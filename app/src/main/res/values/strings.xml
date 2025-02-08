@@ -1,0 +1,7 @@
+
+<resources>
+    <string name="app_name">心迹</string>
+    <!-- existing code -->
+    <string name="hello_world">Hello World!</string>
+    <string name="action_settings">Settings</string>
+</resources>
