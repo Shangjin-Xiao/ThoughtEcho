@@ -65,7 +65,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      debugPrint('获取每日提示失败: $e');
+      debugPrint('获取每日提示失败: \$e');
     }
   }
 
@@ -90,23 +90,6 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: '选择分类',
-                  border: OutlineInputBorder(),
-                ),
-                items: _categories.map((category) {
-                  return DropdownMenuItem(
-                    value: category.id,
-                    child: Text(category.name),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedCategoryId = value ?? 'general';
-                  });
-                },
-              ),
               const SizedBox(height: 16),
               TextField(
                 controller: controller,
@@ -182,7 +165,7 @@ class _HomePageState extends State<HomePage> {
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('AI分析失败: $e'),
+                                    content: Text('AI分析失败: \$e'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -212,7 +195,7 @@ class _HomePageState extends State<HomePage> {
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
                             aiAnalysis: aiSummary,
-                            categoryId: selectedCategoryId,
+                            tagIds: [],
                           ),
                         );
                         Navigator.pop(context);
@@ -296,7 +279,7 @@ class _HomePageState extends State<HomePage> {
           ),
           Expanded(
             child: FutureBuilder<List<Quote>>(
-              future: db.getUserQuotes(categoryId: selectedValue),
+              future: db.getUserQuotes(tagIds: selectedValue != null ? [selectedValue!] : null),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -310,13 +293,13 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.note_alt_outlined,
                           size: 64,
-                          color: theme.colorScheme.primary.withAlpha(128),
+                          color: theme.colorScheme.primary.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '还没有笔记，开始记录吧！',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withAlpha(128),
+                            color: theme.colorScheme.primary.withOpacity(0.5),
                           ),
                         ),
                       ],
@@ -338,13 +321,13 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.search_off,
                           size: 64,
-                          color: theme.colorScheme.primary.withAlpha(128),
+                          color: theme.colorScheme.primary.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '没有找到匹配的笔记',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withAlpha(128),
+                            color: theme.colorScheme.primary.withOpacity(0.5),
                           ),
                         ),
                       ],
@@ -410,7 +393,7 @@ class _HomePageState extends State<HomePage> {
                             }
                           },
                           itemBuilder: (context) => [
-                            const PopupMenuItem(
+                            const PopupMenuItem<String>(
                               value: 'ask',
                               child: Row(
                                 children: [
@@ -652,7 +635,7 @@ class _HomePageState extends State<HomePage> {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('获取回答失败：$e'),
+                    content: Text('获取回答失败：\$e'),
                     backgroundColor: Colors.red,
                   ),
                 );
