@@ -124,7 +124,7 @@ class _HomePageState extends State<HomePage> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -148,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(aiSummary!),
+                        Text(aiSummary),
                       ],
                     ),
                   ),
@@ -306,25 +306,26 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.note_alt_outlined,
                           size: 64,
-                          color: theme.colorScheme.primary.withValues(red: 0.5, green: 0.5, blue: 0.5),
+                          color: theme.colorScheme.primary.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '还没有笔记，开始记录吧！',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withValues(red: 0.5, green: 0.5, blue: 0.5),
+                            color: theme.colorScheme.primary.withOpacity(0.5),
                           ),
                         ),
                       ],
                     ),
                   );
                 }
-
+                
                 final quotes = snapshot.data!;
                 if (_searchQuery.isNotEmpty) {
-                  quotes.removeWhere((quote) => !quote.content.toLowerCase().contains(_searchQuery.toLowerCase()));
+                  quotes.removeWhere((quote) =>
+                      !quote.content.toLowerCase().contains(_searchQuery.toLowerCase()));
                 }
-
+                
                 if (quotes.isEmpty) {
                   return Center(
                     child: Column(
@@ -333,20 +334,20 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.search_off,
                           size: 64,
-                          color: theme.colorScheme.primary.withValues(red: 0.5, green: 0.5, blue: 0.5),
+                          color: theme.colorScheme.primary.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '没有找到匹配的笔记',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withValues(red: 0.5, green: 0.5, blue: 0.5),
+                            color: theme.colorScheme.primary.withOpacity(0.5),
                           ),
                         ),
                       ],
                     ),
                   );
                 }
-
+                
                 return ListView.builder(
                   padding: const EdgeInsets.all(8),
                   itemCount: quotes.length,
@@ -363,7 +364,10 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              DateTime.parse(quote.date).toLocal().toString().split('.')[0],
+                              DateTime.parse(quote.date)
+                                  .toLocal()
+                                  .toString()
+                                  .split('.')[0],
                               style: theme.textTheme.bodySmall,
                             ),
                             if (quote.aiAnalysis != null) ...[
@@ -371,7 +375,7 @@ class _HomePageState extends State<HomePage> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  color: theme.colorScheme.surface,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
@@ -503,7 +507,7 @@ class _HomePageState extends State<HomePage> {
                         margin: const EdgeInsets.all(16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
+                          color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
@@ -547,7 +551,7 @@ class _HomePageState extends State<HomePage> {
           ),
           // 记录页
           _buildQuoteList(db, theme),
-          // AI洞察页
+          // AI侧边页
           const InsightsPage(),
           // 设置页
           const SettingsPage(),
@@ -579,7 +583,7 @@ class _HomePageState extends State<HomePage> {
           NavigationDestination(
             icon: Icon(Icons.psychology_outlined),
             selectedIcon: Icon(Icons.psychology),
-            label: 'AI洞察',
+            label: 'AI侧边',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
