@@ -1,42 +1,39 @@
-name: Build Android APK
+name: Build APK
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Install Android SDK
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y android-sdk
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v2
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x' # 你可以指定 Flutter 版本
+          flutter-version: '3.10.5'  # 根据项目需求指定 Flutter 版本
 
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --split-per-abi
+      - name: Analyze code
+        run: flutter analyze
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
+      - name: Run tests
+        run: flutter test
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v2
         with:
-          name: app-release
-          path: build/app/outputs/apk/release/
+          name: built-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
