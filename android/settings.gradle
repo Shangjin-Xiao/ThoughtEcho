@@ -6,14 +6,6 @@ pluginManagement {
     }
 }
 
-dependencyResolutionManagement {
-    repositories {
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-    }
-}
-
 buildscript {
     ext.kotlin_version = '1.9.22'
     repositories {
@@ -29,11 +21,18 @@ buildscript {
     }
 }
 
-// plugins 块应紧跟在允许的块之后，不得有其他语句
 plugins {
     id 'com.android.application' version '7.4.2' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
     id 'dev.flutter.flutter-gradle-plugin' version '1.0.0' apply false
+}
+
+dependencyResolutionManagement {
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    }
 }
 
 rootProject.name = "yiyan"
