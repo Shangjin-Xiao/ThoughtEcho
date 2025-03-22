@@ -2,42 +2,38 @@ name: Build APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Cache Flutter dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.pub-cache
-        key: ${{ runner.os }}-pub-cache-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pub-cache-
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.10.5'  # 根据项目需求指定 Flutter 版本
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '2.8.0'
-        channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
 
-    - name: Run tests
-      run: flutter test
+      - name: Analyze code
+        run: flutter analyze
 
-    - name: Build APK
-      run: flutter build apk --release
+      - name: Run tests
+        run: flutter test
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: built-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
