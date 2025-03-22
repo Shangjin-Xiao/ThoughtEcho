@@ -8,16 +8,23 @@ import 'services/ai_service.dart';
 import 'pages/home_page.dart';
 
 void main() async {
+  // 确保Flutter绑定初始化
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 仅在非Web平台初始化SQLite
   if (!kIsWeb) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
+  // 使用异步初始化
   final settingsService = await SettingsService.create();
   final databaseService = DatabaseService();
-  await databaseService.init();
+  
+  // 初始化数据库
+  if (!kIsWeb) {
+    await databaseService.init();
+  }
 
   runApp(
     MultiProvider(
