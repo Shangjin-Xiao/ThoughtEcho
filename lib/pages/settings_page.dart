@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../models/note_category.dart';
 import '../models/ai_settings.dart';
+import 'ai_settings_page.dart';
+import 'category_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -13,247 +16,147 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _apiUrlController = TextEditingController();
-  final _apiKeyController = TextEditingController();
-  final _modelController = TextEditingController();
   final _categoryController = TextEditingController();
   bool _isLoading = false;
+  final String _projectUrl = 'https://github.com/yourusername/mind-trace';
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
   }
 
   @override
   void dispose() {
-    _apiUrlController.dispose();
-    _apiKeyController.dispose();
-    _modelController.dispose();
     _categoryController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadSettings() async {
-    final settings = context.read<SettingsService>().aiSettings;
-    setState(() {
-      _apiUrlController.text = settings.apiUrl;
-      _apiKeyController.text = settings.apiKey;
-      _modelController.text = settings.model;
-    });
+  Future<void> _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('无法打开链接: $url')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('设置'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'AI 设置'),
-              Tab(text: '笔记设置'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildAISettings(),
-            _buildNoteSettings(),
-          ],
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('设置'),
       ),
-    );
-  }
-
-  Widget _buildAISettings() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: ListView(
         children: [
-          Text(
-            'API 设置',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _apiUrlController,
-            decoration: const InputDecoration(
-              labelText: 'API URL',
-              hintText: '例如：https://api.openai.com/v1/chat/completions',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _apiKeyController,
-            decoration: const InputDecoration(
-              labelText: 'API Key',
-              hintText: '输入你的 API Key',
-              border: OutlineInputBorder(),
-            ),
-            obscureText: true,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _modelController,
-            decoration: const InputDecoration(
-              labelText: '模型',
-              hintText: '例如：gpt-3.5-turbo',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              final settings = AISettings(
-                apiUrl: _apiUrlController.text,
-                apiKey: _apiKeyController.text,
-                model: _modelController.text,
-              );
-              context.read<SettingsService>().updateAISettings(settings);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('设置已保存')),
-              );
-            },
-            child: const Text('保存 AI 设置'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoteSettings() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '分类管理',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _categoryController,
-                  decoration: const InputDecoration(
-                    labelText: '新分类名称',
-                    hintText: '输入分类名称',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                        if (_categoryController.text.isEmpty) return;
-                        
-                        setState(() => _isLoading = true);
-                        try {
-                          await context
-                              .read<DatabaseService>()
-                              .addCategory(_categoryController.text);
-                          
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('分类添加成功')),
-                          );
-                          _categoryController.clear();
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('添加分类失败：$e')),
-                          );
-                        } finally {
-                          if (mounted) {
-                            setState(() => _isLoading = false);
-                          }
-                        }
-                      },
-                child: const Text('添加'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          StreamBuilder<List<NoteCategory>>(
-            stream: context.read<DatabaseService>().watchCategories(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final categories = snapshot.data!;
-              if (categories.isEmpty) {
-                return const Center(
-                  child: Text('暂无分类'),
+          _buildSettingSection('应用设置', [
+            _buildSettingItem(
+              icon: Icons.language,
+              title: '语言',
+              subtitle: '简体中文',
+              onTap: () {
+                // 暂未实现语言切换功能
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('语言设置功能即将上线')),
                 );
-              }
-
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  return ListTile(
-                    title: Text(category.name),
-                    trailing: category.isDefault ? null : IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('确认删除'),
-                            content: Text('确定要删除分类"${category.name}"吗？'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('取消'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('删除'),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (confirmed == true && mounted) {
-                          try {
-                            await context
-                                .read<DatabaseService>()
-                                .deleteCategory(category.id);
-                                
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('分类删除成功')),
-                            );
-                          } catch (e) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('删除分类失败：$e')),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+              },
+            ),
+            _buildSettingItem(
+              icon: Icons.dark_mode,
+              title: '主题',
+              subtitle: '跟随系统',
+              onTap: () {
+                // 暂未实现主题切换功能
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('主题设置功能即将上线')),
+                );
+              },
+            ),
+          ]),
+          _buildSettingSection('笔记设置', [
+            _buildSettingItem(
+              icon: Icons.category,
+              title: '分类管理',
+              subtitle: '管理笔记分类',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CategorySettingsPage(),
+                  ),
+                );
+              },
+            ),
+          ]),
+          _buildSettingSection('AI 设置', [
+            _buildSettingItem(
+              icon: Icons.api,
+              title: 'API 设置',
+              subtitle: '配置 AI 服务',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AISettingsPage(),
+                  ),
+                );
+              },
+            ),
+          ]),
+          _buildSettingSection('关于', [
+            _buildSettingItem(
+              icon: Icons.info_outline,
+              title: '版本',
+              subtitle: 'v1.0.0',
+              onTap: null,
+            ),
+            _buildSettingItem(
+              icon: Icons.code,
+              title: '项目地址',
+              subtitle: 'GitHub',
+              onTap: () => _launchUrl(_projectUrl),
+            ),
+          ]),
         ],
       ),
     );
   }
+
+  Widget _buildSettingSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue,
+            ),
+          ),
+        ),
+        ...children,
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.blue),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
+      onTap: onTap,
+    );
+  }
+
+
 }

@@ -243,20 +243,30 @@ class DatabaseService extends ChangeNotifier {
       return Stream.value(_categoryStore);
     }
 
-    final controller = StreamController<List<NoteCategory>>();
+    final controller = StreamController<List<NoteCategory>>.broadcast();
     
     Future<void> loadCategories() async {
       try {
         final db = await database;
         final maps = await db.query('categories', orderBy: 'name');
         final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
-        controller.add(categories);
+        if (!controller.isClosed) {
+          controller.add(categories);
+        }
       } catch (e) {
-        controller.addError(e);
+        if (!controller.isClosed) {
+          controller.addError(e);
+        }
       }
     }
 
     loadCategories();
+    
+    // 确保控制器在不再需要时关闭
+    controller.onCancel = () {
+      controller.close();
+    };
+    
     return controller.stream;
   }
 
