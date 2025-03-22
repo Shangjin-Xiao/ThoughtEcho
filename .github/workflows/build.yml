@@ -24,7 +24,7 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.0.0'  # 确保此版本与项目中使用的版本一致
+        flutter-version: '3.19.0'  # 更新到支持 Dart SDK >=3.0.0 的版本
         channel: 'stable'
         cache: true
 
