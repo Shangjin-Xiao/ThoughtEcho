@@ -38,6 +38,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
 
+    - name: Increase Gradle Memory
+      run: echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxPermSize=1024m" >> ~/.gradle/gradle.properties
+
     - name: Install dependencies
       run: flutter pub get
 
