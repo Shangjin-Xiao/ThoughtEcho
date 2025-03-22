@@ -56,13 +56,19 @@ class _SlidingCardState extends State<SlidingCard> {
                     children: [
                       Icon(
                         Icons.arrow_forward,
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 127),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.5),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '向左滑动记录感想',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 127),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -77,4 +83,4 @@ class _SlidingCardState extends State<SlidingCard> {
       ],
     );
   }
-} 
+}
