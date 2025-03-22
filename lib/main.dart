@@ -1,4 +1,4 @@
-import 'dart:async';  // 添加这一行来导入 TimeoutException
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -18,14 +18,25 @@ Future<void> initializeDatabasePlatform() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     
-    // 确保数据库目录存在
-    final dbPath = await getDatabasesPath();
-    await Directory(dbPath).create(recursive: true);
-    
-    // 设置数据库路径
-    final path = join(dbPath, 'mind_trace.db');
-    if (!await Directory(dirname(path)).exists()) {
-      await Directory(dirname(path)).create(recursive: true);
+    try {
+      // 获取应用的可写目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final dbPath = join(appDir.path, 'databases');
+      
+      // 确保数据库目录存在
+      await Directory(dbPath).create(recursive: true);
+      
+      // 设置数据库路径
+      final path = join(dbPath, 'mind_trace.db');
+      if (!await Directory(dirname(path)).exists()) {
+        await Directory(dirname(path)).create(recursive: true);
+      }
+      
+      // 设置 Sqflite 的数据库路径
+      await databaseFactory.setDatabasesPath(dbPath);
+    } catch (e) {
+      debugPrint('创建数据库目录失败: $e');
+      rethrow;
     }
   }
 }
