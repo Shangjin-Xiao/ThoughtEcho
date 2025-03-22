@@ -19,35 +19,16 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
-        cache: 'gradle'
 
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.0'  # 更新到支持 Dart SDK >=3.0.0 的版本
+        flutter-version: '3.13.9'
         channel: 'stable'
         cache: true
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-
-    - name: Increase Gradle Memory
-      run: echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxPermSize=1024m" >> ~/.gradle/gradle.properties
-
     - name: Install dependencies
       run: flutter pub get
-
-    - name: Check for SQLite native libraries
-      run: |
-        echo "Checking for SQLite native libraries..."
-        find . -name "libsqlite.so"
 
     - name: Build APK
       run: flutter build apk --release --verbose
@@ -57,12 +38,3 @@ jobs:
       with:
         name: app-release.apk
         path: build/app/outputs/flutter-apk/app-release.apk
-        
-    - name: Upload build logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: |
-          build/reports
-          **/build/outputs/logs/*.log
