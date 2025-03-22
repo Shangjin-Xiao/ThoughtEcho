@@ -1,5 +1,35 @@
+
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlin-parcelize'
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    // 保持现有的配置不变
     namespace "com.shangjin.yiyan"
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion "25.2.9519653"
@@ -23,8 +53,7 @@ android {
 
     defaultConfig {
         applicationId "com.shangjin.yiyan"
-        // 修改这里，确保最低版本支持
-        minSdkVersion 21 // 显式设置为21，而不是使用 flutter.minSdkVersion
+        minSdkVersion 21  // 显式设置最低SDK版本
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -37,13 +66,11 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            // 添加 NDK ABI 过滤器
             ndk {
                 abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
             }
         }
         debug {
-            // 添加调试配置
             ndk {
                 abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
             }
@@ -54,16 +81,20 @@ android {
         exclude 'META-INF/*.md'
         exclude 'META-INF/licenses/*'
         pickFirst '**/*.so'
+        // 添加数据库文件处理
+        pickFirst 'lib/x86_64/libsqlite.so'
+        pickFirst 'lib/arm64-v8a/libsqlite.so'
+        pickFirst 'lib/armeabi-v7a/libsqlite.so'
     }
 }
 
-// 保持现有的 flutter 配置
 flutter {
     source '../..'
 }
 
-// 保持现有的依赖
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22"
     implementation 'androidx.multidex:multidex:2.0.1'
+    // 添加 SQLite 支持
+    implementation 'androidx.sqlite:sqlite:2.3.1'
 }
