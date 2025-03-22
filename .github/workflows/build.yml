@@ -1,6 +1,12 @@
 name: Build APK
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -10,10 +16,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.pub-cache
+        key: ${{ runner.os }}-pub-cache-${{ hashFiles('**/pubspec.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pub-cache-
+
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '2.8.0'
+        channel: 'stable'
+
+    - name: Run tests
+      run: flutter test
 
     - name: Build APK
       run: flutter build apk --release
@@ -21,5 +39,5 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: apk
+        name: release-apk
         path: build/app/outputs/flutter-apk/app-release.apk
