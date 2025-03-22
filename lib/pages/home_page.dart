@@ -102,7 +102,7 @@ class _HomePageState extends State<HomePage> {
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    // _selectedCategoryId = value;
+                    // 可以在此保存选中的分类 ID
                   });
                 },
               ),
@@ -148,7 +148,8 @@ class _HomePageState extends State<HomePage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(aiSummary),
+                        // 利用非空断言，确保传入的字符串为非空
+                        Text(aiSummary!),
                       ],
                     ),
                   ),
