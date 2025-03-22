@@ -6,7 +6,8 @@ class Quote {
   final String? sentiment;
   final List<String>? keywords;
   final String? summary;
-  String categoryId;
+  List<String> tagIds;
+  final String? categoryId;
 
   Quote({
     this.id,
@@ -16,7 +17,8 @@ class Quote {
     this.sentiment,
     this.keywords,
     this.summary,
-    this.categoryId = 'general',
+    this.tagIds = const [],
+    this.categoryId,
   });
 
   Map<String, dynamic> toMap() {
@@ -24,11 +26,12 @@ class Quote {
       'id': id,
       'date': date,
       'content': content,
-      'aiAnalysis': aiAnalysis,
+      'ai_analysis': aiAnalysis,
       'sentiment': sentiment,
-      'keywords': keywords,
+      'keywords': keywords != null ? keywords!.join(',') : null,
       'summary': summary,
-      'categoryId': categoryId,
+      'tag_ids': tagIds.join(','),
+      'category_id': categoryId,
     };
   }
 
@@ -37,11 +40,12 @@ class Quote {
       id: map['id'],
       date: map['date'],
       content: map['content'],
-      aiAnalysis: map['aiAnalysis'],
+      aiAnalysis: map['ai_analysis'],
       sentiment: map['sentiment'],
-      keywords: map['keywords'] != null ? List<String>.from(map['keywords']) : null,
+      keywords: map['keywords'] != null ? map['keywords'].toString().split(',') : null,
       summary: map['summary'],
-      categoryId: map['categoryId'] ?? 'general',
+      tagIds: (map['tag_ids']?.toString().split(',') ?? []).cast<String>(),
+      categoryId: map['category_id'],
     );
   }
 }

@@ -74,6 +74,7 @@ class _HomePageState extends State<HomePage> {
     final aiService = context.read<AIService>();
     String? aiSummary;
     bool isAnalyzing = false;
+    String selectedCategoryId = 'general';
 
     showModalBottomSheet(
       context: context,
@@ -102,7 +103,7 @@ class _HomePageState extends State<HomePage> {
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    // 可以在此保存选中的分类 ID
+                    selectedCategoryId = value ?? 'general';
                   });
                 },
               ),
@@ -173,6 +174,7 @@ class _HomePageState extends State<HomePage> {
                                     date: DateTime.now().toIso8601String(),
                                   ),
                                 );
+                                if (!mounted) return;
                                 setState(() {
                                   aiSummary = summary;
                                   isAnalyzing = false;
@@ -204,12 +206,13 @@ class _HomePageState extends State<HomePage> {
                   ElevatedButton(
                     onPressed: () {
                       if (controller.text.isNotEmpty) {
+                        if (!mounted) return;
                         db.addQuote(
                           Quote(
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
                             aiAnalysis: aiSummary,
-                            categoryId: 'general',
+                            categoryId: selectedCategoryId,
                           ),
                         );
                         Navigator.pop(context);
@@ -307,13 +310,13 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.note_alt_outlined,
                           size: 64,
-                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          color: theme.colorScheme.primary.withAlpha(128),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '还没有笔记，开始记录吧！',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            color: theme.colorScheme.primary.withAlpha(128),
                           ),
                         ),
                       ],
@@ -335,13 +338,13 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.search_off,
                           size: 64,
-                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          color: theme.colorScheme.primary.withAlpha(128),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '没有找到匹配的笔记',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            color: theme.colorScheme.primary.withAlpha(128),
                           ),
                         ),
                       ],
@@ -512,7 +515,7 @@ class _HomePageState extends State<HomePage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.shadowColor.withOpacity(0.1),
+                              color: theme.shadowColor.withAlpha(26),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),

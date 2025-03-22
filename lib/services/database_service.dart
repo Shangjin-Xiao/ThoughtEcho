@@ -31,13 +31,14 @@ class DatabaseService extends ChangeNotifier {
       final path = await getDatabasesPath();
       _database = await openDatabase(
         join(path, 'mind_trace.db'),
-        version: 1,
+        version: 3,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE categories(
               id TEXT PRIMARY KEY,
               name TEXT NOT NULL,
-              is_default BOOLEAN DEFAULT 0
+              is_default BOOLEAN DEFAULT 0,
+              icon_name TEXT
             )
           ''');
 
@@ -46,60 +47,30 @@ class DatabaseService extends ChangeNotifier {
               id TEXT PRIMARY KEY,
               content TEXT NOT NULL,
               date TEXT NOT NULL,
-              category_id TEXT DEFAULT 'general',
+              tag_ids TEXT DEFAULT '',
               ai_analysis TEXT,
               sentiment TEXT,
               keywords TEXT,
-              summary TEXT,
-              FOREIGN KEY (category_id) REFERENCES categories (id)
+              summary TEXT
             )
           ''');
-
-          // 添加默认分类
-          final defaultCategories = [
-            {'id': 'general', 'name': '随记', 'is_default': 1},
-            {'id': 'movie', 'name': '影视', 'is_default': 1},
-            {'id': 'book', 'name': '书籍', 'is_default': 1},
-            {'id': 'poetry', 'name': '古诗词', 'is_default': 1},
-          ];
-
-          for (var category in defaultCategories) {
-            await db.insert('categories', category);
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            await db.execute('ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""');
+          }
+          if (oldVersion < 3) {
+            await db.execute('ALTER TABLE categories ADD COLUMN icon_name TEXT');
           }
         },
       );
-
-      // 检查并添加缺失的默认分类
-      await _ensureDefaultCategories();
     } catch (e) {
-      debugPrint('数据库初始化错误: $e');
+      debugPrint('数据库初始化错误: \$e');
       rethrow;
     }
   }
 
   Future<void> _ensureDefaultCategories() async {
-    if (kIsWeb) return;
-
-    final defaultCategories = {
-      'general': '随记',
-      'movie': '影视',
-      'book': '书籍',
-      'poetry': '古诗词',
-    };
-
-    final db = await database;
-    final existingCategories = await db.query('categories', where: 'is_default = 1');
-    final existingIds = existingCategories.map((c) => c['id'] as String).toSet();
-
-    for (var entry in defaultCategories.entries) {
-      if (!existingIds.contains(entry.key)) {
-        await db.insert('categories', {
-          'id': entry.key,
-          'name': entry.value,
-          'is_default': 1,
-        });
-      }
-    }
   }
 
   Future<void> addQuote(Quote quote) async {
@@ -122,22 +93,23 @@ class DatabaseService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<Quote>> getUserQuotes({String? categoryId}) async {
+  Future<List<Quote>> getUserQuotes({List<String>? tagIds, String? categoryId}) async {
     try {
       if (kIsWeb) {
-        if (categoryId != null) {
-          return _memoryStore.where((quote) => quote.categoryId == categoryId).toList();
-        }
         return _memoryStore;
       }
 
       final db = await database;
-      final List<Map<String, dynamic>> maps;
-      if (categoryId != null) {
+      List<Map<String, dynamic>> maps;
+      if (tagIds != null && tagIds.isNotEmpty) {
+        final whereClause = tagIds.map((id) => 'tag_ids LIKE \'%$id%\'').join(' OR ');
+        maps = await db.query('quotes', where: whereClause);
+      } else if (categoryId != null && categoryId.isNotEmpty) {
         maps = await db.query('quotes', where: 'category_id = ?', whereArgs: [categoryId]);
       } else {
         maps = await db.query('quotes');
       }
+
 
       return List.generate(maps.length, (i) {
         return Quote(
@@ -145,14 +117,14 @@ class DatabaseService extends ChangeNotifier {
           date: maps[i]['date'],
           content: maps[i]['content'],
           aiAnalysis: maps[i]['ai_analysis'],
-          categoryId: maps[i]['category_id'],
+          tagIds: (maps[i]['tag_ids']?.toString().split(',') ?? []).cast<String>(),
           sentiment: maps[i]['sentiment'],
           keywords: maps[i]['keywords'],
           summary: maps[i]['summary'],
         );
       });
     } catch (e) {
-      debugPrint('获取笔记错误: $e');
+      debugPrint('获取笔记错误: \$e');
       rethrow;
     }
   }
@@ -182,11 +154,12 @@ class DatabaseService extends ChangeNotifier {
     return maps.map((map) => NoteCategory.fromMap(map)).toList();
   }
 
-  Future<void> addCategory(String name) async {
+  Future<void> addCategory(String name, {String? iconName}) async {
     if (kIsWeb) {
       final category = NoteCategory(
         id: _uuid.v4(),
         name: name,
+        iconName: iconName,
       );
       _categoryStore.add(category);
       notifyListeners();
@@ -201,6 +174,7 @@ class DatabaseService extends ChangeNotifier {
         'id': id,
         'name': name,
         'is_default': 0,
+        'icon_name': iconName,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -271,7 +245,5 @@ class DatabaseService extends ChangeNotifier {
   }
 
   Future<void> _notifyCategories() async {
-    final categories = await getCategories();
-    _categoriesController.add(categories);
   }
 }

@@ -19,6 +19,7 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'
 
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
@@ -27,8 +28,23 @@ jobs:
         channel: 'stable'
         cache: true
 
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
     - name: Install dependencies
       run: flutter pub get
+
+    - name: Check for SQLite native libraries
+      run: |
+        echo "Checking for SQLite native libraries..."
+        find . -name "libsqlite.so"
 
     - name: Build APK
       run: flutter build apk --release --verbose
@@ -38,3 +54,12 @@ jobs:
       with:
         name: app-release.apk
         path: build/app/outputs/flutter-apk/app-release.apk
+        
+    - name: Upload build logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          build/reports
+          **/build/outputs/logs/*.log

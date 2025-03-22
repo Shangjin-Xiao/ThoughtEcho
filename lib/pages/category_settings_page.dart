@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart';
+import '../utils/icon_utils.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class CategorySettingsPage extends StatefulWidget {
 class _CategorySettingsPageState extends State<CategorySettingsPage> {
   final _categoryController = TextEditingController();
   bool _isLoading = false;
+  String? _selectedIconName;
 
   @override
   void dispose() {
@@ -51,7 +53,18 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
+                // 添加图标选择按钮
+                IconButton(
+                  onPressed: () {
+                    _showIconSelector(context);
+                  },
+                  icon: _selectedIconName != null
+                      ? Icon(IconUtils.getIconData(_selectedIconName))
+                      : const Icon(Icons.add_circle_outline),
+                  tooltip: '选择图标',
+                ),
+                const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: _isLoading
                       ? null
@@ -62,13 +75,16 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           try {
                             await context
                                 .read<DatabaseService>()
-                                .addCategory(_categoryController.text);
+                                .addCategory(_categoryController.text, iconName: _selectedIconName);
                             
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('分类添加成功')),
                             );
                             _categoryController.clear();
+                            setState(() {
+                              _selectedIconName = null;
+                            });
                           } catch (e) {
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -112,6 +128,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   itemBuilder: (context, index) {
                     final category = categories[index];
                     return ListTile(
+                      leading: Icon(IconUtils.getIconData(category.iconName)),
                       title: Text(category.name),
                       trailing: category.isDefault ? null : IconButton(
                         icon: const Icon(Icons.delete),
@@ -160,6 +177,64 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showIconSelector(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择图标'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 5,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemCount: IconUtils.getAllIcons().length,
+            itemBuilder: (context, index) {
+              final iconEntry = IconUtils.getAllIcons()[index];
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedIconName = iconEntry.key;
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _selectedIconName == iconEntry.key
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(iconEntry.value),
+                      const SizedBox(height: 4),
+                      Text(
+                        iconEntry.key,
+                        style: const TextStyle(fontSize: 10),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+        ],
       ),
     );
   }

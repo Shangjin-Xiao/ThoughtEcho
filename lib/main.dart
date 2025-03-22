@@ -10,26 +10,12 @@ import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/ai_service.dart';
 import 'package:mind_trace/pages/home_page.dart';
-import 'package:mind_trace/theme/app_theme.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
-    // 初始化 SQLite
-    sqfliteFfiInit();
-    
-    // 为Android平台特别配置SQLite
-    if (Platform.isAndroid) {
-      // 使用sqflite_common_ffi_android包提供的Android特定配置
-      databaseFactory = databaseFactoryFfiAndroid;
-      // 配置Android平台的SQLite加载选项
-      final sqfliteAndroidOptions = SqfliteFfiAndroidOptions(
-        // 允许从系统加载SQLite
-        loadSystemLibraries: true,
-      );
-      // 应用Android特定配置
-      sqfliteFfiInit(options: sqfliteAndroidOptions);
-    } else {
-      // 非Android平台使用标准FFI配置
+    if (Platform.isWindows) {
+      // 初始化 SQLite FFI（仅Windows平台需要）
+      sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
     
@@ -48,7 +34,9 @@ Future<void> initializeDatabasePlatform() async {
       }
       
       // 设置 Sqflite 的数据库路径
-      await databaseFactory.setDatabasesPath(dbPath);
+      if (Platform.isWindows || Platform.isAndroid) {
+        await databaseFactory.setDatabasesPath(dbPath);
+      }
     } catch (e) {
       debugPrint('创建数据库目录失败: $e');
       rethrow;
@@ -119,7 +107,7 @@ void main() async {
                   const SizedBox(height: 16),
                   const Text(
                     '应用启动失败',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -154,10 +142,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '心迹',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
       home: FutureBuilder(
         // 给予一个短暂的延迟，确保所有服务都已经正确初始化
         future: Future.delayed(const Duration(milliseconds: 100)),
