@@ -1,8 +1,6 @@
-ext {
-    kotlin_version = '1.9.22'
-}
-
 buildscript {
+    // 在 buildscript 内定义 kotlin_version，全局可用
+    ext.kotlin_version = '1.9.22'
     repositories {
         google()
         mavenCentral()
@@ -16,8 +14,7 @@ buildscript {
 
 plugins {
     id 'com.android.application' version '8.2.2' apply false
-    id 'org.jetbrains.kotlin.android' version "$kotlin_version" apply false
-    id 'dev.flutter.flutter-gradle-plugin' version '1.0.0' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
 }
 
 allprojects {
@@ -28,9 +25,11 @@ allprojects {
 }
 
 rootProject.buildDir = "../build"
+
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
