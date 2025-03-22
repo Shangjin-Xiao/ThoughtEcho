@@ -47,31 +47,31 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    # 新添加的步骤 - 创建图标目录和默认图标
+    # 设置应用图标
     - name: Setup default app icon
       run: |
-        # 创建必要的目录
         mkdir -p android/app/src/main/res/mipmap-hdpi
         mkdir -p android/app/src/main/res/mipmap-mdpi
         mkdir -p android/app/src/main/res/mipmap-xhdpi
         mkdir -p android/app/src/main/res/mipmap-xxhdpi
         mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-        
-        # 复制 Flutter 默认图标
+        
         cp $FLUTTER_HOME/packages/flutter_tools/templates/app_shared/android.tmpl/template/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/
         cp $FLUTTER_HOME/packages/flutter_tools/templates/app_shared/android.tmpl/template/app/src/main/res/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/
         cp $FLUTTER_HOME/packages/flutter_tools/templates/app_shared/android.tmpl/template/app/src/main/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/
         cp $FLUTTER_HOME/packages/flutter_tools/templates/app_shared/android.tmpl/template/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/
         cp $FLUTTER_HOME/packages/flutter_tools/templates/app_shared/android.tmpl/template/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/
 
-    # 新添加的步骤 - 创建启动背景
+    # 设置启动背景，修改了XML的创建方式
     - name: Setup launch background
       run: |
         mkdir -p android/app/src/main/res/drawable
-        echo '<?xml version="1.0" encoding="utf-8"?>
+        cat > android/app/src/main/res/drawable/launch_background.xml << 'EOL'
+        <?xml version="1.0" encoding="utf-8"?>
         <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:drawable="@android:color/white" />
-        </layer-list>' > android/app/src/main/res/drawable/launch_background.xml
+        </layer-list>
+        EOL
 
     - name: Build APK
       run: flutter build apk --release
