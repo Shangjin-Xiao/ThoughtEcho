@@ -16,7 +16,22 @@ Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
     // 初始化 SQLite
     sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+    
+    // 为Android平台特别配置SQLite
+    if (Platform.isAndroid) {
+      // 使用sqflite_common_ffi_android包提供的Android特定配置
+      databaseFactory = databaseFactoryFfiAndroid;
+      // 配置Android平台的SQLite加载选项
+      final sqfliteAndroidOptions = SqfliteFfiAndroidOptions(
+        // 允许从系统加载SQLite
+        loadSystemLibraries: true,
+      );
+      // 应用Android特定配置
+      sqfliteFfiInit(options: sqfliteAndroidOptions);
+    } else {
+      // 非Android平台使用标准FFI配置
+      databaseFactory = databaseFactoryFfi;
+    }
     
     try {
       // 获取应用的可写目录
