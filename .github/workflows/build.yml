@@ -18,28 +18,38 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
+          cache: 'gradle'
           
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.13.9'
           channel: 'stable'
+          cache: true
           
-      - name: Grant execute permission for gradlew
-        run: |
-          cd android
-          chmod +x gradlew
-          
-      - name: Install Flutter dependencies
+      - name: Install dependencies
         run: flutter pub get
         
-      - name: Build APK
+      - name: Make gradlew executable
         run: |
           cd android
-          ./gradlew build
-
-      - name: Upload APK
+          chmod +x ./gradlew
+          
+      - name: Build APK
+        run: |
+          flutter clean
+          flutter build apk --release
+          
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v3
         with:
-          name: release-apk
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 3
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 3
