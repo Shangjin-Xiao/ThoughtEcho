@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  JAVA_OPTS: -Xmx4g
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs="-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,11 +23,14 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'
 
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v3
       with:
         gradle-version: current
+        cache-read-only: false
+        gradle-home-cache-cleanup: true
 
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
@@ -33,19 +40,44 @@ jobs:
         cache: true
 
     - name: Install dependencies
-      run: flutter pub get
+      run: |
+        flutter pub get
+        flutter clean
 
-    - name: Configure Gradle settings
+    - name: Create local.properties
+      run: |
+        echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
+        echo "flutter.buildMode=release" >> android/local.properties
+        echo "flutter.versionName=1.0.0" >> android/local.properties
+        echo "flutter.versionCode=1" >> android/local.properties
+
+    - name: Configure Gradle properties
       run: |
         mkdir -p android/gradle/wrapper
-        echo 'org.gradle.jvmargs=-Xmx4g -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError' > android/gradle.properties
+        echo 'org.gradle.jvmargs=-Xmx4g -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8' > android/gradle.properties
         echo 'org.gradle.daemon=false' >> android/gradle.properties
         echo 'org.gradle.parallel=true' >> android/gradle.properties
         echo 'android.useAndroidX=true' >> android/gradle.properties
         echo 'android.enableJetifier=true' >> android/gradle.properties
+        echo 'android.enableR8=true' >> android/gradle.properties
+        echo 'kotlin.code.style=official' >> android/gradle.properties
+
+    - name: Create debug keystore
+      run: |
+        keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+    - name: Update Gradle wrapper
+      run: |
+        cd android
+        ./gradlew wrapper --gradle-version=8.0.2
+        cd ..
 
     - name: Build APK
-      run: flutter build apk --release --verbose
+      run: |
+        cd android
+        ./gradlew clean
+        cd ..
+        flutter build apk --release --verbose --no-pub --no-tree-shake-icons
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
