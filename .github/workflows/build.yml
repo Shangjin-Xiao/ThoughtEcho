@@ -14,12 +14,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: 'gradle'
+          cache: gradle
           
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -27,27 +27,50 @@ jobs:
           flutter-version: '3.13.9'
           channel: 'stable'
           cache: true
-          
-      - name: Install dependencies
-        run: |
-          flutter pub get
-          flutter doctor -v
+      
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         
-      - name: Make gradlew executable
+      - name: Setup Gradle
         working-directory: android
-        run: chmod +x ./gradlew
+        run: |
+          cat > gradle.properties << EOF
+          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
+          android.useAndroidX=true
+          android.enableJetifier=true
+          android.enableR8=true
+          EOF
+          
+      - name: Configure Keystore
+        working-directory: android
+        run: |
+          cat > key.properties << EOF
+          storePassword=android
+          keyPassword=android
+          keyAlias=key
+          storeFile=key.jks
+          EOF
+          
+      - name: Create debug keystore
+        working-directory: android
+        run: keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          
+      - name: Install Flutter dependencies
+        run: flutter pub get
           
       - name: Build APK
         run: |
+          # 确保清理之前的构建
           flutter clean
-          flutter build apk --release --split-per-abi
+          
+          # 构建release版本
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }}
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-apks
-          path: |
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
