@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../widgets/sliding_card.dart';
 import '../models/quote_model.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import 'settings_page.dart';
 import '../services/ai_service.dart';
 import 'insights_page.dart';
@@ -22,7 +22,8 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  List<NoteCategory> _categories = [];
+  List<NoteTag> _tags = [];
+  List<String> _selectedTagIds = [];
   double? _startDragX;
 
   @override
@@ -30,13 +31,13 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _fetchDailyQuote();
     _fetchDailyPrompt();
-    _loadCategories();
+    _loadTags();
   }
 
-  Future<void> _loadCategories() async {
-    final categories = await context.read<DatabaseService>().getCategories();
+  Future<void> _loadTags() async {
+    final tags = await context.read<DatabaseService>().getTags();
     setState(() {
-      _categories = categories;
+      _tags = tags;
     });
   }
 
@@ -74,7 +75,7 @@ class _HomePageState extends State<HomePage> {
     final aiService = context.read<AIService>();
     String? aiSummary;
     bool isAnalyzing = false;
-    String selectedCategoryId = 'general';
+    List<String> selectedTagIds = [];
 
     showModalBottomSheet(
       context: context,
@@ -101,6 +102,51 @@ class _HomePageState extends State<HomePage> {
                 maxLines: 3,
                 autofocus: true,
               ),
+              
+              // 显示已选标签的UI组件
+              selectedTagIds.isEmpty
+                ? const SizedBox.shrink()
+                : Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '已选标签',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4.0,
+                          runSpacing: 4.0,
+                          children: selectedTagIds.map((tagId) {
+                            final tag = _tags.firstWhere(
+                              (t) => t.id == tagId,
+                              orElse: () => NoteTag(id: tagId, name: '未知标签'),
+                            );
+                            return Chip(
+                              label: Text(tag.name, style: const TextStyle(fontSize: 12)),
+                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14),
+                              deleteIcon: const Icon(Icons.close, size: 14),
+                              onDeleted: () {
+                                setState(() {
+                                  selectedTagIds.remove(tagId);
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
               if (aiSummary != null) ...[
                 const SizedBox(height: 16),
                 SizedBox(
@@ -195,7 +241,7 @@ class _HomePageState extends State<HomePage> {
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
                             aiAnalysis: aiSummary,
-                            tagIds: [],
+                            tagIds: selectedTagIds,
                           ),
                         );
                         Navigator.pop(context);
@@ -217,19 +263,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildQuoteList(DatabaseService db, ThemeData theme) {
-    String? selectedValue;
-    List<DropdownMenuItem<String>> dropdownItems = [
-      const DropdownMenuItem<String>(
-        value: null,
-        child: Text('全部分类'),
-      ),
-      ..._categories.map((category) {
-        return DropdownMenuItem(
-          value: category.id,
-          child: Text(category.name),
-        );
-      }).toList(),
-    ];
+    // 多标签选择UI
+    List<Widget> tagChips = _tags.map((tag) {
+      final isSelected = _selectedTagIds.contains(tag.id);
+      return FilterChip(
+        selected: isSelected,
+        label: Text(tag.name),
+        avatar: Icon(IconUtils.getIconData(tag.iconName)),
+        onSelected: (selected) {
+          setState(() {
+            if (selected) {
+              _selectedTagIds.add(tag.id);
+            } else {
+              _selectedTagIds.remove(tag.id);
+            }
+          });
+        },
+      );
+    }).toList();
 
     return Listener(
       onPointerDown: (event) {
@@ -265,13 +316,75 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                DropdownButton<String>(
-                  value: selectedValue,
-                  items: dropdownItems,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedValue = newValue;
-                    });
+                // 标签筛选按钮
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setModalState) => Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '按标签筛选',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: _tags.map((tag) {
+                                  final isSelected = _selectedTagIds.contains(tag.id);
+                                  return FilterChip(
+                                    selected: isSelected,
+                                    label: Text(tag.name),
+                                    avatar: Icon(IconUtils.getIconData(tag.iconName)),
+                                    onSelected: (selected) {
+                                      setModalState(() {
+                                        setState(() {
+                                          if (selected) {
+                                            _selectedTagIds.add(tag.id);
+                                          } else {
+                                            _selectedTagIds.remove(tag.id);
+                                          }
+                                        });
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedTagIds.clear();
+                                      });
+                                      setModalState(() {});
+                                    },
+                                    child: const Text('清除筛选'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -279,7 +392,7 @@ class _HomePageState extends State<HomePage> {
           ),
           Expanded(
             child: FutureBuilder<List<Quote>>(
-              future: db.getUserQuotes(tagIds: selectedValue != null ? [selectedValue!] : null),
+              future: db.getUserQuotes(tagIds: _selectedTagIds.isNotEmpty ? _selectedTagIds : null),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());

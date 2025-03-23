@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/ai_settings.dart';
 import 'ai_settings_page.dart';
-import 'category_settings_page.dart';
+import 'tag_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -16,7 +16,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _categoryController = TextEditingController();
+  final _tagController = TextEditingController();
   bool _isLoading = false;
   final String _projectUrl = 'https://github.com/yourusername/mind-trace';
 
@@ -27,7 +27,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    _categoryController.dispose();
+    _tagController.dispose();
     super.dispose();
   }
 
@@ -75,14 +75,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ]),
           _buildSettingSection('笔记设置', [
             _buildSettingItem(
-              icon: Icons.category,
-              title: '分类管理',
-              subtitle: '管理笔记分类',
+              icon: Icons.local_offer,
+              title: '标签管理',
+              subtitle: '管理笔记标签',
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const CategorySettingsPage(),
+                    builder: (context) => const TagSettingsPage(),
                   ),
                 );
               },

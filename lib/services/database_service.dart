@@ -129,12 +129,12 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  Stream<List<NoteCategory>> get categoriesStream {
+  Stream<List<NoteTag>> get tagsStream {
     if (kIsWeb) {
-      return Stream.value(_categoryStore);
+      return Stream.value(_tagStore);
     }
 
-    return loadCategories();
+    return loadTags();
   }
 
   Stream<List<NoteCategory>> loadCategories() async* {
@@ -214,7 +214,7 @@ class DatabaseService extends ChangeNotifier {
 
   Stream<List<NoteCategory>> watchCategories() {
     if (kIsWeb) {
-      return Stream.value(_categoryStore);
+      return Stream.value(_tagStore);
     }
 
     final controller = StreamController<List<NoteCategory>>.broadcast();
