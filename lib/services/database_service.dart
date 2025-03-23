@@ -99,11 +99,11 @@ class DatabaseService extends ChangeNotifier {
         return _memoryStore;
       }
 
-      final db = await database;
+      final db = database; // 删除 await
       List<Map<String, dynamic>> maps;
       if (tagIds != null && tagIds.isNotEmpty) {
-        final whereClause = tagIds.map((id) => 'tag_ids LIKE \'%$id%\'').join(' OR ');
-        maps = await db.query('quotes', where: whereClause);
+        final whereClause = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR '); // 使用 ? 占位符
+        maps = await db.query('quotes', where: whereClause, whereArgs: tagIds.map((id) => '%$id%').toList()); // 使用 whereArgs 传递参数
       } else if (categoryId != null && categoryId.isNotEmpty) {
         maps = await db.query('quotes', where: 'category_id = ?', whereArgs: [categoryId]);
       } else {
@@ -129,16 +129,16 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  Stream<List<NoteTag>> get tagsStream {
+  Stream<List<NoteCategory>> get categoriesStream { // 替换 tagsStream 为 categoriesStream, 返回类型为 NoteCategory
     if (kIsWeb) {
-      return Stream.value(_tagStore);
+      return Stream.value(_categoryStore); // 替换 _tagStore 为 _categoryStore
     }
 
-    return loadTags();
+    return watchCategories(); // 替换 loadTags 为 watchCategories
   }
 
   Stream<List<NoteCategory>> loadCategories() async* {
-    final db = await database;
+    final db = database; // 删除 await
     final maps = await db.query('categories', orderBy: 'name');
     final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
     yield categories;
@@ -214,14 +214,14 @@ class DatabaseService extends ChangeNotifier {
 
   Stream<List<NoteCategory>> watchCategories() {
     if (kIsWeb) {
-      return Stream.value(_tagStore);
+      return Stream.value(_categoryStore);
     }
 
     final controller = StreamController<List<NoteCategory>>.broadcast();
     
     Future<void> loadCategories() async {
       try {
-        final db = await database;
+        final db = database; // 删除 await
         final maps = await db.query('categories', orderBy: 'name');
         final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
         if (!controller.isClosed) {
