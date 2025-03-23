@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../utils/icon_utils.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../widgets/sliding_card.dart';
 import '../models/quote_model.dart';
 import '../models/note_tag.dart';
+import '../models/note_category.dart'; // 添加 import NoteCategory
 import 'settings_page.dart';
 import '../services/ai_service.dart';
 import 'insights_page.dart';
@@ -22,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  List<NoteTag> _tags = [];
+  List<NoteCategory> _tags = []; // 修改 _tags 变量类型为 List<NoteCategory>
   List<String> _selectedTagIds = [];
   double? _startDragX;
 
@@ -35,9 +37,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadTags() async {
-    final tags = await context.read<DatabaseService>().getTags();
+    final categories = await context.read<DatabaseService>().getCategories();
     setState(() {
-      _tags = tags;
+      _tags = categories;
     });
   }
 
@@ -102,7 +104,43 @@ class _HomePageState extends State<HomePage> {
                 maxLines: 3,
                 autofocus: true,
               ),
-              
+              const SizedBox(height: 16),
+              // 标签选择区域
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '选择标签',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: _tags.map((NoteCategory tag) { // 显式指定 tag 类型为 NoteCategory
+                      final isSelected = selectedTagIds.contains(tag?.id);
+                      return FilterChip(
+                        selected: isSelected,
+                        label: Text(tag?.name ?? ''),
+                        avatar: Icon(IconUtils.getIconData(tag?.iconName)),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              selectedTagIds.add(tag?.id ?? '');
+                            } else {
+                              selectedTagIds.remove(tag?.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+
               // 显示已选标签的UI组件
               selectedTagIds.isEmpty
                 ? const SizedBox.shrink()
@@ -130,11 +168,11 @@ class _HomePageState extends State<HomePage> {
                           children: selectedTagIds.map((tagId) {
                             final tag = _tags.firstWhere(
                               (t) => t.id == tagId,
-                              orElse: () => NoteTag(id: tagId, name: '未知标签'),
+                              orElse: () => NoteCategory(id: tagId, name: '未知标签'), // 修改 orElse 返回 NoteCategory
                             );
                             return Chip(
-                              label: Text(tag.name, style: const TextStyle(fontSize: 12)),
-                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14),
+                              label: Text(tag.name, style: const TextStyle(fontSize: 12)), // tag 类型已变为 NoteCategory，name 属性存在
+                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14), // tag 类型已变为 NoteCategory，iconName 属性存在
                               deleteIcon: const Icon(Icons.close, size: 14),
                               onDeleted: () {
                                 setState(() {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
-import '../models/note_tag.dart';
+import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
 
 class TagSettingsPage extends StatefulWidget {
@@ -75,8 +75,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           try {
                             await context
                                 .read<DatabaseService>()
-                                .addTag(_tagController.text, iconName: _selectedIconName);
-                            
+                                .addCategory(_tagController.text, iconName: _selectedIconName); // 替换 addTag 为 addCategory
+
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('标签添加成功')),
@@ -101,8 +101,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
               ],
             ),
             const SizedBox(height: 16),
-            StreamBuilder<List<NoteTag>>(
-              stream: context.read<DatabaseService>().watchTags(),
+            StreamBuilder<List<NoteCategory>>( // 替换 StreamBuilder<List<NoteTag>> 为 StreamBuilder<List<NoteCategory>>
+              stream: context.read<DatabaseService>().watchCategories(), // 替换 watchTags 为 watchCategories
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -120,13 +120,13 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                   );
                 }
 
-                final tags = snapshot.data!;
+                final List<NoteCategory> tags = snapshot.data as List<NoteCategory>; // 添加类型转换
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: tags.length,
                   itemBuilder: (context, index) {
-                    final tag = tags[index];
+                    final NoteCategory tag = tags[index]; // 替换 NoteTag 为 NoteCategory
                     return ListTile(
                       leading: Icon(IconUtils.getIconData(tag.iconName)),
                       title: Text(tag.name),
@@ -155,8 +155,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                             try {
                               await context
                                   .read<DatabaseService>()
-                                  .deleteTag(tag.id);
-                                  
+                                  .deleteCategory(tag.id); // 替换 deleteTag 为 deleteCategory
+
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('标签删除成功')),
