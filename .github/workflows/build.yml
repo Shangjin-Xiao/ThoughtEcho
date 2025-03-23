@@ -20,6 +20,11 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v3
+      with:
+        gradle-version: current
+
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
@@ -29,6 +34,15 @@ jobs:
 
     - name: Install dependencies
       run: flutter pub get
+
+    - name: Configure Gradle settings
+      run: |
+        mkdir -p android/gradle/wrapper
+        echo 'org.gradle.jvmargs=-Xmx4g -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError' > android/gradle.properties
+        echo 'org.gradle.daemon=false' >> android/gradle.properties
+        echo 'org.gradle.parallel=true' >> android/gradle.properties
+        echo 'android.useAndroidX=true' >> android/gradle.properties
+        echo 'android.enableJetifier=true' >> android/gradle.properties
 
     - name: Build APK
       run: flutter build apk --release --verbose
