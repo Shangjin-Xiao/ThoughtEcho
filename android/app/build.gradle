@@ -78,10 +78,6 @@ android {
     packagingOptions {
         exclude 'META-INF/*.md'
         exclude 'META-INF/licenses/*'
-        pickFirst '**/*.so'
-        pickFirst 'lib/x86_64/libsqlite.so'
-        pickFirst 'lib/arm64-v8a/libsqlite.so'
-        pickFirst 'lib/armeabi-v7a/libsqlite.so'
     }
 }
 
