@@ -18,7 +18,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _tagController = TextEditingController();
   bool _isLoading = false;
-  final String _projectUrl = 'https://github.com/yourusername/mind-trace';
+  final String _projectUrl = 'https://github.com/Shangjin-Xiao/mind-trace/';
 
   @override
   void initState() {
