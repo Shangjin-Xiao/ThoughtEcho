@@ -57,6 +57,11 @@ jobs:
           
       - name: Install Flutter dependencies
         run: flutter pub get
+        
+      - name: Install sqlite3_flutter_libs for Android
+        run: |
+          # 确保sqlite3_flutter_libs正确安装
+          flutter pub get
           
       - name: Build APK
         run: |
