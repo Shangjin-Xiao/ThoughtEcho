@@ -12,12 +12,11 @@ import 'package:uuid/uuid.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
-  final _categoriesController =
-      StreamController<List<NoteCategory>>.broadcast();
+  final _categoriesController = StreamController<List<NoteCategory>>.broadcast();
   final _uuid = const Uuid();
   // 内存存储，用于 Web 平台或调试存储，与原有业务流程保持一致
   final List<Quote> _memoryStore = [];
-  // 存储分类数据
+  // 内存存储分类数据
   final List<NoteCategory> _categoryStore = [];
 
   Database get database {
@@ -40,8 +39,7 @@ class DatabaseService extends ChangeNotifier {
       // 获取数据库存储路径，由 main.dart 已设置好路径
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'mind_trace.db');
-      
-      // 打开数据库，并在 onCreate 方法中创建 categories 与 quotes 两个数据表
+
       _database = await openDatabase(
         path,
         version: 3,
@@ -82,6 +80,8 @@ class DatabaseService extends ChangeNotifier {
           }
         },
       );
+      // 更新分类流数据
+      await _updateCategoriesStream();
     } catch (e) {
       debugPrint('数据库初始化错误: $e');
       rethrow;
@@ -90,8 +90,83 @@ class DatabaseService extends ChangeNotifier {
 
   // 如果需要，在此处完善默认分类初始化逻辑
   Future<void> _ensureDefaultCategories() async {
-    // 添加默认分类示例，可根据实际需求进行调整
-    // 例如：检查 _categoryStore 是否为空，如果为空则插入默认分类
+    // 示例：如果当前没有分类，则添加一个默认分类
+    final existing = await getCategories();
+    if (existing.isEmpty) {
+      await addCategory("默认分类", iconName: "default_icon");
+    }
+  }
+
+  /// 获取所有分类
+  Future<List<NoteCategory>> getCategories() async {
+    if (kIsWeb) {
+      return _categoryStore;
+    }
+    try {
+      final db = database;
+      final maps = await db.query('categories');
+      final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
+      return categories;
+    } catch (e) {
+      debugPrint('获取分类错误: $e');
+      return [];
+    }
+  }
+
+  /// 添加一条分类
+  Future<void> addCategory(String name, {String? iconName}) async {
+    if (kIsWeb) {
+      final newCategory = NoteCategory(
+        id: _uuid.v4(),
+        name: name,
+        isDefault: false,
+        iconName: iconName ?? "",
+      );
+      _categoryStore.add(newCategory);
+      _categoriesController.add(_categoryStore);
+      notifyListeners();
+      return;
+    }
+    final db = database;
+    final id = _uuid.v4();
+    final categoryMap = {
+      'id': id,
+      'name': name,
+      'is_default': 0,
+      'icon_name': iconName ?? ""
+    };
+    await db.insert(
+      'categories',
+      categoryMap,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await _updateCategoriesStream();
+    notifyListeners();
+  }
+
+  /// 监听分类流
+  Stream<List<NoteCategory>> watchCategories() {
+    _updateCategoriesStream();
+    return _categoriesController.stream;
+  }
+
+  /// 删除指定分类
+  Future<void> deleteCategory(String id) async {
+    if (kIsWeb) {
+      _categoryStore.removeWhere((category) => category.id == id);
+      _categoriesController.add(_categoryStore);
+      notifyListeners();
+      return;
+    }
+    final db = database;
+    await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+    await _updateCategoriesStream();
+    notifyListeners();
+  }
+
+  Future<void> _updateCategoriesStream() async {
+    final categories = await getCategories();
+    _categoriesController.add(categories);
   }
 
   /// 添加一条引用（笔记）
@@ -105,7 +180,7 @@ class DatabaseService extends ChangeNotifier {
     final id = quote.id ?? _uuid.v4();
     final quoteMap = quote.toMap();
     quoteMap['id'] = id;
-    
+
     await db.insert(
       'quotes',
       quoteMap,
