@@ -3,50 +3,132 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' hide Context;  // 避免Context类型冲突
+import 'package:path/path.dart';
 import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/models/quote_model.dart';
+import 'package:mind_trace/services/settings_service.dart';
+import 'package:mind_trace/services/ai_service.dart';
+import 'package:mind_trace/pages/home_page.dart';
 
 Future<void> initializeDatabasePlatform() async {
-  if (!kIsWeb && Platform.isWindows) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+  if (!kIsWeb) {
+    if (Platform.isWindows) {
+      // 初始化 SQLite FFI（仅Windows平台需要）
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    } else if (Platform.isAndroid) {
+      // Android 平台不需要显式初始化
+    }
+    
+    try {
+      // 获取应用的可写目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final dbPath = join(appDir.path, 'databases');
+      
+      // 确保数据库目录存在
+      await Directory(dbPath).create(recursive: true);
+      
+      // 设置数据库路径
+      final path = join(dbPath, 'mind_trace.db');
+      if (!await Directory(dirname(path)).exists()) {
+        await Directory(dirname(path)).create(recursive: true);
+      }
+      
+      // 设置 Sqflite 的数据库路径
+      if (Platform.isWindows || Platform.isAndroid) {
+        await databaseFactory.setDatabasesPath(dbPath);
+      }
+    } catch (e) {
+      debugPrint('创建数据库目录失败: $e');
+      rethrow;
+    }
   }
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
   try {
-    await initializeDatabasePlatform();
-    final databaseService = DatabaseService();
-    await databaseService.database; // 预初始化
+    // 确保Flutter绑定初始化
+    WidgetsFlutterBinding.ensureInitialized();
 
+    // 初始化数据库平台
+    await initializeDatabasePlatform();
+
+    // 初始化服务
+    final settingsService = await SettingsService.create();
+    final databaseService = DatabaseService();
+    
+    // 初始化数据库
+    if (!kIsWeb) {
+      await databaseService.init().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('数据库初始化超时');
+        },
+      );
+    } else {
+      await databaseService.init();
+    }
+
+    // 运行应用
     runApp(
-      ChangeNotifierProvider(
-        create: (_) => databaseService,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => settingsService),
+          ChangeNotifierProvider(create: (_) => databaseService),
+          ChangeNotifierProxyProvider<SettingsService, AIService>(
+            create: (context) => AIService(
+              settingsService: context.read<SettingsService>(),
+            ),
+            update: (context, settings, previous) =>
+                previous ?? AIService(settingsService: settings),
+          ),
+        ],
         child: const MyApp(),
       ),
     );
-  } catch (e) {
+  } catch (e, stackTrace) {
+    debugPrint('应用启动错误: $e');
+    debugPrint('错误堆栈: $stackTrace');
+    
+    // 显示错误界面
     runApp(
       MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('应用启动失败', style: TextStyle(fontSize: 20)),
-                Text('错误: ${e.toString()}', style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => main(),
-                  child: const Text('重试'),
-                ),
-              ],
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '应用启动失败',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '错误信息: ${e.toString()}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      main(); // 重试启动应用
+                    },
+                    child: const Text('重新启动'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -61,74 +143,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '心迹笔记',
-      theme: ThemeData(useMaterial3: true),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  late Future<List<Quote>> _quotesFuture;
-  late DatabaseService _databaseService;
-
-  @override
-  void initState() {
-    super.initState();
-    _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _refreshData();
-  }
-
-  void _refreshData() {
-    setState(() {
-      _quotesFuture = _databaseService.getQuotes();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('我的笔记')),
-      body: FutureBuilder<List<Quote>>(
-        future: _quotesFuture,
+      title: '心迹',
+      home: FutureBuilder(
+        // 给予一个短暂的延迟，确保所有服务都已经正确初始化
+        future: Future.delayed(const Duration(milliseconds: 100)),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('加载失败: ${snapshot.error}'));
-          }
-          final quotes = snapshot.data ?? [];
-          return ListView.builder(
-            itemCount: quotes.length,
-            itemBuilder: (ctx, index) => ListTile(
-              title: Text(quotes[index].content),
-              subtitle: Text(quotes[index].date),
-            ),
-          );
+          return const HomePage();
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await _addSampleNote();
-          _refreshData();
-        },
-        child: const Icon(Icons.add),
       ),
     );
-  }
-
-  Future<void> _addSampleNote() async {
-    await _databaseService.saveQuote(Quote(
-      date: DateTime.now().toString(),
-      content: '新笔记 ${DateTime.now().hour}:${DateTime.now().minute}',
-    ));
   }
 }
