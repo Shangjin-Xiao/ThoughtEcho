@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' hide Context;  // 修改这里，明确hide Context
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/models/quote_model.dart';
 
@@ -24,7 +24,6 @@ Future<void> initializeDatabasePlatform() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 移除permission_handler依赖，改用Android原生权限声明
   try {
     await initializeDatabasePlatform();
     final databaseService = DatabaseService();
@@ -90,9 +89,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _refreshData() {
+    // 修改这里，不在initState中使用context
+    Future<List<Quote>> Function() getQuotes;
+    if (mounted) {
+      getQuotes = () => Provider.of<DatabaseService>(context, listen: false).getQuotes();
+    } else {
+      getQuotes = () => DatabaseService().getQuotes();
+    }
     setState(() {
-      _quotesFuture = Provider.of<DatabaseService>(context, listen: false)
-          .getQuotes();
+      _quotesFuture = getQuotes();
     });
   }
 
@@ -121,7 +126,7 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await _addSampleNote(context); // 传递正确的BuildContext
+          await _addSampleNote(context);
           _refreshData();
         },
         child: const Icon(Icons.add),
@@ -131,7 +136,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _addSampleNote(BuildContext context) async {
     final db = Provider.of<DatabaseService>(context, listen: false);
-    await db.addQuote(Quote(
+    await db.saveQuote(Quote(  // 修改这里，使用saveQuote而不是addQuote
       date: DateTime.now().toString(),
       content: '新笔记 ${DateTime.now().hour}:${DateTime.now().minute}',
     ));
