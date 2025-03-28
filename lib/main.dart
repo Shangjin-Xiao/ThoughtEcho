@@ -17,6 +17,8 @@ Future<void> initializeDatabasePlatform() async {
       // 初始化 SQLite FFI（仅Windows平台需要）
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
+    } else if (Platform.isAndroid) {
+      // Android 平台不需要显式初始化
     }
     
     try {
