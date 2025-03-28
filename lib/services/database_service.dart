@@ -1,190 +1,163 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:mind_trace/models/quote_model.dart';
+import 'package:path/path.dart';
+import 'package:mind_trace/services/database_service.dart';
+import 'package:mind_trace/services/settings_service.dart';
+import 'package:mind_trace/services/ai_service.dart';
+import 'package:mind_trace/pages/home_page.dart';
 
-class DatabaseService with ChangeNotifier {
-  static const _dbVersion = 3;
-  static const _dbName = 'mind_trace_v3.db';
-  Database? _database;
-
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
-  }
-
-  Future<Database> _initDatabase() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final dbPath = join(appDir.path, _dbName);
-
-    return await openDatabase(
-      dbPath,
-      version: _dbVersion,
-      onCreate: (db, version) async {
-        // 笔记表（与您的Quote模型完全匹配）
-        await db.execute('''
-          CREATE TABLE quotes(
-            id TEXT PRIMARY KEY,
-            date TEXT NOT NULL,
-            content TEXT NOT NULL,
-            ai_analysis TEXT,
-            sentiment TEXT,
-            keywords TEXT,
-            summary TEXT,
-            tag_ids TEXT,
-            category_id TEXT,
-            created_at INTEGER DEFAULT (strftime('%s', 'now'))
-          )
-        ''');
-
-        // 分类表
-        await db.execute('''
-          CREATE TABLE categories(
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            color INTEGER,
-            icon_code INTEGER
-          )
-        ''');
-
-        // 标签表
-        await db.execute('''
-          CREATE TABLE tags(
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            color INTEGER
-          )
-        ''');
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('ALTER TABLE quotes ADD COLUMN created_at INTEGER');
-        }
-        if (oldVersion < 3) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS tags(
-              id TEXT PRIMARY KEY,
-              name TEXT NOT NULL UNIQUE,
-              color INTEGER
-            )
-          ''');
-        }
-      },
-    );
-  }
-
-  // =============== 笔记操作 ===============
-  Future<String> saveQuote(Quote quote) async {
-    final db = await database;
-    final id = quote.id ?? DateTime.now().millisecondsSinceEpoch.toString();
-    
-    await db.insert(
-      'quotes',
-      {
-        ...quote.toMap(),
-        'id': id,
-        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    
-    notifyListeners();
-    return id;
-  }
-
-  Future<List<Quote>> getQuotes({
-    String? categoryId,
-    String? tagId,
-    String? searchQuery,
-  }) async {
-    final db = await database;
-    
-    String? where;
-    List<dynamic>? whereArgs;
-    
-    if (categoryId != null) {
-      where = 'category_id = ?';
-      whereArgs = [categoryId];
+Future<void> initializeDatabasePlatform() async {
+  if (!kIsWeb) {
+    if (Platform.isWindows) {
+      // 初始化 SQLite FFI（仅Windows平台需要）
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    } else if (Platform.isAndroid) {
+      // Android 平台不需要显式初始化
     }
     
-    if (tagId != null) {
-      where = 'tag_ids LIKE ?';
-      whereArgs = ['%$tagId%'];
+    try {
+      // 获取应用的可写目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final dbPath = join(appDir.path, 'databases');
+      
+      // 确保数据库目录存在
+      await Directory(dbPath).create(recursive: true);
+      
+      // 设置数据库路径
+      final path = join(dbPath, 'mind_trace.db');
+      if (!await Directory(dirname(path)).exists()) {
+        await Directory(dirname(path)).create(recursive: true);
+      }
+      
+      // 设置 Sqflite 的数据库路径
+      if (Platform.isWindows || Platform.isAndroid) {
+        await databaseFactory.setDatabasesPath(dbPath);
+      }
+    } catch (e) {
+      debugPrint('创建数据库目录失败: $e');
+      rethrow;
     }
+  }
+}
+
+void main() async {
+  try {
+    // 确保Flutter绑定初始化
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // 初始化数据库平台
+    await initializeDatabasePlatform();
+
+    // 初始化服务
+    final settingsService = await SettingsService.create();
+    final databaseService = DatabaseService();
     
-    if (searchQuery != null) {
-      where = where != null ? '$where AND content LIKE ?' : 'content LIKE ?';
-      whereArgs = whereArgs != null 
-          ? [...whereArgs, '%$searchQuery%']
-          : ['%$searchQuery%'];
+    // 初始化数据库
+    if (!kIsWeb) {
+      await databaseService.init().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('数据库初始化超时');
+        },
+      );
+    } else {
+      await databaseService.init();
     }
 
-    final maps = await db.query(
-      'quotes',
-      where: where,
-      whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
+    // 运行应用
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => settingsService),
+          ChangeNotifierProvider(create: (_) => databaseService),
+          ChangeNotifierProxyProvider<SettingsService, AIService>(
+            create: (context) => AIService(
+              settingsService: context.read<SettingsService>(),
+            ),
+            update: (context, settings, previous) =>
+                previous ?? AIService(settingsService: settings),
+          ),
+        ],
+        child: const MyApp(),
+      ),
     );
-
-    return maps.map(Quote.fromMap).toList();
-  }
-
-  // =============== 分类操作 ===============
-  Future<String> saveCategory(Map<String, dynamic> category) async {
-    final db = await database;
-    final id = category['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+  } catch (e, stackTrace) {
+    debugPrint('应用启动错误: $e');
+    debugPrint('错误堆栈: $stackTrace');
     
-    await db.insert(
-      'categories',
-      {
-        ...category,
-        'id': id,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    // 显示错误界面
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '应用启动失败',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '错误信息: ${e.toString()}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      main(); // 重试启动应用
+                    },
+                    child: const Text('重新启动'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
-    
-    notifyListeners();
-    return id;
   }
+}
 
-  Future<List<Map<String, dynamic>>> getCategories() async {
-    final db = await database;
-    return await db.query('categories', orderBy: 'name ASC');
-  }
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-  // =============== 标签操作 ===============
-  Future<String> saveTag(Map<String, dynamic> tag) async {
-    final db = await database;
-    final id = tag['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
-    
-    await db.insert(
-      'tags',
-      {
-        ...tag,
-        'id': id,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '心迹',
+      home: FutureBuilder(
+        // 给予一个短暂的延迟，确保所有服务都已经正确初始化
+        future: Future.delayed(const Duration(milliseconds: 100)),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          return const HomePage();
+        },
+      ),
     );
-    
-    notifyListeners();
-    return id;
-  }
-
-  Future<List<Map<String, dynamic>>> getTags() async {
-    final db = await database;
-    return await db.query('tags', orderBy: 'name ASC');
-  }
-
-  // =============== 实用方法 ===============
-  Future<void> clearAllData() async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete('quotes');
-      await txn.delete('categories');
-      await txn.delete('tags');
-    });
-    notifyListeners();
   }
 }
