@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -14,11 +15,11 @@ import 'package:mind_trace/pages/home_page.dart';
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
     if (Platform.isWindows) {
-      // 初始化 SQLite FFI（仅Windows平台需要）
+      // 初始化 SQLite FFI（仅 Windows 平台需要）
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     } else if (Platform.isAndroid) {
-      // Android 平台不需要显式初始化
+      // Android 平台使用默认的 sqflite 实现
     }
     
     try {
@@ -35,7 +36,7 @@ Future<void> initializeDatabasePlatform() async {
         await Directory(dirname(path)).create(recursive: true);
       }
       
-      // 设置 Sqflite 的数据库路径
+      // 设置 sqflite 的数据库目录（仅在支持的平台下设置）
       if (Platform.isWindows || Platform.isAndroid) {
         await databaseFactory.setDatabasesPath(dbPath);
       }
@@ -48,7 +49,7 @@ Future<void> initializeDatabasePlatform() async {
 
 void main() async {
   try {
-    // 确保Flutter绑定初始化
+    // 确保 Flutter 绑定初始化
     WidgetsFlutterBinding.ensureInitialized();
 
     // 初始化数据库平台
@@ -58,7 +59,7 @@ void main() async {
     final settingsService = await SettingsService.create();
     final databaseService = DatabaseService();
     
-    // 初始化数据库
+    // 初始化数据库，设置超时时间为 5 秒（仅在非 Web 平台下初始化）
     if (!kIsWeb) {
       await databaseService.init().timeout(
         const Duration(seconds: 5),
@@ -109,24 +110,13 @@ void main() async {
                   const SizedBox(height: 16),
                   const Text(
                     '应用启动失败',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '错误信息: ${e.toString()}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      main(); // 重试启动应用
-                    },
-                    child: const Text('重新启动'),
-                  ),
+                  const SizedBox(height: 16),
+                  Text(e.toString()),
                 ],
               ),
             ),
@@ -143,21 +133,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '心迹',
-      home: FutureBuilder(
-        // 给予一个短暂的延迟，确保所有服务都已经正确初始化
-        future: Future.delayed(const Duration(milliseconds: 100)),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-          return const HomePage();
-        },
+      title: 'Mind Trace',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
       ),
+      home: const HomePage(),
     );
   }
 }
