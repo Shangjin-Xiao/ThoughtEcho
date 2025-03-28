@@ -42,7 +42,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -53,7 +53,7 @@ class DatabaseService extends ChangeNotifier {
               icon_name TEXT
             )
           ''');
-          // 创建引用（笔记）表：包含 id、内容、日期、标签、AI 分析、情感、关键词、摘要等字段
+          // 创建引用（笔记）表，新增 category_id 字段：包含 id、内容、日期、标签、AI 分析、情感、关键词、摘要、分类ID 等字段
           await db.execute('''
             CREATE TABLE quotes(
               id TEXT PRIMARY KEY,
@@ -63,20 +63,26 @@ class DatabaseService extends ChangeNotifier {
               ai_analysis TEXT,
               sentiment TEXT,
               keywords TEXT,
-              summary TEXT
+              summary TEXT,
+              category_id TEXT DEFAULT ''
             )
           ''');
         },
         onUpgrade: (db, oldVersion, newVersion) async {
-          // 如果数据库版本低于 2，添加 tag_ids 字段
+          // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
           if (oldVersion < 2) {
             await db.execute(
                 'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""');
           }
-          // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段
+          // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
           if (oldVersion < 3) {
             await db.execute(
                 'ALTER TABLE categories ADD COLUMN icon_name TEXT');
+          }
+          // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
+          if (oldVersion < 4) {
+            await db.execute(
+                'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""');
           }
         },
       );
@@ -177,10 +183,13 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
     final db = database;
+    // 如果笔记中不包含 categoryId, 则设为空字符串
     final id = quote.id ?? _uuid.v4();
     final quoteMap = quote.toMap();
     quoteMap['id'] = id;
-
+    if (!quoteMap.containsKey('category_id')) {
+      quoteMap['category_id'] = "";
+    }
     await db.insert(
       'quotes',
       quoteMap,
