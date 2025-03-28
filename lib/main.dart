@@ -6,18 +6,14 @@ import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' hide Context;  // 修改这里，明确hide Context
+import 'package:path/path.dart' hide Context;  // 避免Context类型冲突
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/models/quote_model.dart';
 
 Future<void> initializeDatabasePlatform() async {
-  if (!kIsWeb) {
-    if (Platform.isWindows) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-    
-    // Android平台不需要特殊初始化
+  if (!kIsWeb && Platform.isWindows) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
 }
 
@@ -81,23 +77,18 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Future<List<Quote>> _quotesFuture;
+  late DatabaseService _databaseService;
 
   @override
   void initState() {
     super.initState();
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _refreshData();
   }
 
   void _refreshData() {
-    // 修改这里，不在initState中使用context
-    Future<List<Quote>> Function() getQuotes;
-    if (mounted) {
-      getQuotes = () => Provider.of<DatabaseService>(context, listen: false).getQuotes();
-    } else {
-      getQuotes = () => DatabaseService().getQuotes();
-    }
     setState(() {
-      _quotesFuture = getQuotes();
+      _quotesFuture = _databaseService.getQuotes();
     });
   }
 
@@ -126,7 +117,7 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await _addSampleNote(context);
+          await _addSampleNote();
           _refreshData();
         },
         child: const Icon(Icons.add),
@@ -134,9 +125,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _addSampleNote(BuildContext context) async {
-    final db = Provider.of<DatabaseService>(context, listen: false);
-    await db.saveQuote(Quote(  // 修改这里，使用saveQuote而不是addQuote
+  Future<void> _addSampleNote() async {
+    await _databaseService.saveQuote(Quote(
       date: DateTime.now().toString(),
       content: '新笔记 ${DateTime.now().hour}:${DateTime.now().minute}',
     ));
