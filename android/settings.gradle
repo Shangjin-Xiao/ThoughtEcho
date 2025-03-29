@@ -36,6 +36,3 @@ dependencyResolutionManagement {
 rootProject.name = "mind-trace"
 
 include ':app'
-
-// 这将自动应用Flutter插件到所有需要的模块
-apply from: "${flutterSdkPath}/packages/flutter_tools/gradle/app_plugin_loader.gradle"
