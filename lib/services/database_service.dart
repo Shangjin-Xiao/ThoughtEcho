@@ -74,7 +74,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 6,
+        version: 7,
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -85,13 +85,15 @@ class DatabaseService extends ChangeNotifier {
               icon_name TEXT
             )
           ''');
-          // 创建引用（笔记）表，新增 category_id、source 和 color_hex 字段
+          // 创建引用（笔记）表，新增 category_id、source、source_author、source_work 和 color_hex 字段
           await db.execute('''
             CREATE TABLE quotes(
               id TEXT PRIMARY KEY,
               content TEXT NOT NULL,
               date TEXT NOT NULL,
               source TEXT,
+              source_author TEXT,
+              source_work TEXT,
               tag_ids TEXT DEFAULT '',
               ai_analysis TEXT,
               sentiment TEXT,
@@ -130,6 +132,55 @@ class DatabaseService extends ChangeNotifier {
             await db.execute(
                 'ALTER TABLE quotes ADD COLUMN color_hex TEXT');
           }
+          
+          // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
+          if (oldVersion < 7) {
+            await db.execute(
+                'ALTER TABLE quotes ADD COLUMN source_author TEXT');
+            await db.execute(
+                'ALTER TABLE quotes ADD COLUMN source_work TEXT');
+            
+            // 将现有的 source 字段数据拆分到新字段中
+            final quotes = await db.query('quotes', where: 'source IS NOT NULL AND source != ""');
+            for (final quote in quotes) {
+              final String? source = quote['source'] as String?;
+              if (source != null && source.isNotEmpty) {
+                String? author;
+                String? work;
+                
+                // 尝试分析现有source格式，提取author和work
+                if (source.contains('——') && source.contains('「')) {
+                  // 格式为"作者——「作品」"
+                  final parts = source.split('——');
+                  if (parts.length > 1) {
+                    author = parts[0].trim();
+                    final workMatch = RegExp(r'「(.+?)」').firstMatch(parts[1]);
+                    if (workMatch != null) {
+                      work = workMatch.group(1);
+                    }
+                  }
+                } else if (source.contains('——')) {
+                  // 格式为"作者——作品"
+                  final parts = source.split('——');
+                  if (parts.length > 1) {
+                    author = parts[0].trim();
+                    work = parts[1].trim();
+                  }
+                }
+                
+                // 更新数据库条目
+                await db.update(
+                  'quotes',
+                  {
+                    'source_author': author,
+                    'source_work': work,
+                  },
+                  where: 'id = ?',
+                  whereArgs: [quote['id']],
+                );
+              }
+            }
+          }
         },
       );
       // 更新分类流数据
@@ -166,6 +217,8 @@ class DatabaseService extends ChangeNotifier {
           'content': q['content'],
           'date': q['date'],
           'source': q['source'],
+          'sourceAuthor': q['source_author'],
+          'sourceWork': q['source_work'],
           'tagIds': q['tag_ids'],
           'aiAnalysis': q['ai_analysis'],
           'sentiment': q['sentiment'],
@@ -227,6 +280,8 @@ class DatabaseService extends ChangeNotifier {
             'content': q['content'],
             'date': q['date'],
             'source': q['source'],
+            'source_author': q['sourceAuthor'],
+            'source_work': q['sourceWork'],
             'tag_ids': q['tagIds'],
             'ai_analysis': q['aiAnalysis'],
             'sentiment': q['sentiment'],

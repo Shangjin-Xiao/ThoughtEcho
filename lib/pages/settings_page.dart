@@ -4,8 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart' show FilePicker, FileType;
 import 'home_page.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
+import '../services/api_service.dart';
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
+import 'hitokoto_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -48,6 +51,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SnackBar(content: Text('语言设置功能即将上线')),
                 );
               },
+            ),
+            _buildSettingItem(
+              icon: Icons.format_quote,
+              title: '一言设置',
+              subtitle: '选择一言类型',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HitokotoSettingsPage()),
+              ),
             ),
             Builder(
               builder: (context) {

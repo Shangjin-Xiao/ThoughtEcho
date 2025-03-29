@@ -13,6 +13,8 @@ import 'insights_page.dart';
 import '../utils/color_utils.dart'; // 新增导入，确保扩展方法可用
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
+import '../services/settings_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -52,7 +54,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _fetchDailyQuote();
+    _loadDailyQuote();
     _fetchDailyPrompt();
     _loadTags();
   }
@@ -70,13 +72,14 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> _fetchDailyQuote() async {
-    final quote = await ApiService.getDailyQuote();
-    if (mounted) {
-      setState(() {
-        dailyQuote = quote;
-      });
-    }
+  Future<void> _loadDailyQuote() async {
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final hitokotoType = settingsService.appSettings.hitokotoType;
+    
+    final quote = await ApiService.getDailyQuote(hitokotoType);
+    setState(() {
+      dailyQuote = quote;
+    });
   }
 
   Future<void> _fetchDailyPrompt() async {
@@ -99,21 +102,27 @@ class _HomePageState extends State<HomePage> {
       return '';
     }
     
-    String result = '——';
+    String result = '';
     if (author != null && author.isNotEmpty) {
-      result += ' $author';
+      result += '——$author';
     }
     
     if (source != null && source.isNotEmpty) {
-      result += ' 「$source」';
+      if (result.isNotEmpty) {
+        result += ' ';
+      } else {
+        result += '——';
+      }
+      result += '「$source」';
     }
     
     return result;
   }
 
-  void _showAddQuoteDialog(BuildContext context, DatabaseService db, {String? prefilledContent, String? prefilledSource}) {
+  void _showAddQuoteDialog(BuildContext context, DatabaseService db, {String? prefilledContent, String? prefilledAuthor, String? prefilledWork}) {
     final TextEditingController controller = TextEditingController(text: prefilledContent ?? '');
-    final TextEditingController sourceController = TextEditingController(text: prefilledSource ?? '');
+    final TextEditingController authorController = TextEditingController(text: prefilledAuthor ?? '');
+    final TextEditingController workController = TextEditingController(text: prefilledWork ?? '');
     final aiService = context.read<AIService>();
     String? aiSummary;
     bool isAnalyzing = false;
@@ -157,14 +166,45 @@ class _HomePageState extends State<HomePage> {
                 autofocus: true,
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: sourceController,
-                decoration: const InputDecoration(
-                  hintText: '添加来源，例如：真相只有一个——江户川柯南「名侦探柯南」',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.source),
+              // 拆分来源输入为作者和作品
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: authorController,
+                      decoration: const InputDecoration(
+                        hintText: '作者/人物',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: workController,
+                      decoration: const InputDecoration(
+                        hintText: '作品名称',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.book),
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '将显示为: ${_formatSource(authorController.text, workController.text)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
-                maxLines: 1,
               ),
               const SizedBox(height: 16),
               
@@ -421,23 +461,40 @@ class _HomePageState extends State<HomePage> {
                     child: const Text('取消'),
                   ),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (controller.text.isNotEmpty) {
                         if (!mounted) return;
-                        db.addQuote(
+                        final aiService = context.read<AIService>();
+                        final summary = await aiService.summarizeNote(
                           Quote(
+                            id: '',
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
-                            aiAnalysis: aiSummary,
-                            source: sourceController.text,
-                            tagIds: selectedTagIds,
-                            colorHex: selectedColorHex,
                           ),
                         );
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('保存成功！')),
+                        if (!mounted) return;
+                        setState(() {
+                          aiSummary = summary;
+                          isAnalyzing = false;
+                        });
+                        
+                        Quote quote = Quote(
+                          id: const Uuid().v4(),
+                          content: controller.text,
+                          date: DateTime.now().toIso8601String(),
+                          aiAnalysis: aiSummary,
+                          source: _formatSource(authorController.text, workController.text),
+                          sourceAuthor: authorController.text,
+                          sourceWork: workController.text,
+                          tagIds: selectedTagIds,
+                          colorHex: selectedColorHex,
                         );
+                        
+                        await db.addQuote(quote);
+                        // 关闭对话框
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       }
                     },
                     child: const Text('保存'),
@@ -805,7 +862,19 @@ class _HomePageState extends State<HomePage> {
                               ),
                               
                               // 来源信息（如果有）
-                              if (quote.source != null && quote.source!.isNotEmpty) ...[
+                              if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) || 
+                                 (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                                  child: Text(
+                                    _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurface.withOpacity(0.75),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
                                 Padding(
                                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                                   child: Text(
@@ -993,7 +1062,7 @@ class _HomePageState extends State<HomePage> {
               icon: const Icon(Icons.refresh),
               onPressed: () async {
                 await Future.wait([
-                  _fetchDailyQuote(),
+                  _loadDailyQuote(),
                   _fetchDailyPrompt(),
                 ]);
               },
@@ -1007,7 +1076,7 @@ class _HomePageState extends State<HomePage> {
           RefreshIndicator(
             onRefresh: () async {
               await Future.wait([
-                _fetchDailyQuote(),
+                _loadDailyQuote(),
                 _fetchDailyPrompt(),
               ]);
             },
@@ -1034,18 +1103,18 @@ class _HomePageState extends State<HomePage> {
                                   style: theme.textTheme.headlineSmall,
                                   textAlign: TextAlign.center,
                                 ),
-                                if (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty || 
-                                   dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty)
+                                if (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty || 
+                                   dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8.0),
                                     child: GestureDetector(
                                       onTap: () {
                                         // 单击复制内容
                                         final String formattedQuote = '${dailyQuote['content']}\n' + 
-                                          (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty ?
-                                           '——${dailyQuote['author']}' : '') +
-                                          (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty ?
-                                           '「${dailyQuote['source']}」' : '');
+                                          (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ?
+                                           '——${dailyQuote['from_who']}' : '') +
+                                          (dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ?
+                                           '「${dailyQuote['from']}」' : '');
                                         
                                         // 复制到剪贴板
                                         Clipboard.setData(ClipboardData(text: formattedQuote));
@@ -1055,26 +1124,16 @@ class _HomePageState extends State<HomePage> {
                                       },
                                       onDoubleTap: () {
                                         // 双击添加到笔记
-                                        final TextEditingController contentController = TextEditingController(text: dailyQuote['content']);
-                                        final TextEditingController sourceController = TextEditingController(
-                                          text: (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty ?
-                                                dailyQuote['author'] : '') +
-                                                (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty ?
-                                                '「${dailyQuote['source']}」' : '')
-                                        );
-                                        
                                         _showAddQuoteDialog(
                                           context, 
                                           db, 
                                           prefilledContent: dailyQuote['content'],
-                                          prefilledSource: (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty ?
-                                                '${dailyQuote['author']}——' : '') +
-                                                (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty ?
-                                                '「${dailyQuote['source']}」' : '')
+                                          prefilledAuthor: dailyQuote['from_who'],
+                                          prefilledWork: dailyQuote['from']
                                         );
                                       },
                                       child: Text(
-                                        formatHitokotoSource(dailyQuote['author'], dailyQuote['source']),
+                                        formatHitokotoSource(dailyQuote['from_who'], dailyQuote['from']),
                                         style: theme.textTheme.bodyMedium?.copyWith(
                                           fontStyle: FontStyle.italic,
                                         ),
@@ -1251,7 +1310,16 @@ class _HomePageState extends State<HomePage> {
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(BuildContext context, DatabaseService db, Quote quote) {
     final TextEditingController controller = TextEditingController(text: quote.content);
-    final TextEditingController sourceController = TextEditingController(text: quote.source);
+    final TextEditingController authorController = TextEditingController(text: quote.sourceAuthor ?? '');
+    final TextEditingController workController = TextEditingController(text: quote.sourceWork ?? '');
+    
+    // 仅当源字段为空时尝试解析旧数据（兼容已有数据）
+    if ((quote.sourceAuthor == null || quote.sourceAuthor!.isEmpty) && 
+        (quote.sourceWork == null || quote.sourceWork!.isEmpty) && 
+        quote.source != null && quote.source!.isNotEmpty) {
+      _parseSource(quote.source!, authorController, workController);
+    }
+    
     final aiService = context.read<AIService>();
     String? aiSummary = quote.aiAnalysis;
     bool isAnalyzing = false;
@@ -1295,14 +1363,45 @@ class _HomePageState extends State<HomePage> {
                 autofocus: true,
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: sourceController,
-                decoration: const InputDecoration(
-                  hintText: '添加来源，例如：真相只有一个——江户川柯南「名侦探柯南」',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.source),
+              // 拆分来源输入为作者和作品
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: authorController,
+                      decoration: const InputDecoration(
+                        hintText: '作者/人物',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: workController,
+                      decoration: const InputDecoration(
+                        hintText: '作品名称',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.book),
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '将显示为: ${_formatSource(authorController.text, workController.text)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
-                maxLines: 1,
               ),
               const SizedBox(height: 16),
               
@@ -1524,11 +1623,13 @@ class _HomePageState extends State<HomePage> {
                                     content: controller.text,
                                     date: quote.date,
                                     aiAnalysis: aiSummary,
+                                    source: _formatSource(authorController.text, workController.text),
+                                    sourceAuthor: authorController.text,
+                                    sourceWork: workController.text,
                                     tagIds: selectedTagIds,
                                     sentiment: quote.sentiment,
                                     keywords: quote.keywords,
                                     summary: quote.summary,
-                                    source: sourceController.text,
                                     categoryId: quote.categoryId,
                                     colorHex: selectedColorHex,
                                   ),
@@ -1571,11 +1672,13 @@ class _HomePageState extends State<HomePage> {
                           content: controller.text,
                           date: quote.date,
                           aiAnalysis: aiSummary,
+                          source: _formatSource(authorController.text, workController.text),
+                          sourceAuthor: authorController.text,
+                          sourceWork: workController.text,
                           tagIds: selectedTagIds,
                           sentiment: quote.sentiment,
                           keywords: quote.keywords,
                           summary: quote.summary,
-                          source: sourceController.text,
                           categoryId: quote.categoryId,
                           colorHex: selectedColorHex,
                         );
@@ -1624,5 +1727,43 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  String _formatSource(String author, String work) {
+    if (author.isEmpty && work.isEmpty) {
+      return '';
+    }
+    
+    String result = '';
+    if (author.isNotEmpty) {
+      result += '——$author';
+    }
+    
+    if (work.isNotEmpty) {
+      result += ' 「$work」';
+    }
+    
+    return result;
+  }
+
+  void _parseSource(String source, TextEditingController authorController, TextEditingController workController) {
+    // 尝试解析格式如"——作者「作品」"的字符串
+    String author = '';
+    String work = '';
+    
+    // 提取作者（在"——"之后，"「"之前）
+    final authorMatch = RegExp(r'——([^「]+)').firstMatch(source);
+    if (authorMatch != null && authorMatch.groupCount >= 1) {
+      author = authorMatch.group(1)?.trim() ?? '';
+    }
+    
+    // 提取作品（在「」之间）
+    final workMatch = RegExp(r'「(.+?)」').firstMatch(source);
+    if (workMatch != null && workMatch.groupCount >= 1) {
+      work = workMatch.group(1) ?? '';
+    }
+    
+    authorController.text = author;
+    workController.text = work;
   }
 }

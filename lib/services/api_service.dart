@@ -6,59 +6,53 @@ class Request {
 }
 
 class ApiService {
+  static const String baseUrl = 'https://v1.hitokoto.cn/';
+
+  // 一言类型常量
+  static const Map<String, String> hitokotoTypes = {
+    'a': '动画',
+    'b': '漫画',
+    'c': '游戏',
+    'd': '文学',
+    'e': '原创',
+    'f': '来自网络',
+    'g': '其他',
+    'h': '影视',
+    'i': '诗词',
+    'j': '网易云',
+    'k': '哲学',
+    'l': '抖机灵',
+  };
+
   static Future<Map<String, dynamic>> getDailyQuote([String? type]) async {
-    int retryCount = 0;
-    const maxRetries = 2;
-    
-    while (retryCount < maxRetries) {
-      try {
-        final uri = type != null
-            ? Uri.parse('https://v1.hitokoto.cn/?c=$type')
-            : Uri.parse('https://v1.hitokoto.cn/');
-        final response = await http.get(uri);
-        
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          return {
-            'content': data['hitokoto'],
-            'source': data['from'] ?? '未知',
-            'author': data['from_who'] ?? '',
-            'type': data['type'] ?? 'a'
-          };
-        } else if (response.statusCode == 429) {
-          await Future.delayed(const Duration(seconds: 1));
-          retryCount++;
-          continue;
-        }
-        
+    try {
+      final uri = type != null
+          ? Uri.parse('$baseUrl?c=$type')
+          : Uri.parse(baseUrl);
+      
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
         return {
-          'content': '获取失败，请稍后重试。',
-          'source': '系统',
-          'author': '',
-          'type': 'a'
+          'content': data['hitokoto'],
+          'from': data['from'] ?? '',
+          'from_who': data['from_who'] ?? '',
+          'type': data['type'] ?? ''
         };
-      } catch (e) {
-        print('获取一言失败: $e');
-        if (retryCount < maxRetries - 1) {
-          await Future.delayed(const Duration(seconds: 1));
-          retryCount++;
-          continue;
-        }
+      } else {
         return {
-          'content': '网络错误，请检查网络连接。',
-          'source': '系统',
-          'author': '',
-          'type': 'a'
+          'content': '获取每日一言失败',
+          'from_who': '',
+          'from': ''
         };
       }
+    } catch (e) {
+      return {
+        'content': '网络连接错误',
+        'from_who': '',
+        'from': ''
+      };
     }
-    
-    return {
-      'content': '获取失败，请稍后重试。',
-      'source': '系统',
-      'author': '',
-      'type': 'a'
-    };
   }
 
   void fetchData() {

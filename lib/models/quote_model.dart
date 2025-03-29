@@ -2,7 +2,9 @@ class Quote {
   final String? id;
   final String date;
   final String content;
-  final String? source;
+  final String? source;       // 保留用于兼容性
+  final String? sourceAuthor; // 添加作者字段
+  final String? sourceWork;   // 添加作品字段
   final String? aiAnalysis;
   final String? sentiment;
   final List<String>? keywords;
@@ -16,6 +18,8 @@ class Quote {
     required this.date,
     required this.content,
     this.source,
+    this.sourceAuthor,
+    this.sourceWork,
     this.aiAnalysis,
     this.sentiment,
     this.keywords,
@@ -31,6 +35,8 @@ class Quote {
       'date': date,
       'content': content,
       'source': source,
+      'source_author': sourceAuthor,
+      'source_work': sourceWork,
       'ai_analysis': aiAnalysis,
       'sentiment': sentiment,
       'keywords': keywords?.join(','),
@@ -47,6 +53,8 @@ class Quote {
       date: map['date'],
       content: map['content'],
       source: map['source'],
+      sourceAuthor: map['source_author'],
+      sourceWork: map['source_work'],
       aiAnalysis: map['ai_analysis'],
       sentiment: map['sentiment'],
       keywords: map['keywords']?.toString().split(','),
