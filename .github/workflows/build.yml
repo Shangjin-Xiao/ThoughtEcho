@@ -47,8 +47,8 @@ jobs:
           cat > key.properties << EOF
           storePassword=android
           keyPassword=android
-          keyAlias=androiddebugkey
-          storeFile=app/debug.keystore
+          keyAlias=key
+          storeFile=key.jks
           EOF
           
       - name: Create debug keystore
@@ -58,20 +58,24 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
         
-      - name: Flutter doctor
-        run: flutter doctor -v
-        
+      - name: Install sqlite3_flutter_libs for Android
+        run: |
+          # 确保sqlite3_flutter_libs正确安装
+          flutter pub get
+          
       - name: Build APK
         run: |
           # 确保清理之前的构建
           flutter clean
           
-          # 构建debug版本
-          flutter build apk --debug
+          # 构建release版本
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }}
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
