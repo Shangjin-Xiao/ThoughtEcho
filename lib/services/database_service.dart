@@ -42,7 +42,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 5,
+        version: 6,
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -53,7 +53,7 @@ class DatabaseService extends ChangeNotifier {
               icon_name TEXT
             )
           ''');
-          // 创建引用（笔记）表，新增 category_id 和 source 字段：包含 id、内容、日期、来源、标签、AI 分析、情感、关键词、摘要、分类ID 等字段
+          // 创建引用（笔记）表，新增 category_id、source 和 color_hex 字段
           await db.execute('''
             CREATE TABLE quotes(
               id TEXT PRIMARY KEY,
@@ -65,7 +65,8 @@ class DatabaseService extends ChangeNotifier {
               sentiment TEXT,
               keywords TEXT,
               summary TEXT,
-              category_id TEXT DEFAULT ''
+              category_id TEXT DEFAULT '',
+              color_hex TEXT
             )
           ''');
         },
@@ -90,6 +91,12 @@ class DatabaseService extends ChangeNotifier {
           if (oldVersion < 5) {
             await db.execute(
                 'ALTER TABLE quotes ADD COLUMN source TEXT');
+          }
+          
+          // 如果数据库版本低于 6，添加 quotes 表中的 color_hex 字段
+          if (oldVersion < 6) {
+            await db.execute(
+                'ALTER TABLE quotes ADD COLUMN color_hex TEXT');
           }
         },
       );
@@ -133,6 +140,7 @@ class DatabaseService extends ChangeNotifier {
           'keywords': q['keywords'],
           'summary': q['summary'],
           'categoryId': q['category_id'],
+          'colorHex': q['color_hex'],
         }).toList(),
       };
       
@@ -193,6 +201,7 @@ class DatabaseService extends ChangeNotifier {
             'keywords': q['keywords'],
             'summary': q['summary'],
             'category_id': q['categoryId'],
+            'color_hex': q['colorHex'],
           });
         }
       });

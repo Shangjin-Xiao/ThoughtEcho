@@ -118,6 +118,18 @@ class _HomePageState extends State<HomePage> {
     String? aiSummary;
     bool isAnalyzing = false;
     List<String> selectedTagIds = [];
+    
+    // 添加颜色选择
+    String? selectedColorHex;
+    final List<Color> colorOptions = [
+      Colors.red.shade100,
+      Colors.orange.shade100,
+      Colors.yellow.shade100,
+      Colors.green.shade100,
+      Colors.blue.shade100,
+      Colors.purple.shade100,
+      Colors.pink.shade100,
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -155,6 +167,94 @@ class _HomePageState extends State<HomePage> {
                 maxLines: 1,
               ),
               const SizedBox(height: 16),
+              
+              // 颜色选择区域
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '卡片颜色',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      // 默认选项（无颜色）
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedColorHex = null;
+                          });
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                              color: selectedColorHex == null 
+                                 ? Theme.of(context).colorScheme.primary 
+                                 : Colors.grey.shade300,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: selectedColorHex == null
+                            ? Center(
+                                child: Icon(
+                                  Icons.check,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              )
+                            : null,
+                        ),
+                      ),
+                      ...colorOptions.map((color) {
+                        final colorHex = '#${color.value.toRadixString(16).substring(2)}';
+                        final isSelected = selectedColorHex == colorHex;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedColorHex = colorHex;
+                            });
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color,
+                              border: Border.all(
+                                color: isSelected 
+                                   ? Theme.of(context).colorScheme.primary 
+                                   : Colors.grey.shade300,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: isSelected
+                              ? Center(
+                                  child: Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : null,
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
               // 标签选择区域
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +270,7 @@ class _HomePageState extends State<HomePage> {
                   Wrap(
                     spacing: 8.0,
                     runSpacing: 8.0,
-                    children: _tags.map((NoteCategory tag) { // 显式指定 tag 类型为 NoteCategory
+                    children: _tags.map((NoteCategory tag) {
                       final isSelected = selectedTagIds.contains(tag.id);
                       return FilterChip(
                         selected: isSelected,
@@ -218,11 +318,11 @@ class _HomePageState extends State<HomePage> {
                           children: selectedTagIds.map((tagId) {
                             final tag = _tags.firstWhere(
                               (t) => t.id == tagId,
-                              orElse: () => NoteCategory(id: tagId, name: '未知标签'), // 修改 orElse 返回 NoteCategory
+                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
                             );
                             return Chip(
-                              label: Text(tag.name, style: const TextStyle(fontSize: 12)), // tag 类型已变为 NoteCategory，name 属性存在
-                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14), // tag 类型已变为 NoteCategory，iconName 属性存在
+                              label: Text(tag.name, style: const TextStyle(fontSize: 12)),
+                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14),
                               deleteIcon: const Icon(Icons.close, size: 14),
                               onDeleted: () {
                                 setState(() {
@@ -331,6 +431,7 @@ class _HomePageState extends State<HomePage> {
                             aiAnalysis: aiSummary,
                             source: sourceController.text,
                             tagIds: selectedTagIds,
+                            colorHex: selectedColorHex,
                           ),
                         );
                         Navigator.pop(context);
@@ -645,10 +746,12 @@ class _HomePageState extends State<HomePage> {
                     final quote = quotes[index];
                     // 获取展开状态，如果不存在则默认为折叠状态
                     final bool isExpanded = _expandedItems[quote.id] ?? false;
-                    // 生成随机颜色，从主色和次色之间选择
-                    final Color cardColor = index % 2 == 0 
-                        ? theme.colorScheme.primary.withOpacity(0.1) 
-                        : theme.colorScheme.secondary.withOpacity(0.1);
+                    // 卡片颜色：优先使用自定义颜色，否则使用动态取色
+                    final Color cardColor = quote.colorHex != null 
+                        ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000)
+                        : index % 2 == 0 
+                          ? theme.colorScheme.primary.withOpacity(0.1) 
+                          : theme.colorScheme.secondary.withOpacity(0.1);
                     
                     // 格式化日期为年月日
                     final DateTime quoteDate = DateTime.parse(quote.date);
@@ -682,21 +785,6 @@ class _HomePageState extends State<HomePage> {
                                       style: theme.textTheme.bodySmall?.copyWith(
                                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.refresh,
-                                        size: 18,
-                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 20,
-                                        minHeight: 20,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      onPressed: () {
-                                        // 刷新功能，可以后续实现
-                                      },
                                     ),
                                   ],
                                 ),
@@ -1168,6 +1256,18 @@ class _HomePageState extends State<HomePage> {
     String? aiSummary = quote.aiAnalysis;
     bool isAnalyzing = false;
     List<String> selectedTagIds = List.from(quote.tagIds);
+    
+    // 添加颜色选择
+    String? selectedColorHex = quote.colorHex;
+    final List<Color> colorOptions = [
+      Colors.red.shade100,
+      Colors.orange.shade100,
+      Colors.yellow.shade100,
+      Colors.green.shade100,
+      Colors.blue.shade100,
+      Colors.purple.shade100,
+      Colors.pink.shade100,
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -1204,6 +1304,94 @@ class _HomePageState extends State<HomePage> {
                 ),
                 maxLines: 1,
               ),
+              const SizedBox(height: 16),
+              
+              // 颜色选择区域
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '卡片颜色',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      // 默认选项（无颜色）
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedColorHex = null;
+                          });
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                              color: selectedColorHex == null 
+                                 ? Theme.of(context).colorScheme.primary 
+                                 : Colors.grey.shade300,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: selectedColorHex == null
+                            ? Center(
+                                child: Icon(
+                                  Icons.check,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              )
+                            : null,
+                        ),
+                      ),
+                      ...colorOptions.map((color) {
+                        final colorHex = '#${color.value.toRadixString(16).substring(2)}';
+                        final isSelected = selectedColorHex == colorHex;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedColorHex = colorHex;
+                            });
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color,
+                              border: Border.all(
+                                color: isSelected 
+                                   ? Theme.of(context).colorScheme.primary 
+                                   : Colors.grey.shade300,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: isSelected
+                              ? Center(
+                                  child: Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : null,
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ],
+              ),
+              
               const SizedBox(height: 16),
               // 标签选择区域
               Column(
@@ -1335,6 +1523,14 @@ class _HomePageState extends State<HomePage> {
                                     id: quote.id,
                                     content: controller.text,
                                     date: quote.date,
+                                    aiAnalysis: aiSummary,
+                                    tagIds: selectedTagIds,
+                                    sentiment: quote.sentiment,
+                                    keywords: quote.keywords,
+                                    summary: quote.summary,
+                                    source: sourceController.text,
+                                    categoryId: quote.categoryId,
+                                    colorHex: selectedColorHex,
                                   ),
                                 );
                                 if (!mounted) return;
@@ -1381,6 +1577,7 @@ class _HomePageState extends State<HomePage> {
                           summary: quote.summary,
                           source: sourceController.text,
                           categoryId: quote.categoryId,
+                          colorHex: selectedColorHex,
                         );
                         db.updateQuote(updatedQuote);
                         Navigator.pop(context);

@@ -9,6 +9,7 @@ class Quote {
   final String? summary;
   List<String> tagIds;
   final String? categoryId;
+  final String? colorHex;
 
   Quote({
     this.id,
@@ -21,6 +22,7 @@ class Quote {
     this.summary,
     this.tagIds = const [],
     this.categoryId,
+    this.colorHex,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,6 +37,7 @@ class Quote {
       'summary': summary,
       'tag_ids': tagIds.join(','),
       'category_id': categoryId,
+      'color_hex': colorHex,
     };
   }
 
@@ -50,6 +53,7 @@ class Quote {
       summary: map['summary'],
       tagIds: (map['tag_ids']?.toString().split(',') ?? []).cast<String>(),
       categoryId: map['category_id'],
+      colorHex: map['color_hex'],
     );
   }
 }
