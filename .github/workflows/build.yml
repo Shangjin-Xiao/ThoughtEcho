@@ -19,60 +19,29 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-      
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 'wrapper'
-          cache-disabled: false
-          cache-read-only: false
-          gradle-home-cache-cleanup: true
+          cache: gradle
           
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.13.9'
           channel: 'stable'
           cache: true
       
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         
-      - name: Configure Gradle Properties
+      - name: Setup Gradle
         working-directory: android
         run: |
           cat > gradle.properties << EOF
-          org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
+          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
-          org.gradle.daemon=false
-          org.gradle.parallel=true
-          org.gradle.caching=true
+          android.enableR8=true
           EOF
           
-      - name: Update app/build.gradle
-        working-directory: android/app
-        run: |
-          sed -i 's/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:\$kotlin_version"/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:\$kotlin_version"\n    implementation "io.flutter:flutter_embedding_debug:1.0.0-18b71d647a292a980abb405ac7d16fe1f0b20434"\n    implementation "io.flutter:flutter_embedding_profile:1.0.0-18b71d647a292a980abb405ac7d16fe1f0b20434"\n    implementation "io.flutter:flutter_embedding_release:1.0.0-18b71d647a292a980abb405ac7d16fe1f0b20434"/' build.gradle
-      
-      - name: Create debug keystore
-        working-directory: android
-        run: |
-          # 确保目录存在
-          mkdir -p app/src/main/jniLibs
-          mkdir -p app/debug
-          
-          # 创建调试签名
-          keytool -genkeypair -v \
-            -keystore app/debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-          
-      - name: Configure Keystore Properties
+      - name: Configure Keystore
         working-directory: android
         run: |
           cat > key.properties << EOF
@@ -82,47 +51,27 @@ jobs:
           storeFile=app/debug.keystore
           EOF
           
-      - name: Check Files
+      - name: Create debug keystore
         working-directory: android
-        run: |
-          ls -la
-          ls -la app/
-          cat key.properties
-          cat app/build.gradle
+        run: keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
-      - name: Flutter Info
+      - name: Install Flutter dependencies
+        run: flutter pub get
+        
+      - name: Flutter doctor
+        run: flutter doctor -v
+        
+      - name: Build APK
         run: |
-          flutter --version
-          flutter doctor -v
-          
-      - name: Generate Files
-        run: |
-          flutter pub get
-          cd android
-          ./gradlew generateDebugSources --stacktrace
-          cd ..
-          
-      - name: Build Debug APK
-        run: |
-          # 清理之前的构建
+          # 确保清理之前的构建
           flutter clean
           
-          # 获取依赖
-          flutter pub get
+          # 构建debug版本
+          flutter build apk --debug
           
-          # 给Gradle脚本增加执行权限
-          cd android
-          chmod +x ./gradlew
-          
-          # 清理并检查Gradle
-          ./gradlew --no-daemon tasks --stacktrace
-          ./gradlew --no-daemon clean --stacktrace
-          ./gradlew --no-daemon :app:assembleDebug --stacktrace --info
-          cd ..
-            
-      - name: Upload Debug APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
