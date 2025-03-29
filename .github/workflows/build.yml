@@ -31,6 +31,13 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         
+      - name: Install Android SDK components
+        run: |
+          echo "y" | sdkmanager "platforms;android-34"
+          echo "y" | sdkmanager "build-tools;34.0.0"
+          echo "y" | sdkmanager "platform-tools"
+          echo "y" | sdkmanager "cmdline-tools;latest"
+          
       - name: Setup Gradle
         working-directory: android
         run: |
@@ -38,7 +45,6 @@ jobs:
           org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
-          android.enableR8=true
           EOF
           
       - name: Configure Keystore
@@ -73,18 +79,122 @@ jobs:
           # 确保Flutter模块正确处理
           cd android
           chmod +x ./gradlew
-          ./gradlew generateLockfiles
+          
+          # 创建特殊映射文件以处理老旧插件，如dynamic_color
+          mkdir -p .gradle
+          cat > .gradle/settings.json << EOF
+          {
+            "moduleConfigurationMap": {
+              "dynamic_color": {
+                "moduleType": "library",
+                "pluginClass": "DynamicColorPlugin"
+              },
+              "shared_preferences_android": {
+                "moduleType": "library",
+                "pluginClass": "SharedPreferencesPlugin"
+              },
+              "flutter_plugin_android_lifecycle": {
+                "moduleType": "library",
+                "pluginClass": "FlutterAndroidLifecyclePlugin"
+              },
+              "sqflite": {
+                "moduleType": "library",
+                "pluginClass": "SqflitePlugin"
+              },
+              "file_picker": {
+                "moduleType": "library",
+                "pluginClass": "FilePickerPlugin"
+              },
+              "sqlite3_flutter_libs": {
+                "moduleType": "library",
+                "pluginClass": "Sqlite3FlutterLibsPlugin"
+              },
+              "url_launcher_android": {
+                "moduleType": "library",
+                "pluginClass": "UrlLauncherPlugin"
+              },
+              "path_provider_android": {
+                "moduleType": "library",
+                "pluginClass": "PathProviderPlugin"
+              }
+            }
+          }
+          EOF
+          
+          # 检查SDK安装情况
+          ls -la $ANDROID_SDK_ROOT/platforms || echo "No platforms directory"
+          ls -la $ANDROID_SDK_ROOT/platform-tools || echo "No platform-tools directory"
+          ls -la $ANDROID_SDK_ROOT/build-tools || echo "No build-tools directory"
+          
           cd ..
+          
+      - name: Update .flutter-plugins-dependencies
+        run: |
+          # 更新依赖关系
+          if [ -f .flutter-plugins-dependencies ]; then
+            echo "更新 .flutter-plugins-dependencies 文件"
+            cat > .flutter-plugins-dependencies.template << EOF
+          {"info":"This is a generated file; do not edit or check into version control.","plugins":{"ios":[],"android":[{"name":"dynamic_color","path":"dynamic_color","native_build":true},{"name":"file_picker","path":"file_picker","native_build":true},{"name":"flutter_plugin_android_lifecycle","path":"flutter_plugin_android_lifecycle","native_build":true},{"name":"path_provider_android","path":"path_provider_android","native_build":true},{"name":"shared_preferences_android","path":"shared_preferences_android","native_build":true},{"name":"sqflite","path":"sqflite","native_build":true},{"name":"sqlite3_flutter_libs","path":"sqlite3_flutter_libs","native_build":true},{"name":"url_launcher_android","path":"url_launcher_android","native_build":true}],"macos":[],"linux":[],"windows":[],"web":[]},"dependencyGraph":[],"date_created":"2024-01-01 00:00:00.000","version":"3.19.3"}
+          EOF
+            cp .flutter-plugins-dependencies.template .flutter-plugins-dependencies
+          fi
+          
+      - name: Setup Flutter plugins manually
+        run: |
+          # 获取每个插件的位置
+          PLUGIN_LIST=$(flutter pub deps --json | grep -o '"dependency":.*' | grep -o 'path: .*' | cut -d '"' -f 2)
+          
+          # 为每个插件创建必要的配置
+          for PLUGIN_PATH in $PLUGIN_LIST; do
+            if [ -d "$PLUGIN_PATH" ] && [ -d "$PLUGIN_PATH/android" ]; then
+              echo "处理插件: $PLUGIN_PATH"
+              # 确保插件的Android目录有build.gradle文件
+              if [ ! -f "$PLUGIN_PATH/android/build.gradle" ]; then
+                echo "创建默认build.gradle"
+                cat > "$PLUGIN_PATH/android/build.gradle" << EOF
+group '$(basename "$PLUGIN_PATH")'
+version '1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.2'
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+}
+EOF
+              fi
+            fi
+          done
           
       - name: Build APK
         run: |
           # 确保清理之前的构建
           flutter clean
           
-          # 构建release版本
+          # 构建release版本，使用--no-tree-shake-icons避免图标问题
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }}
+            --build-name=1.0.${{ github.run_number }} \
+            --no-tree-shake-icons
           
       - name: Upload APK
         uses: actions/upload-artifact@v4

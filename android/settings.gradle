@@ -40,16 +40,77 @@ rootProject.name = "mind-trace"
 
 include ':app'
 
-// 设置为从Flutter插件子目录读取插件设置
+// 使用安全的方式处理插件
 def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
+
+// 旧版Flutter插件加载方式
 def plugins = new Properties()
 def pluginsFile = new File(flutterProjectRoot.toFile(), '.flutter-plugins')
 if (pluginsFile.exists()) {
     pluginsFile.withReader('UTF-8') { reader -> plugins.load(reader) }
 }
 
+// 新版Flutter插件加载方式 
+def pluginsJsonFile = new File(flutterProjectRoot.toFile(), '.flutter-plugins-dependencies')
+def json = null
+if (pluginsJsonFile.exists()) {
+    def jsonTxt = pluginsJsonFile.text
+    try {
+        def slurper = new groovy.json.JsonSlurper()
+        json = slurper.parseText(jsonTxt)
+    } catch (Exception e) {
+        println("Error parsing .flutter-plugins-dependencies file: ${e.message}")
+    }
+}
+
+// 处理老式插件
 plugins.each { name, path ->
     def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
-    include ":$name"
-    project(":$name").projectDir = pluginDirectory
+    if (pluginDirectory.exists()) {
+        include ":$name"
+        project(":$name").projectDir = pluginDirectory
+        
+        // 检查是否存在android目录
+        def androidDir = new File(pluginDirectory, "android")
+        if (!androidDir.exists()) {
+            println("Creating android directory for plugin: $name")
+            androidDir.mkdir()
+        }
+        
+        // 检查是否存在build.gradle
+        def buildGradle = new File(androidDir, "build.gradle")
+        if (!buildGradle.exists()) {
+            println("Creating default build.gradle for plugin: $name")
+            buildGradle.text = """
+group '$name'
+version '1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.2'
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+}
+"""
+        }
+    }
 }
