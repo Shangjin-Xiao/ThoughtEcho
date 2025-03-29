@@ -34,6 +34,12 @@ jobs:
       - name: 检查Flutter问题
         run: flutter analyze || true
       
+      - name: 修复dynamic_color插件问题
+        run: |
+          cd android
+          echo "buildscript { repositories { google(); mavenCentral() } }" > dynamic_color_fix.gradle
+          echo "allprojects { repositories { google(); mavenCentral() } }" >> dynamic_color_fix.gradle
+          
       - name: 设置调试签名
         run: |
           cd android/app
@@ -49,7 +55,7 @@ jobs:
             -validity 10000
       
       - name: 构建调试版APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-pub
       
       - name: 保存APK构建产物
         uses: actions/upload-artifact@v4
