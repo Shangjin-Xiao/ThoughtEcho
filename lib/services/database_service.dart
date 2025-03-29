@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import 'package:uuid/uuid.dart';
@@ -110,7 +111,110 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 获取所有分类
+  /// 导出全部数据到 JSON 格式
+  Future<String> exportAllData() async {
+    try {
+      final db = database;
+      
+      // 查询所有数据并转换为 JSON 友好的格式
+      final categories = await db.query('categories');
+      final quotes = await db.query('quotes');
+      
+      final jsonData = {
+        'metadata': {
+          'app': 'MindTrace',
+          'version': await db.getVersion(),
+          'exportTime': DateTime.now().toIso8601String(),
+        },
+        'categories': categories.map((c) => {
+          'id': c['id'],
+          'name': c['name'],
+          'isDefault': c['is_default'] == 1,
+          'iconName': c['icon_name'],
+        }).toList(),
+        'quotes': quotes.map((q) => {
+          'id': q['id'],
+          'content': q['content'],
+          'date': q['date'],
+          'source': q['source'],
+          'tagIds': q['tag_ids'],
+          'aiAnalysis': q['ai_analysis'],
+          'sentiment': q['sentiment'],
+          'keywords': q['keywords'],
+          'summary': q['summary'],
+          'categoryId': q['category_id'],
+        }).toList(),
+      };
+      
+      // 转换为格式化的 JSON 字符串
+      final jsonStr = JsonEncoder.withIndent('  ').convert(jsonData);
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = 'mindtrace_${DateTime.now().millisecondsSinceEpoch}.json';
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsString(jsonStr);
+      return file.path;
+    } catch (e) {
+      debugPrint('数据导出失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 从 JSON 文件导入数据
+  Future<void> importData(String filePath) async {
+    try {
+      final db = database;
+      final file = File(filePath);
+      final jsonStr = await file.readAsString();
+      final data = json.decode(jsonStr) as Map<String, dynamic>;
+      
+      // 验证数据格式
+      if (!data.containsKey('metadata') || !data.containsKey('categories') || !data.containsKey('quotes')) {
+        throw Exception('无效的备份文件格式');
+      }
+      
+      // 开始事务
+      await db.transaction((txn) async {
+        // 清空现有数据
+        await txn.delete('categories');
+        await txn.delete('quotes');
+        
+        // 恢复分类数据
+        final categories = data['categories'] as List;
+        for (final c in categories) {
+          await txn.insert('categories', {
+            'id': c['id'],
+            'name': c['name'],
+            'is_default': c['isDefault'] ? 1 : 0,
+            'icon_name': c['iconName'],
+          });
+        }
+        
+        // 恢复笔记数据
+        final quotes = data['quotes'] as List;
+        for (final q in quotes) {
+          await txn.insert('quotes', {
+            'id': q['id'],
+            'content': q['content'],
+            'date': q['date'],
+            'source': q['source'],
+            'tag_ids': q['tagIds'],
+            'ai_analysis': q['aiAnalysis'],
+            'sentiment': q['sentiment'],
+            'keywords': q['keywords'],
+            'summary': q['summary'],
+            'category_id': q['categoryId'],
+          });
+        }
+      });
+      
+      await _updateCategoriesStream();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('数据导入失败: $e');
+      rethrow;
+    }
+  }
+
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
       return _categoryStore;
