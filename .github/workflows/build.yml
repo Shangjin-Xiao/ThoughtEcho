@@ -56,12 +56,25 @@ jobs:
         run: keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
       - name: Install Flutter dependencies
-        run: flutter pub get
+        run: |
+          flutter clean
+          flutter pub get
+          # 强制重新生成插件信息
+          rm -f .flutter-plugins-dependencies || true
+          flutter pub get
         
       - name: Install sqlite3_flutter_libs for Android
         run: |
           # 确保sqlite3_flutter_libs正确安装
           flutter pub get
+          
+      - name: Process Flutter modules
+        run: |
+          # 确保Flutter模块正确处理
+          cd android
+          chmod +x ./gradlew
+          ./gradlew generateLockfiles
+          cd ..
           
       - name: Build APK
         run: |
