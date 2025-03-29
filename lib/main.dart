@@ -151,9 +151,15 @@ class MyApp extends StatelessWidget {
   // 根据平台获取不同的 primarySwatch
   MaterialColor _getPrimarySwatchForPlatform(BuildContext context) {
     try {
+      // 所有平台都使用默认蓝色，避免在应用初始化阶段使用Theme.of(context)导致空值异常
+      debugPrint('所有平台: 使用默认蓝色');
+      return createMaterialColor(Colors.blue);
+      // 注释掉原来的平台特定逻辑，因为在应用初始化阶段可能导致问题
+      /*
       if (kIsWeb) {
         debugPrint('Web平台: 使用默认蓝色');
-        return createMaterialColor(Colors.blue); // Web平台默认蓝色
+        // Web平台直接使用默认蓝色，不尝试获取Theme.of(context)
+        return createMaterialColor(Colors.blue);
       } else if (Platform.isAndroid) {
         // 动态获取安卓主题色
         final Color? androidDynamicColor = Theme.of(context).colorScheme.primary;
@@ -163,8 +169,10 @@ class MyApp extends StatelessWidget {
         debugPrint('其他平台: 使用默认蓝色');
         return createMaterialColor(Colors.blue); // 其他平台默认蓝色
       }
-    } catch (e) {
-      debugPrint('获取平台主题色出错: $e，使用默认蓝色');
+      */
+    } catch (e, stackTrace) {
+      debugPrint('获取平台主题色出错: $e');
+      debugPrint('错误堆栈: $stackTrace');
       return createMaterialColor(Colors.blue); // 出错时使用默认蓝色
     }
   }
@@ -172,21 +180,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primaryColor = _getPrimarySwatchForPlatform(context);
+    // 确保 primaryColor[150] 不为空，特别是在Web平台上
+    final Color secondaryColor = kIsWeb 
+        ? primaryColor // Web平台直接使用primaryColor作为secondaryColor
+        : (primaryColor[150] ?? primaryColor); // 非Web平台尝试使用色阶150
+    
     return MaterialApp(
       title: 'Mind Trace',
       themeMode: ThemeMode.system, // 默认使用系统主题
       theme: ThemeData.light().copyWith(
         colorScheme: ColorScheme.light(
           primary: primaryColor,
-          // 使用存在的色阶 150，并添加空值回退
-          secondary: primaryColor[150] ?? primaryColor,
+          secondary: secondaryColor,
         ),
       ),
       darkTheme: ThemeData.dark().copyWith(
         colorScheme: ColorScheme.dark(
           primary: primaryColor,
-          // 使用存在的色阶 150，并添加空值回退
-          secondary: primaryColor[150] ?? primaryColor,
+          secondary: secondaryColor,
         ),
       ),
       home: const HomePage(),
