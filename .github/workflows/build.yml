@@ -19,7 +19,14 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: gradle
+      
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 'wrapper'
+          cache-disabled: false
+          cache-read-only: false
+          gradle-home-cache-cleanup: true
           
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -30,59 +37,87 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         
-      - name: Setup Gradle
+      - name: Configure Gradle Properties
         working-directory: android
         run: |
           cat > gradle.properties << EOF
-          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
+          org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
           android.enableR8=true
+          org.gradle.daemon=false
+          org.gradle.parallel=true
+          org.gradle.caching=true
           EOF
           
-      - name: Configure Keystore
+      - name: Create debug keystore
+        working-directory: android
+        run: |
+          # 确保目录存在
+          mkdir -p app/src/main/jniLibs
+          mkdir -p app/debug
+          
+          # 创建调试签名
+          keytool -genkeypair -v \
+            -keystore app/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          
+      - name: Configure Keystore Properties
         working-directory: android
         run: |
           cat > key.properties << EOF
           storePassword=android
           keyPassword=android
-          keyAlias=key
-          storeFile=key.jks
+          keyAlias=androiddebugkey
+          storeFile=app/debug.keystore
           EOF
           
-      - name: Create debug keystore
+      - name: Check Files
         working-directory: android
-        run: keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        run: |
+          ls -la
+          ls -la app/
+          cat key.properties
           
-      - name: Install Flutter dependencies
-        run: flutter pub get
+      - name: Flutter Info
+        run: |
+          flutter --version
+          flutter doctor -v
+          
+      - name: Install Flutter Dependencies
+        run: |
+          flutter pub get
+          flutter pub deps
         
-      - name: Flutter doctor
-        run: flutter doctor -v
-          
-      - name: Build APK
+      - name: Build Debug APK
         run: |
           # 清理之前的构建
           flutter clean
           
-          # 重新获取依赖
+          # 获取依赖
           flutter pub get
           
-          # 打印依赖版本
-          flutter pub deps
-          
-          # 重置Gradle
+          # 给Gradle脚本增加执行权限
           cd android
           chmod +x ./gradlew
-          ./gradlew clean
+          
+          # 清理并检查Gradle
+          ./gradlew --no-daemon tasks
+          ./gradlew --no-daemon clean
           cd ..
           
-          # 构建APK
-          flutter build apk --release
+          # 直接构建调试APK
+          flutter build apk --debug
             
-      - name: Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
