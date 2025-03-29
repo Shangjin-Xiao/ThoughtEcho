@@ -24,7 +24,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.3'  # 使用最新稳定版本
+          flutter-version: 'stable'
           channel: 'stable'
           cache: true
       
@@ -39,7 +39,6 @@ jobs:
           android.useAndroidX=true
           android.enableJetifier=true
           android.enableR8=true
-          android.suppressUnsupportedCompileSdk=34
           EOF
           
       - name: Configure Keystore
