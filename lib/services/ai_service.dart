@@ -19,7 +19,7 @@ class AIService extends ChangeNotifier {
   }
 
   Future<http.Response> _makeRequest(String url, Map<String, dynamic> body, AISettings settings) async {
-    if (!body.containsKey('messages') || !(body['messages'] is List)) {
+    if (body['messages'] is! List) {
       throw Exception('messages字段格式错误');
     }
 
@@ -230,5 +230,12 @@ class AIService extends ChangeNotifier {
       debugPrint('提问错误: $e');
       rethrow;
     }
+  }
+}
+
+class AiService {
+  void analyzeData(dynamic data) {
+    if (data is! String) return;
+    print("Analyzing data: $data");
   }
 }

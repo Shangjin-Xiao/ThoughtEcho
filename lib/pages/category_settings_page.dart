@@ -156,7 +156,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               await context
                                   .read<DatabaseService>()
                                   .deleteCategory(category.id);
-                                  
+                              
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('分类删除成功')),

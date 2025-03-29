@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/note_category.dart';
@@ -99,15 +98,6 @@ class DatabaseService extends ChangeNotifier {
     } catch (e) {
       debugPrint('数据库初始化错误: $e');
       rethrow;
-    }
-  }
-
-  // 如果需要，在此处完善默认分类初始化逻辑
-  Future<void> _ensureDefaultCategories() async {
-    // 示例：如果当前没有分类，则添加一个默认分类
-    final existing = await getCategories();
-    if (existing.isEmpty) {
-      await addCategory("默认分类", iconName: "default_icon");
     }
   }
 

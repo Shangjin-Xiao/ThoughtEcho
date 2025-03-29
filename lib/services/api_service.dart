@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+class Request {
+  const Request();
+}
+
 class ApiService {
   static Future<Map<String, dynamic>> getDailyQuote([String? type]) async {
     int retryCount = 0;
@@ -21,7 +25,7 @@ class ApiService {
             'type': data['type'] ?? 'a'
           };
         } else if (response.statusCode == 429) {
-          await Future.delayed(Duration(seconds: 1));
+          await Future.delayed(const Duration(seconds: 1));
           retryCount++;
           continue;
         }
@@ -34,7 +38,7 @@ class ApiService {
       } catch (e) {
         print('获取一言失败: $e');
         if (retryCount < maxRetries - 1) {
-          await Future.delayed(Duration(seconds: 1));
+          await Future.delayed(const Duration(seconds: 1));
           retryCount++;
           continue;
         }
@@ -51,5 +55,10 @@ class ApiService {
       'source': '系统',
       'type': 'a'
     };
+  }
+
+  void fetchData() {
+    final req = const Request();
+    print("请求发送：${req.toString()}");
   }
 }

@@ -1,5 +1,3 @@
-export '../services/settings_service.dart' show AISettings;
-
 class AISettings {
   final String apiKey;
   final String apiUrl;

@@ -10,6 +10,7 @@ import '../models/note_category.dart'; // 添加 import NoteCategory
 import 'settings_page.dart';
 import '../services/ai_service.dart';
 import 'insights_page.dart';
+import '../utils/color_utils.dart'; // 新增导入，确保扩展方法可用
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -138,17 +139,17 @@ class _HomePageState extends State<HomePage> {
                     spacing: 8.0,
                     runSpacing: 8.0,
                     children: _tags.map((NoteCategory tag) { // 显式指定 tag 类型为 NoteCategory
-                      final isSelected = selectedTagIds.contains(tag?.id);
+                      final isSelected = selectedTagIds.contains(tag.id);
                       return FilterChip(
                         selected: isSelected,
-                        label: Text(tag?.name ?? ''),
-                        avatar: Icon(IconUtils.getIconData(tag?.iconName)),
+                        label: Text(tag.name),
+                        avatar: Icon(IconUtils.getIconData(tag.iconName)),
                         onSelected: (selected) {
                           setState(() {
                             if (selected) {
-                              selectedTagIds.add(tag?.id ?? '');
+                              selectedTagIds.add(tag.id);
                             } else {
-                              selectedTagIds.remove(tag?.id);
+                              selectedTagIds.remove(tag.id);
                             }
                           });
                         },
@@ -165,7 +166,7 @@ class _HomePageState extends State<HomePage> {
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -545,13 +546,13 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.note_alt_outlined,
                           size: 64,
-                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          color: theme.colorScheme.primary.applyOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '还没有笔记，开始记录吧！',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            color: theme.colorScheme.primary.applyOpacity(0.5),
                           ),
                         ),
                       ],
@@ -574,13 +575,13 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.search_off,
                           size: 64,
-                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          color: theme.colorScheme.primary.applyOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '没有找到匹配的笔记',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            color: theme.colorScheme.primary.applyOpacity(0.5),
                           ),
                         ),
                       ],
@@ -615,7 +616,7 @@ class _HomePageState extends State<HomePage> {
                       child: Material(
                         elevation: 2,
                         borderRadius: BorderRadius.circular(16),
-                        color: theme.colorScheme.surfaceVariant.withOpacity(0.8),
+                        color: theme.colorScheme.surfaceContainerHighest.applyOpacity(0.8),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
                           onTap: () {
@@ -644,7 +645,7 @@ class _HomePageState extends State<HomePage> {
                                   Text(
                                     '—— ${quote.source}',
                                     style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                      color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.7),
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -658,7 +659,7 @@ class _HomePageState extends State<HomePage> {
                                     Icon(
                                       Icons.access_time,
                                       size: 16,
-                                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                      color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.6),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -667,7 +668,7 @@ class _HomePageState extends State<HomePage> {
                                           .toString()
                                           .split('.')[0],
                                       style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                        color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.6),
                                       ),
                                     ),
                                     
@@ -677,7 +678,7 @@ class _HomePageState extends State<HomePage> {
                                       Icon(
                                         Icons.label_outline,
                                         size: 16,
-                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                        color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.6),
                                       ),
                                       const SizedBox(width: 4),
                                       Expanded(
@@ -696,7 +697,7 @@ class _HomePageState extends State<HomePage> {
                                                   vertical: 2,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: theme.colorScheme.primary.withOpacity(0.1),
+                                                  color: theme.colorScheme.primary.applyOpacity(0.1),
                                                   borderRadius: BorderRadius.circular(12),
                                                 ),
                                                 child: Text(
@@ -878,7 +879,7 @@ class _HomePageState extends State<HomePage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.shadowColor.withAlpha(26),
+                              color: theme.shadowColor.applyOpacity(0.26),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -1115,7 +1116,7 @@ class _HomePageState extends State<HomePage> {
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -1274,7 +1275,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除笔记'),
-        content: Text('确定要删除这条笔记吗？此操作无法撤销。'),
+        content: const Text('确定要删除这条笔记吗？此操作无法撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

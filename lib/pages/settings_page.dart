@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:file_picker/file_picker.dart' show FilePicker, FileType; // 明确导入需要的类
-import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart' show FilePicker, FileType;
 import 'home_page.dart';
 import '../services/database_service.dart';
-import '../services/settings_service.dart';
-import '../models/note_tag.dart';
-import '../models/ai_settings.dart';
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 
@@ -19,7 +15,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _isLoading = false;
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/mind-trace/';
 
   @override
@@ -135,18 +130,18 @@ class _SettingsPageState extends State<SettingsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), // 减小上下间距
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Text(
             title,
             style: const TextStyle(
-              fontSize: 14, // 减小字号
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: Colors.blue,
             ),
           ),
         ),
         ...children,
-        const Divider(height: 1), // 减小分割线高度
+        const Divider(height: 1),
       ],
     );
   }
@@ -158,22 +153,22 @@ class _SettingsPageState extends State<SettingsPage> {
     VoidCallback? onTap,
   }) {
     return ListTile(
-      visualDensity: VisualDensity.compact, // 使用紧凑布局
+      visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16,
-        vertical: 4, // 减小垂直间距
+        vertical: 4,
       ),
-      leading: Icon(icon, color: Colors.blue, size: 20), // 减小图标大小
+      leading: Icon(icon, color: Colors.blue, size: 20),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 14), // 减小标题字号
+        style: const TextStyle(fontSize: 14),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(fontSize: 12), // 减小副标题字号
+        style: const TextStyle(fontSize: 12),
       ),
       trailing: onTap != null 
-        ? const Icon(Icons.chevron_right, size: 18)  // 减小箭头图标大小
+        ? const Icon(Icons.chevron_right, size: 18)
         : null,
       onTap: onTap,
     );
@@ -183,7 +178,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     final context = this.context;
     
-    setState(() => _isLoading = true);
     try {
       final dbService = Provider.of<DatabaseService>(context, listen: false);
       final path = await dbService.exportAllData();
@@ -207,10 +201,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('备份失败: $e')),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
@@ -248,7 +238,6 @@ class _SettingsPageState extends State<SettingsPage> {
       
       if (confirmed != true || !mounted) return;
       
-      setState(() => _isLoading = true);
       final dbService = Provider.of<DatabaseService>(context, listen: false);
       await dbService.importData(result.files.single.path!);
       
@@ -274,10 +263,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('恢复失败: $e')),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 }

@@ -31,7 +31,7 @@ class Quote {
       'source': source,
       'ai_analysis': aiAnalysis,
       'sentiment': sentiment,
-      'keywords': keywords != null ? keywords!.join(',') : null,
+      'keywords': keywords?.join(','),
       'summary': summary,
       'tag_ids': tagIds.join(','),
       'category_id': categoryId,
@@ -46,10 +46,21 @@ class Quote {
       source: map['source'],
       aiAnalysis: map['ai_analysis'],
       sentiment: map['sentiment'],
-      keywords: map['keywords'] != null ? map['keywords'].toString().split(',') : null,
+      keywords: map['keywords']?.toString().split(','),
       summary: map['summary'],
       tagIds: (map['tag_ids']?.toString().split(',') ?? []).cast<String>(),
       categoryId: map['category_id'],
     );
+  }
+}
+
+class QuoteModel {
+  final String? author;
+
+  // 添加 const 构造函数，默认值为空字符串
+  const QuoteModel({this.author = ''});
+  
+  String getDisplayAuthor() {
+    return author?.toUpperCase() ?? 'UNKNOWN';
   }
 }

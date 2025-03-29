@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/color_utils.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
@@ -59,7 +60,7 @@ class _SlidingCardState extends State<SlidingCard> {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.5),
+                            .applyOpacity(0.5),
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -68,7 +69,7 @@ class _SlidingCardState extends State<SlidingCard> {
                           color: Theme.of(context)
                               .colorScheme
                               .primary
-                              .withOpacity(0.5),
+                              .applyOpacity(0.5),
                         ),
                       ),
                     ],
