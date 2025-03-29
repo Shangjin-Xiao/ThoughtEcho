@@ -82,11 +82,10 @@ jobs:
           ./gradlew clean
           cd ..
           
-          # 尝试使用Flutter构建
+          # 构建universal APK (不分割ABI)
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }} \
-            --split-per-abi
+            --build-name=1.0.${{ github.run_number }}
             
       - name: Fallback Gradle Build (如果Flutter构建失败)
         if: ${{ failure() }}
@@ -101,8 +100,5 @@ jobs:
           name: app-release
           path: |
             build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
             android/app/build/outputs/apk/release/app-release.apk
           retention-days: 7
