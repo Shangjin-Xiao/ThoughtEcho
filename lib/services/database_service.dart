@@ -199,37 +199,71 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 获取用户的所有引用（支持通过标签 tagIds 或分类 categoryId 查询）
-  Future<List<Quote>> getUserQuotes({
-    List<String>? tagIds,
-    String? categoryId,
-  }) async {
-    try {
+    Future<List<Quote>> getUserQuotes({
+      List<String>? tagIds,
+      String? categoryId,
+    }) async {
+      try {
+        if (kIsWeb) {
+          return _memoryStore;
+        }
+        final db = database;
+        List<Map<String, dynamic>> maps;
+        if (tagIds != null && tagIds.isNotEmpty) {
+          // 根据 tag_ids 字段进行模糊匹配查询
+          final whereClause = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
+          maps = await db.query(
+            'quotes',
+            where: whereClause,
+            whereArgs: tagIds.map((id) => '%$id%').toList(),
+          );
+        } else if (categoryId != null && categoryId.isNotEmpty) {
+          maps = await db.query(
+            'quotes',
+            where: 'category_id = ?',
+            whereArgs: [categoryId],
+          );
+        } else {
+          maps = await db.query('quotes');
+        }
+        return maps.map((map) => Quote.fromMap(map)).toList();
+      } catch (e) {
+        debugPrint('获取引用错误: $e');
+        return [];
+      }
+    }
+  
+    /// 删除指定的笔记
+    Future<void> deleteQuote(String id) async {
       if (kIsWeb) {
-        return _memoryStore;
+        _memoryStore.removeWhere((quote) => quote.id == id);
+        notifyListeners();
+        return;
       }
       final db = database;
-      List<Map<String, dynamic>> maps;
-      if (tagIds != null && tagIds.isNotEmpty) {
-        // 根据 tag_ids 字段进行模糊匹配查询
-        final whereClause = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
-        maps = await db.query(
-          'quotes',
-          where: whereClause,
-          whereArgs: tagIds.map((id) => '%$id%').toList(),
-        );
-      } else if (categoryId != null && categoryId.isNotEmpty) {
-        maps = await db.query(
-          'quotes',
-          where: 'category_id = ?',
-          whereArgs: [categoryId],
-        );
-      } else {
-        maps = await db.query('quotes');
-      }
-      return maps.map((map) => Quote.fromMap(map)).toList();
-    } catch (e) {
-      debugPrint('获取引用错误: $e');
-      return [];
+      await db.delete('quotes', where: 'id = ?', whereArgs: [id]);
+      notifyListeners();
     }
-  }
+  
+    /// 更新笔记内容
+    Future<void> updateQuote(Quote quote) async {
+      if (kIsWeb) {
+        final index = _memoryStore.indexWhere((q) => q.id == quote.id);
+        if (index != -1) {
+          _memoryStore[index] = quote;
+          notifyListeners();
+        }
+        return;
+      }
+      final db = database;
+      final quoteMap = quote.toMap();
+      await db.update(
+        'quotes',
+        quoteMap,
+        where: 'id = ?',
+        whereArgs: [quote.id],
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      notifyListeners();
+    }
 }

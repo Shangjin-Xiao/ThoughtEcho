@@ -27,6 +27,10 @@ class _HomePageState extends State<HomePage> {
   List<NoteCategory> _tags = []; // 修改 _tags 变量类型为 List<NoteCategory>
   List<String> _selectedTagIds = [];
   double? _startDragX;
+  
+  // 排序设置
+  String _sortType = 'time'; // 'time' 或 'name'
+  bool _sortAscending = false; // false为降序（默认新到旧），true为升序
 
   @override
   void initState() {
@@ -68,7 +72,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      debugPrint('获取每日提示失败: \$e');
+      debugPrint('获取每日提示失败: $e');
     }
   }
 
@@ -249,7 +253,7 @@ class _HomePageState extends State<HomePage> {
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('AI分析失败: \$e'),
+                                    content: Text('AI分析失败: $e'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -353,10 +357,93 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
+                // 排序按钮
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  tooltip: '排序',
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setModalState) => Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '排序方式',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // 按时间排序
+                              RadioListTile<String>(
+                                title: const Text('按时间排序'),
+                                subtitle: Text(_sortAscending ? '从旧到新' : '从新到旧'),
+                                value: 'time',
+                                groupValue: _sortType,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortType = value!;
+                                    });
+                                  });
+                                },
+                              ),
+                              // 按名称排序
+                              RadioListTile<String>(
+                                title: const Text('按名称排序'),
+                                subtitle: Text(_sortAscending ? '升序 A-Z' : '降序 Z-A'),
+                                value: 'name',
+                                groupValue: _sortType,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortType = value!;
+                                    });
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              // 排序方向
+                              SwitchListTile(
+                                title: const Text('排序方向'),
+                                subtitle: Text(_sortAscending ? '升序' : '降序'),
+                                value: _sortAscending,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortAscending = value;
+                                    });
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
                 // 标签筛选按钮
                 IconButton(
                   icon: const Icon(Icons.filter_list),
+                  tooltip: '标签筛选',
                   onPressed: () {
                     showModalBottomSheet(
                       context: context,
@@ -458,10 +545,10 @@ class _HomePageState extends State<HomePage> {
                   );
                 }
                 
-                final quotes = snapshot.data!;
+                var quotes = snapshot.data!;
                 if (_searchQuery.isNotEmpty) {
-                  quotes.removeWhere((quote) =>
-                      !quote.content.toLowerCase().contains(_searchQuery.toLowerCase()));
+                  quotes = quotes.where((quote) =>
+                      quote.content.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
                 }
                 
                 if (quotes.isEmpty) {
@@ -484,6 +571,23 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   );
+                }
+                
+                // 根据排序类型和排序方向对笔记进行排序
+                if (_sortType == 'time') {
+                  quotes.sort((a, b) {
+                    final dateA = DateTime.parse(a.date);
+                    final dateB = DateTime.parse(b.date);
+                    return _sortAscending 
+                        ? dateA.compareTo(dateB)  // 升序：从旧到新
+                        : dateB.compareTo(dateA); // 降序：从新到旧
+                  });
+                } else if (_sortType == 'name') {
+                  quotes.sort((a, b) {
+                    return _sortAscending 
+                        ? a.content.compareTo(b.content)  // 升序：A-Z
+                        : b.content.compareTo(a.content); // 降序：Z-A
+                  });
                 }
                 
                 return ListView.builder(
@@ -541,9 +645,33 @@ class _HomePageState extends State<HomePage> {
                           onSelected: (value) async {
                             if (value == 'ask') {
                               _showAIQuestionDialog(context, quote);
+                            } else if (value == 'edit') {
+                              _showEditQuoteDialog(context, db, quote);
+                            } else if (value == 'delete') {
+                              _showDeleteConfirmDialog(context, db, quote);
                             }
                           },
                           itemBuilder: (context) => [
+                            const PopupMenuItem<String>(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit),
+                                  SizedBox(width: 8),
+                                  Text('编辑笔记'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem<String>(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('删除笔记', style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
                             const PopupMenuItem<String>(
                               value: 'ask',
                               child: Row(
@@ -786,13 +914,270 @@ class _HomePageState extends State<HomePage> {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('获取回答失败：\$e'),
+                    content: Text('获取回答失败：$e'),
                     backgroundColor: Colors.red,
                   ),
                 );
               }
             },
             child: const Text('提问'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 显示编辑笔记对话框
+  void _showEditQuoteDialog(BuildContext context, DatabaseService db, Quote quote) {
+    final TextEditingController controller = TextEditingController(text: quote.content);
+    final aiService = context.read<AIService>();
+    String? aiSummary = quote.aiAnalysis;
+    bool isAnalyzing = false;
+    List<String> selectedTagIds = List.from(quote.tagIds);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  hintText: '编辑你的笔记...',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit),
+                ),
+                maxLines: 3,
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              // 标签选择区域
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '选择标签',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: _tags.map((NoteCategory tag) {
+                      final isSelected = selectedTagIds.contains(tag.id);
+                      return FilterChip(
+                        selected: isSelected,
+                        label: Text(tag.name),
+                        avatar: Icon(IconUtils.getIconData(tag.iconName)),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              selectedTagIds.add(tag.id);
+                            } else {
+                              selectedTagIds.remove(tag.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+
+              // 显示已选标签的UI组件
+              selectedTagIds.isEmpty
+                ? const SizedBox.shrink()
+                : Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '已选标签',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4.0,
+                          runSpacing: 4.0,
+                          children: selectedTagIds.map((tagId) {
+                            final tag = _tags.firstWhere(
+                              (t) => t.id == tagId,
+                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                            );
+                            return Chip(
+                              label: Text(tag.name, style: const TextStyle(fontSize: 12)),
+                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14),
+                              deleteIcon: const Icon(Icons.close, size: 14),
+                              onDeleted: () {
+                                setState(() {
+                                  selectedTagIds.remove(tagId);
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+              if (aiSummary != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'AI分析',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(aiSummary ?? ''),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (controller.text.isNotEmpty && aiSummary == null)
+                    TextButton.icon(
+                      onPressed: isAnalyzing
+                          ? null
+                          : () async {
+                              setState(() => isAnalyzing = true);
+                              try {
+                                final summary = await aiService.summarizeNote(
+                                  Quote(
+                                    id: quote.id,
+                                    content: controller.text,
+                                    date: quote.date,
+                                  ),
+                                );
+                                if (!mounted) return;
+                                setState(() {
+                                  aiSummary = summary;
+                                  isAnalyzing = false;
+                                });
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('AI分析失败: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                setState(() => isAnalyzing = false);
+                              }
+                            },
+                      icon: isAnalyzing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome),
+                      label: Text(isAnalyzing ? '分析中...' : 'AI分析'),
+                    ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (controller.text.isNotEmpty) {
+                        if (!mounted) return;
+                        final updatedQuote = Quote(
+                          id: quote.id,
+                          content: controller.text,
+                          date: quote.date,
+                          aiAnalysis: aiSummary,
+                          tagIds: selectedTagIds,
+                          sentiment: quote.sentiment,
+                          keywords: quote.keywords,
+                          summary: quote.summary,
+                          categoryId: quote.categoryId,
+                        );
+                        db.updateQuote(updatedQuote);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('笔记已更新！')),
+                        );
+                      }
+                    },
+                    child: const Text('保存'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 显示删除确认对话框
+  void _showDeleteConfirmDialog(BuildContext context, DatabaseService db, Quote quote) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除笔记'),
+        content: Text('确定要删除这条笔记吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () {
+              db.deleteQuote(quote.id!);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('笔记已删除')),
+              );
+            },
+            child: const Text('删除'),
           ),
         ],
       ),
