@@ -70,8 +70,8 @@ jobs:
           # 重新获取依赖
           flutter pub get
           
-          # 构建APK，使用--split-per-abi=false避免ABI分割问题
-          flutter build apk --release --split-per-abi=false
+          # 构建APK，不使用split-per-abi选项
+          flutter build apk --release
             
       - name: Upload APK
         uses: actions/upload-artifact@v4
