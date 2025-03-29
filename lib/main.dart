@@ -103,8 +103,8 @@ void main() async {
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              // 直接将 ListView 作为 Padding 的 child
+              child: ListView(
                 children: [
                   const Icon(
                     Icons.error_outline,
@@ -114,13 +114,26 @@ void main() async {
                   const SizedBox(height: 16),
                   const Text(
                     '应用启动失败',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(e.toString()),
+                  Text(
+                    '错误信息:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(e.toString()), // 显示错误信息
+                  const SizedBox(height: 16),
+                  Text(
+                    '堆栈跟踪:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(stackTrace.toString()), // 显示堆栈跟踪
                 ],
               ),
             ),
@@ -165,13 +178,15 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light().copyWith(
         colorScheme: ColorScheme.light(
           primary: primaryColor,
-          secondary: primaryColor[200]!,
+          // 使用存在的色阶 150，并添加空值回退
+          secondary: primaryColor[150] ?? primaryColor,
         ),
       ),
       darkTheme: ThemeData.dark().copyWith(
         colorScheme: ColorScheme.dark(
           primary: primaryColor,
-          secondary: primaryColor[200]!,
+          // 使用存在的色阶 150，并添加空值回退
+          secondary: primaryColor[150] ?? primaryColor,
         ),
       ),
       home: const HomePage(),
