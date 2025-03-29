@@ -42,7 +42,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 4,
+        version: 5,
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -53,12 +53,13 @@ class DatabaseService extends ChangeNotifier {
               icon_name TEXT
             )
           ''');
-          // 创建引用（笔记）表，新增 category_id 字段：包含 id、内容、日期、标签、AI 分析、情感、关键词、摘要、分类ID 等字段
+          // 创建引用（笔记）表，新增 category_id 和 source 字段：包含 id、内容、日期、来源、标签、AI 分析、情感、关键词、摘要、分类ID 等字段
           await db.execute('''
             CREATE TABLE quotes(
               id TEXT PRIMARY KEY,
               content TEXT NOT NULL,
               date TEXT NOT NULL,
+              source TEXT,
               tag_ids TEXT DEFAULT '',
               ai_analysis TEXT,
               sentiment TEXT,
@@ -83,6 +84,12 @@ class DatabaseService extends ChangeNotifier {
           if (oldVersion < 4) {
             await db.execute(
                 'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""');
+          }
+          
+          // 如果数据库版本低于 5，添加 quotes 表中的 source 字段
+          if (oldVersion < 5) {
+            await db.execute(
+                'ALTER TABLE quotes ADD COLUMN source TEXT');
           }
         },
       );

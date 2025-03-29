@@ -2,6 +2,7 @@ class Quote {
   final String? id;
   final String date;
   final String content;
+  final String? source;
   final String? aiAnalysis;
   final String? sentiment;
   final List<String>? keywords;
@@ -13,6 +14,7 @@ class Quote {
     this.id,
     required this.date,
     required this.content,
+    this.source,
     this.aiAnalysis,
     this.sentiment,
     this.keywords,
@@ -26,6 +28,7 @@ class Quote {
       'id': id,
       'date': date,
       'content': content,
+      'source': source,
       'ai_analysis': aiAnalysis,
       'sentiment': sentiment,
       'keywords': keywords != null ? keywords!.join(',') : null,
@@ -40,6 +43,7 @@ class Quote {
       id: map['id'],
       date: map['date'],
       content: map['content'],
+      source: map['source'],
       aiAnalysis: map['ai_analysis'],
       sentiment: map['sentiment'],
       keywords: map['keywords'] != null ? map['keywords'].toString().split(',') : null,

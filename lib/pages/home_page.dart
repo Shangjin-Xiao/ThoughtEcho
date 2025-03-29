@@ -19,7 +19,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String dailyQuote = '加载中...';
+  Map<String, dynamic> dailyQuote = {
+    'content': '加载中...',
+    'source': '',
+    'type': 'a'
+  };
   String? dailyPrompt;
   int _currentIndex = 0;
   String _searchQuery = '';
@@ -107,6 +111,15 @@ class _HomePageState extends State<HomePage> {
                 ),
                 maxLines: 3,
                 autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: '添加来源 (可选)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.source),
+                ),
+                maxLines: 1,
               ),
               const SizedBox(height: 16),
               // 标签选择区域
@@ -283,6 +296,7 @@ class _HomePageState extends State<HomePage> {
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
                             aiAnalysis: aiSummary,
+                            source: '', // 来源字段
                             tagIds: selectedTagIds,
                           ),
                         );
@@ -548,7 +562,8 @@ class _HomePageState extends State<HomePage> {
                 var quotes = snapshot.data!;
                 if (_searchQuery.isNotEmpty) {
                   quotes = quotes.where((quote) =>
-                      quote.content.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+                      quote.content.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      (quote.source != null && quote.source!.toLowerCase().contains(_searchQuery.toLowerCase()))).toList();
                 }
                 
                 if (quotes.isEmpty) {
@@ -758,10 +773,23 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             const Icon(Icons.format_quote, size: 40),
                             const SizedBox(height: 16),
-                            Text(
-                              dailyQuote,
-                              style: theme.textTheme.headlineSmall,
-                              textAlign: TextAlign.center,
+                            Column(
+                              children: [
+                                Text(
+                                  dailyQuote['content'],
+                                  style: theme.textTheme.headlineSmall,
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      '—— ${dailyQuote['source']}',
+                                      style: theme.textTheme.bodyMedium,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -961,6 +989,16 @@ class _HomePageState extends State<HomePage> {
                 autofocus: true,
               ),
               const SizedBox(height: 16),
+              TextField(
+                controller: TextEditingController(text: quote.source),
+                decoration: const InputDecoration(
+                  hintText: '添加来源 (可选)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.source),
+                ),
+                maxLines: 1,
+              ),
+              const SizedBox(height: 16),
               // 标签选择区域
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1135,6 +1173,7 @@ class _HomePageState extends State<HomePage> {
                           sentiment: quote.sentiment,
                           keywords: quote.keywords,
                           summary: quote.summary,
+                          source: quote.source,
                           categoryId: quote.categoryId,
                         );
                         db.updateQuote(updatedQuote);
