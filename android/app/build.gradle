@@ -5,7 +5,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.parcelize'
 }
 
-def kotlin_version = '1.9.22'
+def kotlin_version = '1.8.20'
 
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
@@ -20,7 +20,7 @@ def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '
 
 android {
     namespace "com.shangjin.yiyan"
-    compileSdkVersion 35
+    compileSdkVersion 34
     ndkVersion "25.2.9519653"
 
     compileOptions {
@@ -39,7 +39,7 @@ android {
     defaultConfig {
         applicationId "com.shangjin.yiyan"
         minSdkVersion 21
-        targetSdkVersion 35
+        targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -63,11 +63,6 @@ android {
         }
         debug {
         }
-    }
-
-    repositories {
-        google()
-        mavenCentral()
     }
 
     packagingOptions {
