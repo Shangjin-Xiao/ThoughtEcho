@@ -33,7 +33,8 @@ class AppTheme with ChangeNotifier {
   
   // 更新动态颜色方案
   void updateDynamicColorScheme(ColorScheme? scheme) {
-    _dynamicColorScheme = scheme;
+    // 如果动态取色失败，则默认使用 Flutter 蓝色
+    _dynamicColorScheme = scheme ?? ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.light);
     notifyListeners();
   }
   

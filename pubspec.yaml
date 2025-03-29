@@ -22,7 +22,7 @@ dependencies:
   flutter_markdown: ^0.6.18
   intl: ^0.18.1
   url_launcher: ^6.2.4
-  file_picker: ^9.2.3
+  file_picker: ^8.0.0+1
   dynamic_color: ^1.6.9
   flex_color_scheme: ^7.3.1
 
