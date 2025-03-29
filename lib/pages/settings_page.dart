@@ -127,6 +127,41 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _launchUrl(_projectUrl),
             ),
           ]),
+          
+          _buildSettingSection('数据管理', [
+            _buildSettingItem(
+              icon: Icons.backup,
+              title: '备份数据',
+              subtitle: '导出所有数据到文件',
+              onTap: () async {
+                try {
+                  final dbService = Provider.of<DatabaseService>(context, listen: false);
+                  final path = await dbService.exportAllData();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('备份成功，文件路径: $path')),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('备份失败: $e')),
+                  );
+                }
+              },
+            ),
+            _buildSettingItem(
+              icon: Icons.restore,
+              title: '恢复数据',
+              subtitle: '从文件导入数据',
+              onTap: () async {
+                // TODO: 实现文件选择器并调用dbService.importData
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('恢复功能需要实现文件选择器')),
+                );
+              },
+            ),
+          ]),
         ],
       ),
     );
