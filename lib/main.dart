@@ -146,12 +146,27 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Mind Trace',
-      theme: ThemeData(
-        primarySwatch: _getPrimarySwatchForPlatform(context),
-      ),
-      home: const HomePage(),
+    final primaryColor = _getPrimarySwatchForPlatform(context);
+    return Consumer<SettingsService>(
+      builder: (context, settingsService, _) {
+        return MaterialApp(
+          title: 'Mind Trace',
+          themeMode: settingsService.themeMode,
+          theme: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              secondary: primaryColor[200]!,
+            ),
+          ),
+          darkTheme: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: primaryColor,
+              secondary: primaryColor[200]!,
+            ),
+          ),
+          home: const HomePage(),
+        );
+      },
     );
   }
 }

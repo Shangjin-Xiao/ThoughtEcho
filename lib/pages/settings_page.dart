@@ -61,14 +61,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 );
               },
             ),
-            _buildSettingItem(
-              icon: Icons.dark_mode,
-              title: '主题',
-              subtitle: '跟随系统',
-              onTap: () {
-                // 暂未实现主题切换功能
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('主题设置功能即将上线')),
+            Consumer<SettingsService>(
+              builder: (context, settingsService, _) {
+                return SwitchListTile(
+                  secondary: const Icon(Icons.dark_mode, color: Colors.blue),
+                  title: const Text('深色模式'),
+                  subtitle: Text(
+                    settingsService.themeMode == ThemeMode.dark
+                        ? '已开启'
+                        : settingsService.themeMode == ThemeMode.light
+                            ? '已关闭'
+                            : '跟随系统',
+                  ),
+                  value: settingsService.themeMode == ThemeMode.dark,
+                  onChanged: (value) {
+                    settingsService.updateThemeMode(
+                      value ? ThemeMode.dark : ThemeMode.light,
+                    );
+                  },
                 );
               },
             ),
