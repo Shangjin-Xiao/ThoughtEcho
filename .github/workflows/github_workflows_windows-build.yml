@@ -1,0 +1,97 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.19.3'
+          cache: true
+      
+      - name: Install Visual Studio build tools
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Setup sqlite3
+        run: |
+          choco install sqlite
+          
+      - name: Enable Windows Desktop
+        run: flutter config --enable-windows-desktop
+      
+      - name: Get dependencies
+        run: flutter pub get
+        
+      - name: Build Windows
+        run: flutter build windows --release
+      
+      - name: Prepare Release Package
+        run: |
+          # 创建发布目录
+          $RELEASE_DIR = "release"
+          New-Item -ItemType Directory -Force -Path $RELEASE_DIR
+          
+          # 复制主程序文件
+          Copy-Item -Path "build/windows/x64/runner/Release/*" -Destination $RELEASE_DIR -Recurse
+          
+          # 复制SQLite DLL
+          Copy-Item "C:/Windows/System32/sqlite3.dll" -Destination "$RELEASE_DIR/"
+          
+          # 复制资源文件
+          if (Test-Path "assets") {
+            Copy-Item -Path "assets" -Destination "$RELEASE_DIR/" -Recurse
+          }
+          
+          # 创建data目录用于数据库
+          New-Item -ItemType Directory -Force -Path "$RELEASE_DIR/data"
+          
+          # 创建readme文件
+          @"
+          Mind Trace - Windows版本
+
+          使用说明：
+          1. 程序首次运行时会在data目录下自动创建数据库
+          2. 请勿删除data目录，否则可能导致数据丢失
+          3. 如需备份数据，请备份data目录下的数据库文件
+          
+          依赖项：
+          - 已包含所需的SQLite运行时
+          - Windows 10或更高版本
+          
+          遇到问题？
+          请访问: https://github.com/Shangjin-Xiao/mind-trace/issues
+          "@ | Out-File -FilePath "$RELEASE_DIR/README.txt" -Encoding utf8
+          
+          # 打包
+          Compress-Archive -Path "$RELEASE_DIR/*" -DestinationPath "windows-release.zip" -Force
+      
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MindTrace-Windows
+          path: windows-release.zip
+          retention-days: 7
+
+      - name: Generate SHA-256 Hash
+        run: |
+          $hash = Get-FileHash "windows-release.zip" -Algorithm SHA256
+          $hash.Hash | Out-File -FilePath "windows-release.sha256" -NoNewline
+          
+      - name: Upload SHA-256 Hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: MindTrace-Windows-SHA256
+          path: windows-release.sha256
+          retention-days: 7
