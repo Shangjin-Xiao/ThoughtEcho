@@ -1,9 +1,10 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.parcelize'
     id 'dev.flutter.flutter-gradle-plugin'
 }
+
+apply plugin: 'kotlin-parcelize'
 
 def kotlin_version = '1.9.22'
 
