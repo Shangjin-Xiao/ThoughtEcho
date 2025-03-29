@@ -61,22 +61,22 @@ class _SettingsPageState extends State<SettingsPage> {
                 );
               },
             ),
-            Consumer<SettingsService>(
-              builder: (context, settingsService, _) {
+            Builder(
+              builder: (context) {
+                final themeMode = MediaQuery.of(context).platformBrightness == Brightness.dark
+                    ? ThemeMode.dark
+                    : ThemeMode.light;
                 return SwitchListTile(
                   secondary: const Icon(Icons.dark_mode, color: Colors.blue),
                   title: const Text('深色模式'),
                   subtitle: Text(
-                    settingsService.themeMode == ThemeMode.dark
-                        ? '已开启'
-                        : settingsService.themeMode == ThemeMode.light
-                            ? '已关闭'
-                            : '跟随系统',
+                    themeMode == ThemeMode.dark ? '已开启' : '已关闭',
                   ),
-                  value: settingsService.themeMode == ThemeMode.dark,
+                  value: themeMode == ThemeMode.dark,
                   onChanged: (value) {
-                    settingsService.updateThemeMode(
-                      value ? ThemeMode.dark : ThemeMode.light,
+                    // TODO: 实现主题切换持久化
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('主题切换功能需要额外实现持久化')),
                     );
                   },
                 );
