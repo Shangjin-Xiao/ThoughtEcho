@@ -44,12 +44,16 @@ jobs:
           org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
-          android.enableR8=true
           org.gradle.daemon=false
           org.gradle.parallel=true
           org.gradle.caching=true
           EOF
           
+      - name: Update app/build.gradle
+        working-directory: android/app
+        run: |
+          sed -i 's/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:\$kotlin_version"/implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:\$kotlin_version"\n    implementation "io.flutter:flutter_embedding_debug:1.0.0-18b71d647a292a980abb405ac7d16fe1f0b20434"\n    implementation "io.flutter:flutter_embedding_profile:1.0.0-18b71d647a292a980abb405ac7d16fe1f0b20434"\n    implementation "io.flutter:flutter_embedding_release:1.0.0-18b71d647a292a980abb405ac7d16fe1f0b20434"/' build.gradle
+      
       - name: Create debug keystore
         working-directory: android
         run: |
@@ -84,17 +88,20 @@ jobs:
           ls -la
           ls -la app/
           cat key.properties
+          cat app/build.gradle
           
       - name: Flutter Info
         run: |
           flutter --version
           flutter doctor -v
           
-      - name: Install Flutter Dependencies
+      - name: Generate Files
         run: |
           flutter pub get
-          flutter pub deps
-        
+          cd android
+          ./gradlew generateDebugSources --stacktrace
+          cd ..
+          
       - name: Build Debug APK
         run: |
           # 清理之前的构建
@@ -108,16 +115,14 @@ jobs:
           chmod +x ./gradlew
           
           # 清理并检查Gradle
-          ./gradlew --no-daemon tasks
-          ./gradlew --no-daemon clean
+          ./gradlew --no-daemon tasks --stacktrace
+          ./gradlew --no-daemon clean --stacktrace
+          ./gradlew --no-daemon :app:assembleDebug --stacktrace --info
           cd ..
-          
-          # 直接构建调试APK
-          flutter build apk --debug
             
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
