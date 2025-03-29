@@ -24,7 +24,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.0'  # 降低到与Gradle 8.1.0更兼容的版本
+          flutter-version: '3.19.3'  # 使用最新稳定版本
           channel: 'stable'
           cache: true
       
@@ -70,14 +70,17 @@ jobs:
           # 重新获取依赖
           flutter pub get
           
+          # 打印依赖版本
+          flutter pub deps
+          
           # 重置Gradle
           cd android
           chmod +x ./gradlew
           ./gradlew clean
           cd ..
           
-          # 构建APK，添加详细信息
-          flutter build apk --release --verbose
+          # 构建APK
+          flutter build apk --release
             
       - name: Upload APK
         uses: actions/upload-artifact@v4

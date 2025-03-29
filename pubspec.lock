@@ -125,10 +125,10 @@ packages:
     dependency: "direct main"
     description:
       name: flex_color_scheme
-      sha256: "32914024a4f404d90ff449f58d279191675b28e7c08824046baf06826e99d984"
+      sha256: "03a0ad67cc224b20aab9f9a775a6cef76c8f884887902a2d94635c187858b31b"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "7.3.1"
+    version: "6.1.2"
   flex_seed_scheme:
     dependency: transitive
     description:
