@@ -133,9 +133,9 @@ jobs:
           # 更新依赖关系
           if [ -f .flutter-plugins-dependencies ]; then
             echo "更新 .flutter-plugins-dependencies 文件"
-            cat > .flutter-plugins-dependencies.template << EOF
-          {"info":"This is a generated file; do not edit or check into version control.","plugins":{"ios":[],"android":[{"name":"dynamic_color","path":"dynamic_color","native_build":true},{"name":"file_picker","path":"file_picker","native_build":true},{"name":"flutter_plugin_android_lifecycle","path":"flutter_plugin_android_lifecycle","native_build":true},{"name":"path_provider_android","path":"path_provider_android","native_build":true},{"name":"shared_preferences_android","path":"shared_preferences_android","native_build":true},{"name":"sqflite","path":"sqflite","native_build":true},{"name":"sqlite3_flutter_libs","path":"sqlite3_flutter_libs","native_build":true},{"name":"url_launcher_android","path":"url_launcher_android","native_build":true}],"macos":[],"linux":[],"windows":[],"web":[]},"dependencyGraph":[],"date_created":"2024-01-01 00:00:00.000","version":"3.19.3"}
-          EOF
+            cat > .flutter-plugins-dependencies.template << 'EOF'
+{"info":"This is a generated file; do not edit or check into version control.","plugins":{"ios":[],"android":[{"name":"dynamic_color","path":"dynamic_color","native_build":true},{"name":"file_picker","path":"file_picker","native_build":true},{"name":"flutter_plugin_android_lifecycle","path":"flutter_plugin_android_lifecycle","native_build":true},{"name":"path_provider_android","path":"path_provider_android","native_build":true},{"name":"shared_preferences_android","path":"shared_preferences_android","native_build":true},{"name":"sqflite","path":"sqflite","native_build":true},{"name":"sqlite3_flutter_libs","path":"sqlite3_flutter_libs","native_build":true},{"name":"url_launcher_android","path":"url_launcher_android","native_build":true}],"macos":[],"linux":[],"windows":[],"web":[]},"dependencyGraph":[],"date_created":"2024-01-01 00:00:00.000","version":"3.19.3"}
+EOF
             cp .flutter-plugins-dependencies.template .flutter-plugins-dependencies
           fi
           
