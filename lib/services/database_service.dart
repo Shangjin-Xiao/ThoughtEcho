@@ -27,7 +27,39 @@ class DatabaseService extends ChangeNotifier {
   }
 
   Future<void> init() async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      // Web平台特定的初始化
+      debugPrint('在Web平台初始化内存存储');
+      // 添加一些示例数据以便Web平台测试
+      if (_memoryStore.isEmpty) {
+        _memoryStore.add(
+          Quote(
+            id: _uuid.v4(),
+            content: '欢迎使用MindTrace - Web版',
+            date: DateTime.now().toIso8601String(),
+            source: '示例来源',
+            aiAnalysis: '这是Web平台示例笔记',
+          ),
+        );
+      }
+      
+      if (_categoryStore.isEmpty) {
+        _categoryStore.add(
+          NoteCategory(
+            id: _uuid.v4(),
+            name: '默认分类',
+            isDefault: true,
+            iconName: 'bookmark',
+          ),
+        );
+      }
+      
+      // 触发更新
+      _categoriesController.add(_categoryStore);
+      notifyListeners();
+      return;
+    }
+
     if (_database != null) return;
 
     try {
@@ -315,7 +347,15 @@ class DatabaseService extends ChangeNotifier {
     }) async {
       try {
         if (kIsWeb) {
-          return _memoryStore;
+          // Web平台特定逻辑
+          if (tagIds != null && tagIds.isNotEmpty) {
+            return _memoryStore.where((quote) => 
+              tagIds.any((tagId) => quote.tagIds.contains(tagId))).toList();
+          } else if (categoryId != null && categoryId.isNotEmpty) {
+            return _memoryStore.where((quote) => 
+              quote.categoryId == categoryId).toList();
+          }
+          return List.from(_memoryStore);
         }
         final db = database;
         List<Map<String, dynamic>> maps;

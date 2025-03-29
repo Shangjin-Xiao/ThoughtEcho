@@ -24,7 +24,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.2'
+          flutter-version: '3.16.5'  # 使用旧的稳定版本
           channel: 'stable'
           cache: true
       
@@ -39,6 +39,7 @@ jobs:
           android.useAndroidX=true
           android.enableJetifier=true
           android.enableR8=true
+          android.suppressUnsupportedCompileSdk=34
           EOF
           
       - name: Configure Keystore
@@ -58,49 +59,23 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
         
-      - name: Flutter Precache
-        run: |
-          flutter precache --android
-          flutter config --no-analytics
-          flutter doctor -v
-          
-      - name: Install sqlite3_flutter_libs for Android
-        run: |
-          # 确保sqlite3_flutter_libs正确安装
-          flutter pub get
+      - name: Flutter doctor
+        run: flutter doctor -v
           
       - name: Build APK
         run: |
-          # 确保清理之前的构建
+          # 清理之前的构建
           flutter clean
           
-          # 重新获取依赖并确保引擎缓存
+          # 重新获取依赖
           flutter pub get
           
-          # 尝试修复Flutter引擎问题
-          cd android
-          chmod +x ./gradlew
-          ./gradlew clean
-          cd ..
-          
-          # 构建universal APK (不分割ABI)
-          flutter build apk --release \
-            --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }}
+          # 构建APK，使用--split-per-abi=false避免ABI分割问题
+          flutter build apk --release --split-per-abi=false
             
-      - name: Fallback Gradle Build (如果Flutter构建失败)
-        if: ${{ failure() }}
-        working-directory: android
-        run: |
-          chmod +x ./gradlew
-          # 直接使用Gradle构建
-          ./gradlew assembleRelease
-          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            android/app/build/outputs/apk/release/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
