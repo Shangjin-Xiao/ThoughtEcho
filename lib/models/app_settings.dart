@@ -2,7 +2,7 @@ class AppSettings {
   final String hitokotoType;
 
   AppSettings({
-    this.hitokotoType = 'a', // 默认为动画类型
+    this.hitokotoType = 'l', // 默认为抖机灵类型（随机）
   });
 
   Map<String, dynamic> toJson() {
@@ -13,12 +13,12 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> map) {
     return AppSettings(
-      hitokotoType: map['hitokotoType'] ?? 'a',
+      hitokotoType: map['hitokotoType'] ?? 'l',
     );
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
-    hitokotoType: 'a',
+    hitokotoType: 'l',
   );
 
   AppSettings copyWith({

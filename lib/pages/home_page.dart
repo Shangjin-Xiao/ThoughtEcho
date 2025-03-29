@@ -113,7 +113,7 @@ class _HomePageState extends State<HomePage> {
       } else {
         result += '——';
       }
-      result += '「$source」';
+      result += '《$source》';
     }
     
     return result;
@@ -1094,8 +1094,6 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.format_quote, size: 40),
-                            const SizedBox(height: 16),
                             Column(
                               children: [
                                 Text(

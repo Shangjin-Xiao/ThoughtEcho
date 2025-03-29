@@ -54,8 +54,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             _buildSettingItem(
               icon: Icons.format_quote,
-              title: '一言设置',
-              subtitle: '选择一言类型',
+              title: '每日一言设置',
+              subtitle: '设置首页展示的每日一言内容类型',
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const HitokotoSettingsPage()),

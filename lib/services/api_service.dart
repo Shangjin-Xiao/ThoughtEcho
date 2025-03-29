@@ -26,9 +26,16 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getDailyQuote([String? type]) async {
     try {
-      final uri = type != null
-          ? Uri.parse('$baseUrl?c=$type')
-          : Uri.parse(baseUrl);
+      Uri uri;
+      if (type == null) {
+        uri = Uri.parse(baseUrl);
+      } else if (type.contains(',')) {
+        // 支持多类型，格式如 'a,b,c'
+        final typeParams = type.split(',').map((t) => 'c=$t').join('&');
+        uri = Uri.parse('$baseUrl?$typeParams');
+      } else {
+        uri = Uri.parse('$baseUrl?c=$type');
+      }
       
       final response = await http.get(uri);
       if (response.statusCode == 200) {

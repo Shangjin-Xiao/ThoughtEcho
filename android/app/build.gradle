@@ -2,9 +2,8 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'dev.flutter.flutter-gradle-plugin'
+    id 'org.jetbrains.kotlin.plugin.parcelize'
 }
-
-apply plugin: 'kotlin-parcelize'
 
 def kotlin_version = '1.9.22'
 
@@ -69,9 +68,6 @@ android {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url 'https://storage.googleapis.com/download.flutter.io'
-        }
     }
 
     packagingOptions {
