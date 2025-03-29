@@ -79,6 +79,7 @@ jobs:
           
           # 尝试修复Flutter引擎问题
           cd android
+          chmod +x ./gradlew
           ./gradlew clean
           cd ..
           
@@ -91,6 +92,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: android
         run: |
+          chmod +x ./gradlew
           # 直接使用Gradle构建
           ./gradlew assembleRelease
           
