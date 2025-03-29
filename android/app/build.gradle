@@ -72,6 +72,15 @@ android {
         }
     }
 
+    // 添加对官方插件仓库的支持
+    repositories {
+        google()
+        mavenCentral()
+        flatDir {
+            dirs 'libs'
+        }
+    }
+
     packagingOptions {
         exclude 'META-INF/*.md'
         exclude 'META-INF/licenses/*'

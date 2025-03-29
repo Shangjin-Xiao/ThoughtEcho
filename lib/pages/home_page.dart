@@ -11,6 +11,8 @@ import 'settings_page.dart';
 import '../services/ai_service.dart';
 import 'insights_page.dart';
 import '../utils/color_utils.dart'; // 新增导入，确保扩展方法可用
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -23,6 +25,7 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic> dailyQuote = {
     'content': '加载中...',
     'source': '',
+    'author': '',
     'type': 'a'
   };
   String? dailyPrompt;
@@ -90,9 +93,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _showAddQuoteDialog(BuildContext context, DatabaseService db) {
-    final TextEditingController controller = TextEditingController();
-    final TextEditingController sourceController = TextEditingController();
+  // 格式化一言的来源显示
+  String formatHitokotoSource(String? author, String? source) {
+    if ((author == null || author.isEmpty) && (source == null || source.isEmpty)) {
+      return '';
+    }
+    
+    String result = '——';
+    if (author != null && author.isNotEmpty) {
+      result += ' $author';
+    }
+    
+    if (source != null && source.isNotEmpty) {
+      result += ' 「$source」';
+    }
+    
+    return result;
+  }
+
+  void _showAddQuoteDialog(BuildContext context, DatabaseService db, {String? prefilledContent, String? prefilledSource}) {
+    final TextEditingController controller = TextEditingController(text: prefilledContent ?? '');
+    final TextEditingController sourceController = TextEditingController(text: prefilledSource ?? '');
     final aiService = context.read<AIService>();
     String? aiSummary;
     bool isAnalyzing = false;
@@ -925,13 +946,52 @@ class _HomePageState extends State<HomePage> {
                                   style: theme.textTheme.headlineSmall,
                                   textAlign: TextAlign.center,
                                 ),
-                                if (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty)
+                                if (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty || 
+                                   dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      '—— ${dailyQuote['source']}',
-                                      style: theme.textTheme.bodyMedium,
-                                      textAlign: TextAlign.center,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        // 单击复制内容
+                                        final String formattedQuote = '${dailyQuote['content']}\n' + 
+                                          (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty ?
+                                           '——${dailyQuote['author']}' : '') +
+                                          (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty ?
+                                           '「${dailyQuote['source']}」' : '');
+                                        
+                                        // 复制到剪贴板
+                                        Clipboard.setData(ClipboardData(text: formattedQuote));
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('已复制到剪贴板')),
+                                        );
+                                      },
+                                      onDoubleTap: () {
+                                        // 双击添加到笔记
+                                        final TextEditingController contentController = TextEditingController(text: dailyQuote['content']);
+                                        final TextEditingController sourceController = TextEditingController(
+                                          text: (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty ?
+                                                dailyQuote['author'] : '') +
+                                                (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty ?
+                                                '「${dailyQuote['source']}」' : '')
+                                        );
+                                        
+                                        _showAddQuoteDialog(
+                                          context, 
+                                          db, 
+                                          prefilledContent: dailyQuote['content'],
+                                          prefilledSource: (dailyQuote['author'] != null && dailyQuote['author'].isNotEmpty ?
+                                                '${dailyQuote['author']}——' : '') +
+                                                (dailyQuote['source'] != null && dailyQuote['source'].isNotEmpty ?
+                                                '「${dailyQuote['source']}」' : '')
+                                        );
+                                      },
+                                      child: Text(
+                                        formatHitokotoSource(dailyQuote['author'], dailyQuote['source']),
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
                               ],

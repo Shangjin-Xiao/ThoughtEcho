@@ -22,6 +22,7 @@ class ApiService {
           return {
             'content': data['hitokoto'],
             'source': data['from'] ?? '未知',
+            'author': data['from_who'] ?? '',
             'type': data['type'] ?? 'a'
           };
         } else if (response.statusCode == 429) {
@@ -33,6 +34,7 @@ class ApiService {
         return {
           'content': '获取失败，请稍后重试。',
           'source': '系统',
+          'author': '',
           'type': 'a'
         };
       } catch (e) {
@@ -45,6 +47,7 @@ class ApiService {
         return {
           'content': '网络错误，请检查网络连接。',
           'source': '系统',
+          'author': '',
           'type': 'a'
         };
       }
@@ -53,6 +56,7 @@ class ApiService {
     return {
       'content': '获取失败，请稍后重试。',
       'source': '系统',
+      'author': '',
       'type': 'a'
     };
   }
