@@ -36,6 +36,15 @@ class _HomePageState extends State<HomePage> {
   // 排序设置
   String _sortType = 'time'; // 'time' 或 'name'
   bool _sortAscending = false; // false为降序（默认新到旧），true为升序
+  
+  // 存储笔记卡片的展开/折叠状态
+  final Map<String, bool> _expandedItems = {};
+  
+  // 检查文本是否足够长需要展开/折叠功能
+  bool _needsExpansion(String text) {
+    // 简单估算，如果内容超过100个字符则提供展开/折叠功能
+    return text.length > 100;
+  }
 
   @override
   void initState() {
@@ -83,6 +92,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showAddQuoteDialog(BuildContext context, DatabaseService db) {
     final TextEditingController controller = TextEditingController();
+    final TextEditingController sourceController = TextEditingController();
     final aiService = context.read<AIService>();
     String? aiSummary;
     bool isAnalyzing = false;
@@ -115,8 +125,9 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
               TextField(
+                controller: sourceController,
                 decoration: const InputDecoration(
-                  hintText: '添加来源 (可选)',
+                  hintText: '添加来源，例如：真相只有一个——江户川柯南「名侦探柯南」',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.source),
                 ),
@@ -297,7 +308,7 @@ class _HomePageState extends State<HomePage> {
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
                             aiAnalysis: aiSummary,
-                            source: '', // 来源字段
+                            source: sourceController.text,
                             tagIds: selectedTagIds,
                           ),
                         );
@@ -611,74 +622,134 @@ class _HomePageState extends State<HomePage> {
                   itemCount: quotes.length,
                   itemBuilder: (context, index) {
                     final quote = quotes[index];
+                    // 获取展开状态，如果不存在则默认为折叠状态
+                    final bool isExpanded = _expandedItems[quote.id] ?? false;
+                    // 生成随机颜色，从主色和次色之间选择
+                    final Color cardColor = index % 2 == 0 
+                        ? theme.colorScheme.primary.withOpacity(0.1) 
+                        : theme.colorScheme.secondary.withOpacity(0.1);
+                    
+                    // 格式化日期为年月日
+                    final DateTime quoteDate = DateTime.parse(quote.date);
+                    final String formattedDate = '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} 摘录';
+                    
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: Material(
-                        elevation: 2,
+                        elevation: 1,
                         borderRadius: BorderRadius.circular(16),
-                        color: theme.colorScheme.surfaceContainerHighest.applyOpacity(0.8),
+                        color: cardColor,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
                           onTap: () {
                             // 展开/折叠卡片内容
-                            // TODO: 实现展开/折叠逻辑
+                            setState(() {
+                              _expandedItems[quote.id!] = !isExpanded;
+                            });
                           },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 笔记内容
-                                Text(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 头部日期显示
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      formattedDate,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.refresh,
+                                        size: 18,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 20,
+                                        minHeight: 20,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      onPressed: () {
+                                        // 刷新功能，可以后续实现
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              // 笔记内容
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                child: Text(
                                   quote.content,
                                   style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                                    color: theme.colorScheme.onSurface,
                                     height: 1.5,
                                   ),
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: isExpanded ? null : 3,
+                                  overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                                 ),
-                                
-                                // 来源信息（如果有）
-                                if (quote.source != null && quote.source!.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '—— ${quote.source}',
+                              ),
+                              
+                              // 来源信息（如果有）
+                              if (quote.source != null && quote.source!.isNotEmpty) ...[
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                                  child: Text(
+                                    quote.source!,
                                     style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.7),
+                                      color: theme.colorScheme.onSurface.withOpacity(0.75),
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
-                                ],
-                                
-                                // 标签和时间信息
-                                const SizedBox(height: 12),
-                                Row(
+                                ),
+                              ],
+                              
+                              // 展开/折叠按钮（如果内容较长）
+                              if (_needsExpansion(quote.content)) ...[
+                                Center(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _expandedItems[quote.id!] = !isExpanded;
+                                      });
+                                    },
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          isExpanded ? '收起' : '展开全部',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Icon(
+                                          isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                          size: 16,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              
+                              // 底部工具栏
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
+                                child: Row(
                                   children: [
-                                    // 时间信息
-                                    Icon(
-                                      Icons.access_time,
-                                      size: 16,
-                                      color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.6),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      DateTime.parse(quote.date)
-                                          .toLocal()
-                                          .toString()
-                                          .split('.')[0],
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.6),
-                                      ),
-                                    ),
-                                    
                                     // 标签信息
                                     if (quote.tagIds.isNotEmpty) ...[
-                                      const SizedBox(width: 16),
                                       Icon(
                                         Icons.label_outline,
                                         size: 16,
-                                        color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.6),
+                                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                                       ),
                                       const SizedBox(width: 4),
                                       Expanded(
@@ -697,7 +768,7 @@ class _HomePageState extends State<HomePage> {
                                                   vertical: 2,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: theme.colorScheme.primary.applyOpacity(0.1),
+                                                  color: theme.colorScheme.primary.withOpacity(0.1),
                                                   borderRadius: BorderRadius.circular(12),
                                                 ),
                                                 child: Text(
@@ -717,7 +788,7 @@ class _HomePageState extends State<HomePage> {
                                     PopupMenuButton<String>(
                                       icon: Icon(
                                         Icons.more_vert,
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
                                       ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -756,7 +827,7 @@ class _HomePageState extends State<HomePage> {
                                           value: 'delete',
                                           child: Row(
                                             children: [
-                                              const Icon(Icons.delete, color: Colors.red),
+                                              Icon(Icons.delete, color: Colors.red),
                                               const SizedBox(width: 8),
                                               Text(
                                                 '删除笔记',
@@ -769,8 +840,8 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1032,6 +1103,7 @@ class _HomePageState extends State<HomePage> {
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(BuildContext context, DatabaseService db, Quote quote) {
     final TextEditingController controller = TextEditingController(text: quote.content);
+    final TextEditingController sourceController = TextEditingController(text: quote.source);
     final aiService = context.read<AIService>();
     String? aiSummary = quote.aiAnalysis;
     bool isAnalyzing = false;
@@ -1064,9 +1136,9 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: TextEditingController(text: quote.source),
+                controller: sourceController,
                 decoration: const InputDecoration(
-                  hintText: '添加来源 (可选)',
+                  hintText: '添加来源，例如：真相只有一个——江户川柯南「名侦探柯南」',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.source),
                 ),
@@ -1247,7 +1319,7 @@ class _HomePageState extends State<HomePage> {
                           sentiment: quote.sentiment,
                           keywords: quote.keywords,
                           summary: quote.summary,
-                          source: quote.source,
+                          source: sourceController.text,
                           categoryId: quote.categoryId,
                         );
                         db.updateQuote(updatedQuote);
