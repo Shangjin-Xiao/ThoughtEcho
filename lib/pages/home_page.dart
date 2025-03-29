@@ -610,94 +610,167 @@ class _HomePageState extends State<HomePage> {
                   itemCount: quotes.length,
                   itemBuilder: (context, index) {
                     final quote = quotes[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      child: ListTile(
-                        title: Text(quote.content),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              DateTime.parse(quote.date)
-                                  .toLocal()
-                                  .toString()
-                                  .split('.')[0],
-                              style: theme.textTheme.bodySmall,
-                            ),
-                            if (quote.aiAnalysis != null) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(8),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Material(
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(16),
+                        color: theme.colorScheme.surfaceVariant.withOpacity(0.8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            // 展开/折叠卡片内容
+                            // TODO: 实现展开/折叠逻辑
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 笔记内容
+                                Text(
+                                  quote.content,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    height: 1.5,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.auto_awesome,
-                                      size: 16,
-                                      color: theme.colorScheme.primary,
+                                
+                                // 来源信息（如果有）
+                                if (quote.source != null && quote.source!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '—— ${quote.source}',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                      fontStyle: FontStyle.italic,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        quote.aiAnalysis!,
-                                        style: theme.textTheme.bodySmall,
+                                  ),
+                                ],
+                                
+                                // 标签和时间信息
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    // 时间信息
+                                    Icon(
+                                      Icons.access_time,
+                                      size: 16,
+                                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      DateTime.parse(quote.date)
+                                          .toLocal()
+                                          .toString()
+                                          .split('.')[0],
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
                                       ),
+                                    ),
+                                    
+                                    // 标签信息
+                                    if (quote.tagIds.isNotEmpty) ...[
+                                      const SizedBox(width: 16),
+                                      Icon(
+                                        Icons.label_outline,
+                                        size: 16,
+                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            children: quote.tagIds.map((tagId) {
+                                              final tag = _tags.firstWhere(
+                                                (t) => t.id == tagId,
+                                                orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                                              );
+                                              return Container(
+                                                margin: const EdgeInsets.only(right: 8),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: theme.colorScheme.primary.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  tag.name,
+                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                    color: theme.colorScheme.primary,
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    
+                                    // 操作按钮
+                                    PopupMenuButton<String>(
+                                      icon: Icon(
+                                        Icons.more_vert,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      onSelected: (value) async {
+                                        if (value == 'ask') {
+                                          _showAIQuestionDialog(context, quote);
+                                        } else if (value == 'edit') {
+                                          _showEditQuoteDialog(context, db, quote);
+                                        } else if (value == 'delete') {
+                                          _showDeleteConfirmDialog(context, db, quote);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        PopupMenuItem<String>(
+                                          value: 'edit',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit, color: theme.colorScheme.primary),
+                                              const SizedBox(width: 8),
+                                              const Text('编辑笔记'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'ask',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.question_answer, color: theme.colorScheme.primary),
+                                              const SizedBox(width: 8),
+                                              const Text('向AI提问'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.delete, color: Colors.red),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '删除笔记',
+                                                style: TextStyle(color: theme.colorScheme.error),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) async {
-                            if (value == 'ask') {
-                              _showAIQuestionDialog(context, quote);
-                            } else if (value == 'edit') {
-                              _showEditQuoteDialog(context, db, quote);
-                            } else if (value == 'delete') {
-                              _showDeleteConfirmDialog(context, db, quote);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem<String>(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit),
-                                  SizedBox(width: 8),
-                                  Text('编辑笔记'),
-                                ],
-                              ),
+                              ],
                             ),
-                            const PopupMenuItem<String>(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('删除笔记', style: TextStyle(color: Colors.red)),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem<String>(
-                              value: 'ask',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.question_answer),
-                                  SizedBox(width: 8),
-                                  Text('向AI提问'),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     );
