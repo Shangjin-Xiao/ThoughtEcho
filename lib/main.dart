@@ -180,10 +180,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primaryColor = _getPrimarySwatchForPlatform(context);
-    // 确保 primaryColor[150] 不为空，特别是在Web平台上
-    final Color secondaryColor = kIsWeb 
-        ? primaryColor // Web平台直接使用primaryColor作为secondaryColor
-        : (primaryColor[150] ?? primaryColor); // 非Web平台尝试使用色阶150
+    // 确保 secondaryColor 不为空，对所有平台统一处理
+    // 首先尝试获取色阶150，如果不存在则使用primaryColor本身
+    final Color secondaryColor = primaryColor[150] ?? primaryColor;
     
     return MaterialApp(
       title: 'Mind Trace',
