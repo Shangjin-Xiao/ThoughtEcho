@@ -41,7 +41,7 @@ jobs:
       - name: Setup Gradle
         working-directory: android
         run: |
-          cat > gradle.properties << EOF
+          cat > gradle.properties << 'EOF'
           org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
@@ -50,7 +50,7 @@ jobs:
       - name: Configure Keystore
         working-directory: android
         run: |
-          cat > key.properties << EOF
+          cat > key.properties << 'EOF'
           storePassword=android
           keyPassword=android
           keyAlias=key
@@ -82,7 +82,7 @@ jobs:
           
           # 创建特殊映射文件以处理老旧插件，如dynamic_color
           mkdir -p .gradle
-          cat > .gradle/settings.json << EOF
+          cat > .gradle/settings.json << 'EOF'
           {
             "moduleConfigurationMap": {
               "dynamic_color": {
@@ -119,7 +119,7 @@ jobs:
               }
             }
           }
-          EOF
+EOF
           
           # 检查SDK安装情况
           ls -la $ANDROID_SDK_ROOT/platforms || echo "No platforms directory"
@@ -148,11 +148,12 @@ EOF
           for PLUGIN_PATH in $PLUGIN_LIST; do
             if [ -d "$PLUGIN_PATH" ] && [ -d "$PLUGIN_PATH/android" ]; then
               echo "处理插件: $PLUGIN_PATH"
+              PLUGIN_NAME=$(basename "$PLUGIN_PATH")
               # 确保插件的Android目录有build.gradle文件
               if [ ! -f "$PLUGIN_PATH/android/build.gradle" ]; then
                 echo "创建默认build.gradle"
                 cat > "$PLUGIN_PATH/android/build.gradle" << EOF
-group '$(basename "$PLUGIN_PATH")'
+group '$PLUGIN_NAME'
 version '1.0'
 
 buildscript {
