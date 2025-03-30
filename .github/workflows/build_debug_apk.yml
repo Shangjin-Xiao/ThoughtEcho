@@ -38,93 +38,93 @@ jobs:
         run: |
           # 创建修复脚本
           cat > fix_plugins.sh << 'EOL'
-#!/bin/bash
-# 插件修复脚本 - 用于修复Flutter构建中的插件问题
+          #!/bin/bash
+          # 插件修复脚本 - 用于修复Flutter构建中的插件问题
 
-echo "开始修复Flutter插件问题..."
+          echo "开始修复Flutter插件问题..."
 
-# 进入Android目录
-cd android
+          # 进入Android目录
+          cd android
 
-# 创建dynamic_color修复文件
-echo "创建dynamic_color修复配置..."
-cat > dynamic_color_fix.gradle << 'GRADLE'
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
-    }
-}
+          # 创建dynamic_color修复文件
+          echo "创建dynamic_color修复配置..."
+          cat > dynamic_color_fix.gradle << 'GRADLE'
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-GRADLE
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          GRADLE
 
-# 应用修复到settings.gradle
-echo "将修复应用到settings.gradle..."
-echo "apply from: new File(settingsDir, 'dynamic_color_fix.gradle')" >> settings.gradle
+          # 应用修复到settings.gradle
+          echo "将修复应用到settings.gradle..."
+          echo "apply from: new File(settingsDir, 'dynamic_color_fix.gradle')" >> settings.gradle
 
-# 检查所有插件的Android结构
-echo "检查所有Flutter插件的Android结构..."
-cd ..
-PLUGINS_FILE=".flutter-plugins-dependencies"
-if [ -f "$PLUGINS_FILE" ]; then
-    # 使用grep和jq提取所有插件信息
-    cat $PLUGINS_FILE | grep -o '"plugins":{[^}]*}' > plugins_temp.json
-    cat plugins_temp.json
-    
-    # 手动检查dynamic_color插件
-    DYNAMIC_COLOR_DIR="$HOME/.pub-cache/hosted/pub.dev/dynamic_color-1.7.0/android"
-    if [ ! -d "$DYNAMIC_COLOR_DIR" ]; then
-        echo "创建dynamic_color Android目录"
-        mkdir -p "$DYNAMIC_COLOR_DIR"
-    fi
-    
-    if [ ! -f "$DYNAMIC_COLOR_DIR/build.gradle" ]; then
-        echo "创建dynamic_color build.gradle文件"
-        cat > "$DYNAMIC_COLOR_DIR/build.gradle" << 'GRADLE'
-group 'io.material.plugins.dynamic_color'
-version '1.0'
+          # 检查所有插件的Android结构
+          echo "检查所有Flutter插件的Android结构..."
+          cd ..
+          PLUGINS_FILE=".flutter-plugins-dependencies"
+          if [ -f "$PLUGINS_FILE" ]; then
+              # 使用grep和jq提取所有插件信息
+              cat $PLUGINS_FILE | grep -o '"plugins":{[^}]*}' > plugins_temp.json
+              cat plugins_temp.json
+              
+              # 手动检查dynamic_color插件
+              DYNAMIC_COLOR_DIR="$HOME/.pub-cache/hosted/pub.dev/dynamic_color-1.7.0/android"
+              if [ ! -d "$DYNAMIC_COLOR_DIR" ]; then
+                  echo "创建dynamic_color Android目录"
+                  mkdir -p "$DYNAMIC_COLOR_DIR"
+              fi
+              
+              if [ ! -f "$DYNAMIC_COLOR_DIR/build.gradle" ]; then
+                  echo "创建dynamic_color build.gradle文件"
+                  cat > "$DYNAMIC_COLOR_DIR/build.gradle" << 'GRADLE'
+          group 'io.material.plugins.dynamic_color'
+          version '1.0'
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
 
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
-    }
-}
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
 
-apply plugin: 'com.android.library'
+          apply plugin: 'com.android.library'
 
-android {
-    compileSdkVersion 34
+          android {
+              compileSdkVersion 34
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
 
-    defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 34
-    }
-}
-GRADLE
-    fi
-fi
+              defaultConfig {
+                  minSdkVersion 21
+                  targetSdkVersion 34
+              }
+          }
+          GRADLE
+              fi
+          fi
 
-echo "插件修复完成!"
-EOL
+          echo "插件修复完成!"
+          EOL
           
           # 执行修复脚本
           chmod +x fix_plugins.sh
