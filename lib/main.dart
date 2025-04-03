@@ -27,7 +27,7 @@ Future<void> initializeDatabasePlatform() async {
 
       await Directory(dbPath).create(recursive: true);
 
-      final path = join(dbPath, '心记.db');
+      final path = join(dbPath, 'mind_trace.db');
       if (!await Directory(dirname(path)).exists()) {
         await Directory(dirname(path)).create(recursive: true);
       }
