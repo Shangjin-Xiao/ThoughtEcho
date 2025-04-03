@@ -45,15 +45,8 @@ jobs:
       - name: Analyze Flutter code
         run: flutter analyze
 
-
       - name: Build Debug APK
         run: flutter build apk --debug
-
-      - name: Build Release APK
-        run: flutter build apk --release
-
-      - name: Build App Bundle
-        run: flutter build appbundle --release
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
@@ -62,43 +55,3 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
           compression-level: 6
           retention-days: 90
-
-      - name: Upload Release APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          compression-level: 6
-          retention-days: 90
-          
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
-          compression-level: 6
-          retention-days: 90
-
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            build/app/outputs/flutter-apk/app-debug.apk
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
-          draft: false
-          prerelease: false
-          name: Release ${{ github.ref_name }}
-          body: |
-            Mind Trace 发布 ${{ github.ref_name }}
-            
-            自动构建于 ${{ github.event.repository.updated_at }}
-            
-            包含：
-            - 调试版APK (app-debug.apk)
-            - 发布版APK (app-release.apk)
-            - 应用包 (app-release.aab)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

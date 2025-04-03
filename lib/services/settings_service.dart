@@ -37,9 +37,14 @@ class SettingsService extends ChangeNotifier {
     }
 
     // 加载主题模式
-    final String? themeModeString = _prefs.getString(_themeModeKey);
-    if (themeModeString != null) {
-      _themeMode = ThemeMode.values.byName(themeModeString);
+    dynamic themeModeValue = _prefs.get(_themeModeKey);
+    String? themeModeString = themeModeValue?.toString();
+    if (themeModeString != null && themeModeString.isNotEmpty) {
+      try {
+        _themeMode = ThemeMode.values.byName(themeModeString);
+      } catch (e) {
+        _themeMode = ThemeMode.system; // 默认回退到系统主题
+      }
     } else {
       _themeMode = ThemeMode.system; // 默认 ThemeMode.system
     }
