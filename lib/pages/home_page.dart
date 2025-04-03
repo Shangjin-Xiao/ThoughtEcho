@@ -5,7 +5,6 @@ import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../widgets/sliding_card.dart';
 import '../models/quote_model.dart';
-import '../models/note_tag.dart';
 import '../models/note_category.dart'; // 添加 import NoteCategory
 import 'settings_page.dart';
 import '../services/ai_service.dart';
@@ -321,7 +320,7 @@ class _HomePageState extends State<HomePage> {
                             if (selected) {
                               selectedTagIds.add(tag.id);
                             } else {
-                              selectedTagIds.remove(tag.id);
+                              selectedTagIds.remove(tag.id); // 移除未使用的 tagChips 变量
                             }
                           });
                         },

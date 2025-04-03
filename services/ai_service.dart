@@ -11,7 +11,7 @@ class AIService {
 
   Future<void> _validateSettings() async {
     final settings = settingsService.aiSettings;
-    if (settings == null || settings.apiKey.isEmpty || settings.apiUrl.isEmpty) {
+    if (settings.apiKey.isEmpty || settings.apiUrl.isEmpty) {
       throw Exception('AI设置未完成，请先在设置页面配置API信息');
     }
   }
@@ -19,7 +19,7 @@ class AIService {
   Future<String> generateInsights(List<Quote> quotes) async {
     try {
       await _validateSettings();
-      final settings = settingsService.aiSettings!;
+      final settings = settingsService.aiSettings;
 
       final messages = [
         {"role": "system", "content": "你是一个专业的笔记整理和分析助手，请分析用户的日记内容并给出洞察。"},

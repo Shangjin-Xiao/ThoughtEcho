@@ -3,7 +3,6 @@ import 'package:mind_trace/models/quote_model.dart';
 import 'package:mind_trace/services/ai_service.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 
 class EditPage extends StatefulWidget {
   final Quote quote;
@@ -38,7 +37,7 @@ class _EditPageState extends State<EditPage> {
     _authorController = TextEditingController(text: author);
     _workController = TextEditingController(text: work);
     _aiAnalysis = widget.quote.aiAnalysis ?? '';
-    _tagIds = List<String>.from(widget.quote.tagIds ?? []);
+    _tagIds = List<String>.from(widget.quote.tagIds);
     _colorHex = widget.quote.colorHex;
   }
 
