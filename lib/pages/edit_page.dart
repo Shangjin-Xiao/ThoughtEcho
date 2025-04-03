@@ -190,7 +190,7 @@ class _EditPageState extends State<EditPage> {
                   ),
                 );
                 setState(() {
-                  _aiAnalysis = summary ?? '';
+                  _aiAnalysis = summary;
                 });
               },
               child: const Text('生成AI分析'),

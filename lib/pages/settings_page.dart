@@ -4,8 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart' show FilePicker, FileType;
 import 'home_page.dart';
 import '../services/database_service.dart';
-import '../services/settings_service.dart';
-import '../services/api_service.dart';
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';

@@ -510,23 +510,6 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildQuoteList(DatabaseService db, ThemeData theme) {
     // 多标签选择UI
-    List<Widget> tagChips = _tags.map((tag) {
-      final isSelected = _selectedTagIds.contains(tag.id);
-      return FilterChip(
-        selected: isSelected,
-        label: Text(tag.name),
-        avatar: Icon(IconUtils.getIconData(tag.iconName)),
-        onSelected: (selected) {
-          setState(() {
-            if (selected) {
-              _selectedTagIds.add(tag.id);
-            } else {
-              _selectedTagIds.remove(tag.id);
-            }
-          });
-        },
-      );
-    }).toList();
 
     return Listener(
       onPointerDown: (event) {

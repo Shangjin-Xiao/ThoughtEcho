@@ -7,11 +7,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mind_trace/main.dart'; // 修改导入路径
+import '../../lib/main.dart'; // 修改导入路径
 
 void main() {
   testWidgets('基础 UI 测试', (WidgetTester tester) async {
-    await tester.pumpWidget(const App()); // 使用正确的应用根组件名称
+    await tester.pumpWidget(const MyApp()); // 使用正确的应用根组件名称
     
     // 基础UI验证
     expect(find.byType(Scaffold), findsOneWidget);
