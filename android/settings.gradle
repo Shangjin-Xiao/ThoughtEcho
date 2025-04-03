@@ -63,25 +63,26 @@ if (pluginsJsonFile.exists()) {
     }
 }
 
-    def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
-    if (pluginDirectory.exists()) {
-        include ":$name"
-        project(":$name").projectDir = pluginDirectory
-        
-        // 不再需要特殊处理dynamic_color插件，因为我们已经在前面排除了它
-        
-        // 检查是否存在android目录
-        def androidDir = new File(pluginDirectory, "android")
-        if (!androidDir.exists()) {
-            println("Creating android directory for plugin: $name")
-            androidDir.mkdir()
-        }
-        
-        // 检查是否存在build.gradle
-        def buildGradle = new File(androidDir, "build.gradle")
-        if (!buildGradle.exists()) {
-            println("Creating default build.gradle for plugin: $name")
-            buildGradle.text = """
+// 处理插件依赖
+if (json != null && json.plugins != null) {
+    json.plugins.android.each { name, path ->
+        def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
+        if (pluginDirectory.exists()) {
+            include ":$name"
+            project(":$name").projectDir = pluginDirectory
+            
+            // 检查是否存在android目录
+            def androidDir = new File(pluginDirectory, "android")
+            if (!androidDir.exists()) {
+                println("Creating android directory for plugin: $name")
+                androidDir.mkdir()
+            }
+            
+            // 检查是否存在build.gradle
+            def buildGradle = new File(androidDir, "build.gradle")
+            if (!buildGradle.exists()) {
+                println("Creating default build.gradle for plugin: $name")
+                buildGradle.text = """
 group '$name'
 version '1.0'
 
@@ -111,8 +112,16 @@ android {
     }
 }
 """
+            }
         }
-        
-        // 不再需要特殊处理dynamic_color插件，因为我们已经在前面排除了它
+    }
+} else if (plugins != null) {
+    // 旧版处理方式
+    plugins.each { name, path ->
+        def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
+        if (pluginDirectory.exists()) {
+            include ":$name"
+            project(":$name").projectDir = pluginDirectory
+        }
     }
 }

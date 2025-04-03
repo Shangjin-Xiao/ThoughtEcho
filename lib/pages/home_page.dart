@@ -225,62 +225,71 @@ class _HomePageState extends State<HomePage> {
                 
                 // 位置和天气选项
                 const SizedBox(height: 16),
-                // 添加位置信息选项
+                // 使用图标按钮替代SwitchListTile
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: SwitchListTile(
-                        title: const Text('添加位置信息'),
-                        subtitle: location != null
-                            ? Text(locationService.currentAddress ?? location ?? '')
-                            : const Text('不包含位置信息'),
-                        value: includeLocation,
-                        onChanged: (value) {
+                    const Text(
+                      '添加信息',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // 位置信息按钮
+                    Tooltip(
+                      message: location != null 
+                          ? '添加位置: ${locationService.currentAddress ?? location}'
+                          : '添加位置信息',
+                      child: FilterChip(
+                        avatar: Icon(
+                          Icons.location_on,
+                          color: includeLocation ? Theme.of(context).colorScheme.primary : Colors.grey,
+                          size: 18,
+                        ),
+                        label: const Text('位置'),
+                        selected: includeLocation,
+                        onSelected: (value) {
                           setState(() {
                             includeLocation = value;
                           });
-                        },
-                      ),
-                    ),
-                    if (includeLocation && location == null)
-                      IconButton(
-                        icon: const Icon(Icons.my_location),
-                        tooltip: '获取当前位置',
-                        onPressed: () async {
-                          final position = await locationService.getCurrentLocation();
-                          if (position != null) {
-                            setState(() {
-                              location = locationService.getFormattedLocation();
+                          // 如果选中但还没有位置信息，则获取位置
+                          if (includeLocation && location == null) {
+                            locationService.getCurrentLocation().then((position) {
+                              if (position != null) {
+                                setState(() {
+                                  location = locationService.getFormattedLocation();
+                                });
+                              }
                             });
                           }
                         },
+                        selectedColor: Theme.of(context).colorScheme.primaryContainer,
                       ),
-                  ],
-                ),
-                
-                // 添加天气信息选项
-                Row(
-                  children: [
-                    Expanded(
-                      child: SwitchListTile(
-                        title: const Text('添加天气信息'),
-                        subtitle: weather != null
-                            ? Text(weatherService.getFormattedWeather())
-                            : const Text('不包含天气信息'),
-                        value: includeWeather,
-                        onChanged: (value) {
+                    ),
+                    const SizedBox(width: 8),
+                    // 天气信息按钮
+                    Tooltip(
+                      message: weather != null 
+                          ? '添加天气: ${weatherService.getFormattedWeather()}' 
+                          : '添加天气信息',
+                      child: FilterChip(
+                        avatar: Icon(
+                          weather != null ? weatherService.getWeatherIconData() : Icons.cloud,
+                          color: includeWeather ? Theme.of(context).colorScheme.primary : Colors.grey,
+                          size: 18,
+                        ),
+                        label: const Text('天气'),
+                        selected: includeWeather,
+                        onSelected: (value) {
                           setState(() {
                             includeWeather = value;
                           });
                         },
+                        selectedColor: Theme.of(context).colorScheme.primaryContainer,
                       ),
                     ),
-                    if (includeWeather && weather != null)
-                      IconButton(
-                        icon: Icon(weatherService.getWeatherIconData()),
-                        tooltip: '当前天气',
-                        onPressed: null,
-                      ),
                   ],
                 ),
                 

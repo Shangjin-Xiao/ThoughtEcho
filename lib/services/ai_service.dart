@@ -124,28 +124,61 @@ class AIService extends ChangeNotifier {
         }
       ];
 
-      final response = await _makeRequest(
-        settings.apiUrl,
-        {
-          'messages': messages,
-          'temperature': 0.9
-        },
-        settings
-      );
+      try {
+        final response = await _makeRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.9
+          },
+          settings
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            debugPrint('生成每日提示超时');
+            throw Exception('请求超时');
+          },
+        );
 
-      final data = json.decode(response.body);
-      if (data['choices'] != null && 
-          data['choices'].isNotEmpty && 
-          data['choices'][0]['message'] != null) {
-        return data['choices'][0]['message']['content'];
-      } else {
-        debugPrint('API响应格式错误: ${response.body}');
-        throw Exception('API响应格式错误');
+        final data = json.decode(response.body);
+        if (data['choices'] != null && 
+            data['choices'].isNotEmpty && 
+            data['choices'][0]['message'] != null) {
+          return data['choices'][0]['message']['content'];
+        } else {
+          debugPrint('API响应格式错误: ${response.body}');
+          throw Exception('API响应格式错误');
+        }
+      } catch (e) {
+        debugPrint('生成每日提示网络错误: $e');
+        return _getDefaultPrompt();
       }
     } catch (e) {
       debugPrint('生成每日提示错误: $e');
-      rethrow;
+      return _getDefaultPrompt();
     }
+  }
+
+  // 获取默认的每日提示
+  String _getDefaultPrompt() {
+    final List<String> defaultPrompts = [
+      "今天，你有什么让自己感到特别感恩的事情吗？",
+      "如果你能给过去的自己一个建议，那会是什么？",
+      "你今天学到了什么新东西？有什么启发吗？",
+      "有什么一直想尝试却还没有行动的事情？是什么阻碍了你？",
+      "反思一下：最近有什么事情让你感到特别快乐或有成就感？",
+      "你最近克服了什么困难？这个经历教会了你什么？",
+      "如果时间和金钱都不是问题，明天你会做什么？",
+      "今天遇到的最大挑战是什么？你是如何应对的？",
+      "有哪些小习惯正在积极地改变你的生活？",
+      "你最珍视的三个价值观是什么？为什么它们对你如此重要？"
+    ];
+    
+    // 使用日期为种子选择一个提示，确保同一天显示相同提示
+    final today = DateTime.now();
+    final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
+    final index = dayOfYear % defaultPrompts.length;
+    return defaultPrompts[index];
   }
 
   Future<String> generateInsights(List<Quote> quotes) async {
