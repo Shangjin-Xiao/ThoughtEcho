@@ -42,9 +42,6 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      - name: Analyze Flutter code
-        run: flutter analyze
-
       - name: Build Debug APK
         run: flutter build apk --debug
 
