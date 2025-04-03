@@ -31,28 +31,11 @@ jobs:
       - name: 获取Flutter依赖
         run: flutter pub get
       
-      - name: 检查Flutter问题
-        run: flutter analyze || true
-      
-      - name: 修复Flutter插件问题
+      - name: 修复dynamic_color插件
         run: |
-          # 创建修复脚本
-          cat > fix_plugins.sh << 'EOL'
-          #!/bin/bash
-          # 插件修复脚本 - 用于修复Flutter构建中的插件问题
-
-          echo "开始修复Flutter插件问题..."
-
-          # 检查dynamic_color插件
-          DYNAMIC_COLOR_DIR="$HOME/.pub-cache/hosted/pub.dev/dynamic_color-1.7.0/android"
-          if [ ! -d "$DYNAMIC_COLOR_DIR" ]; then
-              echo "创建dynamic_color Android目录"
-              mkdir -p "$DYNAMIC_COLOR_DIR"
-          fi
-          
-          if [ ! -f "$DYNAMIC_COLOR_DIR/build.gradle" ]; then
-              echo "创建dynamic_color build.gradle文件"
-              cat > "$DYNAMIC_COLOR_DIR/build.gradle" << 'GRADLE'
+          PLUGIN_DIR="$HOME/.pub-cache/hosted/pub.dev/dynamic_color-1.7.0/android"
+          mkdir -p "$PLUGIN_DIR"
+          cat > "$PLUGIN_DIR/build.gradle" << 'EOF'
           group 'io.material.plugins.dynamic_color'
           version '1.0'
 
@@ -67,35 +50,44 @@ jobs:
               }
           }
 
+          rootProject.allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
           apply plugin: 'com.android.library'
 
           android {
+              namespace 'io.material.plugins.dynamic_color'
               compileSdkVersion 34
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
 
               defaultConfig {
                   minSdkVersion 21
                   targetSdkVersion 34
               }
-          }
-          GRADLE
-          fi
 
-          echo "插件修复完成!"
-          EOL
-          
-          # 执行修复脚本
-          chmod +x fix_plugins.sh
-          ./fix_plugins.sh
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'com.google.android.material:material:1.11.0'
+          }
+          EOF
+
+      - name: 设置Gradle属性
+        run: |
+          mkdir -p android/gradle/wrapper
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+          echo "org.gradle.jvmargs=-Xmx1536M --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED" > android/gradle.properties
       
       - name: 设置调试签名
         run: |
           cd android/app
-          mkdir -p $PWD
           keytool -genkeypair \
             -alias androiddebugkey \
             -keypass android \
@@ -106,8 +98,14 @@ jobs:
             -keysize 2048 \
             -validity 10000
       
+      - name: 清理构建缓存
+        run: |
+          flutter clean
+          cd android
+          ./gradlew clean
+      
       - name: 构建调试版APK
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug
       
       - name: 保存APK构建产物
         uses: actions/upload-artifact@v4
