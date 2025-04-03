@@ -36,7 +36,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "mind-trace"
+rootProject.name = "心记"
 
 include ':app'
 

@@ -27,7 +27,7 @@ Future<void> initializeDatabasePlatform() async {
 
       await Directory(dbPath).create(recursive: true);
 
-      final path = join(dbPath, 'mind_trace.db');
+      final path = join(dbPath, '心记.db');
       if (!await Directory(dirname(path)).exists()) {
         await Directory(dirname(path)).create(recursive: true);
       }
@@ -146,7 +146,7 @@ class MyApp extends StatelessWidget {
         }
         
         return MaterialApp(
-          title: 'Mind Trace',
+          title: '心记',
           theme: appTheme.createLightThemeData(),
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,

@@ -35,7 +35,7 @@ class DatabaseService extends ChangeNotifier {
         _memoryStore.add(
           Quote(
             id: _uuid.v4(),
-            content: '欢迎使用MindTrace - Web版',
+            content: '欢迎使用心记 - Web版',
             date: DateTime.now().toIso8601String(),
             source: '示例来源',
             aiAnalysis: '这是Web平台示例笔记',
@@ -202,7 +202,7 @@ class DatabaseService extends ChangeNotifier {
       
       final jsonData = {
         'metadata': {
-          'app': 'MindTrace',
+          'app': '心记',
           'version': await db.getVersion(),
           'exportTime': DateTime.now().toIso8601String(),
         },
@@ -232,7 +232,7 @@ class DatabaseService extends ChangeNotifier {
       // 转换为格式化的 JSON 字符串
       final jsonStr = JsonEncoder.withIndent('  ').convert(jsonData);
       final dir = await getApplicationDocumentsDirectory();
-      final fileName = 'mindtrace_${DateTime.now().millisecondsSinceEpoch}.json';
+      final fileName = '心记_${DateTime.now().millisecondsSinceEpoch}.json';
       final file = File('${dir.path}/$fileName');
       await file.writeAsString(jsonStr);
       return file.path;

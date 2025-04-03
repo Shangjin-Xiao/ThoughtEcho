@@ -1,3 +1,3 @@
 
-rootProject.name = "mind-trace"
+rootProject.name = "心记"
 // ...existing code...

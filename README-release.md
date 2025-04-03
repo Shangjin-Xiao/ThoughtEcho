@@ -1,4 +1,4 @@
-# Mind Trace应用发布指南
+# 心记应用发布指南
 
 本指南详细说明如何使用GitHub Actions自动构建并签名Android APK。
 
@@ -9,7 +9,7 @@
 可以使用Android Studio或通过命令行创建密钥库：
 
 ```bash
-keytool -genkey -v -keystore mind-trace-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias mind-trace
+keytool -genkey -v -keystore xinji-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias xinji
 ```
 
 运行此命令后，请按照提示填写相关信息并记住以下重要信息：
@@ -21,13 +21,13 @@ keytool -genkey -v -keystore mind-trace-key.jks -keyalg RSA -keysize 2048 -valid
 
 **Windows系统：**
 ```bash
-certutil -encode mind-trace-key.jks keystore_base64.txt
+certutil -encode xinji-key.jks keystore_base64.txt
 ```
 打开生成的 `keystore_base64.txt` 文件，复制从 `-----BEGIN CERTIFICATE-----` 到 `-----END CERTIFICATE-----` 之间的所有内容（包括这两行）。
 
 **macOS/Linux系统：**
 ```bash
-base64 mind-trace-key.jks > keystore_base64.txt
+base64 xinji-key.jks > keystore_base64.txt
 ```
 复制 `keystore_base64.txt` 中的所有内容。
 
@@ -40,7 +40,7 @@ base64 mind-trace-key.jks > keystore_base64.txt
    | 名称 | 说明 | 示例 |
    |------|------|------|
    | `KEYSTORE_BASE64` | 密钥库文件的base64编码 | *从keystore_base64.txt中复制* |
-   | `KEY_ALIAS` | 密钥别名 | mind-trace |
+   | `KEY_ALIAS` | 密钥别名 | xinji |
    | `KEY_PASSWORD` | 密钥密码 | *您设置的密钥密码* |
    | `STORE_PASSWORD` | 密钥库密码 | *您设置的密钥库密码* |
 
@@ -71,13 +71,13 @@ base64 mind-trace-key.jks > keystore_base64.txt
 
 如需在本地构建已签名的APK，请确保：
 
-1. 将密钥库文件 `mind-trace-key.jks` 放置在 `android/app` 目录中
+1. 将密钥库文件 `xinji-key.jks` 放置在 `android/app` 目录中
 2. 在 `android/key.properties` 文件中配置正确的密钥信息：
    ```
    storePassword=<密钥库密码>
    keyPassword=<密钥密码>
    keyAlias=<密钥别名>
-   storeFile=../app/mind-trace-key.jks
+   storeFile=../app/xinji-key.jks
    ```
 
 ## 常见问题
@@ -88,4 +88,4 @@ base64 mind-trace-key.jks > keystore_base64.txt
 
 2. **无法安装构建的APK**
    - 确保使用相同的签名密钥库进行构建
-   - 如需更换签名密钥，必须更改应用的版本号 
+   - 如需更换签名密钥，必须更改应用的版本号

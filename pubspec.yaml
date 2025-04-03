@@ -1,5 +1,5 @@
-name: mind_trace
-description: A mind tracing app that helps you record and analyze your thoughts.
+name: 心记
+description: 一款帮助你记录和分析思想的应用。
 publish_to: 'none'
 version: 1.0.0+1
 

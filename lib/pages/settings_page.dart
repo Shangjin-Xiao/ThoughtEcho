@@ -19,7 +19,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final String _projectUrl = 'https://github.com/Shangjin-Xiao/mind-trace/';
+  final String _projectUrl = 'https://github.com/Shangjin-Xiao/心记/';
 
   @override
   void dispose() {
