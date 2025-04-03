@@ -12,6 +12,11 @@ class Quote {
   List<String> tagIds;
   final String? categoryId;
   final String? colorHex;
+  // 添加位置相关字段
+  final String? location;     // 格式: 国家,省/州,城市,区/县
+  // 添加天气相关字段
+  final String? weather;      // 天气状况 (如: 晴, 多云, 阴, 雨等)
+  final String? temperature;  // 温度 (如: 25°C)
 
   Quote({
     this.id,
@@ -27,6 +32,9 @@ class Quote {
     this.tagIds = const [],
     this.categoryId,
     this.colorHex,
+    this.location,
+    this.weather,
+    this.temperature,
   });
 
   Map<String, dynamic> toMap() {
@@ -44,6 +52,9 @@ class Quote {
       'tag_ids': tagIds.join(','),
       'category_id': categoryId,
       'color_hex': colorHex,
+      'location': location,
+      'weather': weather,
+      'temperature': temperature,
     };
   }
 
@@ -62,6 +73,9 @@ class Quote {
       tagIds: (map['tag_ids']?.toString().split(',') ?? []).cast<String>(),
       categoryId: map['category_id'],
       colorHex: map['color_hex'],
+      location: map['location'],
+      weather: map['weather'],
+      temperature: map['temperature'],
     );
   }
 }

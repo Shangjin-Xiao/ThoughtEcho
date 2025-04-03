@@ -11,6 +11,8 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/ai_service.dart';
+import 'package:mind_trace/services/location_service.dart';
+import 'package:mind_trace/services/weather_service.dart';
 import 'package:mind_trace/pages/home_page.dart';
 import 'package:mind_trace/theme/app_theme.dart';
 
@@ -52,6 +54,8 @@ void main() async {
     final settingsService = await SettingsService.create();
     final databaseService = DatabaseService();
     final appTheme = AppTheme();
+    final locationService = LocationService();
+    final weatherService = WeatherService();
     await appTheme.initialize();
 
     // 对所有平台统一初始化数据库
@@ -68,6 +72,8 @@ void main() async {
           ChangeNotifierProvider(create: (_) => settingsService),
           ChangeNotifierProvider(create: (_) => databaseService),
           ChangeNotifierProvider(create: (_) => appTheme),
+          ChangeNotifierProvider(create: (_) => locationService),
+          ChangeNotifierProvider(create: (_) => weatherService),
           ChangeNotifierProxyProvider<SettingsService, AIService>(
             create: (context) => AIService(
               settingsService: context.read<SettingsService>(),

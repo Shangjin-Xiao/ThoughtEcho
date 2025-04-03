@@ -3,11 +3,7 @@ import 'package:provider/provider.dart';
 import '../utils/icon_utils.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
-import '../services/location_service.dart';
-import '../services/weather_service.dart';
 import '../widgets/sliding_card.dart';
-import '../widgets/weather_widget.dart';
-import '../widgets/hitokoto_widget.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart'; // 添加 import NoteCategory
 import 'settings_page.dart';
@@ -18,7 +14,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../services/settings_service.dart';
-import '../widgets/quote_item_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -61,7 +56,6 @@ class _HomePageState extends State<HomePage> {
     _loadDailyQuote();
     _fetchDailyPrompt();
     _loadTags();
-    _initLocationAndWeather();
   }
 
   Future<void> _loadTags() async {
@@ -129,19 +123,9 @@ class _HomePageState extends State<HomePage> {
     final TextEditingController authorController = TextEditingController(text: prefilledAuthor ?? '');
     final TextEditingController workController = TextEditingController(text: prefilledWork ?? '');
     final aiService = context.read<AIService>();
-    final locationService = Provider.of<LocationService>(context, listen: false);
-    final weatherService = Provider.of<WeatherService>(context, listen: false);
-    
     String? aiSummary;
     bool isAnalyzing = false;
     List<String> selectedTagIds = [];
-    
-    // 位置和天气相关
-    bool includeLocation = false;
-    bool includeWeather = false;
-    String? location = locationService.getFormattedLocation();
-    String? weather = weatherService.currentWeather;
-    String? temperature = weatherService.temperature;
     
     // 添加颜色选择
     String? selectedColorHex;
@@ -166,7 +150,6 @@ class _HomePageState extends State<HomePage> {
             right: 16,
             top: 16,
           ),
-          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -222,68 +205,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-                
-                // 位置和天气选项
-                const SizedBox(height: 16),
-                // 添加位置信息选项
-                Row(
-                  children: [
-                    Expanded(
-                      child: SwitchListTile(
-                        title: const Text('添加位置信息'),
-                        subtitle: location != null
-                            ? Text(locationService.currentAddress ?? location ?? '')
-                            : const Text('不包含位置信息'),
-                        value: includeLocation,
-                        onChanged: (value) {
-                          setState(() {
-                            includeLocation = value;
-                          });
-                        },
-                      ),
-                    ),
-                    if (includeLocation && location == null)
-                      IconButton(
-                        icon: const Icon(Icons.my_location),
-                        tooltip: '获取当前位置',
-                        onPressed: () async {
-                          final position = await locationService.getCurrentLocation();
-                          if (position != null) {
-                            setState(() {
-                              location = locationService.getFormattedLocation();
-                            });
-                          }
-                        },
-                      ),
-                  ],
-                ),
-                
-                // 添加天气信息选项
-                Row(
-                  children: [
-                    Expanded(
-                      child: SwitchListTile(
-                        title: const Text('添加天气信息'),
-                        subtitle: weather != null
-                            ? Text(weatherService.getFormattedWeather())
-                            : const Text('不包含天气信息'),
-                        value: includeWeather,
-                        onChanged: (value) {
-                          setState(() {
-                            includeWeather = value;
-                          });
-                        },
-                      ),
-                    ),
-                    if (includeWeather && weather != null)
-                      IconButton(
-                        icon: Icon(weatherService.getWeatherIconData()),
-                        tooltip: '当前天气',
-                        onPressed: null,
-                      ),
-                  ],
-                ),
-                
               const SizedBox(height: 16),
               
               // 颜色选择区域
@@ -399,7 +320,7 @@ class _HomePageState extends State<HomePage> {
                             if (selected) {
                               selectedTagIds.add(tag.id);
                             } else {
-                                selectedTagIds.remove(tag.id);
+                              selectedTagIds.remove(tag.id); // 移除未使用的 tagChips 变量
                             }
                           });
                         },
@@ -455,7 +376,9 @@ class _HomePageState extends State<HomePage> {
                   ),
               if (aiSummary != null) ...[
                 const SizedBox(height: 16),
-                  Container(
+                SizedBox(
+                  height: 20.0,
+                  child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
@@ -482,8 +405,10 @@ class _HomePageState extends State<HomePage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(aiSummary ?? ''),
+                        // 利用非空断言，确保传入的字符串为非空
+                        Text(aiSummary!),
                       ],
+                    ),
                   ),
                 ),
               ],
@@ -562,9 +487,6 @@ class _HomePageState extends State<HomePage> {
                           sourceWork: workController.text,
                           tagIds: selectedTagIds,
                           colorHex: selectedColorHex,
-                            location: includeLocation ? location : null,
-                            weather: includeWeather ? weather : null,
-                            temperature: includeWeather ? temperature : null,
                         );
                         
                         await db.addQuote(quote);
@@ -580,7 +502,6 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
             ],
-            ),
           ),
         ),
       ),
@@ -588,290 +509,510 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildQuoteList(DatabaseService db, ThemeData theme) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '搜索笔记...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              // 排序按钮
-              IconButton(
-                icon: const Icon(Icons.sort),
-                tooltip: '排序',
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => StatefulBuilder(
-                      builder: (context, setModalState) => Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '排序方式',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // 按时间排序
-                            RadioListTile<String>(
-                              title: const Text('按时间排序'),
-                              subtitle: Text(_sortAscending ? '从旧到新' : '从新到旧'),
-                              value: 'time',
-                              groupValue: _sortType,
-                              onChanged: (value) {
-                                setModalState(() {
-                                  setState(() {
-                                    _sortType = value!;
-                                  });
-                                });
-                              },
-                            ),
-                            // 按名称排序
-                            RadioListTile<String>(
-                              title: const Text('按名称排序'),
-                              subtitle: Text(_sortAscending ? '升序 A-Z' : '降序 Z-A'),
-                              value: 'name',
-                              groupValue: _sortType,
-                              onChanged: (value) {
-                                setModalState(() {
-                                  setState(() {
-                                    _sortType = value!;
-                                  });
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            // 排序方向
-                            SwitchListTile(
-                              title: const Text('排序方向'),
-                              subtitle: Text(_sortAscending ? '升序' : '降序'),
-                              value: _sortAscending,
-                              onChanged: (value) {
-                                setModalState(() {
-                                  setState(() {
-                                    _sortAscending = value;
-                                  });
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('确定'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+    // 多标签选择UI
+
+    return Listener(
+      onPointerDown: (event) {
+        _startDragX = event.position.dx;
+      },
+      onPointerUp: (event) {
+        final dragDistance = event.position.dx - _startDragX!;
+        if (dragDistance < -50) {
+          _showAddQuoteDialog(context, db);
+        }
+      },
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '搜索笔记...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              // 标签筛选按钮
-              IconButton(
-                icon: const Icon(Icons.filter_list),
-                tooltip: '标签筛选',
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => StatefulBuilder(
-                      builder: (context, setModalState) => Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '按标签筛选',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 8.0,
-                              runSpacing: 8.0,
-                              children: _tags.map((tag) {
-                                final isSelected = _selectedTagIds.contains(tag.id);
-                                return FilterChip(
-                                  selected: isSelected,
-                                  label: Text(tag.name),
-                                  avatar: Icon(IconUtils.getIconData(tag.iconName)),
-                                  onSelected: (selected) {
-                                    setModalState(() {
-                                      setState(() {
-                                        if (selected) {
-                                          _selectedTagIds.add(tag.id);
-                                        } else {
-                                          _selectedTagIds.remove(tag.id);
-                                        }
-                                      });
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedTagIds.clear();
-                                    });
-                                    setModalState(() {});
-                                  },
-                                  child: const Text('清除筛选'),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('确定'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<Quote>>(
-            future: db.getUserQuotes(tagIds: _selectedTagIds.isNotEmpty ? _selectedTagIds : null),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.note_alt_outlined,
-                        size: 64,
-                        color: theme.colorScheme.primary.applyOpacity(0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '还没有笔记，开始记录吧！',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.primary.applyOpacity(0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              var quotes = snapshot.data!;
-              if (_searchQuery.isNotEmpty) {
-                quotes = quotes.where((quote) =>
-                    quote.content.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                    (quote.source != null && quote.source!.toLowerCase().contains(_searchQuery.toLowerCase()))).toList();
-              }
-              
-              if (quotes.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.search_off,
-                        size: 64,
-                        color: theme.colorScheme.primary.applyOpacity(0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '没有找到匹配的笔记',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.primary.applyOpacity(0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              // 根据排序类型和排序方向对笔记进行排序
-              if (_sortType == 'time') {
-                quotes.sort((a, b) {
-                  final dateA = DateTime.parse(a.date);
-                  final dateB = DateTime.parse(b.date);
-                  return _sortAscending 
-                      ? dateA.compareTo(dateB)  // 升序：从旧到新
-                      : dateB.compareTo(dateA); // 降序：从新到旧
-                });
-              } else if (_sortType == 'name') {
-                quotes.sort((a, b) {
-                  return _sortAscending 
-                      ? a.content.compareTo(b.content)  // 升序：A-Z
-                      : b.content.compareTo(a.content); // 降序：Z-A
-                });
-              }
-              
-              return ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: quotes.length,
-                itemBuilder: (context, index) {
-                  final quote = quotes[index];
-                  // 获取展开状态，如果不存在则默认为折叠状态
-                  final bool isExpanded = _expandedItems[quote.id] ?? false;
-                  
-                  return QuoteItemWidget(
-                    quote: quote,
-                    tags: _tags,
-                    isExpanded: isExpanded,
-                    onToggleExpanded: (expanded) {
+                    onChanged: (value) {
                       setState(() {
-                        _expandedItems[quote.id!] = expanded;
+                        _searchQuery = value;
                       });
                     },
-                    onEdit: () => _showEditQuoteDialog(context, db, quote),
-                    onDelete: () => _showDeleteConfirmDialog(context, db, quote),
-                    onAskAI: () => _showAIQuestionDialog(context, quote),
-                  );
-                },
-              );
-            },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // 排序按钮
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  tooltip: '排序',
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setModalState) => Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '排序方式',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // 按时间排序
+                              RadioListTile<String>(
+                                title: const Text('按时间排序'),
+                                subtitle: Text(_sortAscending ? '从旧到新' : '从新到旧'),
+                                value: 'time',
+                                groupValue: _sortType,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortType = value!;
+                                    });
+                                  });
+                                },
+                              ),
+                              // 按名称排序
+                              RadioListTile<String>(
+                                title: const Text('按名称排序'),
+                                subtitle: Text(_sortAscending ? '升序 A-Z' : '降序 Z-A'),
+                                value: 'name',
+                                groupValue: _sortType,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortType = value!;
+                                    });
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              // 排序方向
+                              SwitchListTile(
+                                title: const Text('排序方向'),
+                                subtitle: Text(_sortAscending ? '升序' : '降序'),
+                                value: _sortAscending,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortAscending = value;
+                                    });
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                // 标签筛选按钮
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  tooltip: '标签筛选',
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setModalState) => Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '按标签筛选',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: _tags.map((tag) {
+                                  final isSelected = _selectedTagIds.contains(tag.id);
+                                  return FilterChip(
+                                    selected: isSelected,
+                                    label: Text(tag.name),
+                                    avatar: Icon(IconUtils.getIconData(tag.iconName)),
+                                    onSelected: (selected) {
+                                      setModalState(() {
+                                        setState(() {
+                                          if (selected) {
+                                            _selectedTagIds.add(tag.id);
+                                          } else {
+                                            _selectedTagIds.remove(tag.id);
+                                          }
+                                        });
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedTagIds.clear();
+                                      });
+                                      setModalState(() {});
+                                    },
+                                    child: const Text('清除筛选'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          Expanded(
+            child: FutureBuilder<List<Quote>>(
+              future: db.getUserQuotes(tagIds: _selectedTagIds.isNotEmpty ? _selectedTagIds : null),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.note_alt_outlined,
+                          size: 64,
+                          color: theme.colorScheme.primary.applyOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '还没有笔记，开始记录吧！',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.primary.applyOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                var quotes = snapshot.data!;
+                if (_searchQuery.isNotEmpty) {
+                  quotes = quotes.where((quote) =>
+                      quote.content.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      (quote.source != null && quote.source!.toLowerCase().contains(_searchQuery.toLowerCase()))).toList();
+                }
+                
+                if (quotes.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: theme.colorScheme.primary.applyOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '没有找到匹配的笔记',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.primary.applyOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                // 根据排序类型和排序方向对笔记进行排序
+                if (_sortType == 'time') {
+                  quotes.sort((a, b) {
+                    final dateA = DateTime.parse(a.date);
+                    final dateB = DateTime.parse(b.date);
+                    return _sortAscending 
+                        ? dateA.compareTo(dateB)  // 升序：从旧到新
+                        : dateB.compareTo(dateA); // 降序：从新到旧
+                  });
+                } else if (_sortType == 'name') {
+                  quotes.sort((a, b) {
+                    return _sortAscending 
+                        ? a.content.compareTo(b.content)  // 升序：A-Z
+                        : b.content.compareTo(a.content); // 降序：Z-A
+                  });
+                }
+                
+                return ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: quotes.length,
+                  itemBuilder: (context, index) {
+                    final quote = quotes[index];
+                    // 获取展开状态，如果不存在则默认为折叠状态
+                    final bool isExpanded = _expandedItems[quote.id] ?? false;
+                    // 卡片颜色：优先使用自定义颜色，否则使用动态取色
+                    final Color cardColor = quote.colorHex != null 
+                        ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000)
+                        : index % 2 == 0 
+                          ? theme.colorScheme.primary.withOpacity(0.1) 
+                          : theme.colorScheme.secondary.withOpacity(0.1);
+                    
+                    // 格式化日期为年月日
+                    final DateTime quoteDate = DateTime.parse(quote.date);
+                    final String formattedDate = '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} 摘录';
+                    
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Material(
+                        elevation: 1,
+                        borderRadius: BorderRadius.circular(16),
+                        color: cardColor,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            // 展开/折叠卡片内容
+                            setState(() {
+                              _expandedItems[quote.id!] = !isExpanded;
+                            });
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 头部日期显示
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      formattedDate,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              // 笔记内容
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                child: Text(
+                                  quote.content,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    height: 1.5,
+                                  ),
+                                  maxLines: isExpanded ? null : 3,
+                                  overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                                ),
+                              ),
+                              
+                              // 来源信息（如果有）
+                              if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) || 
+                                 (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                                  child: Text(
+                                    _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurface.withOpacity(0.75),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                                  child: Text(
+                                    quote.source!,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurface.withOpacity(0.75),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              
+                              // 展开/折叠按钮（如果内容较长）
+                              if (_needsExpansion(quote.content)) ...[
+                                Center(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _expandedItems[quote.id!] = !isExpanded;
+                                      });
+                                    },
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          isExpanded ? '收起' : '展开全部',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Icon(
+                                          isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                          size: 16,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              
+                              // 底部工具栏
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
+                                child: Row(
+                                  children: [
+                                    // 标签信息
+                                    if (quote.tagIds.isNotEmpty) ...[
+                                      Icon(
+                                        Icons.label_outline,
+                                        size: 16,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            children: quote.tagIds.map((tagId) {
+                                              final tag = _tags.firstWhere(
+                                                (t) => t.id == tagId,
+                                                orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                                              );
+                                              return Container(
+                                                margin: const EdgeInsets.only(right: 8),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: theme.colorScheme.primary.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  tag.name,
+                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                    color: theme.colorScheme.primary,
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    
+                                    // 操作按钮
+                                    PopupMenuButton<String>(
+                                      icon: Icon(
+                                        Icons.more_vert,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      onSelected: (value) async {
+                                        if (value == 'ask') {
+                                          _showAIQuestionDialog(context, quote);
+                                        } else if (value == 'edit') {
+                                          _showEditQuoteDialog(context, db, quote);
+                                        } else if (value == 'delete') {
+                                          _showDeleteConfirmDialog(context, db, quote);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        PopupMenuItem<String>(
+                                          value: 'edit',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit, color: theme.colorScheme.primary),
+                                              const SizedBox(width: 8),
+                                              const Text('编辑笔记'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'ask',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.question_answer, color: theme.colorScheme.primary),
+                                              const SizedBox(width: 8),
+                                              const Text('向AI提问'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete, color: Colors.red),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '删除笔记',
+                                                style: TextStyle(color: theme.colorScheme.error),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -879,8 +1020,6 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final db = Provider.of<DatabaseService>(context);
     final theme = Theme.of(context);
-    final weatherService = Provider.of<WeatherService>(context);
-    final locationService = Provider.of<LocationService>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -898,38 +1037,8 @@ class _HomePageState extends State<HomePage> {
                   });
                 },
               )
-            : const Text('心记'),
+            : const Text('每日一言'),
         actions: [
-          if (_currentIndex == 0 && weatherService.currentWeather != null && locationService.hasLocationPermission)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      weatherService.getWeatherIconData(),
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           if (_currentIndex == 0)
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -1068,7 +1177,7 @@ class _HomePageState extends State<HomePage> {
           ),
           // 记录页
           _buildQuoteList(db, theme),
-          // AI页
+          // AI侧边页
           const InsightsPage(),
           // 设置页
           const SettingsPage(),
@@ -1100,7 +1209,7 @@ class _HomePageState extends State<HomePage> {
           NavigationDestination(
             icon: Icon(Icons.psychology_outlined),
             selectedIcon: Icon(Icons.psychology),
-            label: 'AI',
+            label: 'AI侧边',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
@@ -1636,66 +1745,5 @@ class _HomePageState extends State<HomePage> {
     
     authorController.text = author;
     workController.text = work;
-  }
-
-  // 初始化位置和天气服务
-  Future<void> _initLocationAndWeather() async {
-    final locationService = Provider.of<LocationService>(context, listen: false);
-    await locationService.init();
-    
-    if (locationService.hasLocationPermission && locationService.isLocationServiceEnabled) {
-      final position = await locationService.getCurrentLocation();
-      if (position != null) {
-        final weatherService = Provider.of<WeatherService>(context, listen: false);
-        await weatherService.getWeatherData(
-          position.latitude, 
-          position.longitude
-        );
-      }
-    } else {
-      _showLocationPermissionDialog();
-    }
-  }
-  
-  // 显示位置权限对话框
-  void _showLocationPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('需要位置权限'),
-        content: const Text('心记需要访问位置信息以显示天气和在笔记中添加位置。如果不授予权限，相关功能将被禁用。'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('稍后再说'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              final locationService = Provider.of<LocationService>(context, listen: false);
-              final granted = await locationService.requestLocationPermission();
-              if (granted) {
-                _initLocationAndWeather();
-              }
-            },
-            child: const Text('授予权限'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 根据天气描述获取图标
-  IconData _getWeatherIcon(String weather) {
-    if (weather.contains('晴')) return Icons.wb_sunny;
-    if (weather.contains('云') || weather.contains('阴')) return Icons.cloud;
-    if (weather.contains('雾') || weather.contains('霾')) return Icons.cloud;
-    if (weather.contains('雨') && weather.contains('雷')) return Icons.flash_on;
-    if (weather.contains('雨')) return Icons.water_drop;
-    if (weather.contains('雪')) return Icons.ac_unit;
-    if (weather.contains('风')) return Icons.air;
-    return Icons.cloud_queue;
   }
 }

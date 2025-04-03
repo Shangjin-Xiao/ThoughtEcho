@@ -8,6 +8,12 @@ import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
+import '../models/note_category.dart';
+import '../services/settings_service.dart';
+import '../services/location_service.dart';
+import '../services/weather_service.dart';
+import 'category_settings_page.dart';
+import 'backup_restore_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -18,9 +24,11 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/心记/';
+  final TextEditingController _locationController = TextEditingController();
 
   @override
   void dispose() {
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -36,141 +44,305 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final settingsService = Provider.of<SettingsService>(context);
+    final locationService = Provider.of<LocationService>(context);
+    final weatherService = Provider.of<WeatherService>(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          _buildSettingSection('应用设置', [
-            _buildSettingItem(
-              icon: Icons.language,
-              title: '语言',
-              subtitle: '简体中文',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('语言设置功能即将上线')),
-                );
-              },
-            ),
-            _buildSettingItem(
-              icon: Icons.format_quote,
-              title: '每日一言设置',
-              subtitle: '设置首页展示的每日一言内容类型',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HitokotoSettingsPage()),
-              ),
-            ),
-            _buildSettingItem(
-              icon: Icons.color_lens,
-              title: '主题设置',
-              subtitle: '自定义主题颜色和明暗模式',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ThemeSettingsPage()),
-              ),
-            ),
-          ]),
-          _buildSettingSection('笔记设置', [
-            _buildSettingItem(
-              icon: Icons.local_offer,
-              title: '标签管理',
-              subtitle: '管理笔记标签',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TagSettingsPage()),
-              ),
-            ),
-          ]),
-          _buildSettingSection('AI 设置', [
-            _buildSettingItem(
-              icon: Icons.api,
-              title: 'API 设置',
-              subtitle: '配置 AI 服务',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AISettingsPage()),
-              ),
-            ),
-          ]),
-          _buildSettingSection('关于', [
-            _buildSettingItem(
-              icon: Icons.info_outline,
-              title: '版本',
-              subtitle: 'v1.0.0',
-              onTap: null,
-            ),
-            _buildSettingItem(
-              icon: Icons.code,
-              title: '项目地址',
-              subtitle: 'GitHub',
-              onTap: () => _launchUrl(_projectUrl),
-            ),
-          ]),
-          _buildSettingSection('数据管理', [
-            _buildSettingItem(
-              icon: Icons.backup,
-              title: '备份数据',
-              subtitle: '导出所有数据到文件',
-              onTap: () => _handleExport(),
-            ),
-            _buildSettingItem(
-              icon: Icons.restore,
-              title: '恢复数据',
-              subtitle: '从备份文件导入数据',
-              onTap: () => _handleImport(),
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
+          // 位置和天气设置
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('位置与天气设置'),
+                  leading: const Icon(Icons.location_on),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Divider(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                SwitchListTile(
+                  title: const Text('使用位置服务'),
+                  subtitle: Text(
+                    locationService.hasLocationPermission 
+                        ? '已获得位置权限' 
+                        : '未获得位置权限',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: locationService.hasLocationPermission
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.error,
+                    ),
+                  ),
+                  value: locationService.hasLocationPermission,
+                  onChanged: (value) async {
+                    if (value) {
+                      // 请求位置权限
+                      final granted = await locationService.requestLocationPermission();
+                      if (granted) {
+                        // 获取当前位置
+                        final position = await locationService.getCurrentLocation();
+                        if (position != null && mounted) {
+                          // 更新天气
+                          await weatherService.getWeatherData(
+                            position.latitude, 
+                            position.longitude
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('位置服务已启用')),
+                          );
+                        }
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('无法获取位置权限')),
+                        );
+                      }
+                    }
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '手动设置位置',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8.0),
+                      TextField(
+                        controller: _locationController,
+                        decoration: InputDecoration(
+                          hintText: '国家,省份,城市,区县 (使用逗号分隔)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0, 
+                            vertical: 12.0,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.check),
+                            onPressed: () {
+                              final locationString = _locationController.text.trim();
+                              if (locationString.isNotEmpty) {
+                                locationService.parseLocationString(locationString);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('位置已更新')),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8.0),
+                      Text(
+                        '当前位置: ${locationService.currentAddress ?? '未设置'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                if (locationService.currentAddress != null)
+                  ListTile(
+                    title: const Text('刷新天气'),
+                    subtitle: Text(
+                      '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
+                      style: TextStyle(
+                        fontSize: 12,
+                      ),
+                    ),
+                    leading: Icon(weatherService.getWeatherIconData()),
+                    trailing: const Icon(Icons.refresh),
+                    onTap: () async {
+                      final position = locationService.currentPosition;
+                      if (position != null) {
+                        await weatherService.getWeatherData(
+                          position.latitude, 
+                          position.longitude
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('天气已更新')),
+                          );
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('无法获取位置信息')),
+                        );
+                      }
+                    },
+                  ),
+                
+                const SizedBox(height: 8.0),
+              ],
             ),
           ),
-        ),
-        ...children,
-        const Divider(height: 1),
-      ],
-    );
-  }
-
-  Widget _buildSettingItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 4,
+          
+          // 应用设置
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('应用设置'),
+                  leading: const Icon(Icons.settings),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Divider(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                // 主题设置
+                ListTile(
+                  title: const Text('主题设置'),
+                  subtitle: const Text('自定义应用的外观主题'),
+                  leading: const Icon(Icons.color_lens_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ThemeSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                // AI设置
+                ListTile(
+                  title: const Text('AI设置'),
+                  subtitle: const Text('配置AI分析功能'),
+                  leading: const Icon(Icons.psychology_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AISettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                // 一言设置
+                ListTile(
+                  title: const Text('一言设置'),
+                  subtitle: const Text('自定义"每日一言"的类型'),
+                  leading: const Icon(Icons.format_quote_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HitokotoSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          // 内容管理
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('内容管理'),
+                  leading: const Icon(Icons.category),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Divider(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                // 标签管理
+                ListTile(
+                  title: const Text('标签管理'),
+                  subtitle: const Text('添加和编辑标签'),
+                  leading: const Icon(Icons.tag),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TagSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                // 分类管理
+                ListTile(
+                  title: const Text('分类管理'),
+                  subtitle: const Text('添加和编辑分类'),
+                  leading: const Icon(Icons.folder_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CategorySettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                // 备份与恢复
+                ListTile(
+                  title: const Text('备份与恢复'),
+                  subtitle: const Text('备份数据或从备份中恢复'),
+                  leading: const Icon(Icons.backup_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BackupRestorePage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          // 关于信息
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('关于'),
+                  leading: const Icon(Icons.info_outline),
+                  onTap: () {
+                    showAboutDialog(
+                      context: context,
+                      applicationName: '心记',
+                      applicationVersion: '1.0.0',
+                      applicationIcon: const FlutterLogo(),
+                      applicationLegalese: '© 2023 心记团队\n一款帮助你记录和分析思想的应用',
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      leading: Icon(icon, color: Colors.blue, size: 20),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 14),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: onTap != null 
-        ? const Icon(Icons.chevron_right, size: 18)
-        : null,
-      onTap: onTap,
     );
   }
 

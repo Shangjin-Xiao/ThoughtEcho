@@ -74,7 +74,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 7,
+        version: 8,
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -180,6 +180,13 @@ class DatabaseService extends ChangeNotifier {
                 );
               }
             }
+          }
+          
+          // 如果数据库版本低于 8，添加位置和天气相关字段
+          if (oldVersion < 8) {
+            await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
+            await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
+            await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
           }
         },
       );
