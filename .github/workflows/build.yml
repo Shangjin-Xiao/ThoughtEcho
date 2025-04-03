@@ -9,36 +9,56 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    
     steps:
     - uses: actions/checkout@v3
-    
+      with:
+        fetch-depth: 1
+    
     - name: 设置 Java 环境
       uses: actions/setup-java@v3
       with:
         distribution: 'zulu'
         java-version: '17'
-    
+        cache: 'gradle'
+    
     - name: 设置 Flutter 环境
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.19.0'
         channel: 'stable'
         cache: true
-        
-    - name: 获取依赖
-      run: flutter pub get
-      
-    - name: 授予Gradle执行权限
-      run: chmod +x android/gradlew
-      
-    - name: 构建APK
+        
+    - name: 清理Flutter环境
       run: |
+        flutter clean
+        flutter doctor -v
+        
+    - name: 获取依赖
+      run: |
+        flutter pub cache repair
+        flutter pub get
+        
+    - name: 准备Android构建环境
+      run: |
+        chmod +x android/gradlew
         cd android
-        ./gradlew assembleDebug
-        
+        ./gradlew clean
+      
+    - name: 构建APK
+      working-directory: android
+      run: ./gradlew assembleDebug --stacktrace
+        
     - name: 上传APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: build/app/outputs/flutter-apk/app-debug.apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7
+
+    - name: 清理构建缓存
+      if: always()
+      run: |
+        rm -rf build
+        rm -rf .dart_tool
+        rm -rf .pub-cache
