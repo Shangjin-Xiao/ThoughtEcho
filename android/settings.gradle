@@ -1,127 +1,27 @@
 pluginManagement {
-    def flutterSdkPath = {
-        def properties = new Properties()
-        def propertiesFile = new File(rootProject.projectDir, "local.properties")
-        if (propertiesFile.exists()) {
-            properties.load(propertiesFile.newDataInputStream())
-            return properties.getProperty('flutter.sdk')
-        }
-        return null
-    }()
-
-    includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
-
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
     }
-
-    plugins {
-        id 'com.android.application' version '8.2.2'
-        id 'com.android.library' version '8.2.2'
-        id 'org.jetbrains.kotlin.android' version '1.8.20'
-        id 'dev.flutter.flutter-gradle-plugin' version '1.0.0'
-    }
 }
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-    repositories {
-        google()
-        mavenCentral()
-        maven {
-            url 'https://storage.googleapis.com/download.flutter.io'
-        }
-    }
-}
-
-rootProject.name = "心记"
-
-include ':app'
-
-// 使用安全的方式处理插件
 def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
-
-// 旧版Flutter插件加载方式
 def plugins = new Properties()
 def pluginsFile = new File(flutterProjectRoot.toFile(), '.flutter-plugins')
 if (pluginsFile.exists()) {
     pluginsFile.withReader('UTF-8') { reader -> plugins.load(reader) }
 }
 
-// 新版Flutter插件加载方式 
-def pluginsJsonFile = new File(flutterProjectRoot.toFile(), '.flutter-plugins-dependencies')
-def json = null
-if (pluginsJsonFile.exists()) {
-    def jsonTxt = pluginsJsonFile.text
-    try {
-        def slurper = new groovy.json.JsonSlurper()
-        json = slurper.parseText(jsonTxt)
-    } catch (Exception e) {
-        println("Error parsing .flutter-plugins-dependencies file: ${e.message}")
-    }
+plugins.each { name, path ->
+    def pluginDirectory = flutterProjectRoot.resolve(path).resolve('android').toFile()
+    include ":$name"
+    project(":$name").projectDir = pluginDirectory
 }
 
-// 处理插件依赖
-if (json != null && json.plugins != null) {
-    json.plugins.android.each { name, path ->
-        def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
-        if (pluginDirectory.exists()) {
-            include ":$name"
-            project(":$name").projectDir = pluginDirectory
-            
-            // 检查是否存在android目录
-            def androidDir = new File(pluginDirectory, "android")
-            if (!androidDir.exists()) {
-                println("Creating android directory for plugin: $name")
-                androidDir.mkdir()
-            }
-            
-            // 检查是否存在build.gradle
-            def buildGradle = new File(androidDir, "build.gradle")
-            if (!buildGradle.exists()) {
-                println("Creating default build.gradle for plugin: $name")
-                buildGradle.text = """
-group '$name'
-version '1.0'
+// 包含动态颜色模块
+include ':dynamic_color'
+project(':dynamic_color').projectDir = new File(rootProject.projectDir, 'dynamic_color')
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
-    }
-}
-
-apply plugin: 'com.android.library'
-
-android {
-    compileSdkVersion 34
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    defaultConfig {
-        minSdkVersion 21
-    }
-}
-"""
-            }
-        }
-    }
-} else if (plugins != null) {
-    // 旧版处理方式
-    plugins.each { name, path ->
-        def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
-        if (pluginDirectory.exists()) {
-            include ":$name"
-            project(":$name").projectDir = pluginDirectory
-        }
-    }
-}
+// 设置根项目名称
+rootProject.name = "心记"
