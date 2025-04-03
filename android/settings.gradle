@@ -91,7 +91,7 @@ plugins.each { name, path ->
             project(":$name").projectDir = dynamicColorAndroidDir
             
             // 跳过后续处理，因为我们已经为dynamic_color创建了自定义配置
-            continue
+            return
         }
         
         // 检查是否存在android目录
