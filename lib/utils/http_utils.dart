@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:io';
+import 'dart:async';
 
 class HttpUtils {
   // 创建一个配置安全的HTTP客户端
@@ -8,7 +9,7 @@ class HttpUtils {
   }
   
   // 安全的GET请求
-  static Future<http.Response> secureGet(String url, {Map<String, String>? headers}) async {
+  static Future<http.Response> secureGet(String url, {Map<String, String>? headers, int? timeoutSeconds}) async {
     final client = createSecureClient();
     try {
       final uri = Uri.parse(url);
@@ -18,10 +19,21 @@ class HttpUtils {
         throw Exception('非安全URL: 所有请求必须使用HTTPS');
       }
       
-      return await client.get(
+      final response = client.get(
         uri,
         headers: headers,
       );
+      
+      if (timeoutSeconds != null) {
+        return await response.timeout(
+          Duration(seconds: timeoutSeconds),
+          onTimeout: () {
+            throw TimeoutException('请求超时');
+          },
+        );
+      }
+      
+      return await response;
     } finally {
       client.close();
     }

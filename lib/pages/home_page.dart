@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../services/settings_service.dart';
 import '../widgets/quote_item_widget.dart';
+import '../widgets/city_search_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -254,15 +255,42 @@ class _HomePageState extends State<HomePage> {
                           setState(() {
                             includeLocation = value;
                           });
-                          // 如果选中但还没有位置信息，则获取位置
-                          if (includeLocation && location == null) {
-                            locationService.getCurrentLocation().then((position) {
-                              if (position != null) {
-                                setState(() {
-                                  location = locationService.getFormattedLocation();
-                                });
-                              }
-                            });
+                          
+                          // 如果选中则显示城市选择对话框
+                          if (includeLocation) {
+                            // 如果有位置则直接使用，否则打开选择对话框
+                            if (location == null) {
+                              // 临时关闭当前底部表单
+                              Navigator.pop(context);
+                              
+                              // 显示城市搜索对话框
+                              showDialog(
+                                context: context,
+                                builder: (dialogContext) => Dialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Container(
+                                    height: MediaQuery.of(context).size.height * 0.7,
+                                    width: MediaQuery.of(context).size.width * 0.9,
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: CitySearchWidget(
+                                      initialCity: locationService.city,
+                                      onCitySelected: (city) {
+                                        // 重新打开添加笔记表单
+                                        _showAddQuoteDialog(
+                                          context, 
+                                          db, 
+                                          prefilledContent: controller.text,
+                                          prefilledAuthor: authorController.text,
+                                          prefilledWork: workController.text,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
                           }
                         },
                         selectedColor: Theme.of(context).colorScheme.primaryContainer,
@@ -598,289 +626,289 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildQuoteList(DatabaseService db, ThemeData theme) {
     return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '搜索笔记...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '搜索笔记...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
+                ),
+                const SizedBox(width: 8),
+                // 排序按钮
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  tooltip: '排序',
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setModalState) => Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '排序方式',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // 按时间排序
+                              RadioListTile<String>(
+                                title: const Text('按时间排序'),
+                                subtitle: Text(_sortAscending ? '从旧到新' : '从新到旧'),
+                                value: 'time',
+                                groupValue: _sortType,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortType = value!;
+                                    });
+                                  });
+                                },
+                              ),
+                              // 按名称排序
+                              RadioListTile<String>(
+                                title: const Text('按名称排序'),
+                                subtitle: Text(_sortAscending ? '升序 A-Z' : '降序 Z-A'),
+                                value: 'name',
+                                groupValue: _sortType,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortType = value!;
+                                    });
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              // 排序方向
+                              SwitchListTile(
+                                title: const Text('排序方向'),
+                                subtitle: Text(_sortAscending ? '升序' : '降序'),
+                                value: _sortAscending,
+                                onChanged: (value) {
+                                  setModalState(() {
+                                    setState(() {
+                                      _sortAscending = value;
+                                    });
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
                   },
                 ),
-              ),
-              const SizedBox(width: 8),
-              // 排序按钮
-              IconButton(
-                icon: const Icon(Icons.sort),
-                tooltip: '排序',
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => StatefulBuilder(
-                      builder: (context, setModalState) => Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '排序方式',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // 按时间排序
-                            RadioListTile<String>(
-                              title: const Text('按时间排序'),
-                              subtitle: Text(_sortAscending ? '从旧到新' : '从新到旧'),
-                              value: 'time',
-                              groupValue: _sortType,
-                              onChanged: (value) {
-                                setModalState(() {
-                                  setState(() {
-                                    _sortType = value!;
-                                  });
-                                });
-                              },
-                            ),
-                            // 按名称排序
-                            RadioListTile<String>(
-                              title: const Text('按名称排序'),
-                              subtitle: Text(_sortAscending ? '升序 A-Z' : '降序 Z-A'),
-                              value: 'name',
-                              groupValue: _sortType,
-                              onChanged: (value) {
-                                setModalState(() {
-                                  setState(() {
-                                    _sortType = value!;
-                                  });
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            // 排序方向
-                            SwitchListTile(
-                              title: const Text('排序方向'),
-                              subtitle: Text(_sortAscending ? '升序' : '降序'),
-                              value: _sortAscending,
-                              onChanged: (value) {
-                                setModalState(() {
-                                  setState(() {
-                                    _sortAscending = value;
-                                  });
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('确定'),
+                const SizedBox(width: 8),
+                // 标签筛选按钮
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  tooltip: '标签筛选',
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setModalState) => Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '按标签筛选',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              // 标签筛选按钮
-              IconButton(
-                icon: const Icon(Icons.filter_list),
-                tooltip: '标签筛选',
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => StatefulBuilder(
-                      builder: (context, setModalState) => Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '按标签筛选',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 8.0,
-                              runSpacing: 8.0,
-                              children: _tags.map((tag) {
-                                final isSelected = _selectedTagIds.contains(tag.id);
-                                return FilterChip(
-                                  selected: isSelected,
-                                  label: Text(tag.name),
-                                  avatar: Icon(IconUtils.getIconData(tag.iconName)),
-                                  onSelected: (selected) {
-                                    setModalState(() {
-                                      setState(() {
-                                        if (selected) {
-                                          _selectedTagIds.add(tag.id);
-                                        } else {
-                                          _selectedTagIds.remove(tag.id);
-                                        }
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: _tags.map((tag) {
+                                  final isSelected = _selectedTagIds.contains(tag.id);
+                                  return FilterChip(
+                                    selected: isSelected,
+                                    label: Text(tag.name),
+                                    avatar: Icon(IconUtils.getIconData(tag.iconName)),
+                                    onSelected: (selected) {
+                                      setModalState(() {
+                                        setState(() {
+                                          if (selected) {
+                                            _selectedTagIds.add(tag.id);
+                                          } else {
+                                            _selectedTagIds.remove(tag.id);
+                                          }
+                                        });
                                       });
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedTagIds.clear();
-                                    });
-                                    setModalState(() {});
-                                  },
-                                  child: const Text('清除筛选'),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('确定'),
-                                ),
-                              ],
-                            ),
-                          ],
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedTagIds.clear();
+                                      });
+                                      setModalState(() {});
+                                    },
+                                    child: const Text('清除筛选'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Quote>>(
+              future: db.getUserQuotes(tagIds: _selectedTagIds.isNotEmpty ? _selectedTagIds : null),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.note_alt_outlined,
+                          size: 64,
+                          color: theme.colorScheme.primary.applyOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '还没有笔记，开始记录吧！',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.primary.applyOpacity(0.5),
+                          ),
+                        ),
+                      ],
                     ),
                   );
-                },
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<Quote>>(
-            future: db.getUserQuotes(tagIds: _selectedTagIds.isNotEmpty ? _selectedTagIds : null),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.note_alt_outlined,
-                        size: 64,
-                        color: theme.colorScheme.primary.applyOpacity(0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '还没有笔记，开始记录吧！',
-                        style: theme.textTheme.titleMedium?.copyWith(
+                }
+                
+                var quotes = snapshot.data!;
+                if (_searchQuery.isNotEmpty) {
+                  quotes = quotes.where((quote) =>
+                      quote.content.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      (quote.source != null && quote.source!.toLowerCase().contains(_searchQuery.toLowerCase()))).toList();
+                }
+                
+                if (quotes.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
                           color: theme.colorScheme.primary.applyOpacity(0.5),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              var quotes = snapshot.data!;
-              if (_searchQuery.isNotEmpty) {
-                quotes = quotes.where((quote) =>
-                    quote.content.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                    (quote.source != null && quote.source!.toLowerCase().contains(_searchQuery.toLowerCase()))).toList();
-              }
-              
-              if (quotes.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.search_off,
-                        size: 64,
-                        color: theme.colorScheme.primary.applyOpacity(0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '没有找到匹配的笔记',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.primary.applyOpacity(0.5),
+                        const SizedBox(height: 16),
+                        Text(
+                          '没有找到匹配的笔记',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.primary.applyOpacity(0.5),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              // 根据排序类型和排序方向对笔记进行排序
-              if (_sortType == 'time') {
-                quotes.sort((a, b) {
-                  final dateA = DateTime.parse(a.date);
-                  final dateB = DateTime.parse(b.date);
-                  return _sortAscending 
-                      ? dateA.compareTo(dateB)  // 升序：从旧到新
-                      : dateB.compareTo(dateA); // 降序：从新到旧
-                });
-              } else if (_sortType == 'name') {
-                quotes.sort((a, b) {
-                  return _sortAscending 
-                      ? a.content.compareTo(b.content)  // 升序：A-Z
-                      : b.content.compareTo(a.content); // 降序：Z-A
-                });
-              }
-              
-              return ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: quotes.length,
-                itemBuilder: (context, index) {
-                  final quote = quotes[index];
-                  // 获取展开状态，如果不存在则默认为折叠状态
-                  final bool isExpanded = _expandedItems[quote.id] ?? false;
+                      ],
+                    ),
+                  );
+                }
+                
+                // 根据排序类型和排序方向对笔记进行排序
+                if (_sortType == 'time') {
+                  quotes.sort((a, b) {
+                    final dateA = DateTime.parse(a.date);
+                    final dateB = DateTime.parse(b.date);
+                    return _sortAscending 
+                        ? dateA.compareTo(dateB)  // 升序：从旧到新
+                        : dateB.compareTo(dateA); // 降序：从新到旧
+                  });
+                } else if (_sortType == 'name') {
+                  quotes.sort((a, b) {
+                    return _sortAscending 
+                        ? a.content.compareTo(b.content)  // 升序：A-Z
+                        : b.content.compareTo(a.content); // 降序：Z-A
+                  });
+                }
+                
+                return ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: quotes.length,
+                  itemBuilder: (context, index) {
+                    final quote = quotes[index];
+                    // 获取展开状态，如果不存在则默认为折叠状态
+                    final bool isExpanded = _expandedItems[quote.id] ?? false;
                   
                   return QuoteItemWidget(
                     quote: quote,
                     tags: _tags,
                     isExpanded: isExpanded,
                     onToggleExpanded: (expanded) {
-                      setState(() {
+                            setState(() {
                         _expandedItems[quote.id!] = expanded;
-                      });
-                    },
+                            });
+                          },
                     onEdit: () => _showEditQuoteDialog(context, db, quote),
                     onDelete: () => _showDeleteConfirmDialog(context, db, quote),
                     onAskAI: () => _showAIQuestionDialog(context, quote),
                   );
-                },
-              );
-            },
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
     );
   }
 
@@ -1706,5 +1734,32 @@ class _HomePageState extends State<HomePage> {
     if (weather.contains('雪')) return Icons.ac_unit;
     if (weather.contains('风')) return Icons.air;
     return Icons.cloud_queue;
+  }
+
+  // 添加城市搜索对话框方法
+  void _showCitySearchDialog(BuildContext context) {
+    final locationService = Provider.of<LocationService>(context, listen: false);
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          width: MediaQuery.of(context).size.width * 0.9,
+          padding: const EdgeInsets.all(8.0),
+          child: CitySearchWidget(
+            initialCity: locationService.city,
+            onCitySelected: (city) {
+              setState(() {
+                locationService.getFormattedLocation();
+              });
+            },
+          ),
+        ),
+      ),
+    );
   }
 }

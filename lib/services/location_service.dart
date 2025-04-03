@@ -3,6 +3,28 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../utils/http_utils.dart';
+
+class CityInfo {
+  final String name; // 城市名称
+  final String fullName; // 完整名称包括国家和省份
+  final double lat; // 纬度
+  final double lon; // 经度
+  final String country; // 国家
+  final String province; // 省/州
+  
+  CityInfo({
+    required this.name,
+    required this.fullName,
+    required this.lat,
+    required this.lon,
+    required this.country,
+    required this.province,
+  });
+  
+  @override
+  String toString() => fullName;
+}
 
 class LocationService extends ChangeNotifier {
   Position? _currentPosition;
@@ -10,12 +32,18 @@ class LocationService extends ChangeNotifier {
   bool _hasLocationPermission = false;
   bool _isLocationServiceEnabled = false;
   bool _isLoading = false;
+  
+  // 城市搜索结果
+  List<CityInfo> _searchResults = [];
+  bool _isSearching = false;
 
   Position? get currentPosition => _currentPosition;
   String? get currentAddress => _currentAddress;
   bool get hasLocationPermission => _hasLocationPermission;
   bool get isLocationServiceEnabled => _isLocationServiceEnabled;
   bool get isLoading => _isLoading;
+  List<CityInfo> get searchResults => _searchResults;
+  bool get isSearching => _isSearching;
 
   // 地址组件
   String? _country;
@@ -27,6 +55,50 @@ class LocationService extends ChangeNotifier {
   String? get province => _province; 
   String? get city => _city;
   String? get district => _district;
+  
+  // 热门城市列表
+  final List<CityInfo> popularCities = [
+    CityInfo(
+      name: '北京', 
+      fullName: '中国, 北京', 
+      lat: 39.9042, 
+      lon: 116.4074,
+      country: '中国',
+      province: '北京'
+    ),
+    CityInfo(
+      name: '上海', 
+      fullName: '中国, 上海', 
+      lat: 31.2304, 
+      lon: 121.4737,
+      country: '中国',
+      province: '上海'
+    ),
+    CityInfo(
+      name: '广州', 
+      fullName: '中国, 广东, 广州', 
+      lat: 23.1291, 
+      lon: 113.2644,
+      country: '中国',
+      province: '广东'
+    ),
+    CityInfo(
+      name: '深圳', 
+      fullName: '中国, 广东, 深圳', 
+      lat: 22.5431, 
+      lon: 114.0579,
+      country: '中国',
+      province: '广东'
+    ),
+    CityInfo(
+      name: '杭州', 
+      fullName: '中国, 浙江, 杭州', 
+      lat: 30.2741, 
+      lon: 120.1551,
+      country: '中国',
+      province: '浙江'
+    ),
+  ];
 
   // 初始化位置服务
   Future<void> init() async {
@@ -209,16 +281,97 @@ class LocationService extends ChangeNotifier {
     }
   }
 
-  // 获取格式化的位置字符串 (国家,省/州,城市,区/县)
-  String? getFormattedLocation() {
-    if (_country == null || _province == null || _city == null) return null;
-    
-    String location = '$_country,$_province,$_city';
-    if (_district != null && _district!.isNotEmpty) {
-      location = '$location,$_district';
+  // 搜索城市
+  Future<List<CityInfo>> searchCity(String query) async {
+    if (query.trim().isEmpty) {
+      _searchResults = [];
+      notifyListeners();
+      return _searchResults;
     }
     
-    return location;
+    try {
+      _isSearching = true;
+      notifyListeners();
+      
+      // 使用OpenStreetMap的Nominatim API搜索城市
+      final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10&featuretype=city';
+      
+      final response = await HttpUtils.secureGet(
+        url,
+        headers: {'Accept-Language': 'zh-CN,zh;q=0.9', 'User-Agent': 'MindTrace App'},
+        timeoutSeconds: 15
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _searchResults = data.map((item) {
+          // 提取地址信息
+          final address = item['address'];
+          final String cityName = address['city'] ?? address['town'] ?? address['village'] ?? item['name'];
+          final String country = address['country'] ?? '';
+          final String state = address['state'] ?? address['province'] ?? '';
+          
+          // 构建完整地址 - 国家, 省/州, 城市
+          final String fullName = [country, state, cityName].where((part) => part.isNotEmpty).join(', ');
+          
+          return CityInfo(
+            name: cityName,
+            fullName: fullName,
+            lat: double.parse(item['lat']),
+            lon: double.parse(item['lon']),
+            country: country,
+            province: state,
+          );
+        }).toList();
+      } else {
+        _searchResults = [];
+        debugPrint('搜索城市失败: ${response.statusCode}, ${response.body}');
+      }
+      
+      _isSearching = false;
+      notifyListeners();
+      return _searchResults;
+    } catch (e) {
+      _isSearching = false;
+      _searchResults = [];
+      debugPrint('搜索城市发生错误: $e');
+      notifyListeners();
+      return _searchResults;
+    }
+  }
+  
+  // 使用选定的城市信息设置位置
+  void setSelectedCity(CityInfo city) {
+    // 手动设置位置组件
+    _country = city.country;
+    _province = city.province;
+    _city = city.name;
+    _district = null;
+    
+    // 更新地址字符串
+    _currentAddress = '${city.country}, ${city.province}, ${city.name}';
+    
+    // 创建一个模拟的Position对象来保持API一致性
+    _currentPosition = Position(
+      latitude: city.lat,
+      longitude: city.lon,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      heading: 0,
+      speed: 0,
+      speedAccuracy: 0,
+      altitudeAccuracy: 0,
+      headingAccuracy: 0,
+    );
+    
+    notifyListeners();
+  }
+  
+  // 获取格式化位置(国家,省份,城市,区县)
+  String getFormattedLocation() {
+    if (_currentAddress == null) return '';
+    return '$_country,$_province,$_city${_district != null ? ',$_district' : ''}';
   }
 
   // 从格式化的位置字符串解析地址组件

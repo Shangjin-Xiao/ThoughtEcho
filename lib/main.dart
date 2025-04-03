@@ -7,14 +7,14 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
-import 'package:dynamic_color/dynamic_color.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/ai_service.dart';
 import 'package:mind_trace/services/location_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
 import 'package:mind_trace/pages/home_page.dart';
-import 'package:mind_trace/theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -53,10 +53,8 @@ void main() async {
 
     final settingsService = await SettingsService.create();
     final databaseService = DatabaseService();
-    final appTheme = AppTheme();
     final locationService = LocationService();
     final weatherService = WeatherService();
-    await appTheme.initialize();
 
     // 对所有平台统一初始化数据库
     await databaseService.init().timeout(
@@ -71,7 +69,6 @@ void main() async {
         providers: [
           ChangeNotifierProvider(create: (_) => settingsService),
           ChangeNotifierProvider(create: (_) => databaseService),
-          ChangeNotifierProvider(create: (_) => appTheme),
           ChangeNotifierProvider(create: (_) => locationService),
           ChangeNotifierProvider(create: (_) => weatherService),
           ChangeNotifierProxyProvider<SettingsService, AIService>(
@@ -140,25 +137,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appTheme = context.watch<AppTheme>();
-    
-    return DynamicColorBuilder(
-      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // 使用Future.microtask延迟更新以避免在构建过程中触发通知
-        if (lightDynamic != null || darkDynamic != null) {
-          Future.microtask(() {
-            appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
-          });
-        }
-        
-        return MaterialApp(
-          title: '心记',
-          theme: appTheme.createLightThemeData(),
-          darkTheme: appTheme.createDarkThemeData(),
-          themeMode: appTheme.themeMode,
-          home: const HomePage(),
-        );
-      },
+    return MaterialApp(
+      title: '心记',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const HomePage(),
     );
   }
 }

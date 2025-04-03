@@ -1,11 +1,16 @@
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
+rootProject.name = 'mind_trace'
 
+def localPropertiesFile = new File(rootProject.projectDir, "local.properties")
+def properties = new Properties()
+
+assert localPropertiesFile.exists()
+localPropertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
+
+def flutterSdkPath = properties.getProperty("flutter.sdk")
+assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+apply from: "$flutterSdkPath/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+
+// 解决CI/CD构建中的dynamic_color插件问题
 def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
 def plugins = new Properties()
 def pluginsFile = new File(flutterProjectRoot.toFile(), '.flutter-plugins')
@@ -14,14 +19,13 @@ if (pluginsFile.exists()) {
 }
 
 plugins.each { name, path ->
-    def pluginDirectory = flutterProjectRoot.resolve(path).resolve('android').toFile()
-    include ":$name"
-    project(":$name").projectDir = pluginDirectory
+    def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
+    // 排除dynamic_color插件
+    if (name != "dynamic_color") {
+        include ":$name"
+        project(":$name").projectDir = pluginDirectory
+    } else {
+        // 完全禁用dynamic_color插件
+        println("Completely disabling dynamic_color plugin due to known issues")
+    }
 }
-
-// 包含动态颜色模块
-include ':dynamic_color'
-project(':dynamic_color').projectDir = new File(rootProject.projectDir, 'dynamic_color')
-
-// 设置根项目名称
-rootProject.name = "心记"

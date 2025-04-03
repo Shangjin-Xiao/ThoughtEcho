@@ -12,7 +12,6 @@ import '../models/note_category.dart';
 import '../services/settings_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
-import 'category_settings_page.dart';
 import 'backup_restore_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -100,7 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
                         }
                       } else if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('无法获取位置权限')),
                         );
                       }
@@ -260,12 +259,12 @@ class _SettingsPageState extends State<SettingsPage> {
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
-              children: [
+      children: [
                 ListTile(
                   title: const Text('内容管理'),
                   leading: const Icon(Icons.category),
                 ),
-                Padding(
+        Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
                     color: theme.colorScheme.outline.withOpacity(0.2),
@@ -282,21 +281,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const TagSettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-                // 分类管理
-                ListTile(
-                  title: const Text('分类管理'),
-                  subtitle: const Text('添加和编辑分类'),
-                  leading: const Icon(Icons.folder_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CategorySettingsPage(),
                       ),
                     );
                   },
