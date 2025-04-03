@@ -63,16 +63,6 @@ if (pluginsJsonFile.exists()) {
     }
 }
 
-// 排除dynamic_color插件，因为它在Android平台上有配置问题
-def excludePlugins = ['dynamic_color']
-
-// 处理老式插件
-plugins.each { name, path ->
-    // 跳过dynamic_color插件，因为它在Android平台上有配置问题
-    if (excludePlugins.contains(name)) {
-        println("Skipping ${name} plugin configuration")
-        return
-    }
     def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
     if (pluginDirectory.exists()) {
         include ":$name"
