@@ -1,0 +1,22 @@
+def scriptFile = project.buildscript.sourceFile
+def flutterRoot = rootProject.projectDir.parentFile.toPath()
+
+if (scriptFile != null) {
+    def pluginDirectory = flutterRoot.resolve("dynamic_color").toFile()
+    
+    // 创建Android配置
+    apply plugin: 'com.android.library'
+    
+    android {
+        compileSdkVersion 34
+        
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_17
+            targetCompatibility JavaVersion.VERSION_17
+        }
+        
+        defaultConfig {
+            minSdkVersion 21
+        }
+    }
+}

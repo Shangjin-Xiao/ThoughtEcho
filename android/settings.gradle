@@ -63,12 +63,36 @@ if (pluginsJsonFile.exists()) {
     }
 }
 
+// 排除dynamic_color插件，因为它在Android平台上有配置问题
+def excludePlugins = ['dynamic_color']
+
 // 处理老式插件
 plugins.each { name, path ->
+    // 跳过dynamic_color插件，因为它在Android平台上有配置问题
+    if (name == 'dynamic_color') {
+        println("Skipping dynamic_color plugin configuration")
+        return
+    }
     def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
     if (pluginDirectory.exists()) {
         include ":$name"
         project(":$name").projectDir = pluginDirectory
+        
+        // 特殊处理dynamic_color插件
+        if (name == 'dynamic_color') {
+            println("Special handling for dynamic_color plugin")
+            // 创建Android目录结构
+            def dynamicColorAndroidDir = new File(rootProject.projectDir, "dynamic_color")
+            if (!dynamicColorAndroidDir.exists()) {
+                dynamicColorAndroidDir.mkdir()
+            }
+            
+            // 设置项目目录并使用自定义build.gradle
+            project(":$name").projectDir = dynamicColorAndroidDir
+            
+            // 跳过后续处理，因为我们已经为dynamic_color创建了自定义配置
+            continue
+        }
         
         // 检查是否存在android目录
         def androidDir = new File(pluginDirectory, "android")
@@ -111,6 +135,13 @@ android {
     }
 }
 """
+        }
+        
+        // 特殊处理dynamic_color插件
+        if (name == 'dynamic_color') {
+            println("Applying special configuration for dynamic_color plugin")
+            // 确保dynamic_color插件有正确的Android配置
+            project(":$name").buildFileName = 'android/build.gradle'
         }
     }
 }

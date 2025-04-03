@@ -108,14 +108,14 @@ void main() async {
                   const SizedBox(height: 16),
                   Text(
                     '错误信息:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(e.toString()),
                   const SizedBox(height: 16),
                   Text(
                     '堆栈跟踪:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(stackTrace.toString()),
