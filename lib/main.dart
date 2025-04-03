@@ -32,15 +32,14 @@ Future<void> initializeDatabasePlatform() async {
         await Directory(dirname(path)).create(recursive: true);
       }
 
-      if (!kIsWeb) {
-        await databaseFactory.setDatabasesPath(dbPath);
-      }
+      await databaseFactory.setDatabasesPath(dbPath);
     } catch (e) {
       debugPrint('创建数据库目录失败: $e');
       rethrow;
     }
   } else {
-    debugPrint('Web平台：跳过平台特定数据库初始化');
+    debugPrint('Web平台：使用内存数据库');
+    // Web平台无需特殊初始化，SQLite会自动使用内存数据库
   }
 }
 
@@ -55,16 +54,13 @@ void main() async {
     final appTheme = AppTheme();
     await appTheme.initialize();
 
-    if (!kIsWeb) {
-      await databaseService.init().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          throw TimeoutException('数据库初始化超时');
-        },
-      );
-    } else {
-      await databaseService.init();
-    }
+    // 对所有平台统一初始化数据库
+    await databaseService.init().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        throw TimeoutException('数据库初始化超时');
+      },
+    );
 
     runApp(
       MultiProvider(
@@ -142,19 +138,18 @@ class MyApp extends StatelessWidget {
     
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // 更新动态颜色方案
-        appTheme.updateDynamicColorScheme(lightDynamic);
+        // 使用Future.microtask延迟更新以避免在构建过程中触发通知
+        if (lightDynamic != null || darkDynamic != null) {
+          Future.microtask(() {
+            appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
+          });
+        }
         
         return MaterialApp(
           title: 'Mind Trace',
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark().copyWith(
-            colorScheme: darkDynamic ?? ColorScheme.dark(
-              primary: Colors.blue,
-              secondary: Colors.blueAccent,
-            ),
-          ),
-          themeMode: ThemeMode.system,
+          theme: appTheme.createLightThemeData(),
+          darkTheme: appTheme.createDarkThemeData(),
+          themeMode: appTheme.themeMode,
           home: const HomePage(),
         );
       },

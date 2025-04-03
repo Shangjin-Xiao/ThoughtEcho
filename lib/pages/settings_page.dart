@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
+import 'theme_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -61,25 +62,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 MaterialPageRoute(builder: (context) => const HitokotoSettingsPage()),
               ),
             ),
-            Builder(
-              builder: (context) {
-                final themeMode = MediaQuery.of(context).platformBrightness == Brightness.dark
-                    ? ThemeMode.dark
-                    : ThemeMode.light;
-                return SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode, color: Colors.blue),
-                  title: const Text('深色模式'),
-                  subtitle: Text(
-                    themeMode == ThemeMode.dark ? '已开启' : '已关闭',
-                  ),
-                  value: themeMode == ThemeMode.dark,
-                  onChanged: (value) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('主题切换功能需要额外实现持久化')),
-                    );
-                  },
-                );
-              },
+            _buildSettingItem(
+              icon: Icons.color_lens,
+              title: '主题设置',
+              subtitle: '自定义主题颜色和明暗模式',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ThemeSettingsPage()),
+              ),
             ),
           ]),
           _buildSettingSection('笔记设置', [
