@@ -36,37 +36,6 @@ jobs:
           android.enableR8=true
           EOF
           
-
-        run: |
-          keytool -genkeypair -v \
-            -keystore app/debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-          
-      - name: Install Flutter dependencies
-        run: |
-          flutter --version
-          flutter doctor -v
-          flutter pub get
-        
-      - name: Install sqlite3_flutter_libs for Android
-        run: |
-          flutter pub get
-          flutter pub upgrade sqlite3_flutter_libs
-          cat > gradle.properties << EOF
-          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
-          android.useAndroidX=true
-          android.enableJetifier=true
-          android.enableR8=true
-          EOF
-          
-
-        run: |
           keytool -genkeypair -v \
             -keystore app/debug.keystore \
             -storepass android \
