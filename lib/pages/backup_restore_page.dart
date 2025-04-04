@@ -103,29 +103,59 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (result == null) return;
       
       if (!mounted) return;
-      final confirmed = await showDialog<bool>(
+      
+      // 添加选项让用户选择是清空原有数据还是合并数据
+      final importOption = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('确认导入'),
-          content: const Text('导入数据将清空当前所有数据，确定要继续吗？'),
+          title: const Text('导入选项'),
+          content: const Text('请选择导入方式：'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(dialogContext, 'cancel'),
               child: const Text('取消'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('确定'),
+              onPressed: () => Navigator.pop(dialogContext, 'clear'),
+              child: const Text('清空并导入'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, 'merge'),
+              child: const Text('合并数据'),
             ),
           ],
         ),
       );
       
-      if (confirmed != true || !mounted) return;
+      if (importOption == 'cancel' || importOption == null || !mounted) return;
+      
+      // 如果选择清空并导入，再次确认
+      if (importOption == 'clear') {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('确认清空数据'),
+            content: const Text('这将清空当前所有数据，确定要继续吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+        
+        if (confirmed != true || !mounted) return;
+      }
       
       final dbService = Provider.of<DatabaseService>(context, listen: false);
       final selectedFile = result['files']![0];
-      await dbService.importData(selectedFile.path);
+      final bool clearExisting = importOption == 'clear';
+      await dbService.importData(selectedFile.path, clearExisting: clearExisting);
       
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

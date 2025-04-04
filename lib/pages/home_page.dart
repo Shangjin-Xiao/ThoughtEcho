@@ -130,10 +130,36 @@ class _HomePageState extends State<HomePage> {
     final aiService = context.read<AIService>();
     final locationService = Provider.of<LocationService>(context, listen: false);
     final weatherService = Provider.of<WeatherService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
     
     String? aiSummary;
     bool isAnalyzing = false;
     List<String> selectedTagIds = [];
+    
+    // 如果是从一言添加，自动添加相关标签
+    if (prefilledContent != null && prefilledContent == dailyQuote['content']) {
+      // 查找或创建"每日一言"标签
+      _ensureDailyQuoteTagExists(db).then((dailyQuoteTagId) {
+        if (dailyQuoteTagId != null) {
+          setState(() {
+            selectedTagIds.add(dailyQuoteTagId);
+          });
+        }
+      });
+      
+      // 查找或创建一言类型标签
+      if (dailyQuote['type'] != null) {
+        String quoteType = dailyQuote['type'] as String;
+        String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
+        _ensureHitokotoTypeTagExists(db, quoteType, typeName).then((typeTagId) {
+          if (typeTagId != null) {
+            setState(() {
+              selectedTagIds.add(typeTagId);
+            });
+          }
+        });
+      }
+    }
     
     // 位置和天气相关
     bool includeLocation = false;
@@ -385,38 +411,60 @@ class _HomePageState extends State<HomePage> {
               ),
               
               const SizedBox(height: 16),
-              // 标签选择区域
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // 标签选择区域 - 改为折叠显示
+              ExpansionTile(
+                title: const Text(
+                  '选择标签',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                leading: const Icon(Icons.tag),
+                initiallyExpanded: false,
+                childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 children: [
-                  const Text(
-                    '选择标签',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                  // 搜索框
+                  TextField(
+                    decoration: const InputDecoration(
+                      hintText: '搜索标签...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        // 这里可以添加标签搜索逻辑
+                      });
+                    },
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: _tags.map((NoteCategory tag) {
-                      final isSelected = selectedTagIds.contains(tag.id);
-                      return FilterChip(
-                        selected: isSelected,
-                        label: Text(tag.name),
-                        avatar: Icon(IconUtils.getIconData(tag.iconName)),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              selectedTagIds.add(tag.id);
-                            } else {
+                  // 标签列表
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _tags.length,
+                      itemBuilder: (context, index) {
+                        final tag = _tags[index];
+                        final isSelected = selectedTagIds.contains(tag.id);
+                        return CheckboxListTile(
+                          title: Text(tag.name),
+                          secondary: Icon(IconUtils.getIconData(tag.iconName)),
+                          value: isSelected,
+                          dense: true,
+                          onChanged: (selected) {
+                            setState(() {
+                              if (selected == true) {
+                                selectedTagIds.add(tag.id);
+                              } else {
                                 selectedTagIds.remove(tag.id);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -917,6 +965,70 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
     );
+  }
+  
+  /// 确保"每日一言"标签存在，如果不存在则创建
+  Future<String?> _ensureDailyQuoteTagExists(DatabaseService db) async {
+    try {
+      // 获取所有标签
+      final categories = await db.getCategories();
+      
+      // 查找"每日一言"标签
+      final dailyQuoteTag = categories.firstWhere(
+        (tag) => tag.name == '每日一言',
+        orElse: () => NoteCategory(id: '', name: ''),
+      );
+      
+      // 如果标签已存在，返回其ID
+      if (dailyQuoteTag.id.isNotEmpty) {
+        return dailyQuoteTag.id;
+      }
+      
+      // 如果标签不存在，创建它
+      final newTagId = const Uuid().v4();
+      await db.addCategory('每日一言', iconName: 'format_quote');
+      
+      // 刷新标签列表
+      await _loadTags();
+      
+      // 返回新创建的标签ID
+      return newTagId;
+    } catch (e) {
+      debugPrint('确保"每日一言"标签存在时出错: $e');
+      return null;
+    }
+  }
+  
+  /// 确保一言类型标签存在，如果不存在则创建
+  Future<String?> _ensureHitokotoTypeTagExists(DatabaseService db, String typeCode, String typeName) async {
+    try {
+      // 获取所有标签
+      final categories = await db.getCategories();
+      
+      // 查找一言类型标签
+      final typeTag = categories.firstWhere(
+        (tag) => tag.name == typeName,
+        orElse: () => NoteCategory(id: '', name: ''),
+      );
+      
+      // 如果标签已存在，返回其ID
+      if (typeTag.id.isNotEmpty) {
+        return typeTag.id;
+      }
+      
+      // 如果标签不存在，创建它
+      final newTagId = const Uuid().v4();
+      await db.addCategory(typeName, iconName: 'category');
+      
+      // 刷新标签列表
+      await _loadTags();
+      
+      // 返回新创建的标签ID
+      return newTagId;
+    } catch (e) {
+      debugPrint('确保一言类型"$typeName"标签存在时出错: $e');
+      return null;
+    }
   }
 
   @override

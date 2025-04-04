@@ -266,7 +266,10 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 从 JSON 文件导入数据
-  Future<void> importData(String filePath) async {
+  ///
+  /// [filePath] - 导入文件的路径
+  /// [clearExisting] - 是否清空现有数据，默认为 true
+  Future<void> importData(String filePath, {bool clearExisting = true}) async {
     try {
       final db = database;
       final file = File(filePath);
@@ -280,39 +283,116 @@ class DatabaseService extends ChangeNotifier {
       
       // 开始事务
       await db.transaction((txn) async {
-        // 清空现有数据
-        await txn.delete('categories');
-        await txn.delete('quotes');
-        
-        // 恢复分类数据
-        final categories = data['categories'] as List;
-        for (final c in categories) {
-          await txn.insert('categories', {
-            'id': c['id'],
-            'name': c['name'],
-            'is_default': c['isDefault'] ? 1 : 0,
-            'icon_name': c['iconName'],
-          });
-        }
-        
-        // 恢复笔记数据
-        final quotes = data['quotes'] as List;
-        for (final q in quotes) {
-          await txn.insert('quotes', {
-            'id': q['id'],
-            'content': q['content'],
-            'date': q['date'],
-            'source': q['source'],
-            'source_author': q['sourceAuthor'],
-            'source_work': q['sourceWork'],
-            'tag_ids': q['tagIds'],
-            'ai_analysis': q['aiAnalysis'],
-            'sentiment': q['sentiment'],
-            'keywords': q['keywords'],
-            'summary': q['summary'],
-            'category_id': q['categoryId'],
-            'color_hex': q['colorHex'],
-          });
+        // 如果选择清空现有数据
+        if (clearExisting) {
+          debugPrint('清空现有数据并导入新数据');
+          await txn.delete('categories');
+          await txn.delete('quotes');
+          
+          // 恢复分类数据
+          final categories = data['categories'] as List;
+          for (final c in categories) {
+            await txn.insert('categories', {
+              'id': c['id'],
+              'name': c['name'],
+              'is_default': c['isDefault'] ? 1 : 0,
+              'icon_name': c['iconName'],
+            });
+          }
+          
+          // 恢复笔记数据
+          final quotes = data['quotes'] as List;
+          for (final q in quotes) {
+            await txn.insert('quotes', {
+              'id': q['id'],
+              'content': q['content'],
+              'date': q['date'],
+              'source': q['source'],
+              'source_author': q['sourceAuthor'],
+              'source_work': q['sourceWork'],
+              'tag_ids': q['tagIds'],
+              'ai_analysis': q['aiAnalysis'],
+              'sentiment': q['sentiment'],
+              'keywords': q['keywords'],
+              'summary': q['summary'],
+              'category_id': q['categoryId'],
+              'color_hex': q['colorHex'],
+              'location': q['location'],
+              'weather': q['weather'],
+              'temperature': q['temperature'],
+            });
+          }
+        } else {
+          debugPrint('合并数据');
+          
+          // 获取现有分类和笔记的ID列表，用于检查是否存在
+          final existingCategories = await txn.query('categories', columns: ['id']);
+          final existingCategoryIds = existingCategories.map((c) => c['id'] as String).toSet();
+          
+          final existingQuotes = await txn.query('quotes', columns: ['id']);
+          final existingQuoteIds = existingQuotes.map((q) => q['id'] as String).toSet();
+          
+          // 合并分类数据
+          final categories = data['categories'] as List;
+          for (final c in categories) {
+            final categoryId = c['id'] as String;
+            final categoryData = {
+              'id': categoryId,
+              'name': c['name'],
+              'is_default': c['isDefault'] ? 1 : 0,
+              'icon_name': c['iconName'],
+            };
+            
+            if (existingCategoryIds.contains(categoryId)) {
+              // 更新现有分类
+              await txn.update(
+                'categories',
+                categoryData,
+                where: 'id = ?',
+                whereArgs: [categoryId],
+              );
+            } else {
+              // 插入新分类
+              await txn.insert('categories', categoryData);
+            }
+          }
+          
+          // 合并笔记数据
+          final quotes = data['quotes'] as List;
+          for (final q in quotes) {
+            final quoteId = q['id'] as String;
+            final quoteData = {
+              'id': quoteId,
+              'content': q['content'],
+              'date': q['date'],
+              'source': q['source'],
+              'source_author': q['sourceAuthor'],
+              'source_work': q['sourceWork'],
+              'tag_ids': q['tagIds'],
+              'ai_analysis': q['aiAnalysis'],
+              'sentiment': q['sentiment'],
+              'keywords': q['keywords'],
+              'summary': q['summary'],
+              'category_id': q['categoryId'],
+              'color_hex': q['colorHex'],
+              'location': q['location'],
+              'weather': q['weather'],
+              'temperature': q['temperature'],
+            };
+            
+            if (existingQuoteIds.contains(quoteId)) {
+              // 更新现有笔记
+              await txn.update(
+                'quotes',
+                quoteData,
+                where: 'id = ?',
+                whereArgs: [quoteId],
+              );
+            } else {
+              // 插入新笔记
+              await txn.insert('quotes', quoteData);
+            }
+          }
         }
       });
       
