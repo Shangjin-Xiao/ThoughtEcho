@@ -73,5 +73,5 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# 保留Google Play Core库相关类
--keep class com.google.android.play.core.** { *; }
+# 忽略Google Play Core库相关类的缺失
+-dontwarn com.google.android.play.core.**

@@ -92,6 +92,5 @@ flutter {
 }
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
-    // 添加Google Play Core库依赖，解决R8缺少类的问题
-    implementation 'com.google.android.play:core:1.10.3'
+    // 不使用Google Play Core库
 }
