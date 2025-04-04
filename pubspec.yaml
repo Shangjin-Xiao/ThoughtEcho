@@ -11,24 +11,28 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.6
   provider: ^6.1.1
-  sqflite: ^2.3.2
-  sqflite_common_ffi: ^2.3.2
-  sqlite3_flutter_libs: ^0.5.18
-  path: ^1.8.3
-  path_provider: ^2.1.2
-  http: ^1.2.0
-  uuid: ^4.3.3
-  shared_preferences: ^2.2.2
-  flutter_markdown: ^0.6.18
-  intl: ^0.19.0
-  url_launcher: ^6.2.4
-  file_picker: ^6.1.1
-  # dynamic_color: ^1.6.6
-  flex_color_scheme: ^7.3.1
-  geolocator: ^11.0.0
-  permission_handler: ^11.3.0
-  weather: ^3.1.1
-  flutter_secure_storage: ^9.0.0
+  sqflite: ^2.5.0
+  sqflite_common_ffi: ^2.5.0
+  sqlite3_flutter_libs: ^2.3.0
+  path: ^1.9.0
+  path_provider: ^2.1.3
+  http: ^1.2.1
+  uuid: ^4.4.0
+  shared_preferences: ^2.2.3
+  flutter_markdown: ^0.7.1
+  intl: ^0.19.1
+  url_launcher: ^6.3.0
+  file_picker: ^7.0.0
+  # dynamic_color: ^1.7.2
+  flex_color_scheme: ^7.5.0
+  geolocator: ^12.0.0
+  permission_handler: ^13.0.0
+  weather: ^4.0.0
+  flutter_secure_storage: ^10.0.0
+  
+  # 显式指定Kotlin版本
+  kotlin:
+    plugin: "1.9.22"
 
 dev_dependencies:
   flutter_test:

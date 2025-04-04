@@ -38,6 +38,7 @@ jobs:
           fi
           
           flutter create --platforms=android --project-name=thoughtecho --org=com.shangjin .
+          flutter pub upgrade
           flutter pub get
 
       - name: 配置 Android 构建
