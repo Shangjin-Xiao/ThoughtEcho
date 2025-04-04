@@ -23,12 +23,17 @@ jobs:
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
+<<<<<<< HEAD
           flutter-version: '3.19.0'
+=======
+          flutter-version: '3.19.3'  # 指定具体的Flutter版本
+>>>>>>> 186acb4c35a401bb461bfcd88859e66af23047bc
           channel: 'stable'
           cache: true
       
       - name: 准备构建环境
         run: |
+<<<<<<< HEAD
           flutter --version
           java -version
           flutter doctor
@@ -46,6 +51,48 @@ jobs:
           EOF
           echo "After gradle-wrapper.properties update:"
           cat gradle/wrapper/gradle-wrapper.properties
+=======
+          cat > gradle.properties << EOF
+          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
+          android.useAndroidX=true
+          android.enableJetifier=true
+          android.enableR8=true
+          EOF
+          
+      - name: Configure Keystore
+        working-directory: android
+        run: |
+          cat > key.properties << EOF
+          storePassword=android
+          keyPassword=android
+          keyAlias=key
+          storeFile=key.jks
+          EOF
+          
+      - name: Create debug keystore
+        working-directory: android
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          
+      - name: Install Flutter dependencies
+        run: |
+          flutter --version
+          flutter doctor -v
+          flutter pub get
+        
+      - name: Install sqlite3_flutter_libs for Android
+        run: |
+          flutter pub get
+          flutter pub upgrade sqlite3_flutter_libs
+>>>>>>> 186acb4c35a401bb461bfcd88859e66af23047bc
           
           # 下载最新的 gradle-wrapper.jar
           curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
@@ -56,6 +103,7 @@ jobs:
       - name: 构建调试 APK
         run: |
           flutter clean
+<<<<<<< HEAD
           rm -rf ~/.gradle/caches/
           flutter pub cache repair
           flutter build apk --debug
@@ -65,3 +113,15 @@ jobs:
         with:
           name: debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
+=======
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }}
+          
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+>>>>>>> 186acb4c35a401bb461bfcd88859e66af23047bc
