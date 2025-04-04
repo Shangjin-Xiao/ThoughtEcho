@@ -61,6 +61,8 @@ class DatabaseService extends ChangeNotifier {
     }
 
     if (_database != null) return;
+    
+    debugPrint('初始化数据库...');
 
     try {
       // 仅在 Windows 平台下使用 FFI，其它平台（如 Android）直接使用 sqflite 默认实现
@@ -194,11 +196,52 @@ class DatabaseService extends ChangeNotifier {
           }
         },
       );
+      
+      // 检查并修复数据库结构
+      await _checkAndFixDatabaseStructure();
+      
       // 更新分类流数据
       await _updateCategoriesStream();
     } catch (e) {
       debugPrint('数据库初始化错误: $e');
       rethrow;
+    }
+  }
+  
+  /// 检查并修复数据库结构，确保所有必要的列都存在
+  Future<void> _checkAndFixDatabaseStructure() async {
+    try {
+      final db = database;
+      
+      // 获取quotes表的列信息
+      final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
+      final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
+      
+      debugPrint('当前quotes表列: $columnNames');
+      
+      // 检查是否缺少location、weather、temperature列
+      final missingColumns = <String>[];
+      if (!columnNames.contains('location')) missingColumns.add('location');
+      if (!columnNames.contains('weather')) missingColumns.add('weather');
+      if (!columnNames.contains('temperature')) missingColumns.add('temperature');
+      
+      if (missingColumns.isNotEmpty) {
+        debugPrint('检测到缺少列: $missingColumns，正在添加...');
+        
+        // 添加缺少的列
+        for (final column in missingColumns) {
+          try {
+            await db.execute('ALTER TABLE quotes ADD COLUMN $column TEXT');
+            debugPrint('成功添加列: $column');
+          } catch (e) {
+            debugPrint('添加列 $column 时出错: $e');
+          }
+        }
+      } else {
+        debugPrint('数据库结构完整，无需修复');
+      }
+    } catch (e) {
+      debugPrint('检查数据库结构时出错: $e');
     }
   }
 
@@ -505,6 +548,17 @@ class DatabaseService extends ChangeNotifier {
         quoteMap['date'] = DateTime.now().toIso8601String();
       }
       
+      // 检查数据库中是否存在location、weather、temperature列
+      final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
+      final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
+      
+      // 如果列不存在，从Map中移除相应的键，避免SQL错误
+      if (!columnNames.contains('location')) quoteMap.remove('location');
+      if (!columnNames.contains('weather')) quoteMap.remove('weather');
+      if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
+      
+      debugPrint('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
+      
       await db.insert(
         'quotes',
         quoteMap,
@@ -600,6 +654,17 @@ class DatabaseService extends ChangeNotifier {
         if (!quoteMap.containsKey('date') || quoteMap['date'] == null) {
           quoteMap['date'] = DateTime.now().toIso8601String();
         }
+        
+        // 检查数据库中是否存在location、weather、temperature列
+        final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
+        final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
+        
+        // 如果列不存在，从Map中移除相应的键，避免SQL错误
+        if (!columnNames.contains('location')) quoteMap.remove('location');
+        if (!columnNames.contains('weather')) quoteMap.remove('weather');
+        if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
+        
+        debugPrint('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
         
         await db.update(
           'quotes',

@@ -75,3 +75,8 @@
 
 # 忽略Google Play Core库相关类的缺失
 -dontwarn com.google.android.play.core.**
+
+# SQLite 数据库相关
+-keep class android.database.sqlite.** { *; }
+-keep class net.sqlcipher.** { *; }  # 如果使用了 SQLCipher，也需要排除
+-keep class com.sqlite.** { *; } # 某些SQLite库的包名
