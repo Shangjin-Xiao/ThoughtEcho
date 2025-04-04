@@ -32,8 +32,11 @@ jobs:
           # 确保Flutter环境正确设置
           flutter doctor -v
           
+          # 接受Android许可证
+          yes | flutter doctor --android-licenses || true
+          
           # 创建Android目录和Gradle文件
-          flutter create --platforms=android .
+          flutter create --platforms=android --project-name=thoughtecho --org=com.shangjin .
           
           # 获取依赖
           flutter pub get
@@ -45,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk 
+          path: build/app/outputs/flutter-apk/app-debug.apk
