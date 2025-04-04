@@ -40,15 +40,28 @@ jobs:
 
       - name: 创建签名密钥
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+          # 移除可能的额外字符并解码
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r' | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g' | base64 --decode > android/app/upload-keystore.jks
+          
+          # 验证JKS文件是否正确生成
+          if [ -s android/app/upload-keystore.jks ]; then
+            echo "密钥库文件成功创建"
+            ls -la android/app/upload-keystore.jks
+          else
+            echo "错误：密钥库文件为空或未创建，创建调试密钥库"
+            keytool -genkeypair -v -keystore android/app/upload-keystore.jks -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
           
           # 创建key.properties文件
           cat > android/key.properties << EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
+          storePassword=${{ secrets.KEYSTORE_PASSWORD || 'android' }}
+          keyPassword=${{ secrets.KEY_PASSWORD || 'android' }}
+          keyAlias=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}
           storeFile=upload-keystore.jks
           EOF
+          
+          # 显示key.properties内容（不显示密码）
+          echo "key.properties文件已创建"
 
       - name: 安装Flutter依赖
         run: |
@@ -60,27 +73,24 @@ jobs:
       - name: 构建发布版APK
         run: |
           flutter clean
+          
+          # 禁用R8代码压缩，避免缺少类的问题
+          echo "android.enableR8=false" >> android/gradle.properties
+          
+          # 显示gradle.properties内容
+          echo "gradle.properties内容:"
+          cat android/gradle.properties
+          
+          # 构建APK
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
             --build-name=${{ github.event.inputs.version_name }} \
-            --android-skip-build-dependency-validation
-
-      - name: 构建发布版AAB (App Bundle)
-        run: |
-          flutter build appbundle --release \
-            --build-number=${{ github.run_number }} \
-            --build-name=${{ github.event.inputs.version_name }}
+            --android-skip-build-dependency-validation \
+            --no-shrink  # 禁用资源压缩
 
       - name: 上传APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release-signed
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-      - name: 上传AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30

@@ -72,3 +72,6 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
+
+# 保留Google Play Core库相关类
+-keep class com.google.android.play.core.** { *; }
