@@ -74,6 +74,8 @@ jobs:
       - name: 构建调试 APK
         run: |
           flutter clean
+          rm -rf ~/.gradle/caches/
+          flutter pub cache repair
           flutter build apk --debug
       
       - name: 上传构建的 APK

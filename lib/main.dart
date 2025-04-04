@@ -146,7 +146,7 @@ class MyApp extends StatelessWidget {
     final appTheme = Provider.of<AppTheme>(context);
     
     return MaterialApp(
-      title: '心记',
+      title: '心迹',
       theme: ThemeData.from(colorScheme: appTheme.lightColorScheme),
       darkTheme: ThemeData.from(colorScheme: appTheme.darkColorScheme),
       themeMode: appTheme.themeMode,
