@@ -109,7 +109,6 @@ jobs:
         run: |
           flutter pub get
           flutter pub upgrade sqlite3_flutter_libs
->>>>>>> 186acb4c35a401bb461bfcd88859e66af23047bc
           
           # 下载最新的 gradle-wrapper.jar
           curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
