@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:file_picker/file_picker.dart' show FilePicker, FileType;
+import 'package:file_selector/file_selector.dart';
 import 'home_page.dart';
 import '../services/database_service.dart';
 import 'ai_settings_page.dart';
@@ -421,11 +421,17 @@ class _SettingsPageState extends State<SettingsPage> {
     final context = this.context;
     
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        allowMultiple: false,
+      // 使用file_selector替代file_picker
+      final XTypeGroup jsonTypeGroup = XTypeGroup(
+        label: 'JSON',
+        extensions: ['json'],
       );
+      final XFile? file = await openFile(
+        acceptedTypeGroups: [jsonTypeGroup],
+      );
+      
+      // 转换为与原代码兼容的格式
+      final result = file != null ? {'files': [file]} : null;
       
       if (result == null) return;
       
@@ -451,7 +457,8 @@ class _SettingsPageState extends State<SettingsPage> {
       if (confirmed != true || !mounted) return;
       
       final dbService = Provider.of<DatabaseService>(context, listen: false);
-      await dbService.importData(result.files.single.path!);
+      final selectedFile = result['files']![0] as XFile;
+      await dbService.importData(selectedFile.path);
       
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
