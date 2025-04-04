@@ -49,10 +49,10 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: '搜索城市...',
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
               suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear),
+                    icon: Icon(Icons.clear, color: theme.colorScheme.primary),
                     onPressed: () {
                       setState(() {
                         _searchController.clear();
@@ -63,7 +63,18 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                 : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16.0),
+                borderSide: BorderSide(color: theme.colorScheme.primary),
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.0),
+                borderSide: BorderSide(color: theme.colorScheme.outline),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.0),
+                borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0),
+              ),
+              filled: true,
+              fillColor: theme.colorScheme.surface,
             ),
             onChanged: (value) {
               setState(() {
@@ -78,7 +89,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
         
         // 搜索结果或热门城市
         Expanded(
-          child: _isSearchActive
+          child: _isSearchActive || locationService.isSearching
               ? _buildSearchResults(locationService)
               : _buildPopularCities(locationService, theme),
         ),
@@ -96,6 +107,14 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               final position = await locationService.getCurrentLocation();
               if (position != null && context.mounted) {
                 Navigator.of(context).pop();
+                widget.onCitySelected(CityInfo(
+                  name: locationService.city ?? '未知城市',
+                  fullName: locationService.getFormattedLocation(),
+                  lat: position.latitude,
+                  lon: position.longitude,
+                  country: locationService.country ?? '未知国家',
+                  province: locationService.province ?? '未知省份',
+                ));
               } else if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('无法获取当前位置，请检查位置权限')),
@@ -114,8 +133,23 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     }
     
     if (locationService.searchResults.isEmpty) {
-      return const Center(
-        child: Text('没有找到匹配的城市'),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.search_off, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('没有找到匹配的城市'),
+            const SizedBox(height: 8),
+            Text(
+              '尝试使用不同的关键词或城市名称',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
       );
     }
     
@@ -126,6 +160,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
         return ListTile(
           title: Text(city.name),
           subtitle: Text(city.fullName),
+          leading: const Icon(Icons.location_city),
           onTap: () {
             locationService.setSelectedCity(city);
             widget.onCitySelected(city);
@@ -188,4 +223,4 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       ],
     );
   }
-} 
+}

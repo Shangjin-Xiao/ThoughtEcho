@@ -15,6 +15,7 @@ import 'package:mind_trace/services/location_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
 import 'package:mind_trace/pages/home_page.dart';
 import 'package:flutter/services.dart';
+import 'package:mind_trace/theme/app_theme.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -64,6 +65,10 @@ void main() async {
       },
     );
 
+    // 初始化主题服务
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+    
     runApp(
       MultiProvider(
         providers: [
@@ -71,6 +76,7 @@ void main() async {
           ChangeNotifierProvider(create: (_) => databaseService),
           ChangeNotifierProvider(create: (_) => locationService),
           ChangeNotifierProvider(create: (_) => weatherService),
+          ChangeNotifierProvider(create: (_) => appTheme),
           ChangeNotifierProxyProvider<SettingsService, AIService>(
             create: (context) => AIService(
               settingsService: context.read<SettingsService>(),
@@ -137,11 +143,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
+    
     return MaterialApp(
       title: '心记',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData.from(colorScheme: appTheme.lightColorScheme),
+      darkTheme: ThemeData.from(colorScheme: appTheme.darkColorScheme),
+      themeMode: appTheme.themeMode,
       home: const HomePage(),
     );
   }

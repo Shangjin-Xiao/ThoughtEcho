@@ -8,11 +8,11 @@ import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
-import '../models/note_category.dart';
 import '../services/settings_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
+import '../widgets/city_search_widget.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -39,6 +39,41 @@ class _SettingsPageState extends State<SettingsPage> {
         SnackBar(content: Text('无法打开链接: $url')),
       );
     }
+  }
+  
+  // 显示城市搜索对话框
+  void _showCitySearchDialog(BuildContext context) {
+    final locationService = Provider.of<LocationService>(context, listen: false);
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          width: MediaQuery.of(context).size.width * 0.9,
+          padding: const EdgeInsets.all(8.0),
+          child: CitySearchWidget(
+            initialCity: locationService.city,
+            onCitySelected: (city) {
+              setState(() {
+                // 更新位置信息显示
+                _locationController.text = locationService.getFormattedLocation();
+              });
+              
+              // 显示成功消息
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('已选择城市: ${city.name}')),
+                );
+              }
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -112,9 +147,30 @@ class _SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '手动设置位置',
+                        '设置位置',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8.0),
+                      // 城市搜索按钮
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.search),
+                        label: const Text('搜索城市'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                        onPressed: () {
+                          _showCitySearchDialog(context);
+                        },
+                      ),
+                      const SizedBox(height: 16.0),
+                      // 手动输入位置（保留原功能）
+                      Text(
+                        '或手动输入位置',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.colorScheme.onSurface.withOpacity(0.8),
                         ),
                       ),
                       const SizedBox(height: 8.0),

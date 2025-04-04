@@ -32,24 +32,30 @@ class ApiService {
   // 获取一言API数据
   static Future<Map<String, dynamic>> getDailyQuote(String type) async {
     try {
+      // 处理多类型选择的情况
+      String apiUrl = 'https://v1.hitokoto.cn/';
+      
+      // 如果类型包含逗号，说明是多类型选择
+      if (type.contains(',')) {
+        // 将逗号分隔的类型转换为c=a&c=b&c=d格式
+        final types = type.split(',');
+        final typeParams = types.map((t) => 'c=$t').join('&');
+        apiUrl = '$apiUrl?$typeParams';
+      } else {
+        // 单类型选择
+        apiUrl = '$apiUrl?c=$type';
+      }
+      
+      debugPrint('一言API请求URL: $apiUrl');
+      
       // 使用带超时的HTTP请求
-      final response = await http.get(
-        Uri.parse('https://v1.hitokoto.cn/?c=$type'),
-      ).timeout(
-        const Duration(seconds: _timeoutSeconds),
-        onTimeout: () {
-          debugPrint('一言API请求超时');
-          // 返回一个模拟的成功响应，包含默认内容
-          return http.Response(
-            json.encode({
-              'hitokoto': '生活不止眼前的苟且，还有诗和远方。',
-              'from': '未知',
-              'from_who': '未知',
-            }),
-            200,
-          );
-        },
-      );
+      final response = await HttpUtils.secureGet(
+        apiUrl,
+        timeoutSeconds: _timeoutSeconds,
+      ).catchError((error) {
+        debugPrint('一言API请求错误: $error');
+        throw error;
+      });
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

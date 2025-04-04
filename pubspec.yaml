@@ -34,3 +34,16 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  
+# 字体配置
+flutter:
+  # 确保应用可以使用Material Design图标
+  uses-material-design: true
+  
+  # 使用系统字体，不再需要额外的字体资源
+  # fonts:
+  #   - family: NotoSansSC
+  #     fonts:
+  #       - asset: assets/fonts/NotoSansSC-Regular.ttf
+  #       - asset: assets/fonts/NotoSansSC-Bold.ttf
+  #         weight: 700
