@@ -23,7 +23,7 @@ jobs:
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.3'  # 指定具体的Flutter版本
+          flutter-version: '3.29.2'  # 升级到匹配Dart SDK要求的Flutter版本
           channel: 'stable'
           cache: true
       
