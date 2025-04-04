@@ -24,6 +24,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
+          dart-sdk-version: '3.9.0' # 明确指定 Dart SDK 版本
           channel: 'stable'
           cache: true
       
