@@ -54,6 +54,10 @@ jobs:
           flutter pub upgrade
       - name: 构建调试 APK
         run: |
+          # 显示Gradle和Kotlin版本信息
+          cd android && ./gradlew --version && cd ..
+          # 显示项目依赖信息
+          cd android && ./gradlew app:dependencies && cd ..
           flutter clean
           flutter build apk --release \
             --build-number=${{ github.run_number }} \

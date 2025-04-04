@@ -77,7 +77,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (confirmed != true || !mounted) return;
       
       final dbService = Provider.of<DatabaseService>(context, listen: false);
-      final selectedFile = result['files']![0] as XFile;
+      final selectedFile = result['files']![0];
       await dbService.importData(selectedFile.path);
       
       if (!mounted) return;

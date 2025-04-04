@@ -238,9 +238,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 16),
                     // 位置信息按钮
                     Tooltip(
-                      message: location != null 
-                          ? '添加位置: ${locationService.currentAddress ?? location}'
-                          : '添加位置信息',
+                      message: '添加位置: ${locationService.currentAddress ?? location}',
                       child: FilterChip(
                         avatar: Icon(
                           Icons.location_on,
@@ -257,42 +255,7 @@ class _HomePageState extends State<HomePage> {
                           // 如果选中则显示城市选择对话框
                           if (includeLocation) {
                             // 如果有位置则直接使用，否则打开选择对话框
-                            if (location == null) {
-                              // 临时关闭当前底部表单
-                              Navigator.pop(context);
-                              
-                              // 显示城市搜索对话框
-                              showDialog(
-                                context: context,
-                                builder: (dialogContext) => Dialog(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Container(
-                                    height: MediaQuery.of(context).size.height * 0.7,
-                                    width: MediaQuery.of(context).size.width * 0.9,
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: CitySearchWidget(
-                                      initialCity: locationService.city,
-                                      onCitySelected: (city) {
-                                        setState(() {
-                                          // 不需要使用变量来存储返回值，只需调用方法刷新位置信息
-                                          locationService.getFormattedLocation();
-                                        });
-                                        // 重新打开添加笔记表单
-                                        _showAddQuoteDialog(
-                                          context, 
-                                          db, 
-                                          prefilledContent: controller.text,
-                                          prefilledAuthor: authorController.text,
-                                          prefilledWork: workController.text,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
+                            // The condition 'location == null' is always false, so this block is removed.
                           }
                         },
                         selectedColor: Theme.of(context).colorScheme.primaryContainer,

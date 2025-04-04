@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.shangjin.thoughtecho"
-    compileSdkVersion 35
+    compileSdkVersion 33
     ndkVersion flutter.ndkVersion
 
     compileOptions {
