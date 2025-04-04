@@ -81,24 +81,3 @@ jobs:
         with:
           name: debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip" >> gradle/wrapper/gradle-wrapper.properties
-          
-          # 下载gradle-wrapper.jar
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar
-          
-          # 显示配置文件内容
-          echo "gradle.properties:"
-          cat gradle.properties
-          
-          # 设置执行权限
-          chmod +x gradlew
-      
-      - name: 构建调试 APK
-        run: flutter build apk --debug
-      
-      - name: 上传构建的 APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
