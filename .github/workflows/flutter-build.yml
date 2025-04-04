@@ -33,7 +33,6 @@ jobs:
           org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
-          android.enableR8=true
           EOF
           
           keytool -genkeypair -v \
@@ -59,9 +58,17 @@ jobs:
           # 显示项目依赖信息
           cd android && ./gradlew app:dependencies && cd ..
           flutter clean
+          
+          # 显示gradle.properties内容
+          echo "gradle.properties内容:"
+          cat android/gradle.properties
+          
+          # 构建APK，禁用代码压缩和混淆
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
             --build-name=1.0.${{ github.run_number }} \
+            --no-shrink \
+            --no-obfuscate \
             --android-skip-build-dependency-validation
           
       - name: Upload APK

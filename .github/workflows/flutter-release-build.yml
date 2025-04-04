@@ -35,7 +35,6 @@ jobs:
           org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
-          android.enableR8=true
           EOF
 
       - name: 创建签名密钥
@@ -69,14 +68,10 @@ jobs:
           flutter doctor -v
           flutter pub get
           flutter pub upgrade
-- name: 构建发布版APK
-  run: |
-    flutter clean
-    
-    # 显示gradle.properties内容
-    echo "gradle.properties内容:"
-    cat android/gradle.properties
-    
+
+      - name: 构建发布版APK
+        run: |
+          flutter clean
           
           # 显示gradle.properties内容
           echo "gradle.properties内容:"
