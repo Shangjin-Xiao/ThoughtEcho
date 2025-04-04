@@ -59,10 +59,6 @@ jobs:
           echo "android.nonTransitiveRClass=false" >> gradle.properties
           echo "android.nonFinalResIds=false" >> gradle.properties
           
-          # 更新build.gradle文件中的Kotlin版本和SDK版本
-          sed -i 's/ext.kotlin_version = \'1.7.10\'/ext.kotlin_version = \'1.9.0\'/' build.gradle
-          sed -i 's/compileSdkVersion 33/compileSdkVersion 35/' app/build.gradle
-          
           # 确保Gradle包装器正确
           mkdir -p gradle/wrapper
           echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
