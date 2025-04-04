@@ -3,6 +3,7 @@ import 'package:mind_trace/models/quote_model.dart';
 import 'package:mind_trace/services/ai_service.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/services/location_service.dart';
+import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
 import 'package:provider/provider.dart';
 
@@ -64,18 +65,18 @@ class _EditPageState extends State<EditPage> {
   }
 
   void _parseSource(String source) {
-    // 尝试解析格式如"——作者「作品」"的字符串
+    // 尝试解析格式如"——作者《作品》"的字符串
     String author = '';
     String work = '';
     
-    // 提取作者（在"——"之后，"「"之前）
-    final authorMatch = RegExp(r'——([^「]+)').firstMatch(source);
+    // 提取作者（在"——"之后，"《"之前）
+    final authorMatch = RegExp(r'——([^《]+)').firstMatch(source);
     if (authorMatch != null && authorMatch.groupCount >= 1) {
       author = authorMatch.group(1)?.trim() ?? '';
     }
     
-    // 提取作品（在「」之间）
-    final workMatch = RegExp(r'「(.+?)」').firstMatch(source);
+    // 提取作品（在《》之间）
+    final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
     if (workMatch != null && workMatch.groupCount >= 1) {
       work = workMatch.group(1) ?? '';
     }
@@ -95,7 +96,7 @@ class _EditPageState extends State<EditPage> {
     }
     
     if (work.isNotEmpty) {
-      result += ' 「$work」';
+      result += ' 《$work》';
     }
     
     return result;
@@ -225,13 +226,23 @@ class _EditPageState extends State<EditPage> {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _authorController,
+                builder: (context, authorValue, child) {
+                  return ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _workController,
+                    builder: (context, workValue, child) {
+                      return Text(
+                        '将显示为: ${_formatSource(authorValue.text, workValue.text)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
               
               const SizedBox(height: 16),
@@ -369,25 +380,49 @@ class _EditPageState extends State<EditPage> {
               ),
               
               const SizedBox(height: 16),
-              const Text('AI 分析:'),
-              Text(_aiAnalysis.isEmpty ? '暂无分析' : _aiAnalysis),
               
-              // 测试用的AI分析按钮
-              ElevatedButton(
-                onPressed: () async {
-                  final aiService = Provider.of<AIService>(context, listen: false);
-                  final summary = await aiService.summarizeNote(
-                    Quote(
-                      id: widget.quote.id,
-                      content: _contentController.text,
-                      date: widget.quote.date,
-                    ),
-                  );
-                  setState(() {
-                    _aiAnalysis = summary;
-                  });
+              // 仅当API已配置时显示AI分析部分
+              Builder(
+                builder: (context) {
+                  final settingsService = Provider.of<SettingsService>(context, listen: false);
+                  final settings = settingsService.aiSettings;
+                  final bool apiConfigured = settings.apiKey.isNotEmpty &&
+                                            settings.apiUrl.isNotEmpty &&
+                                            settings.model.isNotEmpty;
+                  
+                  return apiConfigured
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('AI 分析:'),
+                          Text(_aiAnalysis.isEmpty ? '暂无分析' : _aiAnalysis),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: () async {
+                              try {
+                                final aiService = Provider.of<AIService>(context, listen: false);
+                                final summary = await aiService.summarizeNote(
+                                  Quote(
+                                    id: widget.quote.id,
+                                    content: _contentController.text,
+                                    date: widget.quote.date,
+                                  ),
+                                );
+                                setState(() {
+                                  _aiAnalysis = summary;
+                                });
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('AI分析失败: $e')),
+                                );
+                              }
+                            },
+                            child: const Text('生成AI分析'),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(); // 如果API未配置，则不显示AI分析部分
                 },
-                child: const Text('生成AI分析'),
               ),
             ],
           ),

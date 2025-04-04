@@ -199,7 +199,10 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 导出全部数据到 JSON 格式
-  Future<String> exportAllData() async {
+  ///
+  /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则保存到应用文档目录
+  /// 返回保存的文件路径
+  Future<String> exportAllData({String? customPath}) async {
     try {
       final db = database;
       
@@ -233,14 +236,27 @@ class DatabaseService extends ChangeNotifier {
           'summary': q['summary'],
           'categoryId': q['category_id'],
           'colorHex': q['color_hex'],
+          'location': q['location'],
+          'weather': q['weather'],
+          'temperature': q['temperature'],
         }).toList(),
       };
       
       // 转换为格式化的 JSON 字符串
       final jsonStr = JsonEncoder.withIndent('  ').convert(jsonData);
-      final dir = await getApplicationDocumentsDirectory();
-      final fileName = '心记_${DateTime.now().millisecondsSinceEpoch}.json';
-      final file = File('${dir.path}/$fileName');
+      
+      String filePath;
+      if (customPath != null) {
+        // 使用自定义路径
+        filePath = customPath;
+      } else {
+        // 使用默认路径
+        final dir = await getApplicationDocumentsDirectory();
+        final fileName = '心记_${DateTime.now().millisecondsSinceEpoch}.json';
+        filePath = '${dir.path}/$fileName';
+      }
+      
+      final file = File(filePath);
       await file.writeAsString(jsonStr);
       return file.path;
     } catch (e) {
@@ -386,20 +402,36 @@ class DatabaseService extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    final db = database;
-    // 如果笔记中不包含 categoryId, 则设为空字符串
-    final id = quote.id ?? _uuid.v4();
-    final quoteMap = quote.toMap();
-    quoteMap['id'] = id;
-    if (!quoteMap.containsKey('category_id')) {
-      quoteMap['category_id'] = "";
+    try {
+      final db = database;
+      // 如果笔记中不包含 categoryId, 则设为空字符串
+      final id = quote.id ?? _uuid.v4();
+      final quoteMap = quote.toMap();
+      quoteMap['id'] = id;
+      if (!quoteMap.containsKey('category_id')) {
+        quoteMap['category_id'] = "";
+      }
+      
+      // 确保所有必需的字段都存在
+      if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
+        throw Exception('笔记内容不能为空');
+      }
+      
+      if (!quoteMap.containsKey('date') || quoteMap['date'] == null) {
+        quoteMap['date'] = DateTime.now().toIso8601String();
+      }
+      
+      await db.insert(
+        'quotes',
+        quoteMap,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      debugPrint('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('保存笔记到数据库时出错: $e');
+      rethrow; // 重新抛出异常，让调用者处理
     }
-    await db.insert(
-      'quotes',
-      quoteMap,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    notifyListeners();
   }
 
   /// 获取用户的所有引用（支持通过标签 tagIds 或分类 categoryId 查询）
@@ -467,15 +499,36 @@ class DatabaseService extends ChangeNotifier {
         }
         return;
       }
-      final db = database;
-      final quoteMap = quote.toMap();
-      await db.update(
-        'quotes',
-        quoteMap,
-        where: 'id = ?',
-        whereArgs: [quote.id],
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      notifyListeners();
+      
+      try {
+        if (quote.id == null) {
+          throw Exception('更新笔记时ID不能为空');
+        }
+        
+        final db = database;
+        final quoteMap = quote.toMap();
+        
+        // 确保所有必需的字段都存在
+        if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
+          throw Exception('笔记内容不能为空');
+        }
+        
+        if (!quoteMap.containsKey('date') || quoteMap['date'] == null) {
+          quoteMap['date'] = DateTime.now().toIso8601String();
+        }
+        
+        await db.update(
+          'quotes',
+          quoteMap,
+          where: 'id = ?',
+          whereArgs: [quote.id],
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('笔记已成功更新，ID: ${quote.id}');
+        notifyListeners();
+      } catch (e) {
+        debugPrint('更新笔记时出错: $e');
+        rethrow; // 重新抛出异常，让调用者处理
+      }
     }
 }

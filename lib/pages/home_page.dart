@@ -212,13 +212,23 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  '将显示为: ${_formatSource(authorController.text, workController.text)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: authorController,
+                  builder: (context, authorValue, child) {
+                    return ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: workController,
+                      builder: (context, workValue, child) {
+                        return Text(
+                          '将显示为: ${_formatSource(authorValue.text, workValue.text)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
                 
@@ -540,39 +550,71 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () async {
                       if (controller.text.isNotEmpty) {
                         if (!mounted) return;
-                        final aiService = context.read<AIService>();
-                        final summary = await aiService.summarizeNote(
-                          Quote(
-                            id: '',
+                        
+                        String? summary;
+                        try {
+                          debugPrint('尝试获取AI分析...');
+                          final aiService = context.read<AIService>();
+                          final settings = context.read<SettingsService>().aiSettings;
+                          
+                          // 检查API设置是否已配置
+                          if (settings.apiKey.isNotEmpty && settings.apiUrl.isNotEmpty && settings.model.isNotEmpty) {
+                            summary = await aiService.summarizeNote(
+                              Quote(
+                                id: '',
+                                content: controller.text,
+                                date: DateTime.now().toIso8601String(),
+                              ),
+                            );
+                            debugPrint('AI分析获取成功');
+                          } else {
+                            debugPrint('API未配置，跳过AI分析');
+                          }
+                          
+                          if (!mounted) return;
+                          setState(() {
+                            aiSummary = summary;
+                            isAnalyzing = false;
+                          });
+                        } catch (e) {
+                          debugPrint('获取AI分析失败: $e');
+                          // 继续保存笔记，即使AI分析失败
+                        }
+                        
+                        try {
+                          debugPrint('开始保存笔记...');
+                          Quote quote = Quote(
+                            id: const Uuid().v4(),
                             content: controller.text,
                             date: DateTime.now().toIso8601String(),
-                          ),
-                        );
-                        if (!mounted) return;
-                        setState(() {
-                          aiSummary = summary;
-                          isAnalyzing = false;
-                        });
-                        
-                        Quote quote = Quote(
-                          id: const Uuid().v4(),
-                          content: controller.text,
-                          date: DateTime.now().toIso8601String(),
-                          aiAnalysis: aiSummary,
-                          source: _formatSource(authorController.text, workController.text),
-                          sourceAuthor: authorController.text,
-                          sourceWork: workController.text,
-                          tagIds: selectedTagIds,
-                          colorHex: selectedColorHex,
+                            aiAnalysis: aiSummary,
+                            source: _formatSource(authorController.text, workController.text),
+                            sourceAuthor: authorController.text,
+                            sourceWork: workController.text,
+                            tagIds: selectedTagIds,
+                            colorHex: selectedColorHex,
                             location: includeLocation ? location : null,
                             weather: includeWeather ? weather : null,
                             temperature: includeWeather ? temperature : null,
-                        );
-                        
-                        await db.addQuote(quote);
-                        // 关闭对话框
-                        if (context.mounted) {
-                          Navigator.pop(context);
+                          );
+                          
+                          await db.addQuote(quote);
+                          debugPrint('笔记保存成功，ID: ${quote.id}');
+                          
+                          // 关闭对话框
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('笔记已保存')),
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('保存笔记失败: $e');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('保存失败: $e')),
+                            );
+                          }
                         }
                       }
                     },
@@ -900,7 +942,7 @@ class _HomePageState extends State<HomePage> {
                   });
                 },
               )
-            : const Text('心记'),
+            : const Text('心迹'),
         actions: [
           if (_currentIndex == 0 && weatherService.currentWeather != null && locationService.hasLocationPermission)
             Padding(
@@ -969,42 +1011,42 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Column(
-                              children: [
-                                Text(
-                                  dailyQuote['content'],
-                                  style: theme.textTheme.headlineSmall,
-                                  textAlign: TextAlign.center,
-                                ),
-                                if (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty || 
-                                   dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        // 单击复制内容
-                                        final String formattedQuote = '${dailyQuote['content']}\n' + 
-                                          (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ?
-                                           '——${dailyQuote['from_who']}' : '') +
-                                          (dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ?
-                                           '「${dailyQuote['from']}」' : '');
-                                        
-                                        // 复制到剪贴板
-                                        Clipboard.setData(ClipboardData(text: formattedQuote));
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('已复制到剪贴板')),
-                                        );
-                                      },
-                                      onDoubleTap: () {
-                                        // 双击添加到笔记
-                                        _showAddQuoteDialog(
-                                          context, 
-                                          db, 
-                                          prefilledContent: dailyQuote['content'],
-                                          prefilledAuthor: dailyQuote['from_who'],
-                                          prefilledWork: dailyQuote['from']
-                                        );
-                                      },
+                            GestureDetector(
+                              onTap: () {
+                                // 单击复制内容
+                                final String formattedQuote = '${dailyQuote['content']}\n' +
+                                  (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ?
+                                   '——${dailyQuote['from_who']}' : '') +
+                                  (dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ?
+                                   '《${dailyQuote['from']}》' : '');
+                                
+                                // 复制到剪贴板
+                                Clipboard.setData(ClipboardData(text: formattedQuote));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('已复制到剪贴板')),
+                                );
+                              },
+                              onDoubleTap: () {
+                                // 双击添加到笔记
+                                _showAddQuoteDialog(
+                                  context,
+                                  db,
+                                  prefilledContent: dailyQuote['content'],
+                                  prefilledAuthor: dailyQuote['from_who'],
+                                  prefilledWork: dailyQuote['from']
+                                );
+                              },
+                              child: Column(
+                                children: [
+                                  Text(
+                                    dailyQuote['content'],
+                                    style: theme.textTheme.headlineSmall,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ||
+                                     dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
                                       child: Text(
                                         formatHitokotoSource(dailyQuote['from_who'], dailyQuote['from']),
                                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -1013,12 +1055,11 @@ class _HomePageState extends State<HomePage> {
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                        onSlideComplete: () => _showAddQuoteDialog(context, db),
                       ),
                     ),
                     if (dailyPrompt != null)
@@ -1483,15 +1524,81 @@ class _HomePageState extends State<HomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (controller.text.isNotEmpty && aiSummary == null)
-                    TextButton.icon(
-                      onPressed: isAnalyzing
-                          ? null
-                          : () async {
-                              setState(() => isAnalyzing = true);
-                              try {
-                                final summary = await aiService.summarizeNote(
-                                  Quote(
+                  Builder(
+                    builder: (context) {
+                      final settingsService = Provider.of<SettingsService>(context, listen: false);
+                      final settings = settingsService.aiSettings;
+                      final bool apiConfigured = settings.apiKey.isNotEmpty &&
+                                                settings.apiUrl.isNotEmpty &&
+                                                settings.model.isNotEmpty;
+                      
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (controller.text.isNotEmpty && aiSummary == null && apiConfigured)
+                            TextButton.icon(
+                              onPressed: isAnalyzing
+                                  ? null
+                                  : () async {
+                                      setState(() => isAnalyzing = true);
+                                      try {
+                                        final summary = await aiService.summarizeNote(
+                                          Quote(
+                                            id: quote.id,
+                                            content: controller.text,
+                                            date: quote.date,
+                                            aiAnalysis: aiSummary,
+                                            source: _formatSource(authorController.text, workController.text),
+                                            sourceAuthor: authorController.text,
+                                            sourceWork: workController.text,
+                                            tagIds: selectedTagIds,
+                                            sentiment: quote.sentiment,
+                                            keywords: quote.keywords,
+                                            summary: quote.summary,
+                                            categoryId: quote.categoryId,
+                                            colorHex: selectedColorHex,
+                                          ),
+                                        );
+                                        if (!mounted) return;
+                                        setState(() {
+                                          aiSummary = summary;
+                                          isAnalyzing = false;
+                                        });
+                                      } catch (e) {
+                                        debugPrint('AI分析失败: $e');
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('AI分析失败: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                          setState(() => isAnalyzing = false);
+                                        }
+                                      }
+                                    },
+                              icon: isAnalyzing
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.auto_awesome),
+                              label: Text(isAnalyzing ? '分析中...' : 'AI分析'),
+                            ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('取消'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (controller.text.isNotEmpty) {
+                                if (!mounted) return;
+                                
+                                try {
+                                  debugPrint('开始更新笔记...');
+                                  final updatedQuote = Quote(
                                     id: quote.id,
                                     content: controller.text,
                                     date: quote.date,
@@ -1505,64 +1612,35 @@ class _HomePageState extends State<HomePage> {
                                     summary: quote.summary,
                                     categoryId: quote.categoryId,
                                     colorHex: selectedColorHex,
-                                  ),
-                                );
-                                if (!mounted) return;
-                                setState(() {
-                                  aiSummary = summary;
-                                  isAnalyzing = false;
-                                });
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('AI分析失败: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                setState(() => isAnalyzing = false);
+                                  );
+                                  
+                                  await db.updateQuote(updatedQuote);
+                                  debugPrint('笔记更新成功，ID: ${quote.id}');
+                                  
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('笔记已更新！')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  debugPrint('更新笔记失败: $e');
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('更新失败: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
                               }
                             },
-                      icon: isAnalyzing
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.auto_awesome),
-                      label: Text(isAnalyzing ? '分析中...' : 'AI分析'),
-                    ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('取消'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (controller.text.isNotEmpty) {
-                        if (!mounted) return;
-                        final updatedQuote = Quote(
-                          id: quote.id,
-                          content: controller.text,
-                          date: quote.date,
-                          aiAnalysis: aiSummary,
-                          source: _formatSource(authorController.text, workController.text),
-                          sourceAuthor: authorController.text,
-                          sourceWork: workController.text,
-                          tagIds: selectedTagIds,
-                          sentiment: quote.sentiment,
-                          keywords: quote.keywords,
-                          summary: quote.summary,
-                          categoryId: quote.categoryId,
-                          colorHex: selectedColorHex,
-                        );
-                        db.updateQuote(updatedQuote);
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('笔记已更新！')),
-                        );
-                      }
-                    },
-                    child: const Text('保存'),
+                            child: const Text('保存'),
+                          ),
+                        ],
+                      );
+                    }
                   ),
                 ],
               ),
@@ -1613,25 +1691,25 @@ class _HomePageState extends State<HomePage> {
     }
     
     if (work.isNotEmpty) {
-      result += ' 「$work」';
+      result += ' 《$work》';
     }
     
     return result;
   }
 
   void _parseSource(String source, TextEditingController authorController, TextEditingController workController) {
-    // 尝试解析格式如"——作者「作品」"的字符串
+    // 尝试解析格式如"——作者《作品》"的字符串
     String author = '';
     String work = '';
     
-    // 提取作者（在"——"之后，"「"之前）
-    final authorMatch = RegExp(r'——([^「]+)').firstMatch(source);
+    // 提取作者（在"——"之后，"《"之前）
+    final authorMatch = RegExp(r'——([^《]+)').firstMatch(source);
     if (authorMatch != null && authorMatch.groupCount >= 1) {
       author = authorMatch.group(1)?.trim() ?? '';
     }
     
-    // 提取作品（在「」之间）
-    final workMatch = RegExp(r'「(.+?)」').firstMatch(source);
+    // 提取作品（在《》之间）
+    final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
     if (workMatch != null && workMatch.groupCount >= 1) {
       work = workMatch.group(1) ?? '';
     }
@@ -1665,7 +1743,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('需要位置权限'),
-        content: const Text('心记需要访问位置信息以显示天气和在笔记中添加位置。如果不授予权限，相关功能将被禁用。'),
+        content: const Text('心迹需要访问位置信息以显示天气和在笔记中添加位置。如果不授予权限，相关功能将被禁用。'),
         actions: [
           TextButton(
             onPressed: () {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
 import '../services/database_service.dart';
 import 'home_page.dart';
 
@@ -14,23 +16,68 @@ class BackupRestorePage extends StatefulWidget {
 class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _handleExport(BuildContext context) async {
     try {
-      final dbService = Provider.of<DatabaseService>(context, listen: false);
-      final path = await dbService.exportAllData();
-      
+      // 显示备份选项对话框
       if (!mounted) return;
-      await showDialog(
+      final choice = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('备份成功'),
-          content: SelectableText('文件路径:\n$path'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
+          title: const Text('选择备份方式'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.save),
+                title: const Text('保存到本地'),
+                subtitle: const Text('选择保存位置'),
+                onTap: () => Navigator.pop(context, 'save'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('分享备份文件'),
+                subtitle: const Text('通过其他应用分享'),
+                onTap: () => Navigator.pop(context, 'share'),
+              ),
+            ],
+          ),
         ),
       );
+      
+      if (choice == null) return;
+      
+      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      String path;
+      
+      if (choice == 'save') {
+        // 使用文件选择器保存文件
+        final fileName = '心记_${DateTime.now().millisecondsSinceEpoch}.json';
+        final saveLocation = await getSaveLocation(
+          suggestedName: fileName,
+          acceptedTypeGroups: [
+            XTypeGroup(
+              label: 'JSON',
+              extensions: ['json'],
+            ),
+          ],
+        );
+        
+        if (saveLocation == null) return;
+        
+        path = await dbService.exportAllData(customPath: saveLocation.path);
+        
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('备份已保存到: $path')),
+        );
+      } else {
+        // 使用默认路径并分享
+        path = await dbService.exportAllData();
+        
+        if (!mounted) return;
+        await Share.shareXFiles(
+          [XFile(path)],
+          text: '心记应用数据备份',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -113,7 +160,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ListTile(
             leading: const Icon(Icons.backup),
             title: const Text('备份数据'),
-            subtitle: const Text('导出所有数据到本地文件'),
+            subtitle: const Text('导出所有数据并选择保存方式'),
             onTap: () => _handleExport(context),
           ),
           const Divider(),

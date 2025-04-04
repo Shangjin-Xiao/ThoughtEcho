@@ -22,7 +22,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final String _projectUrl = 'https://github.com/Shangjin-Xiao//';
+  final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final TextEditingController _locationController = TextEditingController();
 
   @override
@@ -374,7 +374,27 @@ class _SettingsPageState extends State<SettingsPage> {
                       applicationName: '心迹',
                       applicationVersion: '1.0.0',
                       applicationIcon: const FlutterLogo(),
-                      applicationLegalese: '© 2023 心迹团队\n一款帮助你记录和分析思想的应用',
+                      applicationLegalese: '© 2025 Shangjin\n一款帮助你记录和分析思想的应用',
+                      children: [
+                        const SizedBox(height: 16),
+                        InkWell(
+                          onTap: () => _launchUrl(_projectUrl),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.code, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                'GitHub: $_projectUrl',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),

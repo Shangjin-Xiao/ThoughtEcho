@@ -37,7 +37,7 @@ class QuoteItemWidget extends StatelessWidget {
     }
     
     if (work.isNotEmpty) {
-      result += ' 「$work」';
+      result += ' 《$work》';
     }
     
     return result;
