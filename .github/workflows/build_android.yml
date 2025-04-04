@@ -57,6 +57,11 @@ jobs:
       - name: Generate debug keystore
         run: |
           mkdir -p android/app/
+          # Remove existing empty keystore file if it exists
+          if [ -f android/app/debug.keystore ]; then
+            rm -f android/app/debug.keystore
+          fi
+          # Generate new keystore
           keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           ls -la android/app/
 
