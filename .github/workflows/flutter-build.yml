@@ -118,31 +118,29 @@ jobs:
           else
             echo "❌ app_plugin_loader.gradle 不存在，将创建此文件"
             mkdir -p "$FLUTTER_HOME/packages/flutter_tools/gradle"
-            # 创建一个最小的app_plugin_loader.gradle文件
-            cat > "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle" << 'EOL'
-// 创建一个空的app_plugin_loader.gradle文件，以便在CI环境中构建
-// 这通常由Flutter生成，但在某些CI环境中可能缺失
-// 本文件只包含最基本的配置
-
-import groovy.json.JsonSlurper
-
-// 设置插件依赖
-def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
-
-// 加载 .flutter-plugins 文件（如果存在）
-def pluginsFile = new File(flutterProjectRoot.toFile(), '.flutter-plugins')
-if (pluginsFile.exists()) {
-    Properties plugins = new Properties()
-    pluginsFile.withInputStream { stream -> plugins.load(stream) }
-    plugins.each { name, path ->
-        def pluginDirectory = flutterProjectRoot.resolve(path).toFile()
-        def pluginBuildGradle = new File(pluginDirectory, 'android/build.gradle')
-        if (pluginBuildGradle.exists()) {
-            apply from: pluginBuildGradle
-        }
-    }
-}
-EOL
+            # 创建app_plugin_loader.gradle文件
+            echo '// 创建一个空的app_plugin_loader.gradle文件，以便在CI环境中构建' > "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '// 这通常由Flutter生成，但在某些CI环境中可能缺失' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '// 本文件只包含最基本的配置' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo 'import groovy.json.JsonSlurper' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '// 设置插件依赖' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo 'def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '// 加载 .flutter-plugins 文件（如果存在）' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo 'def pluginsFile = new File(flutterProjectRoot.toFile(), ".flutter-plugins")' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo 'if (pluginsFile.exists()) {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '    Properties plugins = new Properties()' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '    pluginsFile.withInputStream { stream -> plugins.load(stream) }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '    plugins.each { name, path ->' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '        def pluginDirectory = flutterProjectRoot.resolve(path).toFile()' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '        def pluginBuildGradle = new File(pluginDirectory, "android/build.gradle")' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '        if (pluginBuildGradle.exists()) {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '            apply from: pluginBuildGradle' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '        }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '    }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+            echo '}' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/app_plugin_loader.gradle"
           fi
           
           # 检查flutter.gradle
@@ -151,38 +149,37 @@ EOL
             echo "✅ flutter.gradle 存在"
           else
             echo "❌ flutter.gradle 不存在，将创建此文件"
-            cat > "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle" << 'EOL'
-// 创建一个简化的flutter.gradle文件，以便在CI环境中构建
-// 这通常由Flutter生成，但在某些CI环境中可能缺失
-
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.0'
-    }
-}
-
-apply plugin: FlutterPlugin
-
-class FlutterPlugin implements Plugin<Project> {
-    @Override
-    void apply(Project project) {
-        project.extensions.create("flutter", FlutterExtension)
-    }
-}
-
-class FlutterExtension {
-    String source
-    
-    // 定义ndkVersion属性，避免构建错误
-    String getNdkVersion() {
-        return "21.4.7075529"
-    }
-}
-EOL
+            # 创建flutter.gradle文件
+            echo '// 创建一个简化的flutter.gradle文件，以便在CI环境中构建' > "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '// 这通常由Flutter生成，但在某些CI环境中可能缺失' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo 'buildscript {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    repositories {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '        google()' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '        mavenCentral()' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    dependencies {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '        classpath "com.android.tools.build:gradle:7.3.0"' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '}' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo 'apply plugin: FlutterPlugin' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo 'class FlutterPlugin implements Plugin<Project> {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    @Override' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    void apply(Project project) {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '        project.extensions.create("flutter", FlutterExtension)' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '}' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo 'class FlutterExtension {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    String source' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    ' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    // 定义ndkVersion属性，避免构建错误' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    String getNdkVersion() {' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '        return "21.4.7075529"' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '    }' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
+            echo '}' >> "$FLUTTER_HOME/packages/flutter_tools/gradle/flutter.gradle"
           fi
       
       - name: 确保Android目录权限
