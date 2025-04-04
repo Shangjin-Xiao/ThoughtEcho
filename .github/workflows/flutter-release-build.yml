@@ -75,7 +75,11 @@ jobs:
           flutter clean
           
           # 禁用R8代码压缩，避免缺少类的问题
-          echo "android.enableR8=false" >> android/gradle.properties
+          echo -e "\nandroid.enableR8=false" >> android/gradle.properties
+          
+          # 显示gradle.properties内容
+          echo "gradle.properties内容:"
+          cat android/gradle.properties
           
           # 显示gradle.properties内容
           echo "gradle.properties内容:"
