@@ -56,7 +56,8 @@ jobs:
           flutter clean
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }}
+            --build-name=1.0.${{ github.run_number }} \
+            --android-skip-build-dependency-validation
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
