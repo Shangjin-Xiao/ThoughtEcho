@@ -1,81 +1,67 @@
-name: Build Flutter APK
+name: Flutter调试APK构建
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 设置 Java 环境
+        uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '17'
-          cache: gradle
-          
-      - name: Set up Flutter
+          java-version: '17' # 升级到 Java 17
+
+      - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
+          flutter-version: '3.19.0'
           channel: 'stable'
           cache: true
       
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        
-      - name: Setup Gradle
-        working-directory: android
+      - name: 准备构建环境
         run: |
-          cat > gradle.properties << EOF
-          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
-          android.useAndroidX=true
-          android.enableJetifier=true
-          android.enableR8=true
-          EOF
-          
-      - name: Configure Keystore
-        working-directory: android
-        run: |
-          cat > key.properties << EOF
-          storePassword=android
-          keyPassword=android
-          keyAlias=key
-          storeFile=key.jks
-          EOF
-          
-      - name: Create debug keystore
-        working-directory: android
-        run: keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          
-      - name: Install Flutter dependencies
-        run: flutter pub get
-        
-      - name: Install sqlite3_flutter_libs for Android
-        run: |
-          # 确保sqlite3_flutter_libs正确安装
+          flutter --version
+          java -version
+          flutter doctor
           flutter pub get
+      - name: 构建调试 APK
+          echo "Before gradle-wrapper.properties update:"
+          cat gradle/wrapper/gradle-wrapper.properties
+          # 更新 Gradle wrapper 配置
+          cat > gradle/wrapper/gradle-wrapper.properties << EOF
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.3-all.zip
+          EOF
+          echo "After gradle-wrapper.properties update:"
+          cat gradle/wrapper/gradle-wrapper.properties
           
-      - name: Build APK
+          # 下载最新的 gradle-wrapper.jar
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
+          echo "Gradle wrapper download output:"
+          ls -la gradle/wrapper/gradle-wrapper.jar
+          
+          chmod +x gradlew
+      - name: 构建调试 APK
         run: |
-          # 确保清理之前的构建
           flutter clean
-          
-          # 构建release版本
-          flutter build apk --release \
-            --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }}
-          
-      - name: Upload APK
+          rm -rf ~/.gradle/caches/
+          flutter pub cache repair
+          flutter build apk --debug
+      
+      - name: 上传构建的 APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7
+          name: debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
