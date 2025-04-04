@@ -277,6 +277,10 @@ class _HomePageState extends State<HomePage> {
                                     child: CitySearchWidget(
                                       initialCity: locationService.city,
                                       onCitySelected: (city) {
+                                        setState(() {
+                                          // 不需要使用变量来存储返回值，只需调用方法刷新位置信息
+                                          locationService.getFormattedLocation();
+                                        });
                                         // 重新打开添加笔记表单
                                         _showAddQuoteDialog(
                                           context, 
@@ -1754,6 +1758,7 @@ class _HomePageState extends State<HomePage> {
             initialCity: locationService.city,
             onCitySelected: (city) {
               setState(() {
+                // 不需要使用变量来存储返回值，只需调用方法刷新位置信息
                 locationService.getFormattedLocation();
               });
             },
