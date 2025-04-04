@@ -52,24 +52,20 @@ jobs:
           cd android
           
           # 创建正确的gradle.properties文件
-          cat > gradle.properties << EOF
-org.gradle.jvmargs=-Xmx1536M
-android.useAndroidX=true
-android.enableJetifier=true
-android.defaults.buildfeatures.buildconfig=true
-android.nonTransitiveRClass=false
-android.nonFinalResIds=false
-EOF
+          echo "org.gradle.jvmargs=-Xmx1536M" > gradle.properties
+          echo "android.useAndroidX=true" >> gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+          echo "android.defaults.buildfeatures.buildconfig=true" >> gradle.properties
+          echo "android.nonTransitiveRClass=false" >> gradle.properties
+          echo "android.nonFinalResIds=false" >> gradle.properties
           
           # 确保Gradle包装器正确
           mkdir -p gradle/wrapper
-          cat > gradle/wrapper/gradle-wrapper.properties << EOF
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip
-EOF
+          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip" >> gradle/wrapper/gradle-wrapper.properties
           
           # 下载gradle-wrapper.jar
           curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar
