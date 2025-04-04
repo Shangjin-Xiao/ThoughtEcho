@@ -32,21 +32,37 @@ jobs:
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
       
-      - name: 修复Gradle包装器
+      - name: 安装Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 7.5
+      
+      - name: 生成Gradle包装器
         run: |
-          mkdir -p android/gradle/wrapper
-          echo "distributionBase=GRADLE_USER_HOME" > android/gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> android/gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip" >> android/gradle/wrapper/gradle-wrapper.properties
+          cd android
+          gradle wrapper --gradle-version 7.5
+          ls -la gradle/wrapper/
+          chmod +x gradlew
+          chmod +x gradlew.bat
+      
+      - name: 验证Gradle包装器
+        run: |
+          echo "=== 验证gradle-wrapper.jar是否存在 ==="
+          if [ -f "android/gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "✅ gradle-wrapper.jar 存在"
+          else
+            echo "❌ gradle-wrapper.jar 不存在"
+            exit 1
+          fi
           
-          # 下载gradle-wrapper.jar
-          curl -o android/gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar
-          
-          # 创建gradlew脚本
-          touch android/gradlew
-          chmod +x android/gradlew
+          echo "=== 验证gradle-wrapper.properties是否存在 ==="
+          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
+            echo "✅ gradle-wrapper.properties 存在"
+            cat android/gradle/wrapper/gradle-wrapper.properties
+          else
+            echo "❌ gradle-wrapper.properties 不存在"
+            exit 1
+          fi
       
       - name: 获取依赖
         run: flutter pub get
