@@ -29,10 +29,6 @@ dependencies:
   permission_handler: ^13.0.0
   weather: ^4.0.0
   flutter_secure_storage: ^10.0.0
-  
-  # 显式指定Kotlin版本
-  kotlin:
-    plugin: "1.9.22"
 
 dev_dependencies:
   flutter_test:
