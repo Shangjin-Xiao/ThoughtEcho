@@ -42,13 +42,40 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
+      - name: Remove root settings.gradle.kts
+        run: rm -f settings.gradle.kts
+        
+      - name: Check Gradle files
+        run: |
+          echo "Listing Android directory:"
+          ls -la android/
+          echo "\nChecking Gradle wrapper:"
+          ls -la android/gradle/wrapper/
+          echo "\nChecking Gradle properties:"
+          cat android/gradle.properties
+          
+      - name: Generate debug keystore
+        run: |
+          mkdir -p android/app/
+          keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          ls -la android/app/
+
+      - name: Set Gradle properties
+        run: |
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
+          echo "org.gradle.parallel=true" >> android/gradle.properties
+          echo "org.gradle.daemon=true" >> android/gradle.properties
+
       - name: Build Debug APK
-        run: flutter build apk --debug
+        run: |
+          cd android
+          ./gradlew assembleDebug
+          cd ..
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           compression-level: 6
           retention-days: 90

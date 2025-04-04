@@ -22,7 +22,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final String _projectUrl = 'https://github.com/Shangjin-Xiao/心记/';
+  final String _projectUrl = 'https://github.com/Shangjin-Xiao//';
   final TextEditingController _locationController = TextEditingController();
 
   @override

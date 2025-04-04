@@ -16,6 +16,12 @@ class AIService extends ChangeNotifier {
     if (settings.apiKey.isEmpty) {
       throw Exception('请先在设置中配置 API Key');
     }
+    if (settings.apiUrl.isEmpty) {
+      throw Exception('请先在设置中配置 API URL');
+    }
+    if (settings.model.isEmpty) {
+      throw Exception('请先在设置中配置 AI 模型');
+    }
   }
 
   Future<http.Response> _makeRequest(String url, Map<String, dynamic> body, AISettings settings) async {

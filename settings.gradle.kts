@@ -1,3 +1,0 @@
-
-rootProject.name = "心记"
-// ...existing code...
