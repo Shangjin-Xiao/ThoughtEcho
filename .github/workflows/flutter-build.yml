@@ -32,6 +32,22 @@ jobs:
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
       
+      - name: 修复Gradle包装器
+        run: |
+          mkdir -p android/gradle/wrapper
+          echo "distributionBase=GRADLE_USER_HOME" > android/gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip" >> android/gradle/wrapper/gradle-wrapper.properties
+          
+          # 下载gradle-wrapper.jar
+          curl -o android/gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar
+          
+          # 创建gradlew脚本
+          touch android/gradlew
+          chmod +x android/gradlew
+      
       - name: 获取依赖
         run: flutter pub get
       
@@ -42,7 +58,7 @@ jobs:
         run: flutter build apk --debug
       
       - name: 上传构建的 APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk 
