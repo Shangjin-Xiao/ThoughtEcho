@@ -41,6 +41,28 @@ jobs:
           # 获取依赖
           flutter pub get
       
+      - name: 修复Gradle包装器
+        run: |
+          # 检查并修复gradle-wrapper.properties
+          cd android
+          # 确保目录存在
+          mkdir -p gradle/wrapper
+          # 创建干净的gradle-wrapper.properties文件
+          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-7.5-all.zip" >> gradle/wrapper/gradle-wrapper.properties
+          
+          # 下载gradle-wrapper.jar
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar
+          
+          # 设置执行权限
+          chmod +x gradlew
+          
+          # 查看文件内容确认
+          cat gradle/wrapper/gradle-wrapper.properties
+      
       - name: 构建调试 APK
         run: flutter build apk --debug
       
