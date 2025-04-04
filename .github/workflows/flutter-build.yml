@@ -51,6 +51,7 @@ jobs:
           flutter --version
           flutter doctor -v
           flutter pub get
+          flutter pub upgrade
       - name: 构建调试 APK
         run: |
           flutter clean
