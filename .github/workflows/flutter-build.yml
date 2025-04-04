@@ -51,18 +51,6 @@ jobs:
           flutter --version
           flutter doctor -v
           flutter pub get
-        
-      - name: Install sqlite3_flutter_libs for Android
-        run: |
-          flutter pub get
-          flutter pub upgrade sqlite3_flutter_libs
-          
-          # 下载最新的 gradle-wrapper.jar
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
-          echo "Gradle wrapper download output:"
-          ls -la gradle/wrapper/gradle-wrapper.jar
-          
-          chmod +x gradlew
       - name: 构建调试 APK
         run: |
           flutter clean
