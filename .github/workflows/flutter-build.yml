@@ -42,6 +42,7 @@ jobs:
 
       - name: 配置 Android 构建
         run: |
+          cd $GITHUB_WORKSPACE # 显式进入工作区根目录
           cd android
           
           # 更新 build.gradle 中的 Kotlin 版本
