@@ -184,9 +184,13 @@ class DatabaseService extends ChangeNotifier {
           
           // 如果数据库版本低于 8，添加位置和天气相关字段
           if (oldVersion < 8) {
+            debugPrint('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段');
             await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
             await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
             await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
+            debugPrint('数据库升级：location, weather, temperature 字段添加完成');
+          } else {
+            debugPrint('数据库版本 $oldVersion >= 8，无需添加 location, weather, temperature 字段');
           }
         },
       );
