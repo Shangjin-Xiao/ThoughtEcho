@@ -36,18 +36,7 @@ jobs:
           android.enableR8=true
           EOF
           
-      - name: Configure Keystore
-        working-directory: android
-        run: |
-          cat > key.properties << EOF
-          storePassword=android
-          keyPassword=android
-          keyAlias=key
-          storeFile=key.jks
-          EOF
-          
-      - name: Create debug keystore
-        working-directory: android
+
         run: |
           keytool -genkeypair -v \
             -keystore app/debug.keystore \
@@ -76,18 +65,7 @@ jobs:
           android.enableR8=true
           EOF
           
-      - name: Configure Keystore
-        working-directory: android
-        run: |
-          cat > key.properties << EOF
-          storePassword=android
-          keyPassword=android
-          keyAlias=key
-          storeFile=key.jks
-          EOF
-          
-      - name: Create debug keystore
-        working-directory: android
+
         run: |
           keytool -genkeypair -v \
             -keystore app/debug.keystore \
