@@ -6,8 +6,6 @@ import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/sliding_card.dart';
-import '../widgets/weather_widget.dart';
-import '../widgets/hitokoto_widget.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart'; // 添加 import NoteCategory
 import 'settings_page.dart';

@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/ai_service.dart';
