@@ -1,86 +1,81 @@
-name: Flutter调试APK构建
+name: Build Flutter APK
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v3
 
-      - name: 设置 Java 环境
-        uses: actions/setup-java@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17' # 升级到 Java 17
-
-      - name: 设置 Flutter 环境
+          java-version: '17'
+          cache: gradle
+          
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.2' # 尝试指定 Flutter 版本为 3.29.2
+          flutter-version: '3.13.9'
           channel: 'stable'
           cache: true
       
-      - name: 准备构建环境
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Setup Gradle
+        working-directory: android
         run: |
-          flutter --version
-          java -version
-          flutter doctor
-          
-          if [ -d "android" ]; then
-            rm -rf android
-          fi
-          
-          flutter create --platforms=android --project-name=thoughtecho --org=com.shangjin .
-          flutter pub get
-
-      - name: 配置 Android 构建
-        run: |
-          cd $GITHUB_WORKSPACE # 显式进入工作区根目录
-          cd android
-          
-          # 更新 build.gradle 中的 Kotlin 版本
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' build.gradle
-          
-          # 配置 gradle.properties
           cat > gradle.properties << EOF
-          org.gradle.jvmargs=-Xmx1536M
+          org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
           android.useAndroidX=true
           android.enableJetifier=true
-          android.defaults.buildfeatures.buildconfig=true
-          android.nonTransitiveRClass=false
-          android.nonFinalResIds=false
+          android.enableR8=true
           EOF
           
-          # 更新 Gradle wrapper 配置
-          cat > gradle/wrapper/gradle-wrapper.properties << EOF
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.3-all.zip
-          EOF
-          
-          # 下载最新的 gradle-wrapper.jar
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
-          
-          chmod +x gradlew
-
-      - name: 构建调试 APK
+      - name: Configure Keystore
+        working-directory: android
         run: |
+          cat > key.properties << EOF
+          storePassword=android
+          keyPassword=android
+          keyAlias=key
+          storeFile=key.jks
+          EOF
+          
+      - name: Create debug keystore
+        working-directory: android
+        run: keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          
+      - name: Install Flutter dependencies
+        run: flutter pub get
+        
+      - name: Install sqlite3_flutter_libs for Android
+        run: |
+          # 确保sqlite3_flutter_libs正确安装
+          flutter pub get
+          
+      - name: Build APK
+        run: |
+          # 确保清理之前的构建
           flutter clean
-          rm -rf ~/.gradle/caches/
-          flutter pub cache repair
-          flutter build apk --debug
-      
-      - name: 上传构建的 APK
+          
+          # 构建release版本
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }}
+          
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
