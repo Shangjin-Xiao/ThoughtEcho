@@ -27,41 +27,59 @@ jobs:
           channel: 'stable'
           cache: true
       
-      - name: 整合Flutter项目
+      - name: 准备构建环境
         run: |
-          # 确保Flutter环境正确设置
-          flutter doctor -v
+          # 显示Flutter和Java版本信息
+          flutter --version
+          java -version
           
           # 接受Android许可证
           yes | flutter doctor --android-licenses || true
           
-          # 创建Android目录和Gradle文件
+          # 若存在旧的Android目录则删除
+          if [ -d "android" ]; then
+            rm -rf android
+          fi
+          
+          # 创建新的Android项目
           flutter create --platforms=android --project-name=thoughtecho --org=com.shangjin .
           
           # 获取依赖
           flutter pub get
       
-      - name: 修复Gradle包装器
+      - name: 配置Android构建
         run: |
-          # 检查并修复gradle-wrapper.properties
           cd android
-          # 确保目录存在
+          
+          # 创建正确的gradle.properties文件
+          cat > gradle.properties << EOF
+org.gradle.jvmargs=-Xmx1536M
+android.useAndroidX=true
+android.enableJetifier=true
+android.defaults.buildfeatures.buildconfig=true
+android.nonTransitiveRClass=false
+android.nonFinalResIds=false
+EOF
+          
+          # 确保Gradle包装器正确
           mkdir -p gradle/wrapper
-          # 创建干净的gradle-wrapper.properties文件
-          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-7.5-all.zip" >> gradle/wrapper/gradle-wrapper.properties
+          cat > gradle/wrapper/gradle-wrapper.properties << EOF
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip
+EOF
           
           # 下载gradle-wrapper.jar
           curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar
           
+          # 显示配置文件内容
+          echo "gradle.properties:"
+          cat gradle.properties
+          
           # 设置执行权限
           chmod +x gradlew
-          
-          # 查看文件内容确认
-          cat gradle/wrapper/gradle-wrapper.properties
       
       - name: 构建调试 APK
         run: flutter build apk --debug
