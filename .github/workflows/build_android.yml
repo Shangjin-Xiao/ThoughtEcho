@@ -71,6 +71,9 @@ jobs:
           echo "org.gradle.parallel=true" >> android/gradle.properties
           echo "org.gradle.daemon=true" >> android/gradle.properties
 
+      - name: Add execute permission to gradlew
+        run: chmod +x android/gradlew
+        
       - name: Build Debug APK
         run: |
           cd android
