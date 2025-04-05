@@ -150,14 +150,29 @@ class _HomePageState extends State<HomePage> {
       // 查找或创建一言类型标签
       if (dailyQuote['type'] != null) {
         String quoteType = dailyQuote['type'] as String;
-        String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
-        _ensureHitokotoTypeTagExists(db, quoteType, typeName).then((typeTagId) {
-          if (typeTagId != null) {
-            setState(() {
-              selectedTagIds.add(typeTagId);
-            });
-          }
-        });
+        // 如果用户设置的是抖机灵(l)类型，但实际返回的是其他类型，使用实际返回的类型
+        String settingsType = settingsService.appSettings.hitokotoType;
+        if (settingsType == 'l' || settingsType.contains(',')) {
+          // 使用API返回的实际类型
+          String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
+          _ensureHitokotoTypeTagExists(db, quoteType, typeName).then((typeTagId) {
+            if (typeTagId != null) {
+              setState(() {
+                selectedTagIds.add(typeTagId);
+              });
+            }
+          });
+        } else {
+          // 使用用户设置的类型
+          String typeName = ApiService.hitokotoTypes[settingsType] ?? '未知类型';
+          _ensureHitokotoTypeTagExists(db, settingsType, typeName).then((typeTagId) {
+            if (typeTagId != null) {
+              setState(() {
+                selectedTagIds.add(typeTagId);
+              });
+            }
+          });
+        }
       }
     }
     
@@ -985,14 +1000,18 @@ class _HomePageState extends State<HomePage> {
       }
       
       // 如果标签不存在，创建它
-      final newTagId = const Uuid().v4();
       await db.addCategory('每日一言', iconName: 'format_quote');
       
-      // 刷新标签列表
+      // 刷新标签列表并获取新创建的标签ID
       await _loadTags();
+      final updatedCategories = await db.getCategories();
+      final createdTag = updatedCategories.firstWhere(
+        (tag) => tag.name == '每日一言',
+        orElse: () => NoteCategory(id: '', name: ''),
+      );
       
       // 返回新创建的标签ID
-      return newTagId;
+      return createdTag.id.isNotEmpty ? createdTag.id : null;
     } catch (e) {
       debugPrint('确保"每日一言"标签存在时出错: $e');
       return null;
@@ -1017,14 +1036,34 @@ class _HomePageState extends State<HomePage> {
       }
       
       // 如果标签不存在，创建它
-      final newTagId = const Uuid().v4();
-      await db.addCategory(typeName, iconName: 'category');
+      // 使用更合适的图标
+      String iconName = 'category';
+      // 根据类型选择不同的图标
+      if (typeCode == 'a') iconName = 'movie';
+      else if (typeCode == 'b') iconName = 'menu_book';
+      else if (typeCode == 'c') iconName = 'sports_esports';
+      else if (typeCode == 'd') iconName = 'auto_stories';
+      else if (typeCode == 'e') iconName = 'create';
+      else if (typeCode == 'f') iconName = 'public';
+      else if (typeCode == 'g') iconName = 'category';
+      else if (typeCode == 'h') iconName = 'theaters';
+      else if (typeCode == 'i') iconName = 'format_quote';
+      else if (typeCode == 'j') iconName = 'music_note';
+      else if (typeCode == 'k') iconName = 'psychology';
+      else if (typeCode == 'l') iconName = 'mood';
       
-      // 刷新标签列表
+      await db.addCategory(typeName, iconName: iconName);
+      
+      // 刷新标签列表并获取新创建的标签ID
       await _loadTags();
+      final updatedCategories = await db.getCategories();
+      final createdTag = updatedCategories.firstWhere(
+        (tag) => tag.name == typeName,
+        orElse: () => NoteCategory(id: '', name: ''),
+      );
       
       // 返回新创建的标签ID
-      return newTagId;
+      return createdTag.id.isNotEmpty ? createdTag.id : null;
     } catch (e) {
       debugPrint('确保一言类型"$typeName"标签存在时出错: $e');
       return null;
