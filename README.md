@@ -31,6 +31,15 @@
 - **💾  备份与恢复**：  支持数据备份与恢复功能，确保你的思想记录不会丢失，轻松迁移到新设备。
 - **🎨  Material Design 3**：  采用 Material Design 3 规范设计，界面美观现代，操作流畅自然，提供一致的用户体验。
 
+## 📱 应用截图
+
+<div align="center">
+  <img src="res/homepage.jpg" alt="主页界面" width="250" style="margin-right: 10px;"/>
+  <img src="res/notepage.jpg" alt="笔记页面" width="250" style="margin-right: 10px;"/>
+  <img src="res/add.jpg" alt="添加笔记" width="250" style="margin-right: 10px;"/>
+  <img src="res/settingpage.jpg" alt="设置页面" width="250"/>
+</div>
+
 ## 🚀 开始使用
 
 ### 📲 用户安装指南
