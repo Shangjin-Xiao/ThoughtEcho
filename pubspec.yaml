@@ -1,5 +1,5 @@
-name: mind_trace
-description: 一款帮助你记录和分析思想的应用。
+name: thoughtecho
+description: 心迹 - 一款帮助你记录和分析思想的应用。
 publish_to: 'none'
 version: 1.0.0+1
 

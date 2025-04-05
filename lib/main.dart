@@ -7,14 +7,14 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
-import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/services/settings_service.dart';
-import 'package:mind_trace/services/ai_service.dart';
-import 'package:mind_trace/services/location_service.dart';
-import 'package:mind_trace/services/weather_service.dart';
-import 'package:mind_trace/pages/home_page.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/pages/home_page.dart';
 import 'package:flutter/services.dart';
-import 'package:mind_trace/theme/app_theme.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -29,7 +29,7 @@ Future<void> initializeDatabasePlatform() async {
 
       await Directory(dbPath).create(recursive: true);
 
-      final path = join(dbPath, 'mind_trace.db');
+      final path = join(dbPath, 'thoughtecho.db');
       if (!await Directory(dirname(path)).exists()) {
         await Directory(dirname(path)).create(recursive: true);
       }
@@ -48,7 +48,7 @@ Future<void> initializeDatabasePlatform() async {
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    
+
     await initializeDatabasePlatform();
 
     final settingsService = await SettingsService.create();
@@ -67,7 +67,7 @@ void main() async {
     // 初始化主题服务
     final appTheme = AppTheme();
     await appTheme.initialize();
-    
+
     runApp(
       MultiProvider(
         providers: [
@@ -77,11 +77,12 @@ void main() async {
           ChangeNotifierProvider(create: (_) => weatherService),
           ChangeNotifierProvider(create: (_) => appTheme),
           ChangeNotifierProxyProvider<SettingsService, AIService>(
-            create: (context) => AIService(
-              settingsService: context.read<SettingsService>(),
-            ),
-            update: (context, settings, previous) =>
-                previous ?? AIService(settingsService: settings),
+            create:
+                (context) =>
+                    AIService(settingsService: context.read<SettingsService>()),
+            update:
+                (context, settings, previous) =>
+                    previous ?? AIService(settingsService: settings),
           ),
         ],
         child: const MyApp(),
@@ -99,19 +100,12 @@ void main() async {
               padding: const EdgeInsets.all(16.0),
               child: ListView(
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   const Text(
                     '应用启动失败',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -143,7 +137,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appTheme = Provider.of<AppTheme>(context);
-    
+
     return MaterialApp(
       title: '心迹',
       theme: ThemeData.from(colorScheme: appTheme.lightColorScheme),

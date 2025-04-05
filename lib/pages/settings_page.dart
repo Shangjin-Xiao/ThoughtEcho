@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:file_selector/file_selector.dart';
-import 'home_page.dart';
-import '../services/database_service.dart';
+import 'backup_restore_page.dart';
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
-import '../services/settings_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
-import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -32,6 +28,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _launchUrl(String url) async {
+    if (!mounted) return;
+
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
@@ -40,11 +38,64 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
   }
-  
-  // 显示城市搜索对话框
+
+  Future<void> _handleWeatherRefresh(LocationService locationService, WeatherService weatherService) async {
+    if (!mounted) return;
+
+    final position = locationService.currentPosition;
+    if (position == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法获取位置信息')),
+      );
+      return;
+    }
+
+    await weatherService.getWeatherData(
+      position.latitude,
+      position.longitude,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('天气已更新')),
+    );
+  }
+
+  Future<void> _handleLocationPermission(LocationService locationService, WeatherService weatherService) async {
+    if (!mounted) return;
+
+    final granted = await locationService.requestLocationPermission();
+    if (!granted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法获取位置权限')),
+      );
+      return;
+    }
+
+    final position = await locationService.getCurrentLocation();
+    if (position == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法获取当前位置')),
+      );
+      return;
+    }
+
+    await weatherService.getWeatherData(
+      position.latitude,
+      position.longitude,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('位置服务已启用')),
+    );
+  }
+
   void _showCitySearchDialog(BuildContext context) {
     final locationService = Provider.of<LocationService>(context, listen: false);
-    
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -59,11 +110,9 @@ class _SettingsPageState extends State<SettingsPage> {
             initialCity: locationService.city,
             onCitySelected: (city) {
               setState(() {
-                // 更新位置信息显示
                 _locationController.text = locationService.getFormattedLocation();
               });
-              
-              // 显示成功消息
+
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('已选择城市: ${city.name}')),
@@ -78,7 +127,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final settingsService = Provider.of<SettingsService>(context);
     final locationService = Provider.of<LocationService>(context);
     final weatherService = Provider.of<WeatherService>(context);
     final theme = Theme.of(context);
@@ -87,7 +135,6 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          // 位置和天气设置
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
@@ -105,8 +152,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 SwitchListTile(
                   title: const Text('使用位置服务'),
                   subtitle: Text(
-                    locationService.hasLocationPermission 
-                        ? '已获得位置权限' 
+                    locationService.hasLocationPermission
+                        ? '已获得位置权限'
                         : '未获得位置权限',
                     style: TextStyle(
                       fontSize: 12,
@@ -118,26 +165,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: locationService.hasLocationPermission,
                   onChanged: (value) async {
                     if (value) {
-                      // 请求位置权限
-                      final granted = await locationService.requestLocationPermission();
-                      if (granted) {
-                        // 获取当前位置
-                        final position = await locationService.getCurrentLocation();
-                        if (position != null && mounted) {
-                          // 更新天气
-                          await weatherService.getWeatherData(
-                            position.latitude, 
-                            position.longitude
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('位置服务已启用')),
-                          );
-                        }
-                      } else if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('无法获取位置权限')),
-                        );
-                      }
+                      await _handleLocationPermission(locationService, weatherService);
                     }
                   },
                 ),
@@ -153,7 +181,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       const SizedBox(height: 8.0),
-                      // 城市搜索按钮
                       ElevatedButton.icon(
                         icon: const Icon(Icons.search),
                         label: const Text('搜索城市'),
@@ -165,7 +192,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         },
                       ),
                       const SizedBox(height: 16.0),
-                      // 手动输入位置（保留原功能）
                       Text(
                         '或手动输入位置',
                         style: TextStyle(
@@ -182,7 +208,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0, 
+                            horizontal: 12.0,
                             vertical: 12.0,
                           ),
                           suffixIcon: IconButton(
@@ -210,44 +236,25 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                
                 if (locationService.currentAddress != null)
                   ListTile(
                     title: const Text('刷新天气'),
                     subtitle: Text(
                       '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                       ),
                     ),
                     leading: Icon(weatherService.getWeatherIconData()),
                     trailing: const Icon(Icons.refresh),
                     onTap: () async {
-                      final position = locationService.currentPosition;
-                      if (position != null) {
-                        await weatherService.getWeatherData(
-                          position.latitude, 
-                          position.longitude
-                        );
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('天气已更新')),
-                          );
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('无法获取位置信息')),
-                        );
-                      }
+                      await _handleWeatherRefresh(locationService, weatherService);
                     },
                   ),
-                
                 const SizedBox(height: 8.0),
               ],
             ),
           ),
-          
-          // 应用设置
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
@@ -262,7 +269,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: theme.colorScheme.outline.withOpacity(0.2),
                   ),
                 ),
-                // 主题设置
                 ListTile(
                   title: const Text('主题设置'),
                   subtitle: const Text('自定义应用的外观主题'),
@@ -277,7 +283,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // AI设置
                 ListTile(
                   title: const Text('AI设置'),
                   subtitle: const Text('配置AI分析功能'),
@@ -292,7 +297,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 一言设置
                 ListTile(
                   title: const Text('一言设置'),
                   subtitle: const Text('自定义"每日一言"的类型'),
@@ -310,23 +314,20 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-          
-          // 内容管理
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
-      children: [
+              children: [
                 ListTile(
                   title: const Text('内容管理'),
                   leading: const Icon(Icons.category),
                 ),
-        Padding(
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
                     color: theme.colorScheme.outline.withOpacity(0.2),
                   ),
                 ),
-                // 标签管理
                 ListTile(
                   title: const Text('标签管理'),
                   subtitle: const Text('添加和编辑标签'),
@@ -341,7 +342,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 备份与恢复
                 ListTile(
                   title: const Text('备份与恢复'),
                   subtitle: const Text('备份数据或从备份中恢复'),
@@ -359,8 +359,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-          
-          // 关于信息
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
@@ -404,104 +402,5 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-  }
-
-  Future<void> _handleExport() async {
-    if (!mounted) return;
-    final context = this.context;
-    
-    try {
-      final dbService = Provider.of<DatabaseService>(context, listen: false);
-      final path = await dbService.exportAllData();
-      
-      if (!mounted) return;
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('备份成功'),
-          content: SelectableText('文件路径:\n$path'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('备份失败: $e')),
-      );
-    }
-  }
-
-  Future<void> _handleImport() async {
-    if (!mounted) return;
-    final context = this.context;
-    
-    try {
-      // 使用file_selector替代file_picker
-      final XTypeGroup jsonTypeGroup = XTypeGroup(
-        label: 'JSON',
-        extensions: ['json'],
-      );
-      final XFile? file = await openFile(
-        acceptedTypeGroups: [jsonTypeGroup],
-      );
-      
-      // 转换为与原代码兼容的格式
-      final result = file != null ? {'files': [file]} : null;
-      
-      if (result == null) return;
-      
-      if (!mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('确认导入'),
-          content: const Text('导入数据将清空当前所有数据，确定要继续吗？'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-      
-      if (confirmed != true || !mounted) return;
-      
-      final dbService = Provider.of<DatabaseService>(context, listen: false);
-      final selectedFile = result['files']![0] as XFile;
-      await dbService.importData(selectedFile.path);
-      
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('数据已恢复，重启应用以完成导入'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      
-      if (!mounted) return;
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('恢复失败: $e')),
-      );
-    }
   }
 }

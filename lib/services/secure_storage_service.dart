@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
-  static final SecureStorageService _instance = SecureStorageService._internal();
+  static final SecureStorageService _instance =
+      SecureStorageService._internal();
   late final FlutterSecureStorage _storage;
 
   // 安全存储的键名
@@ -17,10 +18,8 @@ class SecureStorageService {
     const AndroidOptions androidOptions = AndroidOptions(
       encryptedSharedPreferences: true,
     );
-    
-    const IOSOptions iosOptions = IOSOptions(
-      accountName: 'mind_trace_secure',
-    );
+
+    const IOSOptions iosOptions = IOSOptions(accountName: 'thoughtecho_secure');
 
     _storage = const FlutterSecureStorage(
       aOptions: androidOptions,
@@ -34,7 +33,7 @@ class SecureStorageService {
       debugPrint('Web平台不支持安全存储，跳过存储操作');
       return;
     }
-    
+
     await _storage.write(key: _apiKeyKey, value: apiKey);
   }
 
@@ -44,7 +43,7 @@ class SecureStorageService {
       debugPrint('Web平台不支持安全存储，返回空值');
       return null;
     }
-    
+
     return await _storage.read(key: _apiKeyKey);
   }
 
@@ -54,7 +53,7 @@ class SecureStorageService {
       debugPrint('Web平台不支持安全存储，跳过删除操作');
       return;
     }
-    
+
     await _storage.delete(key: _apiKeyKey);
   }
 
@@ -64,8 +63,8 @@ class SecureStorageService {
       debugPrint('Web平台不支持安全存储，返回false');
       return false;
     }
-    
+
     final value = await _storage.read(key: _apiKeyKey);
     return value != null && value.isNotEmpty;
   }
-} 
+}

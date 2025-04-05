@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import '../models/note_category.dart';
@@ -37,7 +39,7 @@ class DatabaseService extends ChangeNotifier {
         _memoryStore.add(
           Quote(
             id: _uuid.v4(),
-            content: '欢迎使用心记 - Web版',
+            content: '欢迎使用心迹 - Web版',
             date: DateTime.now().toIso8601String(),
             source: '示例来源',
             aiAnalysis: '这是Web平台示例笔记',
@@ -79,7 +81,7 @@ class DatabaseService extends ChangeNotifier {
       }
       // 获取数据库存储路径，由 main.dart 已设置好路径
       final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'mind_trace.db');
+      final path = join(dbPath, 'thoughtecho.db');
 
       _database = await openDatabase(
         path,
@@ -626,5 +628,231 @@ class DatabaseService extends ChangeNotifier {
       debugPrint('获取标签错误: $e');
       return [];
     }
+  }
+
+  /// 导出所有数据
+  Future<String> exportAllData({String? customPath}) async {
+    try {
+      final data = {
+        'metadata': {
+          'app': '心迹',
+          'version': 8, // 当前数据库版本
+          'exportTime': DateTime.now().toIso8601String(),
+        },
+        'quotes': await _exportQuotes(),
+        'categories': await _exportCategories(),
+        'tags': await _exportTags(),
+      };
+
+      final jsonStr = json.encode(data);
+
+      final String path;
+      if (customPath != null) {
+        path = customPath;
+      } else {
+        final docDir = await getApplicationDocumentsDirectory();
+        path =
+            '${docDir.path}/thoughtecho_backup_${DateTime.now().millisecondsSinceEpoch}.json';
+      }
+
+      final file = File(path);
+      await file.writeAsString(jsonStr);
+      return path;
+    } catch (e) {
+      debugPrint('导出数据失败: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _exportQuotes() async {
+    if (kIsWeb) {
+      return _memoryStore.map((q) => q.toMap()).toList();
+    }
+    try {
+      final db = database;
+      return await db.query('quotes');
+    } catch (e) {
+      debugPrint('导出笔记数据失败: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _exportCategories() async {
+    if (kIsWeb) {
+      return _categoryStore.map((c) => c.toMap()).toList();
+    }
+    try {
+      final db = database;
+      return await db.query('categories');
+    } catch (e) {
+      debugPrint('导出分类数据失败: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _exportTags() async {
+    if (kIsWeb) {
+      return _tagStore.map((t) => t.toMap()).toList();
+    }
+    try {
+      final db = database;
+      return await db.query('tags');
+    } catch (e) {
+      debugPrint('导出标签数据失败: $e');
+      return [];
+    }
+  }
+
+  /// 从备份文件导入数据
+  Future<void> importData(String filePath, {bool clearExisting = true}) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('导入文件不存在');
+      }
+
+      final jsonStr = await file.readAsString();
+      final data = json.decode(jsonStr) as Map<String, dynamic>;
+
+      // 验证数据格式
+      if (!_validateImportData(data)) {
+        throw Exception('无效的备份文件格式');
+      }
+
+      final importVersion = data['metadata']['version'] as int;
+      if (kIsWeb) {
+        // Web平台特殊处理
+        if (clearExisting) {
+          _memoryStore.clear();
+          _categoryStore.clear();
+          _tagStore.clear();
+        }
+
+        // 导入数据
+        await _importWebData(data);
+      } else {
+        final db = database;
+        await db.transaction((txn) async {
+          try {
+            if (clearExisting) {
+              // 在删除前创建临时备份
+              final backupPath = await _createBackup();
+              debugPrint('已创建数据备份: $backupPath');
+
+              await txn.delete('categories');
+              await txn.delete('quotes');
+              await txn.delete('tags');
+            }
+
+            // 导入数据
+            await _importData(txn, data);
+          } catch (e) {
+            debugPrint('导入过程中出错: $e');
+            rethrow;
+          }
+        });
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('导入数据失败: $e');
+      rethrow;
+    }
+  }
+
+  bool _validateImportData(Map<String, dynamic> data) {
+    try {
+      if (!data.containsKey('metadata') ||
+          !data.containsKey('quotes') ||
+          !data.containsKey('categories')) {
+        return false;
+      }
+
+      final metadata = data['metadata'] as Map<String, dynamic>?;
+      if (metadata == null ||
+          !metadata.containsKey('app') ||
+          !metadata.containsKey('version') ||
+          !metadata.containsKey('exportTime')) {
+        return false;
+      }
+
+      if (metadata['app'] != '心迹') {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _importData(Transaction txn, Map<String, dynamic> data) async {
+    // 导入分类
+    final categories = data['categories'] as List;
+    for (final c in categories) {
+      if (c is! Map<String, dynamic>) continue;
+      await txn.insert(
+        'categories',
+        c,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    // 导入标签
+    if (data.containsKey('tags')) {
+      final tags = data['tags'] as List;
+      for (final t in tags) {
+        if (t is! Map<String, dynamic>) continue;
+        await txn.insert(
+          'tags',
+          t,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    }
+
+    // 导入笔记
+    final quotes = data['quotes'] as List;
+    for (final q in quotes) {
+      if (q is! Map<String, dynamic>) continue;
+      await txn.insert(
+        'quotes',
+        q,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+  }
+
+  Future<void> _importWebData(Map<String, dynamic> data) async {
+    // 导入分类
+    final categories = data['categories'] as List;
+    for (final c in categories) {
+      if (c is! Map<String, dynamic>) continue;
+      _categoryStore.add(NoteCategory.fromMap(c));
+    }
+
+    // 导入标签
+    if (data.containsKey('tags')) {
+      final tags = data['tags'] as List;
+      for (final t in tags) {
+        if (t is! Map<String, dynamic>) continue;
+        _tagStore.add(NoteTag.fromMap(t));
+      }
+    }
+
+    // 导入笔记
+    final quotes = data['quotes'] as List;
+    for (final q in quotes) {
+      if (q is! Map<String, dynamic>) continue;
+      _memoryStore.add(Quote.fromMap(q));
+    }
+  }
+
+  Future<String> _createBackup() async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final docDir = await getApplicationDocumentsDirectory();
+    final backupPath = '${docDir.path}/backup_before_import_$timestamp.json';
+    await exportAllData(customPath: backupPath);
+    return backupPath;
   }
 }

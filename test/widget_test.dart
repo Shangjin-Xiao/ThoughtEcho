@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/services/settings_service.dart';
-import 'package:mind_trace/services/ai_service.dart';
-import 'package:mind_trace/theme/app_theme.dart';
-import 'package:mind_trace/main.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
+import 'package:thoughtecho/main.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
@@ -22,11 +22,12 @@ void main() {
           ChangeNotifierProvider(create: (_) => databaseService),
           ChangeNotifierProvider(create: (_) => appTheme),
           ChangeNotifierProxyProvider<SettingsService, AIService>(
-            create: (context) => AIService(
-              settingsService: context.read<SettingsService>(),
-            ),
-            update: (context, settings, previous) =>
-                previous ?? AIService(settingsService: settings),
+            create:
+                (context) =>
+                    AIService(settingsService: context.read<SettingsService>()),
+            update:
+                (context, settings, previous) =>
+                    previous ?? AIService(settingsService: settings),
           ),
         ],
         child: const MyApp(),
