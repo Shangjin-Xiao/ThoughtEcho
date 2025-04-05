@@ -41,6 +41,8 @@ Color adjustColor(Color color) {
 }
 
 // 新增扩展方法，将 withOpacity 替换为 applyOpacity
-extension ColorValueExtension on Color {
-  Color applyOpacity(double opacity) => Color.fromRGBO(red, green, blue, opacity);
+extension ColorExtension on Color {
+  Color applyOpacity(double opacity) {
+    return Color.fromRGBO(red, green, blue, opacity);
+  }
 }
