@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/models/tag_model.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -23,20 +24,42 @@ class _EditPageState extends State<EditPage> {
   late String _aiAnalysis;
   late List<String> _tagIds;
   late String? _colorHex;
+  List<Tag> _allTags = [];
 
-  // 添加位置和天气相关变量
+  // 位置和天气相关变量
   bool _includeLocation = false;
   bool _includeWeather = false;
   String? _location;
   String? _weather;
   String? _temperature;
 
+  // 预定义的颜色选项
+  final List<Color> _colorOptions = [
+    Colors.red,
+    Colors.pink,
+    Colors.purple,
+    Colors.deepPurple,
+    Colors.indigo,
+    Colors.blue,
+    Colors.lightBlue,
+    Colors.cyan,
+    Colors.teal,
+    Colors.green,
+    Colors.lightGreen,
+    Colors.lime,
+    Colors.yellow,
+    Colors.amber,
+    Colors.orange,
+    Colors.deepOrange,
+    Colors.brown,
+    Colors.blueGrey,
+  ];
+
   @override
   void initState() {
     super.initState();
     _contentController = TextEditingController(text: widget.quote.content);
 
-    // 从source解析出author和work（如果它们为空）
     String author = widget.quote.sourceAuthor ?? '';
     String work = widget.quote.sourceWork ?? '';
 
@@ -50,35 +73,36 @@ class _EditPageState extends State<EditPage> {
     _tagIds = List<String>.from(widget.quote.tagIds);
     _colorHex = widget.quote.colorHex;
 
-    // 初始化位置和天气
     _location = widget.quote.location;
     _weather = widget.quote.weather;
     _temperature = widget.quote.temperature;
     _includeLocation = _location != null && _location!.isNotEmpty;
     _includeWeather = _weather != null && _weather!.isNotEmpty;
 
-    // 如果有位置信息，解析到位置服务
+    // 加载所有标签
+    _loadTags();
+
     if (_includeLocation) {
-      final locationService = Provider.of<LocationService>(
-        context,
-        listen: false,
-      );
+      final locationService = Provider.of<LocationService>(context, listen: false);
       locationService.parseLocationString(_location);
     }
   }
 
+  Future<void> _loadTags() async {
+    final databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _allTags = await databaseService.getTags();
+    setState(() {});
+  }
+
   void _parseSource(String source) {
-    // 尝试解析格式如"——作者《作品》"的字符串
     String author = '';
     String work = '';
 
-    // 提取作者（在"——"之后，"《"之前）
     final authorMatch = RegExp(r'——([^《]+)').firstMatch(source);
     if (authorMatch != null && authorMatch.groupCount >= 1) {
       author = authorMatch.group(1)?.trim() ?? '';
     }
 
-    // 提取作品（在《》之间）
     final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
     if (workMatch != null && workMatch.groupCount >= 1) {
       work = workMatch.group(1) ?? '';
@@ -89,46 +113,136 @@ class _EditPageState extends State<EditPage> {
   }
 
   String _formatSource(String author, String work) {
-    if (author.isEmpty && work.isEmpty) {
-      return '';
-    }
+    if (author.isEmpty && work.isEmpty) return '';
 
     String result = '';
     if (author.isNotEmpty) {
       result += '——$author';
     }
-
     if (work.isNotEmpty) {
       result += ' 《$work》';
     }
-
     return result;
   }
 
-  @override
-  void dispose() {
-    _contentController.dispose();
-    _authorController.dispose();
-    _workController.dispose();
-    super.dispose();
+  void _showTagSelectionDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择标签'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _allTags.length,
+            itemBuilder: (context, index) {
+              final tag = _allTags[index];
+              return CheckboxListTile(
+                title: Text(tag.name),
+                value: _tagIds.contains(tag.id),
+                secondary: Icon(Icons.label_outline,
+                    color: tag.color != null
+                        ? Color(int.parse('0xFF${tag.color}'))
+                        : Theme.of(context).colorScheme.primary),
+                onChanged: (checked) {
+                  setState(() {
+                    if (checked ?? false) {
+                      _tagIds.add(tag.id);
+                    } else {
+                      _tagIds.remove(tag.id);
+                    }
+                  });
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('完成'),
+          ),
+        ],
+      ),
+    );
   }
 
-  // 获取当前位置和天气
-  Future<void> _getCurrentLocationAndWeather() async {
-    final locationService = Provider.of<LocationService>(
-      context,
-      listen: false,
+  void _showColorSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择颜色'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final color in _colorOptions)
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _colorHex = color.value.toRadixString(16).substring(2);
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _colorHex != null &&
+                                color.value.toRadixString(16).substring(2) ==
+                                    _colorHex
+                            ? Colors.white
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              // 添加一个清除颜色的选项
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _colorHex = null;
+                  });
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.clear,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Future<void> _getCurrentLocationAndWeather() async {
+    final locationService = Provider.of<LocationService>(context, listen: false);
     final weatherService = Provider.of<WeatherService>(context, listen: false);
 
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('无法获取位置权限')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('无法获取位置权限')));
         }
         return;
       }
@@ -141,17 +255,21 @@ class _EditPageState extends State<EditPage> {
         _location = locationService.getFormattedLocation();
       });
 
-      // 获取天气
-      await weatherService.getWeatherData(
-        position.latitude,
-        position.longitude,
-      );
+      await weatherService.getWeatherData(position.latitude, position.longitude);
       setState(() {
         _includeWeather = true;
         _weather = weatherService.currentWeather;
         _temperature = weatherService.temperature;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    _authorController.dispose();
+    _workController.dispose();
+    super.dispose();
   }
 
   @override
@@ -167,16 +285,12 @@ class _EditPageState extends State<EditPage> {
           IconButton(
             icon: const Icon(Icons.save),
             onPressed: () async {
-              // 保存编辑后的笔记
               final newQuote = Quote(
                 id: widget.quote.id,
                 content: _contentController.text,
                 date: widget.quote.date,
                 aiAnalysis: _aiAnalysis,
-                source: _formatSource(
-                  _authorController.text,
-                  _workController.text,
-                ),
+                source: _formatSource(_authorController.text, _workController.text),
                 sourceAuthor: _authorController.text,
                 sourceWork: _workController.text,
                 tagIds: _tagIds,
@@ -190,9 +304,8 @@ class _EditPageState extends State<EditPage> {
 
               if (context.mounted) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('保存成功！')));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('保存成功！')));
               }
             },
           ),
@@ -209,6 +322,7 @@ class _EditPageState extends State<EditPage> {
                 decoration: const InputDecoration(
                   labelText: '内容',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit_note_outlined),
                 ),
                 maxLines: 5,
               ),
@@ -218,10 +332,17 @@ class _EditPageState extends State<EditPage> {
                   Expanded(
                     child: TextField(
                       controller: _authorController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: '作者/人物',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(
+                          Icons.person_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -229,44 +350,69 @@ class _EditPageState extends State<EditPage> {
                   Expanded(
                     child: TextField(
                       controller: _workController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: '作品名称',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.book),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(
+                          Icons.auto_stories_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _authorController,
-                builder: (context, authorValue, child) {
-                  return ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _workController,
-                    builder: (context, workValue, child) {
-                      return Text(
-                        '将显示为: ${_formatSource(authorValue.text, workValue.text)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      );
-                    },
-                  );
-                },
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                child: Text(
+                  '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
               ),
-
-              const SizedBox(height: 16),
-              // 位置和天气信息
               Row(
                 children: [
-                  // 位置信息
                   Expanded(
-                    child: InkWell(
+                    child: _buildOptionButton(
+                      icon: Icons.label_outline,
+                      title: '标签',
+                      subtitle: _tagIds.isEmpty ? null : '已选择 ${_tagIds.length} 个',
+                      selected: _tagIds.isNotEmpty,
+                      onTap: _showTagSelectionDialog,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildOptionButton(
+                      icon: Icons.color_lens_outlined,
+                      title: '颜色',
+                      selected: _colorHex != null,
+                      color: _colorHex != null
+                          ? Color(int.parse('0xFF$_colorHex'))
+                          : null,
+                      onTap: _showColorSelectionDialog,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildOptionButton(
+                      icon: _includeLocation
+                          ? Icons.location_on_outlined
+                          : Icons.location_off_outlined,
+                      title: '位置',
+                      subtitle: _includeLocation ? locationService.city : null,
+                      selected: _includeLocation,
                       onTap: () {
                         setState(() {
                           _includeLocation = !_includeLocation;
@@ -275,82 +421,27 @@ class _EditPageState extends State<EditPage> {
                           }
                         });
                       },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8.0,
-                          horizontal: 4.0,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _includeLocation
-                                  ? Icons.location_on
-                                  : Icons.location_off,
-                              size: 20,
-                              color:
-                                  _includeLocation
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '位置',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color:
-                                          _includeLocation
-                                              ? Theme.of(
-                                                context,
-                                              ).colorScheme.primary
-                                              : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  if (_includeLocation && _location != null)
-                                    Text(
-                                      locationService.city ?? '',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (_includeLocation)
-                              IconButton(
-                                icon: const Icon(Icons.refresh, size: 16),
-                                tooltip: '刷新位置',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: () {
-                                  _getCurrentLocationAndWeather();
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
+                      trailing: _includeLocation
+                          ? IconButton(
+                              icon: const Icon(Icons.refresh, size: 16),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: _getCurrentLocationAndWeather,
+                            )
+                          : null,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // 天气信息
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: InkWell(
+                    child: _buildOptionButton(
+                      icon: _includeWeather
+                          ? weatherService.getWeatherIconData()
+                          : Icons.cloud_off_outlined,
+                      title: '天气',
+                      subtitle: _includeWeather
+                          ? '${_weather ?? ''} ${_temperature ?? ''}'
+                          : null,
+                      selected: _includeWeather,
                       onTap: () {
                         setState(() {
                           _includeWeather = !_includeWeather;
@@ -359,123 +450,177 @@ class _EditPageState extends State<EditPage> {
                           }
                         });
                       },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8.0,
-                          horizontal: 4.0,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _includeWeather
-                                  ? weatherService.getWeatherIconData()
-                                  : Icons.cloud_off,
-                              size: 20,
-                              color:
-                                  _includeWeather
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '天气',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color:
-                                          _includeWeather
-                                              ? Theme.of(
-                                                context,
-                                              ).colorScheme.primary
-                                              : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  if (_includeWeather && _weather != null)
-                                    Text(
-                                      '${_weather!} ${_temperature ?? ""}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
                 ],
               ),
-
               const SizedBox(height: 16),
-
-              // 仅当API已配置时显示AI分析部分
               Builder(
                 builder: (context) {
-                  final settingsService = Provider.of<SettingsService>(
-                    context,
-                    listen: false,
-                  );
+                  final settingsService =
+                      Provider.of<SettingsService>(context, listen: false);
                   final settings = settingsService.aiSettings;
-                  final bool apiConfigured =
-                      settings.apiKey.isNotEmpty &&
+                  final bool apiConfigured = settings.apiKey.isNotEmpty &&
                       settings.apiUrl.isNotEmpty &&
                       settings.model.isNotEmpty;
 
                   return apiConfigured
                       ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('AI 分析:'),
-                          Text(_aiAnalysis.isEmpty ? '暂无分析' : _aiAnalysis),
-                          const SizedBox(height: 8),
-                          ElevatedButton(
-                            onPressed: () async {
-                              try {
-                                final aiService = Provider.of<AIService>(
-                                  context,
-                                  listen: false,
-                                );
-                                final summary = await aiService.summarizeNote(
-                                  Quote(
-                                    id: widget.quote.id,
-                                    content: _contentController.text,
-                                    date: widget.quote.date,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.psychology_outlined,
+                                  size: 20,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'AI 分析',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
-                                );
-                                setState(() {
-                                  _aiAnalysis = summary;
-                                });
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('AI分析失败: $e')),
-                                );
-                              }
-                            },
-                            child: const Text('生成AI分析'),
-                          ),
-                        ],
-                      )
-                      : const SizedBox.shrink(); // 如果API未配置，则不显示AI分析部分
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withOpacity(0.5),
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _aiAnalysis.isEmpty ? '暂无分析' : _aiAnalysis,
+                                style: TextStyle(
+                                  color: _aiAnalysis.isEmpty
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.5)
+                                      : Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final aiService = Provider.of<AIService>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final summary = await aiService.summarizeNote(
+                                    Quote(
+                                      id: widget.quote.id,
+                                      content: _contentController.text,
+                                      date: widget.quote.date,
+                                    ),
+                                  );
+                                  setState(() {
+                                    _aiAnalysis = summary;
+                                  });
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('AI分析失败: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.refresh_outlined),
+                              label: const Text('重新生成分析'),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink();
                 },
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionButton({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool selected,
+    required VoidCallback onTap,
+    Color? color,
+    Widget? trailing,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outline.withOpacity(0.5),
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: color ??
+                    (selected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.5)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
             ],
           ),
         ),
