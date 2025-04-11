@@ -12,6 +12,21 @@ class WeatherWidget extends StatelessWidget {
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
     
+    // 构建位置显示文本
+    String locationText = '未知位置';
+    if (locationService.city != null) {
+      // 使用城市名作为主要显示
+      locationText = locationService.city!;
+      
+      // 如果有区县信息，添加到显示中
+      if (locationService.district != null && locationService.district!.isNotEmpty) {
+        locationText = '${locationService.city} · ${locationService.district}';
+      }
+    } else if (locationService.province != null) {
+      // 如果没有城市但有省份
+      locationText = locationService.province!;
+    }
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -23,19 +38,50 @@ class WeatherWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  Icons.cloud,
-                  color: theme.colorScheme.primary,
-                  size: 18,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.cloud,
+                      color: theme.colorScheme.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '当前天气',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '当前天气',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                // 显示位置信息的小标签
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 12,
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        locationText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -45,7 +91,7 @@ class WeatherWidget extends StatelessWidget {
               weatherService.weatherIcon != null 
                 ? weatherService.getWeatherIconData() 
                 : Icons.cloud_queue,
-              size: 32,
+              size: 40, // 稍微放大图标
               color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 8),
@@ -59,32 +105,14 @@ class WeatherWidget extends StatelessWidget {
               weatherService.temperature ?? '',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 22, // 稍微放大温度字体
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (locationService.city != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    locationService.city ?? '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-              ),
+            // 移除了旧的位置标签，因为现在放到了顶部
           ],
         ),
       ),
     );
   }
-} 
+}

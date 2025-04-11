@@ -31,6 +31,9 @@ dependencies:
   permission_handler: ^11.3.0
   weather: ^3.2.0
   flutter_secure_storage: ^9.0.0
+  # 新增本地地理编码相关依赖
+  geocoding: ^2.1.1 # 使用系统提供的地理编码功能
+  geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
 
 dev_dependencies:
   flutter_test:

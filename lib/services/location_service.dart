@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/http_utils.dart';
+import 'local_geocoding_service.dart'; // 导入本地地理编码服务
 
 // 本地地点数据结构
 class Province {
@@ -238,14 +239,17 @@ class LocationService extends ChangeNotifier {
         debugPrint('位置权限状态: $_hasLocationPermission');
         
         if (_hasLocationPermission) {
-          // 尝试获取位置
-          getCurrentLocation().then((position) {
+          // 默认先使用低精度定位，获取快速结果
+          getCurrentLocation(highAccuracy: false).then((position) {
             debugPrint('初始化时获取位置: ${position?.latitude}, ${position?.longitude}');
           });
         }
       } else {
         debugPrint('位置服务未启用');
       }
+      
+      // 默认使用本地数据，避免网络请求
+      _useLocalData = true;
       
       notifyListeners();
     } catch (e) {
@@ -370,7 +374,7 @@ class LocationService extends ChangeNotifier {
   }
 
   // 获取当前位置
-  Future<Position?> getCurrentLocation() async {
+  Future<Position?> getCurrentLocation({bool highAccuracy = false}) async {
     if (!_isLocationServiceEnabled) {
       debugPrint('获取位置时，位置服务未启用');
       return null;
@@ -385,14 +389,20 @@ class LocationService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
       
-      debugPrint('开始获取位置...');
-      _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
+      debugPrint('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
+      
+      // 使用LocalGeocodingService获取位置
+      _currentPosition = await LocalGeocodingService.getCurrentPosition(
+        highAccuracy: highAccuracy
       );
       
-      debugPrint('位置获取成功: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}');
-      await getAddressFromLatLng();
+      if (_currentPosition != null) {
+        debugPrint('位置获取成功: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}');
+        // 使用本地解析方法获取地址
+        await getAddressFromLatLng();
+      } else {
+        debugPrint('无法获取当前位置');
+      }
       
       _isLoading = false;
       notifyListeners();
@@ -400,21 +410,6 @@ class LocationService extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       debugPrint('获取位置失败: $e');
-      
-      // 尝试使用最后一次已知位置
-      try {
-        debugPrint('尝试获取最后一次已知位置...');
-        _currentPosition = await Geolocator.getLastKnownPosition();
-        if (_currentPosition != null) {
-          debugPrint('已获取最后一次已知位置: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}');
-          await getAddressFromLatLng();
-        } else {
-          debugPrint('无法获取最后一次已知位置');
-        }
-      } catch (e2) {
-        debugPrint('获取最后一次已知位置失败: $e2');
-      }
-      
       notifyListeners();
       return _currentPosition;
     }
@@ -429,6 +424,42 @@ class LocationService extends ChangeNotifier {
 
     try {
       debugPrint('开始通过经纬度获取地址信息...');
+      
+      // 使用系统SDK获取地址信息
+      final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
+        _currentPosition!.latitude, 
+        _currentPosition!.longitude
+      );
+      
+      // 如果本地解析成功
+      if (addressInfo != null) {
+        _country = addressInfo['country'];
+        _province = addressInfo['province'];
+        _city = addressInfo['city'];
+        _district = addressInfo['district'];
+        _currentAddress = addressInfo['formatted_address'];
+        
+        debugPrint('本地地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)');
+        notifyListeners();
+        return;
+      }
+      
+      // 如果本地解析失败且允许使用网络，尝试使用在线服务
+      if (!_useLocalData) {
+        try {
+          await _getAddressFromLatLngOnline();
+        } catch (e) {
+          debugPrint('在线地址解析失败: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('获取地址信息失败: $e');
+    }
+  }
+  
+  // 使用在线服务获取地址（备用方法）
+  Future<void> _getAddressFromLatLngOnline() async {
+    try {
       final url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
       
       final response = await http.get(
@@ -438,7 +469,6 @@ class LocationService extends ChangeNotifier {
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        debugPrint('OpenStreetMap响应: ${response.body.substring(0, 200)}...');
         
         // 解析国家、省、市、区信息
         if (data.containsKey('address')) {
@@ -454,20 +484,20 @@ class LocationService extends ChangeNotifier {
             _currentAddress = '$_currentAddress, $_district';
           }
           
-          debugPrint('地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)');
-        } else {
-          debugPrint('响应中没有地址信息');
+          debugPrint('在线地址解析成功: $_currentAddress');
         }
-        
-        notifyListeners();
-      } else {
-        debugPrint('OpenStreetMap API请求失败: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('获取地址信息失败: $e');
+      throw Exception('在线地址解析调用失败: $e');
     }
   }
 
+  // 设置是否使用本地数据
+  void setUseLocalData(bool useLocal) {
+    _useLocalData = useLocal;
+    notifyListeners();
+  }
+  
   // 搜索城市
   Future<List<CityInfo>> searchCity(String query) async {
     if (query.trim().isEmpty) {
@@ -476,10 +506,96 @@ class LocationService extends ChangeNotifier {
       return _searchResults;
     }
     
+    // 如果设置为使用本地数据或检测到网络不可用，则使用本地搜索
+    if (_useLocalData) {
+      return _searchCityLocal(query);
+    } else {
+      try {
+        return await _searchCityOnline(query);
+      } catch (e) {
+        debugPrint('在线搜索失败，切换到本地搜索: $e');
+        // 如果在线搜索失败，自动尝试本地搜索
+        return _searchCityLocal(query);
+      }
+    }
+  }
+
+  // 本地搜索城市
+  List<CityInfo> _searchCityLocal(String query) {
+    _isSearching = true;
+    notifyListeners();
+    
+    query = query.toLowerCase();
+    List<CityInfo> results = [];
+    
+    // 1. 首先搜索热门城市
+    results.addAll(popularCities.where((city) => 
+        city.name.toLowerCase().contains(query) || 
+        city.fullName.toLowerCase().contains(query)));
+    
+    // 2. 然后搜索本地省份、城市和区县数据
+    for (var province in _provinces) {
+      if (province.name.toLowerCase().contains(query)) {
+        // 如果省名匹配，添加该省的所有城市
+        for (var city in province.cities) {
+          results.add(CityInfo(
+            name: city.name,
+            fullName: '中国, ${province.name}, ${city.name}',
+            lat: city.lat,
+            lon: city.lon,
+            country: '中国',
+            province: province.name,
+          ));
+        }
+      } else {
+        // 搜索城市
+        for (var city in province.cities) {
+          if (city.name.toLowerCase().contains(query)) {
+            results.add(CityInfo(
+              name: city.name,
+              fullName: '中国, ${province.name}, ${city.name}',
+              lat: city.lat,
+              lon: city.lon,
+              country: '中国',
+              province: province.name,
+            ));
+          } else {
+            // 搜索区县
+            for (var district in city.districts) {
+              if (district.name.toLowerCase().contains(query)) {
+                results.add(CityInfo(
+                  name: district.name,
+                  fullName: '中国, ${province.name}, ${city.name}, ${district.name}',
+                  lat: district.lat,
+                  lon: district.lon,
+                  country: '中国',
+                  province: province.name,
+                ));
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // 去重
+    final Map<String, CityInfo> uniqueResults = {};
+    for (var city in results) {
+      uniqueResults[city.fullName] = city;
+    }
+    
+    _searchResults = uniqueResults.values.toList();
+    _isSearching = false;
+    notifyListeners();
+    return _searchResults;
+  }
+
+  // 在线搜索城市
+  Future<List<CityInfo>> _searchCityOnline(String query) async {
+    _isSearching = true;
+    notifyListeners();
+    
     try {
-      _isSearching = true;
-      notifyListeners();
-      
       // 使用OpenStreetMap的Nominatim API搜索城市
       final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10&featuretype=city';
       
@@ -514,17 +630,17 @@ class LocationService extends ChangeNotifier {
         _searchResults = [];
         debugPrint('搜索城市失败: ${response.statusCode}, ${response.body}');
       }
-      
-      _isSearching = false;
-      notifyListeners();
-      return _searchResults;
     } catch (e) {
-      _isSearching = false;
       _searchResults = [];
       debugPrint('搜索城市发生错误: $e');
+      // 重新抛出异常以便外部处理
+      throw e;
+    } finally {
+      _isSearching = false;
       notifyListeners();
-      return _searchResults;
     }
+    
+    return _searchResults;
   }
   
   // 使用选定的城市信息设置位置
