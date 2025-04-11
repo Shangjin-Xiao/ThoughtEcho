@@ -612,7 +612,13 @@ class DatabaseService extends ChangeNotifier {
   Future<bool> checkCanExport() async {
     try {
       // 尝试执行简单查询以验证数据库可访问
-      await _database?.query('quote', limit: 1);
+      if (_database == null) {
+        debugPrint('数据库未初始化');
+        return false;
+      }
+      
+      // 修正：将'quote'改为正确的表名'quotes'
+      await _database!.query('quotes', limit: 1);
       return true;
     } catch (e) {
       debugPrint('数据库访问检查失败: $e');
