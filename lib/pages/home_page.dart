@@ -138,28 +138,7 @@ class _HomePageState extends State<HomePage> {
     
     // 如果是从一言添加，自动添加相关标签
     if (prefilledContent != null && prefilledContent == dailyQuote['content']) {
-      // 查找或创建"每日一言"标签
-      _ensureDailyQuoteTagExists(db).then((dailyQuoteTagId) {
-        if (dailyQuoteTagId != null) {
-          setState(() {
-            selectedTagIds.add(dailyQuoteTagId);
-          });
-        }
-      });
-      
-      // 查找或创建一言类型标签
-      if (dailyQuote['type'] != null) {
-        String quoteType = dailyQuote['type'] as String;
-        // 获取实际返回的类型名称
-        String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
-        _ensureHitokotoTypeTagExists(db, quoteType, typeName).then((typeTagId) {
-          if (typeTagId != null) {
-            setState(() {
-              selectedTagIds.add(typeTagId);
-            });
-          }
-        });
-      }
+      _addDefaultTagsForHitokoto(db, selectedTagIds);
     }
     
     // 位置和天气相关
@@ -450,8 +429,20 @@ class _HomePageState extends State<HomePage> {
                         final tag = _tags[index];
                         final isSelected = selectedTagIds.contains(tag.id);
                         return CheckboxListTile(
-                          title: Text(tag.name),
-                          secondary: Icon(IconUtils.getIconData(tag.iconName)),
+                          title: Row(
+                            children: [
+                              if (IconUtils.isEmoji(tag.iconName))
+                                Text(
+                                  IconUtils.getDisplayIcon(tag.iconName),
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                              const SizedBox(width: 8),
+                              Text(tag.name),
+                            ],
+                          ),
+                          secondary: IconUtils.isEmoji(tag.iconName)
+                              ? null
+                              : Icon(IconUtils.getIconData(tag.iconName)),
                           value: isSelected,
                           dense: true,
                           onChanged: (selected) {
@@ -500,8 +491,18 @@ class _HomePageState extends State<HomePage> {
                               orElse: () => NoteCategory(id: tagId, name: '未知标签'),
                             );
                             return Chip(
-                              label: Text(tag.name, style: const TextStyle(fontSize: 12)),
-                              avatar: Icon(IconUtils.getIconData(tag.iconName), size: 14),
+                              label: Row(
+                                  children: [
+                                      if (IconUtils.isEmoji(tag.iconName))
+                                          Text(
+                                              IconUtils.getDisplayIcon(tag.iconName),
+                                              style: const TextStyle(fontSize: 14, color: Colors.black),
+                                          ),
+                                      const SizedBox(width: 4),
+                                      Text(tag.name, style: const TextStyle(fontSize: 12)),
+                                  ],
+                              ),
+                              avatar: null,
                               deleteIcon: const Icon(Icons.close, size: 14),
                               onDeleted: () {
                                 setState(() {
@@ -958,6 +959,45 @@ class _HomePageState extends State<HomePage> {
                     onEdit: () => _showEditQuoteDialog(context, db, quote),
                     onDelete: () => _showDeleteConfirmDialog(context, db, quote),
                     onAskAI: () => _showAIQuestionDialog(context, quote),
+                    // 显示标签和emoji
+                    tagBuilder: (tag) {
+                      return Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (IconUtils.isEmoji(tag.iconName)) ...[
+                              Text(
+                                IconUtils.getDisplayIcon(tag.iconName),
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              const SizedBox(width: 4),
+                            ] else ...[
+                              Icon(
+                                IconUtils.getIconData(tag.iconName),
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            Text(
+                              tag.name,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   );
                   },
                 );
@@ -1053,6 +1093,86 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       debugPrint('确保一言类型"$typeName"标签存在时出错: $e');
       return null;
+    }
+  }
+
+  /// 为一言笔记添加默认分类标签
+  Future<void> _addDefaultTagsForHitokoto(DatabaseService db, List<String> selectedTagIds) async {
+    try {
+      // 获取所有标签
+      final categories = await db.getCategories();
+      
+      // 添加"每日一言"标签
+      final dailyQuoteTag = categories.firstWhere(
+        (tag) => tag.name == '每日一言',
+        orElse: () => NoteCategory(id: '', name: ''),
+      );
+      
+      String? dailyQuoteTagId = dailyQuoteTag.id;
+      
+      // 如果标签不存在，创建它
+      if (dailyQuoteTagId.isEmpty) {
+        await db.addCategory('每日一言', iconName: 'format_quote');
+        await _loadTags(); // 刷新标签列表
+        final updatedCategories = await db.getCategories();
+        final createdTag = updatedCategories.firstWhere(
+          (tag) => tag.name == '每日一言',
+          orElse: () => NoteCategory(id: '', name: ''),
+        );
+        dailyQuoteTagId = createdTag.id;
+      }
+      
+      // 添加标签，确保不重复
+      if (dailyQuoteTagId.isNotEmpty && !selectedTagIds.contains(dailyQuoteTagId)) {
+        selectedTagIds.add(dailyQuoteTagId);
+      }
+      
+      // 如果有一言类型，添加对应的类型标签
+      if (dailyQuote['type'] != null) {
+        String quoteType = dailyQuote['type'] as String;
+        String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
+        
+        // 查找对应的类型标签
+        final typeTag = categories.firstWhere(
+          (tag) => tag.name == typeName,
+          orElse: () => NoteCategory(id: '', name: ''),
+        );
+        
+        String? typeTagId = typeTag.id;
+        
+        // 如果标签不存在，创建它
+        if (typeTagId.isEmpty) {
+          // 根据类型选择图标
+          String iconName = 'category';
+          if (quoteType == 'a') iconName = 'movie';
+          else if (quoteType == 'b') iconName = 'menu_book';
+          else if (quoteType == 'c') iconName = 'sports_esports';
+          else if (quoteType == 'd') iconName = 'auto_stories';
+          else if (quoteType == 'e') iconName = 'create';
+          else if (quoteType == 'f') iconName = 'public';
+          else if (quoteType == 'g') iconName = 'category';
+          else if (quoteType == 'h') iconName = 'theaters';
+          else if (quoteType == 'i') iconName = 'format_quote';
+          else if (quoteType == 'j') iconName = 'music_note';
+          else if (quoteType == 'k') iconName = 'psychology';
+          
+          await db.addCategory(typeName, iconName: iconName);
+          await _loadTags(); // 刷新标签列表
+          final updatedCategories = await db.getCategories();
+          final createdTag = updatedCategories.firstWhere(
+            (tag) => tag.name == typeName,
+            orElse: () => NoteCategory(id: '', name: ''),
+          );
+          typeTagId = createdTag.id;
+        }
+        
+        // 添加标签，确保不重复
+        if (typeTagId.isNotEmpty && !selectedTagIds.contains(typeTagId)) {
+          selectedTagIds.add(typeTagId);
+        }
+      }
+    } catch (e) {
+      debugPrint('添加一言相关标签时出错: $e');
     }
   }
 
@@ -1543,38 +1663,66 @@ class _HomePageState extends State<HomePage> {
               ),
               
               const SizedBox(height: 16),
-              // 标签选择区域
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // 标签选择区域 - 改为折叠显示，与添加笔记界面一致
+              ExpansionTile(
+                title: const Text(
+                  '选择标签',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                leading: const Icon(Icons.tag),
+                initiallyExpanded: false,
+                childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 children: [
-                  const Text(
-                    '选择标签',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                  // 搜索框
+                  TextField(
+                    decoration: const InputDecoration(
+                      hintText: '搜索标签...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        // 这里可以添加标签搜索逻辑
+                      });
+                    },
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: _tags.map((NoteCategory tag) {
-                      final isSelected = selectedTagIds.contains(tag.id);
-                      return FilterChip(
-                        selected: isSelected,
-                        label: Text(tag.name),
-                        avatar: Icon(IconUtils.getIconData(tag.iconName)),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              selectedTagIds.add(tag.id);
-                            } else {
-                              selectedTagIds.remove(tag.id);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
+                  // 标签列表
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _tags.length,
+                      itemBuilder: (context, index) {
+                        final tag = _tags[index];
+                        final isSelected = selectedTagIds.contains(tag.id);
+                        // 使用CheckboxListTile代替FilterChip，与添加笔记界面一致
+                        return CheckboxListTile(
+                          title: Text(tag.name),
+                          secondary: IconUtils.isEmoji(tag.iconName) 
+                              ? Text(
+                                  IconUtils.getDisplayIcon(tag.iconName).toString(),
+                                  style: const TextStyle(fontSize: 20),
+                                )
+                              : Icon(IconUtils.getIconData(tag.iconName)),
+                          value: isSelected,
+                          dense: true,
+                          onChanged: (selected) {
+                            setState(() {
+                              if (selected == true) {
+                                selectedTagIds.add(tag.id);
+                              } else {
+                                selectedTagIds.remove(tag.id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),

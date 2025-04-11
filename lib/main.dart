@@ -64,6 +64,9 @@ void main() async {
       },
     );
 
+    // 初始化默认一言分类
+    await databaseService.initDefaultHitokotoCategories();
+
     // 初始化主题服务
     final appTheme = AppTheme();
     await appTheme.initialize();

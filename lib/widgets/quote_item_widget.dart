@@ -10,6 +10,8 @@ class QuoteItemWidget extends StatelessWidget {
   final Function() onEdit;
   final Function() onDelete;
   final Function() onAskAI;
+  /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
+  final Widget Function(NoteCategory)? tagBuilder;
 
   const QuoteItemWidget({
     Key? key,
@@ -20,6 +22,7 @@ class QuoteItemWidget extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
+    this.tagBuilder,
   }) : super(key: key);
 
   bool _needsExpansion(String text) {
@@ -221,23 +224,25 @@ class QuoteItemWidget extends StatelessWidget {
                                 (t) => t.id == tagId,
                                 orElse: () => NoteCategory(id: tagId, name: '未知标签'),
                               );
-                              return Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  tag.name,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              );
+                              return tagBuilder != null
+                                ? tagBuilder!(tag)
+                                : Container(
+                                    margin: const EdgeInsets.only(right: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      tag.name,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  );
                             }).toList(),
                           ),
                         ),
@@ -307,4 +312,4 @@ class QuoteItemWidget extends StatelessWidget {
       ),
     );
   }
-} 
+}

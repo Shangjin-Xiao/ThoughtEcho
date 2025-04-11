@@ -245,6 +245,134 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
+  /// 初始化默认一言分类标签
+  Future<void> initDefaultHitokotoCategories() async {
+    if (kIsWeb) {
+      // 为Web平台添加默认一言分类
+      final defaultCategories = _getDefaultHitokotoCategories();
+      for (final category in defaultCategories) {
+        final exists = _categoryStore.any((c) => c.name == category.name);
+        if (!exists) {
+          _categoryStore.add(category);
+        }
+      }
+      _categoriesController.add(_categoryStore);
+      return;
+    }
+
+    try {
+      final db = database;
+      final defaultCategories = _getDefaultHitokotoCategories();
+      
+      // 检查每个默认分类是否已存在
+      for (final category in defaultCategories) {
+        final existing = await db.query(
+          'categories',
+          where: 'name = ?',
+          whereArgs: [category.name],
+        );
+        
+        // 如果不存在，则添加
+        if (existing.isEmpty) {
+          await db.insert(
+            'categories',
+            {
+              'id': category.id,
+              'name': category.name,
+              'is_default': category.isDefault ? 1 : 0,
+              'icon_name': category.iconName,
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+          debugPrint('添加默认一言分类: ${category.name}');
+        }
+      }
+      
+      // 更新分类流
+      await _updateCategoriesStream();
+    } catch (e) {
+      debugPrint('初始化默认一言分类出错: $e');
+    }
+  }
+  
+  /// 获取默认一言分类列表
+  List<NoteCategory> _getDefaultHitokotoCategories() {
+    return [
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '每日一言',
+        isDefault: true,
+        iconName: 'format_quote',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '动画',
+        isDefault: true,
+        iconName: 'movie',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '漫画',
+        isDefault: true,
+        iconName: 'menu_book',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '游戏',
+        isDefault: true,
+        iconName: 'sports_esports',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '文学',
+        isDefault: true,
+        iconName: 'auto_stories',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '原创',
+        isDefault: true,
+        iconName: 'create',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '来自网络',
+        isDefault: true,
+        iconName: 'public',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '其他',
+        isDefault: true,
+        iconName: 'category',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '影视',
+        isDefault: true,
+        iconName: 'theaters',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '诗词',
+        isDefault: true,
+        iconName: 'format_quote',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '网易云',
+        isDefault: true,
+        iconName: 'music_note',
+      ),
+      NoteCategory(
+        id: _uuid.v4(),
+        name: '哲学',
+        isDefault: true,
+        iconName: 'psychology',
+      ),
+    ];
+  }
+
   /// 导出全部数据到 JSON 格式
   ///
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则保存到应用文档目录
@@ -468,7 +596,18 @@ class DatabaseService extends ChangeNotifier {
 
   /// 添加一条分类
   Future<void> addCategory(String name, {String? iconName}) async {
+    // 检查参数
+    if (name.trim().isEmpty) {
+      throw Exception('分类名称不能为空');
+    }
+    
     if (kIsWeb) {
+      // 检查是否已存在同名分类
+      final exists = _categoryStore.any((c) => c.name.toLowerCase() == name.toLowerCase());
+      if (exists) {
+        throw Exception('已存在相同名称的分类');
+      }
+      
       final newCategory = NoteCategory(
         id: _uuid.v4(),
         name: name,
@@ -480,7 +619,20 @@ class DatabaseService extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    
     final db = database;
+    
+    // 检查是否已存在同名分类
+    final existing = await db.query(
+      'categories',
+      where: 'LOWER(name) = ?',
+      whereArgs: [name.toLowerCase()],
+    );
+    
+    if (existing.isNotEmpty) {
+      throw Exception('已存在相同名称的分类');
+    }
+    
     final id = _uuid.v4();
     final categoryMap = {
       'id': id,
