@@ -2,7 +2,7 @@ class AppSettings {
   final String hitokotoType;
 
   AppSettings({
-    this.hitokotoType = 'l', // 默认为抖机灵类型（随机）
+    this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
   });
 
   Map<String, dynamic> toJson() {
@@ -13,12 +13,12 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> map) {
     return AppSettings(
-      hitokotoType: map['hitokotoType'] ?? 'l',
+      hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
     );
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
-    hitokotoType: 'l',
+    hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
   );
 
   AppSettings copyWith({
@@ -28,4 +28,4 @@ class AppSettings {
       hitokotoType: hitokotoType ?? this.hitokotoType,
     );
   }
-} 
+}

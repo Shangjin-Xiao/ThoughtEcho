@@ -356,7 +356,7 @@ class DatabaseService extends ChangeNotifier {
         id: _uuid.v4(),
         name: '诗词',
         isDefault: true,
-        iconName: 'format_quote',
+        iconName: 'brush', // 修改为毛笔图标，更符合诗词主题
       ),
       NoteCategory(
         id: _uuid.v4(),
@@ -501,8 +501,14 @@ class DatabaseService extends ChangeNotifier {
           debugPrint('合并数据');
           
           // 获取现有分类和笔记的ID列表，用于检查是否存在
-          final existingCategories = await txn.query('categories', columns: ['id']);
+          final existingCategories = await txn.query('categories');
           final existingCategoryIds = existingCategories.map((c) => c['id'] as String).toSet();
+          
+          // 创建一个映射，用于检查分类名称重复
+          final existingCategoryNames = {
+            for (var c in existingCategories) 
+              (c['name'] as String).toLowerCase(): c['id'] as String
+          };
           
           final existingQuotes = await txn.query('quotes', columns: ['id']);
           final existingQuoteIds = existingQuotes.map((q) => q['id'] as String).toSet();
@@ -511,6 +517,26 @@ class DatabaseService extends ChangeNotifier {
           final categories = data['categories'] as List;
           for (final c in categories) {
             final categoryId = c['id'] as String;
+            final categoryName = (c['name'] as String).toLowerCase();
+            
+            // 检查是否已存在同名分类
+            if (existingCategoryNames.containsKey(categoryName)) {
+              // 如果存在同名分类，使用现有的ID
+              final existingId = existingCategoryNames[categoryName];
+              debugPrint('发现同名分类: $categoryName，使用现有ID: $existingId');
+              
+              // 更新引用新导入分类的笔记，让它们引用现有的同名分类
+              final quotes = data['quotes'] as List;
+              for (final q in quotes) {
+                if (q['categoryId'] == categoryId) {
+                  q['categoryId'] = existingId;
+                }
+              }
+              
+              // 跳过此分类的导入
+              continue;
+            }
+            
             final categoryData = {
               'id': categoryId,
               'name': c['name'],
@@ -529,6 +555,9 @@ class DatabaseService extends ChangeNotifier {
             } else {
               // 插入新分类
               await txn.insert('categories', categoryData);
+              // 更新映射以包含新添加的分类
+              existingCategoryNames[categoryName] = categoryId;
+              existingCategoryIds.add(categoryId);
             }
           }
           

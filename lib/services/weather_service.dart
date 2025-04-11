@@ -289,14 +289,14 @@ class WeatherService extends ChangeNotifier {
     }
   }
 
-  // 设置模拟天气数据(当API不可用时)
+  // 设置天气数据获取失败的状态
   void setMockWeatherData() {
-    _weatherDescription = '晴天';
-    _temperature = '25°C';
-    _temperature_value = 25.0;
-    _currentWeather = '晴天';
-    _weatherIcon = 'clear_day';
-    debugPrint('使用模拟天气数据');
+    _weatherDescription = '获取失败';
+    _temperature = '- -';
+    _temperature_value = null;
+    _currentWeather = '天气数据获取失败';
+    _weatherIcon = 'error'; // 使用错误图标
+    debugPrint('天气数据获取失败，显示错误状态');
     notifyListeners();
   }
 
@@ -385,6 +385,8 @@ class WeatherService extends ChangeNotifier {
         return Icons.ac_unit;
       case 'hail':
         return Icons.grain;
+      case 'error':
+        return Icons.error_outline;
       default:
         return Icons.cloud_queue;
     }

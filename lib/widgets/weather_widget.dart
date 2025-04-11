@@ -88,11 +88,15 @@ class WeatherWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Icon(
-              weatherService.weatherIcon != null 
-                ? weatherService.getWeatherIconData() 
-                : Icons.cloud_queue,
+              weatherService.weatherIcon == 'error'
+                ? Icons.error_outline
+                : (weatherService.weatherIcon != null 
+                  ? weatherService.getWeatherIconData() 
+                  : Icons.cloud_queue),
               size: 40, // 稍微放大图标
-              color: theme.colorScheme.primary,
+              color: weatherService.weatherIcon == 'error' 
+                ? Colors.red 
+                : theme.colorScheme.primary,
             ),
             const SizedBox(height: 8),
             Text(

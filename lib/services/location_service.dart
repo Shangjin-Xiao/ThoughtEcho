@@ -590,14 +590,71 @@ class LocationService extends ChangeNotifier {
     return _searchResults;
   }
 
+  // 使用OpenMeteo的地理编码API搜索城市
+  Future<List<CityInfo>> _searchCityWithOpenMeteo(String query) async {
+    try {
+      // OpenMeteo地理编码API
+      final url = 'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=10&language=zh&format=json';
+      
+      final response = await HttpUtils.secureGet(
+        url,
+        timeoutSeconds: 10
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        // 检查是否有结果
+        if (data.containsKey('results') && data['results'] is List && data['results'].isNotEmpty) {
+          final List<dynamic> results = data['results'];
+          
+          return results.map((item) {
+            // 提取地点信息
+            final String name = item['name'] ?? '';
+            final String country = item['country'] ?? '';
+            final String admin1 = item['admin1'] ?? ''; // 省/州级行政区
+            
+            // 构建完整地址
+            final String fullName = [country, admin1, name].where((part) => part.isNotEmpty).join(', ');
+            
+            return CityInfo(
+              name: name,
+              fullName: fullName,
+              lat: item['latitude'] ?? 0.0,
+              lon: item['longitude'] ?? 0.0,
+              country: country,
+              province: admin1,
+            );
+          }).toList();
+        }
+      }
+      
+      // 如果没有结果或请求失败，返回空列表
+      return [];
+    } catch (e) {
+      debugPrint('OpenMeteo地理编码API调用失败: $e');
+      return [];
+    }
+  }
+
   // 在线搜索城市
   Future<List<CityInfo>> _searchCityOnline(String query) async {
     _isSearching = true;
     notifyListeners();
     
     try {
-      // 使用OpenStreetMap的Nominatim API搜索城市
-      final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10&featuretype=city';
+      // 首先尝试使用OpenMeteo的地理编码API搜索城市
+      final results = await _searchCityWithOpenMeteo(query);
+      
+      // 如果OpenMeteo返回了结果，直接使用
+      if (results.isNotEmpty) {
+        _searchResults = results;
+        return _searchResults;
+      }
+      
+      // 如果OpenMeteo没有返回结果，回退到OpenStreetMap的Nominatim API
+      debugPrint('OpenMeteo没有返回结果，尝试使用OpenStreetMap API');
+      final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10';
       
       final response = await HttpUtils.secureGet(
         url,
@@ -609,13 +666,23 @@ class LocationService extends ChangeNotifier {
         final List<dynamic> data = json.decode(response.body);
         _searchResults = data.map((item) {
           // 提取地址信息
-          final address = item['address'];
-          final String cityName = address['city'] ?? address['town'] ?? address['village'] ?? item['name'];
-          final String country = address['country'] ?? '';
-          final String state = address['state'] ?? address['province'] ?? '';
+          final address = item['address'] ?? {};
+          
+          // 更灵活地处理地点名称，支持城市、地区、国家等各种类型的地点
+          String placeName = item['name'] ?? '';
+          String cityName = address['city'] ?? address['town'] ?? address['village'] ?? address['municipality'] ?? placeName;
+          String country = address['country'] ?? '';
+          String state = address['state'] ?? address['province'] ?? address['county'] ?? '';
+          
+          // 对于一些大城市，可能直接作为顶级地点返回，没有详细的address信息
+          if (address.isEmpty && placeName.isNotEmpty) {
+            cityName = placeName;
+          }
           
           // 构建完整地址 - 国家, 省/州, 城市
           final String fullName = [country, state, cityName].where((part) => part.isNotEmpty).join(', ');
+          
+          debugPrint('搜索结果: $placeName, $cityName, $country, $state, 完整: $fullName');
           
           return CityInfo(
             name: cityName,
