@@ -52,8 +52,18 @@ class SettingsService extends ChangeNotifier {
     final String? appSettingsJson = _prefs.getString(_appSettingsKey);
     if (appSettingsJson != null) {
       _appSettings = AppSettings.fromJson(json.decode(appSettingsJson));
+      
+      // 确保一言类型不为空，如果为空则设置为默认全选
+      if (_appSettings.hitokotoType.isEmpty) {
+        _appSettings = AppSettings.defaultSettings();
+        await _prefs.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+        debugPrint('检测到一言类型为空，已重置为默认全选值');
+      }
     } else {
       _appSettings = AppSettings.defaultSettings();
+      // 首次启动时保存默认设置到存储
+      await _prefs.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+      debugPrint('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
     }
 
     // 加载主题模式

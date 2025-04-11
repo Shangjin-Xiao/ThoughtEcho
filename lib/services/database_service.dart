@@ -608,6 +608,55 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
+  /// 检查是否可以导出数据（检测数据库是否可访问）
+  Future<bool> checkCanExport() async {
+    try {
+      // 尝试执行简单查询以验证数据库可访问
+      await _database?.query('quote', limit: 1);
+      return true;
+    } catch (e) {
+      debugPrint('数据库访问检查失败: $e');
+      return false;
+    }
+  }
+
+  /// 验证备份文件是否有效
+  Future<bool> validateBackupFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('文件不存在');
+      }
+      
+      final content = await file.readAsString();
+      final data = json.decode(content);
+      
+      // 验证基本结构
+      if (!data.containsKey('quotes') || !data.containsKey('categories') || !data.containsKey('tags')) {
+        throw Exception('备份文件格式无效，缺少必要的数据结构');
+      }
+      
+      // 验证版本信息
+      if (!data.containsKey('version') || !data.containsKey('timestamp')) {
+        debugPrint('警告：备份文件缺少版本信息，可能是旧版本备份');
+      }
+      
+      // 检查至少需要有quotes或categories
+      final quotes = data['quotes'] as List?;
+      final categories = data['categories'] as List?;
+      
+      if ((quotes == null || quotes.isEmpty) && (categories == null || categories.isEmpty)) {
+        debugPrint('警告：备份文件不包含任何数据');
+        // 空备份也是有效的，但需要警告用户
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('验证备份文件失败: $e');
+      throw Exception('无法验证备份文件: $e');
+    }
+  }
+
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
       return _categoryStore;
