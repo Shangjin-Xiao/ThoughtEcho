@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 - 追踪你的思想轨迹，释放AI洞察的力量</title>
+    <link rel="icon" type="image/png" href="icon.png"/>
+    <style>
+        :root {
+            --primary-color: #1976D2;
+            --primary-light: #BBDEFB;
+            --primary-dark: #0D47A1;
+            --secondary-color: #49454F;
+            --background-color: #FFFBFE;
+            --surface-color: #FFFFFF;
+            --error-color: #B3261E;
+            --text-primary: #1C1B1F;
+            --text-secondary: #49454F;
+            --text-tertiary: #79747E;
+            --border-color: #E7E0EC;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #90CAF9;
+                --primary-light: #E3F2FD;
+                --primary-dark: #42A5F5;
+                --secondary-color: #CCC2DC;
+                --background-color: #1C1B1F;
+                --surface-color: #2D2C31;
+                --error-color: #F2B8B5;
+                --text-primary: #E6E1E5;
+                --text-secondary: #CAC4D0;
+                --text-tertiary: #938F99;
+                --border-color: #49454F;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-color);
+            padding-top: 40px; /* 为固定导航栏留出空间 */
+        }
+
+        nav {
+            background-color: var(--primary-color);
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 2rem;
+        }
+        
+        .nav-logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .nav-logo img {
+            width: 36px;
+            height: 36px;
+            margin-right: 0.5rem;
+        }
+        
+        .nav-logo h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+        
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 1rem;
+            margin-top: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-right: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin: 2rem 0 1rem;
+            color: var(--primary-color);
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem;
+            color: var(--primary-color);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        .cta-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .section {
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .feature {
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .screenshot {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            background-color: var(--surface-color);
+            padding: 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .screenshot:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .screenshot-placeholder {
+            background-color: var(--primary-light);
+            height: 400px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-dark);
+            font-weight: bold;
+        }
+
+        .screenshot img {
+            width: 100%;
+            height: auto;
+            max-height: 450px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .screenshot-title {
+            margin-top: 0.5rem;
+            font-weight: bold;
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            margin-top: auto;
+        }
+
+        footer {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 3rem 0 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .footer-section h3 {
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .footer-section p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .footer-section a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-bottom p {
+            color: var(--text-tertiary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-top: 50px;
+            }
+            
+            nav {
+                padding: 0.5rem 1rem;
+            }
+            
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 50px;
+                left: 0;
+                width: 100%;
+                background-color: var(--primary-color);
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .nav-links.active {
+                display: flex;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .screenshots {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .screenshot {
+                padding: 1rem;
+            }
+            
+            .screenshot img {
+                height: auto;
+                max-height: 350px;
+            }
+            
+            .screenshot-title {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-logo">
+            <img src="../icon.png" alt="心迹图标">
+            <h2>心迹</h2>
+        </div>
+        <div class="nav-links" id="navLinks">
+            <a href="#overview">概述</a>
+            <a href="#features">功能</a>
+            <a href="#screenshots">界面</a>
+            <a href="#guide">使用指南</a>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub</a>
+        </div>
+        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+    </nav>
+    
+    <header>
+        <div class="container">
+            <div class="logo-container">
+                <img src="../icon.png" alt="心迹图标" class="logo">
+                <h1>心迹</h1>
+            </div>
+            <p class="tagline">追踪你的思想轨迹，释放AI洞察的力量</p>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">立即下载</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="section" id="overview">
+            <h2>项目概述</h2>
+            <p><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉和记录日常思绪，并利用先进的AI技术，深入分析你的笔记内容，挖掘潜在的模式、情感和洞察，从而促进自我认知、提升思考深度，实现个人成长。</p>
+            <p>基于Flutter框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。</p>
+        </section>
+
+        <section class="section" id="features">
+            <h2>核心功能</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">✍️</div>
+                    <div class="feature-title">心迹记录</div>
+                    <p>简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。支持富文本编辑，可添加标签和分类，轻松整理思绪。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🧠</div>
+                    <div class="feature-title">AI智能洞察</div>
+                    <p>集成强大的AI服务，深度分析你的笔记内容，提供情感分析、核心思想提炼、行动建议和思维模式分析等多维度智能洞察。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🤔</div>
+                    <div class="feature-title">每日思考提示</div>
+                    <p>每天为你生成一个发人深省的哲学或智慧提示，激发深度思考，拓展思维边界，培养反思习惯。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🗂️</div>
+                    <div class="feature-title">分类管理</div>
+                    <p>自定义笔记分类，灵活组织和管理你的心迹，方便回顾和检索。支持自定义分类图标，视觉化管理更直观。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🏷️</div>
+                    <div class="feature-title">标签系统</div>
+                    <p>为笔记添加多个标签，实现多维度归类，提升检索效率，构建知识网络。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-title">关键词搜索</div>
+                    <p>强大的关键词搜索功能，快速定位所需笔记，支持标题、内容、标签多维度搜索，回顾特定时期的思考。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📍</div>
+                    <div class="feature-title">位置记录</div>
+                    <p>自动或手动记录笔记创建位置，为思考增添空间维度，回忆更加丰富立体。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">☁️</div>
+                    <div class="feature-title">天气记录</div>
+                    <p>自动记录笔记创建时的天气状况，为日后回顾增添环境背景，丰富记忆线索。</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🌙</div>
+                    <div class="feature-title">深色模式</div>
+                    <p>提供舒适的深色模式，呵护你的双眼，适应不同光线环境，夜间使用更护眼。</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="screenshots">
+            <h2>应用界面</h2>
+            <p>心迹采用Material Design 3规范设计，界面美观现代，操作流畅自然，提供一致的用户体验。</p>
+            <div class="screenshots">
+                <div class="screenshot">
+                    <img src="homepage.jpg" alt="主页界面">
+                    <div class="screenshot-title">主页 - 笔记列表与每日一言</div>
+                </div>
+                <div class="screenshot">
+                    <img src="notepage.jpg" alt="编辑界面">
+                    <div class="screenshot-title">笔记编辑 - 支持标签与位置</div>
+                </div>
+                <div class="screenshot">
+                    <img src="add.jpg" alt="添加笔记界面">
+                    <div class="screenshot-title">添加笔记 - 快速记录想法</div>
+                </div>
+                <div class="screenshot">
+                    <img src="settingpage.jpg" alt="设置界面">
+                    <div class="screenshot-title">应用设置 - 主题与功能配置</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="guide">
+            <h2>开始使用</h2>
+            <h3>用户安装指南</h3>
+            <ol>
+                <li><strong>下载应用</strong>：从<a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">GitHub发布页面</a>下载最新版本</li>
+                <li><strong>首次启动设置</strong>：安装完成后打开应用，根据引导完成初始化设置</li>
+                <li><strong>开始使用</strong>：点击主页面右下角的「+」按钮创建新笔记，在设置页面自定义应用主题和功能偏好</li>
+            </ol>
+
+            <h3>开发者安装指南</h3>
+            <ol>
+                <li><strong>安装Flutter SDK</strong>：请确保你的开发环境已安装<a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a></li>
+                <li><strong>克隆项目</strong>：
+                    <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
+cd ThoughtEcho</code></pre>
+                </li>
+                <li><strong>安装依赖</strong>：
+                    <pre><code>flutter pub get</code></pre>
+                </li>
+                <li><strong>运行应用</strong>：
+                    <pre><code>flutter run</code></pre>
+                </li>
+            </ol>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="cta-button">查看源代码</a>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">下载应用</a>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>关于心迹</h3>
+                    <p>心迹是一款开源的思想记录与分析工具，帮助你捕捉和记录日常思绪，并利用AI技术提供深度洞察。</p>
+                </div>
+                <div class="footer-section">
+                    <h3>快速链接</h3>
+                    <ul>
+                        <li><a href="#overview">项目概述</a></li>
+                        <li><a href="#features">核心功能</a></li>
+                        <li><a href="#screenshots">应用界面</a></li>
+                        <li><a href="#guide">开始使用</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>资源</h3>
+                    <ul>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho">GitHub 仓库</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues">问题反馈</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">许可协议</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">下载应用</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2023-2024 心迹 (ThoughtEcho) - 一款开源的思想记录与分析工具</p>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // 移动端菜单切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const navLinks = document.getElementById('navLinks');
+            
+            if (mobileMenuBtn && navLinks) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    navLinks.classList.toggle('active');
+                });
+                
+                // 点击导航链接后自动关闭菜单
+                const links = navLinks.querySelectorAll('a');
+                links.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            navLinks.classList.remove('active');
+                        }
+                    });
+                });
+            }
+            
+            // 滚动时导航栏样式变化
+            const nav = document.querySelector('nav');
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    nav.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
+                } else {
+                    nav.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

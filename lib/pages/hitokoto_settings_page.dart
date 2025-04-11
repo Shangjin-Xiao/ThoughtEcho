@@ -12,28 +12,35 @@ class HitokotoSettingsPage extends StatefulWidget {
 
 class _HitokotoSettingsPageState extends State<HitokotoSettingsPage> {
   late String _selectedType;
-  final List<String> _selectedMultipleTypes = [];
-  bool _isMultipleSelectionMode = false;
+  final List<String> _selectedTypes = [];
 
   @override
   void initState() {
     super.initState();
     _selectedType = context.read<SettingsService>().appSettings.hitokotoType;
-    // 如果当前选择的是多类型，解析它们
+    // 解析当前选择的类型
     if (_selectedType.contains(',')) {
-      _isMultipleSelectionMode = true;
-      _selectedMultipleTypes.addAll(_selectedType.split(','));
+      _selectedTypes.addAll(_selectedType.split(','));
+    } else {
+      _selectedTypes.add(_selectedType);
     }
+  }
+
+  // 保存选择的类型
+  void _saveSelectedTypes() {
+    // 确保至少选择一种类型
+    if (_selectedTypes.isEmpty) {
+      _selectedTypes.add('a');
+    }
+    _selectedType = _selectedTypes.join(',');
+    context.read<SettingsService>().updateHitokotoType(_selectedType);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('设置已保存')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // 创建一个新的Map，把抖机灵放在第一位
-    final Map<String, String> reorderedTypes = {
-      'l': '抖机灵 (随机)',
-      ...Map.fromEntries(ApiService.hitokotoTypes.entries.where((e) => e.key != 'l')),
-    };
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('每日一言设置'),
@@ -51,99 +58,65 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '您可以自定义首页显示的"每日一言"类型。\n选择"抖机灵"将随机显示所有类型，或者您可以开启多选从其他类型中随机抽取。',
+                  '您可以选择一个或多个"每日一言"类型，程序将从您选择的类型中随机抽取内容展示。',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  title: const Text('开启多选模式'),
-                  subtitle: const Text('从多个类型中随机抽取（选择抖机灵时无法多选）'),
-                  value: _isMultipleSelectionMode && _selectedType != 'l',
-                  onChanged: (value) {
-                    if (_selectedType == 'l') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('选择"抖机灵"时无法开启多选')),
-                      );
-                      return;
-                    }
-                    setState(() {
-                      _isMultipleSelectionMode = value;
-                      if (!value) {
-                        // 如果关闭多选，则使用第一个选中的类型或默认值
-                        _selectedType = _selectedMultipleTypes.isNotEmpty 
-                            ? _selectedMultipleTypes.first 
-                            : 'l';
-                        _selectedMultipleTypes.clear();
-                        context.read<SettingsService>().updateHitokotoType(_selectedType);
-                      } else {
-                        // 如果开启多选，初始选中当前类型
-                        _selectedMultipleTypes.clear();
-                        _selectedMultipleTypes.add(_selectedType);
-                        context.read<SettingsService>().updateHitokotoType(_selectedType);
-                      }
-                    });
-                  },
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
           const Divider(),
-          if (_isMultipleSelectionMode)
-            ...reorderedTypes.entries.where((e) => e.key != 'l').map((entry) {
-              return CheckboxListTile(
-                title: Text(entry.value),
-                subtitle: Text('类型代码: ${entry.key}'),
-                value: _selectedMultipleTypes.contains(entry.key),
-                onChanged: (bool? value) {
+          ...ApiService.hitokotoTypes.entries.map((entry) {
+            return CheckboxListTile(
+              title: Text(entry.value),
+              subtitle: Text('类型代码: ${entry.key}'),
+              value: _selectedTypes.contains(entry.key),
+              onChanged: (bool? value) {
+                setState(() {
                   if (value == true) {
-                    setState(() {
-                      _selectedMultipleTypes.add(entry.key);
-                      _selectedType = _selectedMultipleTypes.join(',');
-                    });
+                    _selectedTypes.add(entry.key);
                   } else {
-                    setState(() {
-                      _selectedMultipleTypes.remove(entry.key);
-                      // 至少要选择一个类型
-                      if (_selectedMultipleTypes.isEmpty) {
-                        _selectedMultipleTypes.add('a');
-                      }
-                      _selectedType = _selectedMultipleTypes.join(',');
-                    });
+                    _selectedTypes.remove(entry.key);
                   }
-                  context.read<SettingsService>().updateHitokotoType(_selectedType);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('设置已保存')),
-                  );
-                },
-              );
-            }).toList()
-          else
-            ...reorderedTypes.entries.map((entry) {
-              return RadioListTile<String>(
-                title: Text(entry.value),
-                subtitle: Text('类型代码: ${entry.key}'),
-                value: entry.key,
-                groupValue: _selectedType,
-                onChanged: (value) {
-                  if (value != null) {
+                });
+                _saveSelectedTypes();
+              },
+            );
+          }).toList(),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () {
                     setState(() {
-                      _selectedType = value;
-                      if (value == 'l') {
-                        // 选择抖机灵时，禁用多选
-                        _isMultipleSelectionMode = false;
-                        _selectedMultipleTypes.clear();
+                      _selectedTypes.clear();
+                      for (final key in ApiService.hitokotoTypes.keys) {
+                        _selectedTypes.add(key);
                       }
                     });
-                    context.read<SettingsService>().updateHitokotoType(value);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('设置已保存')),
-                    );
-                  }
-                },
-              );
-            }).toList(),
+                    _saveSelectedTypes();
+                  },
+                  child: const Text('全选'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedTypes.clear();
+                      _selectedTypes.add('a'); // 至少选一个
+                    });
+                    _saveSelectedTypes();
+                  },
+                  child: const Text('清除全部'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
-} 
+}

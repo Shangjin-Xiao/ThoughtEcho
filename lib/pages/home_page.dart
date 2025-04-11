@@ -150,29 +150,15 @@ class _HomePageState extends State<HomePage> {
       // 查找或创建一言类型标签
       if (dailyQuote['type'] != null) {
         String quoteType = dailyQuote['type'] as String;
-        // 如果用户设置的是抖机灵(l)类型，但实际返回的是其他类型，使用实际返回的类型
-        String settingsType = settingsService.appSettings.hitokotoType;
-        if (settingsType == 'l' || settingsType.contains(',')) {
-          // 使用API返回的实际类型
-          String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
-          _ensureHitokotoTypeTagExists(db, quoteType, typeName).then((typeTagId) {
-            if (typeTagId != null) {
-              setState(() {
-                selectedTagIds.add(typeTagId);
-              });
-            }
-          });
-        } else {
-          // 使用用户设置的类型
-          String typeName = ApiService.hitokotoTypes[settingsType] ?? '未知类型';
-          _ensureHitokotoTypeTagExists(db, settingsType, typeName).then((typeTagId) {
-            if (typeTagId != null) {
-              setState(() {
-                selectedTagIds.add(typeTagId);
-              });
-            }
-          });
-        }
+        // 获取实际返回的类型名称
+        String typeName = ApiService.hitokotoTypes[quoteType] ?? '未知类型';
+        _ensureHitokotoTypeTagExists(db, quoteType, typeName).then((typeTagId) {
+          if (typeTagId != null) {
+            setState(() {
+              selectedTagIds.add(typeTagId);
+            });
+          }
+        });
       }
     }
     
