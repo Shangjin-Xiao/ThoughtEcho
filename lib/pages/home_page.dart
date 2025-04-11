@@ -77,13 +77,43 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadDailyQuote() async {
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
-    final hitokotoType = settingsService.appSettings.hitokotoType;
-    
-    final quote = await ApiService.getDailyQuote(hitokotoType);
-    setState(() {
-      dailyQuote = quote;
-    });
+    try {
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final hitokotoType = settingsService.appSettings.hitokotoType;
+      
+      setState(() {
+        dailyQuote = {
+          'content': '加载中...',
+          'source': '',
+          'author': '',
+          'type': 'a'
+        };
+      });
+      
+      final quote = await ApiService.getDailyQuote(hitokotoType);
+      if (mounted) {
+        setState(() {
+          dailyQuote = quote;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          dailyQuote = {
+            'content': '获取一言失败: ${e.toString()}',
+            'source': '',
+            'author': '',
+            'type': 'error'
+          };
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('获取一言失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _fetchDailyPrompt() async {
@@ -199,6 +229,7 @@ class _HomePageState extends State<HomePage> {
                         prefixIcon: Icon(Icons.person),
                       ),
                       maxLines: 1,
+                      onChanged: (value) => setState(() {}), // 更新UI以显示格式化后的来源
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -211,11 +242,13 @@ class _HomePageState extends State<HomePage> {
                         prefixIcon: Icon(Icons.book),
                       ),
                       maxLines: 1,
+                      onChanged: (value) => setState(() {}), // 更新UI以显示格式化后的来源
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
+              // 显示格式化后的来源预览
               Align(
                 alignment: Alignment.centerLeft,
                 child: ValueListenableBuilder<TextEditingValue>(
@@ -506,7 +539,7 @@ class _HomePageState extends State<HomePage> {
                               deleteIcon: const Icon(Icons.close, size: 14),
                               onDeleted: () {
                                 setState(() {
-                                  selectedTagIds.remove(tagId);
+                                  selectedTagIds.remove(tag.id);
                                 });
                               },
                             );
@@ -1199,9 +1232,14 @@ class _HomePageState extends State<HomePage> {
                   });
                 },
               )
-            : const Text('心迹'),
+            : const Text('心迹'), // 直接显示标题，移除左侧位置信息
         actions: [
-          if (_currentIndex == 0 && weatherService.currentWeather != null && locationService.hasLocationPermission)
+          // 检查城市信息有效（非null且不含"Throttled!"）且天气信息存在且有权限
+          if (_currentIndex == 0 &&
+              locationService.city != null &&
+              !locationService.city!.contains("Throttled!") &&
+              weatherService.currentWeather != null &&
+              locationService.hasLocationPermission)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: Container(
@@ -1213,6 +1251,31 @@ class _HomePageState extends State<HomePage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // 添加位置图标和地点信息
+                    Icon(
+                      Icons.location_on,
+                      size: 12,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      locationService.city ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    // 分隔符
+                    Text(
+                      '|',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onPrimaryContainer.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    // 原有的天气图标和信息
                     Icon(
                       weatherService.getWeatherIconData(),
                       size: 16,
@@ -1231,16 +1294,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-          if (_currentIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () async {
-                await Future.wait([
-                  _loadDailyQuote(),
-                  _fetchDailyPrompt(),
-                ]);
-              },
-            ),
+          // 移除刷新按钮
         ],
       ),
       body: IndexedStack(
@@ -1339,7 +1393,7 @@ class _HomePageState extends State<HomePage> {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.psychology,
+                                  Icons.lightbulb_outline, // 更换为灯泡图标
                                   color: theme.colorScheme.primary,
                                 ),
                                 const SizedBox(width: 8),
@@ -1398,8 +1452,8 @@ class _HomePageState extends State<HomePage> {
             label: '记录',
           ),
           NavigationDestination(
-            icon: Icon(Icons.psychology_outlined),
-            selectedIcon: Icon(Icons.psychology),
+            icon: Icon(Icons.auto_awesome_outlined), // 更换为闪耀星星轮廓图标
+            selectedIcon: Icon(Icons.auto_awesome), // 更换为闪耀星星图标
             label: 'AI',
           ),
           NavigationDestination(
@@ -1976,7 +2030,12 @@ class _HomePageState extends State<HomePage> {
     }
     
     if (work.isNotEmpty) {
-      result += ' 《$work》';
+      if (result.isNotEmpty) {
+        result += ' ';
+      } else {
+        result += '——';
+      }
+      result += '《$work》';
     }
     
     return result;
@@ -2056,7 +2115,7 @@ class _HomePageState extends State<HomePage> {
   IconData _getWeatherIcon(String weather) {
     if (weather.contains('晴')) return Icons.wb_sunny;
     if (weather.contains('云') || weather.contains('阴')) return Icons.cloud;
-    if (weather.contains('雾') || weather.contains('霾')) return Icons.cloud;
+    if (weather.contains('雾') || weather.contains('霾')) return Icons.foggy; // 使用更合适的图标
     if (weather.contains('雨') && weather.contains('雷')) return Icons.flash_on;
     if (weather.contains('雨')) return Icons.water_drop;
     if (weather.contains('雪')) return Icons.ac_unit;

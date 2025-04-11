@@ -62,9 +62,27 @@ class QuoteItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    // 格式化日期为年月日
+    // 格式化日期和时间段
     final DateTime quoteDate = DateTime.parse(quote.date);
-    final String formattedDate = '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} 摘录';
+    final int hour = quoteDate.hour;
+    String timeOfDay;
+    // 使用更诗意的表述
+    if (hour >= 5 && hour < 9) {
+      timeOfDay = '晨曦'; // 5:00 - 8:59
+    } else if (hour >= 9 && hour < 12) {
+      timeOfDay = '清晨'; // 9:00 - 11:59
+    } else if (hour >= 12 && hour < 14) {
+      timeOfDay = '正午'; // 12:00 - 13:59
+    } else if (hour >= 14 && hour < 17) {
+      timeOfDay = '午后'; // 14:00 - 16:59
+    } else if (hour >= 17 && hour < 19) {
+      timeOfDay = '黄昏'; // 17:00 - 18:59
+    } else if (hour >= 19 && hour < 23) {
+      timeOfDay = '夜晚'; // 19:00 - 22:59
+    } else {
+      timeOfDay = '深夜';
+    }
+    final String formattedDate = '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $timeOfDay';
     
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),

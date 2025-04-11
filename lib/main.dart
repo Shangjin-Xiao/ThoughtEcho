@@ -82,9 +82,15 @@ void main() async {
           ChangeNotifierProxyProvider<SettingsService, AIService>(
             create: (context) => AIService(
               settingsService: context.read<SettingsService>(),
+              locationService: context.read<LocationService>(), // 新增
+              weatherService: context.read<WeatherService>(), // 新增
             ),
             update: (context, settings, previous) =>
-                previous ?? AIService(settingsService: settings),
+                previous ?? AIService(
+                  settingsService: settings,
+                  locationService: context.read<LocationService>(), // 新增
+                  weatherService: context.read<WeatherService>(), // 新增
+                ),
           ),
         ],
         child: const MyApp(),

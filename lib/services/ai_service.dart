@@ -4,12 +4,22 @@ import 'package:http/http.dart' as http;
 import '../models/quote_model.dart';
 import '../models/ai_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
+import '../services/location_service.dart'; // 新增导入
+import '../services/weather_service.dart'; // 新增导入
+import 'dart:math'; // 用于随机选择
 
 class AIService extends ChangeNotifier {
   final SettingsService _settingsService;
+  final LocationService _locationService; // 新增
+  final WeatherService _weatherService; // 新增
 
-  AIService({required SettingsService settingsService})
-      : _settingsService = settingsService;
+  AIService({
+    required SettingsService settingsService,
+    required LocationService locationService, // 新增
+    required WeatherService weatherService, // 新增
+  })  : _settingsService = settingsService,
+        _locationService = locationService, // 新增
+        _weatherService = weatherService; // 新增
 
   Future<void> _validateSettings() async {
     final settings = _settingsService.aiSettings;
@@ -115,9 +125,16 @@ class AIService extends ChangeNotifier {
   }
 
   Future<String> generateDailyPrompt() async {
+    final settings = _settingsService.aiSettings;
+
+    // 检查 AI 配置是否有效
+    if (settings.apiKey.isEmpty || settings.apiUrl.isEmpty || settings.model.isEmpty) {
+      debugPrint('AI服务未配置，生成基于上下文的提示');
+      return _generatePromptBasedOnContext();
+    }
+
+    // AI 配置有效，尝试调用 API
     try {
-      await _validateSettings();
-      final settings = _settingsService.aiSettings;
       
       final messages = [
         {
@@ -160,7 +177,8 @@ class AIService extends ChangeNotifier {
         return _getDefaultPrompt();
       }
     } catch (e) {
-      debugPrint('生成每日提示错误: $e');
+      // API 调用失败（例如网络错误），返回默认提示
+      debugPrint('调用 AI 生成每日提示失败: $e');
       return _getDefaultPrompt();
     }
   }
@@ -185,6 +203,145 @@ class AIService extends ChangeNotifier {
     final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
     final index = dayOfYear % defaultPrompts.length;
     return defaultPrompts[index];
+  }
+
+  // 根据时间和天气生成提示
+  String _generatePromptBasedOnContext() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final weather = _weatherService.currentWeather;
+    final temperature = _weatherService.temperature;
+    final city = _locationService.city;
+
+    String timeOfDay;
+    if (hour >= 5 && hour < 12) {
+      timeOfDay = '早上';
+    } else if (hour >= 12 && hour < 18) {
+      timeOfDay = '下午';
+    } else if (hour >= 18 && hour < 23) {
+      timeOfDay = '晚上';
+    } else {
+      timeOfDay = '深夜';
+    }
+
+    List<String> prompts = [];
+
+    // 通用提示
+    prompts.addAll([
+      "此刻，你有什么特别的想法或感受想要记录下来吗？",
+      "回顾今天，有什么让你印象深刻的瞬间？",
+      "静下心来，感受一下当下的情绪，它想告诉你什么？",
+    ]);
+
+    // 基于时间的提示
+    if (timeOfDay == '早上') {
+      prompts.addAll([
+        "新的一天开始了，你对今天有什么期待？",
+        "早晨的空气闻起来怎么样？它让你想起了什么？",
+        "为今天设定一个小目标吧，可以是什么呢？",
+      ]);
+    } else if (timeOfDay == '下午') {
+      prompts.addAll([
+        "午后的阳光或微风，让你有什么感触？",
+        "今天过半，有什么进展顺利或遇到挑战的事情吗？",
+        "花点时间放松一下，想想让你感到平静的事物。",
+      ]);
+    } else if (timeOfDay == '晚上') {
+      prompts.addAll([
+        "夜幕降临，回顾今天，有什么值得回味或反思的？",
+        "此刻的宁静适合思考，你脑海中浮现了什么？",
+        "为明天做个简单的计划或设想吧。",
+      ]);
+    } else { // 深夜
+      prompts.addAll([
+        "夜深人静，有什么心事或灵感悄然浮现？",
+        "此刻的寂静让你想到了什么？",
+        "睡前放下杂念，记录下此刻的心情。",
+      ]);
+    }
+
+    // --- 结合时间和天气的提示 ---
+    if (weather != null) {
+      if (timeOfDay == '早上') {
+        if (weather.contains('晴')) {
+          prompts.add("清晨的阳光洒满窗台，此刻你的心情如何？有什么新的计划吗？");
+        } else if (weather.contains('雨')) {
+          prompts.add("听着清晨的雨声，内心是否格外宁静？有什么特别的感悟？");
+        } else if (weather.contains('云') || weather.contains('阴')) {
+          prompts.add("云层微厚的早晨，适合放慢脚步，思考一下最近的得失。");
+        }
+      } else if (timeOfDay == '下午') {
+         if (weather.contains('晴')) {
+          prompts.add("午后暖阳正好，适合小憩片刻，或是记录下此刻的惬意。");
+        } else if (weather.contains('雨')) {
+          prompts.add("雨天的午后，窗外滴答作响，屋内适合读一本书或写点什么。");
+        }
+      } else if (timeOfDay == '晚上' || timeOfDay == '深夜') {
+        if (weather.contains('晴')) {
+           prompts.add("夜幕降临，星光或月色正好，此刻有什么心事或梦想？");
+        } else if (weather.contains('雨')) {
+           prompts.add("雨夜漫漫，适合独处思考，最近有什么让你困惑或欣喜的事？");
+        } else if (weather.contains('风')) {
+           prompts.add("晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻的灵感吧。");
+        }
+      }
+    }
+
+    // 基于天气的提示 (如果天气信息可用)
+    if (weather != null) {
+      if (weather.contains('晴')) {
+        prompts.addAll([
+          "阳光明媚的日子，有什么让你感到开心？",
+          "这样的好天气，适合做些什么让你放松的事情？",
+        ]);
+      } else if (weather.contains('雨')) {
+        prompts.addAll([
+          "听着雨声，你的心情是怎样的？",
+          "雨天适合沉思，有什么想法在脑海中萦绕？",
+        ]);
+      } else if (weather.contains('云') || weather.contains('阴')) {
+        prompts.addAll([
+          "多云的天空下，你的思绪飘向了何方？",
+          "阴天有时也别有韵味，它让你想起了什么？",
+        ]);
+      } else if (weather.contains('雪')) {
+         prompts.addAll([
+          "窗外的雪景给你带来了怎样的感受？",
+          "下雪天，适合窝在温暖的地方思考些什么？",
+        ]);
+      }
+    }
+    
+    // 基于温度的提示 (如果温度信息可用)
+    if (temperature != null) {
+        try {
+            final tempValue = double.parse(temperature.replaceAll('°C', '').trim());
+            if (tempValue > 28) {
+                prompts.add("天气有点热，此刻你最想做什么来降降温？");
+            } else if (tempValue < 10) {
+                prompts.add("天气有点冷，注意保暖的同时，有什么温暖的想法吗？");
+            }
+        } catch (e) {
+            debugPrint("解析温度失败: $e");
+        }
+    }
+
+    // 基于城市的提示 (如果城市信息可用)
+    if (city != null && city.isNotEmpty) {
+      prompts.add("身在 $city，这座城市今天给你带来了什么灵感？");
+    }
+
+    // 随机选择一条提示（修改为只返回一条）
+    final random = Random();
+    prompts.shuffle(random); // 打乱列表顺序
+    
+    // 如果没有提示，返回一个默认值
+    if (prompts.isEmpty) {
+      return "今天，你有什么新的感悟或想法呢？";
+    }
+    
+    // 返回随机选中的一条提示
+    return prompts.first;
   }
 
   Future<String> generateInsights(List<Quote> quotes) async {
