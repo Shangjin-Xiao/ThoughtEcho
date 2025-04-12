@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart'; // 确保导入 url_launcher
+import 'package:url_launcher/url_launcher.dart';
 import 'package:file_selector/file_selector.dart';
+// --- 添加 geolocator 导入 ---
+import 'package:geolocator/geolocator.dart';
+// --- 导入结束 ---
 import 'home_page.dart';
 import '../services/database_service.dart';
 import 'ai_settings_page.dart';
@@ -9,7 +12,7 @@ import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
 import '../services/settings_service.dart';
-import '../services/location_service.dart';
+import '../services/location_service.dart'; // 包含 CityInfo 定义
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
@@ -59,6 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
      WidgetsBinding.instance.addPostFrameCallback((_) {
        if (mounted) {
          final locationService = Provider.of<LocationService>(context, listen: false);
+         // 使用 getFormattedLocation 初始化文本框
          _locationController.text = locationService.getFormattedLocation();
        }
      });
@@ -85,11 +89,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // 显示城市搜索对话框
   void _showCitySearchDialog(BuildContext context) {
+    // listen: false 因为我们只调用方法，不监听变化
     final locationService = Provider.of<LocationService>(context, listen: false);
+    final weatherService = Provider.of<WeatherService>(context, listen: false);
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog( // 使用 dialogContext 避免歧义
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -98,28 +104,42 @@ class _SettingsPageState extends State<SettingsPage> {
           width: MediaQuery.of(context).size.width * 0.9,
           padding: const EdgeInsets.all(8.0),
           child: CitySearchWidget(
-            initialCity: locationService.city,
-            onCitySelected: (city) async { // 改为 async
-              // 更新 LocationService 中的城市信息
-              locationService.updateCity(city);
+            initialCity: locationService.city, // 传递当��城市名用于可能的高亮或默认显示
+            onCitySelected: (cityInfo) async { // 参数类型为 CityInfo
+              // --- 修正：调用 LocationService 的现有方法 ---
+              locationService.setSelectedCity(cityInfo);
+              // --- 修正结束 ---
 
-              // 尝试获取新城市的经纬度并更新天气
-              final position = await locationService.getPositionForCity(city);
-              if (position != null && mounted) {
-                 final weatherService = Provider.of<WeatherService>(context, listen: false);
-                 await weatherService.getWeatherData(position.latitude, position.longitude);
+              // setSelectedCity 内部会更新 _currentPosition
+              final position = locationService.currentPosition;
+              if (position != null) {
+                 // 异步获取天气，不需要 await，让 UI 先响应
+                 weatherService.getWeatherData(position.latitude, position.longitude)
+                    .then((_) {
+                       if (mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('天气已更新')),
+                           );
+                       }
+                    }).catchError((error) {
+                         if (mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text('天气更新失败: $error')),
+                           );
+                         }
+                    });
               }
 
-              setState(() {
-                // 更新文本框显示
-                _locationController.text = locationService.getFormattedLocation();
-              });
-
-              // 显示成功消息
+              // 更新文本框显示 (在 setState 中确保 UI 刷新)
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('已选择城市: ${city.name}')),
-                );
+                 setState(() {
+                   _locationController.text = locationService.getFormattedLocation();
+                 });
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   SnackBar(content: Text('已选择城市: ${cityInfo.name}')),
+                 );
+                 // 关闭对话框
+                 Navigator.pop(dialogContext);
               }
             },
           ),
@@ -130,21 +150,19 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 注意：在 build 方法中直接读取 listen: false 可能导致 UI 不更新
-    // 对于需要响应变化的 Provider，使用 context.watch 或 Consumer
-    final locationService = context.watch<LocationService>(); // 使用 watch 监听变化
-    final weatherService = context.watch<WeatherService>(); // 使用 watch 监听变化
+    // 使用 watch 监听 LocationService 和 WeatherService 的变化以更新UI
+    final locationService = context.watch<LocationService>();
+    final weatherService = context.watch<WeatherService>();
     final theme = Theme.of(context);
 
-    // 确保控制器文本与 Service 同步 (如果 Service 在别处更新)
-    // 放在这里可能导致每次 build 都重设，但对于显示是安全的
+    // 考虑是否在此处同步 Controller，取决于 LocationService 是否会在别处被修改
     // _locationController.text = locationService.getFormattedLocation();
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          // 位置和天气设置 Card (保持不变)
+          // 位置和天气设置 Card
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
@@ -172,23 +190,25 @@ class _SettingsPageState extends State<SettingsPage> {
                           : theme.colorScheme.error,
                     ),
                   ),
+                  // 开关状态取决于权限和服务是否都启用
                   value: locationService.hasLocationPermission && locationService.isLocationServiceEnabled,
                   onChanged: (value) async {
                     if (value) {
-                      // 请求位置权限
+                      // 尝试启用服务
                       bool permissionGranted = await locationService.requestLocationPermission();
                       if (!permissionGranted) {
                          if (mounted) {
                            ScaffoldMessenger.of(context).showSnackBar(
                              const SnackBar(content: Text('无法获取位置权限')),
                            );
-                           // 保持开关关闭状态
                          }
-                         return; // 权限未获取，直接返回
+                         // 权限未获取，开关状态应保持关闭 (SwitchListTile 会自动处理视觉状态)
+                         return;
                       }
 
                       // 检查位置服务是否启用
-                      if (!locationService.isLocationServiceEnabled) {
+                      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                      if (!serviceEnabled) {
                          if (mounted) {
                            // 提示用户打开位置服务
                            showDialog(
@@ -204,7 +224,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                  TextButton(
                                    onPressed: () async {
                                      Navigator.pop(context);
+                                     // --- 修正：调用 Geolocator ---
                                      await Geolocator.openLocationSettings(); // 尝试打开系统位置设置
+                                     // --- 修正结束 ---
                                    },
                                    child: const Text('去设置'),
                                  ),
@@ -212,21 +234,35 @@ class _SettingsPageState extends State<SettingsPage> {
                              ),
                            );
                          }
-                         return; // 位置服务未启用，直接返回
+                         // 服务未启用，开关状态应保持关闭
+                         return;
                       }
 
-                       // 获取当前位置并更新天气
-                       final position = await locationService.getCurrentLocation();
+                       // 权限和服务都已启用，获取当前位置并更新天气
+                       // 显示加载提示
+                       if(mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('正在获取位置...'), duration: Duration(seconds: 2)),
+                           );
+                       }
+                       final position = await locationService.getCurrentLocation(); // 内部会处理地址解析
                        if (position != null && mounted) {
-                         final weatherService = Provider.of<WeatherService>(context, listen: false);
+                         // getCurrentLocation 内部会调用 getAddressFromLatLng 更新地址
+                         // 触发天气更新
                          await weatherService.getWeatherData(
                            position.latitude,
                            position.longitude
                          );
+                         ScaffoldMessenger.of(context).removeCurrentSnackBar(); // 移除加载提示
                          ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text('位置服务已启用')),
+                           const SnackBar(content: Text('位置服务已启用，位置已更新')),
                          );
+                         // 更新文本框
+                         setState(() {
+                           _locationController.text = locationService.getFormattedLocation();
+                         });
                        } else if (mounted) {
+                         ScaffoldMessenger.of(context).removeCurrentSnackBar();
                          ScaffoldMessenger.of(context).showSnackBar(
                            const SnackBar(content: Text('无法获取当前位置')),
                          );
@@ -234,14 +270,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
                     } else {
                        // 用户手动关闭开关
-                       // 这里可以考虑是否清除位置信息，取决于产品逻辑
-                       // locationService.clearLocation();
                        ScaffoldMessenger.of(context).showSnackBar(
                          const SnackBar(content: Text('位置服务已禁用')),
                        );
-                       // 无需调用 setState，因为 SwitchListTile 会自动更新其视觉状态
+                       // 这里可以考虑清除位置信息
+                       // locationService.clearLocation(); // 假设有此方法
                     }
-                     // 确保UI在权限或服务状态变化后更新
+                     // 强制刷新UI以确保开关状态正确反映
+                     // (虽然 SwitchListTile 通常会自己更新，但保险起见)
                      if (mounted) {
                        setState(() {});
                      }
@@ -253,7 +289,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '设置显示位置', // 修改标题更清晰
+                        '设置显示位置',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -262,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       // 城市搜索按钮
                       ElevatedButton.icon(
                         icon: const Icon(Icons.search),
-                        label: const Text('搜索并选择城市'), // 修改按钮文字
+                        label: const Text('搜索并选择城市'),
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
                         ),
@@ -270,90 +306,35 @@ class _SettingsPageState extends State<SettingsPage> {
                           _showCitySearchDialog(context);
                         },
                       ),
-                      const SizedBox(height: 16.0),
-                      // 手动输入位置（保留原功能，但可能与城市选择冲突，考虑是否移除或改进）
-                      // Text(
-                      //   '或手动输入位置',
-                      //   style: TextStyle(
-                      //     fontSize: 14,
-                      //     color: theme.colorScheme.onSurface.withOpacity(0.8),
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 8.0),
-                      // TextField(
-                      //   controller: _locationController,
-                      //   decoration: InputDecoration(
-                      //     hintText: '国家,省份,城市,区县 (使用逗号分隔)',
-                      //     border: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(8.0),
-                      //     ),
-                      //     contentPadding: const EdgeInsets.symmetric(
-                      //       horizontal: 12.0,
-                      //       vertical: 12.0,
-                      //     ),
-                      //     suffixIcon: IconButton(
-                      //       icon: const Icon(Icons.check),
-                      //       tooltip: '确认手动输入的位置',
-                      //       onPressed: () {
-                      //         final locationString = _locationController.text.trim();
-                      //         if (locationString.isNotEmpty) {
-                      //           // 注意：手动输入会覆盖城市选择，需要明确逻辑
-                      //           locationService.parseLocationString(locationString);
-                      //           // 触发天气更新
-                      //           final position = locationService.currentPosition;
-                      //           if(position != null) {
-                      //              weatherService.getWeatherData(position.latitude, position.longitude);
-                      //           }
-                      //           ScaffoldMessenger.of(context).showSnackBar(
-                      //             const SnackBar(content: Text('位置已更新')),
-                      //           );
-                      //           // 收起键盘
-                      //           FocusScope.of(context).unfocus();
-                      //         } else {
-                      //            ScaffoldMessenger.of(context).showSnackBar(
-                      //              const SnackBar(content: Text('请输入有效的位置信息')),
-                      //            );
-                      //         }
-                      //       },
-                      //     ),
-                      //   ),
-                      //   onSubmitted: (value) { // 用户按回车时也确认
-                      //      final locationString = value.trim();
-                      //      if (locationString.isNotEmpty) {
-                      //        locationService.parseLocationString(locationString);
-                      //        final position = locationService.currentPosition;
-                      //        if(position != null) {
-                      //           weatherService.getWeatherData(position.latitude, position.longitude);
-                      //        }
-                      //        ScaffoldMessenger.of(context).showSnackBar(
-                      //          const SnackBar(content: Text('位置已更新')),
-                      //        );
-                      //      }
-                      //    },
-                      // ),
-                      // const SizedBox(height: 8.0),
-                      Text( // 显示当前选择的位置
+                      const SizedBox(height: 8.0), // 减小间距
+                      // 显示当前选择的位置
+                      Text(
                         '当前显示位置: ${locationService.currentAddress ?? '未设置'}',
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
+                       const SizedBox(height: 8.0), // 增加底部间距
                     ],
                   ),
                 ),
 
+                // 当前天气显示与刷新
                 if (locationService.currentAddress != null)
                   ListTile(
-                    title: const Text('当前天气'), // 修改标题
+                    title: const Text('当前天气'),
                     subtitle: Text(
-                      '${weatherService.currentWeather ?? "点击刷新"} ${weatherService.temperature ?? ""}',
+                      // 如果天气为空，提示用户刷新
+                      (weatherService.currentWeather == null && weatherService.temperature == null)
+                          ? '点击右侧按钮刷新天气'
+                          : '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
                       style: const TextStyle(
                         fontSize: 12,
                       ),
                     ),
-                    leading: Icon(weatherService.getWeatherIconData()),
-                    trailing: IconButton( // 使用 IconButton 增加点击区域
+                    leading: Icon(weatherService.getWeatherIconData()), // 显示天气图标
+                    trailing: IconButton(
                        icon: const Icon(Icons.refresh),
                        tooltip: '刷新天气',
                        onPressed: () async {
@@ -380,7 +361,7 @@ class _SettingsPageState extends State<SettingsPage> {
                          }
                        },
                     ),
-                    onTap: null, // 因为使用了 trailing IconButton，禁用 ListTile 的 onTap
+                    onTap: null, // 禁用 ListTile 的 onTap
                   ),
 
                 const SizedBox(height: 8.0),
@@ -501,22 +482,23 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          // --- 修改后的关于信息 Card ---
+          // 关于信息 Card (已修正)
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                 // --- 修改：关于标题 ListTile，添加 onTap ---
+                 // 关于标题 ListTile，点击弹出对话框
                  ListTile(
-                   title: const Text('关于 心记 (ThoughtEcho)'), // 标题更明确
+                   title: const Text('关于 心记 (ThoughtEcho)'),
                    leading: const Icon(Icons.info_outline),
-                   trailing: const Icon(Icons.chevron_right), // 添加箭头指示可点击
+                   trailing: const Icon(Icons.chevron_right),
                    onTap: () {
                      showAboutDialog(
                        context: context,
                        applicationName: '心记 (ThoughtEcho)',
                        applicationVersion: _appVersion, // 使用变量
-                       applicationIcon: Image.asset('icon.png', width: 48, height: 48), // 确保 icon.png 在 assets 中
+                       // 确保 icon.png 在 pubspec.yaml 的 assets 中声明
+                       applicationIcon: Image.asset('icon.png', width: 48, height: 48),
                        applicationLegalese: '© 2024 Shangjin Xiao',
                        children: <Widget>[
                          const SizedBox(height: 16),
@@ -525,7 +507,7 @@ class _SettingsPageState extends State<SettingsPage> {
                          // 在对话框中添加 GitHub 链接
                          InkWell(
                            onTap: () => _launchUrl(_projectUrl),
-                           child: Padding( // 增加内边距使更容易点击
+                           child: Padding(
                              padding: const EdgeInsets.symmetric(vertical: 8.0),
                              child: Row(
                                mainAxisAlignment: MainAxisAlignment.center,
@@ -533,10 +515,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                  Icon(Icons.code, size: 16, color: Theme.of(context).colorScheme.primary),
                                  const SizedBox(width: 8),
                                  Text(
-                                   '查看项目源码 (GitHub)', // 更清晰的文本
+                                   '查看项目源码 (GitHub)',
                                    style: TextStyle(
                                      color: Theme.of(context).colorScheme.primary,
-                                     // decoration: TextDecoration.underline, // 可选：添加下划线
                                    ),
                                  ),
                                ],
@@ -547,8 +528,6 @@ class _SettingsPageState extends State<SettingsPage> {
                      );
                    },
                  ),
-                 // --- 关于标题 ListTile 结束 ---
-
                  Padding( // 添加分割线
                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                    child: Divider(
@@ -557,7 +536,7 @@ class _SettingsPageState extends State<SettingsPage> {
                  ),
                  // 项目地址 (GitHub) - 直接显示
                  ListTile(
-                   leading: const Icon(Icons.code_outlined), // 使用 outlined 图标统一风格
+                   leading: const Icon(Icons.code_outlined),
                    title: const Text('项目地址 (GitHub)'),
                    subtitle: Text(_projectUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
                    trailing: const Icon(Icons.open_in_new),
@@ -565,17 +544,15 @@ class _SettingsPageState extends State<SettingsPage> {
                  ),
                  // 官网 - 直接显示
                  ListTile(
-                   leading: const Icon(Icons.language_outlined), // 使用 outlined 图标统一风格
+                   leading: const Icon(Icons.language_outlined),
                    title: const Text('官网'),
                    subtitle: Text(_websiteUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
                    trailing: const Icon(Icons.open_in_new),
                    onTap: () => _launchUrl(_websiteUrl),
                  ),
-                 // --- 移除单独的应用版本 ListTile ---
               ],
             ),
           ),
-          // --- 关于信息 Card 结束 ---
 
           const SizedBox(height: 20), // 底部增加一些间距
         ],
@@ -588,26 +565,27 @@ class _SettingsPageState extends State<SettingsPage> {
     Future<void> _handleExport() async {
       if (!mounted) return;
       final context = this.context;
-
-      // 显示加载指示器
-      final overlay = OverlayEntry(
-        builder: (context) => const Material(
-          color: Colors.black54,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在导出...', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-          ),
-        ),
-      );
-      Overlay.of(context).insert(overlay);
+      OverlayEntry? overlay;
 
       try {
+        // 显示加载指示器
+        overlay = OverlayEntry(
+          builder: (context) => const Material(
+            color: Colors.black54,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('正在导出...', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+        );
+        Overlay.of(context).insert(overlay);
+
         final dbService = Provider.of<DatabaseService>(context, listen: false);
 
         // 使用文件选择器让用户选择保存位置
@@ -616,13 +594,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
         if (result == null) {
           // 用户取消了保存
-          overlay.remove();
+          overlay?.remove();
+          overlay = null;
           return;
         }
 
         final String path = await dbService.exportAllData(customPath: result.path);
 
-        overlay.remove(); // 移除加载指示器
+        overlay?.remove(); // 移除加载指示器
+        overlay = null;
 
         if (!mounted) return;
         await showDialog(
@@ -639,18 +619,17 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
       } catch (e) {
-        overlay.remove(); // 确保在出错时移除加载指示器
+        overlay?.remove(); // 确保在出错时移除加载指示器
+        overlay = null;
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('备份失败: $e')),
-        );
+        _showErrorDialog(context, '备份失败', '导出过程中发生错误: $e');
       }
     }
 
     Future<void> _handleImport() async {
       if (!mounted) return;
       final context = this.context;
-      OverlayEntry? overlay; // 将 overlay 声明在 try 外部，以便在 catch 中访问
+      OverlayEntry? overlay; // 将 overlay 声明在 try 外部
 
       try {
         // 使用file_selector替代file_picker
@@ -679,7 +658,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: const Text('取消'),
               ),
               TextButton(
-                style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error), // 突出确定按钮的危险性
+                style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error), // 突出确定按钮的危��性
                 onPressed: () => Navigator.pop(dialogContext, true),
                 child: const Text('确定导入'),
               ),
@@ -746,8 +725,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // 延迟一小段时间确保 SnackBar 显示
         await Future.delayed(const Duration(milliseconds: 500));
 
-        // 这里可以选择不自动重启，让用户手动操作
-        // 或者保留之前的重启逻辑
+        // 可以考虑添加一个按钮让用户手动重启，或者保留之前的自动导航逻辑
         // if (!mounted) return;
         // Navigator.pushAndRemoveUntil(
         //   context,
