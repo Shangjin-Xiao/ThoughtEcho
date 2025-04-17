@@ -7,9 +7,11 @@
     <link rel="icon" type="image/png" href="icon.png"/>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* 主题变量定义 */
         :root {
+            /* 默认为彩色主题 */
             --primary-color: #1976D2;
             --primary-light: #BBDEFB;
             --primary-dark: #0D47A1;
@@ -26,22 +28,54 @@
             --transition: all 0.3s ease;
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --primary-color: #90CAF9;
-                --primary-light: #E3F2FD;
-                --primary-dark: #42A5F5;
-                --accent-color: #FF80AB;
-                --secondary-color: #CCC2DC;
-                --background-color: #121212;
-                --surface-color: #1E1E1E;
-                --error-color: #F2B8B5;
-                --text-primary: #E6E1E5;
-                --text-secondary: #CAC4D0;
-                --text-tertiary: #938F99;
-                --border-color: #49454F;
-                --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            }
+        /* 黑白主题 */
+        [data-theme="monochrome"] {
+            --primary-color: #404040;
+            --primary-light: #E0E0E0;
+            --primary-dark: #202020;
+            --accent-color: #707070;
+            --secondary-color: #505050;
+            --background-color: #F5F5F5;
+            --surface-color: #FFFFFF;
+            --error-color: #808080;
+            --text-primary: #202020;
+            --text-secondary: #404040;
+            --text-tertiary: #606060;
+            --border-color: #D0D0D0;
+        }
+
+        /* 深色模式变量 */
+        [data-theme="dark"] {
+            --primary-color: #90CAF9;
+            --primary-light: #E3F2FD;
+            --primary-dark: #42A5F5;
+            --accent-color: #FF80AB;
+            --secondary-color: #CCC2DC;
+            --background-color: #121212;
+            --surface-color: #1E1E1E;
+            --error-color: #F2B8B5;
+            --text-primary: #E6E1E5;
+            --text-secondary: #CAC4D0;
+            --text-tertiary: #938F99;
+            --border-color: #49454F;
+            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 黑白深色模式 */
+        [data-theme="dark-monochrome"] {
+            --primary-color: #B0B0B0;
+            --primary-light: #505050;
+            --primary-dark: #A0A0A0;
+            --accent-color: #808080;
+            --secondary-color: #A0A0A0;
+            --background-color: #121212;
+            --surface-color: #1E1E1E;
+            --error-color: #A0A0A0;
+            --text-primary: #E0E0E0;
+            --text-secondary: #C0C0C0;
+            --text-tertiary: #A0A0A0;
+            --border-color: #505050;
+            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
         }
 
         * {
@@ -51,12 +85,26 @@
         }
 
         body {
-            font-family: 'Noto Sans SC', 'Segoe UI', sans-serif;
+            font-family: 'Noto Sans SC', 'Noto Sans', sans-serif;
             line-height: 1.6;
             color: var(--text-primary);
             background-color: var(--background-color);
-            padding-top: 60px; /* 为固定导航栏留出空间 */
+            padding-top: 60px;
             font-weight: 300;
+            transition: background-color 0.3s ease;
+        }
+
+        /* 语言切换类 */
+        .en {
+            display: none;
+        }
+        
+        [lang="en"] .en {
+            display: block;
+        }
+        
+        [lang="en"] .zh {
+            display: none;
         }
 
         nav {
@@ -73,6 +121,7 @@
             align-items: center;
             padding: 0.6rem 8%;
             border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
         }
         
         .nav-logo {
@@ -91,6 +140,7 @@
             font-size: 1.4rem;
             color: var(--primary-color);
             font-weight: 500;
+            transition: color 0.3s ease;
         }
         
         .nav-links {
@@ -114,6 +164,32 @@
             opacity: 0.9;
         }
         
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .theme-switch, .lang-switch {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 16px;
+        }
+        
+        .theme-switch:hover, .lang-switch:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
         .mobile-menu-btn {
             display: none;
             background: none;
@@ -129,6 +205,7 @@
             text-align: center;
             padding: 3rem 1rem;
             margin-top: 0;
+            transition: background 0.3s ease;
         }
 
         .container {
@@ -162,6 +239,7 @@
             margin: 2.5rem 0 1.2rem;
             color: var(--primary-color);
             font-weight: 500;
+            transition: color 0.3s ease;
         }
 
         h3 {
@@ -169,12 +247,14 @@
             margin: 1.8rem 0 1rem;
             color: var(--primary-color);
             font-weight: 400;
+            transition: color 0.3s ease;
         }
 
         p {
             margin-bottom: 1rem;
             color: var(--text-secondary);
             line-height: 1.8;
+            transition: color 0.3s ease;
         }
 
         .tagline {
@@ -208,6 +288,7 @@
         .section {
             padding: 3.5rem 0;
             border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
         }
 
         .section-title-container {
@@ -220,6 +301,7 @@
             font-size: 1.1rem;
             max-width: 700px;
             margin: 0 auto 1rem;
+            transition: color 0.3s ease;
         }
 
         .features {
@@ -236,6 +318,7 @@
             box-shadow: var(--card-shadow);
             transition: var(--transition);
             height: 100%;
+            cursor: pointer;
         }
 
         .feature:hover {
@@ -255,12 +338,15 @@
             height: 60px;
             text-align: center;
             line-height: 40px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .feature-title {
             font-size: 1.3rem;
             font-weight: 500;
             margin-bottom: 0.8rem;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
         }
 
         .screenshots {
@@ -280,6 +366,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+            cursor: pointer;
         }
         
         .screenshot:hover {
@@ -294,6 +381,7 @@
             object-fit: contain;
             border-radius: 8px;
             margin-bottom: 1rem;
+            transition: transform 0.3s ease;
         }
 
         .screenshot-title {
@@ -303,6 +391,7 @@
             color: var(--primary-color);
             font-size: 1.1rem;
             margin-top: auto;
+            transition: color 0.3s ease;
         }
 
         /* 路线图样式 */
@@ -341,12 +430,6 @@
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
         }
         
-        .feature-icon {
-            display: inline-block;
-            margin-right: 0.8rem;
-            font-size: 1.5rem;
-        }
-        
         .roadmap-timeline {
             position: relative;
             margin-left: 1rem;
@@ -362,6 +445,7 @@
             width: 3px;
             background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
             border-radius: 3px;
+            transition: background 0.3s ease;
         }
         
         .timeline-item {
@@ -379,6 +463,7 @@
             height: 1.2rem;
             background-color: var(--primary-color);
             border-radius: 50%;
+            transition: background-color 0.3s ease;
         }
         
         .timeline-date {
@@ -390,6 +475,7 @@
             background-color: var(--primary-light);
             padding: 0.3rem 1rem;
             border-radius: 20px;
+            transition: color 0.3s ease, background-color 0.3s ease;
         }
         
         .timeline-content {
@@ -411,6 +497,7 @@
             color: var(--text-primary);
             font-weight: 500;
             font-size: 1.2rem;
+            transition: color 0.3s ease;
         }
         
         .timeline-content ul {
@@ -423,6 +510,8 @@
             margin-bottom: 0.8rem;
             padding-left: 1.5rem;
             position: relative;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
         }
 
         .timeline-content li::before {
@@ -431,6 +520,7 @@
             left: 0;
             color: var(--primary-color);
             font-weight: bold;
+            transition: color 0.3s ease;
         }
         
         .status {
@@ -439,16 +529,17 @@
             padding: 0.2rem 0.7rem;
             border-radius: 20px;
             margin-right: 0.5rem;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         
         .status.in-progress {
-            background-color: #E3F2FD;
-            color: #0D47A1;
+            background-color: var(--primary-light);
+            color: var(--primary-dark);
         }
         
         .status.planned {
-            background-color: #F5F5F5;
-            color: #616161;
+            background-color: var(--background-color);
+            color: var(--text-secondary);
         }
         
         .roadmap-footer {
@@ -458,12 +549,14 @@
             padding: 1.5rem;
             border-radius: 12px;
             box-shadow: var(--card-shadow);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         
         .update-time {
             font-size: 0.9rem;
             color: var(--text-tertiary);
             margin-top: 0.5rem;
+            transition: color 0.3s ease;
         }
 
         .guide-section {
@@ -472,11 +565,14 @@
             padding: 2rem;
             margin: 2rem 0;
             box-shadow: var(--card-shadow);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         .guide-section ol {
             padding-left: 1.5rem;
             margin: 1.5rem 0;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
         }
 
         .guide-section ol li {
@@ -489,6 +585,8 @@
             border-radius: 8px;
             overflow-x: auto;
             margin: 1rem 0;
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .guide-buttons {
@@ -506,6 +604,7 @@
             padding: 4rem 0 2rem;
             margin-top: 3rem;
             box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
         }
 
         .footer-content {
@@ -521,6 +620,7 @@
             font-size: 1.2rem;
             position: relative;
             display: inline-block;
+            transition: color 0.3s ease;
         }
 
         .footer-section h3::after {
@@ -532,11 +632,13 @@
             height: 3px;
             background-color: var(--primary-light);
             border-radius: 3px;
+            transition: background-color 0.3s ease;
         }
 
         .footer-section p {
             color: var(--text-secondary);
             margin-bottom: 1.2rem;
+            transition: color 0.3s ease;
         }
 
         .footer-section ul {
@@ -581,11 +683,13 @@
             text-align: center;
             padding-top: 2rem;
             border-top: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
         }
 
         .footer-bottom p {
             color: var(--text-tertiary);
             font-size: 0.9rem;
+            transition: color 0.3s ease;
         }
 
         /* 移动端样式优化 */
@@ -618,6 +722,10 @@
             
             .mobile-menu-btn {
                 display: block;
+            }
+            
+            .nav-controls {
+                margin-right: 1rem;
             }
             
             h1 {
@@ -692,6 +800,7 @@
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
             border-bottom: 2px solid var(--border-color);
+            transition: border-color 0.3s ease;
         }
         
         .tab-button {
@@ -742,21 +851,254 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* 图片模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            background-color: var(--surface-color);
+            transition: transform 0.3s ease;
+            transform: scale(0.9);
+        }
+        
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-image {
+            width: 100%;
+            height: auto;
+            max-height: 80vh;
+            object-fit: contain;
+            display: block;
+        }
+        
+        .modal-caption {
+            padding: 15px 20px;
+            color: var(--text-primary);
+            background-color: var(--surface-color);
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background-color: var(--surface-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            font-size: 18px;
+            color: var(--text-secondary);
+            border: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .feature-popup {
+            padding: 25px;
+        }
+        
+        .feature-popup h4 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        
+        .feature-popup p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        /* 功能按钮样式 */
+        .floating-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 900;
+        }
+        
+        .control-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 20px;
+            transition: var(--transition);
+        }
+        
+        .control-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 快速导航浮动按钮 */
+        .quick-nav {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 900;
+            background-color: var(--primary-color);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: var(--transition);
+        }
+        
+        .quick-nav:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-3px);
+        }
+        
+        .quick-nav-content {
+            position: absolute;
+            bottom: 65px;
+            left: 0;
+            background-color: var(--surface-color);
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            padding: 10px 0;
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: var(--transition);
+        }
+        
+        .quick-nav:hover .quick-nav-content {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .quick-nav-item {
+            display: block;
+            padding: 10px 20px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        
+        .quick-nav-item:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        /* 页面加载动画 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--primary-light);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <nav>
         <div class="nav-logo">
-            <img src="../icon.png" alt="心迹图标">
-            <h2>心迹</h2>
+            <img src="icon.png" alt="心迹图标">
+            <h2 class="zh">心迹</h2>
+            <h2 class="en">ThoughtEcho</h2>
         </div>
         <div class="nav-links" id="navLinks">
-            <a href="#overview">概述</a>
-            <a href="#features">功能</a>
-            <a href="#roadmap">路线图</a>
-            <a href="#screenshots">界面</a>
-            <a href="#guide">使用指南</a>
-            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub</a>
+            <a href="#overview" class="zh">概述</a>
+            <a href="#overview" class="en">Overview</a>
+            <a href="#features" class="zh">功能</a>
+            <a href="#features" class="en">Features</a>
+            <a href="#roadmap" class="zh">路线图</a>
+            <a href="#roadmap" class="en">Roadmap</a>
+            <a href="#screenshots" class="zh">界面</a>
+            <a href="#screenshots" class="en">Screenshots</a>
+            <a href="#guide" class="zh">使用指南</a>
+            <a href="#guide" class="en">Guide</a>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" class="zh">GitHub</a>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" class="en">GitHub</a>
+        </div>
+        <div class="nav-controls">
+            <button id="themeSwitch" class="theme-switch" title="切换黑白模式/Toggle Monochrome Mode">🎨</button>
+            <button id="langSwitch" class="lang-switch" title="切换语言/Switch Language">🌐</button>
         </div>
         <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
     </nav>
@@ -764,150 +1106,188 @@
     <header>
         <div class="container">
             <div class="logo-container">
-                <img src="../icon.png" alt="心迹图标" class="logo">
-                <h1>心迹</h1>
+                <img src="icon.png" alt="心迹图标/ThoughtEcho Icon" class="logo">
+                <h1 class="zh">心迹</h1>
+                <h1 class="en">ThoughtEcho</h1>
             </div>
-            <p class="tagline">追踪你的思想轨迹，释放AI洞察的力量</p>
-            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">立即下载</a>
+            <p class="tagline zh">追踪你的思想轨迹，释放AI洞察的力量</p>
+            <p class="tagline en">Track your thought journey, unlock the power of AI insights</p>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button zh">立即下载</a>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button en">Download Now</a>
         </div>
     </header>
 
     <div class="container">
         <section class="section" id="overview">
             <div class="section-title-container">
-                <h2>项目概述</h2>
-                <p class="section-subtitle">不只是记录，更是思想的智能伴侣</p>
+                <h2 class="zh">项目概述</h2>
+                <h2 class="en">Project Overview</h2>
+                <p class="section-subtitle zh">不只是记录，更是思想的智能伴侣</p>
+                <p class="section-subtitle en">Not just a journal, but an intelligent companion for your thoughts</p>
             </div>
-            <p><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉和记录日常思绪，并利用先进的AI技术提供深度洞察。</p>
-            <p>基于Flutter框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。</p>
+            <p class="zh"><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉每天的灵感、想法和思考，并利用AI技术提供深度分析和洞察，让你能够更好地理解自己的思维模式，获得新的视角和启发。</p>
+            <p class="en"><strong>ThoughtEcho</strong> is not just a simple diary app, but a powerful <strong>personal thought tracker</strong> and <strong>AI insight assistant</strong>. It helps you capture daily inspirations, ideas, and reflections, and leverages AI technology to provide deep analysis and insights, enabling you to better understand your thinking patterns and gain new perspectives.</p>
+            <p class="zh">基于Flutter框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。</p>
+            <p class="en">Developed with Flutter framework, supporting both mobile and desktop platforms, allowing you to record and review your thoughts anytime, anywhere.</p>
         </section>
 
         <section class="section" id="features">
             <div class="section-title-container">
-                <h2>核心功能</h2>
-                <p class="section-subtitle">精心设计的功能，为你的思考提供完美支持</p>
+                <h2 class="zh">核心功能</h2>
+                <h2 class="en">Core Features</h2>
+                <p class="section-subtitle zh">精心设计的功能，为你的思考提供完美支持</p>
+                <p class="section-subtitle en">Carefully designed features to perfectly support your thinking</p>
             </div>
             <div class="features">
-                <div class="feature">
+                <div class="feature" data-feature="note-taking">
                     <div class="feature-icon">✍️</div>
-                    <div class="feature-title">心迹记录</div>
-                    <p>简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。支持富文本编辑，可添加标签和分类，轻松整理你的思考。</p>
+                    <div class="feature-title zh">心迹记录</div>
+                    <div class="feature-title en">Thought Recording</div>
+                    <p class="zh">简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。支持富文本编辑，可添加标签和分类。</p>
+                    <p class="en">Clean and elegant interface for focusing on capturing ideas, insights, and inspirations. Supports rich text editing with tags and categories.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="ai-insights">
                     <div class="feature-icon">✨</div>
-                    <div class="feature-title">AI智能洞察</div>
-                    <p>集成强大的AI服务，深度分析你的笔记内容，提供情感分析、核心思想提炼、行动建议和思维模式分析等多维度智能洞察。</p>
+                    <div class="feature-title zh">AI智能洞察</div>
+                    <div class="feature-title en">AI Smart Insights</div>
+                    <p class="zh">集成强大的AI服务，深度分析你的笔记内容，提供情感分析、核心思想提炼、行动建议和思维模式分析等多维度智能洞察。</p>
+                    <p class="en">Integrated with powerful AI services to analyze your notes and provide emotional analysis, core idea extraction, action suggestions, and thinking pattern analysis.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="daily-prompts">
                     <div class="feature-icon">🤔</div>
-                    <div class="feature-title">每日思考提示</div>
-                    <p>每天为你生成一个发人深省的哲学或智慧提示，激发深度思考，拓展思维边界，培养反思习惯。</p>
+                    <div class="feature-title zh">每日思考提示</div>
+                    <div class="feature-title en">Daily Thought Prompts</div>
+                    <p class="zh">每天为你生成一个发人深省的哲学或智慧提示，激发深度思考，拓展思维边界，培养反思习惯。</p>
+                    <p class="en">Daily philosophical or wisdom prompts to inspire deep thinking, expand your mental boundaries, and cultivate reflection habits.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="categories">
                     <div class="feature-icon">🗂️</div>
-                    <div class="feature-title">分类管理</div>
-                    <p>自定义笔记分类，灵活组织和管理你的心迹，方便回顾和检索。支持自定义分类图标，视觉化管理更直观。</p>
+                    <div class="feature-title zh">分类管理</div>
+                    <div class="feature-title en">Category Management</div>
+                    <p class="zh">自定义笔记分类，灵活组织和管理你的心迹，方便回顾和检索。支持自定义分类图标，视觉化管理更直观。</p>
+                    <p class="en">Customize note categories for flexible organization and management. Support custom category icons for intuitive visual management.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="tags">
                     <div class="feature-icon">🏷️</div>
-                    <div class="feature-title">标签系统</div>
-                    <p>为笔记添加多个标签，实现多维度归类，提升检索效率，构建知识网络。</p>
+                    <div class="feature-title zh">标签系统</div>
+                    <div class="feature-title en">Tag System</div>
+                    <p class="zh">为笔记添加多个标签，实现多维度归类，提升检索效率，构建知识网络。</p>
+                    <p class="en">Add multiple tags to notes for multi-dimensional categorization, improving retrieval efficiency and building knowledge networks.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="search">
                     <div class="feature-icon">🔍</div>
-                    <div class="feature-title">关键词搜索</div>
-                    <p>强大的关键词搜索功能，快速定位所需笔记，支持标题、内容、标签多维度搜索，回顾特定时期的思考。</p>
+                    <div class="feature-title zh">关键词搜索</div>
+                    <div class="feature-title en">Keyword Search</div>
+                    <p class="zh">强大的关键词搜索功能，快速定位所需笔记，支持标题、内容、标签多维度搜索，回顾特定时期的思考。</p>
+                    <p class="en">Powerful keyword search to quickly locate notes, with multi-dimensional search across titles, content, and tags.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="location">
                     <div class="feature-icon">📍</div>
-                    <div class="feature-title">位置记录</div>
-                    <p>自动或手动记录笔记创建位置，为思考增添空间维度，回忆更加丰富立体。</p>
+                    <div class="feature-title zh">位置记录</div>
+                    <div class="feature-title en">Location Tracking</div>
+                    <p class="zh">自动或手动记录笔记创建位置，为思考增添空间维度，回忆更加丰富立体。</p>
+                    <p class="en">Automatically or manually record the location where notes are created, adding a spatial dimension to your thoughts.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="weather">
                     <div class="feature-icon">☁️</div>
-                    <div class="feature-title">天气记录</div>
-                    <p>自动记录笔记创建时的天气状况，为日后回顾增添环境背景，丰富记忆线索。</p>
+                    <div class="feature-title zh">天气记录</div>
+                    <div class="feature-title en">Weather Recording</div>
+                    <p class="zh">自动记录笔记创建时的天气状况，为日后回顾增添环境背景，丰富记忆线索。</p>
+                    <p class="en">Automatically record weather conditions when creating notes, adding environmental context for future review.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" data-feature="dark-mode">
                     <div class="feature-icon">🌙</div>
-                    <div class="feature-title">深色模式</div>
-                    <p>提供舒适的深色模式，呵护你的双眼，适应不同光线环境，夜间使用更护眼。</p>
+                    <div class="feature-title zh">深色模式</div>
+                    <div class="feature-title en">Dark Mode</div>
+                    <p class="zh">提供舒适的深色模式，呵护你的双眼，适应不同光线环境，夜间使用更护眼。</p>
+                    <p class="en">Comfortable dark mode to protect your eyes and adapt to different lighting environments.</p>
                 </div>
             </div>
         </section>
 
         <section class="section" id="roadmap">
             <div class="section-title-container">
-                <h2>开发路线图</h2>
-                <p class="section-subtitle">心迹正在不断发展和完善中，以下是我们的开发计划</p>
+                <h2 class="zh">开发路线图</h2>
+                <h2 class="en">Development Roadmap</h2>
+                <p class="section-subtitle zh">心迹正在不断发展和完善中，以下是我们的开发计划</p>
+                <p class="section-subtitle en">ThoughtEcho is constantly evolving - here's our development plan</p>
             </div>
             
             <div class="roadmap-container">
                 <div class="roadmap-section">
-                    <h3>已实现功能</h3>
+                    <h3 class="zh">已实现功能</h3>
+                    <h3 class="en">Implemented Features</h3>
                     <ul class="feature-list">
-                        <li><span class="feature-icon">✍️</span> <strong>心迹记录</strong>：简洁优雅的界面，快速记录想法与感悟</li>
-                        <li><span class="feature-icon">🗂️</span> <strong>分类管理</strong>：自定义笔记分类，支持分类图标</li>
-                        <li><span class="feature-icon">🏷️</span> <strong>标签系统</strong>：多标签归类，构建知识网络</li>
-                        <li><span class="feature-icon">🔍</span> <strong>关键词搜索</strong>：多维度检索笔记内容</li>
-                        <li><span class="feature-icon">📍</span> <strong>位置记录</strong>：自动记录笔记创建位置</li>
-                        <li><span class="feature-icon">☁️</span> <strong>天气记录</strong>：自动记录创建时的天气状况</li>
-                        <li><span class="feature-icon">🌙</span> <strong>深色模式</strong>：护眼设计，适应不同光线环境</li>
+                        <li><span class="feature-icon">✍️</span> <strong class="zh">心迹记录</strong><strong class="en">Thought Recording</strong></li>
+                        <li><span class="feature-icon">🗂️</span> <strong class="zh">分类管理</strong><strong class="en">Category Management</strong></li>
+                        <li><span class="feature-icon">🏷️</span> <strong class="zh">标签系统</strong><strong class="en">Tag System</strong></li>
+                        <li><span class="feature-icon">🔍</span> <strong class="zh">关键词搜索</strong><strong class="en">Keyword Search</strong></li>
+                        <li><span class="feature-icon">📍</span> <strong class="zh">位置记录</strong><strong class="en">Location Tracking</strong></li>
+                        <li><span class="feature-icon">☁️</span> <strong class="zh">天气记录</strong><strong class="en">Weather Recording</strong></li>
+                        <li><span class="feature-icon">🌙</span> <strong class="zh">深色模式</strong><strong class="en">Dark Mode</strong></li>
                     </ul>
                 </div>
                 
                 <div class="roadmap-timeline">
                     <div class="timeline-item">
-                        <div class="timeline-date">当前</div>
+                        <div class="timeline-date zh">当前</div>
+                        <div class="timeline-date en">Current</div>
                         <div class="timeline-content">
-                            <h4>基础架构与性能优化</h4>
+                            <h4 class="zh">基础架构与性能优化</h4>
+                            <h4 class="en">Infrastructure and Performance</h4>
                             <ul>
-                                <li><span class="status in-progress">进行中</span> <strong>数据库服务优化</strong>：提升数据存取速度，优化本地存储架构</li>
+                                <li><span class="status in-progress zh">进行中</span><span class="status in-progress en">In Progress</span> <strong class="zh">数据库服务优化</strong><strong class="en">Database Service Optimization</strong></li>
                             </ul>
                         </div>
                     </div>
                     
                     <div class="timeline-item">
-                        <div class="timeline-date">2025年5月</div>
+                        <div class="timeline-date">2025.05</div>
                         <div class="timeline-content">
-                            <h4>用户体验提升</h4>
+                            <h4 class="zh">用户体验提升</h4>
+                            <h4 class="en">User Experience Improvements</h4>
                             <ul>
-                                <li><strong>剪贴板检测</strong>：自动检测复制内容并填充作者信息</li>
-                                <li><strong>推送服务</strong>：推送每日一言，定期提醒</li>
-                                <li><strong>启动引导页</strong>：应用介绍、权限申请及使用引导</li>
+                                <li><strong class="zh">剪贴板检测</strong><strong class="en">Clipboard Detection</strong></li>
+                                <li><strong class="zh">推送服务</strong><strong class="en">Push Notifications</strong></li>
+                                <li><strong class="zh">启动引导页</strong><strong class="en">Onboarding Guide</strong></li>
                             </ul>
                         </div>
                     </div>
                     
                     <div class="timeline-item">
-                        <div class="timeline-date">2025年7月</div>
+                        <div class="timeline-date">2025.07</div>
                         <div class="timeline-content">
-                            <h4>内容创作增强</h4>
+                            <h4 class="zh">内容创作增强</h4>
+                            <h4 class="en">Content Creation Enhancements</h4>
                             <ul>
-                                <li><strong>长文编辑功能</strong>：支持Markdown格式的长文编辑</li>
-                                <li><strong>多媒体支持</strong>：允许在笔记中添加图片等媒体文件</li>
+                                <li><strong class="zh">长文编辑功能</strong><strong class="en">Long-form Editing</strong></li>
+                                <li><strong class="zh">多媒体支持</strong><strong class="en">Multimedia Support</strong></li>
                             </ul>
                         </div>
                     </div>
                     
                     <div class="timeline-item">
-                        <div class="timeline-date">2025年下半年</div>
+                        <div class="timeline-date zh">2025年下半年</div>
+                        <div class="timeline-date en">2025 H2</div>
                         <div class="timeline-content">
-                            <h4>性能与个性化</h4>
+                            <h4 class="zh">性能与个性化</h4>
+                            <h4 class="en">Performance and Personalization</h4>
                             <ul>
-                                <li><strong>自定义界面</strong>：字体、显示间距等个性化设置</li>
-                                <li><strong>引入更多原生库</strong>：重构核心模块，增强应用性能和稳定性</li>
+                                <li><strong class="zh">自定义界面</strong><strong class="en">Custom UI</strong></li>
+                                <li><strong class="zh">引入更多原生库</strong><strong class="en">More Native Libraries</strong></li>
                             </ul>
                         </div>
                     </div>
                     
                     <div class="timeline-item">
-                        <div class="timeline-date">2025年末</div>
+                        <div class="timeline-date zh">2025年末</div>
+                        <div class="timeline-date en">End of 2025</div>
                         <div class="timeline-content">
-                            <h4>AI 与智能服务</h4>
+                            <h4 class="zh">AI 与智能服务</h4>
+                            <h4 class="en">AI and Smart Services</h4>
                             <ul>
-                                <li><strong>AI服务优化</strong>：改进提示词设计，提升智能洞察质量</li>
-                                <li><span class="status planned">规划中</span> <strong>轻量级机器学习分析</strong>：基于TensorFlow实现本地笔记内容分析</li>
+                                <li><strong class="zh">AI服务优化</strong><strong class="en">AI Service Optimization</strong></li>
+                                <li><span class="status planned zh">规划中</span><span class="status planned en">Planned</span> <strong class="zh">轻量级机器学习分析</strong><strong class="en">Lightweight ML Analysis</strong></li>
                             </ul>
                         </div>
                     </div>
@@ -915,72 +1295,94 @@
             </div>
             
             <div class="roadmap-footer">
-                <p>💡 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！</p>
-                <p class="update-time">最近更新：2025年4月17日</p>
+                <p class="zh">💡 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！</p>
+                <p class="en">💡 Our roadmap is constantly evolving based on user feedback and technological advancements. Your suggestions are welcome!</p>
+                <p class="update-time zh">最近更新：2025年4月17日</p>
+                <p class="update-time en">Last updated: April 17, 2025</p>
             </div>
         </section>
 
         <section class="section" id="screenshots">
             <div class="section-title-container">
-                <h2>应用界面</h2>
-                <p class="section-subtitle">心迹采用Material Design 3规范设计，界面美观现代</p>
+                <h2 class="zh">应用界面</h2>
+                <h2 class="en">App Interface</h2>
+                <p class="section-subtitle zh">心迹采用Material Design 3规范设计，界面美观现代</p>
+                <p class="section-subtitle en">ThoughtEcho uses Material Design 3 guidelines for a beautiful, modern interface</p>
             </div>
             <div class="screenshots">
-                <div class="screenshot">
-                    <img src="homepage.jpg" alt="主页界面">
-                    <div class="screenshot-title">主页 - 笔记列表与每日一言</div>
+                <div class="screenshot" data-img="homepage.jpg" data-title-zh="主页 - 笔记列表与每日一言" data-title-en="Home - Note list and daily quote">
+                    <img src="homepage.jpg" alt="主页界面/Home Page">
+                    <div class="screenshot-title zh">主页 - 笔记列表与每日一言</div>
+                    <div class="screenshot-title en">Home - Note list and daily quote</div>
                 </div>
-                <div class="screenshot">
-                    <img src="notepage.jpg" alt="编辑界面">
-                    <div class="screenshot-title">笔记编辑 - 支持标签与位置</div>
+                <div class="screenshot" data-img="notepage.jpg" data-title-zh="笔记编辑 - 支持标签与位置" data-title-en="Note Editing - Support for tags and location">
+                    <img src="notepage.jpg" alt="编辑界面/Edit Page">
+                    <div class="screenshot-title zh">笔记编辑 - 支持标签与位置</div>
+                    <div class="screenshot-title en">Note Editing - Support for tags and location</div>
                 </div>
-                <div class="screenshot">
-                    <img src="add.jpg" alt="添加笔记界面">
-                    <div class="screenshot-title">添加笔记 - 快速记录想法</div>
+                <div class="screenshot" data-img="add.jpg" data-title-zh="添加笔记 - 快速记录想法" data-title-en="Add Note - Quickly record ideas">
+                    <img src="add.jpg" alt="添加笔记界面/Add Note Page">
+                    <div class="screenshot-title zh">添加笔记 - 快速记录想法</div>
+                    <div class="screenshot-title en">Add Note - Quickly record ideas</div>
                 </div>
-                <div class="screenshot">
-                    <img src="settingpage.jpg" alt="设置界面">
-                    <div class="screenshot-title">应用设置 - 主题与功能配置</div>
+                <div class="screenshot" data-img="settingpage.jpg" data-title-zh="应用设置 - 主题与功能配置" data-title-en="App Settings - Theme and feature configuration">
+                    <img src="settingpage.jpg" alt="设置界面/Settings Page">
+                    <div class="screenshot-title zh">应用设置 - 主题与功能配置</div>
+                    <div class="screenshot-title en">App Settings - Theme and feature configuration</div>
                 </div>
             </div>
         </section>
 
         <section class="section" id="guide">
             <div class="section-title-container">
-                <h2>开始使用</h2>
-                <p class="section-subtitle">快速上手，开始您的思想记录之旅</p>
+                <h2 class="zh">开始使用</h2>
+                <h2 class="en">Get Started</h2>
+                <p class="section-subtitle zh">快速上手，开始您的思想记录之旅</p>
+                <p class="section-subtitle en">Quick start guide for your thought journey</p>
             </div>
 
             <div class="tab-container">
                 <div class="tabs">
-                    <button class="tab-button active" data-tab="user-guide">用户指南</button>
-                    <button class="tab-button" data-tab="dev-guide">开发者指南</button>
+                    <button class="tab-button active" data-tab="user-guide"><span class="zh">用户指南</span><span class="en">User Guide</span></button>
+                    <button class="tab-button" data-tab="dev-guide"><span class="zh">开发者指南</span><span class="en">Developer Guide</span></button>
                 </div>
                 
                 <div class="tab-content active" id="user-guide">
                     <div class="guide-section">
-                        <h3>用户安装指南</h3>
+                        <h3 class="zh">用户安装指南</h3>
+                        <h3 class="en">User Installation Guide</h3>
                         <ol>
-                            <li><strong>下载应用</strong>：从<a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">GitHub发布页面</a>下载最新版本</li>
-                            <li><strong>首次启动设置</strong>：安装完成后打开应用，根据引导完成初始化设置</li>
-                            <li><strong>开始使用</strong>：点击主页面右下角的「+」按钮创建新笔记，在设置页面自定义应用主题和功能偏好</li>
+                            <li class="zh"><strong>下载应用</strong>：从<a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">GitHub发布页面</a>下载最新版本</li>
+                            <li class="en"><strong>Download the app</strong>: Get the latest version from the <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">GitHub release page</a></li>
+                            <li class="zh"><strong>首次启动设置</strong>：安装完成后打开应用，根据引导完成初始化设置</li>
+                            <li class="en"><strong>First launch setup</strong>: Open the app after installation and follow the guide to complete initial setup</li>
+                            <li class="zh"><strong>开始使用</strong>：点击主页面右下角的「+」按钮创建新笔记，在设置页面自定义应用主题和功能偏好</li>
+                            <li class="en"><strong>Start using</strong>: Click the "+" button in the bottom right corner to create new notes, customize app theme and preferences in the settings page</li>
                         </ol>
                     </div>
                 </div>
                 
                 <div class="tab-content" id="dev-guide">
                     <div class="guide-section">
-                        <h3>开发者安装指南</h3>
+                        <h3 class="zh">开发者安装指南</h3>
+                        <h3 class="en">Developer Installation Guide</h3>
                         <ol>
-                            <li><strong>安装Flutter SDK</strong>：请确保你的开发环境已安装<a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a></li>
-                            <li><strong>克隆项目</strong>：
+                            <li class="zh"><strong>安装Flutter SDK</strong>：请确保你的开发环境已安装<a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a></li>
+                            <li class="en"><strong>Install Flutter SDK</strong>: Ensure your development environment has the <a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a> installed</li>
+                            <li>
+                                <strong class="zh">克隆项目</strong>
+                                <strong class="en">Clone the project</strong>
                                 <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
 cd ThoughtEcho</code></pre>
                             </li>
-                            <li><strong>安装依赖</strong>：
+                            <li>
+                                <strong class="zh">安装依赖</strong>
+                                <strong class="en">Install dependencies</strong>
                                 <pre><code>flutter pub get</code></pre>
                             </li>
-                            <li><strong>运行应用</strong>：
+                            <li>
+                                <strong class="zh">运行应用</strong>
+                                <strong class="en">Run the app</strong>
                                 <pre><code>flutter run</code></pre>
                             </li>
                         </ol>
@@ -989,8 +1391,10 @@ cd ThoughtEcho</code></pre>
             </div>
 
             <div class="guide-buttons">
-                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="cta-button">查看源代码</a>
-                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">下载应用</a>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="cta-button zh">查看源代码</a>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="cta-button en">View Source Code</a>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button zh">下载应用</a>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button en">Download App</a>
             </div>
         </section>
     </div>
@@ -999,84 +1403,57 @@ cd ThoughtEcho</code></pre>
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>关于心迹</h3>
-                    <p>心迹是一款开源的思想记录与分析工具，帮助你捕捉和记录日常思绪，并利用AI技术提供深度洞察。</p>
+                    <h3 class="zh">关于心迹</h3>
+                    <h3 class="en">About ThoughtEcho</h3>
+                    <p class="zh">心迹是一款帮助你记录思想轨迹的Flutter应用，致力于提供智能化的个人思考管理体验。</p>
+                    <p class="en">ThoughtEcho is a Flutter app that helps you track your thought journey, committed to providing an intelligent personal thinking management experience.</p>
                 </div>
                 <div class="footer-section">
-                    <h3>快速链接</h3>
+                    <h3 class="zh">快速链接</h3>
+                    <h3 class="en">Quick Links</h3>
                     <ul>
-                        <li><a href="#overview">项目概述</a></li>
-                        <li><a href="#features">核心功能</a></li>
-                        <li><a href="#roadmap">开发路线图</a></li>
-                        <li><a href="#screenshots">应用界面</a></li>
-                        <li><a href="#guide">开始使用</a></li>
+                        <li><a href="#overview" class="zh">项目概述</a><a href="#overview" class="en">Overview</a></li>
+                        <li><a href="#features" class="zh">核心功能</a><a href="#features" class="en">Core Features</a></li>
+                        <li><a href="#roadmap" class="zh">开发路线图</a><a href="#roadmap" class="en">Roadmap</a></li>
+                        <li><a href="#screenshots" class="zh">应用界面</a><a href="#screenshots" class="en">Screenshots</a></li>
+                        <li><a href="#guide" class="zh">开始使用</a><a href="#guide" class="en">Get Started</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
-                    <h3>资源</h3>
+                    <h3 class="zh">资源</h3>
+                    <h3 class="en">Resources</h3>
                     <ul>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho">GitHub 仓库</a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues">问题反馈</a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">许可协议</a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">下载应用</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="zh">GitHub仓库</a><a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="en">GitHub Repository</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" class="zh">问题反馈</a><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" class="en">Issue Tracker</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="zh">最新版本</a><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="en">Latest Release</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2023-2025 心迹 (ThoughtEcho) - 一款开源的思想记录与分析工具</p>
+                <p class="zh">© 2025 心迹 - 由Shangjin-Xiao开发 | 基于<a href="https://flutter.dev" target="_blank">Flutter</a></p>
+                <p class="en">© 2025 ThoughtEcho - Developed by Shangjin-Xiao | Powered by <a href="https://flutter.dev" target="_blank">Flutter</a></p>
             </div>
         </div>
     </footer>
-    <script>
-        // 移动端菜单切换功能
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-            const navLinks = document.getElementById('navLinks');
-            
-            if (mobileMenuBtn && navLinks) {
-                mobileMenuBtn.addEventListener('click', function() {
-                    navLinks.classList.toggle('active');
-                });
-                
-                // 点击导航链接后自动关闭菜单
-                const links = navLinks.querySelectorAll('a');
-                links.forEach(link => {
-                    link.addEventListener('click', function() {
-                        if (window.innerWidth <= 768) {
-                            navLinks.classList.remove('active');
-                        }
-                    });
-                });
-            }
-            
-            // 滚动时导航栏样式变化
-            const nav = document.querySelector('nav');
-            window.addEventListener('scroll', function() {
-                if (window.scrollY > 50) {
-                    nav.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
-                } else {
-                    nav.style.boxShadow = 'var(--card-shadow)';
-                }
-            });
-            
-            // 标签页切换
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-            
-            tabButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const tabId = this.getAttribute('data-tab');
-                    
-                    // 移除所有标签的active类
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
-                    
-                    // 添加active类到当前标签
-                    this.classList.add('active');
-                    document.getElementById(tabId).classList.add('active');
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+    
+    <!-- 图片模态框 -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <img class="modal-image" id="modalImage" src="">
+            <div class="modal-caption" id="modalCaption"></div>
+        </div>
+    </div>
+    
+    <!-- 功能模态框 -->
+    <div class="modal" id="featureModal">
+        <div class="modal-content feature-popup">
+            <button class="modal-close" id="featureModalClose">&times;</button>
+            <h4 id="featureTitle"></h4>
+            <div id="featureContent"></div>
+        </div>
+    </div>
+    
+    <!-- 浮动控制按钮 -->
+    <div class="floating-controls">
+        <button class="control-button" id="darkM
