@@ -267,6 +267,126 @@
             margin-top: auto;
         }
 
+        /* 路线图样式 */
+        .roadmap-container {
+            display: flex;
+            flex-direction: column;
+            margin: 2rem 0;
+        }
+        
+        .roadmap-section {
+            margin-bottom: 2rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .feature-icon {
+            display: inline-block;
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .roadmap-timeline {
+            position: relative;
+            margin-left: 1.5rem;
+        }
+        
+        .roadmap-timeline:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background: var(--primary-color);
+            opacity: 0.5;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 2.5rem;
+        }
+        
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -0.5rem;
+            top: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+            background: var(--primary-color);
+            border-radius: 50%;
+        }
+        
+        .timeline-date {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .timeline-content {
+            background: var(--surface-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .timeline-content h4 {
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+        
+        .timeline-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .timeline-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .status {
+            display: inline-block;
+            font-size: 0.8rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 1rem;
+            margin-right: 0.5rem;
+        }
+        
+        .status.in-progress {
+            background-color: #BBDEFB;
+            color: #0D47A1;
+        }
+        
+        .status.planned {
+            background-color: #E0E0E0;
+            color: #616161;
+        }
+        
+        .roadmap-footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .update-time {
+            font-size: 0.9rem;
+            color: var(--text-tertiary);
+        }
+
         footer {
             background-color: var(--secondary-color);
             color: white;
@@ -382,6 +502,14 @@
             .screenshot-title {
                 font-size: 1rem;
             }
+            
+            .timeline-item {
+                padding-left: 1.5rem;
+            }
+            
+            .timeline-content {
+                padding: 0.75rem 1rem;
+            }
         }
     </style>
 </head>
@@ -394,6 +522,7 @@
         <div class="nav-links" id="navLinks">
             <a href="#overview">概述</a>
             <a href="#features">功能</a>
+            <a href="#roadmap">路线图</a>
             <a href="#screenshots">界面</a>
             <a href="#guide">使用指南</a>
             <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub</a>
@@ -415,7 +544,7 @@
     <div class="container">
         <section class="section" id="overview">
             <h2>项目概述</h2>
-            <p><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉和记录日常思绪，并利用先进的AI技术，深入分析你的笔记内容，挖掘潜在的模式、情感和洞察，从而促进自我认知、提升思考深度，实现个人成长。</p>
+            <p><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉和记录日常思绪，并利用先进的AI技术提供深度洞察。</p>
             <p>基于Flutter框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。</p>
         </section>
 
@@ -425,7 +554,7 @@
                 <div class="feature">
                     <div class="feature-icon">✍️</div>
                     <div class="feature-title">心迹记录</div>
-                    <p>简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。支持富文本编辑，可添加标签和分类，轻松整理思绪。</p>
+                    <p>简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。支持富文本编辑，可添加标签和分类，轻松整理你的思考。</p>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">🧠</div>
@@ -467,6 +596,88 @@
                     <div class="feature-title">深色模式</div>
                     <p>提供舒适的深色模式，呵护你的双眼，适应不同光线环境，夜间使用更护眼。</p>
                 </div>
+            </div>
+        </section>
+
+        <section class="section" id="roadmap">
+            <h2>开发路线图</h2>
+            <p>心迹正在不断发展和完善中。以下是我们当前的开发计划和未来功能展望：</p>
+            
+            <div class="roadmap-container">
+                <div class="roadmap-section">
+                    <h3>✅ 已实现功能</h3>
+                    <ul class="feature-list">
+                        <li><span class="feature-icon">✍️</span> <strong>心迹记录</strong>：简洁优雅的界面，快速记录想法与感悟</li>
+                        <li><span class="feature-icon">🗂️</span> <strong>分类管理</strong>：自定义笔记分类，支持分类图标</li>
+                        <li><span class="feature-icon">🏷️</span> <strong>标签系统</strong>：多标签归类，构建知识网络</li>
+                        <li><span class="feature-icon">🔍</span> <strong>关键词搜索</strong>：多维度检索笔记内容</li>
+                        <li><span class="feature-icon">📍</span> <strong>位置记录</strong>：自动记录笔记创建位置</li>
+                        <li><span class="feature-icon">☁️</span> <strong>天气记录</strong>：自动记录创建时的天气状况</li>
+                        <li><span class="feature-icon">🌙</span> <strong>深色模式</strong>：护眼设计，适应不同光线环境</li>
+                    </ul>
+                </div>
+                
+                <div class="roadmap-timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-date">当前</div>
+                        <div class="timeline-content">
+                            <h4>基础架构与性能优化</h4>
+                            <ul>
+                                <li><span class="status in-progress">进行中</span> <strong>数据库服务优化</strong>：提升数据存取速度，优化本地存储架构</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月</div>
+                        <div class="timeline-content">
+                            <h4>用户体验提升</h4>
+                            <ul>
+                                <li><strong>剪贴板检测</strong>：自动检测复制内容并填充作者信息</li>
+                                <li><strong>推送服务</strong>：推送每日一言，定期提醒</li>
+                                <li><strong>启动引导页</strong>：应用介绍、权限申请及使用引导</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年7月</div>
+                        <div class="timeline-content">
+                            <h4>内容创作增强</h4>
+                            <ul>
+                                <li><strong>长文编辑功能</strong>：支持Markdown格式的长文编辑</li>
+                                <li><strong>多媒体支持</strong>：允许在笔记中添加图片等媒体文件</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年下半年</div>
+                        <div class="timeline-content">
+                            <h4>性能与个性化</h4>
+                            <ul>
+                                <li><strong>自定义界面</strong>：字体、显示间距等个性化设置</li>
+                                <li><strong>引入更多原生库</strong>：重构核心模块，增强应用性能和稳定性</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年末</div>
+                        <div class="timeline-content">
+                            <h4>AI 与智能服务</h4>
+                            <ul>
+                                <li><strong>AI服务优化</strong>：改进提示词设计，提升智能洞察质量</li>
+                                <li><span class="status planned">规划中</span> <strong>轻量级机器学习分析</strong>：基于TensorFlow实现本地笔记内容分析</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="roadmap-footer">
+                <p>💡 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！</p>
+                <p class="update-time">最近更新：2025年4月17日</p>
             </div>
         </section>
 
@@ -536,6 +747,7 @@ cd ThoughtEcho</code></pre>
                     <ul>
                         <li><a href="#overview">项目概述</a></li>
                         <li><a href="#features">核心功能</a></li>
+                        <li><a href="#roadmap">开发路线图</a></li>
                         <li><a href="#screenshots">应用界面</a></li>
                         <li><a href="#guide">开始使用</a></li>
                     </ul>
@@ -551,7 +763,7 @@ cd ThoughtEcho</code></pre>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2023-2024 心迹 (ThoughtEcho) - 一款开源的思想记录与分析工具</p>
+                <p>© 2023-2025 心迹 (ThoughtEcho) - 一款开源的思想记录与分析工具</p>
             </div>
         </div>
     </footer>
