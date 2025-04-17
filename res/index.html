@@ -1456,4 +1456,504 @@ cd ThoughtEcho</code></pre>
     
     <!-- 浮动控制按钮 -->
     <div class="floating-controls">
-        <button class="control-button" id="darkM
+        <button class="control-button" id="darkModeToggle" title="切换深色模式/Toggle Dark Mode">🌓</button>
+        <button class="control-button" id="scrollToTop" title="返回顶部/Back to Top">↑</button>
+    </div>
+    
+    <!-- 快速导航 -->
+    <div class="quick-nav">
+        <div class="quick-nav-icon">📋</div>
+        <div class="quick-nav-content">
+            <a href="#overview" class="quick-nav-item zh">概述</a>
+            <a href="#overview" class="quick-nav-item en">Overview</a>
+            <a href="#features" class="quick-nav-item zh">功能</a>
+            <a href="#features" class="quick-nav-item en">Features</a>
+            <a href="#roadmap" class="quick-nav-item zh">路线图</a>
+            <a href="#roadmap" class="quick-nav-item en">Roadmap</a>
+            <a href="#screenshots" class="quick-nav-item zh">界面</a>
+            <a href="#screenshots" class="quick-nav-item en">Screenshots</a>
+            <a href="#guide" class="quick-nav-item zh">使用指南</a>
+            <a href="#guide" class="quick-nav-item en">Guide</a>
+        </div>
+    </div>
+
+    <script>
+        // 功能特性描述数据
+        const featureData = {
+            "note-taking": {
+                titleZh: "心迹记录",
+                titleEn: "Thought Recording",
+                contentZh: `
+                    <p>心迹的核心功能，提供简洁优雅的界面，让您专注于记录思想和感受。</p>
+                    <p>特点：</p>
+                    <ul>
+                        <li>简约的编辑界面，减少干扰</li>
+                        <li>支持富文本格式化</li>
+                        <li>快速添加标签和分类</li>
+                        <li>自动保存功能</li>
+                        <li>定时提醒记录功能</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>The core function of ThoughtEcho, providing a clean and elegant interface for focusing on recording thoughts and feelings.</p>
+                    <p>Features:</p>
+                    <ul>
+                        <li>Minimal editing interface with reduced distractions</li>
+                        <li>Rich text formatting support</li>
+                        <li>Quick tag and category addition</li>
+                        <li>Auto-save functionality</li>
+                        <li>Scheduled recording reminders</li>
+                    </ul>
+                `
+            },
+            "ai-insights": {
+                titleZh: "AI智能洞察",
+                titleEn: "AI Smart Insights",
+                contentZh: `
+                    <p>利用先进的AI技术，分析您的笔记内容，提供深度洞察。</p>
+                    <p>功能包括：</p>
+                    <ul>
+                        <li>情感分析：检测笔记中的情绪状态</li>
+                        <li>主题提取：识别反复出现的主题和想法</li>
+                        <li>思维模式分析：发现独特的思考方式</li>
+                        <li>发展趋势：追踪情绪和思维的长期变化</li>
+                        <li>个性化建议：基于分析结果提供建议</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Using advanced AI technology to analyze your notes and provide deeper insights.</p>
+                    <p>Functions include:</p>
+                    <ul>
+                        <li>Emotion analysis: Detect emotional states in your notes</li>
+                        <li>Topic extraction: Identify recurring themes and ideas</li>
+                        <li>Thinking pattern analysis: Discover unique thought patterns</li>
+                        <li>Development trends: Track long-term changes in emotions and thinking</li>
+                        <li>Personalized suggestions: Provide recommendations based on analysis</li>
+                    </ul>
+                `
+            },
+            "daily-prompts": {
+                titleZh: "每日思考提示",
+                titleEn: "Daily Thought Prompts",
+                contentZh: `
+                    <p>每天为您提供一个富有启发性的思考提示，激发思考和创造力。</p>
+                    <p>特色：</p>
+                    <ul>
+                        <li>每日更新的提示内容</li>
+                        <li>涵盖哲学、心理学、创意思维等领域</li>
+                        <li>可根据您的兴趣定制提示类型</li>
+                        <li>可设置提醒时间</li>
+                        <li>历史提示库，方便回顾</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Provides an inspirational thinking prompt every day to stimulate thinking and creativity.</p>
+                    <p>Features:</p>
+                    <ul>
+                        <li>Daily updated prompt content</li>
+                        <li>Covering philosophy, psychology, creative thinking and more</li>
+                        <li>Customizable prompt types based on your interests</li>
+                        <li>Configurable reminder time</li>
+                        <li>Historical prompt library for review</li>
+                    </ul>
+                `
+            },
+            "categories": {
+                titleZh: "分类管理",
+                titleEn: "Category Management",
+                contentZh: `
+                    <p>灵活的笔记分类系统，帮助您整理思绪和管理知识。</p>
+                    <p>功能亮点：</p>
+                    <ul>
+                        <li>自定义分类和子分类</li>
+                        <li>可视化分类图标</li>
+                        <li>分类颜色编码</li>
+                        <li>拖拽式分类调整</li>
+                        <li>分类统计和分析</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Flexible note categorization system to help organize thoughts and manage knowledge.</p>
+                    <p>Key features:</p>
+                    <ul>
+                        <li>Custom categories and subcategories</li>
+                        <li>Visual category icons</li>
+                        <li>Category color coding</li>
+                        <li>Drag-and-drop category adjustment</li>
+                        <li>Category statistics and analysis</li>
+                    </ul>
+                `
+            },
+            "tags": {
+                titleZh: "标签系统",
+                titleEn: "Tag System",
+                contentZh: `
+                    <p>多维度标签系统，实现笔记的精细化管理和快速检索。</p>
+                    <p>系统特点：</p>
+                    <ul>
+                        <li>无限制标签创建</li>
+                        <li>智能标签推荐</li>
+                        <li>标签云可视化</li>
+                        <li>标签关系图谱</li>
+                        <li>基于标签的笔记聚合</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Multi-dimensional tag system for fine-grained note management and quick retrieval.</p>
+                    <p>System features:</p>
+                    <ul>
+                        <li>Unlimited tag creation</li>
+                        <li>Smart tag recommendations</li>
+                        <li>Tag cloud visualization</li>
+                        <li>Tag relationship mapping</li>
+                        <li>Note aggregation based on tags</li>
+                    </ul>
+                `
+            },
+            "search": {
+                titleZh: "关键词搜索",
+                titleEn: "Keyword Search",
+                contentZh: `
+                    <p>强大的搜索功能，快速找到您需要的任何笔记内容。</p>
+                    <p>搜索能力：</p>
+                    <ul>
+                        <li>全文检索</li>
+                        <li>标题、标签、分类筛选</li>
+                        <li>日期范围搜索</li>
+                        <li>位置和天气条件过滤</li>
+                        <li>搜索历史记录</li>
+                        <li>搜索结果排序选项</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Powerful search functionality to quickly find any note content you need.</p>
+                    <p>Search capabilities:</p>
+                    <ul>
+                        <li>Full-text search</li>
+                        <li>Title, tag, category filtering</li>
+                        <li>Date range search</li>
+                        <li>Location and weather condition filters</li>
+                        <li>Search history</li>
+                        <li>Search result sorting options</li>
+                    </ul>
+                `
+            },
+            "location": {
+                titleZh: "位置记录",
+                titleEn: "Location Tracking",
+                contentZh: `
+                    <p>记录您创建笔记时的位置信息，为思想增添空间维度。</p>
+                    <p>功能详情：</p>
+                    <ul>
+                        <li>自动或手动位置标记</li>
+                        <li>地图可视化</li>
+                        <li>位置历史统计</li>
+                        <li>位置标签自动生成</li>
+                        <li>基于位置的笔记聚合</li>
+                        <li>位置隐私保护设置</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Record location information when creating notes, adding a spatial dimension to your thoughts.</p>
+                    <p>Feature details:</p>
+                    <ul>
+                        <li>Automatic or manual location marking</li>
+                        <li>Map visualization</li>
+                        <li>Location history statistics</li>
+                        <li>Automatic location tag generation</li>
+                        <li>Location-based note aggregation</li>
+                        <li>Location privacy protection settings</li>
+                    </ul>
+                `
+            },
+            "weather": {
+                titleZh: "天气记录",
+                titleEn: "Weather Recording",
+                contentZh: `
+                    <p>自动记录创建笔记时的天气状况，丰富您的记忆背景。</p>
+                    <p>系统功能：</p>
+                    <ul>
+                        <li>实时天气数据获取</li>
+                        <li>温度、湿度、气压等详细信息</li>
+                        <li>天气图标可视化</li>
+                        <li>天气与情绪关联分析</li>
+                        <li>基于天气条件的笔记过滤</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Automatically record weather conditions when creating notes, enriching your memory context.</p>
+                    <p>System functions:</p>
+                    <ul>
+                        <li>Real-time weather data acquisition</li>
+                        <li>Detailed information including temperature, humidity, air pressure</li>
+                        <li>Weather icon visualization</li>
+                        <li>Weather and mood correlation analysis</li>
+                        <li>Note filtering based on weather conditions</li>
+                    </ul>
+                `
+            },
+            "dark-mode": {
+                titleZh: "深色模式",
+                titleEn: "Dark Mode",
+                contentZh: `
+                    <p>舒适的深色显示模式，保护视力，适应不同环境。</p>
+                    <p>模式特点：</p>
+                    <ul>
+                        <li>自动跟随系统设置</li>
+                        <li>手动切换选项</li>
+                        <li>定时自动切换</li>
+                        <li>优化的深色色彩方案</li>
+                        <li>减少蓝光辐射</li>
+                    </ul>
+                `,
+                contentEn: `
+                    <p>Comfortable dark display mode to protect vision and adapt to different environments.</p>
+                    <p>Mode features:</p>
+                    <ul>
+                        <li>Automatic system setting following</li>
+                        <li>Manual switching option</li>
+                        <li>Scheduled automatic switching</li>
+                        <li>Optimized dark color scheme</li>
+                        <li>Reduced blue light radiation</li>
+                    </ul>
+                `
+            }
+        };
+        
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const body = document.documentElement;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const themeSwitch = document.getElementById('themeSwitch');
+            const langSwitch = document.getElementById('langSwitch');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const scrollToTop = document.getElementById('scrollToTop');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const navLinks = document.getElementById('navLinks');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const screenshots = document.querySelectorAll('.screenshot');
+            const features = document.querySelectorAll('.feature');
+            
+            // 图片模态框元素
+            const imageModal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            const modalClose = document.getElementById('modalClose');
+            
+            // 功能模态框元素
+            const featureModal = document.getElementById('featureModal');
+            const featureTitle = document.getElementById('featureTitle');
+            const featureContent = document.getElementById('featureContent');
+            const featureModalClose = document.getElementById('featureModalClose');
+            
+            // 系统语言检测
+            function detectSystemLanguage() {
+                const browserLang = navigator.language || navigator.userLanguage;
+                return browserLang.startsWith('zh') ? 'zh' : 'en';
+            }
+            
+            // 系统主题偏好检测
+            function detectSystemThemePreference() {
+                return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            
+            // 初始化设置
+            function initializeSettings() {
+                // 检测语言设置
+                const savedLang = localStorage.getItem('preferredLanguage') || detectSystemLanguage();
+                setLanguage(savedLang);
+                
+                // 检测主题设置
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme) {
+                    setTheme(savedTheme);
+                } else {
+                    // 如果没有保存的主题，则根据系统设置
+                    const systemTheme = detectSystemThemePreference();
+                    setTheme(systemTheme === 'dark' ? 'dark' : 'light');
+                }
+                
+                // 检测黑白模式设置
+                const monochromeMode = localStorage.getItem('monochromeMode') === 'true';
+                if (monochromeMode) {
+                    toggleMonochromeMode();
+                }
+            }
+            
+            // 设置语言
+            function setLanguage(lang) {
+                document.body.setAttribute('lang', lang);
+                localStorage.setItem('preferredLanguage', lang);
+            }
+            
+            // 切换语言
+            function toggleLanguage() {
+                const currentLang = document.body.getAttribute('lang') || 'zh';
+                const newLang = currentLang === 'zh' ? 'en' : 'zh';
+                setLanguage(newLang);
+            }
+            
+            // 设置主题
+            function setTheme(theme) {
+                const currentMonochrome = body.getAttribute('data-theme') === 'monochrome' || body.getAttribute('data-theme') === 'dark-monochrome';
+                
+                if (theme === 'dark') {
+                    body.setAttribute('data-theme', currentMonochrome ? 'dark-monochrome' : 'dark');
+                } else {
+                    body.setAttribute('data-theme', currentMonochrome ? 'monochrome' : 'light');
+                }
+                
+                localStorage.setItem('theme', theme);
+            }
+            
+            // 切换深色模式
+            function toggleDarkMode() {
+                const currentTheme = localStorage.getItem('theme') || 'light';
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                setTheme(newTheme);
+            }
+            
+            // 切换黑白模式
+            function toggleMonochromeMode() {
+                const currentTheme = body.getAttribute('data-theme');
+                
+                if (currentTheme === 'light' || !currentTheme) {
+                    body.setAttribute('data-theme', 'monochrome');
+                } else if (currentTheme === 'dark') {
+                    body.setAttribute('data-theme', 'dark-monochrome');
+                } else if (currentTheme === 'monochrome') {
+                    body.setAttribute('data-theme', 'light');
+                } else if (currentTheme === 'dark-monochrome') {
+                    body.setAttribute('data-theme', 'dark');
+                }
+                
+                localStorage.setItem('monochromeMode', 
+                    (currentTheme === 'monochrome' || currentTheme === 'dark-monochrome') ? 'false' : 'true');
+            }
+            
+            // 滚动到顶部
+            function scrollToTopFunction() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+            
+            // 切换移动菜单
+            function toggleMobileMenu() {
+                navLinks.classList.toggle('active');
+            }
+            
+            // 切换标签页
+            function switchTab(event) {
+                const tabId = event.target.getAttribute('data-tab');
+                
+                tabButtons.forEach(button => {
+                    button.classList.remove('active');
+                });
+                
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                event.target.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            }
+            
+            // 打开图片模态框
+            function openImageModal(event) {
+                const imgSrc = this.getAttribute('data-img');
+                const imgTitleZh = this.getAttribute('data-title-zh');
+                const imgTitleEn = this.getAttribute('data-title-en');
+                const currentLang = document.body.getAttribute('lang') || 'zh';
+                
+                modalImage.src = imgSrc;
+                modalCaption.textContent = currentLang === 'zh' ? imgTitleZh : imgTitleEn;
+                imageModal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+            
+            // 关闭图片模态框
+            function closeImageModal() {
+                imageModal.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+            
+            // 打开功能模态框
+            function openFeatureModal(event) {
+                const featureId = this.getAttribute('data-feature');
+                const currentLang = document.body.getAttribute('lang') || 'zh';
+                const feature = featureData[featureId];
+                
+                if (feature) {
+                    featureTitle.textContent = currentLang === 'zh' ? feature.titleZh : feature.titleEn;
+                    featureContent.innerHTML = currentLang === 'zh' ? feature.contentZh : feature.contentEn;
+                    featureModal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+            
+            // 关闭功能模态框
+            function closeFeatureModal() {
+                featureModal.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+            
+            // 页面加载完成后隐藏加载动画
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    loadingOverlay.classList.add('fade-out');
+                }, 500);
+            });
+            
+            // 注册事件监听
+            themeSwitch.addEventListener('click', toggleMonochromeMode);
+            langSwitch.addEventListener('click', toggleLanguage);
+            darkModeToggle.addEventListener('click', toggleDarkMode);
+            scrollToTop.addEventListener('click', scrollToTopFunction);
+            mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', switchTab);
+            });
+            
+            screenshots.forEach(screenshot => {
+                screenshot.addEventListener('click', openImageModal);
+            });
+            
+            features.forEach(feature => {
+                feature.addEventListener('click', openFeatureModal);
+            });
+            
+            modalClose.addEventListener('click', closeImageModal);
+            featureModalClose.addEventListener('click', closeFeatureModal);
+            
+            // 点击模态框背景关闭模态框
+            imageModal.addEventListener('click', function(event) {
+                if (event.target === imageModal) {
+                    closeImageModal();
+                }
+            });
+            
+            featureModal.addEventListener('click', function(event) {
+                if (event.target === featureModal) {
+                    closeFeatureModal();
+                }
+            });
+            
+            // 监听系统主题变化
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                // 如果没有用户明确设置的主题，则跟随系统
+                if (!localStorage.getItem('theme')) {
+                    setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+            
+            // 初始化设置
+            initializeSettings();
+        });
+    </script>
+</body>
+</html>
