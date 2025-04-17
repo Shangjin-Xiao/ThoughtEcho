@@ -5,19 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>心迹 - 追踪你的思想轨迹，释放AI洞察的力量</title>
     <link rel="icon" type="image/png" href="icon.png"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #1976D2;
             --primary-light: #BBDEFB;
             --primary-dark: #0D47A1;
+            --accent-color: #FF4081;
             --secondary-color: #49454F;
-            --background-color: #FFFBFE;
+            --background-color: #F5F7FA;
             --surface-color: #FFFFFF;
             --error-color: #B3261E;
             --text-primary: #1C1B1F;
             --text-secondary: #49454F;
             --text-tertiary: #79747E;
             --border-color: #E7E0EC;
+            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -25,14 +31,16 @@
                 --primary-color: #90CAF9;
                 --primary-light: #E3F2FD;
                 --primary-dark: #42A5F5;
+                --accent-color: #FF80AB;
                 --secondary-color: #CCC2DC;
-                --background-color: #1C1B1F;
-                --surface-color: #2D2C31;
+                --background-color: #121212;
+                --surface-color: #1E1E1E;
                 --error-color: #F2B8B5;
                 --text-primary: #E6E1E5;
                 --text-secondary: #CAC4D0;
                 --text-tertiary: #938F99;
                 --border-color: #49454F;
+                --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             }
         }
 
@@ -43,26 +51,28 @@
         }
 
         body {
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-family: 'Noto Sans SC', 'Segoe UI', sans-serif;
             line-height: 1.6;
             color: var(--text-primary);
             background-color: var(--background-color);
-            padding-top: 40px; /* 为固定导航栏留出空间 */
+            padding-top: 60px; /* 为固定导航栏留出空间 */
+            font-weight: 300;
         }
 
         nav {
-            background-color: var(--primary-color);
-            color: white;
+            background-color: var(--surface-color);
+            color: var(--text-primary);
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--card-shadow);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 2rem;
+            padding: 0.6rem 8%;
+            border-bottom: 1px solid var(--border-color);
         }
         
         .nav-logo {
@@ -71,15 +81,16 @@
         }
         
         .nav-logo img {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             margin-right: 0.5rem;
         }
         
         .nav-logo h2 {
             margin: 0;
-            font-size: 1.5rem;
-            color: white;
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            font-weight: 500;
         }
         
         .nav-links {
@@ -88,179 +99,255 @@
         }
         
         .nav-links a {
-            color: white;
+            color: var(--text-secondary);
             text-decoration: none;
-            font-weight: 500;
-            transition: opacity 0.3s;
+            font-weight: 400;
+            transition: var(--transition);
+            font-size: 0.95rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
         }
         
         .nav-links a:hover {
-            opacity: 0.8;
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            opacity: 0.9;
         }
         
         .mobile-menu-btn {
             display: none;
             background: none;
             border: none;
-            color: white;
+            color: var(--text-primary);
             font-size: 1.5rem;
             cursor: pointer;
         }
+
+        .sparkle {
+            display: inline-block;
+            animation: sparkle 2s infinite;
+            margin-right: 3px;
+            color: var(--accent-color);
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 0.4; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.4; transform: scale(0.8); }
+        }
         
         header {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: white;
             text-align: center;
-            padding: 1.5rem 1rem;
+            padding: 3rem 1rem;
             margin-top: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '✨';
+            position: absolute;
+            top: 20px;
+            left: 10%;
+            font-size: 1.5rem;
+            opacity: 0.7;
+            animation: float 5s ease-in-out infinite;
+        }
+
+        header::after {
+            content: '✨';
+            position: absolute;
+            bottom: 30px;
+            right: 15%;
+            font-size: 2rem;
+            opacity: 0.5;
+            animation: float 7s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(10deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 5%;
         }
 
         .logo-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
         }
 
         .logo {
             width: 80px;
             height: 80px;
             margin-right: 1rem;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             margin-bottom: 1rem;
+            font-weight: 700;
         }
 
         h2 {
-            font-size: 2rem;
-            margin: 2rem 0 1rem;
+            font-size: 1.8rem;
+            margin: 2.5rem 0 1.2rem;
             color: var(--primary-color);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        h2::before {
+            content: '✨';
+            margin-right: 0.8rem;
+            font-size: 1.5rem;
         }
 
         h3 {
-            font-size: 1.5rem;
-            margin: 1.5rem 0 1rem;
+            font-size: 1.4rem;
+            margin: 1.8rem 0 1rem;
             color: var(--primary-color);
+            font-weight: 400;
         }
 
         p {
             margin-bottom: 1rem;
             color: var(--text-secondary);
+            line-height: 1.8;
         }
 
         .tagline {
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            margin-bottom: 1.8rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .cta-button {
             display: inline-block;
             background-color: var(--primary-color);
             color: white;
-            padding: 12px 24px;
-            border-radius: 4px;
+            padding: 14px 28px;
+            border-radius: 50px;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 500;
             margin-top: 1rem;
-            transition: background-color 0.3s;
+            transition: var(--transition);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
         }
 
         .cta-button:hover {
             background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
         }
 
         .section {
-            padding: 2rem 0;
+            padding: 3.5rem 0;
             border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title-container {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .section-subtitle {
+            color: var(--text-tertiary);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 1rem;
         }
 
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
-            margin: 2rem 0;
+            margin: 3rem 0;
         }
 
         .feature {
             background-color: var(--surface-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
+            border-radius: 12px;
+            padding: 1.8rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            height: 100%;
         }
 
         .feature:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
         }
 
         .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-size: 2rem;
+            margin-bottom: 1.2rem;
             color: var(--primary-color);
+            display: inline-block;
+            padding: 10px;
+            background-color: var(--primary-light);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            line-height: 40px;
         }
 
         .feature-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-bottom: 0.8rem;
         }
 
         .screenshots {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin: 2rem 0;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+            margin: 3rem 0;
         }
 
         .screenshot {
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--card-shadow);
             background-color: var(--surface-color);
             padding: 1.5rem;
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: var(--transition);
             height: 100%;
             display: flex;
             flex-direction: column;
         }
         
         .screenshot:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .screenshot-placeholder {
-            background-color: var(--primary-light);
-            height: 400px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--primary-dark);
-            font-weight: bold;
+            transform: translateY(-8px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
         }
 
         .screenshot img {
             width: 100%;
             height: auto;
-            max-height: 450px;
+            max-height: 420px;
             object-fit: contain;
             border-radius: 8px;
             margin-bottom: 1rem;
         }
 
         .screenshot-title {
-            margin-top: 0.5rem;
-            font-weight: bold;
+            margin-top: 1rem;
+            font-weight: 500;
             text-align: center;
             color: var(--primary-color);
             font-size: 1.1rem;
@@ -271,33 +358,60 @@
         .roadmap-container {
             display: flex;
             flex-direction: column;
-            margin: 2rem 0;
+            margin: 2.5rem 0;
+            position: relative;
         }
-        
+
         .roadmap-section {
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .roadmap-section h3 {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .roadmap-section h3::before {
+            content: '✨';
+            margin-right: 0.8rem;
+            font-size: 1.2rem;
         }
         
         .feature-list {
             list-style: none;
             padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
         }
         
         .feature-list li {
             display: flex;
             align-items: flex-start;
             margin-bottom: 0.75rem;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .feature-list li:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
         }
         
         .feature-icon {
             display: inline-block;
-            margin-right: 0.5rem;
-            font-size: 1.2rem;
+            margin-right: 0.8rem;
+            font-size: 1.5rem;
         }
         
         .roadmap-timeline {
             position: relative;
-            margin-left: 1.5rem;
+            margin-left: 1rem;
+            padding-left: 1.5rem;
         }
         
         .roadmap-timeline:before {
@@ -306,46 +420,67 @@
             left: 0;
             top: 0;
             height: 100%;
-            width: 2px;
-            background: var(--primary-color);
-            opacity: 0.5;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
+            border-radius: 3px;
         }
         
         .timeline-item {
             position: relative;
             padding-left: 2rem;
-            margin-bottom: 2.5rem;
+            margin-bottom: 3.5rem;
         }
         
         .timeline-item:before {
-            content: '';
+            content: '✨';
             position: absolute;
-            left: -0.5rem;
+            left: -1.3rem;
             top: 0.5rem;
-            width: 1rem;
-            height: 1rem;
-            background: var(--primary-color);
-            border-radius: 50%;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            background-color: var(--background-color);
+            padding: 0.2rem;
         }
         
         .timeline-date {
-            font-weight: bold;
+            font-weight: 500;
             color: var(--primary-color);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.8rem;
             font-size: 1.1rem;
+            display: inline-block;
+            background-color: var(--primary-light);
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
         }
         
         .timeline-content {
             background: var(--surface-color);
-            border-radius: 8px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .timeline-content:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
         }
         
         .timeline-content h4 {
             margin-top: 0;
-            margin-bottom: 0.75rem;
+            margin-bottom: 1rem;
             color: var(--text-primary);
+            font-weight: 500;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .timeline-content h4::before {
+            content: '✨';
+            margin-right: 0.8rem;
+            font-size: 0.9em;
+            opacity: 0.8;
         }
         
         .timeline-content ul {
@@ -355,62 +490,123 @@
         }
         
         .timeline-content li {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.8rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-content li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+            font-weight: bold;
         }
         
         .status {
             display: inline-block;
             font-size: 0.8rem;
-            padding: 0.125rem 0.5rem;
-            border-radius: 1rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
             margin-right: 0.5rem;
         }
         
         .status.in-progress {
-            background-color: #BBDEFB;
+            background-color: #E3F2FD;
             color: #0D47A1;
         }
         
         .status.planned {
-            background-color: #E0E0E0;
+            background-color: #F5F5F5;
             color: #616161;
         }
         
         .roadmap-footer {
-            margin-top: 2rem;
+            margin-top: 3rem;
             text-align: center;
-            font-style: italic;
+            background-color: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
         }
         
         .update-time {
             font-size: 0.9rem;
             color: var(--text-tertiary);
+            margin-top: 0.5rem;
+        }
+
+        .guide-section {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: var(--card-shadow);
+        }
+
+        .guide-section ol {
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .guide-section ol li {
+            margin-bottom: 1rem;
+        }
+
+        .guide-section pre {
+            background-color: var(--background-color);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .guide-buttons {
+            text-align: center;
+            margin-top: 2.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
         }
 
         footer {
-            background-color: var(--secondary-color);
-            color: white;
-            padding: 3rem 0 1.5rem;
-            margin-top: 2rem;
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            padding: 4rem 0 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
         }
 
         .footer-content {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-            text-align: left;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
         }
 
         .footer-section h3 {
-            color: white;
-            margin-bottom: 1rem;
+            color: var(--primary-color);
+            margin-bottom: 1.2rem;
             font-size: 1.2rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .footer-section h3::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 3px;
+            background-color: var(--primary-light);
+            border-radius: 3px;
         }
 
         .footer-section p {
             color: var(--text-secondary);
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
 
         .footer-section ul {
@@ -419,24 +615,42 @@
         }
 
         .footer-section ul li {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.7rem;
+            transition: var(--transition);
+        }
+
+        .footer-section ul li:hover {
+            transform: translateX(5px);
         }
 
         .footer-section a {
-            color: white;
+            color: var(--text-secondary);
             text-decoration: none;
-            transition: opacity 0.3s;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .footer-section a::before {
+            content: '→';
+            margin-right: 0.5rem;
+            font-size: 0.9em;
+            color: var(--primary-color);
+            transition: var(--transition);
         }
 
         .footer-section a:hover {
-            opacity: 0.8;
-            text-decoration: underline;
+            color: var(--primary-color);
+        }
+
+        .footer-section a:hover::before {
+            transform: translateX(3px);
         }
 
         .footer-bottom {
             text-align: center;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
         }
 
         .footer-bottom p {
@@ -444,9 +658,10 @@
             font-size: 0.9rem;
         }
 
+        /* 移动端样式优化 */
         @media (max-width: 768px) {
             body {
-                padding-top: 50px;
+                padding-top: 55px;
             }
             
             nav {
@@ -456,13 +671,15 @@
             .nav-links {
                 display: none;
                 position: absolute;
-                top: 50px;
+                top: 55px;
                 left: 0;
                 width: 100%;
-                background-color: var(--primary-color);
+                background-color: var(--surface-color);
                 flex-direction: column;
                 padding: 1rem;
-                gap: 1rem;
+                box-shadow: var(--card-shadow);
+                text-align: center;
+                z-index: 2;
             }
             
             .nav-links.active {
@@ -483,11 +700,16 @@
 
             .features {
                 grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .feature-list {
+                grid-template-columns: 1fr;
             }
 
             .screenshots {
                 grid-template-columns: 1fr;
-                gap: 1.5rem;
+                gap: 2rem;
             }
             
             .screenshot {
@@ -495,21 +717,100 @@
             }
             
             .screenshot img {
-                height: auto;
                 max-height: 350px;
-            }
-            
-            .screenshot-title {
-                font-size: 1rem;
             }
             
             .timeline-item {
                 padding-left: 1.5rem;
+                margin-bottom: 2.5rem;
             }
             
             .timeline-content {
-                padding: 0.75rem 1rem;
+                padding: 1.2rem 1.5rem;
             }
+
+            .guide-section {
+                padding: 1.5rem;
+            }
+
+            .guide-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .guide-buttons .cta-button {
+                width: 100%;
+            }
+
+            footer {
+                padding: 2.5rem 0 1.5rem;
+            }
+
+            .footer-content {
+                gap: 2rem;
+            }
+        }
+        
+        /* 标签页切换样式 */
+        .tab-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .tab-button {
+            padding: 0.8rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            position: relative;
+            font-size: 1rem;
+        }
+        
+        .tab-button::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: transparent;
+            transition: var(--transition);
+        }
+        
+        .tab-button:hover {
+            color: var(--primary-color);
+        }
+        
+        .tab-button.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-button.active::after {
+            background-color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -536,20 +837,28 @@
                 <img src="../icon.png" alt="心迹图标" class="logo">
                 <h1>心迹</h1>
             </div>
-            <p class="tagline">追踪你的思想轨迹，释放AI洞察的力量</p>
+            <p class="tagline">
+                <span class="sparkle">✨</span>追踪你的思想轨迹，释放AI洞察的力量<span class="sparkle">✨</span>
+            </p>
             <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">立即下载</a>
         </div>
     </header>
 
     <div class="container">
         <section class="section" id="overview">
-            <h2>项目概述</h2>
+            <div class="section-title-container">
+                <h2>项目概述</h2>
+                <p class="section-subtitle"><span class="sparkle">✨</span>不只是记录，更是思想的智能伴侣<span class="sparkle">✨</span></p>
+            </div>
             <p><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉和记录日常思绪，并利用先进的AI技术提供深度洞察。</p>
             <p>基于Flutter框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。</p>
         </section>
 
         <section class="section" id="features">
-            <h2>核心功能</h2>
+            <div class="section-title-container">
+                <h2>核心功能</h2>
+                <p class="section-subtitle"><span class="sparkle">✨</span>精心设计的功能，为你的思考提供完美支持<span class="sparkle">✨</span></p>
+            </div>
             <div class="features">
                 <div class="feature">
                     <div class="feature-icon">✍️</div>
@@ -600,20 +909,22 @@
         </section>
 
         <section class="section" id="roadmap">
-            <h2>开发路线图</h2>
-            <p>心迹正在不断发展和完善中。以下是我们当前的开发计划和未来功能展望：</p>
+            <div class="section-title-container">
+                <h2>开发路线图</h2>
+                <p class="section-subtitle"><span class="sparkle">✨</span>心迹正在不断发展和完善中，以下是我们的开发计划<span class="sparkle">✨</span></p>
+            </div>
             
             <div class="roadmap-container">
                 <div class="roadmap-section">
-                    <h3>✅ 已实现功能</h3>
+                    <h3>已实现功能</h3>
                     <ul class="feature-list">
-                        <li><span class="feature-icon">✍️</span> <strong>心迹记录</strong>：简洁优雅的界面，快速记录想法与感悟</li>
-                        <li><span class="feature-icon">🗂️</span> <strong>分类管理</strong>：自定义笔记分类，支持分类图标</li>
-                        <li><span class="feature-icon">🏷️</span> <strong>标签系统</strong>：多标签归类，构建知识网络</li>
-                        <li><span class="feature-icon">🔍</span> <strong>关键词搜索</strong>：多维度检索笔记内容</li>
-                        <li><span class="feature-icon">📍</span> <strong>位置记录</strong>：自动记录笔记创建位置</li>
-                        <li><span class="feature-icon">☁️</span> <strong>天气记录</strong>：自动记录创建时的天气状况</li>
-                        <li><span class="feature-icon">🌙</span> <strong>深色模式</strong>：护眼设计，适应不同光线环境</li>
+                        <li><span class="feature-icon">✨</span> <strong>心迹记录</strong>：简洁优雅的界面，快速记录想法与感悟</li>
+                        <li><span class="feature-icon">✨</span> <strong>分类管理</strong>：自定义笔记分类，支持分类图标</li>
+                        <li><span class="feature-icon">✨</span> <strong>标签系统</strong>：多标签归类，构建知识网络</li>
+                        <li><span class="feature-icon">✨</span> <strong>关键词搜索</strong>：多维度检索笔记内容</li>
+                        <li><span class="feature-icon">✨</span> <strong>位置记录</strong>：自动记录笔记创建位置</li>
+                        <li><span class="feature-icon">✨</span> <strong>天气记录</strong>：自动记录创建时的天气状况</li>
+                        <li><span class="feature-icon">✨</span> <strong>深色模式</strong>：护眼设计，适应不同光线环境</li>
                     </ul>
                 </div>
                 
@@ -676,14 +987,16 @@
             </div>
             
             <div class="roadmap-footer">
-                <p>💡 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！</p>
+                <p><span class="sparkle">✨</span> 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！ <span class="sparkle">✨</span></p>
                 <p class="update-time">最近更新：2025年4月17日</p>
             </div>
         </section>
 
         <section class="section" id="screenshots">
-            <h2>应用界面</h2>
-            <p>心迹采用Material Design 3规范设计，界面美观现代，操作流畅自然，提供一致的用户体验。</p>
+            <div class="section-title-container">
+                <h2>应用界面</h2>
+                <p class="section-subtitle"><span class="sparkle">✨</span>心迹采用Material Design 3规范设计，界面美观现代<span class="sparkle">✨</span></p>
+            </div>
             <div class="screenshots">
                 <div class="screenshot">
                     <img src="homepage.jpg" alt="主页界面">
@@ -705,30 +1018,49 @@
         </section>
 
         <section class="section" id="guide">
-            <h2>开始使用</h2>
-            <h3>用户安装指南</h3>
-            <ol>
-                <li><strong>下载应用</strong>：从<a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">GitHub发布页面</a>下载最新版本</li>
-                <li><strong>首次启动设置</strong>：安装完成后打开应用，根据引导完成初始化设置</li>
-                <li><strong>开始使用</strong>：点击主页面右下角的「+」按钮创建新笔记，在设置页面自定义应用主题和功能偏好</li>
-            </ol>
+            <div class="section-title-container">
+                <h2>开始使用</h2>
+                <p class="section-subtitle"><span class="sparkle">✨</span>快速上手，开始您的思想记录之旅<span class="sparkle">✨</span></p>
+            </div>
 
-            <h3>开发者安装指南</h3>
-            <ol>
-                <li><strong>安装Flutter SDK</strong>：请确保你的开发环境已安装<a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a></li>
-                <li><strong>克隆项目</strong>：
-                    <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="user-guide">用户指南</button>
+                    <button class="tab-button" data-tab="dev-guide">开发者指南</button>
+                </div>
+                
+                <div class="tab-content active" id="user-guide">
+                    <div class="guide-section">
+                        <h3>用户安装指南</h3>
+                        <ol>
+                            <li><strong>下载应用</strong>：从<a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">GitHub发布页面</a>下载最新版本</li>
+                            <li><strong>首次启动设置</strong>：安装完成后打开应用，根据引导完成初始化设置</li>
+                            <li><strong>开始使用</strong>：点击主页面右下角的「+」按钮创建新笔记，在设置页面自定义应用主题和功能偏好</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="dev-guide">
+                    <div class="guide-section">
+                        <h3>开发者安装指南</h3>
+                        <ol>
+                            <li><strong>安装Flutter SDK</strong>：请确保你的开发环境已安装<a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a></li>
+                            <li><strong>克隆项目</strong>：
+                                <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
 cd ThoughtEcho</code></pre>
-                </li>
-                <li><strong>安装依赖</strong>：
-                    <pre><code>flutter pub get</code></pre>
-                </li>
-                <li><strong>运行应用</strong>：
-                    <pre><code>flutter run</code></pre>
-                </li>
-            </ol>
+                            </li>
+                            <li><strong>安装依赖</strong>：
+                                <pre><code>flutter pub get</code></pre>
+                            </li>
+                            <li><strong>运行应用</strong>：
+                                <pre><code>flutter run</code></pre>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
 
-            <div style="text-align: center; margin-top: 2rem;">
+            <div class="guide-buttons">
                 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="cta-button">查看源代码</a>
                 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">下载应用</a>
             </div>
@@ -795,8 +1127,32 @@ cd ThoughtEcho</code></pre>
                 if (window.scrollY > 50) {
                     nav.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
                 } else {
-                    nav.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+                    nav.style.boxShadow = 'var(--card-shadow)';
                 }
+            });
+            
+            // 标签页切换
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // 移除所有标签的active类
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // 添加active类到当前标签
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // 添加闪烁动画效果
+            const sparkles = document.querySelectorAll('.sparkle');
+            sparkles.forEach((sparkle, index) => {
+                sparkle.style.animationDelay = (index * 0.3) + 's';
             });
         });
     </script>
