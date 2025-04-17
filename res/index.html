@@ -122,19 +122,6 @@
             font-size: 1.5rem;
             cursor: pointer;
         }
-
-        .sparkle {
-            display: inline-block;
-            animation: sparkle 2s infinite;
-            margin-right: 3px;
-            color: var(--accent-color);
-        }
-
-        @keyframes sparkle {
-            0% { opacity: 0.4; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 0.4; transform: scale(0.8); }
-        }
         
         header {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
@@ -142,34 +129,6 @@
             text-align: center;
             padding: 3rem 1rem;
             margin-top: 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        header::before {
-            content: '✨';
-            position: absolute;
-            top: 20px;
-            left: 10%;
-            font-size: 1.5rem;
-            opacity: 0.7;
-            animation: float 5s ease-in-out infinite;
-        }
-
-        header::after {
-            content: '✨';
-            position: absolute;
-            bottom: 30px;
-            right: 15%;
-            font-size: 2rem;
-            opacity: 0.5;
-            animation: float 7s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(10deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
         }
 
         .container {
@@ -203,14 +162,6 @@
             margin: 2.5rem 0 1.2rem;
             color: var(--primary-color);
             font-weight: 500;
-            display: flex;
-            align-items: center;
-        }
-
-        h2::before {
-            content: '✨';
-            margin-right: 0.8rem;
-            font-size: 1.5rem;
         }
 
         h3 {
@@ -365,18 +316,6 @@
         .roadmap-section {
             margin-bottom: 3rem;
         }
-
-        .roadmap-section h3 {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .roadmap-section h3::before {
-            content: '✨';
-            margin-right: 0.8rem;
-            font-size: 1.2rem;
-        }
         
         .feature-list {
             list-style: none;
@@ -432,14 +371,14 @@
         }
         
         .timeline-item:before {
-            content: '✨';
+            content: '';
             position: absolute;
-            left: -1.3rem;
+            left: -0.6rem;
             top: 0.5rem;
-            color: var(--primary-color);
-            font-size: 1.2rem;
-            background-color: var(--background-color);
-            padding: 0.2rem;
+            width: 1.2rem;
+            height: 1.2rem;
+            background-color: var(--primary-color);
+            border-radius: 50%;
         }
         
         .timeline-date {
@@ -472,15 +411,6 @@
             color: var(--text-primary);
             font-weight: 500;
             font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .timeline-content h4::before {
-            content: '✨';
-            margin-right: 0.8rem;
-            font-size: 0.9em;
-            opacity: 0.8;
         }
         
         .timeline-content ul {
@@ -837,9 +767,7 @@
                 <img src="../icon.png" alt="心迹图标" class="logo">
                 <h1>心迹</h1>
             </div>
-            <p class="tagline">
-                <span class="sparkle">✨</span>追踪你的思想轨迹，释放AI洞察的力量<span class="sparkle">✨</span>
-            </p>
+            <p class="tagline">追踪你的思想轨迹，释放AI洞察的力量</p>
             <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="cta-button">立即下载</a>
         </div>
     </header>
@@ -848,7 +776,7 @@
         <section class="section" id="overview">
             <div class="section-title-container">
                 <h2>项目概述</h2>
-                <p class="section-subtitle"><span class="sparkle">✨</span>不只是记录，更是思想的智能伴侣<span class="sparkle">✨</span></p>
+                <p class="section-subtitle">不只是记录，更是思想的智能伴侣</p>
             </div>
             <p><strong>心迹</strong>不仅仅是一款简洁的日记应用，更是一个强大的<strong>个人思想追踪器</strong>和<strong>AI洞察助手</strong>。它帮助你捕捉和记录日常思绪，并利用先进的AI技术提供深度洞察。</p>
             <p>基于Flutter框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。</p>
@@ -857,7 +785,7 @@
         <section class="section" id="features">
             <div class="section-title-container">
                 <h2>核心功能</h2>
-                <p class="section-subtitle"><span class="sparkle">✨</span>精心设计的功能，为你的思考提供完美支持<span class="sparkle">✨</span></p>
+                <p class="section-subtitle">精心设计的功能，为你的思考提供完美支持</p>
             </div>
             <div class="features">
                 <div class="feature">
@@ -866,7 +794,7 @@
                     <p>简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。支持富文本编辑，可添加标签和分类，轻松整理你的思考。</p>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">🧠</div>
+                    <div class="feature-icon">✨</div>
                     <div class="feature-title">AI智能洞察</div>
                     <p>集成强大的AI服务，深度分析你的笔记内容，提供情感分析、核心思想提炼、行动建议和思维模式分析等多维度智能洞察。</p>
                 </div>
@@ -911,20 +839,20 @@
         <section class="section" id="roadmap">
             <div class="section-title-container">
                 <h2>开发路线图</h2>
-                <p class="section-subtitle"><span class="sparkle">✨</span>心迹正在不断发展和完善中，以下是我们的开发计划<span class="sparkle">✨</span></p>
+                <p class="section-subtitle">心迹正在不断发展和完善中，以下是我们的开发计划</p>
             </div>
             
             <div class="roadmap-container">
                 <div class="roadmap-section">
                     <h3>已实现功能</h3>
                     <ul class="feature-list">
-                        <li><span class="feature-icon">✨</span> <strong>心迹记录</strong>：简洁优雅的界面，快速记录想法与感悟</li>
-                        <li><span class="feature-icon">✨</span> <strong>分类管理</strong>：自定义笔记分类，支持分类图标</li>
-                        <li><span class="feature-icon">✨</span> <strong>标签系统</strong>：多标签归类，构建知识网络</li>
-                        <li><span class="feature-icon">✨</span> <strong>关键词搜索</strong>：多维度检索笔记内容</li>
-                        <li><span class="feature-icon">✨</span> <strong>位置记录</strong>：自动记录笔记创建位置</li>
-                        <li><span class="feature-icon">✨</span> <strong>天气记录</strong>：自动记录创建时的天气状况</li>
-                        <li><span class="feature-icon">✨</span> <strong>深色模式</strong>：护眼设计，适应不同光线环境</li>
+                        <li><span class="feature-icon">✍️</span> <strong>心迹记录</strong>：简洁优雅的界面，快速记录想法与感悟</li>
+                        <li><span class="feature-icon">🗂️</span> <strong>分类管理</strong>：自定义笔记分类，支持分类图标</li>
+                        <li><span class="feature-icon">🏷️</span> <strong>标签系统</strong>：多标签归类，构建知识网络</li>
+                        <li><span class="feature-icon">🔍</span> <strong>关键词搜索</strong>：多维度检索笔记内容</li>
+                        <li><span class="feature-icon">📍</span> <strong>位置记录</strong>：自动记录笔记创建位置</li>
+                        <li><span class="feature-icon">☁️</span> <strong>天气记录</strong>：自动记录创建时的天气状况</li>
+                        <li><span class="feature-icon">🌙</span> <strong>深色模式</strong>：护眼设计，适应不同光线环境</li>
                     </ul>
                 </div>
                 
@@ -987,7 +915,7 @@
             </div>
             
             <div class="roadmap-footer">
-                <p><span class="sparkle">✨</span> 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！ <span class="sparkle">✨</span></p>
+                <p>💡 我们的路线图会根据用户反馈和技术发展不断调整，欢迎提出您的建议和需求！</p>
                 <p class="update-time">最近更新：2025年4月17日</p>
             </div>
         </section>
@@ -995,7 +923,7 @@
         <section class="section" id="screenshots">
             <div class="section-title-container">
                 <h2>应用界面</h2>
-                <p class="section-subtitle"><span class="sparkle">✨</span>心迹采用Material Design 3规范设计，界面美观现代<span class="sparkle">✨</span></p>
+                <p class="section-subtitle">心迹采用Material Design 3规范设计，界面美观现代</p>
             </div>
             <div class="screenshots">
                 <div class="screenshot">
@@ -1020,7 +948,7 @@
         <section class="section" id="guide">
             <div class="section-title-container">
                 <h2>开始使用</h2>
-                <p class="section-subtitle"><span class="sparkle">✨</span>快速上手，开始您的思想记录之旅<span class="sparkle">✨</span></p>
+                <p class="section-subtitle">快速上手，开始您的思想记录之旅</p>
             </div>
 
             <div class="tab-container">
@@ -1147,12 +1075,6 @@ cd ThoughtEcho</code></pre>
                     this.classList.add('active');
                     document.getElementById(tabId).classList.add('active');
                 });
-            });
-            
-            // 添加闪烁动画效果
-            const sparkles = document.querySelectorAll('.sparkle');
-            sparkles.forEach((sparkle, index) => {
-                sparkle.style.animationDelay = (index * 0.3) + 's';
             });
         });
     </script>
