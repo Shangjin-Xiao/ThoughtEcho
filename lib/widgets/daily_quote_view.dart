@@ -3,20 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/ai_service.dart';
-import '../services/database_service.dart';
 import '../services/settings_service.dart';
-import '../services/location_service.dart';
-import '../services/weather_service.dart';
 import '../widgets/sliding_card.dart';
 
 class DailyQuoteView extends StatefulWidget {
-  final Function(String, String?, String?) onAddQuote;
-  
-  const DailyQuoteView({
-    Key? key,
-    required this.onAddQuote,
-  }) : super(key: key);
-  
+  // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
+  final Function(String, String?, String?, Map<String, dynamic>) onAddQuote;
+
+  const DailyQuoteView({Key? key, required this.onAddQuote}) : super(key: key);
+
   @override
   State<DailyQuoteView> createState() => _DailyQuoteViewState();
 }
@@ -26,31 +21,34 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
     'content': '加载中...',
     'source': '',
     'author': '',
-    'type': 'a'
+    'type': 'a',
   };
   String? dailyPrompt;
-  
+
   @override
   void initState() {
     super.initState();
     _loadDailyQuote();
     _fetchDailyPrompt();
   }
-  
+
   Future<void> _loadDailyQuote() async {
     try {
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final settingsService = Provider.of<SettingsService>(
+        context,
+        listen: false,
+      );
       final hitokotoType = settingsService.appSettings.hitokotoType;
-      
+
       setState(() {
         dailyQuote = {
           'content': '加载中...',
           'source': '',
           'author': '',
-          'type': 'a'
+          'type': 'a',
         };
       });
-      
+
       final quote = await ApiService.getDailyQuote(hitokotoType);
       if (mounted) {
         setState(() {
@@ -64,14 +62,11 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
             'content': '获取一言失败: ${e.toString()}',
             'source': '',
             'author': '',
-            'type': 'error'
+            'type': 'error',
           };
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('获取一言失败: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('获取一言失败: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -90,18 +85,19 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
       debugPrint('获取每日提示失败: $e');
     }
   }
-  
+
   // 格式化一言的来源显示
   String formatHitokotoSource(String? author, String? source) {
-    if ((author == null || author.isEmpty) && (source == null || source.isEmpty)) {
+    if ((author == null || author.isEmpty) &&
+        (source == null || source.isEmpty)) {
       return '';
     }
-    
+
     String result = '';
     if (author != null && author.isNotEmpty) {
       result += '——$author';
     }
-    
+
     if (source != null && source.isNotEmpty) {
       if (result.isNotEmpty) {
         result += ' ';
@@ -110,25 +106,23 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
       }
       result += '《$source》';
     }
-    
+
     return result;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([
-          _loadDailyQuote(),
-          _fetchDailyPrompt(),
-        ]);
+        await Future.wait([_loadDailyQuote(), _fetchDailyPrompt()]);
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Container(
-          height: MediaQuery.of(context).size.height -
+          height:
+              MediaQuery.of(context).size.height -
               kToolbarHeight -
               MediaQuery.of(context).padding.top -
               kBottomNavigationBarHeight,
@@ -142,24 +136,32 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
                       GestureDetector(
                         onTap: () {
                           // 单击复制内容
-                          final String formattedQuote = '${dailyQuote['content']}\n' +
-                            (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ?
-                            '——${dailyQuote['from_who']}' : '') +
-                            (dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ?
-                            '《${dailyQuote['from']}》' : '');
-                          
+                          final String formattedQuote =
+                              '${dailyQuote['content']}\n' +
+                              (dailyQuote['from_who'] != null &&
+                                      dailyQuote['from_who'].isNotEmpty
+                                  ? '——${dailyQuote['from_who']}'
+                                  : '') +
+                              (dailyQuote['from'] != null &&
+                                      dailyQuote['from'].isNotEmpty
+                                  ? '《${dailyQuote['from']}》'
+                                  : '');
+
                           // 复制到剪贴板
-                          Clipboard.setData(ClipboardData(text: formattedQuote));
+                          Clipboard.setData(
+                            ClipboardData(text: formattedQuote),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('已复制到剪贴板')),
                           );
                         },
                         onDoubleTap: () {
-                          // 双击添加到笔记
+                          // 双击添加到笔记，同时传递完整的一言数据以便根据类型添加标签
                           widget.onAddQuote(
                             dailyQuote['content'],
                             dailyQuote['from_who'],
-                            dailyQuote['from']
+                            dailyQuote['from'],
+                            dailyQuote,
                           );
                         },
                         child: Column(
@@ -169,12 +171,17 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
                               style: theme.textTheme.headlineSmall,
                               textAlign: TextAlign.center,
                             ),
-                            if (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ||
-                                dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty)
+                            if (dailyQuote['from_who'] != null &&
+                                    dailyQuote['from_who'].isNotEmpty ||
+                                dailyQuote['from'] != null &&
+                                    dailyQuote['from'].isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
                                 child: Text(
-                                  formatHitokotoSource(dailyQuote['from_who'], dailyQuote['from']),
+                                  formatHitokotoSource(
+                                    dailyQuote['from_who'],
+                                    dailyQuote['from'],
+                                  ),
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     fontStyle: FontStyle.italic,
                                   ),

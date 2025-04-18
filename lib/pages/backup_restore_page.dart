@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart'; // 添加缺失的path_provider导入
-import 'dart:io';
 import '../services/database_service.dart';
 import 'home_page.dart';
 
