@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN"> <!-- Default lang attribute -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -62,6 +62,7 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* Apply Noto Sans first when English is selected */
         body.lang-en {
             font-family: 'Noto Sans', 'Noto Sans SC', sans-serif;
         }
@@ -271,23 +272,22 @@
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem; /* Reduced gap slightly */
+            gap: 2rem;
             margin: 3rem 0;
         }
 
         .feature {
             background-color: var(--surface-color);
             border-radius: 12px;
-            padding: 1.5rem; /* Adjusted padding */
+            padding: 1.5rem;
             box-shadow: var(--card-shadow);
             transition: var(--transition);
-            /* height: 100%; Remove fixed height to allow expansion */
             cursor: pointer;
-            border: 1px solid transparent; /* Add border for better visual feedback on hover/active */
+            border: 1px solid transparent;
         }
 
         .feature:hover {
-            transform: translateY(-5px); /* Reduced hover effect slightly */
+            transform: translateY(-5px);
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
             border-color: var(--primary-light);
         }
@@ -299,17 +299,17 @@
         }
 
         .feature-icon {
-            font-size: 1.8rem; /* Adjusted icon size */
+            font-size: 1.8rem;
             color: var(--primary-color);
             background-color: var(--primary-light);
             border-radius: 50%;
-            width: 50px; /* Adjusted size */
-            height: 50px; /* Adjusted size */
+            width: 50px;
+            height: 50px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             margin-right: 1rem;
-            flex-shrink: 0; /* Prevent icon shrinking */
+            flex-shrink: 0;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
@@ -322,9 +322,9 @@
 
 
         .feature-title {
-            font-size: 1.2rem; /* Adjusted title size */
+            font-size: 1.2rem;
             font-weight: 500;
-            margin: 0; /* Remove default margins */
+            margin: 0;
             color: var(--text-primary);
             transition: color 0.3s ease;
         }
@@ -370,16 +370,16 @@
             color: var(--text-secondary);
             font-size: 0.95rem;
         }
-        .long-desc p { /* Paragraphs inside long desc */
+        .long-desc p {
              margin-bottom: 1rem;
         }
 
         .feature-details img {
             width: 100%;
-            max-width: 400px; /* Limit image width */
+            max-width: 400px;
             height: auto;
             border-radius: 8px;
-            margin: 0 auto; /* Center image */
+            margin: 0 auto;
             display: block;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             border: 1px solid var(--border-color);
@@ -395,10 +395,11 @@
             position: relative;
         }
 
-        .roadmap-section {
+        .roadmap-section { /* Not currently used, but keep for potential future structure */
             margin-bottom: 3rem;
         }
 
+        /* Feature list inside roadmap (if needed) */
         .feature-list {
             list-style: none;
             padding: 0;
@@ -446,7 +447,6 @@
             padding-left: 2rem;
             margin-bottom: 3.5rem;
         }
-        /* Remove last item's bottom margin */
         .timeline-item:last-child {
             margin-bottom: 0;
         }
@@ -462,6 +462,11 @@
             border-radius: 50%;
             transition: background-color 0.3s ease;
         }
+         /* Style timeline point based on status */
+         .timeline-item[data-status="completed"]::before { background-color: #2E7D32; }
+         .timeline-item[data-status="in-progress"]::before { background-color: var(--primary-color); }
+         .timeline-item[data-status="planned"]::before { background-color: #BDBDBD; } /* Grey for planned */
+
 
         .timeline-date {
             font-weight: 500;
@@ -495,11 +500,11 @@
             font-weight: 500;
             font-size: 1.2rem;
             transition: color 0.3s ease;
-            display: flex; /* Align status and title */
+            display: flex;
             align-items: center;
         }
         .timeline-content h4 .status {
-             margin-right: 0.8rem; /* Space between status and title */
+             margin-right: 0.8rem;
         }
 
 
@@ -534,10 +539,9 @@
             font-size: 0.8rem;
             padding: 0.2rem 0.7rem;
             border-radius: 20px;
-            /* margin-right: 0.5rem; Removed margin here, added in h4 */
             transition: background-color 0.3s ease, color 0.3s ease;
             font-weight: 500;
-            white-space: nowrap; /* Prevent status text wrapping */
+            white-space: nowrap;
         }
 
         .status.completed {
@@ -565,13 +569,6 @@
             box-shadow: var(--card-shadow);
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
-
-        /* .update-time { REMOVED as requested
-             font-size: 0.9rem;
-             color: var(--text-tertiary);
-             margin-top: 0.5rem;
-             transition: color 0.3s ease;
-        } */
         /* --- End Roadmap Section --- */
 
         /* --- Guide Section --- */
@@ -795,7 +792,7 @@
                 gap: 1.5rem;
             }
             .feature {
-                 padding: 1rem; /* Adjust padding for mobile */
+                 padding: 1rem;
              }
              .feature-header {
                  margin-bottom: 0.8rem;
@@ -814,11 +811,9 @@
              }
 
 
-            .feature-list { /* In roadmap, if used */
+            .feature-list {
                 grid-template-columns: 1fr;
             }
-
-            /* Screenshots section removed */
 
             .roadmap-timeline {
                 margin-left: 0.5rem;
@@ -877,12 +872,12 @@
         /* --- End Mobile Optimizations --- */
 
         /* --- Utility & Animation --- */
-        .tab-container { /* If tabs are used */
+        .tab-container {
             max-width: 800px;
             margin: 0 auto;
         }
 
-        .tabs { /* If tabs are used */
+        .tabs {
             display: flex;
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
@@ -890,7 +885,7 @@
             transition: border-color 0.3s ease;
         }
 
-        .tab-button { /* If tabs are used */
+        .tab-button {
             padding: 0.8rem 1.5rem;
             background: none;
             border: none;
@@ -913,7 +908,7 @@
             border-bottom-color: var(--primary-color);
         }
 
-        .tab-content { /* If tabs are used */
+        .tab-content {
             display: none;
             animation: fadeIn 0.5s ease;
         }
@@ -927,7 +922,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Image Modal (Kept in case it's needed elsewhere, e.g., in expanded features) */
+        /* Image Modal */
         .modal {
             display: none;
             position: fixed;
@@ -1033,7 +1028,7 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             font-size: 20px;
-            transition: var(--transition), opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease; /* Added opacity/visibility/transform */
+            transition: var(--transition), opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
             opacity: 0;
             visibility: hidden;
             transform: translateY(20px);
@@ -1088,14 +1083,15 @@
             visibility: hidden;
         }
 
-
-        html[lang="zh-CN"] .content-en {
+        /* --- Language Switching CSS --- */
+        body.lang-zh .content-en {
             display: none;
         }
 
-        html[lang="en"] .content-zh {
+        body.lang-en .content-zh {
             display: none;
         }
+        /* --- End Language Switching CSS --- */
 
 
         .animated {
@@ -1111,7 +1107,7 @@
 
     </style>
 </head>
-<body class="lang-zh">
+<body class="lang-zh"> <!-- Default class on body -->
     <!-- 加载动画 -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
@@ -1130,7 +1126,6 @@
             <a href="#features" class="content-en">Features</a>
             <a href="#roadmap" class="content-zh">路线图</a>
             <a href="#roadmap" class="content-en">Roadmap</a>
-            <!-- Screenshot link removed -->
             <a href="#guide" class="content-zh">使用指南</a>
             <a href="#guide" class="content-en">Guide</a>
             <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub</a>
@@ -1215,7 +1210,7 @@
                     <!-- 功能3: AI 洞察 -->
                     <div class="feature animated" style="transition-delay: 0.3s;">
                         <div class="feature-header">
-                            <span class="feature-icon">✨</span> <!-- Icon changed -->
+                            <span class="feature-icon">✨</span>
                             <div class="feature-title-container">
                                 <h3 class="feature-title content-zh">AI 洞察 (开发中)</h3>
                                 <h3 class="feature-title content-en">AI Insights (WIP)</h3>
@@ -1229,7 +1224,6 @@
                                 <p class="content-zh">这不仅仅是记录。我们正在探索如何利用 AI 的力量，让你的笔记活起来。未来的版本中，AI 或许能帮你自动总结长篇笔记、发现不同笔记间的隐藏联系，甚至在你写作时提供启发性的建议。敬请期待！</p>
                                 <p class="content-en">It's more than just recording. We are exploring how to leverage the power of AI to bring your notes to life. In future versions, AI might help you automatically summarize long notes, discover hidden connections between different notes, or even provide inspiring suggestions as you write. Stay tuned!</p>
                              </div>
-                             <!-- No image for AI yet -->
                         </div>
                     </div>
                      <!-- 功能4: 个性化主题 -->
@@ -1252,9 +1246,8 @@
                              <img src="theme_setting.jpg" alt="主题设置界面截图 / Theme Setting Interface Screenshot" loading="lazy">
                         </div>
                     </div>
-                     <!-- 功能5: 数据同步 (已移除) -->
                      <!-- 功能6: 一言集成 -->
-                     <div class="feature animated" style="transition-delay: 0.5s;"> <!-- Adjusted delay -->
+                     <div class="feature animated" style="transition-delay: 0.5s;">
                         <div class="feature-header">
                             <span class="feature-icon">💬</span>
                             <div class="feature-title-container">
@@ -1287,8 +1280,8 @@
                 </div>
                 <div class="roadmap-container">
                      <div class="roadmap-timeline">
-                        <!-- 时间点 1 -->
-                        <div class="timeline-item animated">
+                        <!-- 时间点 1: Q1 2024 (已完成) -->
+                        <div class="timeline-item animated" data-status="completed">
                              <span class="timeline-date">Q1 2024</span>
                              <div class="timeline-content">
                                  <h4><span class="status completed content-zh">已完成</span><span class="status completed content-en">Completed</span> <span class="content-zh">基础功能上线</span><span class="content-en">Foundation Launch</span></h4>
@@ -1301,56 +1294,72 @@
                                      <li class="content-en">Tag management system</li>
                                      <li class="content-zh">浅色/深色主题切换</li>
                                      <li class="content-en">Light/dark theme switching</li>
-                                 </ul>
-                             </div>
-                        </div>
-                        <!-- 时间点 2 -->
-                        <div class="timeline-item animated">
-                             <span class="timeline-date">Q2 2024</span>
-                             <div class="timeline-content">
-                                 <h4><span class="status in-progress content-zh">进行中</span><span class="status in-progress content-en">In Progress</span> <span class="content-zh">体验优化与扩展</span><span class="content-en">Experience Enhancement & Expansion</span></h4>
-                                 <ul>
                                      <li class="content-zh">自定义主题颜色</li>
                                      <li class="content-en">Custom theme colors</li>
                                      <li class="content-zh">一言集成与类型选择</li>
                                      <li class="content-en">Hitokoto integration and type selection</li>
-                                     <li class="content-zh">性能优化和 Bug 修复</li>
-                                     <li class="content-en">Performance optimization and bug fixes</li>
-                                     <li class="content-zh">用户界面细节打磨 (包括交互优化)</li>
-                                     <li class="content-en">UI refinement (including interaction optimization)</li>
                                  </ul>
                              </div>
                         </div>
-                        <!-- 时间点 3 -->
-                        <div class="timeline-item animated"> <!-- Removed last-child margin rule applies here now -->
+                        <!-- 时间点 2: Q2 2024 (进行中 - 近期规划) -->
+                        <div class="timeline-item animated" data-status="in-progress">
+                             <span class="timeline-date">Q2 2024</span>
+                             <div class="timeline-content">
+                                 <h4><span class="status in-progress content-zh">进行中</span><span class="status in-progress content-en">In Progress</span> <span class="content-zh">体验优化与近期功能</span><span class="content-en">Experience Enhancement & Near-Term Features</span></h4>
+                                 <ul>
+                                     <li class="content-zh">新用户启动引导流程 (介绍, 权限, 设置)</li>
+                                     <li class="content-en">New User Onboarding Flow (Intro, Permissions, Settings)</li>
+                                     <li class="content-zh">剪切板智能检测 (快速添加内容)</li>
+                                     <li class="content-en">Smart Clipboard Detection (Quick content adding)</li>
+                                     <li class="content-zh">每日一言推送通知</li>
+                                     <li class="content-en">Daily Hitokoto Push Notifications</li>
+                                     <li class="content-zh">数据库性能优化</li>
+                                     <li class="content-en">Database Performance Optimization</li>
+                                     <li class="content-zh">持续性能优化与 Bug 修复</li>
+                                     <li class="content-en">Ongoing Performance Optimization & Bug Fixes</li>
+                                 </ul>
+                             </div>
+                        </div>
+                        <!-- 时间点 3: Q3 2024 (计划中 - 核心功能增强) -->
+                        <div class="timeline-item animated" data-status="planned">
                              <span class="timeline-date">Q3 2024</span>
                              <div class="timeline-content">
-                                 <h4><span class="status planned content-zh">计划中</span><span class="status planned content-en">Planned</span> <span class="content-zh">AI 功能探索</span><span class="content-en">AI Feature Exploration</span></h4>
+                                 <h4><span class="status planned content-zh">计划中</span><span class="status planned content-en">Planned</span> <span class="content-zh">核心功能增强</span><span class="content-en">Core Feature Enhancement</span></h4>
                                  <ul>
-                                     <li class="content-zh">AI 笔记总结（初步）</li>
-                                     <li class="content-en">AI note summarization (initial)</li>
-                                     <li class="content-zh">基于内容的笔记关联推荐</li>
-                                     <li class="content-en">Content-based related note suggestions</li>
-                                     <li class="content-zh">探索 AI 写作辅助功能</li>
-                                     <li class="content-en">Exploring AI writing assistance features</li>
-                                     <li class="content-zh">更丰富的导出选项</li> <!-- Moved from deleted section -->
-                                     <li class="content-en">More export options</li> <!-- Moved from deleted section -->
+                                     <li class="content-zh">增强长文 Markdown 编辑体验</li>
+                                     <li class="content-en">Enhanced Long-form Markdown Editing Experience</li>
+                                     <li class="content-zh">支持笔记中插入图片与文件</li>
+                                     <li class="content-en">Support for Inserting Images & Files in Notes</li>
+                                     <li class="content-zh">增强 AI 服务 (优化提示词, 自动填充作者等)</li>
+                                     <li class="content-en">Enhance AI Service (Optimize prompts, auto-fill author, etc.)</li>
+                                     <li class="content-zh">界面深度自定义 (字体、间距、交互等)</li>
+                                     <li class="content-en">Deep UI Customization (Font, spacing, interaction, etc.)</li>
                                  </ul>
                              </div>
                         </div>
-                        <!-- 时间点 4 (Cloud sync) REMOVED -->
+                         <!-- 时间点 4: 未来探索 (计划中) -->
+                         <div class="timeline-item animated" data-status="planned">
+                             <span class="timeline-date content-zh">未来探索</span><span class="timeline-date content-en">Future Exploration</span>
+                             <div class="timeline-content">
+                                 <h4><span class="status planned content-zh">计划中</span><span class="status planned content-en">Planned</span> <span class="content-zh">未来探索与底层优化</span><span class="content-en">Future Exploration & Underlying Optimization</span></h4>
+                                 <ul>
+                                     <li class="content-zh">探索 TensorFlow Lite 进行本地笔记分析</li>
+                                     <li class="content-en">Explore TensorFlow Lite for local note analysis</li>
+                                     <li class="content-zh">底层重构与原生库引入以提升性能</li>
+                                     <li class="content-en">Underlying Refactoring & Native Library Introduction for Performance Improvement</li>
+                                     <!-- 可以根据需要添加更多远期规划 -->
+                                 </ul>
+                             </div>
+                         </div>
                      </div>
 
                     <div class="roadmap-footer animated">
                         <p class="content-zh">路线图会根据用户反馈和开发进度动态调整。</p>
                         <p class="content-en">The roadmap is subject to change based on user feedback and development progress.</p>
-                        <!-- Update time REMOVED -->
                     </div>
                 </div>
             </div>
         </section>
-
-        <!-- Screenshots section REMOVED -->
 
         <section id="guide" class="section">
             <div class="container">
@@ -1417,15 +1426,14 @@ flutter run</code></pre>
                     <h3 class="content-en">About ThoughtEcho</h3>
                     <p class="content-zh">一款简洁高效的 Flutter 应用，旨在帮助用户捕捉、整理和深化思考。</p>
                     <p class="content-en">A clean and efficient Flutter app designed to help users capture, organize, and deepen their thoughts.</p>
-                     <!-- <div class="social-links"> ... </div> -->
                 </div>
                 <div class="footer-section animated" style="transition-delay: 0.1s;">
                     <h3 class="content-zh">相关链接</h3>
                     <h3 class="content-en">Related Links</h3>
                     <ul>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub Repo</a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" class="content-zh">下载发布版</a><span class="content-en"><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank">Downloads</a></span></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank" class="content-zh">问题反馈</a><span class="content-en"><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank">Issue Tracker</a></span></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank"><span class="content-zh">下载发布版</span><span class="content-en">Downloads</span></a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank"><span class="content-zh">问题反馈</span><span class="content-en">Issue Tracker</span></a></li>
                         <li><a href="https://flutter.dev" target="_blank">Flutter</a></li>
                     </ul>
                 </div>
@@ -1434,7 +1442,6 @@ flutter run</code></pre>
                     <h3 class="content-en">Contact Me</h3>
                     <ul>
                          <li><a href="https://github.com/Shangjin-Xiao" target="_blank">GitHub Profile</a></li>
-                         <!-- <li><a href="mailto:your-email@example.com">Email</a></li> -->
                     </ul>
                 </div>
             </div>
@@ -1444,7 +1451,7 @@ flutter run</code></pre>
         </div>
     </footer>
 
-     <!-- 图片模态框 (保留结构，以备将来使用) -->
+     <!-- 图片模态框 -->
      <div class="modal" id="imageModal">
          <button class="modal-close" id="modalCloseBtn" aria-label="关闭">&times;</button>
          <div class="modal-content">
@@ -1463,14 +1470,13 @@ flutter run</code></pre>
         // --- 页面加载与入场动画 ---
         window.addEventListener('load', () => {
             const loadingOverlay = document.getElementById('loadingOverlay');
-            loadingOverlay.classList.add('fade-out');
-            // 触发页面可见元素的入场动画
+            if(loadingOverlay) loadingOverlay.classList.add('fade-out'); // Check element exists
             const animatedElements = document.querySelectorAll('.animated');
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('visible');
-                        observer.unobserve(entry.target); // 动画只触发一次
+                        observer.unobserve(entry.target);
                     }
                 });
             }, { threshold: 0.1 });
@@ -1483,14 +1489,17 @@ flutter run</code></pre>
         // --- 移动端菜单 ---
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const navLinks = document.getElementById('navLinks');
-        mobileMenuBtn.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-        });
-        navLinks.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                navLinks.classList.remove('active');
+        if(mobileMenuBtn && navLinks){
+            mobileMenuBtn.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
             });
-        });
+            navLinks.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    navLinks.classList.remove('active');
+                });
+            });
+        }
+
 
         // --- 主题切换 ---
         const themeSwitch = document.getElementById('themeSwitch');
@@ -1500,11 +1509,11 @@ flutter run</code></pre>
         function setTheme(theme) {
             if (theme === 'dark') {
                 body.classList.add('dark-theme');
-                themeSwitch.textContent = '☀️';
+                if(themeSwitch) themeSwitch.textContent = '☀️';
                 localStorage.setItem('theme', 'dark');
             } else {
                 body.classList.remove('dark-theme');
-                themeSwitch.textContent = '🌙';
+                 if(themeSwitch) themeSwitch.textContent = '🌙';
                 localStorage.setItem('theme', 'light');
             }
         }
@@ -1516,73 +1525,80 @@ flutter run</code></pre>
             setTheme(prefersDark ? 'dark' : 'light');
         }
 
-        themeSwitch.addEventListener('click', () => {
-            const newTheme = body.classList.contains('dark-theme') ? 'light' : 'dark';
-            setTheme(newTheme);
-        });
+        if(themeSwitch) {
+            themeSwitch.addEventListener('click', () => {
+                const newTheme = body.classList.contains('dark-theme') ? 'light' : 'dark';
+                setTheme(newTheme);
+            });
+        }
+
 
         // --- 语言切换 ---
         const langSwitch = document.getElementById('langSwitch');
         const html = document.documentElement;
 
         function setLanguage(lang) {
-            html.lang = lang;
-            body.classList.toggle('lang-en', lang === 'en');
-            body.classList.toggle('lang-zh', lang === 'zh-CN');
-            langSwitch.textContent = lang === 'en' ? '中' : 'En';
+            html.lang = lang === 'zh-CN' ? 'zh-CN' : 'en'; // Set lang on <html>
+            body.classList.toggle('lang-en', lang === 'en'); // Toggle class on <body>
+            body.classList.toggle('lang-zh', lang === 'zh-CN'); // Toggle class on <body>
+            if(langSwitch) langSwitch.textContent = lang === 'en' ? '中' : 'En';
             localStorage.setItem('language', lang);
-            // Note: Screenshot modal captions removed, so no update needed here now
         }
 
         const currentLang = localStorage.getItem('language') || 'zh-CN';
         setLanguage(currentLang);
 
-        langSwitch.addEventListener('click', () => {
-            const newLang = html.lang === 'en' ? 'zh-CN' : 'en';
-            setLanguage(newLang);
-        });
+        if(langSwitch) {
+            langSwitch.addEventListener('click', () => {
+                // Determine new language based on body class for safety
+                const newLang = body.classList.contains('lang-en') ? 'zh-CN' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
 
         // --- 页脚年份 ---
-        document.getElementById('currentYear').textContent = new Date().getFullYear();
+        const currentYearEl = document.getElementById('currentYear');
+        if(currentYearEl) {
+            currentYearEl.textContent = new Date().getFullYear();
+        }
+
 
         // --- 功能特性展开/收起 ---
         const featuresContainer = document.querySelector('.features');
         if (featuresContainer) {
             featuresContainer.addEventListener('click', (event) => {
                 const featureElement = event.target.closest('.feature');
+                 if (event.target.tagName === 'IMG' && event.target.closest('.feature-details')) {
+                     return;
+                 }
+
                 if (featureElement) {
-                    // Optionally close other open features
-                    // featuresContainer.querySelectorAll('.feature.expanded').forEach(openFeature => {
-                    //     if (openFeature !== featureElement) {
-                    //         openFeature.classList.remove('expanded');
-                    //     }
-                    // });
                     featureElement.classList.toggle('expanded');
                 }
             });
         }
 
 
-        // --- 图片模态框 (如果需要，可以给 feature-details 里的图片添加点击事件) ---
+        // --- 图片模态框 ---
         const imageModal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
         const modalCaption = document.getElementById('modalCaption');
         const modalCloseBtn = document.getElementById('modalCloseBtn');
 
-        // Example: Add click listener to images within feature details
         document.querySelectorAll('.feature-details img').forEach(img => {
-            img.style.cursor = 'zoom-in'; // Indicate image is clickable
+            img.style.cursor = 'zoom-in';
             img.addEventListener('click', (e) => {
-                 e.stopPropagation(); // Prevent feature card from toggling when clicking image
-                 modalImage.src = img.src;
-                 modalCaption.textContent = img.alt; // Use alt text as caption
-                 imageModal.classList.add('show');
+                 e.stopPropagation();
+                 if(modalImage) modalImage.src = img.src;
+                 if(modalCaption) modalCaption.textContent = img.alt;
+                 if(imageModal) imageModal.classList.add('show');
              });
         });
 
 
         function closeModal() {
-            imageModal.classList.remove('show');
+            if(imageModal) imageModal.classList.remove('show');
         }
 
         if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
@@ -1599,7 +1615,7 @@ flutter run</code></pre>
         const backToTopBtn = document.getElementById('backToTopBtn');
 
         window.addEventListener('scroll', () => {
-             if(!backToTopBtn) return; // Check if button exists
+             if(!backToTopBtn) return;
             if (window.pageYOffset > 300) {
                 backToTopBtn.classList.add('visible');
             } else {
@@ -1614,34 +1630,51 @@ flutter run</code></pre>
         }
 
         // --- 导航链接高亮 ---
-        const sections = document.querySelectorAll('section[id]');
+        const sections = document.querySelectorAll('main section[id]');
         const navLi = document.querySelectorAll('.nav-links a');
 
-        window.addEventListener('scroll', () => {
+        function updateActiveNav() {
             let current = '';
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+
             sections.forEach(section => {
                 const sectionTop = section.offsetTop;
-                if (pageYOffset >= sectionTop - 70) {
-                    current = section.getAttribute('id');
-                }
+                const sectionHeight = section.offsetHeight;
+                 // Adjusted logic: highlight if the top of the section is within the top half of the viewport
+                 if (scrollPosition >= sectionTop - window.innerHeight / 2 && scrollPosition < sectionTop + sectionHeight - window.innerHeight / 2) {
+                     current = section.getAttribute('id');
+                 }
             });
+             // Special case for header/overview if no main section is active
+             if (!current) {
+                 const header = document.getElementById('overview');
+                 if (header && scrollPosition < header.offsetTop + header.offsetHeight - 70) {
+                    current = 'overview';
+                 }
+             }
+
 
             navLi.forEach(a => {
                 a.classList.remove('active');
-                // Check if href exists and matches current section
-                 if (a.getAttribute('href') && a.getAttribute('href') === `#${current}`) {
+                const href = a.getAttribute('href');
+                 if (href && href === `#${current}`) {
                     a.classList.add('active');
-                }
+                 }
             });
-            // Highlight first link if at top
-            if (pageYOffset < 300 && navLi.length > 0 && navLi[0].getAttribute('href') === '#overview') {
+
+             // If still no section is active (e.g., scrolled way down past last section), keep last section active? Or none? Let's default to none or last.
+             // Or, if at the very top, ensure 'overview' is active.
+             if (scrollPosition < 100) { // Check if near the top
                  navLi.forEach(a => a.classList.remove('active'));
-                 navLi[0].classList.add('active');
-            } else if (pageYOffset < 300) { // Fallback if first link isn't #overview
-                 navLi.forEach(a => a.classList.remove('active'));
-                 if(navLi.length > 0) navLi[0].classList.add('active');
-            }
-        });
+                 const overviewLink = document.querySelector('.nav-links a[href="#overview"]');
+                 if (overviewLink) overviewLink.classList.add('active');
+             } else if (!document.querySelector('.nav-links a.active') && navLi.length > 0) {
+                 // Maybe highlight the last visible one if logic fails? For now, leave as is.
+             }
+        }
+        window.addEventListener('scroll', updateActiveNav);
+        window.addEventListener('load', updateActiveNav); // Also run on load
+
 
     </script>
 </body>
