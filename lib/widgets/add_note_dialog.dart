@@ -100,8 +100,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       }
     }
     // 如果是从一言添加，添加相关标签
-    else if (widget.prefilledContent != null &&
-        widget.prefilledAuthor != null) {
+    else if (widget.prefilledContent != null || widget.hitokotoData != null) {
       // 这里会在显示对话框后添加相关标签
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _addDefaultHitokotoTags();
@@ -572,17 +571,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               Text(
                                 IconUtils.getDisplayIcon(tag.iconName),
                                 style: const TextStyle(fontSize: 20),
-                              ),
+                              )
+                            else
+                              Icon(IconUtils.getIconData(tag.iconName)),
                             const SizedBox(width: 8),
-                            Text(tag.name),
+                            Flexible(
+                              child: Text(
+                                tag.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
-                        secondary:
-                            IconUtils.isEmoji(tag.iconName)
-                                ? null
-                                : Icon(IconUtils.getIconData(tag.iconName)),
                         value: isSelected,
                         dense: true,
+                        controlAffinity: ListTileControlAffinity.trailing,
                         onChanged: (selected) {
                           setState(() {
                             if (selected == true) {
