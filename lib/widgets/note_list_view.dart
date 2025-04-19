@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
+import '../controllers/search_controller.dart'; // 导入我们自定义的搜索控制器
 import '../utils/icon_utils.dart';
-import '../utils/color_utils.dart';
 import '../widgets/quote_item_widget.dart';
 
 class NoteListView extends StatefulWidget {
@@ -113,7 +113,14 @@ class _NoteListViewState extends State<NoteListView> {
   void _onSearchChanged(String value) {
     // 通知父级组件搜索内容改变
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.onTagSelectionChanged(widget.selectedTagIds);
+      if (widget.searchQuery != value) {
+        // 使用回调传递搜索值到父组件，而不是仅传递标签ID
+        widget.onSortChanged(widget.sortType, widget.sortAscending);
+        
+        // 使用Provider更新搜索状态
+        final searchController = Provider.of<NoteSearchController>(context, listen: false);
+        searchController.updateSearch(value);
+      }
     });
   }
 
@@ -135,13 +142,13 @@ class _NoteListViewState extends State<NoteListView> {
                 Icon(
                   Icons.note_alt_outlined,
                   size: 64,
-                  color: theme.colorScheme.primary.applyOpacity(0.5),
+                  color: theme.colorScheme.primary.withAlpha(128),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   '还没有笔记，开始记录吧！',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary.applyOpacity(0.5),
+                    color: theme.colorScheme.primary.withAlpha(128),
                   ),
                 ),
               ],
@@ -174,13 +181,13 @@ class _NoteListViewState extends State<NoteListView> {
                 Icon(
                   Icons.search_off,
                   size: 64,
-                  color: theme.colorScheme.primary.applyOpacity(0.5),
+                  color: theme.colorScheme.primary.withAlpha(128),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   '没有找到匹配的笔记',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary.applyOpacity(0.5),
+                    color: theme.colorScheme.primary.withAlpha(128),
                   ),
                 ),
               ],

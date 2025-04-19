@@ -1,152 +1,252 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
-import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import '../models/quote_model.dart';
-import 'package:uuid/uuid.dart';
+import 'package:mind_trace/models/note_category.dart';
+import 'package:mind_trace/services/database_service.dart';
+import 'package:mind_trace/widgets/add_note_dialog.dart'; // 导入AddNoteDialog
+import 'package:mmkv/mmkv.dart';
+import 'package:provider/provider.dart';
 
-/// 剪贴板服务，用于监听和处理剪贴板内容
 class ClipboardService extends ChangeNotifier {
-  // 用于监听剪贴板的定时器
-  Timer? _clipboardTimer;
-  // 上一次检测到的剪贴板内容
-  String _lastClipboardContent = '';
-  // 是否启用剪贴板监听
-  bool _isMonitoringEnabled = false;
-  // 回调函数，当检测到新的有效文本时调用
-  Function(String)? onNewTextDetected;
+  static const String _keyEnableClipboardMonitoring = 'enable_clipboard_monitoring';
+  static const String _keyLastClipboardContent = 'last_clipboard_content';
+  
+  // 常见的引述格式匹配
+  static final RegExp _quoteAuthorPattern = RegExp(
+    r'[-—–]\s*([^，。,\.、\n]{2,20})$|《([^》]+)》\s*[-—–]\s*([^，。,\.、\n]{2,20})|"(.+)"\s*[-—–]\s*([^，。,\.、\n]{2,20})',
+    multiLine: true,
+  );
+  
+  // 可能的出处标识
+  static final RegExp _sourcePattern = RegExp(
+    r'[（\(](.{2,30}?)[）\)]$|《(.{2,30}?)》$|摘自[《]?(.{2,30}?)[》]?$|选自[《]?(.{2,30}?)[》]?$|出自[《]?(.{2,30}?)[》]?$',
+    multiLine: true,
+  );
 
-  // 获取监听状态
-  bool get isMonitoringEnabled => _isMonitoringEnabled;
-
-  // 设置监听状态并通知监听器
-  set isMonitoringEnabled(bool value) {
-    if (_isMonitoringEnabled == value) return;
-    _isMonitoringEnabled = value;
-    if (_isMonitoringEnabled) {
-      _startMonitoring();
-    } else {
-      _stopMonitoring();
+  // 是否启用剪贴板监控
+  bool _enableClipboardMonitoring = false;
+  bool get enableClipboardMonitoring => _enableClipboardMonitoring;
+  
+  // 剪贴板上次处理的内容缓存
+  String _lastProcessedContent = '';
+  
+  // MMKV实例，用于存储设置
+  late final MMKV _mmkv;
+  
+  // 构造函数
+  ClipboardService() {
+    _initPreferences();
+  }
+  
+  // 初始化首选项
+  Future<void> _initPreferences() async {
+    try {
+      _mmkv = MMKV.defaultMMKV();
+      _loadPreferences();
+    } catch (e) {
+      debugPrint('初始化剪贴板服务首选项时出错: $e');
     }
+  }
+  
+  // 从MMKV加载首选项
+  void _loadPreferences() {
+    _enableClipboardMonitoring = _mmkv.decodeBool(_keyEnableClipboardMonitoring) ?? false;
+    _lastProcessedContent = _mmkv.decodeString(_keyLastClipboardContent) ?? '';
     notifyListeners();
   }
-
-  ClipboardService() {
-    // 构造函数中初始化，但默认不开启监听
+  
+  // 设置是否启用剪贴板监控
+  void setEnableClipboardMonitoring(bool value) {
+    _enableClipboardMonitoring = value;
+    _mmkv.encodeBool(_keyEnableClipboardMonitoring, value);
+    notifyListeners();
   }
-
-  /// 开始监听剪贴板变化
-  void _startMonitoring() {
-    if (kIsWeb) {
-      debugPrint('Web平台不支持剪贴板监听');
-      return;
+  
+  // 检查剪贴板内容
+  Future<Map<String, dynamic>?> checkClipboard() async {
+    if (!_enableClipboardMonitoring) {
+      return null;
     }
-
-    // 先检查当前剪贴板内容
-    _checkClipboard();
-
-    // 设置定时器，每2秒检查一次剪贴板
-    _clipboardTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      _checkClipboard();
-    });
-
-    debugPrint('剪贴板监听已启动');
-  }
-
-  /// 停止监听剪贴板变化
-  void _stopMonitoring() {
-    _clipboardTimer?.cancel();
-    _clipboardTimer = null;
-    debugPrint('剪贴板监听已停止');
-  }
-
-  /// 检查剪贴板内容是否变化
-  Future<void> _checkClipboard() async {
+    
     try {
-      // 获取当前剪贴板内容
-      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-      final text = clipboardData?.text ?? '';
-
-      // 如果内容有变化且不为空
-      if (text.isNotEmpty && text != _lastClipboardContent) {
-        debugPrint('检测到剪贴板内容变化');
-        _lastClipboardContent = text;
-
-        // 判断内容是否适合作为引用保存（排除太短的内容或URL等）
-        if (_isValidQuoteContent(text)) {
-          // 调用回调函数
-          if (onNewTextDetected != null) {
-            onNewTextDetected!(text);
-          }
-        }
+      // 获取剪贴板数据
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      
+      // 没有数据或数据与上次处理的相同，返回null
+      if (data == null || data.text == null || data.text!.isEmpty || 
+          data.text == _lastProcessedContent) {
+        return null;
       }
+      
+      final content = data.text!;
+      
+      // 内容过长或过短不处理
+      if (content.length > 5000 || content.length < 5) {
+        return null;
+      }
+      
+      // 更新最近处理的内容
+      _lastProcessedContent = content;
+      _mmkv.encodeString(_keyLastClipboardContent, content);
+      
+      // 提取作者和出处（如果有）
+      final extractedInfo = _extractAuthorAndSource(content);
+      String? author = extractedInfo['author'];
+      String? source = extractedInfo['source'];
+      
+      // 返回提取的信息
+      return {
+        'content': content,
+        'author': author,
+        'source': source,
+      };
     } catch (e) {
-      debugPrint('检查剪贴板内容出错: $e');
-    }
-  }
-
-  /// 判断内容是否适合作为引用保存
-  bool _isValidQuoteContent(String text) {
-    // 过滤掉太短的内容
-    if (text.length < 5) return false;
-
-    // 过滤掉看起来像URL的内容
-    if (text.startsWith('http://') ||
-        text.startsWith('https://') ||
-        text.startsWith('www.')) {
-      return false;
-    }
-
-    // 过滤掉可能是代码的内容
-    if (text.contains('{') &&
-        text.contains('}') &&
-        (text.contains('function') ||
-            text.contains('class') ||
-            text.contains('var ') ||
-            text.contains('let '))) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /// 手动检查剪贴板内容
-  Future<String?> getClipboardText() async {
-    try {
-      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-      return clipboardData?.text;
-    } catch (e) {
-      debugPrint('获取剪贴板内容出错: $e');
+      debugPrint('检查剪贴板时出错: $e');
       return null;
     }
   }
-
-  /// 将文本复制到剪贴板
-  Future<bool> copyToClipboard(String text) async {
-    try {
-      await Clipboard.setData(ClipboardData(text: text));
-      return true;
-    } catch (e) {
-      debugPrint('复制到剪贴板失败: $e');
-      return false;
+  
+  // 从文本中提取作者和出处信息（类似一言格式）
+  Map<String, String?> _extractAuthorAndSource(String content) {
+    String? author;
+    String? source;
+    
+    // 尝试提取作者信息（如常见的"—— 作者"格式）
+    final authorMatches = _quoteAuthorPattern.allMatches(content);
+    if (authorMatches.isNotEmpty) {
+      for (var match in authorMatches) {
+        // 按优先级尝试不同的匹配组
+        author = match.group(1) ?? match.group(3) ?? match.group(5);
+        if (author != null && author.isNotEmpty) {
+          break;
+        }
+      }
     }
+    
+    // 尝试提取出处信息（如书名或文章名）
+    final sourceMatches = _sourcePattern.allMatches(content);
+    if (sourceMatches.isNotEmpty) {
+      for (var match in sourceMatches) {
+        // 尝试不同的匹配组
+        source = match.group(1) ?? match.group(2) ?? match.group(3) ?? match.group(4);
+        if (source != null && source.isNotEmpty) {
+          break;
+        }
+      }
+    }
+    
+    return {
+      'author': author,
+      'source': source,
+    };
   }
-
-  /// 从剪贴板内容创建引用
-  Quote? createQuoteFromClipboard(String? text) {
-    if (text == null || text.isEmpty) return null;
-
-    return Quote(
-      id: const Uuid().v4(),
-      content: text,
-      date: DateTime.now().toIso8601String(),
-      source: '',
+  
+  // 显示询问对话框并打开编辑页面
+  void showClipboardConfirmationDialog(
+    BuildContext context,
+    Map<String, dynamic> clipboardData,
+  ) {
+    final content = clipboardData['content'] as String;
+    final author = clipboardData['author'] as String?;
+    final source = clipboardData['source'] as String?;
+    
+    // 显示确认对话框
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('发现剪贴板内容'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('是否将剪贴板内容添加为笔记？'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                content.length > 100 ? '${content.substring(0, 100)}...' : content,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            if (author != null || source != null) 
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  '已识别: ${author ?? ''}${source != null ? ' 《$source》' : ''}',
+                  style: const TextStyle(
+                    fontSize: 12, 
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic
+                  ),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _openEditPage(context, content, author, source);
+            },
+            child: const Text('添加'),
+          ),
+        ],
+      ),
     );
   }
-
-  @override
-  void dispose() {
-    _stopMonitoring();
-    super.dispose();
+  
+  // 打开编辑页面
+  void _openEditPage(
+    BuildContext context, 
+    String content, 
+    String? author, 
+    String? source
+  ) async {
+    try {
+      // 获取所有标签
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
+      final List<NoteCategory> tags = await databaseService.getCategories();
+      
+      // 防止在异步操作后使用已销毁的BuildContext
+      if (!context.mounted) return;
+      
+      // 打开编辑页面
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => AddNoteDialog(
+          prefilledContent: content,
+          prefilledAuthor: author,
+          prefilledWork: source,
+          tags: tags,
+          onSave: (quote) {
+            // 可以在这里添加保存后的回调
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('笔记已保存')),
+              );
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('打开编辑页面失败: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失败: $e')),
+        );
+      }
+    }
   }
 }

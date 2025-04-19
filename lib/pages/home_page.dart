@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/ai_service.dart';
+import '../services/clipboard_service.dart';
+import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
@@ -19,9 +22,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _currentIndex = 0;
-  final String _searchQuery = '';
   List<NoteCategory> _tags = [];
   List<String> _selectedTagIds = [];
 
@@ -29,11 +31,56 @@ class _HomePageState extends State<HomePage> {
   String _sortType = 'time';
   bool _sortAscending = false;
 
+  // 搜索控制器
+  final _searchController = NoteSearchController();
+
   @override
   void initState() {
     super.initState();
     _loadTags();
     _initLocationAndWeather();
+    
+    // 注册生命周期观察器
+    WidgetsBinding.instance.addObserver(this);
+    
+    // 首次进入应用时检查剪贴板
+    _checkClipboard();
+  }
+
+  @override
+  void dispose() {
+    // 移除生命周期观察器
+    WidgetsBinding.instance.removeObserver(this);
+    
+    super.dispose();
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 当应用从后台恢复时检查剪贴板
+    if (state == AppLifecycleState.resumed) {
+      _checkClipboard();
+    }
+  }
+
+  // 检查剪贴板内容并处理
+  Future<void> _checkClipboard() async {
+    if (!mounted) return;
+    
+    final clipboardService = Provider.of<ClipboardService>(
+      context, 
+      listen: false
+    );
+    
+    // 如果剪贴板监控功能未启用，则不进行检查
+    if (!clipboardService.enableClipboardMonitoring) return;
+    
+    // 检查剪贴板内容
+    final clipboardData = await clipboardService.checkClipboard();
+    if (clipboardData != null && mounted) {
+      // 显示确认对话框
+      clipboardService.showClipboardConfirmationDialog(context, clipboardData);
+    }
   }
 
   Future<void> _loadTags() async {
@@ -245,150 +292,161 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // 处理排序变更
+  void _handleSortChanged(String sortType, bool sortAscending) {
+    setState(() {
+      _sortType = sortType;
+      _sortAscending = sortAscending;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('心迹'),
-        actions: [
-          // 显示位置和天气信息
-          if (_currentIndex == 0 &&
-              locationService.city != null &&
-              !locationService.city!.contains("Throttled!") &&
-              weatherService.currentWeather != null &&
-              locationService.hasLocationPermission)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 12,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      locationService.getDisplayLocation(),
-                      style: TextStyle(
-                        fontSize: 12,
+    // 使用Provider包装搜索控制器，使其子组件可以访问
+    return ChangeNotifierProvider.value(
+      value: _searchController,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('心迹'),
+          actions: [
+            // 显示位置和天气信息
+            if (_currentIndex == 0 &&
+                locationService.city != null &&
+                !locationService.city!.contains("Throttled!") &&
+                weatherService.currentWeather != null &&
+                locationService.hasLocationPermission)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 12,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '|',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer
-                            .withAlpha(128), // 替换 withOpacity
+                      const SizedBox(width: 2),
+                      Text(
+                        locationService.getDisplayLocation(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      weatherService.getWeatherIconData(),
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
-                      style: TextStyle(
-                        fontSize: 12,
+                      const SizedBox(width: 4),
+                      Text(
+                        '|',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer
+                              .withAlpha(128),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        weatherService.getWeatherIconData(),
+                        size: 16,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+          ],
+        ),
+        body: IndexedStack(
+          index: _currentIndex,
+          children: [
+            // 首页 - 每日一言
+            DailyQuoteView(
+              onAddQuote:
+                  (content, author, work, hitokotoData) => _showAddQuoteDialog(
+                    prefilledContent: content,
+                    prefilledAuthor: author,
+                    prefilledWork: work,
+                    hitokotoData: hitokotoData,
+                  ),
             ),
-        ],
-      ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          // 首页 - 每日一言
-          DailyQuoteView(
-            onAddQuote:
-                (content, author, work, hitokotoData) => _showAddQuoteDialog(
-                  prefilledContent: content,
-                  prefilledAuthor: author,
-                  prefilledWork: work,
-                  hitokotoData: hitokotoData,
-                ),
-          ),
-          // 笔记列表页
-          NoteListView(
-            tags: _tags,
-            selectedTagIds: _selectedTagIds,
-            onTagSelectionChanged: (tagIds) {
-              setState(() {
-                _selectedTagIds = tagIds;
-              });
-            },
-            searchQuery: _searchQuery,
-            sortType: _sortType,
-            sortAscending: _sortAscending,
-            onSortChanged: (type, ascending) {
-              setState(() {
-                _sortType = type;
-                _sortAscending = ascending;
-              });
-            },
-            onEdit: _showEditQuoteDialog,
-            onDelete: _showDeleteConfirmDialog,
-            onAskAI: _showAIQuestionDialog,
-          ),
-          // AI页
-          const InsightsPage(),
-          // 设置页
-          const SettingsPage(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddQuoteDialog(),
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: '首页',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book),
-            label: '记录',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: 'AI',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '设置',
-          ),
-        ],
+            // 笔记列表页
+            Consumer<NoteSearchController>(
+              builder: (context, searchController, child) {
+                return NoteListView(
+                  tags: _tags,
+                  selectedTagIds: _selectedTagIds,
+                  onTagSelectionChanged: (tagIds) {
+                    setState(() {
+                      _selectedTagIds = tagIds;
+                    });
+                  },
+                  searchQuery: searchController.searchQuery,
+                  sortType: _sortType,
+                  sortAscending: _sortAscending,
+                  onSortChanged: _handleSortChanged,
+                  onEdit: _showEditQuoteDialog,
+                  onDelete: _showDeleteConfirmDialog,
+                  onAskAI: _showAIQuestionDialog,
+                );
+              },
+            ),
+            // AI页
+            const InsightsPage(),
+            // 设置页
+            const SettingsPage(),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddQuoteDialog(),
+          child: const Icon(Icons.add),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: '首页',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.book_outlined),
+              selectedIcon: Icon(Icons.book),
+              label: '记录',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.auto_awesome_outlined),
+              selectedIcon: Icon(Icons.auto_awesome),
+              label: 'AI',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: '设置',
+            ),
+          ],
+        ),
       ),
     );
   }
