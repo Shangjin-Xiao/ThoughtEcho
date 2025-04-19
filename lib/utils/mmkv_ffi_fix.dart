@@ -4,8 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
-import 'mmkv_adapter.dart';
-import 'dart:convert';
+import 'package:mind_trace/utils/mmkv_adapter.dart';
 
 /// 安全的 MMKV 包装类，当 MMKV 出现问题时会回退到 shared_preferences
 class SafeMMKV {

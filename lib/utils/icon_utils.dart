@@ -34,6 +34,7 @@ class IconUtils {
     'mood': Icons.mood,
     'bookmark': Icons.bookmark,
     'label': Icons.label,
+    'brush': Icons.brush,
   };
   
   // 常用emoji分类 - 与笔记和思考相关的emoji
