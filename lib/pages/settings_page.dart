@@ -327,6 +327,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: theme.colorScheme.outline.withOpacity(0.2),
                   ),
                 ),
+                // 添加剪贴板监控设置
+                _buildClipboardMonitoringItem(context),
                 ListTile(
                   title: const Text('主题设置'),
                   subtitle: const Text('自定义应用的外观主题'),

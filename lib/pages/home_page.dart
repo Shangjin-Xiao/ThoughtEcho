@@ -436,6 +436,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ],
         ),
         floatingActionButton: FloatingActionButton(
+          heroTag: 'homePageFAB', // 添加唯一的hero标签
           onPressed: () => _showAddQuoteDialog(),
           child: const Icon(Icons.add),
         ),
