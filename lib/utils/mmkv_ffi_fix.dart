@@ -4,6 +4,8 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
+import 'package:mmkv/mmkv.dart';
+import 'dart:convert';
 
 /// 安全的 MMKV 包装类，当 MMKV 出现问题时会回退到 shared_preferences
 class SafeMMKV {
@@ -21,12 +23,22 @@ class SafeMMKV {
   /// 初始化存储
   Future<void> initialize() async {
     if (_initialized) return;
-    
     try {
-      // 使用 SharedPreferences 作为备用存储方案
-      _storage = SharedPrefsAdapter();
-      await _storage.initialize();
-      debugPrint('SafeMMKV: 使用 SharedPreferences 作为存储');
+      if (kIsWeb) {
+        _storage = SharedPrefsAdapter();
+        await _storage.initialize();
+        debugPrint('SafeMMKV: Web 平台，使用 SharedPreferences');
+      } else {
+        try {
+          _storage = MMKVAdapter();
+          await _storage.initialize();
+          debugPrint('SafeMMKV: 使用 MMKV 作为存储');
+        } catch (e) {
+          debugPrint('SafeMMKV: MMKV 初始化失败: $e，回退到 SharedPreferences');
+          _storage = SharedPrefsAdapter();
+          await _storage.initialize();
+        }
+      }
       _initialized = true;
     } catch (e) {
       debugPrint('SafeMMKV 初始化失败: $e');
@@ -223,4 +235,68 @@ class SharedPrefsAdapter implements StorageAdapter {
   Set<String> getKeys() {
     return _prefs.getKeys();
   }
+}
+
+/// MMKV 存储适配器
+class MMKVAdapter implements StorageAdapter {
+  late final MMKV _mmkv;
+
+  @override
+  Future<void> initialize() async {
+    final String _ = await MMKV.initialize();
+    _mmkv = MMKV.defaultMMKV();
+  }
+
+  @override
+  Future<bool> setString(String key, String value) async => Future.value(_mmkv.encodeString(key, value));
+
+  @override
+  String? getString(String key) => _mmkv.decodeString(key);
+
+  @override
+  Future<bool> setInt(String key, int value) async => Future.value(_mmkv.encodeInt(key, value));
+
+  @override
+  int? getInt(String key) => _mmkv.decodeInt(key);
+
+  @override
+  Future<bool> setDouble(String key, double value) async => Future.value(_mmkv.encodeDouble(key, value));
+
+  @override
+  double? getDouble(String key) => _mmkv.decodeDouble(key);
+
+  @override
+  Future<bool> setBool(String key, bool value) async => Future.value(_mmkv.encodeBool(key, value));
+
+  @override
+  bool? getBool(String key) => _mmkv.decodeBool(key);
+
+  @override
+  Future<bool> setStringList(String key, List<String> value) async {
+    return await setString(key, json.encode(value));
+  }
+
+  @override
+  List<String>? getStringList(String key) {
+    final s = getString(key);
+    return s == null ? null : List<String>.from(json.decode(s));
+  }
+
+  @override
+  bool containsKey(String key) => _mmkv.containsKey(key);
+
+  @override
+  Future<bool> remove(String key) async {
+    _mmkv.removeValue(key);
+    return true;
+  }
+
+  @override
+  Future<bool> clear() async {
+    _mmkv.removeValues(_mmkv.allKeys);
+    return true;
+  }
+
+  @override
+  Set<String> getKeys() => _mmkv.allKeys.toSet();
 }

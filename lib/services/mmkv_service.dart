@@ -14,9 +14,6 @@ class MMKVService {
 
   MMKVService._internal();
 
-  // Web平台模拟存储（现在由 SafeMMKV 处理）
-  static final Map<String, dynamic> _webStorage = {};
-
   /// 初始化MMKV存储
   Future<void> init() async {
     if (_isInitialized) return;
