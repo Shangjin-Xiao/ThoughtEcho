@@ -47,7 +47,20 @@ class _InsightsPageState extends State<InsightsPage>
     },
   ];
 
+  // 分析风格
+  final List<Map<String, dynamic>> _analysisStyles = [
+    {
+      'title': '专业分析',
+      'description': '以专业、客观的方式分析您的笔记',
+      'style': 'professional',
+    },
+    {'title': '友好导师', 'description': '像一位友好的导师给予温和的建议', 'style': 'friendly'},
+    {'title': '风趣幽默', 'description': '以幽默风趣的方式解读您的思考', 'style': 'humorous'},
+    {'title': '文学风格', 'description': '以优美的文学语言描述您的思考旅程', 'style': 'literary'},
+  ];
+
   String _selectedAnalysisType = 'comprehensive';
+  String _selectedAnalysisStyle = 'professional';
 
   @override
   void initState() {
@@ -96,6 +109,7 @@ class _InsightsPageState extends State<InsightsPage>
         insights = await aiService.generateInsights(
           quotes,
           analysisType: _selectedAnalysisType,
+          analysisStyle: _selectedAnalysisStyle,
         );
       }
 
@@ -103,6 +117,8 @@ class _InsightsPageState extends State<InsightsPage>
 
       setState(() {
         _insights = insights;
+        // 自动切换到结果标签页
+        _tabController.animateTo(1);
       });
     } catch (e) {
       if (!mounted) return;
@@ -221,6 +237,50 @@ class _InsightsPageState extends State<InsightsPage>
 
           const SizedBox(height: 24),
 
+          Text(
+            '选择分析风格',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 分析风格选择
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  _analysisStyles.map((style) {
+                    final isSelected = _selectedAnalysisStyle == style['style'];
+                    return ChoiceChip(
+                      label: Text(style['title']),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _selectedAnalysisStyle = style['style'];
+                          });
+                        }
+                      },
+                      selectedColor: theme.colorScheme.primaryContainer,
+                      labelStyle: TextStyle(
+                        color:
+                            isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      tooltip: style['description'],
+                    );
+                  }).toList(),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // 自定义提示词选项
           InkWell(
             onTap: () {
@@ -294,7 +354,7 @@ class _InsightsPageState extends State<InsightsPage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'AI 分析会综合您所有的笔记内容，发现潜在的思维模式和规律。这可能需要一些时间，请耐心等待。分析结果仅供参考，可能不完全准确。',
+                  'AI 分析会综合您所有的笔记内容，发现潜在的思维模式和规律。可以选择不同的分析风格来获取多样的洞察视角。这可能需要一些时间，请耐心等待。',
                   style: TextStyle(
                     fontSize: 13,
                     color: theme.colorScheme.onSecondaryContainer,

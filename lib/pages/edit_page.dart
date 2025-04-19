@@ -6,6 +6,7 @@ import 'package:mind_trace/services/location_service.dart';
 import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 
 class EditPage extends StatefulWidget {
   final Quote quote;
@@ -144,6 +145,435 @@ class _EditPageState extends State<EditPage> {
     }
   }
 
+  // 显示AI选项菜单
+  void _showAIOptions(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'AI助手',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.text_fields),
+                title: const Text('智能分析来源'),
+                subtitle: const Text('分析文本中可能的作者和作品'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _analyzeSource();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.brush),
+                title: const Text('润色文本'),
+                subtitle: const Text('优化文本表达，使其更加流畅、优美'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _polishText();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.add_circle_outline),
+                title: const Text('续写内容'),
+                subtitle: const Text('以相同的风格和语调延伸当前内容'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _continueText();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.analytics),
+                title: const Text('深度分析'),
+                subtitle: const Text('对笔记内容进行深入分析和解读'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _analyzeContent();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  // 分析来源
+  Future<void> _analyzeSource() async {
+    if (_contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先输入内容')),
+      );
+      return;
+    }
+    
+    final aiService = Provider.of<AIService>(context, listen: false);
+    
+    try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('正在分析来源...'),
+              ],
+            ),
+          );
+        },
+      );
+      
+      // 调用AI分析来源
+      final result = await aiService.analyzeSource(_contentController.text);
+      
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      // 解析JSON结果
+      try {
+        final Map<String, dynamic> sourceData = json.decode(result);
+        
+        String? author = sourceData['author'] as String?;
+        String? work = sourceData['work'] as String?;
+        String confidence = sourceData['confidence'] as String? ?? '低';
+        String explanation = sourceData['explanation'] as String? ?? '';
+        
+        // 显示结果对话框
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('分析结果 (可信度: $confidence)'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (author != null && author.isNotEmpty) ...[
+                      const Text('可能的作者:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(author),
+                      const SizedBox(height: 8),
+                    ],
+                    if (work != null && work.isNotEmpty) ...[
+                      const Text('可能的作品:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(work),
+                      const SizedBox(height: 8),
+                    ],
+                    if (explanation.isNotEmpty) ...[
+                      const Text('分析说明:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(explanation, style: TextStyle(fontSize: 13)),
+                    ],
+                    if ((author == null || author.isEmpty) && (work == null || work.isEmpty))
+                      const Text('未能识别出明确的作者或作品'),
+                  ],
+                ),
+                actions: [
+                  if ((author != null && author.isNotEmpty) || (work != null && work.isNotEmpty))
+                    TextButton(
+                      child: const Text('应用分析结果'),
+                      onPressed: () {
+                        setState(() {
+                          if (author != null && author.isNotEmpty) {
+                            _authorController.text = author;
+                          }
+                          if (work != null && work.isNotEmpty) {
+                            _workController.text = work;
+                          }
+                        });
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  TextButton(
+                    child: const Text('关闭'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('解析结果失败: $e')),
+          );
+        }
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分析失败: $e')),
+        );
+      }
+    }
+  }
+  
+  // 润色文本
+  Future<void> _polishText() async {
+    if (_contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先输入内容')),
+      );
+      return;
+    }
+    
+    final aiService = Provider.of<AIService>(context, listen: false);
+    
+    try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('正在润色文本...'),
+              ],
+            ),
+          );
+        },
+      );
+      
+      // 调用AI润色文本
+      final result = await aiService.polishText(_contentController.text);
+      
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      // 显示结果对话框
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('润色结果'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: SelectableText(result),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('应用更改'),
+                  onPressed: () {
+                    setState(() {
+                      _contentController.text = result;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('取消'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('润色失败: $e')),
+        );
+      }
+    }
+  }
+  
+  // 续写文本
+  Future<void> _continueText() async {
+    if (_contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先输入内容')),
+      );
+      return;
+    }
+    
+    final aiService = Provider.of<AIService>(context, listen: false);
+    
+    try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('正在续写内容...'),
+              ],
+            ),
+          );
+        },
+      );
+      
+      // 调用AI续写文本
+      final result = await aiService.continueText(_contentController.text);
+      
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      // 显示结果对话框
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('续写结果'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: SelectableText(result),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('附加到原文'),
+                  onPressed: () {
+                    setState(() {
+                      _contentController.text = '${_contentController.text}\n\n$result';
+                    });
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('取消'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('续写失败: $e')),
+        );
+      }
+    }
+  }
+  
+  // 深入分析内容
+  Future<void> _analyzeContent() async {
+    if (_contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先输入内容')),
+      );
+      return;
+    }
+    
+    final aiService = Provider.of<AIService>(context, listen: false);
+    
+    try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('正在分析内容...'),
+              ],
+            ),
+          );
+        },
+      );
+      
+      // 调用AI分析
+      final quote = Quote(
+        id: widget.quote.id,
+        content: _contentController.text,
+        date: widget.quote.date,
+        location: _includeLocation ? _location : null,
+        weather: _includeWeather ? _weather : null,
+        temperature: _includeWeather ? _temperature : null,
+      );
+      
+      final result = await aiService.summarizeNote(quote);
+      
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      setState(() {
+        _aiAnalysis = result;
+      });
+      
+      // 显示成功提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('分析完成')),
+        );
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分析失败: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final databaseService = Provider.of<DatabaseService>(context);
@@ -154,6 +584,14 @@ class _EditPageState extends State<EditPage> {
       appBar: AppBar(
         title: const Text('编辑'),
         actions: [
+          // 添加AI功能按钮
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'AI助手',
+            onPressed: () {
+              _showAIOptions(context);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.save),
             onPressed: () async {

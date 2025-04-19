@@ -330,6 +330,7 @@ class AIService extends ChangeNotifier {
   Future<String> generateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
+    String analysisStyle = 'professional',
   }) async {
     try {
       await _validateSettings();
@@ -337,67 +338,29 @@ class AIService extends ChangeNotifier {
 
       final quotesText = quotes
           .map((quote) {
-            return '日期：${quote.date}\n内容：${quote.content}';
+            String quoteText = '日期：${quote.date}\n内容：${quote.content}';
+            // 添加额外的笔记元数据，如果存在的话
+            if (quote.location != null && quote.location!.isNotEmpty) {
+              quoteText += '\n位置：${quote.location}';
+            }
+            if (quote.weather != null && quote.weather!.isNotEmpty) {
+              quoteText += '\n天气：${quote.weather}';
+            }
+            if (quote.temperature != null && quote.temperature!.isNotEmpty) {
+              quoteText += '\n温度：${quote.temperature}';
+            }
+            if (quote.source != null && quote.source!.isNotEmpty) {
+              quoteText += '\n来源：${quote.source}';
+            }
+            return quoteText;
           })
           .join('\n\n');
 
-      String systemPrompt;
+      // 根据分析类型选择系统提示词
+      String systemPrompt = _getAnalysisTypePrompt(analysisType);
 
-      switch (analysisType) {
-        case 'emotional':
-          systemPrompt = '''你是一位专注情感分析的心理学家，擅长从文字中解读人们的情感状态和变化。
-请分析用户的笔记内容，提供深入的情感洞察：
-
-1. 情感状态总结：概括用户笔记中表达的主要情绪和情感状态
-2. 情绪波动和模式：识别情绪变化的模式和可能触发因素
-3. 积极/消极情绪比例：分析笔记中积极和消极情绪的大致比例
-4. 情绪管理建议：提供有针对性的情绪管理策略和建议
-
-请使用温和、理解的语气，像一位支持性的朋友一样，而非冷冰冰的分析。避免使用过于专业的术语，用通俗易懂的语言表达你的洞察。记住，你的目标是帮助用户更好地理解自己的情感世界。''';
-          break;
-
-        case 'mindmap':
-          systemPrompt = '''你是一位思维导图专家和认知分析师，擅长分析人们的思考模式和思维结构。
-请分析用户的笔记内容，揭示其思维模式和结构：
-
-1. 核心思考主题：识别用户笔记中反复出现的核心概念和主题
-2. 思维模式分析：分析用户的思维风格（如系统性思考、创造性思维、批判性思考等）
-3. 思维连接：发现不同笔记之间的隐藏联系和思维路径
-4. 思维盲点：温和地指出可能的思维盲区或固定思维模式
-5. 思维拓展建议：提出拓展思考的方向和具体建议
-
-请以清晰、结构化的方式组织你的回应，使用思维导图的概念来呈现分析结果。用友好、鼓励的语气，激发用户的思考深度和广度。''';
-          break;
-
-        case 'growth':
-          systemPrompt = '''你是一位成长型思维教练和个人发展顾问，擅长发现人们的成长潜力和进步路径。
-请分析用户的笔记内容，提供个性化的成长和进步建议：
-
-1. 个人优势识别：发现并强调用户笔记中展现的能力和优势
-2. 成长机会：识别潜在的个人成长机会和领域
-3. 目标与价值观：从笔记中提炼用户可能的核心价值观和潜在目标
-4. 具体行动建议：提供3-5个具体、可行的行动建议，帮助用户在个人成长道路上前进
-5. 长期成长方向：温和地提出一些长期发展的可能方向和愿景
-
-请使用鼓励、支持的语气，像一位有智慧的导师，而不是居高临下的评判者。注重实用性和可行动性，使你的建议切实可行。''';
-          break;
-
-        case 'comprehensive':
-        default:
-          systemPrompt =
-              '''你是一位经验丰富、洞察敏锐的个人成长分析师和思维教练。你擅长从用户的日常记录中发现隐藏的模式和连接，并提供深刻的个人成长洞察。
-
-请以一位贴心的私人顾问身份，分析以下笔记内容，创建一份结构清晰、内容丰富的个人洞察报告，帮助用户更好地了解自己：
-
-1. 核心主题与思考焦点：发现笔记中反复出现的主题、关键概念和思考方向
-2. 情感状态分析：解读笔记中表达的情绪变化和情感模式
-3. 思维模式特点：分析用户的思考风格、视角和思维习惯
-4. 个人成长亮点：指出笔记中展现的进步、成长和积极变化
-5. 前进方向建议：根据分析结果，提供3-5个具体、个性化的成长建议
-
-请使用温和、支持的语气，避免居高临下的评判。确保你的分析既有深度，又具有实用性，能真正帮助用户获得关于自己的新见解。''';
-          break;
-      }
+      // 根据分析风格修改提示词
+      systemPrompt = _appendAnalysisStylePrompt(systemPrompt, analysisStyle);
 
       final messages = [
         {'role': 'system', 'content': systemPrompt},
@@ -423,6 +386,94 @@ class AIService extends ChangeNotifier {
       debugPrint('生成洞察错误: $e');
       rethrow;
     }
+  }
+
+  // 根据分析类型获取基础提示词
+  String _getAnalysisTypePrompt(String analysisType) {
+    switch (analysisType) {
+      case 'emotional':
+        return '''你是一位专注情感分析的心理学家，擅长从文字中解读人们的情感状态和变化。
+请分析用户的笔记内容，提供深入的情感洞察：
+
+1. 情感状态总结：概括用户笔记中表达的主要情绪和情感状态
+2. 情绪波动和模式：识别情绪变化的模式和可能触发因素
+3. 积极/消极情绪比例：分析笔记中积极和消极情绪的大致比例
+4. 情绪管理建议：提供有针对性的情绪管理策略和建议
+
+请使用温和、理解的语气，像一位支持性的朋友一样，而非冷冰冰的分析。避免使用过于专业的术语，用通俗易懂的语言表达你的洞察。记住，你的目标是帮助用户更好地理解自己的情感世界。''';
+
+      case 'mindmap':
+        return '''你是一位思维导图专家和认知分析师，擅长分析人们的思考模式和思维结构。
+请分析用户的笔记内容，揭示其思维模式和结构：
+
+1. 核心思考主题：识别用户笔记中反复出现的核心概念和主题
+2. 思维模式分析：分析用户的思维风格（如系统性思考、创造性思维、批判性思考等）
+3. 思维连接：发现不同笔记之间的隐藏联系和思维路径
+4. 思维盲点：温和地指出可能的思维盲区或固定思维模式
+5. 思维拓展建议：提出拓展思考的方向和具体建议
+
+请以清晰、结构化的方式组织你的回应，使用思维导图的概念来呈现分析结果。用友好、鼓励的语气，激发用户的思考深度和广度。''';
+
+      case 'growth':
+        return '''你是一位成长型思维教练和个人发展顾问，擅长发现人们的成长潜力和进步路径。
+请分析用户的笔记内容，提供个性化的成长和进步建议：
+
+1. 个人优势识别：发现并强调用户笔记中展现的能力和优势
+2. 成长机会：识别潜在的个人成长机会和领域
+3. 目标与价值观：从笔记中提炼用户可能的核心价值观和潜在目标
+4. 具体行动建议：提供3-5个具体、可行的行动建议，帮助用户在个人成长道路上前进
+5. 长期成长方向：温和地提出一些长期发展的可能方向和愿景
+
+请使用鼓励、支持的语气，像一位有智慧的导师，而不是居高临下的评判者。注重实用性和可行动性，使你的建议切实可行。''';
+
+      case 'comprehensive':
+      default:
+        return '''你是一位经验丰富、洞察敏锐的个人成长分析师和思维教练。你擅长从用户的日常记录中发现隐藏的模式和连接，并提供深刻的个人成长洞察。
+
+请以一位贴心的私人顾问身份，分析以下笔记内容，创建一份结构清晰、内容丰富的个人洞察报告，帮助用户更好地了解自己：
+
+1. 核心主题与思考焦点：发现笔记中反复出现的主题、关键概念和思考方向
+2. 情感状态分析：解读笔记中表达的情绪变化和情感模式，以及可能的位置、天气等环境因素影响
+3. 思维模式特点：分析用户的思考风格、视角和思维习惯
+4. 个人成长亮点：指出笔记中展现的进步、成长和积极变化
+5. 前进方向建议：根据分析结果，提供3-5个具体、个性化的成长建议
+
+请使用温和、支持的语气，避免居高临下的评判。确保你的分析既有深度，又具有实用性，能真正帮助用户获得关于自己的新见解。''';
+    }
+  }
+
+  // 根据分析风格调整提示词
+  String _appendAnalysisStylePrompt(String basePrompt, String analysisStyle) {
+    String styleAppendix = '';
+
+    switch (analysisStyle) {
+      case 'friendly':
+        styleAppendix = '''
+        
+风格指导：请以非常友好、亲切的方式表达你的分析，就像与老朋友聊天一样。使用温暖、鼓励的语气，偶尔可以加入一些轻松的表达。避免过于正式或学术化的语言，保持亲近感和共情。使用"我们"、"你"等代词增强亲近感，并确保你的建议是鼓励性的，而不是指导性的。''';
+        break;
+
+      case 'humorous':
+        styleAppendix = '''
+        
+风格指导：请以风趣幽默的方式呈现你的分析，像网易云音乐的歌单锐评一样。可以适当加入一些诙谐的比喻、俏皮的表达和轻松的调侃（但要尊重用户）。使用生动有趣的语言，避免过于严肃的表达方式。可以使用一些流行梗或轻松的修辞手法，让分析读起来既有深度又有趣味。记住，目标是让用户在会心一笑的同时获得有价值的洞察。''';
+        break;
+
+      case 'literary':
+        styleAppendix = '''
+        
+风格指导：请以优美的文学风格呈现你的分析，仿佛在撰写一篇散文或随笔。使用富有诗意的语言、生动的比喻和优雅的表达。可以引用一些经典文学作品或古诗词来点缀你的分析。结构上可以更加灵活流畅，像讲述一个故事一样展开你的洞察。通过文学性的表达方式，让用户感受到思考的美和自我探索的意义。''';
+        break;
+
+      case 'professional':
+      default:
+        styleAppendix = '''
+        
+风格指导：请保持专业、清晰的分析风格，注重逻辑性和实用性。使用结构化的段落和清晰的标题，确保分析易于理解和应用。语言应该精确但不过于学术化，避免使用过多专业术语。保持适度的客观性，同时传达出足够的理解和支持。''';
+        break;
+    }
+
+    return basePrompt + styleAppendix;
   }
 
   // 使用自定义提示词生成洞察
@@ -501,6 +552,141 @@ class AIService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('提问错误: $e');
+      rethrow;
+    }
+  }
+
+  // 分析来源，返回JSON格式的结果
+  Future<String> analyzeSource(String content) async {
+    try {
+      await _validateSettings();
+      final settings = _settingsService.aiSettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '''你是一个专业的文本分析助手，你的任务是分析文本中可能提到的作者和作品。
+请以JSON格式返回以下信息：
+{
+  "author": "推测的作者名称，如果无法确定则留空",
+  "work": "推测的作品名称，如果无法确定则留空",
+  "confidence": "高/中/低，表示你的推测置信度",
+  "explanation": "简短解释你的推测依据"
+}
+
+非常重要：
+1. 只返回JSON格式的数据，不要有其他文字说明
+2. 如果你不确定或无法分析，请确保在适当的字段中返回空字符串，不要胡乱猜测
+3. 对于中文引述格式常见形式是："——作者《作品》"
+4. 作者名应该只包含人名，不包含头衔或其他描述词
+5. 对于作品名，请去掉引号《》等标记符号''',
+        },
+        {'role': 'user', 'content': '请分析以下文本的可能来源：\n\n$content'},
+      ];
+
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.4, // 使用较低的温度确保格式一致性
+        'max_tokens': 500,
+      }, settings);
+
+      final data = json.decode(response.body);
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
+          data['choices'][0]['message'] != null) {
+        return data['choices'][0]['message']['content'];
+      } else {
+        debugPrint('API响应格式错误: ${response.body}');
+        throw Exception('API响应格式错误');
+      }
+    } catch (e) {
+      debugPrint('分析来源错误: $e');
+      rethrow;
+    }
+  }
+
+  // 润色文本
+  Future<String> polishText(String content) async {
+    try {
+      await _validateSettings();
+      final settings = _settingsService.aiSettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '''你是一个专业的文字润色助手，擅长改进文本的表达和结构。
+请对用户提供的文本进行润色，使其更加流畅、优美、有深度。保持原文的核心意思和情感基调，但提升其文学价值和表达力。
+
+注意：
+1. 保持原文的核心思想不变
+2. 提高语言的表现力和优美度
+3. 修正语法、标点等问题
+4. 适当使用修辞手法增强表达力
+5. 返回完整的润色后文本''',
+        },
+        {'role': 'user', 'content': '请润色以下文本：\n\n$content'},
+      ];
+
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.7,
+        'max_tokens': 1000,
+      }, settings);
+
+      final data = json.decode(response.body);
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
+          data['choices'][0]['message'] != null) {
+        return data['choices'][0]['message']['content'];
+      } else {
+        debugPrint('API响应格式错误: ${response.body}');
+        throw Exception('API响应格式错误');
+      }
+    } catch (e) {
+      debugPrint('润色文本错误: $e');
+      rethrow;
+    }
+  }
+
+  // 续写文本
+  Future<String> continueText(String content) async {
+    try {
+      await _validateSettings();
+      final settings = _settingsService.aiSettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '''你是一个专业的文本创作助手，擅长根据已有内容进行续写。
+请根据用户提供的文本，以相同的风格和语调进行自然的延伸和续写。在保持连贯性和一致性的同时，提供有深度和意义的内容。
+
+注意：
+1. 保持与原文一致的风格、语气和主题
+2. 续写的内容应当是原文的自然延伸
+3. 不要重复原文的内容
+4. 续写的长度大约为原文的一半到相当长度
+5. 确保内容有深度，不要流于表面''',
+        },
+        {'role': 'user', 'content': '请续写以下文本：\n\n$content'},
+      ];
+
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.8, // 使用较高的创意性
+        'max_tokens': 1000,
+      }, settings);
+
+      final data = json.decode(response.body);
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
+          data['choices'][0]['message'] != null) {
+        return data['choices'][0]['message']['content'];
+      } else {
+        debugPrint('API响应格式错误: ${response.body}');
+        throw Exception('API响应格式错误');
+      }
+    } catch (e) {
+      debugPrint('续写文本错误: $e');
       rethrow;
     }
   }
