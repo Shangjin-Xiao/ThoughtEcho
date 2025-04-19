@@ -31,7 +31,8 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   geocoding: ^2.1.1 # 使用系统提供的地理编码功能
   geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
-  mmkv: ^2.1.1 
+  mmkv: ^2.1.1 # 使用当前最新正式版
+  ffi: ^2.1.0 # 显式添加FFI依赖，确保与最新的Dart兼容
 
 dev_dependencies:
   flutter_test:
@@ -51,11 +52,3 @@ flutter_launcher_icons:
 flutter:
   # 确保应用可以使用Material Design图标
   uses-material-design: true
-  
-  # 使用系统字体，不再需要额外的字体资源
-  # fonts:
-  #   - family: NotoSansSC
-  #     fonts:
-  #       - asset: assets/fonts/NotoSansSC-Regular.ttf
-  #       - asset: assets/fonts/NotoSansSC-Bold.ttf
-  #         weight: 700

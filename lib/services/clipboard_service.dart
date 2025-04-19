@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:mind_trace/models/note_category.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/widgets/add_note_dialog.dart'; // 导入AddNoteDialog
-import 'package:mmkv/mmkv.dart';
 import 'package:provider/provider.dart';
+import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring = 'enable_clipboard_monitoring';
@@ -30,8 +30,8 @@ class ClipboardService extends ChangeNotifier {
   // 剪贴板上次处理的内容缓存
   String _lastProcessedContent = '';
   
-  // MMKV实例，用于存储设置
-  late final MMKV _mmkv;
+  // 使用安全包装类替代直接的MMKV
+  late final SafeMMKV _storage;
   
   // 构造函数
   ClipboardService() {
@@ -41,24 +41,25 @@ class ClipboardService extends ChangeNotifier {
   // 初始化首选项
   Future<void> _initPreferences() async {
     try {
-      _mmkv = MMKV.defaultMMKV();
+      _storage = SafeMMKV();
+      await _storage.initialize();
       _loadPreferences();
     } catch (e) {
       debugPrint('初始化剪贴板服务首选项时出错: $e');
     }
   }
   
-  // 从MMKV加载首选项
+  // 从存储加载首选项
   void _loadPreferences() {
-    _enableClipboardMonitoring = _mmkv.decodeBool(_keyEnableClipboardMonitoring) ?? false;
-    _lastProcessedContent = _mmkv.decodeString(_keyLastClipboardContent) ?? '';
+    _enableClipboardMonitoring = _storage.getBool(_keyEnableClipboardMonitoring) ?? false;
+    _lastProcessedContent = _storage.getString(_keyLastClipboardContent) ?? '';
     notifyListeners();
   }
   
   // 设置是否启用剪贴板监控
   void setEnableClipboardMonitoring(bool value) {
     _enableClipboardMonitoring = value;
-    _mmkv.encodeBool(_keyEnableClipboardMonitoring, value);
+    _storage.setBool(_keyEnableClipboardMonitoring, value);
     notifyListeners();
   }
   
@@ -87,7 +88,7 @@ class ClipboardService extends ChangeNotifier {
       
       // 更新最近处理的内容
       _lastProcessedContent = content;
-      _mmkv.encodeString(_keyLastClipboardContent, content);
+      _storage.setString(_keyLastClipboardContent, content);  // 修正变量名
       
       // 提取作者和出处（如果有）
       final extractedInfo = _extractAuthorAndSource(content);

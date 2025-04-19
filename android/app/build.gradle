@@ -50,10 +50,12 @@ android {
     defaultConfig {
         applicationId "com.shangjin.thoughtecho"
         minSdkVersion 23
-        targetSdkVersion 35
+        targetSdkVersion 34  // 修正: targetSdkVersion 不应高于 compileSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+        // 设置应用程序类名为我们的自定义实现
+        manifestPlaceholders = [applicationName: "com.shangjin.thoughtecho.ThoughtEchoApplication"]
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
@@ -93,7 +95,9 @@ android {
 flutter {
     source '../..'
 }
+
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
-    // 不使用Google Play Core库
+    // 更新 MMKV 依赖
+    implementation 'com.tencent:mmkv:1.2.16'  // 使用与 Flutter 插件兼容的最新版本
 }
