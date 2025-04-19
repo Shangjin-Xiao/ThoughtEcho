@@ -23,25 +23,25 @@ class _InsightsPageState extends State<InsightsPage>
   final List<Map<String, dynamic>> _analysisTypes = [
     {
       'title': '全面分析',
-      'icon': Icons.psychology,
+      'icon': Icons.all_inclusive,
       'description': '综合分析您所有笔记，探索主题、情感和思维模式',
       'prompt': 'comprehensive',
     },
     {
       'title': '情感洞察',
-      'icon': Icons.mood,
+      'icon': Icons.star,
       'description': '分析您的情绪状态和变化趋势',
       'prompt': 'emotional',
     },
     {
       'title': '思维导图',
-      'icon': Icons.account_tree,
+      'icon': Icons.star,
       'description': '构建您思考的结构和思维习惯分析',
       'prompt': 'mindmap',
     },
     {
       'title': '成长建议',
-      'icon': Icons.trending_up,
+      'icon': Icons.star,
       'description': '根据您的笔记提供个性化成长和进步建议',
       'prompt': 'growth',
     },
@@ -599,14 +599,14 @@ class _InsightsPageState extends State<InsightsPage>
   IconData _getAnalysisIcon() {
     switch (_selectedAnalysisType) {
       case 'emotional':
-        return Icons.mood;
+        return Icons.star;
       case 'mindmap':
-        return Icons.account_tree;
+        return Icons.star;
       case 'growth':
-        return Icons.trending_up;
+        return Icons.star;
       case 'comprehensive':
       default:
-        return Icons.psychology;
+        return Icons.all_inclusive;
     }
   }
 

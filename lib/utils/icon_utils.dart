@@ -30,7 +30,7 @@ class IconUtils {
     'create': Icons.create,
     'public': Icons.public,
     'category': Icons.category,
-    'psychology': Icons.psychology,
+    'psychology': Icons.bolt,
     'mood': Icons.mood,
     'bookmark': Icons.bookmark,
     'label': Icons.label,

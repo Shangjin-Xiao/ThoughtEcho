@@ -24,11 +24,9 @@ class SettingsService extends ChangeNotifier {
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
 
-  SettingsService(this._prefs) {
-    _loadSettings();
-  }
+  SettingsService(this._prefs);
 
-  void _loadSettings() async {
+  Future<void> _loadSettings() async {
     // 检查是否需要迁移数据
     await _migrateDataIfNeeded();
 
@@ -162,7 +160,12 @@ class SettingsService extends ChangeNotifier {
   static Future<SettingsService> create() async {
     // 保留SharedPreferences实例以便数据迁移
     final prefs = await SharedPreferences.getInstance();
-    return SettingsService(prefs);
+    final service = SettingsService(prefs);
+    // 初始化 MMKVService
+    await service._mmkv.init();
+    // 加载设置数据
+    await service._loadSettings();
+    return service;
   }
 
   Future<void> updateAISettings(AISettings settings) async {

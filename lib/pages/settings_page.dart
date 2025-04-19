@@ -344,9 +344,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: const Text('AI设置'),
-                  subtitle: const Text('配置AI分析功能'),
-                  leading: const Icon(Icons.psychology_outlined),
+                  title: const Text('API设置'),
+                  subtitle: const Text('配置AI分析所需的API信息'),
+                  leading: const Icon(Icons.api_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(

@@ -175,97 +175,95 @@ class ClipboardService extends ChangeNotifier {
     OverlayEntry? overlayEntry;
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 20,
-        right: 20,
+        // 居中显示在上方
+        top: MediaQuery.of(context).padding.top + 32,
+        left: MediaQuery.of(context).size.width / 2 - 160, // 新宽度320
         child: Material(
           color: Colors.transparent,
           child: Container(
-            width: 280,
+            constraints: const BoxConstraints(maxWidth: 320),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(22), // 更大圆角
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha((0.15 * 255).round()),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withAlpha((0.12 * 255).round()),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Column(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.content_paste,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '发现剪贴板内容',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {
-                          overlayEntry?.remove();
-                        },
-                        child: const Icon(
-                          Icons.close,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
+                Icon(
+                  Icons.content_paste,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
                 ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
+                const SizedBox(width: 10),
+                Flexible(
                   child: Text(
-                    content.length > 60 ? '${content.substring(0, 60)}...' : content,
-                    style: const TextStyle(fontSize: 13),
-                    maxLines: 2,
+                    '发现剪贴板内容',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (author != null || source != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Text(
-                      '已识别: ${author ?? ''}${source != null ? ' 《$source》' : ''}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey,
-                        fontStyle: FontStyle.italic,
-                      ),
+                const SizedBox(width: 8),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(36, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                OverflowBar(
-                  spacing: 8.0,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        overlayEntry?.remove();
-                      },
-                      child: const Text('忽略'),
+                  onPressed: () {
+                    overlayEntry?.remove();
+                  },
+                  child: const Text('忽略', style: TextStyle(fontSize: 13)),
+                ),
+                const SizedBox(width: 4),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                    minimumSize: const Size(36, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        overlayEntry?.remove();
-                        _openEditPage(context, content, author, source);
-                      },
-                      child: const Text('添加为笔记'),
+                  ),
+                  onPressed: () {
+                    overlayEntry?.remove();
+                    _openEditPage(context, content, author, source);
+                  },
+                  child: Text(
+                    '添加为笔记',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 2),
+                GestureDetector(
+                  onTap: () {
+                    overlayEntry?.remove();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 2),
+                    child: Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ],
             ),
