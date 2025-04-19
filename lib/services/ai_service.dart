@@ -43,7 +43,7 @@ class AIService extends ChangeNotifier {
       'model': settings.model,
       'messages': body['messages'],
       'temperature': body['temperature'] ?? 0.7,
-      'max_tokens': body['max_tokens'] ?? 1000,
+      'max_tokens': body['max_tokens'] ?? 2500, // 增加 token 限制到 2500
       'stream': false
     };
 
@@ -62,23 +62,23 @@ class AIService extends ChangeNotifier {
         },
         body: json.encode(requestBody),
       ).timeout(
-        const Duration(seconds: 30),
+        const Duration(seconds: 60), // 延长超时时间到60秒
         onTimeout: () {
-          throw Exception('请求超时');
+          throw Exception('请求超时，AI分析可能需要更长时间，请稍后再试');
         },
       );
 
       if (response.statusCode != 200) {
         final errorBody = response.body;
         debugPrint('API错误响应: $errorBody');
-        throw Exception('API请求失败：${response.statusCode}\n$errorBody');
+        throw Exception('AI服务请求失败：${response.statusCode}\n$errorBody');
       }
 
       return response;
     } catch (e) {
       debugPrint('API请求错误: $e');
       if (e.toString().contains('Failed host lookup')) {
-        throw Exception('无法连接到API服务器，请确保服务器已启动');
+        throw Exception('无法连接到AI服务器，请检查网络连接或服务器状态');
       }
       rethrow;
     }
@@ -344,7 +344,7 @@ class AIService extends ChangeNotifier {
     return prompts.first;
   }
 
-  Future<String> generateInsights(List<Quote> quotes) async {
+  Future<String> generateInsights(List<Quote> quotes, {String analysisType = 'comprehensive'}) async {
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
@@ -353,10 +353,67 @@ class AIService extends ChangeNotifier {
         return '日期：${quote.date}\n内容：${quote.content}';
       }).join('\n\n');
 
+      String systemPrompt;
+      
+      switch (analysisType) {
+        case 'emotional':
+          systemPrompt = '''你是一位专注情感分析的心理学家，擅长从文字中解读人们的情感状态和变化。
+请分析用户的笔记内容，提供深入的情感洞察：
+
+1. 情感状态总结：概括用户笔记中表达的主要情绪和情感状态
+2. 情绪波动和模式：识别情绪变化的模式和可能触发因素
+3. 积极/消极情绪比例：分析笔记中积极和消极情绪的大致比例
+4. 情绪管理建议：提供有针对性的情绪管理策略和建议
+
+请使用温和、理解的语气，像一位支持性的朋友一样，而非冷冰冰的分析。避免使用过于专业的术语，用通俗易懂的语言表达你的洞察。记住，你的目标是帮助用户更好地理解自己的情感世界。''';
+          break;
+          
+        case 'mindmap':
+          systemPrompt = '''你是一位思维导图专家和认知分析师，擅长分析人们的思考模式和思维结构。
+请分析用户的笔记内容，揭示其思维模式和结构：
+
+1. 核心思考主题：识别用户笔记中反复出现的核心概念和主题
+2. 思维模式分析：分析用户的思维风格（如系统性思考、创造性思维、批判性思考等）
+3. 思维连接：发现不同笔记之间的隐藏联系和思维路径
+4. 思维盲点：温和地指出可能的思维盲区或固定思维模式
+5. 思维拓展建议：提出拓展思考的方向和具体建议
+
+请以清晰、结构化的方式组织你的回应，使用思维导图的概念来呈现分析结果。用友好、鼓励的语气，激发用户的思考深度和广度。''';
+          break;
+          
+        case 'growth':
+          systemPrompt = '''你是一位成长型思维教练和个人发展顾问，擅长发现人们的成长潜力和进步路径。
+请分析用户的笔记内容，提供个性化的成长和进步建议：
+
+1. 个人优势识别：发现并强调用户笔记中展现的能力和优势
+2. 成长机会：识别潜在的个人成长机会和领域
+3. 目标与价值观：从笔记中提炼用户可能的核心价值观和潜在目标
+4. 具体行动建议：提供3-5个具体、可行的行动建议，帮助用户在个人成长道路上前进
+5. 长期成长方向：温和地提出一些长期发展的可能方向和愿景
+
+请使用鼓励、支持的语气，像一位有智慧的导师，而不是居高临下的评判者。注重实用性和可行动性，使你的建议切实可行。''';
+          break;
+          
+        case 'comprehensive':
+        default:
+          systemPrompt = '''你是一位经验丰富、洞察敏锐的个人成长分析师和思维教练。你擅长从用户的日常记录中发现隐藏的模式和连接，并提供深刻的个人成长洞察。
+
+请以一位贴心的私人顾问身份，分析以下笔记内容，创建一份结构清晰、内容丰富的个人洞察报告，帮助用户更好地了解自己：
+
+1. 核心主题与思考焦点：发现笔记中反复出现的主题、关键概念和思考方向
+2. 情感状态分析：解读笔记中表达的情绪变化和情感模式
+3. 思维模式特点：分析用户的思考风格、视角和思维习惯
+4. 个人成长亮点：指出笔记中展现的进步、成长和积极变化
+5. 前进方向建议：根据分析结果，提供3-5个具体、个性化的成长建议
+
+请使用温和、支持的语气，避免居高临下的评判。确保你的分析既有深度，又具有实用性，能真正帮助用户获得关于自己的新见解。''';
+          break;
+      }
+
       final messages = [
         {
           'role': 'system',
-          'content': '你是一位经验丰富、洞察敏锐的个人成长分析师和心理咨询师。你擅长从用户的日常记录中发现隐藏的模式和规律，并提供深刻的个人成长洞察。 你的任务是深入分析用户提供的所有笔记内容，从以下几个方面进行专业、全面且具有启发性的分析，帮助用户更好地了解自己：\n\n1. **核心主题与关注焦点 (Main Themes & Focus Areas)**：  分析用户笔记中反复出现的主题、关键词和概念，总结用户当前最关注的领域和核心议题。\n\n2. **情感变化趋势 (Emotional Trend Analysis)**：  分析用户在不同时期的笔记中表达的情感变化趋势，例如情绪波动、情感周期等，帮助用户了解自身情感状态的变化规律。\n\n3. **思维模式特点 (Thinking Pattern Characteristics)**：  分析用户的思维方式、认知偏好和思考习惯，例如理性思维、感性思维、发散思维、收敛思维等，帮助用户认识自己的思维优势和局限。\n\n4. **个性化成长建议 (Personalized Growth Recommendations)**：  基于以上分析，为用户提供量身定制的个人成长建议，例如提升专注力、改善情绪管理、拓展知识领域等， направлены на 促进用户的全面发展。\n\n请你运用你的专业知识和分析技巧，像一位贴心的私人顾问一样，为用户提供一份 содержательный, insightful, and actionable 个人洞察报告。',
+          'content': systemPrompt,
         },
         {
           'role': 'user',
@@ -368,7 +425,8 @@ class AIService extends ChangeNotifier {
         settings.apiUrl,
         {
           'messages': messages,
-          'temperature': 0.7
+          'temperature': 0.7,
+          'max_tokens': 2500
         },
         settings
       );
@@ -384,6 +442,54 @@ class AIService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('生成洞察错误: $e');
+      rethrow;
+    }
+  }
+  
+  // 使用自定义提示词生成洞察
+  Future<String> generateCustomInsights(List<Quote> quotes, String customPrompt) async {
+    try {
+      await _validateSettings();
+      final settings = _settingsService.aiSettings;
+
+      final quotesText = quotes.map((quote) {
+        return '日期：${quote.date}\n内容：${quote.content}';
+      }).join('\n\n');
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '''你是一位资深的笔记分析和个人成长顾问。你的任务是根据用户的特定要求，分析他们的笔记内容。
+请以专业、友好且有洞察力的方式回应用户的特定分析请求。注重提供有用、实用且个性化的洞察。
+避免使用过于学术或抽象的语言，保持回应亲切自然。请遵循用户的具体指示进行分析。''',
+        },
+        {
+          'role': 'user',
+          'content': '请根据以下要求分析我的笔记：\n\n${customPrompt}\n\n笔记内容：\n\n${quotesText}'
+        }
+      ];
+
+      final response = await _makeRequest(
+        settings.apiUrl,
+        {
+          'messages': messages,
+          'temperature': 0.7,
+          'max_tokens': 3000
+        },
+        settings
+      );
+
+      final data = json.decode(response.body);
+      if (data['choices'] != null && 
+          data['choices'].isNotEmpty && 
+          data['choices'][0]['message'] != null) {
+        return data['choices'][0]['message']['content'];
+      } else {
+        debugPrint('API响应格式错误: ${response.body}');
+        throw Exception('API响应格式错误');
+      }
+    } catch (e) {
+      debugPrint('生成自定义洞察错误: $e');
       rethrow;
     }
   }
