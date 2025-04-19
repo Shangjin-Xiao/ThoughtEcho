@@ -17,9 +17,9 @@ class AIService extends ChangeNotifier {
     required SettingsService settingsService,
     required LocationService locationService, // 新增
     required WeatherService weatherService, // 新增
-  })  : _settingsService = settingsService,
-        _locationService = locationService, // 新增
-        _weatherService = weatherService; // 新增
+  }) : _settingsService = settingsService,
+       _locationService = locationService, // 新增
+       _weatherService = weatherService; // 新增
 
   Future<void> _validateSettings() async {
     final settings = _settingsService.aiSettings;
@@ -34,7 +34,11 @@ class AIService extends ChangeNotifier {
     }
   }
 
-  Future<http.Response> _makeRequest(String url, Map<String, dynamic> body, AISettings settings) async {
+  Future<http.Response> _makeRequest(
+    String url,
+    Map<String, dynamic> body,
+    AISettings settings,
+  ) async {
     if (body['messages'] is! List) {
       throw Exception('messages字段格式错误');
     }
@@ -44,7 +48,7 @@ class AIService extends ChangeNotifier {
       'messages': body['messages'],
       'temperature': body['temperature'] ?? 0.7,
       'max_tokens': body['max_tokens'] ?? 2500, // 增加 token 限制到 2500
-      'stream': false
+      'stream': false,
     };
 
     debugPrint('API请求体: ${json.encode(requestBody)}');
@@ -54,19 +58,21 @@ class AIService extends ChangeNotifier {
 
     try {
       final client = http.Client();
-      final response = await client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${settings.apiKey}',
-        },
-        body: json.encode(requestBody),
-      ).timeout(
-        const Duration(seconds: 60), // 延长超时时间到60秒
-        onTimeout: () {
-          throw Exception('请求超时，AI分析可能需要更长时间，请稍后再试');
-        },
-      );
+      final response = await client
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${settings.apiKey}',
+            },
+            body: json.encode(requestBody),
+          )
+          .timeout(
+            const Duration(seconds: 60), // 延长超时时间到60秒
+            onTimeout: () {
+              throw Exception('请求超时，AI分析可能需要更长时间，请稍后再试');
+            },
+          );
 
       if (response.statusCode != 200) {
         final errorBody = response.body;
@@ -88,30 +94,24 @@ class AIService extends ChangeNotifier {
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
-      
+
       final messages = [
         {
           'role': 'system',
-          'content': '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
+          'content':
+              '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
         },
-        {
-          'role': 'user',
-          'content': '请分析以下内容：\n${quote.content}'
-        }
+        {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
       ];
 
-      final response = await _makeRequest(
-        settings.apiUrl,
-        {
-          'messages': messages,
-          'temperature': 0.7
-        },
-        settings
-      );
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.7,
+      }, settings);
 
       final data = json.decode(response.body);
-      if (data['choices'] != null && 
-          data['choices'].isNotEmpty && 
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
@@ -128,34 +128,28 @@ class AIService extends ChangeNotifier {
     final settings = _settingsService.aiSettings;
 
     // 检查 AI 配置是否有效
-    if (settings.apiKey.isEmpty || settings.apiUrl.isEmpty || settings.model.isEmpty) {
+    if (settings.apiKey.isEmpty ||
+        settings.apiUrl.isEmpty ||
+        settings.model.isEmpty) {
       debugPrint('AI服务未配置，生成基于上下文的提示');
       return _generatePromptBasedOnContext();
     }
 
     // AI 配置有效，尝试调用 API
     try {
-      
       final messages = [
         {
           'role': 'system',
-          'content': '你是一个富有哲理和智慧的导师，请生成一个发人深省的问题或提示，引导用户进行思考和写作。'
+          'content': '你是一个富有哲理和智慧的导师，请生成一个发人深省的问题或提示，引导用户进行思考和写作。',
         },
-        {
-          'role': 'user',
-          'content': '请生成一个今日提示，帮助用户进行思考和写作。'
-        }
+        {'role': 'user', 'content': '请生成一个今日提示，帮助用户进行思考和写作。'},
       ];
 
       try {
-        final response = await _makeRequest(
-          settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 0.9
-          },
-          settings
-        ).timeout(
+        final response = await _makeRequest(settings.apiUrl, {
+          'messages': messages,
+          'temperature': 0.9,
+        }, settings).timeout(
           const Duration(seconds: 15),
           onTimeout: () {
             debugPrint('生成每日提示超时');
@@ -164,8 +158,8 @@ class AIService extends ChangeNotifier {
         );
 
         final data = json.decode(response.body);
-        if (data['choices'] != null && 
-            data['choices'].isNotEmpty && 
+        if (data['choices'] != null &&
+            data['choices'].isNotEmpty &&
             data['choices'][0]['message'] != null) {
           return data['choices'][0]['message']['content'];
         } else {
@@ -195,9 +189,9 @@ class AIService extends ChangeNotifier {
       "如果时间和金钱都不是问题，明天你会做什么？",
       "今天遇到的最大挑战是什么？你是如何应对的？",
       "有哪些小习惯正在积极地改变你的生活？",
-      "你最珍视的三个价值观是什么？为什么它们对你如此重要？"
+      "你最珍视的三个价值观是什么？为什么它们对你如此重要？",
     ];
-    
+
     // 使用日期为种子选择一个提示，确保同一天显示相同提示
     final today = DateTime.now();
     final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
@@ -252,7 +246,8 @@ class AIService extends ChangeNotifier {
         "此刻的宁静适合思考，你脑海中浮现了什么？",
         "为明天做个简单的计划或设想吧。",
       ]);
-    } else { // 深夜
+    } else {
+      // 深夜
       prompts.addAll([
         "夜深人静，有什么心事或灵感悄然浮现？",
         "此刻的寂静让你想到了什么？",
@@ -271,18 +266,18 @@ class AIService extends ChangeNotifier {
           prompts.add("云层微厚的早晨，适合放慢脚步，思考一下最近的得失。");
         }
       } else if (timeOfDay == '下午') {
-         if (weather.contains('晴')) {
+        if (weather.contains('晴')) {
           prompts.add("午后暖阳正好，适合小憩片刻，或是记录下此刻的惬意。");
         } else if (weather.contains('雨')) {
           prompts.add("雨天的午后，窗外滴答作响，屋内适合读一本书或写点什么。");
         }
       } else if (timeOfDay == '晚上' || timeOfDay == '深夜') {
         if (weather.contains('晴')) {
-           prompts.add("夜幕降临，星光或月色正好，此刻有什么心事或梦想？");
+          prompts.add("夜幕降临，星光或月色正好，此刻有什么心事或梦想？");
         } else if (weather.contains('雨')) {
-           prompts.add("雨夜漫漫，适合独处思考，最近有什么让你困惑或欣喜的事？");
+          prompts.add("雨夜漫漫，适合独处思考，最近有什么让你困惑或欣喜的事？");
         } else if (weather.contains('风')) {
-           prompts.add("晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻的灵感吧。");
+          prompts.add("晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻的灵感吧。");
         }
       }
     }
@@ -290,40 +285,28 @@ class AIService extends ChangeNotifier {
     // 基于天气的提示 (如果天气信息可用)
     if (weather != null) {
       if (weather.contains('晴')) {
-        prompts.addAll([
-          "阳光明媚的日子，有什么让你感到开心？",
-          "这样的好天气，适合做些什么让你放松的事情？",
-        ]);
+        prompts.addAll(["阳光明媚的日子，有什么让你感到开心？", "这样的好天气，适合做些什么让你放松的事情？"]);
       } else if (weather.contains('雨')) {
-        prompts.addAll([
-          "听着雨声，你的心情是怎样的？",
-          "雨天适合沉思，有什么想法在脑海中萦绕？",
-        ]);
+        prompts.addAll(["听着雨声，你的心情是怎样的？", "雨天适合沉思，有什么想法在脑海中萦绕？"]);
       } else if (weather.contains('云') || weather.contains('阴')) {
-        prompts.addAll([
-          "多云的天空下，你的思绪飘向了何方？",
-          "阴天有时也别有韵味，它让你想起了什么？",
-        ]);
+        prompts.addAll(["多云的天空下，你的思绪飘向了何方？", "阴天有时也别有韵味，它让你想起了什么？"]);
       } else if (weather.contains('雪')) {
-         prompts.addAll([
-          "窗外的雪景给你带来了怎样的感受？",
-          "下雪天，适合窝在温暖的地方思考些什么？",
-        ]);
+        prompts.addAll(["窗外的雪景给你带来了怎样的感受？", "下雪天，适合窝在温暖的地方思考些什么？"]);
       }
     }
-    
+
     // 基于温度的提示 (如果温度信息可用)
     if (temperature != null) {
-        try {
-            final tempValue = double.parse(temperature.replaceAll('°C', '').trim());
-            if (tempValue > 28) {
-                prompts.add("天气有点热，此刻你最想做什么来降降温？");
-            } else if (tempValue < 10) {
-                prompts.add("天气有点冷，注意保暖的同时，有什么温暖的想法吗？");
-            }
-        } catch (e) {
-            debugPrint("解析温度失败: $e");
+      try {
+        final tempValue = double.parse(temperature.replaceAll('°C', '').trim());
+        if (tempValue > 28) {
+          prompts.add("天气有点热，此刻你最想做什么来降降温？");
+        } else if (tempValue < 10) {
+          prompts.add("天气有点冷，注意保暖的同时，有什么温暖的想法吗？");
         }
+      } catch (e) {
+        debugPrint("解析温度失败: $e");
+      }
     }
 
     // 基于城市的提示 (如果城市信息可用)
@@ -334,27 +317,32 @@ class AIService extends ChangeNotifier {
     // 随机选择一条提示（修改为只返回一条）
     final random = Random();
     prompts.shuffle(random); // 打乱列表顺序
-    
+
     // 如果没有提示，返回一个默认值
     if (prompts.isEmpty) {
       return "今天，你有什么新的感悟或想法呢？";
     }
-    
+
     // 返回随机选中的一条提示
     return prompts.first;
   }
 
-  Future<String> generateInsights(List<Quote> quotes, {String analysisType = 'comprehensive'}) async {
+  Future<String> generateInsights(
+    List<Quote> quotes, {
+    String analysisType = 'comprehensive',
+  }) async {
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
 
-      final quotesText = quotes.map((quote) {
-        return '日期：${quote.date}\n内容：${quote.content}';
-      }).join('\n\n');
+      final quotesText = quotes
+          .map((quote) {
+            return '日期：${quote.date}\n内容：${quote.content}';
+          })
+          .join('\n\n');
 
       String systemPrompt;
-      
+
       switch (analysisType) {
         case 'emotional':
           systemPrompt = '''你是一位专注情感分析的心理学家，擅长从文字中解读人们的情感状态和变化。
@@ -367,7 +355,7 @@ class AIService extends ChangeNotifier {
 
 请使用温和、理解的语气，像一位支持性的朋友一样，而非冷冰冰的分析。避免使用过于专业的术语，用通俗易懂的语言表达你的洞察。记住，你的目标是帮助用户更好地理解自己的情感世界。''';
           break;
-          
+
         case 'mindmap':
           systemPrompt = '''你是一位思维导图专家和认知分析师，擅长分析人们的思考模式和思维结构。
 请分析用户的笔记内容，揭示其思维模式和结构：
@@ -380,7 +368,7 @@ class AIService extends ChangeNotifier {
 
 请以清晰、结构化的方式组织你的回应，使用思维导图的概念来呈现分析结果。用友好、鼓励的语气，激发用户的思考深度和广度。''';
           break;
-          
+
         case 'growth':
           systemPrompt = '''你是一位成长型思维教练和个人发展顾问，擅长发现人们的成长潜力和进步路径。
 请分析用户的笔记内容，提供个性化的成长和进步建议：
@@ -393,10 +381,11 @@ class AIService extends ChangeNotifier {
 
 请使用鼓励、支持的语气，像一位有智慧的导师，而不是居高临下的评判者。注重实用性和可行动性，使你的建议切实可行。''';
           break;
-          
+
         case 'comprehensive':
         default:
-          systemPrompt = '''你是一位经验丰富、洞察敏锐的个人成长分析师和思维教练。你擅长从用户的日常记录中发现隐藏的模式和连接，并提供深刻的个人成长洞察。
+          systemPrompt =
+              '''你是一位经验丰富、洞察敏锐的个人成长分析师和思维教练。你擅长从用户的日常记录中发现隐藏的模式和连接，并提供深刻的个人成长洞察。
 
 请以一位贴心的私人顾问身份，分析以下笔记内容，创建一份结构清晰、内容丰富的个人洞察报告，帮助用户更好地了解自己：
 
@@ -411,29 +400,19 @@ class AIService extends ChangeNotifier {
       }
 
       final messages = [
-        {
-          'role': 'system',
-          'content': systemPrompt,
-        },
-        {
-          'role': 'user',
-          'content': '请分析以下笔记内容：\n\n$quotesText'
-        }
+        {'role': 'system', 'content': systemPrompt},
+        {'role': 'user', 'content': '请分析以下笔记内容：\n\n$quotesText'},
       ];
 
-      final response = await _makeRequest(
-        settings.apiUrl,
-        {
-          'messages': messages,
-          'temperature': 0.7,
-          'max_tokens': 2500
-        },
-        settings
-      );
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.7,
+        'max_tokens': 2500,
+      }, settings);
 
       final data = json.decode(response.body);
-      if (data['choices'] != null && 
-          data['choices'].isNotEmpty && 
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
@@ -445,16 +424,21 @@ class AIService extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   // 使用自定义提示词生成洞察
-  Future<String> generateCustomInsights(List<Quote> quotes, String customPrompt) async {
+  Future<String> generateCustomInsights(
+    List<Quote> quotes,
+    String customPrompt,
+  ) async {
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
 
-      final quotesText = quotes.map((quote) {
-        return '日期：${quote.date}\n内容：${quote.content}';
-      }).join('\n\n');
+      final quotesText = quotes
+          .map((quote) {
+            return '日期：${quote.date}\n内容：${quote.content}';
+          })
+          .join('\n\n');
 
       final messages = [
         {
@@ -465,23 +449,20 @@ class AIService extends ChangeNotifier {
         },
         {
           'role': 'user',
-          'content': '请根据以下要求分析我的笔记：\n\n${customPrompt}\n\n笔记内容：\n\n${quotesText}'
-        }
+          'content':
+              '请根据以下要求分析我的笔记：\n\n${customPrompt}\n\n笔记内容：\n\n${quotesText}',
+        },
       ];
 
-      final response = await _makeRequest(
-        settings.apiUrl,
-        {
-          'messages': messages,
-          'temperature': 0.7,
-          'max_tokens': 3000
-        },
-        settings
-      );
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.7,
+        'max_tokens': 3000,
+      }, settings);
 
       final data = json.decode(response.body);
-      if (data['choices'] != null && 
-          data['choices'].isNotEmpty && 
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
@@ -500,28 +481,18 @@ class AIService extends ChangeNotifier {
       final settings = _settingsService.aiSettings;
 
       final messages = [
-        {
-          'role': 'system',
-          'content': '你是一个专业的笔记分析助手，请根据用户的笔记内容回答问题。'
-        },
-        {
-          'role': 'user',
-          'content': '笔记内容：${quote.content}\n\n问题：$question'
-        }
+        {'role': 'system', 'content': '你是一个专业的笔记分析助手，请根据用户的笔记内容回答问题。'},
+        {'role': 'user', 'content': '笔记内容：${quote.content}\n\n问题：$question'},
       ];
 
-      final response = await _makeRequest(
-        settings.apiUrl,
-        {
-          'messages': messages,
-          'temperature': 0.7
-        },
-        settings
-      );
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.7,
+      }, settings);
 
       final data = json.decode(response.body);
-      if (data['choices'] != null && 
-          data['choices'].isNotEmpty && 
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
