@@ -4,9 +4,9 @@ class SlidingCard extends StatefulWidget {
   final List<Widget> pages;
 
   const SlidingCard({
-    Key? key,
+    super.key,
     required this.pages,
-  }) : super(key: key);
+  });
 
   @override
   State<SlidingCard> createState() => _SlidingCardState();

@@ -3,7 +3,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'
+    if (dart.library.io) 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/note_category.dart';
@@ -12,7 +14,8 @@ import 'package:uuid/uuid.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
-  final _categoriesController = StreamController<List<NoteCategory>>.broadcast();
+  final _categoriesController =
+      StreamController<List<NoteCategory>>.broadcast();
   final _uuid = const Uuid();
   // 内存存储，用于 Web 平台或调试存储，与原有业务流程保持一致
   final List<Quote> _memoryStore = [];
@@ -76,7 +79,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 8,
+        version: 9, // 版本号增加，以支持添加索引
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -108,45 +111,59 @@ class DatabaseService extends ChangeNotifier {
               temperature TEXT -- 从版本 8 开始添加
             )
           ''');
+
+          // 创建索引以加速常用查询
+          await db.execute(
+            'CREATE INDEX idx_quotes_category_id ON quotes(category_id)',
+          );
+          await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
+          // 虽然tag_ids是一个文本字段，但我们也可以为它创建索引，以加速LIKE查询
+          await db.execute(
+            'CREATE INDEX idx_quotes_tag_ids ON quotes(tag_ids)',
+          );
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
           if (oldVersion < 2) {
             await db.execute(
-                'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""');
+              'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""',
+            );
           }
           // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
           if (oldVersion < 3) {
             await db.execute(
-                'ALTER TABLE categories ADD COLUMN icon_name TEXT');
+              'ALTER TABLE categories ADD COLUMN icon_name TEXT',
+            );
           }
           // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
           if (oldVersion < 4) {
             await db.execute(
-                'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""');
+              'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""',
+            );
           }
 
           // 如果数据库版本低于 5，添加 quotes 表中的 source 字段
           if (oldVersion < 5) {
-            await db.execute(
-                'ALTER TABLE quotes ADD COLUMN source TEXT');
+            await db.execute('ALTER TABLE quotes ADD COLUMN source TEXT');
           }
 
           // 如果数据库版本低于 6，添加 quotes 表中的 color_hex 字段
           if (oldVersion < 6) {
-            await db.execute(
-                'ALTER TABLE quotes ADD COLUMN color_hex TEXT');
+            await db.execute('ALTER TABLE quotes ADD COLUMN color_hex TEXT');
           }
 
           // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
           if (oldVersion < 7) {
             await db.execute(
-                'ALTER TABLE quotes ADD COLUMN source_author TEXT');
-            await db.execute(
-                'ALTER TABLE quotes ADD COLUMN source_work TEXT');
+              'ALTER TABLE quotes ADD COLUMN source_author TEXT',
+            );
+            await db.execute('ALTER TABLE quotes ADD COLUMN source_work TEXT');
 
             // 将现有的 source 字段数据拆分到新字段中
-            final quotes = await db.query('quotes', where: 'source IS NOT NULL AND source != ""');
+            final quotes = await db.query(
+              'quotes',
+              where: 'source IS NOT NULL AND source != ""',
+            );
             for (final quote in quotes) {
               final String? source = quote['source'] as String?;
               if (source != null && source.isNotEmpty) {
@@ -176,10 +193,7 @@ class DatabaseService extends ChangeNotifier {
                 // 更新数据库条目
                 await db.update(
                   'quotes',
-                  {
-                    'source_author': author,
-                    'source_work': work,
-                  },
+                  {'source_author': author, 'source_work': work},
                   where: 'id = ?',
                   whereArgs: [quote['id']],
                 );
@@ -189,13 +203,28 @@ class DatabaseService extends ChangeNotifier {
 
           // 如果数据库版本低于 8，添加位置和天气相关字段
           if (oldVersion < 8) {
-            debugPrint('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段');
+            debugPrint(
+              '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段',
+            );
             await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
             await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
             await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
             debugPrint('数据库升级：location, weather, temperature 字段添加完成');
-          } else {
-            debugPrint('数据库版本 $oldVersion >= 8，无需添加 location, weather, temperature 字段');
+          }
+
+          // 如果数据库版本低于 9，添加索引以提高查询性能
+          if (oldVersion < 9) {
+            debugPrint('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
+            );
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
+            );
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
+            );
+            debugPrint('数据库升级：索引添加完成');
           }
         },
       );
@@ -275,16 +304,12 @@ class DatabaseService extends ChangeNotifier {
 
         // 如果不存在，则添加
         if (existing.isEmpty) {
-          await db.insert(
-            'categories',
-            {
-              'id': category.id,
-              'name': category.name,
-              'is_default': category.isDefault ? 1 : 0,
-              'icon_name': category.iconName,
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
+          await db.insert('categories', {
+            'id': category.id,
+            'name': category.name,
+            'is_default': category.isDefault ? 1 : 0,
+            'icon_name': category.iconName,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
           debugPrint('添加默认一言分类: ${category.name}');
         }
       }
@@ -392,34 +417,44 @@ class DatabaseService extends ChangeNotifier {
           'version': await db.getVersion(),
           'exportTime': DateTime.now().toIso8601String(),
         },
-        'categories': categories.map((c) => {
-          'id': c['id'],
-          'name': c['name'],
-          'isDefault': c['is_default'] == 1,
-          'iconName': c['icon_name'],
-        }).toList(),
-        'quotes': quotes.map((q) => {
-          'id': q['id'],
-          'content': q['content'],
-          'date': q['date'],
-          'source': q['source'],
-          'sourceAuthor': q['source_author'],
-          'sourceWork': q['source_work'],
-          'tagIds': q['tag_ids'],
-          'aiAnalysis': q['ai_analysis'],
-          'sentiment': q['sentiment'],
-          'keywords': q['keywords'],
-          'summary': q['summary'],
-          'categoryId': q['category_id'],
-          'colorHex': q['color_hex'],
-          'location': q['location'],
-          'weather': q['weather'],
-          'temperature': q['temperature'],
-        }).toList(),
+        'categories':
+            categories
+                .map(
+                  (c) => {
+                    'id': c['id'],
+                    'name': c['name'],
+                    'isDefault': c['is_default'] == 1,
+                    'iconName': c['icon_name'],
+                  },
+                )
+                .toList(),
+        'quotes':
+            quotes
+                .map(
+                  (q) => {
+                    'id': q['id'],
+                    'content': q['content'],
+                    'date': q['date'],
+                    'source': q['source'],
+                    'sourceAuthor': q['source_author'],
+                    'sourceWork': q['source_work'],
+                    'tagIds': q['tag_ids'],
+                    'aiAnalysis': q['ai_analysis'],
+                    'sentiment': q['sentiment'],
+                    'keywords': q['keywords'],
+                    'summary': q['summary'],
+                    'categoryId': q['category_id'],
+                    'colorHex': q['color_hex'],
+                    'location': q['location'],
+                    'weather': q['weather'],
+                    'temperature': q['temperature'],
+                  },
+                )
+                .toList(),
       };
 
       // 转换为格式化的 JSON 字符串
-      final jsonStr = JsonEncoder.withIndent('  ').convert(jsonData);
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(jsonData);
 
       String filePath;
       if (customPath != null) {
@@ -453,8 +488,10 @@ class DatabaseService extends ChangeNotifier {
       final data = json.decode(jsonStr) as Map<String, dynamic>;
 
       // 验证数据格式 (与 validateBackupFile 保持一致)
-      if (!data.containsKey('metadata') || !data.containsKey('categories') || !data.containsKey('quotes')) {
-         throw Exception('备份文件格式无效，缺少必要的顶层数据结构 (metadata, categories, quotes)');
+      if (!data.containsKey('metadata') ||
+          !data.containsKey('categories') ||
+          !data.containsKey('quotes')) {
+        throw Exception('备份文件格式无效，缺少必要的顶层数据结构 (metadata, categories, quotes)');
       }
 
       // 开始事务
@@ -503,16 +540,18 @@ class DatabaseService extends ChangeNotifier {
 
           // 获取现有分类和笔记的ID列表，用于检查是否存在
           final existingCategories = await txn.query('categories');
-          final existingCategoryIds = existingCategories.map((c) => c['id'] as String).toSet();
+          final existingCategoryIds =
+              existingCategories.map((c) => c['id'] as String).toSet();
 
           // 创建一个映射，用于检查分类名称重复
           final existingCategoryNames = {
             for (var c in existingCategories)
-              (c['name'] as String).toLowerCase(): c['id'] as String
+              (c['name'] as String).toLowerCase(): c['id'] as String,
           };
 
           final existingQuotes = await txn.query('quotes', columns: ['id']);
-          final existingQuoteIds = existingQuotes.map((q) => q['id'] as String).toSet();
+          final existingQuoteIds =
+              existingQuotes.map((q) => q['id'] as String).toSet();
 
           // 合并分类数据
           final categories = data['categories'] as List;
@@ -647,31 +686,35 @@ class DatabaseService extends ChangeNotifier {
       // 验证基本结构，应与 exportAllData 导出的结构一致
       final requiredKeys = {'metadata', 'categories', 'quotes'};
       if (!requiredKeys.every((key) => data.containsKey(key))) {
-         // 提供更详细的错误信息，指出缺少哪些键
-         final missingKeys = requiredKeys.difference(data.keys.toSet());
-         throw Exception('备份文件格式无效，缺少必要的顶层数据结构 (需要: metadata, categories, quotes; 缺少: ${missingKeys.join(', ')})');
+        // 提供更详细的错误信息，指出缺少哪些键
+        final missingKeys = requiredKeys.difference(data.keys.toSet());
+        throw Exception(
+          '备份文件格式无效，缺少必要的顶层数据结构 (需要: metadata, categories, quotes; 缺少: ${missingKeys.join(', ')})',
+        );
       }
       // --- 修改结束 ---
 
       // 可选：进一步验证内部结构，例如 metadata 是否包含 version
-      if (data['metadata'] is! Map || !(data['metadata'] as Map).containsKey('version')) {
+      if (data['metadata'] is! Map ||
+          !(data['metadata'] as Map).containsKey('version')) {
         debugPrint('警告：备份文件元数据 (metadata) 格式不正确或缺少版本信息');
         // 可以选择是否在这里抛出异常，取决于是否强制要求版本信息
       }
 
       // 可选：检查 categories 和 quotes 是否为列表类型
       if (data['categories'] is! List) {
-         throw Exception('备份文件中的 \'categories\' 必须是一个列表');
+        throw Exception('备份文件中的 \'categories\' 必须是一个列表');
       }
       if (data['quotes'] is! List) {
-         throw Exception('备份文件中的 \'quotes\' 必须是一个列表');
+        throw Exception('备份文件中的 \'quotes\' 必须是一个列表');
       }
 
       // 检查至少需要有quotes或categories (可选，空备份也可能有效)
       final quotes = data['quotes'] as List?;
       final categories = data['categories'] as List?;
 
-      if ((quotes == null || quotes.isEmpty) && (categories == null || categories.isEmpty)) {
+      if ((quotes == null || quotes.isEmpty) &&
+          (categories == null || categories.isEmpty)) {
         debugPrint('警告：备份文件不包含任何分类或笔记数据');
         // 空备份也是有效的，但可以记录警告
       }
@@ -688,7 +731,6 @@ class DatabaseService extends ChangeNotifier {
       throw Exception('无法验证备份文件： $e');
     }
   }
-
 
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
@@ -714,7 +756,9 @@ class DatabaseService extends ChangeNotifier {
 
     if (kIsWeb) {
       // 检查是否已存在同名分类
-      final exists = _categoryStore.any((c) => c.name.toLowerCase() == name.toLowerCase());
+      final exists = _categoryStore.any(
+        (c) => c.name.toLowerCase() == name.toLowerCase(),
+      );
       if (exists) {
         throw Exception('已存在相同名称的分类');
       }
@@ -749,7 +793,7 @@ class DatabaseService extends ChangeNotifier {
       'id': id,
       'name': name,
       'is_default': 0,
-      'icon_name': iconName ?? ""
+      'icon_name': iconName ?? "",
     };
     await db.insert(
       'categories',
@@ -836,111 +880,204 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 获取用户的所有引用（支持通过标签 tagIds 或分类 categoryId 查询）
-    Future<List<Quote>> getUserQuotes({
-      List<String>? tagIds,
-      String? categoryId,
-    }) async {
-      try {
-        if (kIsWeb) {
-          // Web平台特定逻辑
-          if (tagIds != null && tagIds.isNotEmpty) {
-            return _memoryStore.where((quote) =>
-              tagIds.any((tagId) => quote.tagIds.contains(tagId))).toList();
-          } else if (categoryId != null && categoryId.isNotEmpty) {
-            return _memoryStore.where((quote) =>
-              quote.categoryId == categoryId).toList();
-          }
-          return List.from(_memoryStore);
-        }
-        final db = database;
-        List<Map<String, dynamic>> maps;
+  /// 添加分页支持，使用limit和offset参数控制数据量
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20, // 默认每页加载20条
+    int offset = 0, // 默认从第0条开始
+    String orderBy = 'date DESC', // 默认按日期倒序排列
+  }) async {
+    try {
+      if (kIsWeb) {
+        // Web平台特定逻辑
+        List<Quote> filteredQuotes;
         if (tagIds != null && tagIds.isNotEmpty) {
-          // 根据 tag_ids 字段进行模糊匹配查询
-          final whereClause = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
-          maps = await db.query(
-            'quotes',
-            where: whereClause,
-            whereArgs: tagIds.map((id) => '%$id%').toList(),
-          );
+          filteredQuotes =
+              _memoryStore
+                  .where(
+                    (quote) =>
+                        tagIds.any((tagId) => quote.tagIds.contains(tagId)),
+                  )
+                  .toList();
         } else if (categoryId != null && categoryId.isNotEmpty) {
-          maps = await db.query(
-            'quotes',
-            where: 'category_id = ?',
-            whereArgs: [categoryId],
-          );
+          filteredQuotes =
+              _memoryStore
+                  .where((quote) => quote.categoryId == categoryId)
+                  .toList();
         } else {
-          maps = await db.query('quotes');
+          filteredQuotes = List.from(_memoryStore);
         }
-        return maps.map((map) => Quote.fromMap(map)).toList();
-      } catch (e) {
-        debugPrint('获取引用错误: $e');
-        return [];
-      }
-    }
 
-    /// 删除指定的笔记
-    Future<void> deleteQuote(String id) async {
-      if (kIsWeb) {
-        _memoryStore.removeWhere((quote) => quote.id == id);
-        notifyListeners();
-        return;
+        // 按日期排序（假设Quote类有一个date字段）
+        filteredQuotes.sort((a, b) {
+          if (orderBy.contains('DESC')) {
+            return b.date.compareTo(a.date); // 降序
+          } else {
+            return a.date.compareTo(b.date); // 升序
+          }
+        });
+
+        // 应用分页
+        final start =
+            offset < filteredQuotes.length ? offset : filteredQuotes.length;
+        final end =
+            (offset + limit) < filteredQuotes.length
+                ? (offset + limit)
+                : filteredQuotes.length;
+        return filteredQuotes.sublist(start, end);
       }
+
       final db = database;
-      await db.delete('quotes', where: 'id = ?', whereArgs: [id]);
-      notifyListeners();
-    }
+      List<Map<String, dynamic>> maps;
+      String where = '';
+      List<dynamic> whereArgs = [];
 
-    /// 更新笔记内容
-    Future<void> updateQuote(Quote quote) async {
-      if (kIsWeb) {
-        final index = _memoryStore.indexWhere((q) => q.id == quote.id);
-        if (index != -1) {
-          _memoryStore[index] = quote;
-          notifyListeners();
-        }
-        return;
+      if (tagIds != null && tagIds.isNotEmpty) {
+        // 根据 tag_ids 字段进行模糊匹配查询
+        where = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
+        whereArgs = tagIds.map((id) => '%$id%').toList();
+      } else if (categoryId != null && categoryId.isNotEmpty) {
+        where = 'category_id = ?';
+        whereArgs = [categoryId];
       }
 
-      try {
-        if (quote.id == null) {
-          throw Exception('更新笔记时ID不能为空');
-        }
-
-        final db = database;
-        final quoteMap = quote.toMap();
-
-        // 确保所有必需的字段都存在
-        if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
-          throw Exception('笔记内容不能为空');
-        }
-
-        if (!quoteMap.containsKey('date') || quoteMap['date'] == null) {
-          quoteMap['date'] = DateTime.now().toIso8601String();
-        }
-
-        // 检查数据库中是否存在location、weather、temperature列
-        final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
-        final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
-
-        // 如果列不存在，从Map中移除相应的键，避免SQL错误
-        if (!columnNames.contains('location')) quoteMap.remove('location');
-        if (!columnNames.contains('weather')) quoteMap.remove('weather');
-        if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
-
-        debugPrint('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
-
-        await db.update(
+      // 使用分页查询
+      if (where.isNotEmpty) {
+        maps = await db.query(
           'quotes',
-          quoteMap,
-          where: 'id = ?',
-          whereArgs: [quote.id],
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          where: where,
+          whereArgs: whereArgs,
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
         );
-        debugPrint('笔记已成功更新，ID: ${quote.id}');
-        notifyListeners();
-      } catch (e) {
-        debugPrint('更新笔记时出错: $e');
-        rethrow; // 重新抛出异常，让调用者处理
+      } else {
+        maps = await db.query(
+          'quotes',
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
+        );
       }
+
+      debugPrint('分页加载笔记: limit=$limit, offset=$offset, 获取到${maps.length}条记录');
+      return maps.map((map) => Quote.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取引用错误: $e');
+      return [];
     }
+  }
+
+  /// 获取笔记总数（用于分页）
+  Future<int> getQuotesCount({List<String>? tagIds, String? categoryId}) async {
+    try {
+      if (kIsWeb) {
+        // Web平台特定逻辑
+        if (tagIds != null && tagIds.isNotEmpty) {
+          return _memoryStore
+              .where(
+                (quote) => tagIds.any((tagId) => quote.tagIds.contains(tagId)),
+              )
+              .length;
+        } else if (categoryId != null && categoryId.isNotEmpty) {
+          return _memoryStore
+              .where((quote) => quote.categoryId == categoryId)
+              .length;
+        }
+        return _memoryStore.length;
+      }
+
+      final db = database;
+      String where = '';
+      List<dynamic> whereArgs = [];
+
+      if (tagIds != null && tagIds.isNotEmpty) {
+        where = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
+        whereArgs = tagIds.map((id) => '%$id%').toList();
+      } else if (categoryId != null && categoryId.isNotEmpty) {
+        where = 'category_id = ?';
+        whereArgs = [categoryId];
+      }
+
+      // 计算符合条件的记录总数
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quotes ${where.isEmpty ? '' : 'WHERE $where'}',
+        whereArgs,
+      );
+
+      final count = Sqflite.firstIntValue(result) ?? 0;
+      debugPrint('笔记总数: $count');
+      return count;
+    } catch (e) {
+      debugPrint('获取笔记总数出错: $e');
+      return 0;
+    }
+  }
+
+  /// 删除指定的笔记
+  Future<void> deleteQuote(String id) async {
+    if (kIsWeb) {
+      _memoryStore.removeWhere((quote) => quote.id == id);
+      notifyListeners();
+      return;
+    }
+    final db = database;
+    await db.delete('quotes', where: 'id = ?', whereArgs: [id]);
+    notifyListeners();
+  }
+
+  /// 更新笔记内容
+  Future<void> updateQuote(Quote quote) async {
+    if (kIsWeb) {
+      final index = _memoryStore.indexWhere((q) => q.id == quote.id);
+      if (index != -1) {
+        _memoryStore[index] = quote;
+        notifyListeners();
+      }
+      return;
+    }
+
+    try {
+      if (quote.id == null) {
+        throw Exception('更新笔记时ID不能为空');
+      }
+
+      final db = database;
+      final quoteMap = quote.toMap();
+
+      // 确保所有必需的字段都存在
+      if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
+        throw Exception('笔记内容不能为空');
+      }
+
+      if (!quoteMap.containsKey('date') || quoteMap['date'] == null) {
+        quoteMap['date'] = DateTime.now().toIso8601String();
+      }
+
+      // 检查数据库中是否存在location、weather、temperature列
+      final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
+      final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
+
+      // 如果列不存在，从Map中移除相应的键，避免SQL错误
+      if (!columnNames.contains('location')) quoteMap.remove('location');
+      if (!columnNames.contains('weather')) quoteMap.remove('weather');
+      if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
+
+      debugPrint('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
+
+      await db.update(
+        'quotes',
+        quoteMap,
+        where: 'id = ?',
+        whereArgs: [quote.id],
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      debugPrint('笔记已成功更新，ID: ${quote.id}');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('更新笔记时出错: $e');
+      rethrow; // 重新抛出异常，让调用者处理
+    }
+  }
 }

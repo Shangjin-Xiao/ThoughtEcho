@@ -10,7 +10,7 @@ class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
   final Function(String, String?, String?, Map<String, dynamic>) onAddQuote;
 
-  const DailyQuoteView({Key? key, required this.onAddQuote}) : super(key: key);
+  const DailyQuoteView({super.key, required this.onAddQuote});
 
   @override
   State<DailyQuoteView> createState() => _DailyQuoteViewState();
@@ -120,7 +120,7 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height:
               MediaQuery.of(context).size.height -
               kToolbarHeight -
@@ -137,15 +137,13 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
                         onTap: () {
                           // 单击复制内容
                           final String formattedQuote =
-                              '${dailyQuote['content']}\n' +
-                              (dailyQuote['from_who'] != null &&
+                              '${dailyQuote['content']}\n${dailyQuote['from_who'] != null &&
                                       dailyQuote['from_who'].isNotEmpty
                                   ? '——${dailyQuote['from_who']}'
-                                  : '') +
-                              (dailyQuote['from'] != null &&
+                                  : ''}${dailyQuote['from'] != null &&
                                       dailyQuote['from'].isNotEmpty
                                   ? '《${dailyQuote['from']}》'
-                                  : '');
+                                  : ''}';
 
                           // 复制到剪贴板
                           Clipboard.setData(

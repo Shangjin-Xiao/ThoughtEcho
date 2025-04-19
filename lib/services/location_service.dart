@@ -820,7 +820,7 @@ class LocationService extends ChangeNotifier {
       _searchResults = [];
       debugPrint('搜索城市发生错误: $e');
       // 重新抛出异常以便外部处理
-      throw e;
+      rethrow;
     } finally {
       _isSearching = false;
       notifyListeners();
@@ -868,7 +868,7 @@ class LocationService extends ChangeNotifier {
     if (_city == null) return '';
 
     // 如果城市名已经包含"市"，不再添加
-    String cityDisplay = _city!.endsWith('市') ? _city! : '${_city}市';
+    String cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
 
     // 如果有区县信息，添加中文中间点和区县名称
     if (_district != null && _district!.isNotEmpty) {

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:intl/intl.dart';
 import '../utils/http_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -43,8 +41,8 @@ class WeatherService extends ChangeNotifier {
           await _saveToCache(latitude, longitude);
         } catch (e) {
           debugPrint('OpenMeteo API调用失败: $e');
-          // 如果API调用失败，尝试使用本地估算的天气数据
-          _useLocalWeatherEstimation(latitude, longitude);
+          // API调用失败，直接抛出异常
+          rethrow;
         }
       }
       
@@ -59,123 +57,6 @@ class WeatherService extends ChangeNotifier {
     }
   }
 
-  // 使用本地估算的天气数据（基于经纬度和季节）
-  void _useLocalWeatherEstimation(double latitude, double longitude) {
-    debugPrint('使用本地天气估算');
-    
-    // 获取当前日期信息用于季节确定
-    final now = DateTime.now();
-    final month = now.month;
-    
-    // 判断大致季节（北半球视角）
-    String season;
-    if (month >= 3 && month <= 5) {
-      season = '春季';
-    } else if (month >= 6 && month <= 8) {
-      season = '夏季';
-    } else if (month >= 9 && month <= 11) {
-      season = '秋季';
-    } else {
-      season = '冬季';
-    }
-    
-    // 南北半球季节相反
-    if (latitude < 0) {
-      if (season == '夏季') {
-        season = '冬季';
-      } else if (season == '冬季') {
-        season = '夏季';
-      } else if (season == '春季') {
-        season = '秋季';
-      } else {
-        season = '春季';
-      }
-    }
-    
-    // 根据纬度确定温度范围
-    double baseTemp;
-    if (latitude.abs() < 15) {
-      // 热带
-      baseTemp = 28;
-    } else if (latitude.abs() < 30) {
-      // 亚热带
-      baseTemp = 22;
-    } else if (latitude.abs() < 45) {
-      // 温带
-      baseTemp = 15;
-    } else if (latitude.abs() < 60) {
-      // 亚寒带
-      baseTemp = 5;
-    } else {
-      // 寒带
-      baseTemp = -10;
-    }
-    
-    // 根据季节调整温度
-    if (season == '夏季') {
-      baseTemp += 10;
-    } else if (season == '冬季') {
-      baseTemp -= 10;
-    } else {
-      // 春秋季温度适中
-      baseTemp += 2;
-    }
-    
-    // 确定天气类型（简化模型）
-    String weatherType;
-    int weatherCode;
-    
-    // 随机天气变化因子
-    final randomFactor = now.day % 4; // 0-3之间的数字，给天气添加一些随机性
-    
-    if (season == '夏季') {
-      if (randomFactor == 0) {
-        weatherType = '晴';
-        weatherCode = 0;
-      } else if (randomFactor == 1) {
-        weatherType = '多云';
-        weatherCode = 3;
-      } else {
-        weatherType = '阵雨';
-        weatherCode = 80;
-      }
-    } else if (season == '冬季') {
-      if (latitude.abs() > 40 && randomFactor > 1) {
-        weatherType = '雪';
-        weatherCode = 71;
-      } else if (randomFactor == 0) {
-        weatherType = '晴';
-        weatherCode = 0;
-      } else {
-        weatherType = '多云';
-        weatherCode = 3;
-      }
-    } else {
-      // 春秋季
-      if (randomFactor == 0) {
-        weatherType = '晴';
-        weatherCode = 0;
-      } else if (randomFactor == 1) {
-        weatherType = '多云';
-        weatherCode = 3;
-      } else if (randomFactor == 2) {
-        weatherType = '小雨';
-        weatherCode = 61;
-      } else {
-        weatherType = '阴';
-        weatherCode = 3;
-      }
-    }
-    
-    // 设置天气数据
-    _weatherDescription = weatherType;
-    _currentWeather = weatherType;
-    _temperature_value = baseTemp + (randomFactor - 1.5);
-    _temperature = '${_temperature_value?.toStringAsFixed(0)}°C';
-    _weatherIcon = _getWeatherIconCode(weatherCode);
-    
-    debugPrint('本地天气估算: $_weatherDescription, $_temperature');
-  }
 
   // 从缓存加载天气数据
   Future<bool> _loadFromCache(double latitude, double longitude) async {
@@ -285,7 +166,7 @@ class WeatherService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('获取OpenMeteo天气失败: $e');
-      throw e; // 重新抛出异常以便外部处理
+      rethrow; // 重新抛出异常以便外部处理
     }
   }
 

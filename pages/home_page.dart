@@ -6,7 +6,7 @@ import '../widgets/sliding_card.dart';
 import '../models/quote_model.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();

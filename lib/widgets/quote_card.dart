@@ -4,7 +4,7 @@ import 'package:mind_trace/models/quote_model.dart';
 class QuoteCard extends StatelessWidget {
   final Quote quote;
 
-  const QuoteCard({Key? key, required this.quote}) : super(key: key);
+  const QuoteCard({super.key, required this.quote});
 
   @override
   Widget build(BuildContext context) {

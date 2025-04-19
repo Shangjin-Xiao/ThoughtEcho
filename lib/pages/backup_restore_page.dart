@@ -78,7 +78,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         final saveLocation = await getSaveLocation(
           suggestedName: fileName,
           acceptedTypeGroups: [
-            XTypeGroup(
+            const XTypeGroup(
               label: 'JSON',
               extensions: ['json'],
             ),
@@ -142,7 +142,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _handleImport(BuildContext context) async {
     try {
       // 使用file_selector替代file_picker
-      final XTypeGroup jsonTypeGroup = XTypeGroup(
+      const XTypeGroup jsonTypeGroup = XTypeGroup(
         label: 'JSON',
         extensions: ['json'],
       );

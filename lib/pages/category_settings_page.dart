@@ -5,7 +5,7 @@ import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 
 class CategorySettingsPage extends StatefulWidget {
-  const CategorySettingsPage({Key? key}) : super(key: key);
+  const CategorySettingsPage({super.key});
 
   @override
   State<CategorySettingsPage> createState() => _CategorySettingsPageState();
@@ -218,7 +218,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           
           return AlertDialog(
             title: const Text('选择图标'),
-            content: Container(
+            content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.8,
               height: MediaQuery.of(context).size.height * 0.6,
               child: Column(

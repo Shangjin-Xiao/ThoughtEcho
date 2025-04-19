@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import '../utils/color_utils.dart';
 
 class SlidingCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onSlideComplete;
 
   const SlidingCard({
-    Key? key,
+    super.key,
     required this.child,
     this.onSlideComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -13,7 +13,7 @@ import 'dart:convert';
 class EditPage extends StatefulWidget {
   final Quote quote;
 
-  const EditPage({Key? key, required this.quote}) : super(key: key);
+  const EditPage({super.key, required this.quote});
 
   @override
   _EditPageState createState() => _EditPageState();
@@ -293,7 +293,7 @@ class _EditPageState extends State<EditPage> {
                     ],
                     if (explanation.isNotEmpty) ...[
                       const Text('分析说明:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text(explanation, style: TextStyle(fontSize: 13)),
+                      Text(explanation, style: const TextStyle(fontSize: 13)),
                     ],
                     if ((author == null || author.isEmpty) && (work == null || work.isEmpty))
                       const Text('未能识别出明确的作者或作品'),

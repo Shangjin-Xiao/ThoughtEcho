@@ -4,7 +4,7 @@ import '../services/settings_service.dart';
 import '../services/api_service.dart';
 
 class HitokotoSettingsPage extends StatefulWidget {
-  const HitokotoSettingsPage({Key? key}) : super(key: key);
+  const HitokotoSettingsPage({super.key});
 
   @override
   State<HitokotoSettingsPage> createState() => _HitokotoSettingsPageState();
@@ -82,7 +82,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage> {
                 _saveSelectedTypes();
               },
             );
-          }).toList(),
+          }),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),

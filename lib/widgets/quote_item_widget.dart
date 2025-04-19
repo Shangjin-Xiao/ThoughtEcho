@@ -14,7 +14,7 @@ class QuoteItemWidget extends StatelessWidget {
   final Widget Function(NoteCategory)? tagBuilder;
 
   const QuoteItemWidget({
-    Key? key,
+    super.key,
     required this.quote,
     required this.tags,
     required this.isExpanded,
@@ -23,7 +23,7 @@ class QuoteItemWidget extends StatelessWidget {
     required this.onDelete,
     required this.onAskAI,
     this.tagBuilder,
-  }) : super(key: key);
+  });
 
   bool _needsExpansion(String text) {
     return text.length > 100;
@@ -91,7 +91,7 @@ class QuoteItemWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         color: quote.colorHex != null 
           ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000)
-          : theme.colorScheme.surfaceVariant.withOpacity(0.3),
+          : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => onToggleExpanded(!isExpanded),
@@ -310,7 +310,7 @@ class QuoteItemWidget extends StatelessWidget {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete, color: Colors.red),
+                              const Icon(Icons.delete, color: Colors.red),
                               const SizedBox(width: 8),
                               Text(
                                 '删除笔记',

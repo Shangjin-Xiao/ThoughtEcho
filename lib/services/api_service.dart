@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../utils/http_utils.dart';
 
@@ -113,7 +112,7 @@ class ApiService {
   }
 
   void fetchData() {
-    final req = const Request();
+    const req = Request();
     print("请求发送：${req.toString()}");
   }
 }

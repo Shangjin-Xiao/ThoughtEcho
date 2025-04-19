@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
-  const ThemeSettingsPage({Key? key}) : super(key: key);
+  const ThemeSettingsPage({super.key});
 
   @override
   State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
@@ -280,11 +280,11 @@ class ColorPicker extends StatefulWidget {
   final ColorScheme colorScheme;
 
   const ColorPicker({
-    Key? key,
+    super.key,
     required this.pickerColor,
     required this.onColorChanged,
     required this.colorScheme,
-  }) : super(key: key);
+  });
 
   @override
   State<ColorPicker> createState() => _ColorPickerState();

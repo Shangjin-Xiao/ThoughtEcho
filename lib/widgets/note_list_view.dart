@@ -20,7 +20,7 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onAskAI;
 
   const NoteListView({
-    Key? key,
+    super.key,
     required this.tags,
     required this.selectedTagIds,
     required this.onTagSelectionChanged,
@@ -31,7 +31,7 @@ class NoteListView extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
-  }) : super(key: key);
+  });
 
   @override
   State<NoteListView> createState() => _NoteListViewState();

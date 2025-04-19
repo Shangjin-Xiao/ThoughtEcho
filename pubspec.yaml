@@ -29,11 +29,13 @@ dependencies:
   flex_color_scheme: ^7.3.1
   geolocator: ^11.1.0
   permission_handler: ^11.3.0
-  weather: ^3.2.0
   flutter_secure_storage: ^9.0.0
   # 新增本地地理编码相关依赖
   geocoding: ^2.1.1 # 使用系统提供的地理编码功能
   geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
+  # 添加MMKV依赖，用于高效的键值存储
+  mmkv: ^1.3.2
+  # 使用Flutter内置的剪贴板功能(不需要额外的依赖)
 
 dev_dependencies:
   flutter_test:

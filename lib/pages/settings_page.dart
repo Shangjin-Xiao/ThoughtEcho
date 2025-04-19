@@ -3,20 +3,18 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:geolocator/geolocator.dart'; // 确保导入 geolocator
-import 'home_page.dart';
 import '../services/database_service.dart';
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
-import '../services/settings_service.dart';
 import '../services/location_service.dart'; // 包含 CityInfo 定义
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -134,9 +132,9 @@ class _SettingsPageState extends State<SettingsPage> {
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                ListTile(
-                  title: const Text('位置与天气设置'),
-                  leading: const Icon(Icons.location_on),
+                const ListTile(
+                  title: Text('位置与天气设置'),
+                  leading: Icon(Icons.location_on),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -318,9 +316,9 @@ class _SettingsPageState extends State<SettingsPage> {
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                ListTile(
-                  title: const Text('应用设置'),
-                  leading: const Icon(Icons.settings),
+                const ListTile(
+                  title: Text('应用设置'),
+                  leading: Icon(Icons.settings),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -358,7 +356,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ListTile(
                   title: const Text('一言设置'),
-                  subtitle: const Text('自定义\"每日一言\"的类型'),
+                  subtitle: const Text('自定义"每日一言"的类型'),
                   leading: const Icon(Icons.format_quote_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -379,9 +377,9 @@ class _SettingsPageState extends State<SettingsPage> {
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                ListTile(
-                  title: const Text('内容管理'),
-                  leading: const Icon(Icons.category),
+                const ListTile(
+                  title: Text('内容管理'),
+                  leading: Icon(Icons.category),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -540,14 +538,14 @@ class _SettingsPageState extends State<SettingsPage> {
         final FileSaveLocation? result = await getSaveLocation(suggestedName: fileName);
 
         if (result == null) {
-          overlay?.remove();
+          overlay.remove();
           overlay = null;
           return;
         }
 
         final String path = await dbService.exportAllData(customPath: result.path);
 
-        overlay?.remove();
+        overlay.remove();
         overlay = null;
 
         if (!mounted) return;
@@ -578,13 +576,13 @@ class _SettingsPageState extends State<SettingsPage> {
       OverlayEntry? overlay;
 
       try {
-        final XTypeGroup jsonTypeGroup = XTypeGroup(
+        const XTypeGroup jsonTypeGroup = XTypeGroup(
           label: 'JSON Backup File',
           extensions: ['json'],
         );
-        final List<XFile>? files = await openFiles(acceptedTypeGroups: [jsonTypeGroup]);
+        final List<XFile> files = await openFiles(acceptedTypeGroups: [jsonTypeGroup]);
 
-        if (files == null || files.isEmpty) {
+        if (files.isEmpty) {
            return;
          }
 
@@ -642,7 +640,7 @@ class _SettingsPageState extends State<SettingsPage> {
         }
 
         if (!isValid) {
-          overlay?.remove();
+          overlay.remove();
           overlay = null;
           if (!mounted) return;
           _showErrorDialog(context, '导入失败', '所选文件不是有效的备份文件: $validationError');
@@ -651,7 +649,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
         await dbService.importData(selectedFile.path, clearExisting: true);
 
-        overlay?.remove();
+        overlay.remove();
         overlay = null;
 
         if (!mounted) return;

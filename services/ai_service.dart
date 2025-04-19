@@ -25,11 +25,10 @@ class AIService {
         {"role": "system", "content": "你是一个专业的笔记整理和分析助手，请分析用户的日记内容并给出洞察。"},
         {
           "role": "user",
-          "content": "基于以下日记内容，给出一份深入的分析：\n" +
-              quotes.map((q) {
+          "content": "基于以下日记内容，给出一份深入的分析：\n${quotes.map((q) {
                 final content = "日期：${q.date}\n内容：${q.content}";
                 return content;
-              }).join("\n\n")
+              }).join("\n\n")}"
         }
       ];
 

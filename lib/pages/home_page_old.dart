@@ -10,13 +10,12 @@ import 'settings_page.dart';
 import '../services/ai_service.dart';
 import 'insights_page.dart';
 import '../utils/color_utils.dart'; // 新增导入，确保扩展方法可用
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../services/settings_service.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -34,7 +33,7 @@ class _HomePageState extends State<HomePage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   List<NoteCategory> _tags = []; // 修改 _tags 变量类型为 List<NoteCategory>
-  List<String> _selectedTagIds = [];
+  final List<String> _selectedTagIds = [];
   double? _startDragX;
   
   // 排序设置
@@ -287,7 +286,7 @@ class _HomePageState extends State<HomePage> {
                               : null,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ],
@@ -337,7 +336,7 @@ class _HomePageState extends State<HomePage> {
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -987,7 +986,7 @@ class _HomePageState extends State<HomePage> {
                                           value: 'delete',
                                           child: Row(
                                             children: [
-                                              Icon(Icons.delete, color: Colors.red),
+                                              const Icon(Icons.delete, color: Colors.red),
                                               const SizedBox(width: 8),
                                               Text(
                                                 '删除笔记',
@@ -1064,7 +1063,7 @@ class _HomePageState extends State<HomePage> {
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              child: Container(
+              child: SizedBox(
                 height: MediaQuery.of(context).size.height -
                     kToolbarHeight -
                     MediaQuery.of(context).padding.top -
@@ -1090,11 +1089,9 @@ class _HomePageState extends State<HomePage> {
                                     child: GestureDetector(
                                       onTap: () {
                                         // 单击复制内容
-                                        final String formattedQuote = '${dailyQuote['content']}\n' + 
-                                          (dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ?
-                                           '——${dailyQuote['from_who']}' : '') +
-                                          (dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ?
-                                           '「${dailyQuote['from']}」' : '');
+                                        final String formattedQuote = '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ?
+                                           '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ?
+                                           '「${dailyQuote['from']}」' : ''}';
                                         
                                         // 复制到剪贴板
                                         Clipboard.setData(ClipboardData(text: formattedQuote));
@@ -1465,7 +1462,7 @@ class _HomePageState extends State<HomePage> {
                               : null,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ],
@@ -1515,7 +1512,7 @@ class _HomePageState extends State<HomePage> {
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(

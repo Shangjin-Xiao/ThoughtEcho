@@ -5,10 +5,10 @@ class HitokotoWidget extends StatelessWidget {
   final Function(String?, String?) formatSource;
 
   const HitokotoWidget({
-    Key? key,
+    super.key,
     required this.quote,
     required this.formatSource,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -20,7 +20,7 @@ class AddNoteDialog extends StatefulWidget {
   final Function(Quote)? onSave; // 保存后的回调
 
   const AddNoteDialog({
-    Key? key,
+    super.key,
     this.initialQuote,
     this.prefilledContent,
     this.prefilledAuthor,
@@ -28,7 +28,7 @@ class AddNoteDialog extends StatefulWidget {
     this.hitokotoData,
     required this.tags,
     this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<AddNoteDialog> createState() => _AddNoteDialogState();
@@ -519,7 +519,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   : null,
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ],
@@ -609,7 +609,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceVariant,
+                    color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(

@@ -5,7 +5,7 @@ import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
 
 class TagSettingsPage extends StatefulWidget {
-  const TagSettingsPage({Key? key}) : super(key: key);
+  const TagSettingsPage({super.key});
 
   @override
   State<TagSettingsPage> createState() => _TagSettingsPageState();
@@ -250,7 +250,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
               return AlertDialog(
                 title: const Text('选择图标'),
-                content: Container(
+                content: SizedBox(
                   width: MediaQuery.of(context).size.width * 0.8,
                   height: MediaQuery.of(context).size.height * 0.6,
                   child: Column(

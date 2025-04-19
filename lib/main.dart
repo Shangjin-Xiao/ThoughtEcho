@@ -12,8 +12,9 @@ import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/ai_service.dart';
 import 'package:mind_trace/services/location_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
+import 'package:mind_trace/services/mmkv_service.dart';
+import 'package:mind_trace/services/clipboard_service.dart'; // 导入剪贴板服务
 import 'package:mind_trace/pages/home_page.dart';
-import 'package:flutter/services.dart';
 import 'package:mind_trace/theme/app_theme.dart';
 
 Future<void> initializeDatabasePlatform() async {
@@ -48,13 +49,18 @@ Future<void> initializeDatabasePlatform() async {
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    
+
+    // 初始化MMKV
+    final mmkvService = MMKVService();
+    await mmkvService.init();
+
     await initializeDatabasePlatform();
 
     final settingsService = await SettingsService.create();
     final databaseService = DatabaseService();
     final locationService = LocationService();
     final weatherService = WeatherService();
+    final clipboardService = ClipboardService(); // 创建剪贴板服务实例
 
     // 对所有平台统一初始化数据库
     await databaseService.init().timeout(
@@ -70,7 +76,7 @@ void main() async {
     // 初始化主题服务
     final appTheme = AppTheme();
     await appTheme.initialize();
-    
+
     runApp(
       MultiProvider(
         providers: [
@@ -78,19 +84,25 @@ void main() async {
           ChangeNotifierProvider(create: (_) => databaseService),
           ChangeNotifierProvider(create: (_) => locationService),
           ChangeNotifierProvider(create: (_) => weatherService),
+          ChangeNotifierProvider(
+            create: (_) => clipboardService,
+          ), // 添加剪贴板服务Provider
           ChangeNotifierProvider(create: (_) => appTheme),
           ChangeNotifierProxyProvider<SettingsService, AIService>(
-            create: (context) => AIService(
-              settingsService: context.read<SettingsService>(),
-              locationService: context.read<LocationService>(), // 新增
-              weatherService: context.read<WeatherService>(), // 新增
-            ),
-            update: (context, settings, previous) =>
-                previous ?? AIService(
-                  settingsService: settings,
+            create:
+                (context) => AIService(
+                  settingsService: context.read<SettingsService>(),
                   locationService: context.read<LocationService>(), // 新增
                   weatherService: context.read<WeatherService>(), // 新增
                 ),
+            update:
+                (context, settings, previous) =>
+                    previous ??
+                    AIService(
+                      settingsService: settings,
+                      locationService: context.read<LocationService>(), // 新增
+                      weatherService: context.read<WeatherService>(), // 新增
+                    ),
           ),
         ],
         child: const MyApp(),
@@ -108,31 +120,24 @@ void main() async {
               padding: const EdgeInsets.all(16.0),
               child: ListView(
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   const Text(
                     '应用启动失败',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     '错误信息:',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(e.toString()),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     '堆栈跟踪:',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(stackTrace.toString()),
@@ -152,7 +157,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appTheme = Provider.of<AppTheme>(context);
-    
+
     return MaterialApp(
       title: '心迹',
       theme: ThemeData.from(colorScheme: appTheme.lightColorScheme),

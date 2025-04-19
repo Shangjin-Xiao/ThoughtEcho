@@ -4,7 +4,7 @@ import '../services/settings_service.dart';
 import '../models/ai_settings.dart';
 
 class AISettingsPage extends StatefulWidget {
-  const AISettingsPage({Key? key}) : super(key: key);
+  const AISettingsPage({super.key});
 
   @override
   State<AISettingsPage> createState() => _AISettingsPageState();

@@ -501,7 +501,7 @@ class AIService extends ChangeNotifier {
         {
           'role': 'user',
           'content':
-              '请根据以下要求分析我的笔记：\n\n${customPrompt}\n\n笔记内容：\n\n${quotesText}',
+              '请根据以下要求分析我的笔记：\n\n$customPrompt\n\n笔记内容：\n\n$quotesText',
         },
       ];
 

@@ -152,7 +152,7 @@ class AppTheme with ChangeNotifier {
         dialogRadius: 20,
         timePickerDialogRadius: 20,
       ),
-      keyColors: FlexKeyColors(
+      keyColors: const FlexKeyColors(
         useSecondary: true,
         useTertiary: true,
       ),
@@ -181,7 +181,7 @@ class AppTheme with ChangeNotifier {
         dialogRadius: 20,
         timePickerDialogRadius: 20,
       ),
-      keyColors: FlexKeyColors(
+      keyColors: const FlexKeyColors(
         useSecondary: true,
         useTertiary: true,
       ),

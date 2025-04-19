@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
-  String _searchQuery = '';
+  final String _searchQuery = '';
   List<NoteCategory> _tags = [];
   List<String> _selectedTagIds = [];
 

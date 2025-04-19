@@ -4,7 +4,7 @@ import '../services/weather_service.dart';
 import '../services/location_service.dart';
 
 class WeatherWidget extends StatelessWidget {
-  const WeatherWidget({Key? key}) : super(key: key);
+  const WeatherWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

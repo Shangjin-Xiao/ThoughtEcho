@@ -5,7 +5,7 @@ import '../services/ai_service.dart';
 import 'dart:math';
 
 class InsightsPage extends StatefulWidget {
-  const InsightsPage({Key? key}) : super(key: key);
+  const InsightsPage({super.key});
 
   @override
   State<InsightsPage> createState() => _InsightsPageState();
