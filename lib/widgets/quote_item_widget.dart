@@ -123,7 +123,9 @@ class QuoteItemWidget extends StatelessWidget {
                             const SizedBox(width: 2),
                             Text(
                               quote.location!.split(',').length >= 3
-                                ? quote.location!.split(',')[2] // 显示城市名
+                                ? (quote.location!.split(',').length >= 4 
+                                  ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}'  // 显示 "城市·区县"
+                                  : quote.location!.split(',')[2]) // 只有城市
                                 : quote.location!,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.secondary,

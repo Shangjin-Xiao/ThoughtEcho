@@ -151,57 +151,129 @@ class ClipboardService extends ChangeNotifier {
     final author = clipboardData['author'] as String?;
     final source = clipboardData['source'] as String?;
     
-    // 显示确认对话框
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('发现剪贴板内容'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('是否将剪贴板内容添加为笔记？'),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                content.length > 100 ? '${content.substring(0, 100)}...' : content,
-                style: const TextStyle(fontSize: 14),
-              ),
+    // 显示非阻塞式通知
+    showNonBlockingClipboardNotification(context, content, author, source);
+  }
+  
+  // 显示非阻塞式剪贴板通知
+  void showNonBlockingClipboardNotification(
+    BuildContext context,
+    String content,
+    String? author,
+    String? source,
+  ) {
+    // 构建一个OverlayEntry
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 280,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.15 * 255).round()),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            if (author != null || source != null) 
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  '已识别: ${author ?? ''}${source != null ? ' 《$source》' : ''}',
-                  style: const TextStyle(
-                    fontSize: 12, 
-                    color: Colors.grey,
-                    fontStyle: FontStyle.italic
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.content_paste,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '发现剪贴板内容',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          overlayEntry?.remove();
+                        },
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-          ],
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(
+                    content.length > 60 ? '${content.substring(0, 60)}...' : content,
+                    style: const TextStyle(fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (author != null || source != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Text(
+                      '已识别: ${author ?? ''}${source != null ? ' 《$source》' : ''}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                OverflowBar(
+                  spacing: 8.0,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        overlayEntry?.remove();
+                      },
+                      child: const Text('忽略'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        overlayEntry?.remove();
+                        _openEditPage(context, content, author, source);
+                      },
+                      child: const Text('添加为笔记'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _openEditPage(context, content, author, source);
-            },
-            child: const Text('添加'),
-          ),
-        ],
       ),
     );
+
+    // 添加到Overlay
+    Overlay.of(context).insert(overlayEntry);
+    
+    // 10秒后自动移除通知
+    Future.delayed(const Duration(seconds: 10), () {
+      if (overlayEntry?.mounted ?? false) {
+        overlayEntry?.remove();
+      }
+    });
   }
   
   // 打开编辑页面
