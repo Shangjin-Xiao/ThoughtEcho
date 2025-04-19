@@ -76,6 +76,8 @@ void main() async {
       final locationService = LocationService();
       final weatherService = WeatherService();
       final clipboardService = ClipboardService(); // 创建剪贴板服务实例
+      // 初始化剪贴板服务
+      await clipboardService.init();
 
       // 对所有平台统一初始化数据库
       await databaseService.init().timeout(
