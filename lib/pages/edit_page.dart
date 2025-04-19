@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mind_trace/models/quote_model.dart';
+import 'package:mind_trace/models/note_category.dart';
 import 'package:mind_trace/services/ai_service.dart';
 import 'package:mind_trace/services/database_service.dart';
 import 'package:mind_trace/services/location_service.dart';
 import 'package:mind_trace/services/settings_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
+import 'package:mind_trace/utils/icon_utils.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 
@@ -862,10 +864,79 @@ class _EditPageState extends State<EditPage> {
                     : const SizedBox.shrink(); // 如果API未配置，则不显示AI分析部分
                 },
               ),
+              
+              // 添加标签选择功能
+              const SizedBox(height: 16),
+              _buildTagSelector(),
             ],
           ),
         ),
       ),
     );
   }
-}
+  
+  // 构建标签选择器
+  Widget _buildTagSelector() {
+    return FutureBuilder<List<NoteCategory>>(
+      future: Provider.of<DatabaseService>(context, listen: false).getCategories(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text('暂无标签，请先在设置中创建标签');
+        }
+        
+        final tags = snapshot.data!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('标签:'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: tags.map((tag) {
+                final isSelected = _tagIds.contains(tag.id);
+                
+                return FilterChip(
+                  selected: isSelected,
+                  label: Text(tag.name),
+                  avatar: _buildTagIcon(tag),
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _tagIds.add(tag.id);
+                      } else {
+                        _tagIds.remove(tag.id);
+                      }
+                    });
+                  },
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  checkmarkColor: Theme.of(context).colorScheme.primary,
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  // 构建标签图标，正确处理emoji
+  Widget _buildTagIcon(NoteCategory tag) {
+    // 导入IconUtils
+    if (IconUtils.isEmoji(tag.iconName)) {
+      return Text(
+        IconUtils.getDisplayIcon(tag.iconName),
+        style: const TextStyle(fontSize: 16),
+      );
+    } else {
+      return Icon(
+        IconUtils.getIconData(tag.iconName),
+        size: 16,
+      );
+    }
+  }

@@ -252,21 +252,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            _currentIndex == 1
-                ? TextField(
-                  decoration: const InputDecoration(
-                    hintText: '搜索...',
-                    border: InputBorder.none,
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                )
-                : const Text('心迹'),
+        title: const Text('心迹'),
         actions: [
           // 显示位置和天气信息
           if (_currentIndex == 0 &&
@@ -292,7 +278,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(width: 2),
                     Text(
-                      locationService.city ?? '',
+                      locationService.getDisplayLocation(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
