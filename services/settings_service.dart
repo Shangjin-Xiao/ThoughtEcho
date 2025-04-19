@@ -5,7 +5,7 @@ class SettingsService {
   SettingsService({required String someParameter});
 
   // 定义 aiSettings
-  final aiSettings = AISettings(apiKey: '', apiUrl: '', model: 'default');
+  final AISettings aiSettings = const AISettings(apiKey: '', apiUrl: '', model: 'default');
 
   // 定义 init 方法
   void init() {
