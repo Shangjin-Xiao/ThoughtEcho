@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:geolocator/geolocator.dart'; // 确保导入 geolocator
 import '../services/database_service.dart';
+import '../services/clipboard_service.dart'; // 添加剪贴板服务导入
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
@@ -507,6 +508,18 @@ class _SettingsPageState extends State<SettingsPage> {
   }
   // --- 辅助方法结束 ---
 
+  // 构建剪贴板监控设置项
+  Widget _buildClipboardMonitoringItem(BuildContext context) {
+    final clipboardService = Provider.of<ClipboardService>(context);
+    return SwitchListTile(
+      title: const Text('剪贴板监控'),
+      subtitle: const Text('自动检测剪贴板内容并提示添加笔记'),
+      value: clipboardService.enableClipboardMonitoring,
+      onChanged: (value) {
+        clipboardService.setEnableClipboardMonitoring(value);
+      },
+    );
+  }
 
   // _handleExport 和 _handleImport 函数保持不变 (省略以减少篇幅)
     Future<void> _handleExport() async {

@@ -46,109 +46,94 @@ Future<void> initializeDatabasePlatform() async {
   }
 }
 
+// 添加错误处理函数，用于报告启动过程中的异常
+void _reportStartupError(FlutterErrorDetails details) {
+  FlutterError.dumpErrorToConsole(details);
+  // 可在此处添加崩溃报告逻辑
+}
+
+// main函数开始
 void main() async {
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
+  // 包装主应用入口点，捕获初始化过程中的错误
+  runZonedGuarded<Future<void>>(() async {
+    FlutterError.onError = _reportStartupError;
 
-    // 初始化MMKV
-    final mmkvService = MMKVService();
-    await mmkvService.init();
+    try {
+      // 确保Flutter绑定初始化
+      WidgetsFlutterBinding.ensureInitialized();
+      
+      // 初始化平台特定的数据库配置
+      await initializeDatabasePlatform();
 
-    await initializeDatabasePlatform();
+      // 初始化MMKV
+      final mmkvService = MMKVService();
+      await mmkvService.init(); // 使用正确的init()方法而不是initialize()
 
-    final settingsService = await SettingsService.create();
-    final databaseService = DatabaseService();
-    final locationService = LocationService();
-    final weatherService = WeatherService();
-    final clipboardService = ClipboardService(); // 创建剪贴板服务实例
+      // 初始化设置服务（传入MMKV服务实例）
+      final settingsService = await SettingsService.create(); // 使用工厂方法创建SettingsService
+      
+      final databaseService = DatabaseService();
+      final locationService = LocationService();
+      final weatherService = WeatherService();
+      final clipboardService = ClipboardService(); // 创建剪贴板服务实例
 
-    // 对所有平台统一初始化数据库
-    await databaseService.init().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        throw TimeoutException('数据库初始化超时');
-      },
-    );
+      // 对所有平台统一初始化数据库
+      await databaseService.init().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('数据库初始化超时');
+        },
+      );
 
-    // 初始化默认一言分类
-    await databaseService.initDefaultHitokotoCategories();
+      // 初始化默认一言分类
+      await databaseService.initDefaultHitokotoCategories();
 
-    // 初始化主题服务
-    final appTheme = AppTheme();
-    await appTheme.initialize();
+      // 初始化主题服务
+      final appTheme = AppTheme();
+      await appTheme.initialize();
 
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => settingsService),
-          ChangeNotifierProvider(create: (_) => databaseService),
-          ChangeNotifierProvider(create: (_) => locationService),
-          ChangeNotifierProvider(create: (_) => weatherService),
-          ChangeNotifierProvider(
-            create: (_) => clipboardService,
-          ), // 添加剪贴板服务Provider
-          ChangeNotifierProvider(create: (_) => appTheme),
-          ChangeNotifierProxyProvider<SettingsService, AIService>(
-            create:
-                (context) => AIService(
-                  settingsService: context.read<SettingsService>(),
-                  locationService: context.read<LocationService>(), // 新增
-                  weatherService: context.read<WeatherService>(), // 新增
-                ),
-            update:
-                (context, settings, previous) =>
-                    previous ??
-                    AIService(
-                      settingsService: settings,
-                      locationService: context.read<LocationService>(), // 新增
-                      weatherService: context.read<WeatherService>(), // 新增
-                    ),
-          ),
-        ],
-        child: const MyApp(),
-      ),
-    );
-  } catch (e, stackTrace) {
-    debugPrint('应用启动错误: $e');
-    debugPrint('错误堆栈: $stackTrace');
-
-    runApp(
-      MaterialApp(
-        home: Scaffold(
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView(
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '应用启动失败',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      runApp(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => settingsService),
+            ChangeNotifierProvider(create: (_) => databaseService),
+            ChangeNotifierProvider(create: (_) => locationService),
+            ChangeNotifierProvider(create: (_) => weatherService),
+            ChangeNotifierProvider(
+              create: (_) => clipboardService,
+            ), // 添加剪贴板服务Provider
+            ChangeNotifierProvider(create: (_) => appTheme),
+            ChangeNotifierProxyProvider<SettingsService, AIService>(
+              create:
+                  (context) => AIService(
+                    settingsService: context.read<SettingsService>(),
+                    locationService: context.read<LocationService>(),
+                    weatherService: context.read<WeatherService>(),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '错误信息:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(e.toString()),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '堆栈跟踪:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(stackTrace.toString()),
-                ],
-              ),
+              update:
+                  (context, settings, previous) =>
+                      previous ??
+                      AIService(
+                        settingsService: settings,
+                        locationService: context.read<LocationService>(),
+                        weatherService: context.read<WeatherService>(),
+                      ),
             ),
-          ),
+          ],
+          child: const MyApp(),
         ),
-      ),
-    );
-  }
+      );
+    } catch (e, stackTrace) {
+      debugPrint('应用初始化失败: $e');
+      debugPrint('堆栈跟踪: $stackTrace');
+      // 可以在这里显示错误启动画面或重试逻辑
+      rethrow;
+    }
+  }, (error, stackTrace) {
+    debugPrint('未捕获的异常: $error');
+    debugPrint('堆栈跟踪: $stackTrace');
+    // 可在此添加崩溃报告逻辑
+  });
 }
 
 class MyApp extends StatelessWidget {

@@ -634,25 +634,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                     () => NoteCategory(id: tagId, name: '未知标签'),
                               );
                               return Chip(
-                                label: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (IconUtils.isEmoji(tag.iconName))
-                                      Text(
-                                        IconUtils.getDisplayIcon(tag.iconName),
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black,
+                                label: IconUtils.isEmoji(tag.iconName)
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          IconUtils.getDisplayIcon(tag.iconName),
+                                          style: const TextStyle(fontSize: 14),
                                         ),
-                                      ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      tag.name,
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                avatar: null,
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          tag.name,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    )
+                                  : Text(tag.name),
+                                avatar: !IconUtils.isEmoji(tag.iconName)
+                                  ? Icon(
+                                      IconUtils.getIconData(tag.iconName),
+                                      size: 14,
+                                    )
+                                  : null,
                                 deleteIcon: const Icon(Icons.close, size: 14),
                                 onDeleted: () {
                                   setState(() {

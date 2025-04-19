@@ -22,7 +22,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
   List<NoteCategory> _tags = [];
   List<String> _selectedTagIds = [];
@@ -34,11 +34,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // 搜索控制器
   final _searchController = NoteSearchController();
 
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadTags();
     _initLocationAndWeather();
+    _initServices();
     
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
@@ -47,11 +51,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _checkClipboard();
   }
 
+  // 初始化各项服务
+  Future<void> _initServices() async {
+    // 延迟初始化，确保Provider可用
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 初始化所需的其他服务
+      // ...
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 保留didChangeDependencies以便将来可能需要监听其他依赖项的变化
+  }
+
   @override
   void dispose() {
+    _tabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
-    
     super.dispose();
   }
   
@@ -73,8 +92,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
     
     // 如果剪贴板监控功能未启用，则不进行检查
-    if (!clipboardService.enableClipboardMonitoring) return;
+    if (!clipboardService.enableClipboardMonitoring) {
+      debugPrint('剪贴板监控已禁用，跳过检查');
+      return;
+    }
     
+    debugPrint('执行剪贴板检查');
     // 检查剪贴板内容
     final clipboardData = await clipboardService.checkClipboard();
     if (clipboardData != null && mounted) {

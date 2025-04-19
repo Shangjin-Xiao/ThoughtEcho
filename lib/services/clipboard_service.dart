@@ -44,6 +44,7 @@ class ClipboardService extends ChangeNotifier {
       _storage = SafeMMKV();
       await _storage.initialize();
       _loadPreferences();
+      debugPrint('剪贴板服务初始化完成，监控状态: $_enableClipboardMonitoring');
     } catch (e) {
       debugPrint('初始化剪贴板服务首选项时出错: $e');
     }
@@ -53,6 +54,7 @@ class ClipboardService extends ChangeNotifier {
   void _loadPreferences() {
     _enableClipboardMonitoring = _storage.getBool(_keyEnableClipboardMonitoring) ?? false;
     _lastProcessedContent = _storage.getString(_keyLastClipboardContent) ?? '';
+    debugPrint('加载剪贴板监控设置: $_enableClipboardMonitoring');
     notifyListeners();
   }
   
@@ -60,12 +62,14 @@ class ClipboardService extends ChangeNotifier {
   void setEnableClipboardMonitoring(bool value) {
     _enableClipboardMonitoring = value;
     _storage.setBool(_keyEnableClipboardMonitoring, value);
+    debugPrint('剪贴板监控设置已更新: $value');
     notifyListeners();
   }
   
-  // 检查剪贴板内容
+  // 检查剪贴板内容（应用启动或从后台恢复时调用）
   Future<Map<String, dynamic>?> checkClipboard() async {
     if (!_enableClipboardMonitoring) {
+      debugPrint('剪贴板监控已禁用，跳过检查');
       return null;
     }
     
@@ -76,24 +80,29 @@ class ClipboardService extends ChangeNotifier {
       // 没有数据或数据与上次处理的相同，返回null
       if (data == null || data.text == null || data.text!.isEmpty || 
           data.text == _lastProcessedContent) {
+        debugPrint('剪贴板为空或内容未变化');
         return null;
       }
       
       final content = data.text!;
+      debugPrint('检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content}');
       
       // 内容过长或过短不处理
       if (content.length > 5000 || content.length < 5) {
+        debugPrint('剪贴板内容长度不适合处理: ${content.length}字符');
         return null;
       }
       
       // 更新最近处理的内容
       _lastProcessedContent = content;
-      _storage.setString(_keyLastClipboardContent, content);  // 修正变量名
+      _storage.setString(_keyLastClipboardContent, content);
       
       // 提取作者和出处（如果有）
       final extractedInfo = _extractAuthorAndSource(content);
       String? author = extractedInfo['author'];
       String? source = extractedInfo['source'];
+      
+      debugPrint('从剪贴板提取信息 - 作者: $author, 出处: $source');
       
       // 返回提取的信息
       return {
@@ -266,6 +275,7 @@ class ClipboardService extends ChangeNotifier {
     );
 
     // 添加到Overlay
+    debugPrint('显示剪贴板通知弹窗');
     Overlay.of(context).insert(overlayEntry);
     
     // 10秒后自动移除通知
