@@ -182,7 +182,7 @@ public class MMKVPlugin implements FlutterPlugin, MethodCallHandler {
             String[] keys = kv.allKeys();
             result.success(keys);
         } else if ("disableProcessing".equals(method)) {
-            MMKV.disableProcessing();
+            // MMKV.disableProcessing(); // Method removed or deprecated
             result.success(null);
         } else {
             result.notImplemented();
