@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="心迹 - 追踪你的思想轨迹，释放AI洞察的力量。一款使用Flutter构建的本地优先笔记应用。">
     <title>心迹 - 追踪你的思想轨迹，释放AI洞察的力量</title>
     <link rel="icon" type="image/png" href="icon.png"/>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,25 +12,25 @@
     <style>
         /* 主题变量定义 */
         :root {
-            /* 浅色主题 */
+            /* 浅色主题 - 优化配色方案 */
             --primary-color: #1976D2;
             --primary-light: #BBDEFB;
             --primary-dark: #0D47A1;
             --accent-color: #FF4081;
             --secondary-color: #49454F;
-            --background-color: #F5F7FA;
+            --background-color: #F8FAFD; /* 稍微调亮背景色 */
             --surface-color: #FFFFFF;
             --error-color: #B3261E;
             --text-primary: #1C1B1F;
             --text-secondary: #49454F;
             --text-tertiary: #79747E;
             --border-color: #E7E0EC;
-            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-            --transition: all 0.3s ease;
+            --card-shadow: 0 6px 16px rgba(0, 0, 0, 0.06); /* 柔和阴影 */
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* 更平滑的过渡 */
             scroll-behavior: smooth;
         }
 
-        /* 深色主题变量 */
+        /* 深色主题变量 - 优化深色配色 */
         body.dark-theme {
             --primary-color: #90CAF9;
             --primary-light: #E3F2FD;
@@ -164,9 +165,30 @@
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: white;
             text-align: center;
-            padding: 4rem 1rem;
+            padding: 6rem 1rem; /* 增大页头空间 */
             margin-top: 0;
             transition: background 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 添加页头背景效果 */
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 800 800"><g fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"><path d="M769 229L1037 260.9M927 880L731 737 520 660 309 538 40 599 295 764 126.5 879.5 40 599-197 493 102 382-31 229 126.5 79.5-69-63"/><path d="M-31 229L237 261 390 382 603 493 308.5 537.5 101.5 381.5M370 905L295 764"/><path d="M520 660L578 842 731 737 840 599 603 493 520 660 295 764 309 538 390 382 539 269 769 229 577.5 41.5 370 105 295 -36 126.5 79.5-69-63"/><path d="M520-140L578.5 42.5 731-63M603 493L539 269 237 261 370 105M902 382L539 269M390 382L102 382"/><path d="M-222 42L126.5 79.5 370 105 539 269 577.5 41.5 927 80 769 229 902 382 603 493 731 737M295-36L577.5 41.5M578 842L295 764M40-201L127 80M102 382L-261 269"/></g></svg>');
+            opacity: 0.3;
+            z-index: 0;
+            animation: headerBgMove 60s linear infinite;
+        }
+
+        @keyframes headerBgMove {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
         }
 
         .container {
@@ -176,6 +198,8 @@
         }
 
         .logo-container {
+            position: relative;
+            z-index: 1;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -183,16 +207,26 @@
         }
 
         .logo {
-            width: 80px;
-            height: 80px;
+            width: 100px; /* 放大logo */
+            height: 100px;
             margin-right: 1rem;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25)); /* 增强阴影 */
+            animation: pulse 3s infinite alternate; /* 添加缓慢脉动效果 */
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
         }
 
         h1 {
-            font-size: 2.8rem;
-            margin-bottom: 1rem;
+            font-size: 3rem; /* 增大标题字号 */
+            margin-bottom: 1.5rem;
             font-weight: 700;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px; /* 字母间距微调 */
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
         }
 
         h2 {
@@ -219,31 +253,42 @@
         }
 
         .tagline {
-            font-size: 1.3rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
+            font-size: 1.4rem; /* 增大副标题字号 */
+            margin-bottom: 2.5rem;
+            opacity: 0.95; /* 增加不透明度 */
             max-width: 700px;
             margin-left: auto;
             margin-right: auto;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* 文字阴影 */
         }
 
         .cta-button {
             display: inline-block;
             background-color: var(--primary-color);
             color: white;
-            padding: 14px 28px;
+            padding: 16px 36px; /* 加大按钮 */
             border-radius: 50px;
             text-decoration: none;
             font-weight: 500;
-            margin-top: 1.5rem;
+            margin-top: 2rem;
             transition: var(--transition);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 增强按钮阴影 */
+            position: relative;
+            z-index: 1;
+            border: 2px solid transparent; /* 为悬停效果准备 */
         }
 
         .cta-button:hover {
             background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            transform: translateY(-4px); /* 增加悬停效果 */
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cta-button:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .section {
@@ -276,20 +321,39 @@
             margin: 3rem 0;
         }
 
+        /* 为功能卡片增加更精致的动画 */
         .feature {
             background-color: var(--surface-color);
-            border-radius: 12px;
-            padding: 1.5rem;
+            border-radius: 16px; /* 增加圆角 */
+            padding: 2rem;
             box-shadow: var(--card-shadow);
             transition: var(--transition);
             cursor: pointer;
             border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            opacity: 0;
+            transition: var(--transition);
         }
 
         .feature:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
             border-color: var(--primary-light);
+        }
+        
+        .feature:hover::after {
+            opacity: 1;
         }
 
         .feature-header {
@@ -299,18 +363,24 @@
         }
 
         .feature-icon {
-            font-size: 1.8rem;
+            font-size: 2rem;
             color: var(--primary-color);
             background-color: var(--primary-light);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 60px; /* 增大图标尺寸 */
+            height: 60px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin-right: 1rem;
+            margin-right: 1.5rem;
             flex-shrink: 0;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: var(--transition);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .feature:hover .feature-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
         }
 
         .feature-title-container {
@@ -411,10 +481,11 @@
             left: 0;
             top: 0;
             height: 100%;
-            width: 3px;
+            width: 4px; /* 增加宽度 */
             background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
             border-radius: 3px;
             transition: background 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
         }
 
         .timeline-item {
@@ -431,12 +502,20 @@
             position: absolute;
             left: -0.6rem;
             top: 0.5rem;
-            width: 1.2rem;
-            height: 1.2rem;
+            width: 1.4rem; /* 增大时间点 */
+            height: 1.4rem;
             border-radius: 50%;
-            transition: background-color 0.3s ease;
-            border: 3px solid var(--background-color); /* Add border to make dot stand out */
+            transition: var(--transition);
+            border: 3px solid var(--background-color);
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03); /* 添加外发光效果 */
         }
+        
+        /* 添加时间点悬浮效果 */
+        .timeline-item:hover::before {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 6px rgba(var(--primary-color-rgb), 0.1);
+        }
+
          /* Style timeline point based on status */
          .timeline-item[data-status="completed"]::before { background-color: #4CAF50; } /* Green */
          .timeline-item[data-status="in-progress"]::before { background-color: var(--primary-color); } /* Blue */
@@ -630,7 +709,7 @@
         }
 
         .footer-section p {
-            color: var(--text-secondary);
+            color: var (--text-secondary);
             margin-bottom: 1.2rem;
             transition: color 0.3s ease;
             font-size: 0.95rem;
@@ -895,6 +974,8 @@
              align-items: center;
              position: relative; /* For spinner positioning */
              min-height: 100px; /* Ensure some height for spinner */
+             background-color: rgba(0, 0, 0, 0.03); /* 添加微妙背景色 */
+             border-radius: 8px 8px 0 0;
         }
         /* Basic Spinner Style (Hidden by default) */
          .modal-spinner {
@@ -1051,11 +1132,13 @@
         /* --- End Language Switching CSS --- */
 
 
+        /* 改进动画效果 */
         .animated {
             opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+            transform: translateY(30px); /* 增加初始偏移 */
+            transition: opacity 0.7s ease-out, transform 0.7s cubic-bezier(0.19, 1, 0.22, 1); /* 使用更平滑的缓动函数 */
         }
+        
         .animated.visible {
             opacity: 1;
             transform: translateY(0);
@@ -1107,10 +1190,16 @@
                 <span class="content-zh">追踪你的思想轨迹，释放AI洞察的力量</span>
                 <span class="content-en">Track your train of thought, unleash the power of AI insights</span>
             </p>
-            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" class="cta-button animated" style="transition-delay: 0.3s;">
-                <span class="content-zh">获取最新版本</span>
-                <span class="content-en">Get Latest Release</span>
-            </a>
+            <div class="cta-buttons animated" style="transition-delay: 0.3s;">
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" class="cta-button">
+                    <span class="content-zh">获取最新版本</span>
+                    <span class="content-en">Get Latest Release</span>
+                </a>
+                <a href="#features" class="cta-button" style="background: transparent; border-color: white; margin-left: 16px;">
+                    <span class="content-zh">探索功能</span>
+                    <span class="content-en">Explore Features</span>
+                </a>
+            </div>
         </div>
     </header>
 
@@ -1340,7 +1429,7 @@
 
         <section id="guide" class="section">
             <div class="container">
-                <div class="section-title-container animated">
+                <div class="section-title-container animated"></div>
                     <h2 class="content-zh">快速上手</h2>
                     <h2 class="content-en">Quick Start Guide</h2>
                     <p class="section-subtitle content-zh">简单几步，开始使用心迹记录你的想法。</p>
@@ -1424,7 +1513,7 @@ flutter run</code></pre>
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom animated" style="transition-delay: 0.3s;">
+            <div class="footer-bottom animated" style="transition-delay: 0.3s;"></div>
                 <p>&copy; <span id="currentYear"></span> Shangjin-Xiao. All Rights Reserved.</p>
             </div>
         </div>
@@ -1451,6 +1540,7 @@ flutter run</code></pre>
     <script>
         // --- 页面加载与入场动画 ---
         window.addEventListener('load', () => {
+            addScrollIndicator();
             const loadingOverlay = document.getElementById('loadingOverlay');
             if(loadingOverlay) loadingOverlay.classList.add('fade-out');
             const animatedElements = document.querySelectorAll('.animated');
@@ -1683,6 +1773,26 @@ flutter run</code></pre>
         window.addEventListener('scroll', updateActiveNav);
         window.addEventListener('load', updateActiveNav);
 
+        // 添加滚动进度指示器
+        const addScrollIndicator = () => {
+            const indicator = document.createElement('div');
+            indicator.style.position = 'fixed';
+            indicator.style.top = '0';
+            indicator.style.left = '0';
+            indicator.style.height = '4px';
+            indicator.style.backgroundColor = 'var(--primary-color)';
+            indicator.style.zIndex = '2000';
+            indicator.style.width = '0%';
+            indicator.style.transition = 'width 0.1s ease';
+            document.body.appendChild(indicator);
+            
+            window.addEventListener('scroll', () => {
+                const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (scrollTop / scrollHeight) * 100;
+                indicator.style.width = scrolled + '%';
+            });
+        };
 
     </script>
 </body>
