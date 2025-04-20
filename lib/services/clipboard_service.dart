@@ -286,12 +286,13 @@ class ClipboardService extends ChangeNotifier {
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  onPressed: () async { // 改为 async
+                  onPressed: () async { // Keep async
                     overlayEntry?.remove();
-                    // 增加短暂延迟，确保其他初始化操作有时间完成
-                    await Future.delayed(const Duration(milliseconds: 200)); 
-                    if (context.mounted) { // 再次检查 context 是否有效
+                    // REMOVED: await Future.delayed(const Duration(milliseconds: 200)); 
+                    if (context.mounted) { // Keep mounted check
                       _openEditPage(context, content, author, source);
+                    } else {
+                       debugPrint("Clipboard notification context became unmounted before opening edit page.");
                     }
                   },
                   child: Text(

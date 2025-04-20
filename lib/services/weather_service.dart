@@ -158,6 +158,7 @@ class WeatherService extends ChangeNotifier {
 
   // 使用OpenMeteo API获取天气
   Future<void> _getOpenMeteoWeather(double latitude, double longitude) async {
+    String? rawResponseBody; // Store raw response for debugging
     try {
       // OpenMeteo是完全免费的API，不需要API key
       final url = 'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto&language=zh_cn';
@@ -167,27 +168,52 @@ class WeatherService extends ChangeNotifier {
         timeoutSeconds: 10, // 降低超时时间，避免长时间等待
       );
       
+      rawResponseBody = response.body; // Store raw response
+
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        // 解析天气代码和温度
-        final current = data['current'];
-        final weatherCode = current['weather_code'];
-        _temperature_value = current['temperature_2m'];
-        _temperature = '${_temperature_value?.toStringAsFixed(0)}°C';
-        
-        // 天气代码转换为中文描述
-        _weatherDescription = _getWeatherDescription(weatherCode);
-        _currentWeather = _weatherDescription;
-        _weatherIcon = _getWeatherIconCode(weatherCode);
-        
-        debugPrint('天气数据获取成功：$_weatherDescription, $_temperature');
+        // Add specific try-catch for JSON parsing and data access
+        try {
+          final data = json.decode(response.body);
+          
+          // Check if 'current' data exists and is a map
+          if (data != null && data['current'] is Map<String, dynamic>) {
+            final current = data['current'] as Map<String, dynamic>;
+            
+            // Safely access data with null checks or default values
+            final weatherCode = current['weather_code'];
+            _temperature_value = current['temperature_2m'] as double?; // Use 'as double?' for safe casting
+            
+            if (_temperature_value != null) {
+              _temperature = '${_temperature_value?.toStringAsFixed(0)}°C';
+            } else {
+              _temperature = '- -'; // Default if null
+            }
+            
+            if (weatherCode is int) { // Check type before using
+              _weatherDescription = _getWeatherDescription(weatherCode);
+              _weatherIcon = _getWeatherIconCode(weatherCode);
+            } else {
+              _weatherDescription = '未知'; // Default if code is invalid
+              _weatherIcon = 'cloudy'; // Default icon
+            }
+            _currentWeather = _weatherDescription;
+            
+            debugPrint('天气数据获取成功：$_weatherDescription, $_temperature');
+          } else {
+             debugPrint('OpenMeteo响应格式错误: 缺少 "current" 数据');
+             throw Exception('OpenMeteo响应格式错误: 缺少 "current" 数据');
+          }
+        } catch (e) {
+          // Catch JSON parsing or data access errors specifically
+          debugPrint('解析OpenMeteo天气数据失败: $e. Raw response: $rawResponseBody');
+          throw Exception('解析天气数据失败: $e'); // Rethrow specific error
+        }
       } else {
         debugPrint('OpenMeteo请求失败: ${response.statusCode}，${response.body}');
         throw Exception('OpenMeteo请求失败: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('获取OpenMeteo天气失败: $e');
+      debugPrint('获取OpenMeteo天气失败: $e. Raw response: $rawResponseBody');
       rethrow; // 重新抛出异常以便外部处理
     }
   }

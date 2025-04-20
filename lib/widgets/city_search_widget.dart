@@ -80,18 +80,14 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               setState(() {
                 _isSearchActive = value.isNotEmpty;
               });
-              if (value.isNotEmpty) {
-                locationService.searchCity(value);
-              }
+              locationService.searchCity(value);
             },
           ),
         ),
         
-        // 搜索结果或热门城市
+        // 搜索结果
         Expanded(
-          child: _isSearchActive || locationService.isSearching
-              ? _buildSearchResults(locationService)
-              : _buildPopularCities(locationService, theme),
+          child: _buildSearchResults(locationService),
         ),
         
         // 当前位置按钮
@@ -168,59 +164,6 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           },
         );
       },
-    );
-  }
-  
-  Widget _buildPopularCities(LocationService locationService, ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text(
-            '热门城市',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16.0),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: locationService.popularCities.length,
-            itemBuilder: (context, index) {
-              final city = locationService.popularCities[index];
-              return InkWell(
-                onTap: () {
-                  locationService.setSelectedCity(city);
-                  widget.onCitySelected(city);
-                  Navigator.of(context).pop();
-                },
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(
-                    city.name,
-                    style: TextStyle(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }
