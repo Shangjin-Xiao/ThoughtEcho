@@ -19,6 +19,9 @@ void main() {
     final appTheme = AppTheme();
     await appTheme.initialize();
 
+    // 创建 Navigator Key
+    final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -41,7 +44,7 @@ void main() {
                 ),
           ),
         ],
-        child: const MyApp(),
+        child: MyApp(navigatorKey: navigatorKey), // 传递 navigatorKey
       ),
     );
 

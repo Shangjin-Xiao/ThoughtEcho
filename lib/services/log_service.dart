@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:mind_trace/utils/mmkv_ffi_fix.dart';
 import 'package:mind_trace/services/log_database_service.dart';
+import 'package:flutter/widgets.dart'; // Import WidgetsBinding
 
 // 定义日志级别
 enum LogLevel {
@@ -104,6 +105,9 @@ class LogService with ChangeNotifier {
   // 提供只读访问
   List<LogEntry> get logs => List.unmodifiable(_memoryLogs);
   LogLevel get currentLevel => _currentLevel;
+
+  // 标志位，防止重复调度 postFrameCallback
+  bool _notifyScheduled = false;
   
   /// 创建日志服务实例
   LogService() {
@@ -176,7 +180,15 @@ class LogService with ChangeNotifier {
         loadedLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _memoryLogs = loadedLogs;
         
-        notifyListeners();
+        if (!_notifyScheduled) {
+          _notifyScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (hasListeners) { // 检查是否仍有监听器
+              notifyListeners();
+            }
+            _notifyScheduled = false; // 重置标志位
+          });
+        }
         debugPrint('从数据库加载了 ${_memoryLogs.length} 条日志');
       }
     } catch (e) {
@@ -210,8 +222,16 @@ class LogService with ChangeNotifier {
       print(entry.toString());
     }
     
-    // 通知监听器
-    notifyListeners();
+    // 延迟通知监听器，避免在 build 方法中直接调用
+    if (!_notifyScheduled) {
+      _notifyScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (hasListeners) { // 检查是否仍有监听器
+           notifyListeners();
+        }
+        _notifyScheduled = false; // 重置标志位
+      });
+    }
   }
   
   /// 将待处理的日志保存到数据库
@@ -264,14 +284,32 @@ class LogService with ChangeNotifier {
         );
       }
       
-      notifyListeners();
+      // 级别更改也需要通知，同样延迟处理
+      if (!_notifyScheduled) {
+        _notifyScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (hasListeners) {
+             notifyListeners();
+          }
+          _notifyScheduled = false;
+        });
+      }
     }
   }
   
   /// 清除所有内存中的日志
   void clearMemoryLogs() {
     _memoryLogs.clear();
-    notifyListeners();
+    // 延迟通知
+    if (!_notifyScheduled) {
+      _notifyScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (hasListeners) {
+           notifyListeners();
+        }
+        _notifyScheduled = false;
+      });
+    }
     log(LogLevel.info, '内存中的日志已清除', source: 'LogService');
   }
   
@@ -284,7 +322,16 @@ class LogService with ChangeNotifier {
     // 清除数据库中的日志
     await _logDb.clearAllLogs();
     
-    notifyListeners();
+    // 延迟通知
+    if (!_notifyScheduled) {
+      _notifyScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (hasListeners) {
+           notifyListeners();
+        }
+        _notifyScheduled = false;
+      });
+    }
     
     // 记录一条新日志表示清除操作完成
     log(LogLevel.info, '所有日志记录已清除', source: 'LogService');

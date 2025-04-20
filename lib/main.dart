@@ -50,21 +50,31 @@ Future<void> initializeDatabasePlatform() async {
 // 全局导航key，用于日志服务在无context时获取context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// 日志写入递归保护
+bool _isLogging = false;
+
 // main函数开始
 void main() async {
-  // 重定向debugPrint到日志服务
+  // 重定向debugPrint到日志服务，增加递归保护
   debugPrint = (String? message, {int? wrapWidth}) {
-    // 仍然输出到控制台
-    debugPrintSynchronously(message);
-    // 写入日志服务
-    final context = navigatorKey.currentContext;
-    if (context != null && message != null && message.isNotEmpty) {
-      try {
-        Provider.of<LogService>(context, listen: false).info(
-          message,
-          source: 'debugPrint',
-        );
-      } catch (_) {}
+    if (_isLogging) {
+      // 防止递归
+      return;
+    }
+    _isLogging = true;
+    try {
+      debugPrintSynchronously(message);
+      final context = navigatorKey.currentContext;
+      if (context != null && message != null && message.isNotEmpty) {
+        try {
+          Provider.of<LogService>(context, listen: false).info(
+            message,
+            source: 'debugPrint',
+          );
+        } catch (_) {}
+      }
+    } finally {
+      _isLogging = false;
     }
   };
 
