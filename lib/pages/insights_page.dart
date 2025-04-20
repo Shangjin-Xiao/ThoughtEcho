@@ -23,25 +23,25 @@ class _InsightsPageState extends State<InsightsPage>
   final List<Map<String, dynamic>> _analysisTypes = [
     {
       'title': '全面分析',
-      'icon': Icons.all_inclusive,
+      'icon': Icons.all_inclusive, // 保持不变
       'description': '综合分析您所有笔记，探索主题、情感和思维模式',
       'prompt': 'comprehensive',
     },
     {
       'title': '情感洞察',
-      'icon': Icons.star,
+      'icon': Icons.mood, // 更新图标
       'description': '分析您的情绪状态和变化趋势',
       'prompt': 'emotional',
     },
     {
       'title': '思维导图',
-      'icon': Icons.star,
+      'icon': Icons.account_tree, // 更新图标
       'description': '构建您思考的结构和思维习惯分析',
       'prompt': 'mindmap',
     },
     {
       'title': '成长建议',
-      'icon': Icons.star,
+      'icon': Icons.trending_up, // 更新图标
       'description': '根据您的笔记提供个性化成长和进步建议',
       'prompt': 'growth',
     },
@@ -597,16 +597,21 @@ class _InsightsPageState extends State<InsightsPage>
   }
 
   IconData _getAnalysisIcon() {
+    // 如果是自定义提示词，也显示一个通用图标
+    if (_showCustomPrompt && _customPromptController.text.isNotEmpty) {
+      return Icons.auto_awesome; // 或者其他合适的图标
+    }
+    
     switch (_selectedAnalysisType) {
       case 'emotional':
-        return Icons.star;
+        return Icons.mood; // 更新图标
       case 'mindmap':
-        return Icons.star;
+        return Icons.account_tree; // 更新图标
       case 'growth':
-        return Icons.star;
+        return Icons.trending_up; // 更新图标
       case 'comprehensive':
       default:
-        return Icons.all_inclusive;
+        return Icons.all_inclusive; // 保持不变
     }
   }
 

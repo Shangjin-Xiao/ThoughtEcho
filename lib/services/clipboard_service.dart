@@ -101,17 +101,18 @@ class ClipboardService extends ChangeNotifier {
       final extractedInfo = _extractAuthorAndSource(content);
       String? author = extractedInfo['author'];
       String? source = extractedInfo['source'];
+      String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
       
-      debugPrint('从剪贴板提取信息 - 作者: $author, 出处: $source');
+      debugPrint('从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串: $matchedSubstring');
       
-      // 剥离末尾元数据，保证 content 只剩主要文本
-      final metaPattern = RegExp(r'[-—–]+\s*[^《]+?《[^》]+?》\s*\$|^《[^》]+?》\s*[-—–]+\s*[^，。.、\n]+\s*\$|"[^"]+"\s*[-—–]+\s*[^，。.、\n]+\s*\$');
-      final displayContent = (author != null || source != null)
-          ? content.replaceAll(metaPattern, '').trim()
+      // 如果提取到了元数据，从原始内容中移除匹配的子串
+      final displayContent = (matchedSubstring != null)
+          ? content.replaceFirst(matchedSubstring, '').trim() 
           : content;
+          
       // 返回提取的信息
       return {
-        'content': displayContent,
+        'content': displayContent, // 使用处理后的内容
         'author': author,
         'source': source,
       };
@@ -122,41 +123,80 @@ class ClipboardService extends ChangeNotifier {
   }
   
   // 从文本中提取作者和出处信息（类似一言格式）
+  // 返回包含 'author', 'source', 'matched_substring' 的 Map
   Map<String, String?> _extractAuthorAndSource(String content) {
     final text = content.trim();
     String? author;
     String? source;
-    
-    // 1. 匹配 ——作者《出处》
-    final m1 = RegExp(r'[-—–]+\s*([^《]+?)《([^》]+?)》\s*\$').firstMatch(text);
+    String? matchedSubstring; // 用于存储匹配到的完整元数据子串
+
+    // 定义清理函数，去除前后空格和特定标点
+    String? clean(String? input) {
+      return input?.trim().replaceAll(RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$'), '').trim();
+    }
+
+    // 1. 匹配 ——作者《出处》 或 --作者《出处》 等
+    final m1 = RegExp(r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$').firstMatch(text);
     if (m1 != null) {
-      author = m1.group(1)?.trim();
-      source = m1.group(2)?.trim();
-      return {'author': author, 'source': source};
+      author = clean(m1.group(1));
+      source = clean(m1.group(2));
+      matchedSubstring = m1.group(0);
+      return {'author': author, 'source': source, 'matched_substring': matchedSubstring};
     }
-    // 2. 匹配 《出处》——作者
-    final m2 = RegExp(r'《([^》]+?)》\s*[-—–]+\s*([^，。.、\n]+)\$').firstMatch(text);
+    
+    // 2. 匹配 《出处》——作者 或 《出处》--作者 等
+    final m2 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$').firstMatch(text);
     if (m2 != null) {
-      source = m2.group(1)?.trim();
-      author = m2.group(2)?.trim();
-      return {'author': author, 'source': source};
+      source = clean(m2.group(1));
+      author = clean(m2.group(2));
+      matchedSubstring = m2.group(0);
+      return {'author': author, 'source': source, 'matched_substring': matchedSubstring};
     }
-    // 3. 匹配 "文"——作者
-    final m3 = RegExp(r'"[^"]+"\s*[-—–]+\s*([^，。.、\n]+)\$').firstMatch(text);
+    
+    // 3. 匹配 "文"——作者 或 "文"--作者 等
+    final m3 = RegExp(r'["“](.+?)["”]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$').firstMatch(text);
     if (m3 != null) {
-      author = m3.group(1)?.trim();
+      // 这种情况通常只提取作者，引用的内容在前面
+      author = clean(m3.group(2));
+      matchedSubstring = m3.group(0);
+      // 注意：这里可能需要更复杂的逻辑来判断是否要提取 source，暂时只提取 author
+      return {'author': author, 'source': null, 'matched_substring': matchedSubstring};
     }
-    // 4. 回退提取作者
-    if (author == null) {
-      final m4 = RegExp(r'[-—–]\s*([^，。.、\n]{2,20})$').firstMatch(text);
-      if (m4 != null) author = m4.group(1)?.trim();
+
+    // 4. 回退提取作者（匹配末尾的 ——作者 或 --作者）
+    final m4 = RegExp(r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$').firstMatch(text);
+    if (m4 != null) {
+      author = clean(m4.group(1));
+      matchedSubstring = m4.group(0);
+      // 尝试在此基础上再提取出处
+      final remainingText = text.substring(0, text.length - matchedSubstring!.length).trim();
+      final m4Source = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$').firstMatch(remainingText);
+       if (m4Source != null) {
+         source = clean(m4Source.group(1));
+         // 更新匹配的子串以包含出处部分 (可能不精确，但尝试包含)
+         matchedSubstring = text.substring(remainingText.length - m4Source.group(0)!.length);
+       }
+      return {'author': author, 'source': source, 'matched_substring': matchedSubstring};
     }
-    // 5. 回退提取出处
-    if (source == null) {
-      final m5 = RegExp(r'《([^》]+?)》').firstMatch(text);
-      if (m5 != null) source = m5.group(1)?.trim();
+    
+    // 5. 回退提取出处（匹配末尾的 《出处》 或 （出处））
+    final m5 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$').firstMatch(text);
+    if (m5 != null) {
+      source = clean(m5.group(1));
+      matchedSubstring = m5.group(0);
+       // 尝试在此基础上再提取作者
+      final remainingText = text.substring(0, text.length - matchedSubstring!.length).trim();
+      final m5Author = RegExp(r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$').firstMatch(remainingText);
+      if (m5Author != null) {
+        author = clean(m5Author.group(1));
+        // 更新匹配的子串以包含作者部分 (可能不精确，但尝试包含)
+        matchedSubstring = text.substring(remainingText.length - m5Author.group(0)!.length);
+      }
+      return {'author': author, 'source': source, 'matched_substring': matchedSubstring};
     }
-    return {'author': author, 'source': source};
+
+    // 如果都没有匹配到，返回 null
+    return {'author': null, 'source': null, 'matched_substring': null};
   }
   
   // 显示询问对话框并打开编辑页面
