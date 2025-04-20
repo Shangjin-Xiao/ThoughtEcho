@@ -47,8 +47,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
     
-    // 首次进入应用时检查剪贴板
-    _checkClipboard();
+    // 使用延迟方法来确保在UI构建完成后执行剪贴板检查，避免冷启动问题
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 首次进入应用时检查剪贴板
+      _checkClipboard();
+    });
   }
 
   // 初始化各项服务
@@ -78,7 +81,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 当应用从后台恢复时检查剪贴板
     if (state == AppLifecycleState.resumed) {
-      _checkClipboard();
+      // 确保在Resume状态下使用延迟执行剪贴板检查，避免在UI更新前调用
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _checkClipboard();
+        }
+      });
     }
   }
 

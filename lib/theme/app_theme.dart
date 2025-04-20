@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 
 class AppTheme with ChangeNotifier {
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
   
-  late SharedPreferences _prefs;
+  late SafeMMKV _storage;
   Color? _customColor;
   bool _useCustomColor = false;
   ColorScheme? _lightDynamicColorScheme;
@@ -49,9 +49,11 @@ class AppTheme with ChangeNotifier {
   // 初始化主题服务
   Future<void> initialize() async {
     try {
-      _prefs = await SharedPreferences.getInstance();
+      _storage = SafeMMKV();
+      await _storage.initialize();
       _loadCustomColor();
       _loadThemeMode();
+      debugPrint('主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 主题模式=$_themeMode');
     } catch (e) {
       debugPrint('初始化主题服务失败: $e');
       // 初始化失败时使用默认值
@@ -85,32 +87,32 @@ class AppTheme with ChangeNotifier {
   // 设置自定义颜色
   Future<void> setCustomColor(Color color) async {
     _customColor = color;
-    await _prefs.setInt(_customColorKey, color.value);
+    await _storage.setInt(_customColorKey, color.value);
     notifyListeners();
   }
   
   // 切换是否使用自定义颜色
   Future<void> setUseCustomColor(bool value) async {
     _useCustomColor = value;
-    await _prefs.setBool(_useCustomColorKey, value);
+    await _storage.setBool(_useCustomColorKey, value);
     notifyListeners();
   }
   
   // 设置主题模式
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    await _prefs.setString(_themeModeKey, mode.name);
+    await _storage.setString(_themeModeKey, mode.name);
     notifyListeners();
   }
   
   // 从持久化存储加载自定义颜色设置
   void _loadCustomColor() {
     try {
-      final colorValue = _prefs.getInt(_customColorKey);
+      final colorValue = _storage.getInt(_customColorKey);
       if (colorValue != null) {
         _customColor = Color(colorValue);
       }
-      _useCustomColor = _prefs.getBool(_useCustomColorKey) ?? false;
+      _useCustomColor = _storage.getBool(_useCustomColorKey) ?? false;
     } catch (e) {
       debugPrint('加载自定义颜色失败: $e');
       _customColor = Colors.blue;
@@ -121,7 +123,7 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载主题模式
   void _loadThemeMode() {
     try {
-      final modeString = _prefs.getString(_themeModeKey);
+      final modeString = _storage.getString(_themeModeKey);
       if (modeString != null) {
         _themeMode = ThemeMode.values.byName(modeString);
       }

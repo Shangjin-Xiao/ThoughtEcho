@@ -9,7 +9,6 @@ import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring = 'enable_clipboard_monitoring';
-  static const String _keyLastClipboardContent = 'last_clipboard_content';
   
   // 常见的引述格式匹配
   static final RegExp _quoteAuthorPattern = RegExp(
@@ -27,7 +26,7 @@ class ClipboardService extends ChangeNotifier {
   bool _enableClipboardMonitoring = false;
   bool get enableClipboardMonitoring => _enableClipboardMonitoring;
   
-  // 剪贴板上次处理的内容缓存
+  // 剪贴板上次处理的内容缓存（仅内存中，不需要持久化）
   String _lastProcessedContent = '';
   
   // 使用安全包装类替代直接的MMKV
@@ -56,7 +55,6 @@ class ClipboardService extends ChangeNotifier {
   // 从存储加载首选项
   void _loadPreferences() {
     _enableClipboardMonitoring = _storage.getBool(_keyEnableClipboardMonitoring) ?? false;
-    _lastProcessedContent = _storage.getString(_keyLastClipboardContent) ?? '';
     debugPrint('加载剪贴板监控设置: $_enableClipboardMonitoring');
     notifyListeners();
   }
@@ -96,9 +94,8 @@ class ClipboardService extends ChangeNotifier {
         return null;
       }
       
-      // 更新最近处理的内容
+      // 更新最近处理的内容（仅在内存中记住，不需要持久化）
       _lastProcessedContent = content;
-      _storage.setString(_keyLastClipboardContent, content);
       
       // 提取作者和出处（如果有）
       final extractedInfo = _extractAuthorAndSource(content);

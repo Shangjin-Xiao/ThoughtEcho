@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../utils/http_utils.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 
 class WeatherService extends ChangeNotifier {
   String? _currentWeather;
@@ -15,6 +15,10 @@ class WeatherService extends ChangeNotifier {
   static const _cacheKey = 'weather_cache';
   static const _cacheExpiryKey = 'weather_cache_expiry';
   static const _cacheDuration = Duration(hours: 3); // 天气缓存3小时
+  
+  // MMKV存储实例
+  late SafeMMKV _storage;
+  bool _isInitialized = false;
 
   String? get currentWeather => _currentWeather;
   String? get temperature => _temperature;
@@ -22,10 +26,32 @@ class WeatherService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get weatherIcon => _weatherIcon;
   double? get temperatureValue => _temperature_value;
+  
+  // 构造函数
+  WeatherService() {
+    _init();
+  }
+  
+  // 初始化MMKV存储
+  Future<void> _init() async {
+    try {
+      _storage = SafeMMKV();
+      await _storage.initialize();
+      _isInitialized = true;
+      debugPrint('天气服务MMKV存储初始化完成');
+    } catch (e) {
+      debugPrint('天气服务MMKV存储初始化失败: $e');
+    }
+  }
 
   // 获取天气信息
   Future<void> getWeatherData(double latitude, double longitude) async {
     try {
+      // 确保存储已初始化
+      if (!_isInitialized) {
+        await _init();
+      }
+      
       _isLoading = true;
       notifyListeners();
       
@@ -61,15 +87,13 @@ class WeatherService extends ChangeNotifier {
   // 从缓存加载天气数据
   Future<bool> _loadFromCache(double latitude, double longitude) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
       // 检查缓存是否存在并且未过期
-      final cacheExpiryString = prefs.getString(_cacheExpiryKey);
+      final cacheExpiryString = _storage.getString(_cacheExpiryKey);
       if (cacheExpiryString != null) {
         final cacheExpiry = DateTime.parse(cacheExpiryString);
         if (DateTime.now().isBefore(cacheExpiry)) {
           // 缓存有效，可以使用
-          final cacheJson = prefs.getString(_cacheKey);
+          final cacheJson = _storage.getString(_cacheKey);
           if (cacheJson != null) {
             final cacheData = json.decode(cacheJson);
             
@@ -108,8 +132,6 @@ class WeatherService extends ChangeNotifier {
     }
     
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
       // 创建缓存数据
       final cacheData = {
         'latitude': latitude,
@@ -122,15 +144,15 @@ class WeatherService extends ChangeNotifier {
       };
       
       // 保存缓存和过期时间
-      await prefs.setString(_cacheKey, json.encode(cacheData));
-      await prefs.setString(
+      await _storage.setString(_cacheKey, json.encode(cacheData));
+      await _storage.setString(
         _cacheExpiryKey, 
         DateTime.now().add(_cacheDuration).toIso8601String()
       );
       
-      debugPrint('天气数据已保存到缓存');
+      debugPrint('天气数据已保存到MMKV缓存');
     } catch (e) {
-      debugPrint('保存天气数据到缓存失败: $e');
+      debugPrint('保存天气数据到MMKV缓存失败: $e');
     }
   }
 
