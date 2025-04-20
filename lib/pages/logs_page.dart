@@ -11,102 +11,491 @@ class LogsPage extends StatefulWidget {
 }
 
 class _LogsPageState extends State<LogsPage> {
+  // 过滤设置
   LogLevel? _filterLevel;
+  String? _filterSource;
   String? _searchQuery;
   final TextEditingController _searchController = TextEditingController();
+  
+  // 详情查看
+  LogEntry? _selectedLog;
+  
+  // 正在加载更多日志
+  bool _isLoadingMore = false;
+  
+  // 分页相关
+  int _currentPage = 0;
+  static const int _pageSize = 50;
+  List<LogEntry> _historyLogs = [];
+  bool _hasMoreLogs = true;
+  
+  // 滚动控制器
+  final ScrollController _scrollController = ScrollController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // 监听滚动事件，用于实现滚动到底部加载更多
+    _scrollController.addListener(_scrollListener);
+  }
   
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
     super.dispose();
   }
   
-  // 过滤日志方法
-  bool _filterLog(String log, LogLevel? level, String? query) {
-    if (level == null && (query == null || query.isEmpty)) {
-      return true; // 没有过滤条件
+  // 滚动监听器，用于加载更多日志
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+    
+    // 当滚动到底部时加载更多历史日志
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreLogs();
+    }
+  }
+  
+  // 加载更多历史日志
+  Future<void> _loadMoreLogs() async {
+    final logService = Provider.of<LogService>(context, listen: false);
+    
+    // 如果没有更多日志可加载，或已在加载中，则返回
+    if (!_hasMoreLogs || _isLoadingMore) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+    });
+    
+    try {
+      // 计算要跳过的日志数量
+      final offset = _currentPage * _pageSize;
+      
+      // 查询下一页日志
+      final moreLogs = await logService.queryLogs(
+        level: _filterLevel,
+        searchText: _searchQuery,
+        source: _filterSource,
+        limit: _pageSize,
+        offset: offset,
+      );
+      
+      if (moreLogs.isEmpty) {
+        // 没有更多日志
+        setState(() {
+          _hasMoreLogs = false;
+          _isLoadingMore = false;
+        });
+      } else {
+        // 添加新加载的日志并更新页码
+        setState(() {
+          _historyLogs.addAll(moreLogs);
+          _currentPage++;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('加载更多日志失败: $e')),
+      );
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+  
+  // 刷新日志列表
+  Future<void> _refreshLogs() async {
+    setState(() {
+      _currentPage = 0;
+      _historyLogs.clear();
+      _hasMoreLogs = true;
+    });
+    
+    await _loadMoreLogs();
+  }
+  
+  // 过滤日志
+  bool _filterLog(LogEntry log) {
+    // 级别过滤
+    if (_filterLevel != null && log.level != _filterLevel) {
+      return false;
     }
     
-    bool levelMatch = true;
-    if (level != null) {
-      // 通过日志字符串中的级别标识过滤 (如 [INFO], [WARNING] 等)
-      levelMatch = log.contains('[${level.name.toUpperCase()}]');
+    // 源过滤
+    if (_filterSource != null && _filterSource!.isNotEmpty) {
+      final source = log.source ?? '';
+      if (!source.toLowerCase().contains(_filterSource!.toLowerCase())) {
+        return false;
+      }
     }
     
-    bool queryMatch = true;
-    if (query != null && query.isNotEmpty) {
-      queryMatch = log.toLowerCase().contains(query.toLowerCase());
+    // 文本搜索
+    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
+      return log.message.toLowerCase().contains(_searchQuery!.toLowerCase()) ||
+             (log.error ?? '').toLowerCase().contains(_searchQuery!.toLowerCase());
     }
     
-    return levelMatch && queryMatch;
+    return true;
+  }
+  
+  // 显示日志详情对话框
+  void _showLogDetails(LogEntry log) {
+    setState(() {
+      _selectedLog = log;
+    });
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildLogDetailsSheet(log),
+    ).then((_) {
+      setState(() {
+        _selectedLog = null;
+      });
+    });
+  }
+  
+  // 构建日志详情底部表
+  Widget _buildLogDetailsSheet(LogEntry log) {
+    final theme = Theme.of(context);
+    
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 标题栏
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceVariant,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _getLogLevelIcon(log.level),
+                          color: _getLogLevelColor(log.level, theme),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${log.level.name.toUpperCase()} 日志 ${log.source != null ? "[${log.source}]" : ""}',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.copy),
+                          tooltip: '复制全部信息',
+                          onPressed: () => _copyLogToClipboard(log),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '时间: ${log.timestamp.toLocal().toString()}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // 详细内容（可滚动）
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // 消息
+                    Text(
+                      '消息:',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SelectableText(
+                        log.message,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                    
+                    // 错误信息（如果存在）
+                    if (log.error != null && log.error!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        '错误:',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(
+                          log.error!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontFamily: 'monospace',
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                    
+                    // 堆栈跟踪（如果存在）
+                    if (log.stackTrace != null && log.stackTrace!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        '堆栈跟踪:',
+                        style: theme.textTheme.labelLarge,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(
+                          log.stackTrace!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  // 复制日志内容到剪贴板
+  void _copyLogToClipboard(LogEntry log) {
+    final buffer = StringBuffer();
+    buffer.write('时间: ${log.timestamp.toLocal().toString()}\n');
+    buffer.write('级别: ${log.level.name.toUpperCase()}\n');
+    
+    if (log.source != null && log.source!.isNotEmpty) {
+      buffer.write('来源: ${log.source}\n');
+    }
+    
+    buffer.write('消息: ${log.message}\n');
+    
+    if (log.error != null && log.error!.isNotEmpty) {
+      buffer.write('错误: ${log.error}\n');
+    }
+    
+    if (log.stackTrace != null && log.stackTrace!.isNotEmpty) {
+      buffer.write('堆栈跟踪: ${log.stackTrace}\n');
+    }
+    
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('日志详情已复制到剪贴板')),
+    );
+  }
+  
+  // 获取日志级别对应的图标
+  IconData _getLogLevelIcon(LogLevel level) {
+    switch (level) {
+      case LogLevel.verbose:
+        return Icons.text_snippet_outlined;
+      case LogLevel.debug:
+        return Icons.code;
+      case LogLevel.info:
+        return Icons.info_outline;
+      case LogLevel.warning:
+        return Icons.warning_amber;
+      case LogLevel.error:
+        return Icons.error_outline;
+      case LogLevel.none:
+        return Icons.block;
+    }
+  }
+  
+  // 获取日志级别对应的颜色
+  Color _getLogLevelColor(LogLevel level, ThemeData theme) {
+    switch (level) {
+      case LogLevel.verbose:
+        return Colors.grey;
+      case LogLevel.debug:
+        return Colors.teal;
+      case LogLevel.info:
+        return Colors.blue;
+      case LogLevel.warning:
+        return Colors.orange;
+      case LogLevel.error:
+        return Colors.red;
+      case LogLevel.none:
+        return theme.colorScheme.onSurface;
+    }
+  }
+  
+  // 构建过滤器横幅
+  Widget _buildFiltersBanner() {
+    final hasFilters = _filterLevel != null || 
+                       (_filterSource != null && _filterSource!.isNotEmpty) || 
+                       (_searchQuery != null && _searchQuery!.isNotEmpty);
+                       
+    if (!hasFilters) return const SizedBox.shrink();
+    
+    final theme = Theme.of(context);
+    final List<Widget> filterChips = [];
+    
+    // 级别过滤器
+    if (_filterLevel != null) {
+      filterChips.add(
+        Chip(
+          label: Text(_filterLevel!.name.toUpperCase()),
+          avatar: Icon(
+            _getLogLevelIcon(_filterLevel!),
+            size: 18,
+            color: _getLogLevelColor(_filterLevel!, theme),
+          ),
+          onDeleted: () {
+            setState(() {
+              _filterLevel = null;
+            });
+            _refreshLogs();
+          },
+          backgroundColor: theme.colorScheme.secondaryContainer,
+        ),
+      );
+    }
+    
+    // 源过滤器
+    if (_filterSource != null && _filterSource!.isNotEmpty) {
+      filterChips.add(
+        Chip(
+          label: Text('来源: $_filterSource'),
+          avatar: const Icon(Icons.source_outlined, size: 18),
+          onDeleted: () {
+            setState(() {
+              _filterSource = null;
+            });
+            _refreshLogs();
+          },
+          backgroundColor: theme.colorScheme.tertiaryContainer,
+        ),
+      );
+    }
+    
+    // 搜索过滤器
+    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
+      filterChips.add(
+        Chip(
+          label: Text('搜索: $_searchQuery'),
+          avatar: const Icon(Icons.search, size: 18),
+          onDeleted: () {
+            setState(() {
+              _searchQuery = null;
+              _searchController.clear();
+            });
+            _refreshLogs();
+          },
+          backgroundColor: theme.colorScheme.primaryContainer,
+        ),
+      );
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: theme.colorScheme.surface,
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (int i = 0; i < filterChips.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: filterChips[i],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _filterLevel = null;
+                _filterSource = null;
+                _searchQuery = null;
+                _searchController.clear();
+              });
+              _refreshLogs();
+            },
+            child: const Text('清除全部'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final logService = Provider.of<LogService>(context);
     final theme = Theme.of(context);
+    final logService = Provider.of<LogService>(context);
     
-    // 获取过滤后的日志
-    final filteredLogs = logService.logs
-        .where((log) => _filterLog(log, _filterLevel, _searchQuery))
-        .toList();
+    // 获取内存中的日志（实时）与历史日志
+    final memoryLogs = logService.logs.where(_filterLog).toList();
+    final allLogs = [...memoryLogs, ..._historyLogs.where(_filterLog)];
     
     return Scaffold(
       appBar: AppBar(
         title: const Text('日志查看'),
         actions: [
+          // 自动滚动按钮
           IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: '清除所有日志',
+            icon: const Icon(Icons.filter_list),
+            tooltip: '日志过滤',
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('清除日志'),
-                  content: const Text('确定要清除所有日志记录吗？此操作无法撤销。'),
-                  actions: [
-                    TextButton(
-                      child: const Text('取消'),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    TextButton(
-                      child: const Text('清除'),
-                      onPressed: () {
-                        logService.clearLogs();
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('日志已清除')),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              );
+              _showFilterDialog();
             },
           ),
-          PopupMenuButton<LogLevel?>(
-            tooltip: '按日志级别过滤',
-            icon: const Icon(Icons.filter_list),
-            initialValue: _filterLevel,
-            onSelected: (level) {
-              setState(() {
-                // 如果当前已选中该级别，则取消选择（显示所有级别）
-                _filterLevel = level == _filterLevel ? null : level;
-              });
+          IconButton(
+            icon: const Icon(Icons.cleaning_services_outlined),
+            tooltip: '清除日志',
+            onPressed: () {
+              _showClearLogsDialog();
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: null,
-                child: Text('显示所有'),
-              ),
-              ...LogLevel.values
-                  .where((level) => level != LogLevel.none) // 排除 none 级别
-                  .map((level) => PopupMenuItem(
-                        value: level,
-                        child: Text(level.name[0].toUpperCase() + level.name.substring(1)),
-                      ))
-                  .toList()
-            ],
           ),
         ],
       ),
@@ -131,6 +520,7 @@ class _LogsPageState extends State<LogsPage> {
                           setState(() {
                             _searchQuery = null;
                           });
+                          _refreshLogs();
                         },
                       )
                     : null,
@@ -139,110 +529,421 @@ class _LogsPageState extends State<LogsPage> {
                 setState(() {
                   _searchQuery = value.isEmpty ? null : value;
                 });
+                // 延迟搜索，减少频繁查询
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  if (_searchQuery == value) {
+                    _refreshLogs();
+                  }
+                });
+              },
+              textInputAction: TextInputAction.search,
+              onSubmitted: (value) {
+                setState(() {
+                  _searchQuery = value.isEmpty ? null : value;
+                });
+                _refreshLogs();
               },
             ),
           ),
           
-          // 过滤信息显示
-          if (_filterLevel != null || (_searchQuery != null && _searchQuery!.isNotEmpty))
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  Text(
-                    '过滤条件: ' +
-                    (_filterLevel != null 
-                      ? _filterLevel!.name.toUpperCase() 
-                      : '') +
-                    (_filterLevel != null && (_searchQuery != null && _searchQuery!.isNotEmpty) 
-                      ? ' + ' 
-                      : '') +
-                    (_searchQuery != null && _searchQuery!.isNotEmpty
-                      ? '"$_searchQuery"'
-                      : ''),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _filterLevel = null;
-                        _searchQuery = null;
-                        _searchController.clear();
-                      });
-                    },
-                    child: const Text('清除过滤'),
-                  ),
-                ],
-              ),
-            ),
+          // 过滤器横幅
+          _buildFiltersBanner(),
           
-          // 日志显示区域
+          // 日志列表
           Expanded(
-            child: filteredLogs.isEmpty
-                ? Center(
-                    child: Text(
-                      logService.logs.isEmpty
-                          ? '没有日志记录'
-                          : '没有匹配的日志记录',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+            child: RefreshIndicator(
+              onRefresh: _refreshLogs,
+              child: allLogs.isEmpty
+                  ? Center(
+                      child: Text(
+                        '没有日志记录',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: filteredLogs.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final log = filteredLogs[index];
-                      
-                      // 确定日志级别颜色
-                      Color logColor = theme.colorScheme.onSurface;
-                      if (log.contains('[ERROR]')) {
-                        logColor = Colors.red;
-                      } else if (log.contains('[WARNING]')) {
-                        logColor = Colors.orange;
-                      } else if (log.contains('[INFO]')) {
-                        logColor = Colors.blue;
-                      } else if (log.contains('[DEBUG]')) {
-                        logColor = Colors.teal;
-                      } else if (log.contains('[VERBOSE]')) {
-                        logColor = Colors.grey;
-                      }
-                      
-                      return InkWell(
-                        onLongPress: () {
-                          // 复制日志到剪贴板
-                          Clipboard.setData(ClipboardData(text: log));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('日志已复制到剪贴板')),
+                    )
+                  : ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(8.0),
+                      itemCount: allLogs.length + (_isLoadingMore ? 1 : 0) + (_hasMoreLogs ? 1 : 0),
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        // 加载更多指示器
+                        if (_isLoadingMore && index == allLogs.length) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: CircularProgressIndicator(),
+                            ),
                           );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            log,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: logColor,
-                              fontFamily: 'monospace',
+                        }
+                        
+                        // 加载更多按钮
+                        if (_hasMoreLogs && !_isLoadingMore && index == allLogs.length) {
+                          return TextButton(
+                            onPressed: _loadMoreLogs,
+                            child: const Text('加载更多日志'),
+                          );
+                        }
+                        
+                        // 正常日志项
+                        final log = allLogs[index];
+                        final logColor = _getLogLevelColor(log.level, theme);
+                        
+                        return InkWell(
+                          onTap: () => _showLogDetails(log),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withOpacity(0.1),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 日志头部（时间和级别）
+                                Row(
+                                  children: [
+                                    Icon(
+                                      _getLogLevelIcon(log.level),
+                                      size: 16,
+                                      color: logColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      log.level.name.toUpperCase(),
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: logColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (log.source != null && log.source!.isNotEmpty)
+                                      Expanded(
+                                        child: Text(
+                                          '[${log.source}]',
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    Text(
+                                      _formatTimestamp(log.timestamp),
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                                // 日志消息
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4.0, left: 20.0),
+                                  child: Text(
+                                    log.message,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      height: 1.2,
+                                    ),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                
+                                // 错误指示器（如果有）
+                                if (log.error != null && log.error!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0, left: 20.0),
+                                    child: Text(
+                                      '包含错误信息',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.error,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+          
+          // 底部状态栏
+          Container(
+            color: theme.colorScheme.surface,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              '已显示 ${allLogs.length} 条日志 • 长按日志可复制 • 点击查看详情',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        color: theme.colorScheme.surface,
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Text(
-          '日志条数: ${filteredLogs.length}/${logService.logs.length} • 长按日志可复制',
-          style: theme.textTheme.bodySmall,
-          textAlign: TextAlign.center,
-        ),
+    );
+  }
+  
+  // 格式化时间戳为友好格式
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final local = timestamp.toLocal();
+    final difference = now.difference(local);
+    
+    // 今天的日志只显示时间
+    if (local.year == now.year && local.month == now.month && local.day == now.day) {
+      return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
+    } 
+    // 一周内的日志显示星期几和时间
+    else if (difference.inDays < 7) {
+      final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      final weekday = weekdays[(local.weekday - 1) % 7];
+      return '$weekday ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    } 
+    // 更久的日志显示日期和时间
+    else {
+      return '${local.month}-${local.day} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    }
+  }
+  
+  // 显示过滤对话框
+  void _showFilterDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildFilterBottomSheet(),
+    );
+  }
+  
+  // 构建过滤底部表
+  Widget _buildFilterBottomSheet() {
+    final theme = Theme.of(context);
+    
+    // 过滤状态
+    late LogLevel? tempFilterLevel = _filterLevel;
+    String? tempFilterSource = _filterSource;
+    
+    // 创建用于源过滤的文本控制器，并设置初始值
+    final sourceController = TextEditingController(text: tempFilterSource ?? '');
+    
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            children: [
+              // 标题栏
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceVariant,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_list),
+                    const SizedBox(width: 8),
+                    Text(
+                      '日志过滤选项',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          tempFilterLevel = null;
+                          tempFilterSource = null;
+                          sourceController.text = '';
+                        });
+                      },
+                      child: const Text('重置'),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // 过滤选项
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // 日志级别过滤
+                    Text(
+                      '按日志级别过滤',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: LogLevel.values
+                          .where((level) => level != LogLevel.none) // 排除"不记录"选项
+                          .map((level) => FilterChip(
+                                label: Text(level.name.toUpperCase()),
+                                selected: tempFilterLevel == level,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    tempFilterLevel = selected ? level : null;
+                                  });
+                                },
+                                avatar: Icon(
+                                  _getLogLevelIcon(level),
+                                  color: _getLogLevelColor(level, theme),
+                                  size: 18,
+                                ),
+                                backgroundColor: theme.colorScheme.surfaceVariant,
+                                selectedColor: theme.colorScheme.secondaryContainer,
+                              ))
+                          .toList(),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // 源过滤
+                    Text(
+                      '按来源过滤',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: sourceController,
+                      decoration: const InputDecoration(
+                        hintText: '输入日志来源名称...',
+                        prefixIcon: Icon(Icons.source_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          tempFilterSource = value.isEmpty ? null : value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              
+              // 底部确认取消按钮
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(
+                    top: BorderSide(
+                      color: theme.colorScheme.outline.withOpacity(0.2),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('取消'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        // 应用过滤
+                        this.setState(() {
+                          _filterLevel = tempFilterLevel;
+                          _filterSource = tempFilterSource;
+                        });
+                        
+                        Navigator.of(context).pop();
+                        _refreshLogs();
+                      },
+                      child: const Text('应用'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  // 显示清除日志对话框
+  void _showClearLogsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清除日志'),
+        content: const Text('您想清除哪些日志？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final logService = Provider.of<LogService>(context, listen: false);
+              logService.clearMemoryLogs();
+              
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('内存中的日志已清除')),
+              );
+            },
+            child: const Text('仅清除内存日志'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              
+              // 显示加载指示器
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+              
+              try {
+                final logService = Provider.of<LogService>(context, listen: false);
+                await logService.clearAllLogs();
+                
+                Navigator.of(context).pop(); // 关闭加载指示器
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('所有日志记录已清除')),
+                );
+                
+                // 刷新日志
+                setState(() {
+                  _historyLogs.clear();
+                  _currentPage = 0;
+                  _hasMoreLogs = true;
+                });
+                
+              } catch (e) {
+                Navigator.of(context).pop(); // 关闭加载指示器
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('清除日志失败: $e')),
+                );
+              }
+            },
+            child: const Text('清除全部日志'),
+          ),
+        ],
       ),
     );
   }
