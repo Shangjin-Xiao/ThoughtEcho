@@ -99,9 +99,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         );
       }
     }
-    // 如果是从一言添加，添加相关标签
-    else if (widget.prefilledContent != null || widget.hitokotoData != null) {
-      // 这里会在显示对话框后添加相关标签
+    // 只有hitokotoData不为空时，才自动添加每日一言标签
+    else if (widget.hitokotoData != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _addDefaultHitokotoTags();
       });

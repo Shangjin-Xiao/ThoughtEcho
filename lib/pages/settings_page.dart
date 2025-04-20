@@ -9,6 +9,7 @@ import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
+import 'logs_settings_page.dart'; // 导入新的日志设置页面
 import '../services/location_service.dart'; // 包含 CityInfo 定义
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
@@ -367,6 +368,21 @@ class _SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const HitokotoSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                // 添加日志设置入口
+                ListTile(
+                  title: const Text('日志设置'),
+                  subtitle: const Text('配置应用日志记录级别'),
+                  leading: const Icon(Icons.article_outlined), // 或者 Icons.bug_report_outlined
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LogsSettingsPage(),
                       ),
                     );
                   },

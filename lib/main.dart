@@ -14,6 +14,7 @@ import 'package:mind_trace/services/location_service.dart';
 import 'package:mind_trace/services/weather_service.dart';
 import 'package:mind_trace/services/mmkv_service.dart';
 import 'package:mind_trace/services/clipboard_service.dart'; // 导入剪贴板服务
+import 'package:mind_trace/services/log_service.dart'; // 导入日志服务
 import 'package:mind_trace/pages/home_page.dart';
 import 'package:mind_trace/theme/app_theme.dart';
 
@@ -76,6 +77,8 @@ void main() async {
       final locationService = LocationService();
       final weatherService = WeatherService();
       final clipboardService = ClipboardService(); // 创建剪贴板服务实例
+      final logService = LogService(); // 创建日志服务实例
+      
       // 初始化剪贴板服务
       await clipboardService.init();
 
@@ -101,9 +104,8 @@ void main() async {
             ChangeNotifierProvider(create: (_) => databaseService),
             ChangeNotifierProvider(create: (_) => locationService),
             ChangeNotifierProvider(create: (_) => weatherService),
-            ChangeNotifierProvider(
-              create: (_) => clipboardService,
-            ), // 添加剪贴板服务Provider
+            ChangeNotifierProvider(create: (_) => clipboardService), // 添加剪贴板服务Provider
+            ChangeNotifierProvider(create: (_) => logService), // 添加日志服务Provider
             ChangeNotifierProvider(create: (_) => appTheme),
             ChangeNotifierProxyProvider<SettingsService, AIService>(
               create:

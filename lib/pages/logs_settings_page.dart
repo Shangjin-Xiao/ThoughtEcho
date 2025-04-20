@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/log_service.dart'; // 导入日志服务
+import 'logs_page.dart'; // 导入日志查看页面
 
 class LogsSettingsPage extends StatelessWidget {
   const LogsSettingsPage({super.key});
@@ -13,6 +14,21 @@ class LogsSettingsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('日志设置'),
+        actions: [
+          // 添加一个打开日志查看页面的按钮
+          TextButton.icon(
+            icon: const Icon(Icons.article_outlined),
+            label: const Text('查看日志'),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LogsPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: ListView(
         children: [
