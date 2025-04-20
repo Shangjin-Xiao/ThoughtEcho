@@ -1,6 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'mmkv_ffi_fix.dart';
-import 'dart:convert';
 
 /// MMKVAdapter - Web 平台使用 SharedPreferences 作为后端存储
 class MMKVAdapter implements StorageAdapter {

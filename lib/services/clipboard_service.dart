@@ -246,9 +246,13 @@ class ClipboardService extends ChangeNotifier {
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async { // 改为 async
                     overlayEntry?.remove();
-                    _openEditPage(context, content, author, source);
+                    // 增加短暂延迟，确保其他初始化操作有时间完成
+                    await Future.delayed(const Duration(milliseconds: 200)); 
+                    if (context.mounted) { // 再次检查 context 是否有效
+                      _openEditPage(context, content, author, source);
+                    }
                   },
                   child: Text(
                     '添加为笔记',
