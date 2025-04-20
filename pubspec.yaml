@@ -33,6 +33,7 @@ dependencies:
   geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
   mmkv: ^2.1.1 # 使用当前最新正式版
   ffi: ^2.1.0 # 显式添加FFI依赖，确保与最新的Dart兼容
+  sqflite_common_ffi_web: ^0.3.0  # 请使用当前最新版本
 
 dev_dependencies:
   flutter_test:

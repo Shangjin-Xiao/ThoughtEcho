@@ -26,7 +26,7 @@ class _LogsPageState extends State<LogsPage> {
   // 分页相关
   int _currentPage = 0;
   static const int _pageSize = 50;
-  List<LogEntry> _historyLogs = [];
+  final List<LogEntry> _historyLogs = [];
   bool _hasMoreLogs = true;
   
   // 滚动控制器
@@ -182,7 +182,7 @@ class _LogsPageState extends State<LogsPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant,
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -237,7 +237,7 @@ class _LogsPageState extends State<LogsPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: SelectableText(
@@ -283,7 +283,7 @@ class _LogsPageState extends State<LogsPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: SelectableText(
@@ -749,7 +749,7 @@ class _LogsPageState extends State<LogsPage> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant,
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -807,7 +807,7 @@ class _LogsPageState extends State<LogsPage> {
                                   color: _getLogLevelColor(level, theme),
                                   size: 18,
                                 ),
-                                backgroundColor: theme.colorScheme.surfaceVariant,
+                                backgroundColor: theme.colorScheme.surfaceContainerHighest,
                                 selectedColor: theme.colorScheme.secondaryContainer,
                               ))
                           .toList(),

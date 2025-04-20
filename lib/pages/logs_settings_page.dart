@@ -79,7 +79,7 @@ class LogsSettingsPage extends StatelessWidget {
               },
               activeColor: theme.colorScheme.primary,
             );
-          }).toList(),
+          }),
         ],
       ),
     );

@@ -4,7 +4,7 @@ import 'package:geocode/geocode.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math'; // 导入数学库，用于三角函数计算
+// 导入数学库，用于三角函数计算
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 
 /// 本地地理编码服务类

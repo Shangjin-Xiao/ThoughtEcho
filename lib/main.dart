@@ -47,17 +47,43 @@ Future<void> initializeDatabasePlatform() async {
   }
 }
 
-// 添加错误处理函数，用于报告启动过程中的异常
-void _reportStartupError(FlutterErrorDetails details) {
-  FlutterError.dumpErrorToConsole(details);
-  // 可在此处添加崩溃报告逻辑
-}
+// 全局导航key，用于日志服务在无context时获取context
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // main函数开始
 void main() async {
-  // 包装主应用入口点，捕获初始化过程中的错误
+  // 重定向debugPrint到日志服务
+  debugPrint = (String? message, {int? wrapWidth}) {
+    // 仍然输出到控制台
+    debugPrintSynchronously(message);
+    // 写入日志服务
+    final context = navigatorKey.currentContext;
+    if (context != null && message != null && message.isNotEmpty) {
+      try {
+        Provider.of<LogService>(context, listen: false).info(
+          message,
+          source: 'debugPrint',
+        );
+      } catch (_) {}
+    }
+  };
+
   runZonedGuarded<Future<void>>(() async {
-    FlutterError.onError = _reportStartupError;
+    // 捕获Flutter框架异常并写入日志服务
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.dumpErrorToConsole(details);
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        try {
+          Provider.of<LogService>(context, listen: false).error(
+            'Flutter异常: \\${details.exceptionAsString()}',
+            error: details.exception,
+            stackTrace: details.stack,
+            source: 'FlutterError',
+          );
+        } catch (_) {}
+      }
+    };
 
     try {
       // 确保Flutter绑定初始化
@@ -124,24 +150,45 @@ void main() async {
                       ),
             ),
           ],
-          child: const MyApp(),
+          child: MyApp(navigatorKey: navigatorKey),
         ),
       );
     } catch (e, stackTrace) {
-      debugPrint('应用初始化失败: $e');
-      debugPrint('堆栈跟踪: $stackTrace');
-      // 可以在这里显示错误启动画面或重试逻辑
+      debugPrint('应用初始化失败: \\${e}');
+      debugPrint('堆栈跟踪: \\${stackTrace}');
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        try {
+          Provider.of<LogService>(context, listen: false).error(
+            '应用初始化失败: \\${e}',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'main',
+          );
+        } catch (_) {}
+      }
       rethrow;
     }
   }, (error, stackTrace) {
-    debugPrint('未捕获的异常: $error');
-    debugPrint('堆栈跟踪: $stackTrace');
-    // 可在此添加崩溃报告逻辑
+    debugPrint('未捕获的异常: \\${error}');
+    debugPrint('堆栈跟踪: \\${stackTrace}');
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      try {
+        Provider.of<LogService>(context, listen: false).error(
+          '未捕获异常: \\${error}',
+          error: error,
+          stackTrace: stackTrace,
+          source: 'runZonedGuarded',
+        );
+      } catch (_) {}
+    }
   });
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final GlobalKey<NavigatorState> navigatorKey;
+  const MyApp({required this.navigatorKey, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +199,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.from(colorScheme: appTheme.lightColorScheme),
       darkTheme: ThemeData.from(colorScheme: appTheme.darkColorScheme),
       themeMode: appTheme.themeMode,
+      navigatorKey: navigatorKey,
       home: const HomePage(),
     );
   }

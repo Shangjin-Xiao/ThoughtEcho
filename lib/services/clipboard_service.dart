@@ -252,10 +252,10 @@ class ClipboardService extends ChangeNotifier {
                   size: 20,
                 ),
                 const SizedBox(width: 10),
-                Flexible(
+                const Flexible(
                   child: Text(
                     '发现剪贴板内容',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),

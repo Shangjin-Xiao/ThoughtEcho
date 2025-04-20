@@ -526,79 +526,91 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
             // 标签选择区域
             const SizedBox(height: 16),
-            ExpansionTile(
-              title: const Text(
-                '选择标签',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              leading: const Icon(Icons.tag),
-              initiallyExpanded: false,
-              childrenPadding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              children: [
-                // 搜索框
-                TextField(
-                  decoration: const InputDecoration(
-                    hintText: '搜索标签...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: 8.0,
-                      horizontal: 12.0,
-                    ),
+            FutureBuilder<List<NoteCategory>>(
+              future: Provider.of<DatabaseService>(context, listen: false).getCategories(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('加载标签失败: \\${snapshot.error}'));
+                }
+                final tags = snapshot.data ?? [];
+                return ExpansionTile(
+                  title: const Text(
+                    '选择标签',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
-                  onChanged: (value) {
-                    // 可以添加标签搜索逻辑
-                  },
-                ),
-                const SizedBox(height: 8),
-                // 标签列表
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: widget.tags.length,
-                    itemBuilder: (context, index) {
-                      final tag = widget.tags[index];
-                      final isSelected = _selectedTagIds.contains(tag.id);
-                      return CheckboxListTile(
-                        title: Row(
-                          children: [
-                            if (IconUtils.isEmoji(tag.iconName))
-                              Text(
-                                IconUtils.getDisplayIcon(tag.iconName),
-                                style: const TextStyle(fontSize: 20),
-                              )
-                            else
-                              Icon(IconUtils.getIconData(tag.iconName)),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                tag.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                  leading: const Icon(Icons.tag),
+                  initiallyExpanded: false,
+                  childrenPadding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  children: [
+                    // 搜索框
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: '搜索标签...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 8.0,
+                          horizontal: 12.0,
                         ),
-                        value: isSelected,
-                        dense: true,
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        onChanged: (selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _selectedTagIds.add(tag.id);
-                            } else {
-                              _selectedTagIds.remove(tag.id);
-                            }
-                          });
+                      ),
+                      onChanged: (value) {
+                        // 可以添加标签搜索逻辑
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    // 标签列表
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: tags.length,
+                        itemBuilder: (context, index) {
+                          final tag = tags[index];
+                          final isSelected = _selectedTagIds.contains(tag.id);
+                          return CheckboxListTile(
+                            title: Row(
+                              children: [
+                                if (IconUtils.isEmoji(tag.iconName))
+                                  Text(
+                                    IconUtils.getDisplayIcon(tag.iconName),
+                                    style: const TextStyle(fontSize: 20),
+                                  )
+                                else
+                                  Icon(IconUtils.getIconData(tag.iconName)),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    tag.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            value: isSelected,
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.trailing,
+                            onChanged: (selected) {
+                              setState(() {
+                                if (selected == true) {
+                                  _selectedTagIds.add(tag.id);
+                                } else {
+                                  _selectedTagIds.remove(tag.id);
+                                }
+                              });
+                            },
+                          );
                         },
-                      );
-                    },
-                  ),
-                ),
-              ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             // 显示已选标签
