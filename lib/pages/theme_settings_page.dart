@@ -35,11 +35,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         children: [
           Card(
             margin: const EdgeInsets.all(16),
-            elevation: 0,
+            elevation: 1,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: Theme.of(context).colorScheme.outline,
                 width: 1,
               ),
             ),
@@ -88,11 +88,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           ),
           Card(
             margin: const EdgeInsets.all(16),
-            elevation: 0,
+            elevation: 1,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: Theme.of(context).colorScheme.outline,
                 width: 1,
               ),
             ),
@@ -359,7 +359,12 @@ class _ColorPickerState extends State<ColorPicker> {
         ),
         const SizedBox(height: 16),
         // 确认按钮
-        ElevatedButton(
+        FilledButton(
+          style: FilledButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+            ),
+          ),
           onPressed: () => widget.onColorChanged(_currentColor),
           child: const Text('确定'),
         ),

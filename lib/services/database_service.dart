@@ -1001,7 +1001,7 @@ class DatabaseService extends ChangeNotifier {
         conditions.add('(content LIKE ? OR source LIKE ?)');
         args.addAll(['%$searchQuery%', '%$searchQuery%']);
       }
-      final whereClause = conditions.isNotEmpty ? 'WHERE ' + conditions.join(' AND ') : '';
+      final whereClause = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
       final result = await db.rawQuery('SELECT COUNT(*) as count FROM quotes $whereClause', args);
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {

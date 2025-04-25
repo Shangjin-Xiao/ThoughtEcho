@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
+import '../theme/app_theme.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -322,11 +323,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                               color: isSelected
                                                   ? Theme.of(context).colorScheme.primaryContainer
                                                   : Colors.transparent,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(context).colorScheme.primary
-                                                    : Theme.of(context).dividerColor,
+                                                    : Theme.of(context).colorScheme.outline,
                                                 width: isSelected ? 2 : 1,
                                               ),
                                             ),
@@ -393,11 +394,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                               color: isSelected
                                                   ? Theme.of(context).colorScheme.primaryContainer
                                                   : Colors.transparent,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(context).colorScheme.primary
-                                                    : Colors.transparent,
+                                                    : Theme.of(context).colorScheme.outline,
                                               ),
                                             ),
                                             child: Icon(iconData),

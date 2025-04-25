@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:flutter/widgets.dart'; // Import WidgetsBinding
+
+// 导入main.dart中的全局函数
+import '../main.dart' show getAndClearDeferredErrors;
 
 // 定义日志级别
 enum LogLevel {
@@ -88,6 +92,9 @@ class LogService with ChangeNotifier {
   static const int _maxInMemoryLogs = 300; // 内存中保留的最大日志数量
   static const int _maxStoredLogs = 10000; // 数据库中存储的最大日志数
   static const Duration _batchSaveInterval = Duration(seconds: 2); // 批量保存日志的间隔时间
+
+  // 单例实例
+  static LogService? _instance;
   
   // 日志数据库服务
   final LogDatabaseService _logDb = LogDatabaseService();
@@ -109,6 +116,12 @@ class LogService with ChangeNotifier {
   // 标志位，防止重复调度 postFrameCallback
   bool _notifyScheduled = false;
   
+  /// 单例模式访问
+  static LogService get instance {
+    _instance ??= LogService();
+    return _instance!;
+  }
+
   /// 创建日志服务实例
   LogService() {
     _initialize();
@@ -147,6 +160,9 @@ class LogService with ChangeNotifier {
         message: '日志服务已启动',
         source: 'LogService',
       ));
+
+      // 处理缓存的早期错误（如果有的话）
+      _processDeferredErrors();
       
     } catch (e, stack) {
       debugPrint('日志服务初始化失败: $e');
@@ -219,7 +235,8 @@ class LogService with ChangeNotifier {
     
     // 在调试模式下打印日志
     if (kDebugMode) {
-      print(entry.toString());
+      // 使用 debugPrint 代替 print，以便重定向功能能捕获这些输出
+      debugPrint(entry.toString());
     }
     
     // 延迟通知监听器，避免在 build 方法中直接调用
@@ -418,4 +435,46 @@ class LogService with ChangeNotifier {
       
   void error(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
       log(LogLevel.error, message, source: source, error: error, stackTrace: stackTrace);
+
+  /// 处理在日志服务初始化之前缓存的错误
+  Future<void> _processDeferredErrors() async {
+    try {
+      // 导入main.dart中定义的全局函数
+      // 使用 Function 类型来声明外部函数
+      // ignore: prefer_function_declarations_over_variables
+      const Function getAndClearDeferredErrorsFunc = getAndClearDeferredErrors;
+      
+      // 调用全局函数获取早期错误
+      final errorsList = getAndClearDeferredErrorsFunc();
+      
+      if (errorsList.isNotEmpty) {
+        // 将每个早期错误添加到日志系统
+        for (final errorMap in errorsList) {
+          log(
+            LogLevel.error,
+            errorMap['message'] as String? ?? '未知错误',
+            error: errorMap['error'],
+            stackTrace: errorMap['stackTrace'] != null 
+                ? StackTrace.fromString(errorMap['stackTrace'].toString()) 
+                : null,
+            source: errorMap['source'] as String? ?? 'unknown',
+          );
+        }
+        debugPrint('处理了 ${errorsList.length} 条早期缓存错误');
+      }
+    } catch (e) {
+      debugPrint('处理缓存错误时出错: $e');
+    }
+  }
+  
+  /// 注册全局异常处理
+  void registerGlobalErrorHandlers() {
+    // 这个方法可以在应用启动时调用，添加全局的错误处理钩子
+    if (!kIsWeb && !Platform.isIOS && !Platform.isAndroid) {
+      // 对于桌面平台，可以添加更多特定平台的错误处理
+      debugPrint('已为桌面平台注册全局异常处理');
+    }
+    
+    // 其他平台特定错误处理可以在这里添加
+  }
 }

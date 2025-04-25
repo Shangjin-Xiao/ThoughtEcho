@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
 import 'dart:math';
+import '../theme/app_theme.dart';
+import '../widgets/app_empty_view.dart';
+import '../widgets/app_loading_view.dart';
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
@@ -375,9 +378,9 @@ class _InsightsPageState extends State<InsightsPage>
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isSelected ? 4 : 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(
-          color: isSelected ? theme.primaryColor : theme.dividerColor,
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline,
           width: isSelected ? 2 : 0.5,
         ),
       ),
@@ -388,7 +391,7 @@ class _InsightsPageState extends State<InsightsPage>
             _showCustomPrompt = false;
           });
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -399,15 +402,15 @@ class _InsightsPageState extends State<InsightsPage>
                 decoration: BoxDecoration(
                   color:
                       isSelected
-                          ? theme.primaryColor
+                          ? theme.colorScheme.primary
                           : theme.colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 ),
                 child: Icon(
                   type['icon'] as IconData,
                   color:
                       isSelected
-                          ? Colors.white
+                          ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSecondaryContainer,
                   size: 28,
                 ),
@@ -443,60 +446,13 @@ class _InsightsPageState extends State<InsightsPage>
 
   Widget _buildAnalysisResultTab(ThemeData theme) {
     if (_isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text('正在分析您的笔记...\n这可能需要一些时间'),
-            const SizedBox(height: 8),
-            Text(
-              _getRandomLoadingMessage(),
-              style: TextStyle(
-                color: theme.colorScheme.secondary,
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
+      return const AppLoadingView();
     }
 
     if (_insights.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.auto_awesome,
-              size: 64,
-              color: theme.colorScheme.secondary.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '选择分析类型并点击"开始分析"',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '洞察将帮助你发现笔记中的思维模式和规律',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+      return const AppEmptyView(
+        svgAsset: 'assets/empty/empty_state.svg',
+        text: '选择分析类型并点击"开始分析"\n洞察将帮助你发现笔记中的思维模式和规律',
       );
     }
 

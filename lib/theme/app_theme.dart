@@ -153,7 +153,7 @@ class AppTheme with ChangeNotifier {
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 7,
-      subThemesData: FlexSubThemesData(
+      subThemesData: const FlexSubThemesData(
         blendOnLevel: 10,
         blendOnColors: false,
         useTextTheme: true,
@@ -187,7 +187,7 @@ class AppTheme with ChangeNotifier {
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 10,
-      subThemesData: FlexSubThemesData(
+      subThemesData: const FlexSubThemesData(
         blendOnLevel: 15,
         useTextTheme: true,
         useM2StyleDividerInM3: false,

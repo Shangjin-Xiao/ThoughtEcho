@@ -1,0 +1,190 @@
+import 'package:flutter/material.dart';
+import '../models/note_category.dart';
+
+class NoteFilterSortSheet extends StatefulWidget {
+  final List<NoteCategory> allTags;
+  final List<String> selectedTagIds;
+  final String sortType;
+  final bool sortAscending;
+  final List<String>? selectedWeathers;
+  final void Function(List<String> tagIds, String sortType, bool sortAscending, List<String> selectedWeathers) onApply;
+
+  const NoteFilterSortSheet({
+    super.key,
+    required this.allTags,
+    required this.selectedTagIds,
+    required this.sortType,
+    required this.sortAscending,
+    this.selectedWeathers,
+    required this.onApply,
+  });
+
+  @override
+  State<NoteFilterSortSheet> createState() => _NoteFilterSortSheetState();
+}
+
+class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
+  late List<String> _tempSelectedTagIds;
+  late String _tempSortType;
+  late bool _tempSortAscending;
+  late List<String> _tempSelectedWeathers;
+
+  @override
+  void initState() {
+    super.initState();
+    _tempSelectedTagIds = List.from(widget.selectedTagIds);
+    _tempSortType = widget.sortType;
+    _tempSortAscending = widget.sortAscending;
+    _tempSelectedWeathers = widget.selectedWeathers != null ? List.from(widget.selectedWeathers!) : <String>[];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: MediaQuery.of(context).viewInsets.add(const EdgeInsets.all(20)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('筛选与排序', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          Text('标签筛选', style: theme.textTheme.bodyLarge),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: widget.allTags.map((tag) {
+              final isSelected = _tempSelectedTagIds.contains(tag.id);
+              return FilterChip(
+                selected: isSelected,
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                      (RegExp(r'^[\u{1F300}-\u{1FAFF}]', unicode: true).hasMatch(tag.iconName!))
+                        ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
+                        : Icon(
+                            IconData(int.tryParse(tag.iconName ?? '') ?? 0, fontFamily: 'MaterialIcons'),
+                            size: 16,
+                          ),
+                    if (tag.iconName != null && tag.iconName!.isNotEmpty) const SizedBox(width: 4),
+                    Text(tag.name, style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _tempSelectedTagIds.add(tag.id);
+                    } else {
+                      _tempSelectedTagIds.remove(tag.id);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          Text('天气筛选', style: theme.textTheme.bodyLarge),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: [
+              '晴', '多云', '阴', '雨', '雪', '风', '雾', '霾', '雷阵雨'
+            ].map((weather) {
+              final isSelected = _tempSelectedWeathers.contains(weather);
+              IconData icon;
+              switch (weather) {
+                case '晴': icon = Icons.wb_sunny; break;
+                case '多云': icon = Icons.cloud_queue; break;
+                case '阴': icon = Icons.cloud; break;
+                case '雨': icon = Icons.umbrella; break;
+                case '雪': icon = Icons.ac_unit; break;
+                case '风': icon = Icons.air; break;
+                case '雾': icon = Icons.blur_on; break;
+                case '霾': icon = Icons.blur_on; break;
+                case '雷阵雨': icon = Icons.flash_on; break;
+                default: icon = Icons.wb_cloudy;
+              }
+              return FilterChip(
+                selected: isSelected,
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 16),
+                    const SizedBox(width: 4),
+                    Text(weather, style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _tempSelectedWeathers.add(weather);
+                    } else {
+                      _tempSelectedWeathers.remove(weather);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          Text('排序方式', style: theme.textTheme.bodyLarge),
+          RadioListTile<String>(
+            title: const Text('按时间排序'),
+            value: 'time',
+            groupValue: _tempSortType,
+            onChanged: (value) {
+              setState(() {
+                _tempSortType = value!;
+              });
+            },
+          ),
+          RadioListTile<String>(
+            title: const Text('按名称排序'),
+            value: 'name',
+            groupValue: _tempSortType,
+            onChanged: (value) {
+              setState(() {
+                _tempSortType = value!;
+              });
+            },
+          ),
+          SwitchListTile(
+            title: const Text('升序'),
+            value: _tempSortAscending,
+            onChanged: (value) {
+              setState(() {
+                _tempSortAscending = value;
+              });
+            },
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FilledButton.tonal(
+                onPressed: () {
+                  setState(() {
+                    _tempSelectedTagIds.clear();
+                    _tempSortType = 'time';
+                    _tempSortAscending = false;
+                    _tempSelectedWeathers.clear();
+                  });
+                },
+                child: const Text('重置'),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: () {
+                  widget.onApply(_tempSelectedTagIds, _tempSortType, _tempSortAscending, _tempSelectedWeathers);
+                  Navigator.pop(context);
+                },
+                child: const Text('应用'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+} 

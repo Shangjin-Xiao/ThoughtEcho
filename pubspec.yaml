@@ -24,7 +24,6 @@ dependencies:
   url_launcher: ^6.2.4
   file_selector: ^1.0.2 # 使用Flutter官方维护的文件选择器插件
   share_plus: ^7.2.1 # 用于分享文件
-  # dynamic_color: ^1.6.6
   flex_color_scheme: ^7.3.1
   geolocator: ^11.1.0
   permission_handler: ^11.3.0
@@ -34,6 +33,11 @@ dependencies:
   mmkv: ^2.1.1 # 使用当前最新正式版
   ffi: ^2.1.0 # 显式添加FFI依赖，确保与最新的Dart兼容
   sqflite_common_ffi_web: ^0.3.0  # 请使用当前最新版本
+  flex_color_picker: ^3.3.0
+  lottie: ^2.7.0
+  flutter_svg: ^2.0.7
+  flutter_spinkit: ^5.2.0
+  dynamic_color: ^1.6.6
 
 dev_dependencies:
   flutter_test:
@@ -53,3 +57,5 @@ flutter_launcher_icons:
 flutter:
   # 确保应用可以使用Material Design图标
   uses-material-design: true
+  assets:
+    - assets/lottie/

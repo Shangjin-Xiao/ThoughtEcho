@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart'; // 添加缺失的path_provider导入
+import 'package:path_provider/path_provider.dart'; 
 import '../services/database_service.dart';
 import 'home_page.dart';
 
@@ -67,57 +68,156 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       
       if (choice == null) return;
       
-      String path;
+      String path = '';
       
       // 显示导出进度
       final progressOverlay = _showLoadingOverlay(context, '正在导出数据...');
       
-      if (choice == 'save') {
-        // 使用文件选择器保存文件
-        final fileName = '心记_${DateTime.now().millisecondsSinceEpoch}.json';
-        final saveLocation = await getSaveLocation(
-          suggestedName: fileName,
-          acceptedTypeGroups: [
-            const XTypeGroup(
-              label: 'JSON',
-              extensions: ['json'],
-            ),
-          ],
-        );
-        
-        // 关闭进度指示器
-        progressOverlay.remove();
-        
-        if (saveLocation == null) return;
-        
-        // 重新显示进度，因为用户选择了保存位置
-        final exportOverlay = _showLoadingOverlay(context, '正在保存数据...');
-        
-        try {
-          path = await dbService.exportAllData(customPath: saveLocation.path);
+      try {
+        if (choice == 'save') {
+          // 创建临时文件
+          final now = DateTime.now();
+          final formattedDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+          final fileName = '心记_备份_$formattedDate.json';
           
-          exportOverlay.remove();
-          
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('备份已保存到: $path'),
-              action: SnackBarAction(
-                label: '查看',
-                onPressed: () {
-                  // 这里可以添加打开文件所在文件夹的功能
-                },
+          if (Platform.isWindows) {
+            // Windows 平台特殊处理
+            // 先创建备份文件到临时目录
+            final tempDir = await getTemporaryDirectory();
+            final tempFilePath = '${tempDir.path}/$fileName';
+            
+            // 导出到临时文件
+            final tempFile = await dbService.exportAllData(customPath: tempFilePath);
+            
+            // 关闭进度指示器
+            progressOverlay.remove();
+            
+            // 然后使用系统对话框保存
+            final saveLocation = await getSaveLocation(
+              suggestedName: fileName,
+              acceptedTypeGroups: [
+                const XTypeGroup(
+                  label: 'JSON',
+                  extensions: ['json'],
+                ),
+              ],
+            );
+            
+            if (saveLocation == null) {
+              // 用户取消了保存，删除临时文件
+              try {
+                File(tempFile).deleteSync();
+              } catch (_) {}
+              return;
+            }
+            
+            // 创建新的进度指示器
+            final saveOverlay = _showLoadingOverlay(context, '正在保存文件...');
+            
+            try {
+              // 复制临时文件到用户选择的位置
+              await File(tempFile).copy(saveLocation.path);
+              
+              // 删除临时文件
+              await File(tempFile).delete();
+              
+              path = saveLocation.path;
+              saveOverlay.remove();
+              
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('备份已保存到: $path'),
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            } catch (e) {
+              saveOverlay.remove();
+              rethrow;
+            }
+          } else if (Platform.isAndroid) {
+            // 安卓平台特殊处理
+            // 先导出到应用专用目录
+            final docsDir = await getApplicationDocumentsDirectory();
+            final localPath = '${docsDir.path}/$fileName';
+            
+            // 导出数据
+            path = await dbService.exportAllData(customPath: localPath);
+            
+            // 关闭进度指示器
+            progressOverlay.remove();
+            
+            // 使用分享功能让用户选择保存位置
+            if (!mounted) return;
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('备份文件已生成，即将打开分享选项...'),
+                duration: Duration(seconds: 2),
               ),
-            ),
-          );
-        } catch (e) {
-          exportOverlay.remove();
-          if (!mounted) return;
-          _showErrorDialog(context, '导出失败', '无法保存备份文件: $e\n\n请检查存储权限和剩余空间。');
-        }
-      } else {
-        // 使用默认路径并分享
-        try {
+            );
+            
+            // 延迟一下再打开分享，让用户看到提示
+            await Future.delayed(const Duration(seconds: 1));
+            
+            if (!mounted) return;
+            await Share.shareXFiles(
+              [XFile(path)],
+              text: '心记备份文件',
+              subject: '保存心记备份文件',
+            );
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('提示: 选择"保存到设备"可将备份文件保存到本地存储'),
+                duration: Duration(seconds: 5),
+              ),
+            );
+          } else {
+            // 其他平台使用常规方式
+            try {
+              final saveLocation = await getSaveLocation(
+                suggestedName: fileName,
+                acceptedTypeGroups: [
+                  const XTypeGroup(
+                    label: 'JSON',
+                    extensions: ['json'],
+                  ),
+                ],
+              );
+              
+              // 关闭进度指示器
+              progressOverlay.remove();
+              
+              if (saveLocation == null) return;
+              
+              // 重新显示进度，因为用户选择了保存位置
+              final exportOverlay = _showLoadingOverlay(context, '正在保存数据...');
+              
+              try {
+                path = await dbService.exportAllData(customPath: saveLocation.path);
+                
+                exportOverlay.remove();
+                
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('备份已保存到: $path'),
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              } catch (e) {
+                exportOverlay.remove();
+                rethrow;
+              }
+            } catch (e) {
+              // 确保关闭进度指示器
+              progressOverlay.remove();
+              rethrow;
+            }
+          }
+        } else {
+          // 使用默认路径并分享
           path = await dbService.exportAllData();
           
           progressOverlay.remove();
@@ -127,11 +227,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             [XFile(path)],
             text: '心记应用数据备份',
           );
-        } catch (e) {
-          progressOverlay.remove();
-          if (!mounted) return;
-          _showErrorDialog(context, '分享失败', '无法分享备份文件: $e\n\n请检查应用权限和剩余存储空间。');
         }
+      } catch (e) {
+        // 确保关闭进度指示器
+        progressOverlay.remove();
+        
+        if (!mounted) return;
+        _showErrorDialog(
+          context, 
+          '备份失败', 
+          '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。'
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -212,87 +318,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       
       // 如果选择清空并导入，再次确认
       if (importOption == 'clear') {
-        // 先导出一个安全备份
-        final backupBeforeImport = await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('创建安全备份'),
-            content: const Text('建议在清空数据前先创建一个当前数据的备份，以防导入失败后需要恢复。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('跳过备份'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                child: const Text('创建备份'),
-              ),
-            ],
-          ),
-        );
-        
-        if (backupBeforeImport == true) {
-          // 创建安全备份
-          if (!mounted) return;
-          
-          final safetyBackupOverlay = _showLoadingOverlay(context, '创建安全备份中...');
-          
-          try {
-            // 创建带日期时间的备份文件名
-            final now = DateTime.now();
-            final formattedDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-            final safetyFileName = '心记_导入前备份_$formattedDate.json';
-            
-            // 使用默认位置保存
-            final safetyBackupPath = await dbService.exportAllData(customPath: '${await _getDocumentsPath()}/$safetyFileName');
-            
-            safetyBackupOverlay.remove();
-            
-            if (!mounted) return;
-            
-            // 通知用户备份已创建
-            await showDialog(
-              context: context,
-              builder: (dialogContext) => AlertDialog(
-                title: const Text('安全备份已创建'),
-                content: Text('已在以下位置创建备份：\n$safetyBackupPath\n\n请妥善保存此文件，以便在需要时恢复数据。'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext),
-                    child: const Text('确定'),
-                  ),
-                ],
-              ),
-            );
-          } catch (e) {
-            safetyBackupOverlay.remove();
-            if (!mounted) return;
-            
-            // 显示创建安全备份失败的警告，但仍然允许用户继续
-            final continueAnyway = await showDialog<bool>(
-              context: context,
-              builder: (dialogContext) => AlertDialog(
-                title: const Text('安全备份失败'),
-                content: Text('创建安全备份失败: $e\n\n是否仍要继续导入操作？这可能会导致数据无法恢复。'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, false),
-                    child: const Text('取消导入'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, true),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('仍要继续'),
-                  ),
-                ],
-              ),
-            );
-            
-            if (continueAnyway != true) return;
-          }
-        }
-        
-        // 确认清空操作
+        // 直接确认清空操作，删除了自动备份提示
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -441,17 +467,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             onTap: () => _handleImport(context),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.schedule),
-            title: const Text('自动备份'),
-            subtitle: const Text('设置定期自动备份（即将推出）'),
-            enabled: false,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('此功能即将推出，敬请期待！')),
-              );
-            },
-          ),
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Card(

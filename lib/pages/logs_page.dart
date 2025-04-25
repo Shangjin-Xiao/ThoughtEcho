@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/log_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_empty_view.dart';
+import '../widgets/app_loading_view.dart';
+import '../widgets/app_error_view.dart';
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -102,6 +106,10 @@ class _LogsPageState extends State<LogsPage> {
       setState(() {
         _isLoadingMore = false;
       });
+      showDialog(
+        context: context,
+        builder: (context) => const AppErrorView(text: '加载日志失败'),
+      );
     }
   }
   
@@ -476,18 +484,12 @@ class _LogsPageState extends State<LogsPage> {
       LogService? logService;
       try {
         logService = Provider.of<LogService>(context);
-      } catch (e, stack) {
+      } catch (e) {
         return Scaffold(
           appBar: AppBar(title: const Text('日志查看')),
           body: Center(
             child: Text('日志服务未就绪或Provider异常：\n$e', style: const TextStyle(color: Colors.red)),
           ),
-        );
-      }
-      if (logService == null) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('日志查看')),
-          body: const Center(child: Text('日志服务未初始化')),
         );
       }
       
@@ -571,14 +573,7 @@ class _LogsPageState extends State<LogsPage> {
               child: RefreshIndicator(
                 onRefresh: _refreshLogs,
                 child: allLogs.isEmpty
-                    ? Center(
-                        child: Text(
-                          '没有日志记录',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                      )
+                    ? const AppEmptyView(svgAsset: 'assets/empty/empty_logs.svg', text: '暂无日志')
                     : ListView.separated(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(8.0),
@@ -587,11 +582,9 @@ class _LogsPageState extends State<LogsPage> {
                         itemBuilder: (context, index) {
                           // 加载更多指示器
                           if (_isLoadingMore && index == allLogs.length) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: CircularProgressIndicator(),
-                              ),
+                            return const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: AppLoadingView(),
                             );
                           }
                           
@@ -612,9 +605,9 @@ class _LogsPageState extends State<LogsPage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                                 border: Border.all(
-                                  color: theme.colorScheme.outline.withOpacity(0.1),
+                                  color: theme.colorScheme.outline,
                                 ),
                               ),
                               child: Column(

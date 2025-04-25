@@ -9,6 +9,7 @@ import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import '../theme/app_theme.dart';
 
 class EditPage extends StatefulWidget {
   final Quote quote;
@@ -164,7 +165,7 @@ class _EditPageState extends State<EditPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.dialogRadius)),
       ),
       builder: (BuildContext context) {
         return SafeArea(
@@ -188,7 +189,7 @@ class _EditPageState extends State<EditPage> {
                   ],
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.outline),
               ListTile(
                 leading: const Icon(Icons.text_fields),
                 title: const Text('智能分析来源'),
@@ -720,7 +721,7 @@ class _EditPageState extends State<EditPage> {
                           }
                         });
                       },
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           vertical: 8.0,
@@ -804,7 +805,7 @@ class _EditPageState extends State<EditPage> {
                           }
                         });
                       },
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           vertical: 8.0,
@@ -892,6 +893,11 @@ class _EditPageState extends State<EditPage> {
                           Text(_aiAnalysis.isEmpty ? '暂无分析' : _aiAnalysis),
                           const SizedBox(height: 8),
                           ElevatedButton(
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                              ),
+                            ),
                             onPressed: () async {
                               try {
                                 final aiService = Provider.of<AIService>(

@@ -59,31 +59,31 @@ class _LogTestPageState extends State<LogTestPage> {
                 _buildLogButton(
                   context, 
                   'Verbose', 
-                  Colors.grey.shade600, 
+                  Theme.of(context).colorScheme.outline,
                   () => _logMessage(logService, LogLevel.verbose)
                 ),
                 _buildLogButton(
                   context, 
                   'Debug', 
-                  Colors.teal, 
+                  Theme.of(context).colorScheme.secondary,
                   () => _logMessage(logService, LogLevel.debug)
                 ),
                 _buildLogButton(
                   context, 
                   'Info', 
-                  Colors.blue, 
+                  Theme.of(context).colorScheme.primary,
                   () => _logMessage(logService, LogLevel.info)
                 ),
                 _buildLogButton(
                   context, 
                   'Warning', 
-                  Colors.orange, 
+                  Theme.of(context).colorScheme.tertiary,
                   () => _logMessage(logService, LogLevel.warning)
                 ),
                 _buildLogButton(
                   context, 
                   'Error', 
-                  Colors.red, 
+                  Theme.of(context).colorScheme.error,
                   () => _logMessage(logService, LogLevel.error)
                 ),
               ],

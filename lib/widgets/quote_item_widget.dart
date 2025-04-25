@@ -86,20 +86,26 @@ class QuoteItemWidget extends StatelessWidget {
     final String formattedDate = '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $timeOfDay';
     
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 12),
       child: Material(
         elevation: 2,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         color: quote.colorHex != null 
           ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000)
-          : theme.colorScheme.surface,
+          : theme.colorScheme.surfaceContainerHighest,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           onTap: () => onToggleExpanded(!isExpanded),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              boxShadow: AppTheme.defaultShadow,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withOpacity(0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
               color: Colors.transparent,
             ),
             child: Column(

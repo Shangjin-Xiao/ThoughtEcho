@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
+import '../theme/app_theme.dart';
 
 class TagSettingsPage extends StatefulWidget {
   const TagSettingsPage({super.key});
@@ -379,9 +380,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                               : Colors
                                                                   .transparent,
                                                       borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
+                                                          BorderRadius.circular(AppTheme.cardRadius),
                                                       border: Border.all(
                                                         color:
                                                             isSelected
@@ -390,9 +389,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                                     )
                                                                     .colorScheme
                                                                     .primary
-                                                                : Theme.of(
-                                                                  context,
-                                                                ).dividerColor,
+                                                                : Theme.of(context).colorScheme.outline,
                                                         width:
                                                             isSelected ? 2 : 1,
                                                       ),
@@ -411,7 +408,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         ),
                                       ),
 
-                                    const Divider(),
+                                    Divider(color: Theme.of(context).colorScheme.outline),
                                   ],
                                 );
                               }),
@@ -480,9 +477,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                               : Colors
                                                                   .transparent,
                                                       borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
+                                                          BorderRadius.circular(AppTheme.cardRadius),
                                                       border: Border.all(
                                                         color:
                                                             isSelected
@@ -491,8 +486,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                                     )
                                                                     .colorScheme
                                                                     .primary
-                                                                : Colors
-                                                                    .transparent,
+                                                                : Theme.of(context).colorScheme.outline,
                                                       ),
                                                     ),
                                                     child: Icon(iconData),

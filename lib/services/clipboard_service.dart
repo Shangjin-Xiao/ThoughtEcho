@@ -6,6 +6,7 @@ import '../services/database_service.dart';
 import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
 import 'package:provider/provider.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
+import '../theme/app_theme.dart';
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring = 'enable_clipboard_monitoring';
@@ -222,105 +223,65 @@ class ClipboardService extends ChangeNotifier {
     // 构建一个OverlayEntry
     OverlayEntry? overlayEntry;
     overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        // 居中显示在上方
-        top: MediaQuery.of(context).padding.top + 32,
-        left: MediaQuery.of(context).size.width / 2 - 160, // 新宽度320
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 320),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(22), // 更大圆角
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.12 * 255).round()),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      builder: (context) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () async {
+          overlayEntry?.remove();
+          if (context.mounted) {
+            _openEditPage(context, content, author, source);
+          }
+        },
+        child: Stack(
+          children: [
+            // 半透明背景，点击背景即忽略
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  overlayEntry?.remove();
+                },
+                child: Container(color: Colors.transparent),
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.content_paste,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                const Flexible(
-                  child: Text(
-                    '发现剪贴板内容',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+            // 居中弹窗
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 32,
+              left: MediaQuery.of(context).size.width / 2 - 160,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+                    boxShadow: AppTheme.defaultShadow,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.content_paste,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      const Flexible(
+                        child: Text(
+                          '发现剪贴板内容，点击弹窗添加为笔记',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(36, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  onPressed: () {
-                    overlayEntry?.remove();
-                  },
-                  child: const Text('忽略', style: TextStyle(fontSize: 13)),
-                ),
-                const SizedBox(width: 4),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                    minimumSize: const Size(36, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  onPressed: () async { // Keep async
-                    overlayEntry?.remove();
-                    // REMOVED: await Future.delayed(const Duration(milliseconds: 200)); 
-                    if (context.mounted) { // Keep mounted check
-                      _openEditPage(context, content, author, source);
-                    } else {
-                       debugPrint("Clipboard notification context became unmounted before opening edit page.");
-                    }
-                  },
-                  child: Text(
-                    '添加为笔记',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 2),
-                GestureDetector(
-                  onTap: () {
-                    overlayEntry?.remove();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 2),
-                    child: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -328,7 +289,6 @@ class ClipboardService extends ChangeNotifier {
     // 添加到Overlay
     debugPrint('显示剪贴板通知弹窗');
     Overlay.of(context).insert(overlayEntry);
-    
     // 10秒后自动移除通知
     Future.delayed(const Duration(seconds: 10), () {
       if (overlayEntry?.mounted ?? false) {

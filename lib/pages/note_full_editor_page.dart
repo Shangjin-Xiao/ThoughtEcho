@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -28,7 +27,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const SizedBox.shrink(),
         actions: [

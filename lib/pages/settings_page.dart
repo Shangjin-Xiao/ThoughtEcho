@@ -360,7 +360,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ListTile(
                   title: const Text('一言设置'),
-                  subtitle: const Text('自定义\"每日一言\"的类型'), // Keep original subtitle
+                  subtitle: const Text('自定义"每日一言"的类型'), // Keep original subtitle
                   leading: const Icon(Icons.format_quote_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {

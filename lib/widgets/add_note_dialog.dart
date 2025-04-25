@@ -60,6 +60,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     Colors.pink.shade100,
   ];
 
+  // 缓存标签future，防止FutureBuilder多次请求导致闪屏
+  Future<List<NoteCategory>>? _tagFuture;
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +110,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         _addDefaultHitokotoTags();
       });
     }
+
+    // 初始化标签future
+    _tagFuture = Provider.of<DatabaseService>(context, listen: false).getCategories();
   }
 
   @override
@@ -566,7 +572,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             // 标签选择区域
             const SizedBox(height: 16),
             FutureBuilder<List<NoteCategory>>(
-              future: Provider.of<DatabaseService>(context, listen: false).getCategories(),
+              future: _tagFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -775,7 +781,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     if (_contentController.text.isNotEmpty &&
                         _aiSummary == null &&
                         apiConfigured) {
-                      return TextButton.icon(
+                      return FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                          ),
+                        ),
                         onPressed:
                             _isAnalyzing
                                 ? null
@@ -831,11 +842,22 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   },
                 ),
                 const Spacer(),
-                TextButton(
+                FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                    ),
+                  ),
                   onPressed: () => Navigator.pop(context),
                   child: const Text('取消'),
                 ),
-                ElevatedButton(
+                const SizedBox(width: 8),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                    ),
+                  ),
                   onPressed: () async {
                     if (_contentController.text.isNotEmpty) {
                       // 创建或更新笔记
