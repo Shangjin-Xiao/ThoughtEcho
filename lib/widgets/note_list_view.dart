@@ -6,6 +6,7 @@ import '../services/database_service.dart';
 import '../controllers/search_controller.dart'; // 导入我们自定义的搜索控制器
 import '../utils/icon_utils.dart';
 import '../widgets/quote_item_widget.dart';
+import 'dart:async';
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -47,75 +48,85 @@ class _NoteListViewState extends State<NoteListView> {
   bool _hasMore = true;
   int _offset = 0;
   static const int _pageSize = 20;
+  late StreamSubscription<List<Quote>> _quotesSub;
 
   @override
   void initState() {
     super.initState();
     _searchController.text = widget.searchQuery;
-    // 初始化并加载第一页
-    _resetAndLoad();
+    _offset = 0; _hasMore = true;
+    // 初始订阅数据流
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    _quotesSub = db.watchQuotes(
+      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+      limit: _pageSize,
+      orderBy: widget.sortType == 'time'
+        ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+        : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+    ).listen((list) {
+      setState(() {
+        _quotes.clear();
+        _quotes.addAll(list);
+        _hasMore = list.length % _pageSize == 0;
+      });
+    });
+    // 加载第一页
+    _loadMore();
   }
 
   @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 搜索、筛选或排序变化时重置并重新加载
     if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.selectedTagIds != widget.selectedTagIds ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending) {
-      _resetAndLoad();
-    }
-    // 同步搜索框内容
-    if (oldWidget.searchQuery != widget.searchQuery) {
+      // 重置并重订阅
+      _quotesSub.cancel();
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      _quotesSub = db.watchQuotes(
+        tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+        limit: _pageSize,
+        orderBy: widget.sortType == 'time'
+          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+          : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+      ).listen((list) {
+        setState(() {
+          _quotes.clear();
+          _quotes.addAll(list);
+          _hasMore = list.length % _pageSize == 0;
+        });
+      });
       _searchController.text = widget.searchQuery;
+      _loadMore();
     }
   }
 
-  void _resetAndLoad() {
+  @override
+  void dispose() {
+    _quotesSub.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resetAndLoad() async {
     _quotes.clear();
-    _offset = 0;
     _hasMore = true;
+    _offset = 0;
     _loadMore();
   }
 
   Future<void> _loadMore() async {
-    if (!_hasMore || _isLoading) return;
-    setState(() => _isLoading = true);
+    if (!_hasMore) return;
     final db = Provider.of<DatabaseService>(context, listen: false);
-    // 构建排序字符串
-    final orderBy = widget.sortType == 'time'
-        ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-        : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}';
-    // 分页查询
-    final newQuotes = await db.getUserQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
-      offset: _offset,
-      orderBy: orderBy,
-    );
-    // 本地搜索过滤
-    final filtered = widget.searchQuery.isNotEmpty
-        ? newQuotes.where((q) =>
-            q.content.toLowerCase().contains(widget.searchQuery.toLowerCase()) ||
-            (q.source?.toLowerCase().contains(widget.searchQuery.toLowerCase()) ?? false)
-          ).toList()
-        : newQuotes;
-    setState(() {
-      _quotes.addAll(filtered);
-      _offset += newQuotes.length;
-      _hasMore = newQuotes.length == _pageSize;
-      _isLoading = false;
-    });
+    await db.loadMoreQuotes();
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    // 加载中且还没数据
-    if (_quotes.isEmpty && _isLoading) {
+    if (_quotes.isEmpty && _hasMore) {
       return const Center(child: CircularProgressIndicator());
     }
-    // 无数据
-    if (_quotes.isEmpty && !_isLoading) {
+    if (_quotes.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -198,7 +209,7 @@ class _NoteListViewState extends State<NoteListView> {
             },
           );
         }
-        // 列表底部加载更多提示
+        // 滚到底部时触发加载更多
         _loadMore();
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 16),

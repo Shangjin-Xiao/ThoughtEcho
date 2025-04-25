@@ -22,6 +22,17 @@ class DatabaseService extends ChangeNotifier {
   // 内存存储分类数据
   final List<NoteCategory> _categoryStore = [];
 
+  // 新增：流式分页加载笔记
+  final _quotesController = StreamController<List<Quote>>.broadcast();
+  List<Quote> _quotesCache = [];
+  List<String>? _watchTagIds;
+  String? _watchCategoryId;
+  String _watchOrderBy = 'date DESC';
+  int _watchLimit = 20;
+  int _watchOffset = 0;
+  bool _watchHasMore = true;
+  String? _watchSearchQuery;
+
   Database get database {
     if (_database == null) {
       throw Exception('数据库未初始化');
@@ -886,144 +897,111 @@ class DatabaseService extends ChangeNotifier {
       );
       debugPrint('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
       notifyListeners();
+      _refreshQuotesStream(); // 更新流
     } catch (e) {
       debugPrint('保存笔记到数据库时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
     }
   }
 
-  /// 获取用户的所有引用（支持通过标签 tagIds 或分类 categoryId 查询）
-  /// 添加分页支持，使用limit和offset参数控制数据量
+  // 在增删改后刷新分页流数据
+  void _refreshQuotesStream() {
+    if (_quotesController.hasListener) {
+      _watchOffset = 0;
+      _quotesCache = [];
+      _loadNextQuotesPage();
+    }
+  }
+
+  /// 分页获取笔记，支持标签、分类和搜索
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
-    int limit = 20, // 默认每页加载20条
-    int offset = 0, // 默认从第0条开始
-    String orderBy = 'date DESC', // 默认按日期倒序排列
+    String? searchQuery,
+    int limit = 20,
+    int offset = 0,
+    String orderBy = 'date DESC',
   }) async {
     try {
       if (kIsWeb) {
-        // Web平台特定逻辑
-        List<Quote> filteredQuotes;
+        // Web 平台内存过滤
+        List<Quote> filtered = List.from(_memoryStore);
         if (tagIds != null && tagIds.isNotEmpty) {
-          filteredQuotes =
-              _memoryStore
-                  .where(
-                    (quote) =>
-                        tagIds.any((tagId) => quote.tagIds.contains(tagId)),
-                  )
-                  .toList();
+          filtered = filtered.where((q) => tagIds.any((id) => q.tagIds.contains(id))).toList();
         } else if (categoryId != null && categoryId.isNotEmpty) {
-          filteredQuotes =
-              _memoryStore
-                  .where((quote) => quote.categoryId == categoryId)
-                  .toList();
-        } else {
-          filteredQuotes = List.from(_memoryStore);
+          filtered = filtered.where((q) => q.categoryId == categoryId).toList();
         }
-
-        // 按日期排序（假设Quote类有一个date字段）
-        filteredQuotes.sort((a, b) {
-          if (orderBy.contains('DESC')) {
-            return b.date.compareTo(a.date); // 降序
-          } else {
-            return a.date.compareTo(b.date); // 升序
-          }
-        });
-
-        // 应用分页
-        final start =
-            offset < filteredQuotes.length ? offset : filteredQuotes.length;
-        final end =
-            (offset + limit) < filteredQuotes.length
-                ? (offset + limit)
-                : filteredQuotes.length;
-        return filteredQuotes.sublist(start, end);
+        if (searchQuery != null && searchQuery.isNotEmpty) {
+          filtered = filtered.where((q) => q.content.toLowerCase().contains(searchQuery.toLowerCase())
+            || (q.source?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false)).toList();
+        }
+        filtered.sort((a, b) => b.date.compareTo(a.date));
+        final start = offset < filtered.length ? offset : filtered.length;
+        final end = (offset + limit) < filtered.length ? (offset + limit) : filtered.length;
+        return filtered.sublist(start, end);
       }
 
       final db = database;
-      List<Map<String, dynamic>> maps;
-      String where = '';
-      List<dynamic> whereArgs = [];
-
+      List<String> conditions = [];
+      List<dynamic> args = [];
       if (tagIds != null && tagIds.isNotEmpty) {
-        // 根据 tag_ids 字段进行模糊匹配查询
-        where = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
-        whereArgs = tagIds.map((id) => '%$id%').toList();
-      } else if (categoryId != null && categoryId.isNotEmpty) {
-        where = 'category_id = ?';
-        whereArgs = [categoryId];
+        conditions.add(tagIds.map((_) => 'tag_ids LIKE ?').join(' OR '));
+        args.addAll(tagIds.map((id) => '%$id%'));
       }
-
-      // 使用分页查询
-      if (where.isNotEmpty) {
-        maps = await db.query(
-          'quotes',
-          where: where,
-          whereArgs: whereArgs,
-          orderBy: orderBy,
-          limit: limit,
-          offset: offset,
-        );
-      } else {
-        maps = await db.query(
-          'quotes',
-          orderBy: orderBy,
-          limit: limit,
-          offset: offset,
-        );
+      if (categoryId != null && categoryId.isNotEmpty) {
+        conditions.add('category_id = ?');
+        args.add(categoryId);
       }
-
-      debugPrint('分页加载笔记: limit=$limit, offset=$offset, 获取到${maps.length}条记录');
-      return maps.map((map) => Quote.fromMap(map)).toList();
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        conditions.add('(content LIKE ? OR source LIKE ?)');
+        args.addAll(['%$searchQuery%', '%$searchQuery%']);
+      }
+      final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+      final maps = await db.query(
+        'quotes',
+        where: where,
+        whereArgs: args,
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+      return maps.map((m) => Quote.fromMap(m)).toList();
     } catch (e) {
       debugPrint('获取引用错误: $e');
       return [];
     }
   }
 
-  /// 获取笔记总数（用于分页）
-  Future<int> getQuotesCount({List<String>? tagIds, String? categoryId}) async {
+  /// 获取笔记总数，用于分页
+  Future<int> getQuotesCount({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+  }) async {
     try {
       if (kIsWeb) {
-        // Web平台特定逻辑
-        if (tagIds != null && tagIds.isNotEmpty) {
-          return _memoryStore
-              .where(
-                (quote) => tagIds.any((tagId) => quote.tagIds.contains(tagId)),
-              )
-              .length;
-        } else if (categoryId != null && categoryId.isNotEmpty) {
-          return _memoryStore
-              .where((quote) => quote.categoryId == categoryId)
-              .length;
-        }
-        return _memoryStore.length;
+        return (await getUserQuotes(tagIds: tagIds, categoryId: categoryId, searchQuery: searchQuery, limit: 1000000, offset: 0)).length;
       }
-
       final db = database;
-      String where = '';
-      List<dynamic> whereArgs = [];
-
+      List<String> conditions = [];
+      List<dynamic> args = [];
       if (tagIds != null && tagIds.isNotEmpty) {
-        where = tagIds.map((id) => 'tag_ids LIKE ?').join(' OR ');
-        whereArgs = tagIds.map((id) => '%$id%').toList();
-      } else if (categoryId != null && categoryId.isNotEmpty) {
-        where = 'category_id = ?';
-        whereArgs = [categoryId];
+        conditions.add(tagIds.map((_) => 'tag_ids LIKE ?').join(' OR '));
+        args.addAll(tagIds.map((id) => '%$id%'));
       }
-
-      // 计算符合条件的记录总数
-      final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM quotes ${where.isEmpty ? '' : 'WHERE $where'}',
-        whereArgs,
-      );
-
-      final count = Sqflite.firstIntValue(result) ?? 0;
-      debugPrint('笔记总数: $count');
-      return count;
+      if (categoryId != null && categoryId.isNotEmpty) {
+        conditions.add('category_id = ?');
+        args.add(categoryId);
+      }
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        conditions.add('(content LIKE ? OR source LIKE ?)');
+        args.addAll(['%$searchQuery%', '%$searchQuery%']);
+      }
+      final whereClause = conditions.isNotEmpty ? 'WHERE ' + conditions.join(' AND ') : '';
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM quotes $whereClause', args);
+      return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
-      debugPrint('获取笔记总数出错: $e');
+      debugPrint('获取笔记总数错误: $e');
       return 0;
     }
   }
@@ -1033,11 +1011,13 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       _memoryStore.removeWhere((quote) => quote.id == id);
       notifyListeners();
+      _refreshQuotesStream();
       return;
     }
     final db = database;
     await db.delete('quotes', where: 'id = ?', whereArgs: [id]);
     notifyListeners();
+    _refreshQuotesStream();
   }
 
   /// 更新笔记内容
@@ -1088,9 +1068,52 @@ class DatabaseService extends ChangeNotifier {
       );
       debugPrint('笔记已成功更新，ID: ${quote.id}');
       notifyListeners();
+      _refreshQuotesStream(); // 更新流
     } catch (e) {
       debugPrint('更新笔记时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
     }
+  }
+
+  /// 监听笔记列表，支持分页加载和搜索
+  Stream<List<Quote>> watchQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+  }) {
+    _watchTagIds = tagIds;
+    _watchCategoryId = categoryId;
+    _watchOrderBy = orderBy;
+    _watchLimit = limit;
+    _watchOffset = 0;
+    _watchHasMore = true;
+    _quotesCache = [];
+    _watchSearchQuery = (searchQuery!=null && searchQuery.isNotEmpty)? searchQuery:null;
+    // 首次加载
+    _loadNextQuotesPage();
+    return _quotesController.stream;
+  }
+
+  /// 公共接口：加载下一页笔记
+  Future<void> loadMoreQuotes() async {
+    if (!_watchHasMore) return;
+    await _loadNextQuotesPage();
+  }
+
+  Future<void> _loadNextQuotesPage() async {
+    final newQuotes = await getUserQuotes(
+      tagIds: _watchTagIds,
+      categoryId: _watchCategoryId,
+      limit: _watchLimit,
+      offset: _watchOffset,
+      orderBy: _watchOrderBy,
+      searchQuery: _watchSearchQuery,
+    );
+    _quotesCache.addAll(newQuotes);
+    _watchOffset += newQuotes.length;
+    _watchHasMore = newQuotes.length == _watchLimit;
+    _quotesController.add(List.unmodifiable(_quotesCache));
   }
 }

@@ -55,7 +55,6 @@ bool _isLogging = false;
 
 // main函数开始
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
   // 重定向debugPrint到日志服务，增加递归保护
   debugPrint = (String? message, {int? wrapWidth}) {
     if (_isLogging) {
@@ -96,6 +95,7 @@ void main() async {
   };
 
   await runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
     try {
       // 初始化平台特定的数据库配置
       await initializeDatabasePlatform();
