@@ -85,24 +85,34 @@ class _NoteListViewState extends State<NoteListView> {
   @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
     // 更新搜索控制器文本，避免与外部状态不同步
     if (oldWidget.searchQuery != widget.searchQuery) {
       _searchController.text = widget.searchQuery;
     }
+    
     // 检查是否有条件变化
     if (oldWidget.searchQuery != widget.searchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending) {
-      // 取消旧的订阅并重新订阅新的数据流
-      _quotesSub.cancel();
+      
+      setState(() {
+        _isLoading = true;
+      });
+      
+      // 使用更新条件的方式而不是重新订阅
       final db = Provider.of<DatabaseService>(context, listen: false);
-      _isLoading = true;
+      
+      // 取消现有订阅
+      _quotesSub.cancel();
+      
+      // 创建新的订阅
       _quotesSub = db.watchQuotes(
         tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
         limit: _pageSize,
         orderBy: widget.sortType == 'time'
-            ? 'date  ${widget.sortAscending ? 'ASC' : 'DESC'}'
+            ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
             : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
         searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
       ).listen((list) {
@@ -113,6 +123,11 @@ class _NoteListViewState extends State<NoteListView> {
           _isLoading = false;
         });
       });
+      
+      // 重置状态
+      _offset = 0;
+      _hasMore = true;
+      _quotes.clear();
     }
   }
   
@@ -273,60 +288,77 @@ class _NoteListViewState extends State<NoteListView> {
     final db = Provider.of<DatabaseService>(context);
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12), // 去除左右白边
-      child: Column(
-      children: [
-        Padding(
-            padding: const EdgeInsets.only(bottom: 12), // 搜索栏与列表间距
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '搜索笔记...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double maxWidth;
+        if (constraints.maxWidth < 600) {
+          maxWidth = constraints.maxWidth; // 小屏铺满
+        } else if (constraints.maxWidth < 1200) {
+          maxWidth = 900; // 中屏适中
+        } else {
+          maxWidth = 1200; // 大屏更宽
+        }
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: '搜索笔记...',
+                              prefixIcon: const Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onChanged: _onSearchChanged,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.tune),
+                          tooltip: '筛选/排序',
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              ),
+                              builder: (context) => NoteFilterSortSheet(
+                                allTags: widget.tags,
+                                selectedTagIds: widget.selectedTagIds,
+                                sortType: widget.sortType,
+                                sortAscending: widget.sortAscending,
+                                selectedWeathers: _selectedWeathers,
+                                onApply: (tagIds, sortType, sortAscending, selectedWeathers) {
+                                  widget.onTagSelectionChanged(tagIds);
+                                  widget.onSortChanged(sortType, sortAscending);
+                                  setState(() {
+                                    _selectedWeathers = selectedWeathers;
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  onChanged: _onSearchChanged,
-                ),
+                  Expanded(child: _buildNoteList(db, theme)),
+                ],
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                  icon: const Icon(Icons.tune),
-                  tooltip: '筛选/排序',
-                  onPressed: () {
-    showModalBottomSheet(
-      context: context,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      builder: (context) => NoteFilterSortSheet(
-                        allTags: widget.tags,
-                        selectedTagIds: widget.selectedTagIds,
-                        sortType: widget.sortType,
-                        sortAscending: widget.sortAscending,
-                        selectedWeathers: _selectedWeathers,
-                        onApply: (tagIds, sortType, sortAscending, selectedWeathers) {
-                          widget.onTagSelectionChanged(tagIds);
-                          widget.onSortChanged(sortType, sortAscending);
-                          setState(() {
-                            _selectedWeathers = selectedWeathers;
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ],
             ),
           ),
-          Expanded(child: _buildNoteList(db, theme)),
-        ],
-          ),
+        );
+      },
     );
   }
 }

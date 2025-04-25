@@ -28,8 +28,34 @@ class QuoteItemWidget extends StatelessWidget {
     this.tagBuilder,
   });
 
+  // 判断内容是否为富文本（Quill Delta JSON）
+  bool _isRichContent(String content) {
+    try {
+      final decoded = jsonDecode(content);
+      return decoded is List && decoded.isNotEmpty && decoded.first is Map && decoded.first.containsKey('insert');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // 获取富文本的段落数
+  int _getRichParagraphCount(String content) {
+    try {
+      final decoded = jsonDecode(content);
+      if (decoded is List) {
+        return decoded.where((op) => op is Map && op['insert'] != null && op['insert'].toString().contains('\n')).length;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  // 判断是否需要展开按钮（富文本：段落数>3，纯文本：长度>100）
   bool _needsExpansion(String text) {
-    return text.length > 100;
+    if (_isRichContent(text)) {
+      return _getRichParagraphCount(text) > 3;
+    } else {
+      return text.length > 100;
+    }
   }
 
   String _formatSource(String author, String work) {
@@ -341,21 +367,50 @@ class QuoteItemWidget extends StatelessWidget {
   }
 
   Widget _buildRichContent(BuildContext context) {
-    try {
-      final document = quill.Document.fromJson(jsonDecode(quote.content));
-      final controller = quill.QuillController(
-        document: document,
-        selection: const TextSelection.collapsed(offset: 0),
-      );
-      return quill.QuillEditor.basic(
-        controller: controller,
-        config: const quill.QuillEditorConfig(
-          expands: false,
-          padding: EdgeInsets.zero,
-        ),
-      );
-    } catch (_) {
-      // 纯文本回退
+    if (_isRichContent(quote.content)) {
+      try {
+        final decoded = jsonDecode(quote.content);
+        final List richOps = decoded;
+        // 统计段落
+        int paraCount = 0;
+        List filteredOps = [];
+        if (!isExpanded) {
+          for (var op in richOps) {
+            filteredOps.add(op);
+            if (op is Map && op['insert'] != null && op['insert'].toString().contains('\n')) {
+              paraCount++;
+              if (paraCount >= 3) break;
+            }
+          }
+        } else {
+          filteredOps = richOps;
+        }
+        final document = quill.Document.fromJson(filteredOps);
+        final controller = quill.QuillController(
+          document: document,
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+        return quill.QuillEditor.basic(
+          controller: controller,
+          config: const quill.QuillEditorConfig(
+            expands: false,
+            padding: EdgeInsets.zero,
+          ),
+        );
+      } catch (_) {
+        // 回退为纯文本
+        return Text(
+          quote.content,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            height: 1.5,
+          ),
+          maxLines: isExpanded ? null : 3,
+          overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+        );
+      }
+    } else {
+      // 纯文本
       return Text(
         quote.content,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(

@@ -148,51 +148,31 @@ void main() async {
     };
 
     try {
-      // 初始化平台特定的数据库配置
+      // 先初始化必要的平台特定的数据库配置
       await initializeDatabasePlatform();
 
-      // 初始化MMKV
+      // 初始化轻量级且必须的服务
       final mmkvService = MMKVService();
       await mmkvService.init();
 
-      // 初始化设置服务（传入MMKV服务实例）
+      // 初始化设置服务
       final settingsService = await SettingsService.create();
+      
+      // 创建服务实例但暂不初始化重量级服务
       final databaseService = DatabaseService();
       final locationService = LocationService();
       final weatherService = WeatherService();
       final clipboardService = ClipboardService();
       final logService = LogService();
-
-      // 初始化剪贴板服务
-      await clipboardService.init();
-      
-      try {
-        // 对所有平台统一初始化数据库
-        await databaseService.init().timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            throw TimeoutException('数据库初始化超时');
-          },
-        );
-        // 初始化默认一言分类
-        await databaseService.initDefaultHitokotoCategories();
-      } catch (e, stackTrace) {
-        // 数据库初始化失败，进入紧急模式
-        debugPrint('数据库初始化失败，将启动紧急模式: $e');
-        _isEmergencyMode = true;
-        
-        // 记录错误，但不重新抛出，让应用在紧急模式下继续
-        logService.error(
-          '数据库初始化失败，进入紧急模式',
-          error: e,
-          stackTrace: stackTrace,
-          source: 'main',
-        );
-      }
-      
-      // 初始化主题服务
       final appTheme = AppTheme();
+      
+      // 初始化主题 - 这是UI显示必须的
       await appTheme.initialize();
+      
+      // 使用ValueNotifier跟踪服务初始化状态
+      final servicesInitialized = ValueNotifier<bool>(false);
+      
+      // 启动应用UI
       runApp(
         MultiProvider(
           providers: [
@@ -203,6 +183,8 @@ void main() async {
             ChangeNotifierProvider(create: (_) => clipboardService),
             ChangeNotifierProvider(create: (_) => logService),
             ChangeNotifierProvider(create: (_) => appTheme),
+            // 提供初始化状态
+            ValueListenableProvider<bool>.value(value: servicesInitialized),
             ChangeNotifierProxyProvider<SettingsService, AIService>(
               create:
                   (context) => AIService(
@@ -226,6 +208,67 @@ void main() async {
           ),
         ),
       );
+      
+      // 首屏UI显示后，异步初始化其他服务
+      // 使用microtask确保在UI渲染后执行
+      Future.microtask(() async {
+        try {
+          debugPrint('UI已显示，正在后台初始化服务...');
+          
+          // 初始化clipboardService
+          await clipboardService.init().timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => debugPrint('剪贴板服务初始化超时，将继续后续初始化'),
+          );
+          
+          // 初始化数据库，这通常是最耗时的操作
+          try {
+            await databaseService.init().timeout(
+              const Duration(seconds: 5),
+              onTimeout: () {
+                throw TimeoutException('数据库初始化超时');
+              },
+            );
+            
+            // 初始化默认一言分类
+            await databaseService.initDefaultHitokotoCategories();
+            debugPrint('数据库服务初始化完成');
+          } catch (e, stackTrace) {
+            debugPrint('数据库初始化失败: $e');
+            _isEmergencyMode = true;
+            
+            // 记录错误但继续执行其他服务初始化
+            logService.error(
+              '数据库初始化失败，进入紧急模式',
+              error: e,
+              stackTrace: stackTrace,
+              source: 'background_init',
+            );
+          }
+          
+          // 其他可能的服务初始化
+          // 注意: 地理位置和天气服务可以按需初始化，无需在启动时加载
+          
+          // 初始化完成，更新状态
+          servicesInitialized.value = true;
+          debugPrint('所有后台服务初始化完成');
+        } catch (e, stackTrace) {
+          debugPrint('后台服务初始化失败: $e');
+          
+          // 记录错误
+          final context = navigatorKey.currentContext;
+          if (context != null) {
+            try {
+              Provider.of<LogService>(context, listen: false).error(
+                '后台服务初始化失败',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'background_init',
+              );
+            } catch (_) {}
+          }
+        }
+      });
     } catch (e, stackTrace) {
       debugPrint('应用初始化失败: $e');
       debugPrint('堆栈跟踪: $stackTrace');
@@ -285,6 +328,25 @@ class MyApp extends StatelessWidget {
         Locale('en'),
         // 你可以根据需要添加更多语言
       ],
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            double maxWidth = 720; // 全局最大内容宽度
+            bool isWide = constraints.maxWidth > maxWidth;
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isWide ? 24 : 0, // 大屏两侧留白
+                  ),
+                  child: child!,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -301,77 +363,79 @@ class EmergencyRecoveryPage extends StatelessWidget {
         backgroundColor: Colors.red,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded, 
-                size: 64, 
-                color: Colors.red
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                '数据库初始化失败',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+        child: SingleChildScrollView( // 添加SingleChildScrollView使内容可滚动
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // 设置为min以适应内容
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded, 
+                  size: 64, 
+                  color: Colors.red
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '应用无法正常启动。可能是数据库损坏或无法访问。\n\n'
-                '您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。',
-                style: TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BackupRestorePage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.backup),
-                label: const Text('备份和恢复数据'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                const SizedBox(height: 24),
+                const Text(
+                  '数据库初始化失败',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HomePage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('尝试重新启动应用'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                const SizedBox(height: 16),
+                const Text(
+                  '应用无法正常启动。可能是数据库损坏或无法访问。\n\n'
+                  '您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                '提示: 如果问题持续存在，可能需要重新安装应用。请确保在此之前备份您的数据。',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BackupRestorePage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.backup),
+                  label: const Text('备份和恢复数据'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomePage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('尝试重新启动应用'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  '提示: 如果问题持续存在，可能需要重新安装应用。请确保在此之前备份您的数据。',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -474,6 +538,23 @@ class EmergencyApp extends StatelessWidget {
                 const Spacer(),
                 FilledButton.icon(
                   onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EmergencyBackupPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.backup),
+                  label: const Text('备份和恢复数据'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {
                     // 尝试重新启动应用
                     restartApp();
                   },
@@ -518,6 +599,197 @@ class EmergencyApp extends StatelessWidget {
     // 重新启动应用的逻辑
     // 在Flutter中不能真正地重启应用，所以这里只是重新运行main函数
     main();
+  }
+}
+
+/// 极端情况下的备份恢复页面，即使在数据库完全损坏的情况下也能工作
+class EmergencyBackupPage extends StatefulWidget {
+  const EmergencyBackupPage({super.key});
+
+  @override
+  State<EmergencyBackupPage> createState() => _EmergencyBackupPageState();
+}
+
+class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
+  bool _isLoading = false;
+  String? _statusMessage;
+  bool _hasError = false;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('紧急数据恢复'),
+        backgroundColor: Colors.orange,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.data_saver_on,
+                size: 64,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '数据紧急恢复工具',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '由于应用发生了严重错误，您可以尝试：\n\n'
+                '1. 导出数据库文件 - 导出原始数据库文件供专业人员恢复\n'
+                '2. 尝试查看备份恢复页 - 注意：由于数据库可能损坏，此功能可能无法正常工作',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 32),
+              if (_isLoading)
+                Column(
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text('正在处理...${_statusMessage ?? ""}')
+                  ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _exportDatabaseFile,
+                      icon: const Icon(Icons.folder),
+                      label: const Text('导出数据库文件'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () {
+                        try {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const BackupRestorePage(),
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('无法打开备份还原页面：$e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.backup),
+                      label: const Text('尝试打开标准备份还原页面'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              if (_statusMessage != null && !_isLoading)
+                Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _hasError ? Colors.red.shade100 : Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _statusMessage!,
+                    style: TextStyle(
+                      color: _hasError ? Colors.red.shade900 : Colors.green.shade900,
+                    ),
+                  ),
+                ),
+              const Spacer(),
+              const Text(
+                '提示: 导出的数据库文件可以发送给开发人员进行专业恢复。',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportDatabaseFile() async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = '正在定位数据库文件...';
+      _hasError = false;
+    });
+
+    try {
+      // 获取数据库文件路径
+      final appDir = await getApplicationDocumentsDirectory();
+      final dbPath = join(appDir.path, 'databases');
+      final dbFile = File(join(dbPath, 'thoughtecho.db'));
+      final oldDbFile = File(join(dbPath, 'mind_trace.db'));
+      
+      // 确认文件存在
+      if (!dbFile.existsSync() && !oldDbFile.existsSync()) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = '未找到数据库文件';
+          _hasError = true;
+        });
+        return;
+      }
+      
+      // 使用存在的文件
+      final sourceFile = dbFile.existsSync() ? dbFile : oldDbFile;
+      
+      setState(() {
+        _statusMessage = '正在准备导出...';
+      });
+      
+      // 创建一个导出目录
+      final downloadsDir = Directory(join(appDir.path, 'Downloads'));
+      if (!downloadsDir.existsSync()) {
+        await downloadsDir.create(recursive: true);
+      }
+      
+      // 创建导出文件名
+      final now = DateTime.now();
+      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final exportFileName = 'thoughtecho_emergency_${timestamp}.db';
+      final exportFile = File(join(downloadsDir.path, exportFileName));
+      
+      // 复制文件
+      setState(() {
+        _statusMessage = '正在复制文件...';
+      });
+      
+      await sourceFile.copy(exportFile.path);
+      
+      setState(() {
+        _isLoading = false;
+        _statusMessage = '数据库文件已导出到: ${exportFile.path}';
+        _hasError = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _statusMessage = '导出失败: $e';
+        _hasError = true;
+      });
+    }
   }
 }
 

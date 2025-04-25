@@ -36,14 +36,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final _searchController = NoteSearchController();
 
   late TabController _tabController;
-
+  
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadTags();
     _initLocationAndWeather();
-    _initServices();
     
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
@@ -52,15 +51,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 首次进入应用时检查剪贴板
       _checkClipboard();
-    });
-  }
-
-  // 初始化各项服务
-  Future<void> _initServices() async {
-    // 延迟初始化，确保Provider可用
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 初始化所需的其他服务
-      // ...
     });
   }
 
@@ -336,6 +326,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
+    
+    // 直接用context.watch<bool>()获取服务初始化状态
+    final bool servicesInitialized = context.watch<bool>();
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
     return ChangeNotifierProvider.value(
@@ -344,6 +337,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         appBar: AppBar(
           title: const Text('心迹'),
           actions: [
+            // 显示服务初始化状态指示器
+            if (!servicesInitialized)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                child: SizedBox(
+                  width: 20, 
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                  ),
+                ),
+              ),
+              
             // 显示位置和天气信息
             if (_currentIndex == 0 &&
                 locationService.city != null &&

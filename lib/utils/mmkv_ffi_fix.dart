@@ -1,7 +1,8 @@
 // MMKV 包装类
 // 这个文件提供了一个安全的 MMKV 包装，避免直接使用 FFI 接口
-// 主要目的是解决 MMKV 2.1.1 版本与当前 Dart/Flutter 版本的兼容性问题
+// 主要目的是解决 MMKV 在某些设备上的兼容性问题，特别是32位ARM设备
 
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'mmkv_adapter.dart';
@@ -22,6 +23,9 @@ class SafeMMKV {
   // 初始化锁，防止并发初始化
   final _initLock = Object();
   bool _initializing = false;
+
+  // 标记是否是32位ARM设备 
+  bool _isArm32Device = false;
   
   /// 初始化存储
   Future<void> initialize() async {
@@ -39,27 +43,99 @@ class SafeMMKV {
     
     _initializing = true;
     try {
+      // 检查是否是32位ARM设备
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          final is64bit = await _checkIs64BitDevice();
+          _isArm32Device = !is64bit;
+          debugPrint('SafeMMKV: 检测到${is64bit ? '64位' : '32位'}设备');
+        } catch (e) {
+          debugPrint('SafeMMKV: 检测设备架构失败: $e');
+          _isArm32Device = false; // 默认假设不是32位设备
+        }
+      }
+
       if (kIsWeb) {
         _storage = SharedPrefsAdapter();
         await _storage!.initialize();
         debugPrint('SafeMMKV: Web 平台，使用 SharedPreferences');
       } else {
-        try {
-          _storage = MMKVAdapter();
-          await _storage!.initialize();
-          debugPrint('SafeMMKV: 使用 MMKVAdapter (移动端) 作为存储');
-        } catch (e) {
-          debugPrint('SafeMMKV: MMKVAdapter 初始化失败: $e，回退到 SharedPreferences');
+        // 32位ARM设备优先使用SharedPreferences，避免MMKV可能存在的兼容性问题
+        if (_isArm32Device) {
+          debugPrint('SafeMMKV: 检测到32位ARM设备，优先使用SharedPreferences');
           _storage = SharedPrefsAdapter();
           await _storage!.initialize();
+        } else {
+          try {
+            _storage = MMKVAdapter();
+            await _storage!.initialize();
+            debugPrint('SafeMMKV: 使用 MMKVAdapter 作为存储');
+          } catch (e) {
+            debugPrint('SafeMMKV: MMKVAdapter 初始化失败: $e，回退到 SharedPreferences');
+            _storage = SharedPrefsAdapter();
+            await _storage!.initialize();
+          }
         }
       }
       _initialized = true;
     } catch (e) {
       debugPrint('SafeMMKV 初始化失败: $e');
-      rethrow;
+      // 最终回退：如果所有存储机制都失败，尝试使用内存存储
+      try {
+        _storage = _InMemoryStorageAdapter();
+        await _storage!.initialize();
+        debugPrint('SafeMMKV: 所有存储机制失败，回退到内存存储');
+        _initialized = true;
+      } catch (e2) {
+        debugPrint('SafeMMKV: 内存存储也初始化失败: $e2');
+        rethrow;
+      }
     } finally {
       _initializing = false;
+    }
+  }
+  
+  // 检测设备是否为64位
+  Future<bool> _checkIs64BitDevice() async {
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        // 基于设备架构检测64位系统
+        final arch = await _getPlatformArchitecture();
+        return arch.contains('64') || arch == 'aarch64' || arch == 'x86_64' || arch == 'mips64';
+      } else if (!kIsWeb && Platform.isIOS) {
+        // iOS模拟器可能返回x86_64，真机一般是arm64
+        return true; // iOS设备大多都是64位了
+      }
+      // 其他平台假定为64位
+      return true;
+    } catch (e) {
+      debugPrint('检测设备架构失败: $e');
+      // 安全起见，如果检测失败，假定为32位设备避免使用MMKV 2.x
+      return false;
+    }
+  }
+  
+  // 获取设备架构
+  Future<String> _getPlatformArchitecture() async {
+    try {
+      if (Platform.isAndroid) {
+        // 尝试获取系统架构信息
+        final archInfo = await Process.run('getprop', ['ro.product.cpu.abi']);
+        if (archInfo.exitCode == 0 && archInfo.stdout != null) {
+          final arch = (archInfo.stdout as String).trim().toLowerCase();
+          debugPrint('检测到CPU架构: $arch');
+          return arch;
+        }
+      }
+      // 如果无法通过命令获取，使用Dart自身检测
+      String arch = Platform.operatingSystemVersion.toLowerCase();
+      if (arch.contains('64')) return 'arm64';
+      
+      // 最后使用dart:io的内置属性
+      return Platform.version.toLowerCase();
+    } catch (e) {
+      debugPrint('获取平台架构失败: $e');
+      return ''; // 返回空字符串，让调用者判断为32位设备
     }
   }
   
@@ -155,6 +231,98 @@ class SafeMMKV {
   }
 }
 
+/// 内存存储适配器（作为最终回退）
+class _InMemoryStorageAdapter implements StorageAdapter {
+  final Map<String, dynamic> _data = {};
+  
+  @override
+  Future<void> initialize() async {
+    // 内存存储不需要初始化
+  }
+  
+  @override
+  Future<bool> setString(String key, String value) async {
+    _data[key] = value;
+    return true;
+  }
+  
+  @override
+  String? getString(String key) {
+    final value = _data[key];
+    return value is String ? value : null;
+  }
+  
+  @override
+  Future<bool> setInt(String key, int value) async {
+    _data[key] = value;
+    return true;
+  }
+  
+  @override
+  int? getInt(String key) {
+    final value = _data[key];
+    return value is int ? value : null;
+  }
+  
+  @override
+  Future<bool> setDouble(String key, double value) async {
+    _data[key] = value;
+    return true;
+  }
+  
+  @override
+  double? getDouble(String key) {
+    final value = _data[key];
+    return value is double ? value : null;
+  }
+  
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    _data[key] = value;
+    return true;
+  }
+  
+  @override
+  bool? getBool(String key) {
+    final value = _data[key];
+    return value is bool ? value : null;
+  }
+  
+  @override
+  Future<bool> setStringList(String key, List<String> value) async {
+    _data[key] = value;
+    return true;
+  }
+  
+  @override
+  List<String>? getStringList(String key) {
+    final value = _data[key];
+    return value is List<String> ? value : null;
+  }
+  
+  @override
+  bool containsKey(String key) {
+    return _data.containsKey(key);
+  }
+  
+  @override
+  Future<bool> remove(String key) async {
+    _data.remove(key);
+    return true;
+  }
+  
+  @override
+  Future<bool> clear() async {
+    _data.clear();
+    return true;
+  }
+  
+  @override
+  Set<String> getKeys() {
+    return _data.keys.toSet();
+  }
+}
+
 /// 存储适配器接口
 abstract class StorageAdapter {
   Future<void> initialize();
@@ -224,7 +392,7 @@ class SharedPrefsAdapter implements StorageAdapter {
   }
   
   @override
-  Future<bool> setStringList(String key, List<String> value) {
+  Future<bool> setStringList(String key, List<String> value) async {
     return _prefs.setStringList(key, value);
   }
   

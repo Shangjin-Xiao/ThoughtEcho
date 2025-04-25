@@ -911,9 +911,19 @@ class DatabaseService extends ChangeNotifier {
   // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
     if (_quotesController.hasListener) {
+      debugPrint('刷新笔记流数据');
+      // 清除缓存，确保获取最新数据
+      _filterCache.clear();
+      
+      // 重置状态并加载新数据
       _watchOffset = 0;
       _quotesCache = [];
+      _watchHasMore = true;
+      
+      // 触发重新加载
       _loadNextQuotesPage();
+    } else {
+      debugPrint('笔记流无监听器，跳过刷新');
     }
   }
 

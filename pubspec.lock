@@ -745,42 +745,42 @@ packages:
     dependency: "direct main"
     description:
       name: mmkv
-      sha256: "211e7b6d7a18f8aea00df03e5c0ed01e63e85783618d4a88ea8fbbc9158ca1a5"
+      sha256: d0a3f06cf42404edb09ac33a821d28ccbece894d05b6d66601860703bc77702e
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.1"
+    version: "2.2.1"
   mmkv_android:
     dependency: transitive
     description:
       name: mmkv_android
-      sha256: "5ec42b135c4af6524e78b260921c8c598264535f64eb12e6555ce8023d7a01e0"
+      sha256: eeba5680c5b7e95322134013e970c99a8f32d095b1ef9e22a707765fed3c7847
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.0"
+    version: "2.2.1"
   mmkv_ios:
     dependency: transitive
     description:
       name: mmkv_ios
-      sha256: "8c6fa68b35c3f4748fa5642e9541233a8beeec7e3fbfb5990e2695fe84c8fd94"
+      sha256: "6010ee20126cfadd23e696edf0e131bbf1bec7b895bc67528f7f479632c20854"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.0"
+    version: "2.2.1"
   mmkv_ohos:
     dependency: transitive
     description:
       name: mmkv_ohos
-      sha256: eb56a04f4dfa74cc289d9c5de04ede44c32ada096da9ec1c9610a391eb6ba385
+      sha256: "0fc01fb1de09c002188feaf8c21088ddd95022a58b7d534a73febe00f58600b5"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.0"
+    version: "2.2.1"
   mmkv_platform_interface:
     dependency: transitive
     description:
       name: mmkv_platform_interface
-      sha256: "6e50431524e11edb6c30e1b4b8cd96b8283ed57c1ea8d72d354de9c88039d143"
+      sha256: "65d5c1a2c43ad5d064bbf956eed45bb62e89c4fe8ccac40de829959e16ba62d1"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.0"
+    version: "2.2.1"
   nested:
     dependency: transitive
     description:
