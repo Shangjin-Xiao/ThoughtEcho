@@ -82,6 +82,20 @@ class _AISettingsPageState extends State<AISettingsPage> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Add AI Risk Warning
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Text(
+                '请注意：AI 生成的内容可能不完全准确或可靠，请谨慎使用并自行判断。',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            // End of AI Risk Warning
+
             ElevatedButton(
               onPressed: () {
                 final settings = AISettings(

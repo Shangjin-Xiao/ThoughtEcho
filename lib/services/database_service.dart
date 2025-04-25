@@ -38,7 +38,7 @@ class DatabaseService extends ChangeNotifier {
         _memoryStore.add(
           Quote(
             id: _uuid.v4(),
-            content: '欢迎使用心记 - Web版',
+            content: '欢迎使用心迹 - Web版',
             date: DateTime.now().toIso8601String(),
             source: '示例来源',
             aiAnalysis: '这是Web平台示例笔记',
@@ -75,7 +75,20 @@ class DatabaseService extends ChangeNotifier {
       }
       // 获取数据库存储路径，由 main.dart 已设置好路径
       final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'mind_trace.db');
+      final oldPath = join(dbPath, 'mind_trace.db');
+      final path = join(dbPath, 'thoughtecho.db');
+
+      // 自动迁移旧数据库文件
+      final oldFile = File(oldPath);
+      final newFile = File(path);
+      if (!await newFile.exists() && await oldFile.exists()) {
+        try {
+          await oldFile.copy(path); // 用copy更安全，保留原文件
+          debugPrint('已自动迁移旧数据库文件到新文件名');
+        } catch (e) {
+          debugPrint('自动迁移旧数据库文件失败: $e');
+        }
+      }
 
       _database = await openDatabase(
         path,
@@ -413,7 +426,7 @@ class DatabaseService extends ChangeNotifier {
 
       final jsonData = {
         'metadata': {
-          'app': '心记',
+          'app': '心迹',
           'version': await db.getVersion(),
           'exportTime': DateTime.now().toIso8601String(),
         },
@@ -463,7 +476,7 @@ class DatabaseService extends ChangeNotifier {
       } else {
         // 使用默认路径
         final dir = await getApplicationDocumentsDirectory();
-        final fileName = '心记_${DateTime.now().millisecondsSinceEpoch}.json';
+        final fileName = '心迹_${DateTime.now().millisecondsSinceEpoch}.json';
         filePath = '${dir.path}/$fileName';
       }
 

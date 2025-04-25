@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:mind_trace/models/quote_model.dart';
-import 'package:mind_trace/models/note_category.dart';
-import 'package:mind_trace/services/ai_service.dart';
-import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/services/location_service.dart';
-import 'package:mind_trace/services/settings_service.dart';
-import 'package:mind_trace/services/weather_service.dart';
-import 'package:mind_trace/utils/icon_utils.dart';
+import '../models/quote_model.dart';
+import '../models/note_category.dart';
+import '../services/ai_service.dart';
+import '../services/database_service.dart';
+import '../services/location_service.dart';
+import '../services/settings_service.dart';
+import '../services/weather_service.dart';
+import '../utils/icon_utils.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 

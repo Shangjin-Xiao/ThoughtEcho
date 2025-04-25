@@ -7,16 +7,16 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
-import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/services/settings_service.dart';
-import 'package:mind_trace/services/ai_service.dart';
-import 'package:mind_trace/services/location_service.dart';
-import 'package:mind_trace/services/weather_service.dart';
-import 'package:mind_trace/services/mmkv_service.dart';
-import 'package:mind_trace/services/clipboard_service.dart'; // 导入剪贴板服务
-import 'package:mind_trace/services/log_service.dart'; // 导入日志服务
-import 'package:mind_trace/pages/home_page.dart';
-import 'package:mind_trace/theme/app_theme.dart';
+import 'services/database_service.dart';
+import 'services/settings_service.dart';
+import 'services/ai_service.dart';
+import 'services/location_service.dart';
+import 'services/weather_service.dart';
+import 'services/mmkv_service.dart';
+import 'services/clipboard_service.dart'; // 导入剪贴板服务
+import 'services/log_service.dart'; // 导入日志服务
+import 'pages/home_page.dart';
+import 'theme/app_theme.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -55,6 +55,7 @@ bool _isLogging = false;
 
 // main函数开始
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   // 重定向debugPrint到日志服务，增加递归保护
   debugPrint = (String? message, {int? wrapWidth}) {
     if (_isLogging) {
@@ -78,46 +79,40 @@ void main() async {
     }
   };
 
-  runZonedGuarded<Future<void>>(() async {
-    // 捕获Flutter框架异常并写入日志服务
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.dumpErrorToConsole(details);
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        try {
-          Provider.of<LogService>(context, listen: false).error(
-            'Flutter异常: \\${details.exceptionAsString()}',
-            error: details.exception,
-            stackTrace: details.stack,
-            source: 'FlutterError',
-          );
-        } catch (_) {}
-      }
-    };
+  // 捕获Flutter框架异常并写入日志服务
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      try {
+        Provider.of<LogService>(context, listen: false).error(
+          'Flutter异常: \\${details.exceptionAsString()}',
+          error: details.exception,
+          stackTrace: details.stack,
+          source: 'FlutterError',
+        );
+      } catch (_) {}
+    }
+  };
 
+  await runZonedGuarded<Future<void>>(() async {
     try {
-      // 确保Flutter绑定初始化
-      WidgetsFlutterBinding.ensureInitialized();
-      
       // 初始化平台特定的数据库配置
       await initializeDatabasePlatform();
 
       // 初始化MMKV
       final mmkvService = MMKVService();
-      await mmkvService.init(); // 使用正确的init()方法而不是initialize()
+      await mmkvService.init();
 
       // 初始化设置服务（传入MMKV服务实例）
-      final settingsService = await SettingsService.create(); // 使用工厂方法创建SettingsService
-      
+      final settingsService = await SettingsService.create();
       final databaseService = DatabaseService();
       final locationService = LocationService();
       final weatherService = WeatherService();
-      final clipboardService = ClipboardService(); // 创建剪贴板服务实例
-      final logService = LogService(); // 创建日志服务实例
-      
+      final clipboardService = ClipboardService();
+      final logService = LogService();
       // 初始化剪贴板服务
       await clipboardService.init();
-
       // 对所有平台统一初始化数据库
       await databaseService.init().timeout(
         const Duration(seconds: 5),
@@ -125,14 +120,11 @@ void main() async {
           throw TimeoutException('数据库初始化超时');
         },
       );
-
       // 初始化默认一言分类
       await databaseService.initDefaultHitokotoCategories();
-
       // 初始化主题服务
       final appTheme = AppTheme();
       await appTheme.initialize();
-
       runApp(
         MultiProvider(
           providers: [
@@ -140,8 +132,8 @@ void main() async {
             ChangeNotifierProvider(create: (_) => databaseService),
             ChangeNotifierProvider(create: (_) => locationService),
             ChangeNotifierProvider(create: (_) => weatherService),
-            ChangeNotifierProvider(create: (_) => clipboardService), // 添加剪贴板服务Provider
-            ChangeNotifierProvider(create: (_) => logService), // 添加日志服务Provider
+            ChangeNotifierProvider(create: (_) => clipboardService),
+            ChangeNotifierProvider(create: (_) => logService),
             ChangeNotifierProvider(create: (_) => appTheme),
             ChangeNotifierProxyProvider<SettingsService, AIService>(
               create:
@@ -164,13 +156,13 @@ void main() async {
         ),
       );
     } catch (e, stackTrace) {
-      debugPrint('应用初始化失败: \\${e}');
-      debugPrint('堆栈跟踪: \\${stackTrace}');
+      debugPrint('应用初始化失败: \\$e');
+      debugPrint('堆栈跟踪: \\$stackTrace');
       final context = navigatorKey.currentContext;
       if (context != null) {
         try {
           Provider.of<LogService>(context, listen: false).error(
-            '应用初始化失败: \\${e}',
+            '应用初始化失败: \\$e',
             error: e,
             stackTrace: stackTrace,
             source: 'main',
@@ -180,13 +172,13 @@ void main() async {
       rethrow;
     }
   }, (error, stackTrace) {
-    debugPrint('未捕获的异常: \\${error}');
-    debugPrint('堆栈跟踪: \\${stackTrace}');
+    debugPrint('未捕获的异常: \\$error');
+    debugPrint('堆栈跟踪: \\$stackTrace');
     final context = navigatorKey.currentContext;
     if (context != null) {
       try {
         Provider.of<LogService>(context, listen: false).error(
-          '未捕获异常: \\${error}',
+          '未捕获异常: \\$error',
           error: error,
           stackTrace: stackTrace,
           source: 'runZonedGuarded',

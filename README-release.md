@@ -1,4 +1,4 @@
-# 心记应用发布指南
+# 心迹应用发布指南
 
 本指南详细说明如何使用GitHub Actions自动构建并签名Android APK。
 

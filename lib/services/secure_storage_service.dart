@@ -19,7 +19,7 @@ class SecureStorageService {
     );
     
     const IOSOptions iosOptions = IOSOptions(
-      accountName: 'mind_trace_secure',
+      accountName: 'thoughtecho_secure',
     );
 
     _storage = const FlutterSecureStorage(

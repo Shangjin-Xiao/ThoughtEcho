@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/services/settings_service.dart';
-import 'package:mind_trace/services/ai_service.dart';
-import 'package:mind_trace/services/location_service.dart'; // 新增导入
-import 'package:mind_trace/services/weather_service.dart'; // 新增导入
-import 'package:mind_trace/theme/app_theme.dart';
-import 'package:mind_trace/main.dart'; // MyApp 可能需要保持导入
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
+import 'package:thoughtecho/main.dart'; // MyApp 可能需要保持导入
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {

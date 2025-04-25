@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:mind_trace/utils/mmkv_ffi_fix.dart';
-import 'package:mind_trace/services/log_database_service.dart';
+import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:flutter/widgets.dart'; // Import WidgetsBinding
 
 // 定义日志级别

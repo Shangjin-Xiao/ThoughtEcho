@@ -252,7 +252,7 @@ class LocationService extends ChangeNotifier {
         Uri.parse(url),
         headers: {
           'Accept-Language': 'zh-CN,zh;q=0.9',
-          'User-Agent': 'MindTrace App',
+          'User-Agent': 'ThoughtEcho App',
         },
       );
 
@@ -392,7 +392,7 @@ class LocationService extends ChangeNotifier {
         url,
         headers: {
           'Accept-Language': 'zh-CN,zh;q=0.9',
-          'User-Agent': 'MindTrace App',
+          'User-Agent': 'ThoughtEcho App',
         },
         timeoutSeconds: 15,
       );

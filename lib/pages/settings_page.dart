@@ -177,7 +177,7 @@ class _SettingsPageState extends State<SettingsPage> {
                              context: context,
                              builder: (context) => AlertDialog(
                                title: const Text('请启用位置服务'),
-                               content: const Text('心记需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。'),
+                               content: const Text('心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。'),
                                actions: [
                                  TextButton(
                                    onPressed: () => Navigator.pop(context),
@@ -360,7 +360,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ListTile(
                   title: const Text('一言设置'),
-                  subtitle: const Text('自定义"每日一言"的类型'),
+                  subtitle: const Text('自定义\"每日一言\"的类型'), // Keep original subtitle
                   leading: const Icon(Icons.format_quote_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -372,7 +372,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 添加日志设置入口
+                // Add Hitokoto attribution text here
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 4.0, right: 16.0, bottom: 8.0), // Added bottom padding
+                  child: Text(
+                    '一言服务由 Hitokoto 提供',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+                // End of Hitokoto attribution text
+                // Add Logs Settings entry below
                 ListTile(
                   title: const Text('日志设置'),
                   subtitle: const Text('配置应用日志记录级别'),
@@ -445,13 +457,13 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                  // --- 修改：关于标题 ListTile，点击弹出包含链接的对话框 ---
                  ListTile(
-                   title: const Text('关于 心记 (ThoughtEcho)'),
+                   title: const Text('关于 心迹 (ThoughtEcho)'),
                    leading: const Icon(Icons.info_outline),
                    trailing: const Icon(Icons.chevron_right), // 添加箭头指示可点击
                    onTap: () {
                      showAboutDialog(
                        context: context,
-                       applicationName: '心记 (ThoughtEcho)',
+                       applicationName: '心迹 (ThoughtEcho)',
                        // 不再显示版本号
                        // applicationVersion: _appVersion,
                        applicationIcon: Image.asset('icon.png', width: 48, height: 48), // 确保 icon.png 在 assets 中

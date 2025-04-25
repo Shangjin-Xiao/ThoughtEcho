@@ -1,9 +1,9 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mind_trace/models/note_category.dart';
-import 'package:mind_trace/services/database_service.dart';
-import 'package:mind_trace/widgets/add_note_dialog.dart'; // 导入AddNoteDialog
+import '../models/note_category.dart';
+import '../services/database_service.dart';
+import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
 import 'package:provider/provider.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 
@@ -154,7 +154,7 @@ class ClipboardService extends ChangeNotifier {
     }
     
     // 3. 匹配 "文"——作者 或 "文"--作者 等
-    final m3 = RegExp(r'["“](.+?)["”]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$').firstMatch(text);
+    final m3 = RegExp(r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$').firstMatch(text);
     if (m3 != null) {
       // 这种情况通常只提取作者，引用的内容在前面
       author = clean(m3.group(2));
