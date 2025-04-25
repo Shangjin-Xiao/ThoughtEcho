@@ -233,11 +233,8 @@ class LogService with ChangeNotifier {
     // 添加到待处理队列，准备写入数据库
     _pendingLogs.add(entry);
     
-    // 在调试模式下打印日志
-    if (kDebugMode) {
-      // 使用 debugPrint 代替 print，以便重定向功能能捕获这些输出
-      debugPrint(entry.toString());
-    }
+    // 在调试模式下打印日志，但避免递归
+    // 不再使用 debugPrint 或 print，避免递归问题
     
     // 延迟通知监听器，避免在 build 方法中直接调用
     if (!_notifyScheduled) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'dart:convert';
 
 class QuoteItemWidget extends StatelessWidget {
   final Quote quote;
@@ -172,15 +174,7 @@ class QuoteItemWidget extends StatelessWidget {
                 // 笔记内容
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: Text(
-                    quote.content,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      height: 1.5,
-                    ),
-                    maxLines: isExpanded ? null : 3,
-                    overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                  ),
+                  child: _buildRichContent(context),
                 ),
                 
                 // 来源信息（如果有）
@@ -345,5 +339,33 @@ class QuoteItemWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildRichContent(BuildContext context) {
+    try {
+      final document = quill.Document.fromJson(jsonDecode(quote.content));
+      final controller = quill.QuillController(
+        document: document,
+        selection: const TextSelection.collapsed(offset: 0),
+      );
+      return quill.QuillEditor.basic(
+        controller: controller,
+        config: const quill.QuillEditorConfig(
+          expands: false,
+          padding: EdgeInsets.zero,
+        ),
+      );
+    } catch (_) {
+      // 纯文本回退
+      return Text(
+        quote.content,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+          height: 1.5,
+        ),
+        maxLines: isExpanded ? null : 3,
+        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+      );
+    }
   }
 }

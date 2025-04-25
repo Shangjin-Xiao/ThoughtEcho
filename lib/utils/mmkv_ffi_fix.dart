@@ -13,41 +13,59 @@ class SafeMMKV {
   factory SafeMMKV() => _instance;
   SafeMMKV._internal();
   
-  // 存储适配器
-  late final StorageAdapter _storage;
+  // 存储适配器 - 改为非 late，允许为 null
+  StorageAdapter? _storage;
   
   // 初始化标识
   bool _initialized = false;
   
+  // 初始化锁，防止并发初始化
+  final _initLock = Object();
+  bool _initializing = false;
+  
   /// 初始化存储
   Future<void> initialize() async {
+    // 如果已经初始化，则直接返回，避免重复初始化
     if (_initialized) return;
+    
+    // 简单的锁机制，避免并发初始化
+    if (_initializing) {
+      // 如果已经有其他线程在初始化，等待它完成
+      while (_initializing && !_initialized) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      return;
+    }
+    
+    _initializing = true;
     try {
       if (kIsWeb) {
         _storage = SharedPrefsAdapter();
-        await _storage.initialize();
+        await _storage!.initialize();
         debugPrint('SafeMMKV: Web 平台，使用 SharedPreferences');
       } else {
         try {
           _storage = MMKVAdapter();
-          await _storage.initialize();
+          await _storage!.initialize();
           debugPrint('SafeMMKV: 使用 MMKVAdapter (移动端) 作为存储');
         } catch (e) {
           debugPrint('SafeMMKV: MMKVAdapter 初始化失败: $e，回退到 SharedPreferences');
           _storage = SharedPrefsAdapter();
-          await _storage.initialize();
+          await _storage!.initialize();
         }
       }
       _initialized = true;
     } catch (e) {
       debugPrint('SafeMMKV 初始化失败: $e');
       rethrow;
+    } finally {
+      _initializing = false;
     }
   }
   
   /// 确保已初始化
   void _ensureInitialized() {
-    if (!_initialized) {
+    if (!_initialized || _storage == null) {
       throw StateError('SafeMMKV 尚未初始化，请先调用 initialize() 方法');
     }
   }
@@ -55,85 +73,85 @@ class SafeMMKV {
   /// 设置字符串值
   Future<bool> setString(String key, String value) async {
     _ensureInitialized();
-    return _storage.setString(key, value);
+    return _storage!.setString(key, value);
   }
   
   /// 获取字符串值
   String? getString(String key) {
     _ensureInitialized();
-    return _storage.getString(key);
+    return _storage!.getString(key);
   }
   
   /// 设置整数值
   Future<bool> setInt(String key, int value) async {
     _ensureInitialized();
-    return _storage.setInt(key, value);
+    return _storage!.setInt(key, value);
   }
   
   /// 获取整数值
   int? getInt(String key) {
     _ensureInitialized();
-    return _storage.getInt(key);
+    return _storage!.getInt(key);
   }
   
   /// 设置双精度浮点值
   Future<bool> setDouble(String key, double value) async {
     _ensureInitialized();
-    return _storage.setDouble(key, value);
+    return _storage!.setDouble(key, value);
   }
   
   /// 获取双精度浮点值
   double? getDouble(String key) {
     _ensureInitialized();
-    return _storage.getDouble(key);
+    return _storage!.getDouble(key);
   }
   
   /// 设置布尔值
   Future<bool> setBool(String key, bool value) async {
     _ensureInitialized();
-    return _storage.setBool(key, value);
+    return _storage!.setBool(key, value);
   }
   
   /// 获取布尔值
   bool? getBool(String key) {
     _ensureInitialized();
-    return _storage.getBool(key);
+    return _storage!.getBool(key);
   }
   
   /// 设置字符串列表
   Future<bool> setStringList(String key, List<String> value) async {
     _ensureInitialized();
-    return _storage.setStringList(key, value);
+    return _storage!.setStringList(key, value);
   }
   
   /// 获取字符串列表
   List<String>? getStringList(String key) {
     _ensureInitialized();
-    return _storage.getStringList(key);
+    return _storage!.getStringList(key);
   }
   
   /// 检查键是否存在
   bool containsKey(String key) {
     _ensureInitialized();
-    return _storage.containsKey(key);
+    return _storage!.containsKey(key);
   }
   
   /// 删除指定键的值
   Future<bool> remove(String key) async {
     _ensureInitialized();
-    return _storage.remove(key);
+    return _storage!.remove(key);
   }
   
   /// 清除所有值
   Future<bool> clear() async {
     _ensureInitialized();
-    return _storage.clear();
+    return _storage!.clear();
   }
   
   /// 获取所有键名
   Set<String> getKeys() {
     _ensureInitialized();
-    return _storage.getKeys();
+    return _storage!.getKeys();
   }
 }
 

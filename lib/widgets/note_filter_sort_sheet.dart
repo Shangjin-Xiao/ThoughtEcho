@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/note_category.dart';
+import '../utils/icon_utils.dart'; // Import IconUtils
 
 class NoteFilterSortSheet extends StatefulWidget {
   final List<NoteCategory> allTags;
@@ -55,18 +56,22 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             runSpacing: 8.0,
             children: widget.allTags.map((tag) {
               final isSelected = _tempSelectedTagIds.contains(tag.id);
+              // Use IconUtils to get the icon
+              final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+              final dynamic tagIcon = IconUtils.getIconData(tag.iconName); // getIconData handles null/empty and returns default
+
               return FilterChip(
                 selected: isSelected,
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                      (RegExp(r'^[\u{1F300}-\u{1FAFF}]', unicode: true).hasMatch(tag.iconName!))
+                      isEmoji
                         ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
-                        : Icon(
-                            IconData(int.tryParse(tag.iconName ?? '') ?? 0, fontFamily: 'MaterialIcons'),
-                            size: 16,
-                          ),
+                        // Use the IconData from IconUtils
+                        : (tagIcon is IconData) // Check if it's IconData
+                            ? Icon(tagIcon, size: 16)
+                            : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
                     if (tag.iconName != null && tag.iconName!.isNotEmpty) const SizedBox(width: 4),
                     Text(tag.name, style: theme.textTheme.bodyMedium),
                   ],
@@ -187,4 +192,4 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       ),
     );
   }
-} 
+}

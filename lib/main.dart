@@ -66,37 +66,55 @@ void main() async {
   
   // 全局记录未捕获的异步错误
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('捕获到平台分发器错误: $error');
-    debugPrint('堆栈: $stack');
+    // 使用原始 print 而不是通过日志系统重定向
+    print('捕获到平台分发器错误: $error');
+    print('堆栈: $stack');
+    
+    // 捕获到错误后再记录到日志系统
+    _deferredErrors.add({
+      'message': '平台分发器错误',
+      'error': error,
+      'stackTrace': stack,
+      'source': 'PlatformDispatcher',
+    });
+    
     return true; // 返回true表示错误已处理
   };
   
-  // 拦截所有print调用，重定向到日志系统
-  // 使用包装函数而不是直接赋值给print（这会导致错误）
-  const originalPrint = print;
-  void loggedPrint(Object? object) {
-    originalPrint(object);
-    try {
-      if (object != null) {
-        final logService = LogService.instance;
-        logService.debug(
-          object.toString(),
-          source: 'print',
-        );
-      }
-    } catch (_) {
-      // 忽略处理过程中的错误，以免影响正常日志输出
-    }
-  }
+  // 保存原始 print 函数
+  final originalPrint = print;
   
-  // 全局替换print为我们的包装函数
-  // ignore: invalid_assignment
-  // print = loggedPrint; // 这行会引起错误，我们不应该直接给print赋值
-  
-  // 重定向debugPrint，使其使用我们的日志系统
+  // 重新定义 debugPrint，创建一个安全版本避免递归
+  final originalDebugPrint = debugPrint;
   debugPrint = (String? message, {int? wrapWidth}) {
-    if (message != null) {
-      loggedPrint(message);
+    if (_isLogging) {
+      // 防止递归 - 如果已经在日志过程中，直接使用原始 print
+      originalPrint(message);
+      return;
+    }
+    
+    _isLogging = true;
+    try {
+      // 直接使用原始 print 输出，不触发递归
+      originalPrint(message);
+      
+      // 只有当 LogService 实例可用时才记录日志
+      if (message != null && message.isNotEmpty) {
+        // 尝试获取上下文
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          try {
+            final logService = Provider.of<LogService>(context, listen: false);
+            if (logService != null) {
+              logService.info(message, source: 'debugPrint');
+            }
+          } catch (_) {
+            // 忽略 Provider 错误
+          }
+        }
+      }
+    } finally {
+      _isLogging = false;
     }
   };
 
