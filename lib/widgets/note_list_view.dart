@@ -41,24 +41,184 @@ class _NoteListViewState extends State<NoteListView> {
   final TextEditingController _searchController = TextEditingController();
   final Map<String, bool> _expandedItems = {};
 
+  // 分页和懒加载状态
+  final List<Quote> _quotes = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  static const int _pageSize = 20;
+
   @override
   void initState() {
     super.initState();
     _searchController.text = widget.searchQuery;
+    // 初始化并加载第一页
+    _resetAndLoad();
   }
 
   @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // 搜索、筛选或排序变化时重置并重新加载
+    if (oldWidget.searchQuery != widget.searchQuery ||
+        oldWidget.selectedTagIds != widget.selectedTagIds ||
+        oldWidget.sortType != widget.sortType ||
+        oldWidget.sortAscending != widget.sortAscending) {
+      _resetAndLoad();
+    }
+    // 同步搜索框内容
     if (oldWidget.searchQuery != widget.searchQuery) {
       _searchController.text = widget.searchQuery;
     }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void _resetAndLoad() {
+    _quotes.clear();
+    _offset = 0;
+    _hasMore = true;
+    _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _isLoading) return;
+    setState(() => _isLoading = true);
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    // 构建排序字符串
+    final orderBy = widget.sortType == 'time'
+        ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+        : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}';
+    // 分页查询
+    final newQuotes = await db.getUserQuotes(
+      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+      limit: _pageSize,
+      offset: _offset,
+      orderBy: orderBy,
+    );
+    // 本地搜索过滤
+    final filtered = widget.searchQuery.isNotEmpty
+        ? newQuotes.where((q) =>
+            q.content.toLowerCase().contains(widget.searchQuery.toLowerCase()) ||
+            (q.source?.toLowerCase().contains(widget.searchQuery.toLowerCase()) ?? false)
+          ).toList()
+        : newQuotes;
+    setState(() {
+      _quotes.addAll(filtered);
+      _offset += newQuotes.length;
+      _hasMore = newQuotes.length == _pageSize;
+      _isLoading = false;
+    });
+  }
+
+  Widget _buildNoteList(DatabaseService db, ThemeData theme) {
+    // 加载中且还没数据
+    if (_quotes.isEmpty && _isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    // 无数据
+    if (_quotes.isEmpty && !_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.note_alt_outlined,
+              size: 64,
+              color: theme.colorScheme.primary.withAlpha(128),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '还没有笔记，开始记录吧！',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary.withAlpha(128),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: _quotes.length + (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index < _quotes.length) {
+          final quote = _quotes[index];
+          // 获取展开状态，如果不存在则默认为折叠状态
+          final bool isExpanded = _expandedItems[quote.id] ?? false;
+
+          return QuoteItemWidget(
+            quote: quote,
+            tags: widget.tags,
+            isExpanded: isExpanded,
+            onToggleExpanded: (expanded) {
+              setState(() {
+                _expandedItems[quote.id!] = expanded;
+              });
+            },
+            onEdit: () => widget.onEdit(quote),
+            onDelete: () => widget.onDelete(quote),
+            onAskAI: () => widget.onAskAI(quote),
+            // 显示标签和emoji
+            tagBuilder: (tag) {
+              return Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (IconUtils.isEmoji(tag.iconName)) ...[
+                      Text(
+                        IconUtils.getDisplayIcon(tag.iconName),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(width: 4),
+                    ] else ...[
+                      Icon(
+                        IconUtils.getIconData(tag.iconName),
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      tag.name,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        }
+        // 列表底部加载更多提示
+        _loadMore();
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
+    );
+  }
+
+  // 搜索内容变化回调
+  void _onSearchChanged(String value) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.searchQuery != value) {
+        // 触发父组件更新搜索参数
+        widget.onSortChanged(widget.sortType, widget.sortAscending);
+        // 更新全局搜索状态
+        final searchController = Provider.of<NoteSearchController>(context, listen: false);
+        searchController.updateSearch(value);
+      }
+    });
   }
 
   @override
@@ -82,21 +242,16 @@ class _NoteListViewState extends State<NoteListView> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onChanged: (value) {
-                    // 搜索内容改变时触发外部回调
-                    _onSearchChanged(value);
-                  },
+                  onChanged: _onSearchChanged,
                 ),
               ),
               const SizedBox(width: 8),
-              // 排序按钮
               IconButton(
                 icon: const Icon(Icons.sort),
                 tooltip: '排序',
                 onPressed: () => _showSortDialog(context),
               ),
               const SizedBox(width: 8),
-              // 标签筛选按钮
               IconButton(
                 icon: const Icon(Icons.filter_list),
                 tooltip: '标签筛选',
@@ -107,174 +262,6 @@ class _NoteListViewState extends State<NoteListView> {
         ),
         Expanded(child: _buildNoteList(db, theme)),
       ],
-    );
-  }
-
-  void _onSearchChanged(String value) {
-    // 通知父级组件搜索内容改变
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.searchQuery != value) {
-        // 使用回调传递搜索值到父组件，而不是仅传递标签ID
-        widget.onSortChanged(widget.sortType, widget.sortAscending);
-        
-        // 使用Provider更新搜索状态
-        final searchController = Provider.of<NoteSearchController>(context, listen: false);
-        searchController.updateSearch(value);
-      }
-    });
-  }
-
-  Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    return FutureBuilder<List<Quote>>(
-      future: db.getUserQuotes(
-        tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.note_alt_outlined,
-                  size: 64,
-                  color: theme.colorScheme.primary.withAlpha(128),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '还没有笔记，开始记录吧！',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary.withAlpha(128),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        var quotes = snapshot.data!;
-        if (widget.searchQuery.isNotEmpty) {
-          quotes =
-              quotes
-                  .where(
-                    (quote) =>
-                        quote.content.toLowerCase().contains(
-                          widget.searchQuery.toLowerCase(),
-                        ) ||
-                        (quote.source != null &&
-                            quote.source!.toLowerCase().contains(
-                              widget.searchQuery.toLowerCase(),
-                            )),
-                  )
-                  .toList();
-        }
-
-        if (quotes.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.search_off,
-                  size: 64,
-                  color: theme.colorScheme.primary.withAlpha(128),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '没有找到匹配的笔记',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary.withAlpha(128),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        // 根据排序类型和排序方向对笔记进行排序
-        if (widget.sortType == 'time') {
-          quotes.sort((a, b) {
-            final dateA = DateTime.parse(a.date);
-            final dateB = DateTime.parse(b.date);
-            return widget.sortAscending
-                ? dateA.compareTo(dateB) // 升序：从旧到新
-                : dateB.compareTo(dateA); // 降序：从新到旧
-          });
-        } else if (widget.sortType == 'name') {
-          quotes.sort((a, b) {
-            return widget.sortAscending
-                ? a.content.compareTo(b.content) // 升序：A-Z
-                : b.content.compareTo(a.content); // 降序：Z-A
-          });
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(8),
-          itemCount: quotes.length,
-          itemBuilder: (context, index) {
-            final quote = quotes[index];
-            // 获取展开状态，如果不存在则默认为折叠状态
-            final bool isExpanded = _expandedItems[quote.id] ?? false;
-
-            return QuoteItemWidget(
-              quote: quote,
-              tags: widget.tags,
-              isExpanded: isExpanded,
-              onToggleExpanded: (expanded) {
-                setState(() {
-                  _expandedItems[quote.id!] = expanded;
-                });
-              },
-              onEdit: () => widget.onEdit(quote),
-              onDelete: () => widget.onDelete(quote),
-              onAskAI: () => widget.onAskAI(quote),
-              // 显示标签和emoji
-              tagBuilder: (tag) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (IconUtils.isEmoji(tag.iconName)) ...[
-                        Text(
-                          IconUtils.getDisplayIcon(tag.iconName),
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(width: 4),
-                      ] else ...[
-                        Icon(
-                          IconUtils.getIconData(tag.iconName),
-                          size: 14,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        tag.name,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
     );
   }
 

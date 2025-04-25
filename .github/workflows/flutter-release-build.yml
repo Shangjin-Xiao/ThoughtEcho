@@ -77,8 +77,9 @@ jobs:
           echo "gradle.properties内容:"
           cat android/gradle.properties
           
-          # 构建APK，禁用代码压缩和混淆
+          # 构建APK，明确指定32位和64位架构
           flutter build apk --release \
+            --target-platform=android-arm,android-arm64 \
             --build-number=${{ github.run_number }} \
             --build-name=${{ github.event.inputs.version_name }} \
             --no-shrink \
