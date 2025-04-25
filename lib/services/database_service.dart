@@ -262,9 +262,54 @@ class DatabaseService extends ChangeNotifier {
 
       // 更新分类流数据
       await _updateCategoriesStream();
+      
+      // 修复: 初始化完成后，立即预加载笔记数据并触发监听器
+      debugPrint('数据库初始化完成，开始预加载笔记数据...');
+      // 重置流相关状态
+      _watchOffset = 0;
+      _quotesCache = [];
+      _filterCache.clear();
+      _watchHasMore = true;
+      // 调用一次 _loadNextQuotesPage 来预加载数据
+      await _prefetchInitialQuotes();
+      // 通知监听器数据已更新
+      notifyListeners();
     } catch (e) {
       debugPrint('数据库初始化错误: $e');
       rethrow;
+    }
+  }
+  
+  /// 在初始化时预加载笔记数据
+  Future<void> _prefetchInitialQuotes() async {
+    try {
+      // 使用默认配置加载第一页数据
+      final quotes = await getUserQuotes(
+        limit: _watchLimit,
+        offset: 0,
+        orderBy: _watchOrderBy,
+      );
+      
+      if (quotes.isNotEmpty) {
+        debugPrint('初始预加载了 ${quotes.length} 条笔记');
+        
+        // 更新缓存
+        final cacheKey = _generateCacheKey(orderBy: _watchOrderBy);
+        _addToCache(cacheKey, quotes, 0);
+        
+        // 确保笔记流控制器有最新数据
+        if (_quotesController.hasListener) {
+          _quotesCache = quotes;
+          _watchOffset = quotes.length;
+          _watchHasMore = quotes.length == _watchLimit;
+          _quotesController.add(List.unmodifiable(quotes));
+        }
+      } else {
+        debugPrint('数据库中没有笔记数据');
+      }
+    } catch (e) {
+      debugPrint('预加载笔记时出错: $e');
+      // 预加载错误不会导致初始化失败
     }
   }
 

@@ -223,61 +223,49 @@ class ClipboardService extends ChangeNotifier {
     // 构建一个OverlayEntry
     OverlayEntry? overlayEntry;
     overlayEntry = OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          // 背景层：事件透传，仅点击弹窗外时关闭弹窗
-          IgnorePointer(
-            ignoring: false,
-            child: Container(),
-          ),
-          // 居中弹窗，点击弹窗本身才响应
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 32,
-            left: MediaQuery.of(context).size.width / 2 - 160,
-            child: GestureDetector(
-              onTap: () async {
-                overlayEntry?.remove();
-                if (context.mounted) {
-                  _openEditPage(context, content, author, source);
-                }
-              },
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 320),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
-                    boxShadow: AppTheme.defaultShadow,
+      builder: (context) => Center(
+        child: GestureDetector(
+          onTap: () async {
+            overlayEntry?.remove();
+            if (context.mounted) {
+              _openEditPage(context, content, author, source);
+            }
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+                boxShadow: AppTheme.defaultShadow,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.content_paste,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.content_paste,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 20,
+                  const SizedBox(width: 10),
+                  const Flexible(
+                    child: Text(
+                      '发现剪贴板内容，点击添加为笔记',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                      const SizedBox(width: 10),
-                      const Flexible(
-                        child: Text(
-                          '发现剪贴板内容，点击添加为笔记',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
 

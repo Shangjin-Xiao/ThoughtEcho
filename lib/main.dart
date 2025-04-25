@@ -331,15 +331,33 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return LayoutBuilder(
           builder: (context, constraints) {
-            double maxWidth = 720; // 全局最大内容宽度
-            bool isWide = constraints.maxWidth > maxWidth;
+            // 更灵活的布局适应算法
+            double maxWidth;
+            double horizontalPadding;
+            
+            if (constraints.maxWidth < 600) {
+              // 小屏幕设备 (手机)
+              maxWidth = constraints.maxWidth;
+              horizontalPadding = 0;
+            } else if (constraints.maxWidth < 960) {
+              // 中等屏幕设备 (小平板)
+              maxWidth = constraints.maxWidth * 0.95;
+              horizontalPadding = 8;
+            } else if (constraints.maxWidth < 1280) {
+              // 大屏幕设备 (大平板/小桌面)
+              maxWidth = constraints.maxWidth * 0.9;
+              horizontalPadding = 16;
+            } else {
+              // 超大屏幕 (桌面)
+              maxWidth = 1600; // 更大的最大宽度
+              horizontalPadding = 24;
+            }
+            
             return Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isWide ? 24 : 0, // 大屏两侧留白
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   child: child!,
                 ),
               ),

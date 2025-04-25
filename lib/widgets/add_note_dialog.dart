@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
 import '../pages/note_full_editor_page.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -508,29 +509,24 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(
-                              color:
-                                  _selectedColorHex == null
-                                      ? theme.colorScheme.primary
-                                      : Colors.grey.shade300,
+                              color: _selectedColorHex == null ? theme.colorScheme.primary : Colors.grey.shade300,
                               width: 2,
                             ),
                             borderRadius: BorderRadius.circular(18),
                           ),
-                          child:
-                              _selectedColorHex == null
-                                  ? Center(
-                                    child: Icon(
-                                      Icons.check,
-                                      size: 18,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  )
-                                  : null,
+                          child: _selectedColorHex == null
+                              ? Center(
+                                  child: Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                )
+                              : null,
                         ),
                       ),
                       ..._colorOptions.map((color) {
-                        final colorHex =
-                            '#${color.value.toRadixString(16).substring(2)}';
+                        final colorHex = '#${color.value.toRadixString(16).substring(2)}';
                         final isSelected = _selectedColorHex == colorHex;
                         return GestureDetector(
                           onTap: () {
@@ -544,27 +540,97 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             decoration: BoxDecoration(
                               color: color,
                               border: Border.all(
-                                color:
-                                    isSelected
-                                        ? theme.colorScheme.primary
-                                        : Colors.grey.shade300,
+                                color: isSelected ? theme.colorScheme.primary : Colors.grey.shade300,
                                 width: 2,
                               ),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child:
-                                isSelected
-                                    ? Center(
-                                      child: Icon(
-                                        Icons.check,
-                                        size: 18,
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    )
-                                    : null,
+                            child: isSelected
+                                ? Center(
+                                    child: Icon(
+                                      Icons.check,
+                                      size: 18,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  )
+                                : null,
                           ),
                         );
                       }),
+                      // 自定义颜色（如果有且不在预设内）
+                      if (_selectedColorHex != null && !_colorOptions.map((c) => '#${c.value.toRadixString(16).substring(2)}').contains(_selectedColorHex))
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              // 保持当前自定义颜色选中
+                            });
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000),
+                              border: Border.all(
+                                color: theme.colorScheme.primary,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.check,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // 调色盘按钮
+                      GestureDetector(
+                        onTap: () async {
+                          final color = await showDialog<Color>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('选择自定义颜色'),
+                              content: ColorPicker(
+                                color: _selectedColorHex != null
+                                    ? Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000)
+                                    : Colors.blue,
+                                onColorChanged: (color) {
+                                  Navigator.of(context).pop(color);
+                                },
+                                pickersEnabled: <ColorPickerType, bool>{
+                                  ColorPickerType.both: false,
+                                  ColorPickerType.primary: true,
+                                  ColorPickerType.accent: false,
+                                },
+                                width: 28,
+                                height: 28,
+                                borderRadius: 14,
+                                spacing: 4,
+                                runSpacing: 4,
+                                showColorCode: false,
+                                showRecentColors: false,
+                              ),
+                            ),
+                          );
+                          if (color != null) {
+                            setState(() {
+                              _selectedColorHex = '#${color.value.toRadixString(16).substring(2)}';
+                            });
+                          }
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const Icon(Icons.palette, size: 18, color: Colors.grey),
+                        ),
+                      ),
                     ],
                   ),
                 ],

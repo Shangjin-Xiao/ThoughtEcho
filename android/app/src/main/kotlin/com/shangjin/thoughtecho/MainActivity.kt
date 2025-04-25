@@ -3,16 +3,14 @@ package com.shangjin.thoughtecho
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
+import android.view.WindowManager
 
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 检测设备架构是否为32位，如果是则禁用硬件加速
         if (!is64BitDevice()) {
-            // 最简单可靠的方法是直接设置Activity的硬件加速标志
-            window.setFlags(
-                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                0
-            )
+            // 使用clearFlags来禁用硬件加速
+            window.clearFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
         }
         super.onCreate(savedInstanceState)
     }

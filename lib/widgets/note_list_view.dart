@@ -290,23 +290,32 @@ class _NoteListViewState extends State<NoteListView> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // 根据屏幕宽度自适应调整内容宽度
         double maxWidth;
+        
         if (constraints.maxWidth < 600) {
-          maxWidth = constraints.maxWidth; // 小屏铺满
-        } else if (constraints.maxWidth < 1200) {
-          maxWidth = 900; // 中屏适中
+          maxWidth = constraints.maxWidth; // 小屏完全利用可用空间
+        } else if (constraints.maxWidth < 960) {
+          maxWidth = constraints.maxWidth * 0.98; // 中小屏几乎铺满
+        } else if (constraints.maxWidth < 1280) {
+          maxWidth = constraints.maxWidth * 0.95; // 中屏更高利用率
         } else {
-          maxWidth = 1200; // 大屏更宽
+          maxWidth = 1800; // 大屏更宽的最大宽度，充分利用大屏空间
         }
+        
+        // 根据屏幕尺寸调整边距 - 小屏幕紧凑一些
+        final horizontalPadding = constraints.maxWidth < 600 ? 4.0 : 8.0;
+        final verticalPadding = constraints.maxWidth < 600 ? 2.0 : 4.0;
+        
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 4), // 减少顶部组件间距
                     child: Row(
                       children: [
                         Expanded(
@@ -315,6 +324,10 @@ class _NoteListViewState extends State<NoteListView> {
                             decoration: InputDecoration(
                               hintText: '搜索笔记...',
                               prefixIcon: const Icon(Icons.search),
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: constraints.maxWidth < 600 ? 8.0 : 12.0,
+                              ),
+                              isDense: constraints.maxWidth < 600, // 小屏幕更紧凑
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -322,13 +335,16 @@ class _NoteListViewState extends State<NoteListView> {
                             onChanged: _onSearchChanged,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         IconButton(
                           icon: const Icon(Icons.tune),
                           tooltip: '筛选/排序',
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40), // 更紧凑的按钮
+                          visualDensity: VisualDensity.compact,
                           onPressed: () {
                             showModalBottomSheet(
                               context: context,
+                              isScrollControlled: true, // 允许更大的底部表单
                               shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                               ),
