@@ -2,18 +2,21 @@ package com.shangjin.thoughtecho
 
 import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
+import android.view.Window
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 检测设备架构是否为32位，如果是则禁用硬件加速
         if (!is64BitDevice()) {
-            // 正确的方法是设置窗口标志
+            // 使用更通用的方法禁用硬件加速
+            requestWindowFeature(Window.FEATURE_NO_TITLE)
             window.setFlags(
-                WindowManager.LayoutParams.FLAG_SOFTWARE_RENDERABLE,
-                WindowManager.LayoutParams.FLAG_SOFTWARE_RENDERABLE
+                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
             )
+            // 清除硬件加速标志
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
         }
         super.onCreate(savedInstanceState)
     }
