@@ -14,6 +14,7 @@ import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
 import 'insights_page.dart';
 import 'settings_page.dart';
+import '../theme/app_theme.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -352,49 +353,46 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    boxShadow: AppTheme.defaultShadow,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.location_on,
-                        size: 12,
+                        size: 14,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-                      const SizedBox(width: 2),
+                      const SizedBox(width: 4),
                       Text(
                         locationService.getDisplayLocation(),
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       Text(
                         '|',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer
-                              .withAlpha(128),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer.withAlpha(128),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       Icon(
                         weatherService.getWeatherIconData(),
-                        size: 16,
+                        size: 18,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

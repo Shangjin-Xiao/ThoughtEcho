@@ -9,6 +9,8 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
+import '../theme/app_theme.dart';
+import '../pages/note_full_editor_page.dart';
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -316,15 +318,52 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 16),
-            TextField(
-              controller: _contentController,
-              decoration: const InputDecoration(
-                hintText: '写下你的感悟...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.edit),
-              ),
-              maxLines: 3,
-              autofocus: true,
+            // 内容输入区，带全屏编辑按钮
+            const SizedBox(height: 16),
+            Stack(
+              children: [
+                TextField(
+                  controller: _contentController,
+                  decoration: InputDecoration(
+                    hintText: '写下你的感悟...',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.edit),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16).copyWith(right: 48),
+                  ),
+                  maxLines: 3,
+                  autofocus: true,
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Builder(
+                    builder: (context) {
+                      final isLongContent = _contentController.text.length > 100;
+                      return IconButton(
+                        tooltip: '全屏编辑',
+                        icon: Icon(
+                          Icons.fullscreen,
+                          color: isLongContent ? theme.colorScheme.primary : theme.iconTheme.color,
+                        ),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NoteFullEditorPage(
+                                initialContent: _contentController.text,
+                              ),
+                            ),
+                          );
+                          if (result != null && result is String) {
+                            _contentController.text = result;
+                            setState(() {});
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             // 拆分来源输入为作者和作品
@@ -897,6 +936,65 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             tags: tags,
             onSave: onSave,
           ),
+    );
+  }
+}
+
+class FullScreenNoteEditor extends StatefulWidget {
+  final String initialText;
+  const FullScreenNoteEditor({super.key, required this.initialText});
+
+  @override
+  State<FullScreenNoteEditor> createState() => _FullScreenNoteEditorState();
+}
+
+class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('全屏编辑'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check),
+            tooltip: '保存并返回',
+            onPressed: () {
+              Navigator.pop(context, _controller.text);
+            },
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: TextField(
+          controller: _controller,
+          maxLines: null,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: '请输入内容...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+            ),
+            filled: true,
+            fillColor: theme.colorScheme.surface,
+          ),
+        ),
+      ),
     );
   }
 }

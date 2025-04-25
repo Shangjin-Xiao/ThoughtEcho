@@ -14,6 +14,19 @@ class AppTheme with ChangeNotifier {
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
   
+  // 全局圆角和阴影参数
+  static const double cardRadius = 16;
+  static const double dialogRadius = 20;
+  static const double buttonRadius = 12;
+  static const double inputRadius = 10;
+  static const List<BoxShadow> defaultShadow = [
+    BoxShadow(
+      color: Colors.black12,
+      blurRadius: 8,
+      offset: Offset(0, 2),
+    ),
+  ];
+  
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
     if (_useCustomColor && _customColor != null) {
@@ -140,7 +153,7 @@ class AppTheme with ChangeNotifier {
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 7,
-      subThemesData: const FlexSubThemesData(
+      subThemesData: FlexSubThemesData(
         blendOnLevel: 10,
         blendOnColors: false,
         useTextTheme: true,
@@ -149,10 +162,14 @@ class AppTheme with ChangeNotifier {
         useInputDecoratorThemeInDialogs: true,
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
-        cardRadius: 12,
-        inputDecoratorRadius: 10,
-        dialogRadius: 20,
-        timePickerDialogRadius: 20,
+        cardRadius: cardRadius,
+        inputDecoratorRadius: inputRadius,
+        dialogRadius: dialogRadius,
+        timePickerDialogRadius: dialogRadius,
+        outlinedButtonRadius: buttonRadius,
+        filledButtonRadius: buttonRadius,
+        textButtonRadius: buttonRadius,
+        fabRadius: buttonRadius,
       ),
       keyColors: const FlexKeyColors(
         useSecondary: true,
@@ -170,7 +187,7 @@ class AppTheme with ChangeNotifier {
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 10,
-      subThemesData: const FlexSubThemesData(
+      subThemesData: FlexSubThemesData(
         blendOnLevel: 15,
         useTextTheme: true,
         useM2StyleDividerInM3: false,
@@ -178,10 +195,14 @@ class AppTheme with ChangeNotifier {
         useInputDecoratorThemeInDialogs: true,
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
-        cardRadius: 12,
-        inputDecoratorRadius: 10,
-        dialogRadius: 20,
-        timePickerDialogRadius: 20,
+        cardRadius: cardRadius,
+        inputDecoratorRadius: inputRadius,
+        dialogRadius: dialogRadius,
+        timePickerDialogRadius: dialogRadius,
+        outlinedButtonRadius: buttonRadius,
+        filledButtonRadius: buttonRadius,
+        textButtonRadius: buttonRadius,
+        fabRadius: buttonRadius,
       ),
       keyColors: const FlexKeyColors(
         useSecondary: true,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class SlidingCard extends StatelessWidget {
   final Widget child;
@@ -24,9 +25,19 @@ class SlidingCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(24),
         child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          ),
+          shadowColor: Colors.transparent,
           child: Container(
             padding: const EdgeInsets.all(24),
             alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              boxShadow: AppTheme.defaultShadow,
+              color: theme.cardColor,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
