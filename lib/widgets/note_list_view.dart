@@ -41,6 +41,8 @@ class NoteListView extends StatefulWidget {
 class _NoteListViewState extends State<NoteListView> {
   final TextEditingController _searchController = TextEditingController();
   final Map<String, bool> _expandedItems = {};
+  // 添加固定的GlobalKey，避免重建时生成新Key
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
@@ -77,19 +79,25 @@ class _NoteListViewState extends State<NoteListView> {
   @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // 更新搜索控制器文本，避免与外部状态不同步
+    if (oldWidget.searchQuery != widget.searchQuery) {
+      _searchController.text = widget.searchQuery;
+    }
+    // 检查是否有条件变化
     if (oldWidget.searchQuery != widget.searchQuery ||
-        oldWidget.selectedTagIds != widget.selectedTagIds ||
+        !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending) {
-      // 重置并重订阅
+      // 取消旧的订阅并重新订阅新的数据流
       _quotesSub.cancel();
       final db = Provider.of<DatabaseService>(context, listen: false);
       _quotesSub = db.watchQuotes(
         tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
         limit: _pageSize,
         orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+            ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+            : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+        searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
       ).listen((list) {
         setState(() {
           _quotes.clear();
@@ -97,9 +105,16 @@ class _NoteListViewState extends State<NoteListView> {
           _hasMore = list.length % _pageSize == 0;
         });
       });
-      _searchController.text = widget.searchQuery;
-      _loadMore();
     }
+  }
+  
+  // 辅助方法：比较两个列表是否相等
+  bool _areListsEqual(List<String> list1, List<String> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i] != list2[i]) return false;
+    }
+    return true;
   }
 
   @override
@@ -147,75 +162,101 @@ class _NoteListViewState extends State<NoteListView> {
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: _quotes.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index < _quotes.length) {
-          final quote = _quotes[index];
-          // 获取展开状态，如果不存在则默认为折叠状态
-          final bool isExpanded = _expandedItems[quote.id] ?? false;
-
-          return QuoteItemWidget(
-            quote: quote,
-            tags: widget.tags,
-            isExpanded: isExpanded,
-            onToggleExpanded: (expanded) {
-              setState(() {
-                _expandedItems[quote.id!] = expanded;
-              });
-            },
-            onEdit: () => widget.onEdit(quote),
-            onDelete: () => widget.onDelete(quote),
-            onAskAI: () => widget.onAskAI(quote),
-            // 显示标签和emoji
-            tagBuilder: (tag) {
-              return Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (IconUtils.isEmoji(tag.iconName)) ...[
-                      Text(
-                        IconUtils.getDisplayIcon(tag.iconName),
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(width: 4),
-                    ] else ...[
-                      Icon(
-                        IconUtils.getIconData(tag.iconName),
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      tag.name,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
+    
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) {
+        // 预加载逻辑：当用户滚动到距离底部20%的位置时，提前加载下一页
+        if (notification is ScrollUpdateNotification) {
+          final metrics = notification.metrics;
+          if (metrics.pixels > metrics.maxScrollExtent - metrics.viewportDimension * 0.2) {
+            _loadMore();
+          }
         }
-        // 滚到底部时触发加载更多
-        _loadMore();
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Center(child: CircularProgressIndicator()),
-        );
+        return true;
       },
+      child: AnimatedList(
+        key: _listKey,
+        initialItemCount: _quotes.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index, animation) {
+          if (index < _quotes.length) {
+            final quote = _quotes[index];
+            // 获取展开状态，如果不存在则默认为折叠状态
+            final bool isExpanded = _expandedItems[quote.id] ?? false;
+            
+            // 使用FadeTransition为新项目添加淡入效果
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: animation.drive(
+                  Tween<Offset>(
+                    begin: const Offset(0.1, 0),
+                    end: Offset.zero,
+                  ),
+                ),
+                child: QuoteItemWidget(
+                  quote: quote,
+                  tags: widget.tags,
+                  isExpanded: isExpanded,
+                  onToggleExpanded: (expanded) {
+                    setState(() {
+                      _expandedItems[quote.id!] = expanded;
+                    });
+                  },
+                  onEdit: () => widget.onEdit(quote),
+                  onDelete: () => widget.onDelete(quote),
+                  onAskAI: () => widget.onAskAI(quote),
+                  tagBuilder: (tag) {
+                    return Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (IconUtils.isEmoji(tag.iconName)) ...[
+                            Text(
+                              IconUtils.getDisplayIcon(tag.iconName),
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                          ] else ...[
+                            Icon(
+                              IconUtils.getIconData(tag.iconName),
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            tag.name,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          }
+          // 底部加载指示器，也使用动画淡入显示
+          return FadeTransition(
+            opacity: animation,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -33,6 +33,10 @@ class DatabaseService extends ChangeNotifier {
   bool _watchHasMore = true;
   String? _watchSearchQuery;
 
+  // 查询缓存，减少重复数据库查询
+  final Map<String, List<Quote>> _filterCache = {};
+  final int _maxCacheEntries = 10; // 最多缓存10组过滤条件的结果
+
   Database get database {
     if (_database == null) {
       throw Exception('数据库未初始化');
@@ -1103,17 +1107,167 @@ class DatabaseService extends ChangeNotifier {
   }
 
   Future<void> _loadNextQuotesPage() async {
-    final newQuotes = await getUserQuotes(
+    // 如果已经没有更多数据，直接返回
+    if (!_watchHasMore) return;
+    
+    // 生成当前查询条件的缓存键
+    final cacheKey = _generateCacheKey(
       tagIds: _watchTagIds,
       categoryId: _watchCategoryId,
-      limit: _watchLimit,
-      offset: _watchOffset,
-      orderBy: _watchOrderBy,
       searchQuery: _watchSearchQuery,
+      orderBy: _watchOrderBy,
     );
-    _quotesCache.addAll(newQuotes);
-    _watchOffset += newQuotes.length;
-    _watchHasMore = newQuotes.length == _watchLimit;
-    _quotesController.add(List.unmodifiable(_quotesCache));
+    
+    // 先尝试从缓存获取数据
+    final cachedQuotes = _getFromCache(cacheKey, _watchOffset, _watchLimit);
+    if (cachedQuotes != null) {
+      debugPrint('从缓存加载 ${cachedQuotes.length} 条笔记 (偏移量: $_watchOffset)');
+      _quotesCache.addAll(cachedQuotes);
+      _watchOffset += cachedQuotes.length;
+      _watchHasMore = cachedQuotes.length == _watchLimit;
+      _quotesController.add(List.unmodifiable(_quotesCache));
+      
+      // 如果本次加载接近缓存末尾，提前加载下一页
+      final cachedData = _filterCache[cacheKey];
+      if (cachedData != null && _watchOffset >= cachedData.length - _watchLimit / 2) {
+        // 在后台预加载下一页数据
+        _prefetchNextPage(cacheKey);
+      }
+      
+      return;
+    }
+
+    // 缓存未命中，从数据库加载
+    _loadFromDatabase(cacheKey);
+  }
+
+  // 从数据库加载数据
+  Future<void> _loadFromDatabase(String cacheKey) async {
+    try {
+      final newQuotes = await getUserQuotes(
+        tagIds: _watchTagIds,
+        categoryId: _watchCategoryId,
+        limit: _watchLimit,
+        offset: _watchOffset,
+        orderBy: _watchOrderBy,
+        searchQuery: _watchSearchQuery,
+      );
+      
+      debugPrint('从数据库加载 ${newQuotes.length} 条笔记 (偏移量: $_watchOffset)');
+      
+      if (newQuotes.isNotEmpty) {
+        _quotesCache.addAll(newQuotes);
+        _watchOffset += newQuotes.length;
+        _watchHasMore = newQuotes.length == _watchLimit;
+        
+        // 将新获取的数据添加到缓存中
+        _addToCache(cacheKey, newQuotes, _watchOffset - newQuotes.length);
+        
+        // 如果加载了满页数据，触发预加载下一页
+        if (newQuotes.length == _watchLimit) {
+          // 延迟预加载，避免立即发起新请求
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (_quotesController.hasListener) {
+              _prefetchNextPage(cacheKey);
+            }
+          });
+        }
+      } else {
+        _watchHasMore = false;
+      }
+      
+      // 通知监听器
+      _quotesController.add(List.unmodifiable(_quotesCache));
+    } catch (e) {
+      debugPrint('加载笔记时出错: $e');
+      // 出错时也需要通知，避免UI一直显示加载状态
+      _quotesController.add(List.unmodifiable(_quotesCache));
+    }
+  }
+
+  // 预加载下一页数据
+  Future<void> _prefetchNextPage(String cacheKey) async {
+    try {
+      // 检查是否已经加载了所有数据
+      if (!_watchHasMore) return;
+      
+      // 计算下一页的偏移量
+      final nextPageOffset = _watchOffset;
+      
+      // 避免重复预加载：检查缓存中是否已经有了下一页数据
+      final cachedData = _filterCache[cacheKey];
+      if (cachedData != null && cachedData.length > nextPageOffset) {
+        // 缓存中已有下一页数据，无需预加载
+        return;
+      }
+      
+      debugPrint('预加载下一页数据，偏移量: $nextPageOffset');
+      
+      // 预加载下一页数据
+      final prefetchedQuotes = await getUserQuotes(
+        tagIds: _watchTagIds,
+        categoryId: _watchCategoryId,
+        limit: _watchLimit,
+        offset: nextPageOffset,
+        orderBy: _watchOrderBy,
+        searchQuery: _watchSearchQuery,
+      );
+      
+      // 将预加载的数据添加到缓存，但不更新当前显示
+      if (prefetchedQuotes.isNotEmpty) {
+        _addToCache(cacheKey, prefetchedQuotes, nextPageOffset);
+      }
+    } catch (e) {
+      debugPrint('预加载笔记时出错: $e');
+      // 预加载错误可以被忽略，不影响主UI流
+    }
+  }
+
+  // 生成缓存键，将过滤条件组合成唯一标识
+  String _generateCacheKey({
+    List<String>? tagIds, 
+    String? categoryId, 
+    String? searchQuery, 
+    String orderBy = 'date DESC'
+  }) {
+    final tagKey = tagIds?.join(',') ?? '';
+    final categoryKey = categoryId ?? '';
+    final searchKey = searchQuery ?? '';
+    return '$tagKey|$categoryKey|$searchKey|$orderBy';
+  }
+
+  // 从缓存中获取数据，如果有的话
+  List<Quote>? _getFromCache(String cacheKey, int offset, int limit) {
+    final cachedData = _filterCache[cacheKey];
+    if (cachedData == null) return null;
+    
+    // 检查是否缓存了足够的数据
+    if (cachedData.length > offset) {
+      final end = (offset + limit) <= cachedData.length ? 
+                  (offset + limit) : cachedData.length;
+      return cachedData.sublist(offset, end);
+    }
+    
+    return null;
+  }
+
+  // 向缓存添加数据
+  void _addToCache(String cacheKey, List<Quote> quotes, int offset) {
+    if (!_filterCache.containsKey(cacheKey)) {
+      // 如果缓存已满，移除最旧的条目
+      if (_filterCache.length >= _maxCacheEntries) {
+        final oldestKey = _filterCache.keys.first;
+        _filterCache.remove(oldestKey);
+      }
+      _filterCache[cacheKey] = [];
+    }
+    
+    // 如果是第一页，则清空缓存
+    if (offset == 0) {
+      _filterCache[cacheKey] = List.from(quotes);
+    } else {
+      // 否则追加到现有缓存
+      _filterCache[cacheKey]!.addAll(quotes);
+    }
   }
 }
