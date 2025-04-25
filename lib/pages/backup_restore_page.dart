@@ -27,7 +27,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final dbService = Provider.of<DatabaseService>(context, listen: false);
       
       // 尝试预先验证能否导出
-      bool canExport = await dbService.checkCanExport();
+      bool canExport = false; // 默认值为false，需要通过验证
+      try {
+        // 使用已存在的checkCanExport方法验证数据库是否可访问
+        canExport = await dbService.checkCanExport();
+      } catch (e) {
+        debugPrint('数据库访问验证失败: $e');
+      }
       
       // 关闭加载指示器
       loadingOverlay.remove();
@@ -292,6 +298,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
       
       // 添加选项让用户选择是清空原有数据还是合并数据
+      if (!mounted) return;
       final importOption = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -390,7 +397,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   OverlayEntry _showLoadingOverlay(BuildContext context, String message) {
     final overlay = OverlayEntry(
       builder: (context) => Container(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         child: Center(
           child: Card(
             margin: const EdgeInsets.all(16),
@@ -430,12 +437,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       ),
     );
   }
-  
-  /// 获取文档目录路径
-  Future<String> _getDocumentsPath() async {
-    final directory = await getApplicationDocumentsDirectory();
-    return directory.path;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -449,7 +450,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               '定期备份数据可以帮助您防止意外数据丢失。建议每次进行重要更改后都创建一个备份。',
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),

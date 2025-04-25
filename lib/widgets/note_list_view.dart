@@ -170,6 +170,8 @@ class _NoteListViewState extends State<NoteListView> {
       child: AnimatedList(
         key: _listKey,
         initialItemCount: _quotes.length + (_hasMore ? 1 : 0),
+        physics: const AlwaysScrollableScrollPhysics(),
+        scrollDirection: Axis.vertical,
         itemBuilder: (context, index, animation) {
           if (index < _quotes.length) {
             final quote = _quotes[index];
@@ -272,33 +274,33 @@ class _NoteListViewState extends State<NoteListView> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20), // 全局左右、上下留白
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12), // 去除左右白边
       child: Column(
-        children: [
-          Padding(
+      children: [
+        Padding(
             padding: const EdgeInsets.only(bottom: 12), // 搜索栏与列表间距
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: '搜索笔记...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: '搜索笔记...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    onChanged: _onSearchChanged,
                   ),
+                  onChanged: _onSearchChanged,
                 ),
-                const SizedBox(width: 8),
-                IconButton(
+              ),
+              const SizedBox(width: 8),
+              IconButton(
                   icon: const Icon(Icons.tune),
                   tooltip: '筛选/排序',
                   onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
+    showModalBottomSheet(
+      context: context,
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                       ),
@@ -324,7 +326,7 @@ class _NoteListViewState extends State<NoteListView> {
           ),
           Expanded(child: _buildNoteList(db, theme)),
         ],
-      ),
+          ),
     );
   }
 }

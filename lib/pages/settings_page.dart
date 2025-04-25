@@ -466,7 +466,7 @@ class _SettingsPageState extends State<SettingsPage> {
                        applicationName: '心迹 (ThoughtEcho)',
                        // 不再显示版本号
                        // applicationVersion: _appVersion,
-                       applicationIcon: Image.asset('icon.png', width: 48, height: 48), // 确保 icon.png 在 assets 中
+                       applicationIcon: Image.asset('assets/icon.png', width: 48, height: 48), // 路径修正，兼容所有平台
                        applicationLegalese: '© 2024 Shangjin Xiao',
                        children: <Widget>[
                          const SizedBox(height: 16),

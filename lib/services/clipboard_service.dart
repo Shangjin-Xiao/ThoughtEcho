@@ -223,29 +223,24 @@ class ClipboardService extends ChangeNotifier {
     // 构建一个OverlayEntry
     OverlayEntry? overlayEntry;
     overlayEntry = OverlayEntry(
-      builder: (context) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () async {
-          overlayEntry?.remove();
-          if (context.mounted) {
-            _openEditPage(context, content, author, source);
-          }
-        },
-        child: Stack(
-          children: [
-            // 半透明背景，点击背景即忽略
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  overlayEntry?.remove();
-                },
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-            // 居中弹窗
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 32,
-              left: MediaQuery.of(context).size.width / 2 - 160,
+      builder: (context) => Stack(
+        children: [
+          // 背景层：事件透传，仅点击弹窗外时关闭弹窗
+          IgnorePointer(
+            ignoring: false,
+            child: Container(),
+          ),
+          // 居中弹窗，点击弹窗本身才响应
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 32,
+            left: MediaQuery.of(context).size.width / 2 - 160,
+            child: GestureDetector(
+              onTap: () async {
+                overlayEntry?.remove();
+                if (context.mounted) {
+                  _openEditPage(context, content, author, source);
+                }
+              },
               child: Material(
                 color: Colors.transparent,
                 child: Container(
@@ -268,7 +263,7 @@ class ClipboardService extends ChangeNotifier {
                       const SizedBox(width: 10),
                       const Flexible(
                         child: Text(
-                          '发现剪贴板内容，点击弹窗添加为笔记',
+                          '发现剪贴板内容，点击添加为笔记',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -281,8 +276,8 @@ class ClipboardService extends ChangeNotifier {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 

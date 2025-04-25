@@ -97,7 +97,6 @@ class QuoteItemWidget extends StatelessWidget {
           : theme.colorScheme.surfaceContainerHighest,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          onTap: () => onToggleExpanded(!isExpanded),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),

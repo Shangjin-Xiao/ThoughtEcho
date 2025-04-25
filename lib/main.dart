@@ -18,6 +18,8 @@ import 'services/log_service.dart';
 import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -61,94 +63,90 @@ bool _isEmergencyMode = false;
 final List<Map<String, dynamic>> _deferredErrors = [];
 
 void main() async {
-  // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // 全局记录未捕获的异步错误
-  PlatformDispatcher.instance.onError = (error, stack) {
-    // 使用原始 print 而不是通过日志系统重定向
-    print('捕获到平台分发器错误: $error');
-    print('堆栈: $stack');
-    
-    // 捕获到错误后再记录到日志系统
-    _deferredErrors.add({
-      'message': '平台分发器错误',
-      'error': error,
-      'stackTrace': stack,
-      'source': 'PlatformDispatcher',
-    });
-    
-    return true; // 返回true表示错误已处理
-  };
-  
-  // 保存原始 print 函数
-  final originalPrint = print;
-  
-  // 重新定义 debugPrint，创建一个安全版本避免递归
-  final originalDebugPrint = debugPrint;
-  debugPrint = (String? message, {int? wrapWidth}) {
-    if (_isLogging) {
-      // 防止递归 - 如果已经在日志过程中，直接使用原始 print
-      originalPrint(message);
-      return;
-    }
-    
-    _isLogging = true;
-    try {
-      // 直接使用原始 print 输出，不触发递归
-      originalPrint(message);
+  await runZonedGuarded<Future<void>>(() async {
+    // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // 全局记录未捕获的异步错误
+    PlatformDispatcher.instance.onError = (error, stack) {
+      // 使用debugPrint而不是print
+      debugPrint('捕获到平台分发器错误: $error');
+      debugPrint('堆栈: $stack');
       
-      // 只有当 LogService 实例可用时才记录日志
-      if (message != null && message.isNotEmpty) {
-        // 尝试获取上下文
-        final context = navigatorKey.currentContext;
-        if (context != null) {
-          try {
-            final logService = Provider.of<LogService>(context, listen: false);
-            if (logService != null) {
+      // 捕获到错误后再记录到日志系统
+      _deferredErrors.add({
+        'message': '平台分发器错误',
+        'error': error,
+        'stackTrace': stack,
+        'source': 'PlatformDispatcher',
+      });
+      
+      return true; // 返回true表示错误已处理
+    };
+
+    // 保存原始 print 函数
+    const originalPrint = print;
+
+    // 重新定义 debugPrint
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (_isLogging) {
+        // 防止递归 - 如果已经在日志过程中，直接使用原始 print
+        originalPrint(message);
+        return;
+      }
+      
+      _isLogging = true;
+      try {
+        // 直接使用原始 print 输出，不触发递归
+        originalPrint(message);
+        
+        // 只有当 LogService 实例可用时才记录日志
+        if (message != null && message.isNotEmpty) {
+          // 尝试获取上下文
+          final context = navigatorKey.currentContext;
+          if (context != null) {
+            try {
+              final logService = Provider.of<LogService>(context, listen: false);
               logService.info(message, source: 'debugPrint');
+            } catch (_) {
+              // 忽略 Provider 错误
             }
-          } catch (_) {
-            // 忽略 Provider 错误
           }
         }
+      } finally {
+        _isLogging = false;
       }
-    } finally {
-      _isLogging = false;
-    }
-  };
+    };
 
-  // 捕获Flutter框架异常并写入日志服务
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.dumpErrorToConsole(details);
-    
-    // 尝试获取LogService实例
-    final context = navigatorKey.currentContext;
-    try {
-      if (context != null) {
-        final logService = Provider.of<LogService>(context, listen: false);
-        logService.error(
-          'Flutter异常: ${details.exceptionAsString()}',
-          error: details.exception,
-          stackTrace: details.stack,
-          source: 'FlutterError',
-        );
-      } else {
-        // 无法通过context获取LogService时，先保存到全局缓存
-        _deferredErrors.add({
-          'message': 'Flutter异常: ${details.exceptionAsString()}',
-          'error': details.exception,
-          'stackTrace': details.stack,
-          'source': 'FlutterError',
-        });
+    // 捕获Flutter框架异常并写入日志服务
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.dumpErrorToConsole(details);
+      
+      // 尝试获取LogService实例
+      final context = navigatorKey.currentContext;
+      try {
+        if (context != null) {
+          final logService = Provider.of<LogService>(context, listen: false);
+          logService.error(
+            'Flutter异常: ${details.exceptionAsString()}',
+            error: details.exception,
+            stackTrace: details.stack,
+            source: 'FlutterError',
+          );
+        } else {
+          // 无法通过context获取LogService时，先保存到全局缓存
+          _deferredErrors.add({
+            'message': 'Flutter异常: ${details.exceptionAsString()}',
+            'error': details.exception,
+            'stackTrace': details.stack,
+            'source': 'FlutterError',
+          });
+        }
+      } catch (e) {
+        debugPrint('记录Flutter异常时出错: $e');
       }
-    } catch (e) {
-      debugPrint('记录Flutter异常时出错: $e');
-    }
-  };
+    };
 
-  // 在区域内捕获所有未处理的异常和错误
-  await runZonedGuarded<Future<void>>(() async {
     try {
       // 初始化平台特定的数据库配置
       await initializeDatabasePlatform();
@@ -229,21 +227,21 @@ void main() async {
         ),
       );
     } catch (e, stackTrace) {
-      debugPrint('应用初始化失败: \\$e');
-      debugPrint('堆栈跟踪: \\$stackTrace');
+      debugPrint('应用初始化失败: $e');
+      debugPrint('堆栈跟踪: $stackTrace');
       
       // 如果初始化失败，直接运行一个简单的错误应用
       _isEmergencyMode = true;
       runApp(EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()));
     }
   }, (error, stackTrace) {
-    debugPrint('未捕获的异常: \\$error');
-    debugPrint('堆栈跟踪: \\$stackTrace');
+    debugPrint('未捕获的异常: $error');
+    debugPrint('堆栈跟踪: $stackTrace');
     final context = navigatorKey.currentContext;
     if (context != null) {
       try {
         Provider.of<LogService>(context, listen: false).error(
-          '未捕获异常: \\$error',
+          '未捕获异常: $error',
           error: error,
           stackTrace: stackTrace,
           source: 'runZonedGuarded',
@@ -276,6 +274,17 @@ class MyApp extends StatelessWidget {
       home: isEmergencyMode 
         ? const EmergencyRecoveryPage() 
         : const HomePage(),
+      localizationsDelegates: const [
+        quill.FlutterQuillLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('zh'),
+        Locale('en'),
+        // 你可以根据需要添加更多语言
+      ],
     );
   }
 }

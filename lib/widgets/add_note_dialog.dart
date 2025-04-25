@@ -320,231 +320,196 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         top: 16,
       ),
       child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            // 内容输入区，带全屏编辑按钮
-            const SizedBox(height: 16),
-            Stack(
-              children: [
-                TextField(
-                  controller: _contentController,
-                  decoration: InputDecoration(
-                    hintText: '写下你的感悟...',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.edit),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16).copyWith(right: 48),
+        child: IntrinsicHeight(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              // 内容输入区，带全屏编辑按钮
+              const SizedBox(height: 16),
+              Stack(
+                children: [
+                  TextField(
+                    controller: _contentController,
+                    decoration: InputDecoration(
+                      hintText: '写下你的感悟...',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.edit),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16).copyWith(right: 48),
+                    ),
+                    maxLines: 3,
+                    autofocus: true,
                   ),
-                  maxLines: 3,
-                  autofocus: true,
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Builder(
-                    builder: (context) {
-                      final isLongContent = _contentController.text.length > 100;
-                      return IconButton(
-                        tooltip: '全屏编辑',
-                        icon: Icon(
-                          Icons.fullscreen,
-                          color: isLongContent ? theme.colorScheme.primary : theme.iconTheme.color,
-                        ),
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => NoteFullEditorPage(
-                                initialContent: _contentController.text,
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Builder(
+                      builder: (context) {
+                        final isLongContent = _contentController.text.length > 100;
+                        return IconButton(
+                          tooltip: '全屏编辑',
+                          icon: Icon(
+                            Icons.fullscreen,
+                            color: isLongContent ? theme.colorScheme.primary : theme.iconTheme.color,
+                          ),
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NoteFullEditorPage(
+                                  initialContent: _contentController.text,
+                                ),
                               ),
-                            ),
-                          );
-                          if (result != null && result is String) {
-                            _contentController.text = result;
-                            setState(() {});
-                          }
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 拆分来源输入为作者和作品
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _authorController,
-                    decoration: const InputDecoration(
-                      hintText: '作者/人物',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                            );
+                            if (result != null && result is String) {
+                              _contentController.text = result;
+                              setState(() {});
+                            }
+                          },
+                        );
+                      },
                     ),
-                    maxLines: 1,
-                    onChanged: (value) => setState(() {}),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _workController,
-                    decoration: const InputDecoration(
-                      hintText: '作品名称',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.book),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 拆分来源输入为作者和作品
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _authorController,
+                      decoration: const InputDecoration(
+                        hintText: '作者/人物',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      maxLines: 1,
+                      onChanged: (value) => setState(() {}),
                     ),
-                    maxLines: 1,
-                    onChanged: (value) => setState(() {}),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // 显示格式化后的来源预览
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _workController,
+                      decoration: const InputDecoration(
+                        hintText: '作品名称',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.book),
+                      ),
+                      maxLines: 1,
+                      onChanged: (value) => setState(() {}),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 显示格式化后的来源预览
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
               ),
-            ),
 
-            // 位置和天气选项
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const Text(
-                  '添加信息',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 16),
-                // 位置信息按钮
-                Tooltip(
-                  message:
-                      '添加位置: ${locationService.currentAddress ?? location}',
-                  child: FilterChip(
-                    avatar: Icon(
-                      Icons.location_on,
-                      color:
-                          _includeLocation
-                              ? theme.colorScheme.primary
-                              : Colors.grey,
-                      size: 18,
-                    ),
-                    label: const Text('位置'),
-                    selected: _includeLocation,
-                    onSelected: (value) {
-                      setState(() {
-                        _includeLocation = value;
-                      });
-                    },
-                    selectedColor: theme.colorScheme.primaryContainer,
+              // 位置和天气选项
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const Text(
+                    '添加信息',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // 天气信息按钮
-                Tooltip(
-                  message:
-                      weather != null
-                          ? '添加天气: ${weatherService.getFormattedWeather()}'
-                          : '添加天气信息',
-                  child: FilterChip(
-                    avatar: Icon(
-                      weather != null
-                          ? weatherService.getWeatherIconData()
-                          : Icons.cloud,
-                      color:
-                          _includeWeather
-                              ? theme.colorScheme.primary
-                              : Colors.grey,
-                      size: 18,
-                    ),
-                    label: const Text('天气'),
-                    selected: _includeWeather,
-                    onSelected: (value) {
-                      setState(() {
-                        _includeWeather = value;
-                      });
-                    },
-                    selectedColor: theme.colorScheme.primaryContainer,
-                  ),
-                ),
-              ],
-            ),
-
-            // 颜色选择区域
-            const SizedBox(height: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '卡片颜色',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  children: [
-                    // 默认选项（无颜色）
-                    GestureDetector(
-                      onTap: () {
+                  const SizedBox(width: 16),
+                  // 位置信息按钮
+                  Tooltip(
+                    message:
+                        '添加位置: ${locationService.currentAddress ?? location}',
+                    child: FilterChip(
+                      avatar: Icon(
+                        Icons.location_on,
+                        color:
+                            _includeLocation
+                                ? theme.colorScheme.primary
+                                : Colors.grey,
+                        size: 18,
+                      ),
+                      label: const Text('位置'),
+                      selected: _includeLocation,
+                      onSelected: (value) {
                         setState(() {
-                          _selectedColorHex = null;
+                          _includeLocation = value;
                         });
                       },
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color:
-                                _selectedColorHex == null
-                                    ? theme.colorScheme.primary
-                                    : Colors.grey.shade300,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child:
-                            _selectedColorHex == null
-                                ? Center(
-                                  child: Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                )
-                                : null,
-                      ),
+                      selectedColor: theme.colorScheme.primaryContainer,
                     ),
-                    ..._colorOptions.map((color) {
-                      final colorHex =
-                          '#${color.value.toRadixString(16).substring(2)}';
-                      final isSelected = _selectedColorHex == colorHex;
-                      return GestureDetector(
+                  ),
+                  const SizedBox(width: 8),
+                  // 天气信息按钮
+                  Tooltip(
+                    message:
+                        weather != null
+                            ? '添加天气: ${weatherService.getFormattedWeather()}'
+                            : '添加天气信息',
+                    child: FilterChip(
+                      avatar: Icon(
+                        weather != null
+                            ? weatherService.getWeatherIconData()
+                            : Icons.cloud,
+                        color:
+                            _includeWeather
+                                ? theme.colorScheme.primary
+                                : Colors.grey,
+                        size: 18,
+                      ),
+                      label: const Text('天气'),
+                      selected: _includeWeather,
+                      onSelected: (value) {
+                        setState(() {
+                          _includeWeather = value;
+                        });
+                      },
+                      selectedColor: theme.colorScheme.primaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+
+              // 颜色选择区域
+              const SizedBox(height: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '卡片颜色',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      // 默认选项（无颜色）
+                      GestureDetector(
                         onTap: () {
                           setState(() {
-                            _selectedColorHex = colorHex;
+                            _selectedColorHex = null;
                           });
                         },
                         child: Container(
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: color,
+                            color: Colors.white,
                             border: Border.all(
                               color:
-                                  isSelected
+                                  _selectedColorHex == null
                                       ? theme.colorScheme.primary
                                       : Colors.grey.shade300,
                               width: 2,
@@ -552,7 +517,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child:
-                              isSelected
+                              _selectedColorHex == null
                                   ? Center(
                                     child: Icon(
                                       Icons.check,
@@ -562,373 +527,410 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   )
                                   : null,
                         ),
-                      );
-                    }),
-                  ],
-                ),
-              ],
-            ),
-
-            // 标签选择区域
-            const SizedBox(height: 16),
-            FutureBuilder<List<NoteCategory>>(
-              future: _tagFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('加载标签失败: \\${snapshot.error}'));
-                }
-                final tags = snapshot.data ?? [];
-                return ExpansionTile(
-                  title: const Text(
-                    '选择标签',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  leading: const Icon(Icons.tag),
-                  initiallyExpanded: false,
-                  childrenPadding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  children: [
-                    // 搜索框
-                    TextField(
-                      decoration: const InputDecoration(
-                        hintText: '搜索标签...',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 8.0,
-                          horizontal: 12.0,
-                        ),
                       ),
-                      onChanged: (value) {
-                        // 可以添加标签搜索逻辑
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    // 标签列表
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: tags.length,
-                        itemBuilder: (context, index) {
-                          final tag = tags[index];
-                          final isSelected = _selectedTagIds.contains(tag.id);
-                          return CheckboxListTile(
-                            title: Row(
-                              children: [
-                                if (IconUtils.isEmoji(tag.iconName))
-                                  Text(
-                                    IconUtils.getDisplayIcon(tag.iconName),
-                                    style: const TextStyle(fontSize: 20),
-                                  )
-                                else
-                                  Icon(IconUtils.getIconData(tag.iconName)),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    tag.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                      ..._colorOptions.map((color) {
+                        final colorHex =
+                            '#${color.value.toRadixString(16).substring(2)}';
+                        final isSelected = _selectedColorHex == colorHex;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedColorHex = colorHex;
+                            });
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color,
+                              border: Border.all(
+                                color:
+                                    isSelected
+                                        ? theme.colorScheme.primary
+                                        : Colors.grey.shade300,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
                             ),
-                            value: isSelected,
-                            dense: true,
-                            controlAffinity: ListTileControlAffinity.trailing,
-                            onChanged: (selected) {
-                              setState(() {
-                                if (selected == true) {
-                                  _selectedTagIds.add(tag.id);
-                                } else {
-                                  _selectedTagIds.remove(tag.id);
-                                }
-                              });
-                            },
-                          );
+                            child:
+                                isSelected
+                                    ? Center(
+                                      child: Icon(
+                                        Icons.check,
+                                        size: 18,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    )
+                                    : null,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ],
+              ),
+
+              // 标签选择区域
+              const SizedBox(height: 16),
+              FutureBuilder<List<NoteCategory>>(
+                future: _tagFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('加载标签失败: \\${snapshot.error}'));
+                  }
+                  final tags = snapshot.data ?? [];
+                  return ExpansionTile(
+                    title: const Text(
+                      '选择标签',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    leading: const Icon(Icons.tag),
+                    initiallyExpanded: false,
+                    childrenPadding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    children: [
+                      // 搜索框
+                      TextField(
+                        decoration: const InputDecoration(
+                          hintText: '搜索标签...',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: 8.0,
+                            horizontal: 12.0,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          // 可以添加标签搜索逻辑
                         },
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                      const SizedBox(height: 8),
+                      // 标签列表
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: tags.length,
+                          itemBuilder: (context, index) {
+                            final tag = tags[index];
+                            final isSelected = _selectedTagIds.contains(tag.id);
+                            return CheckboxListTile(
+                              title: Row(
+                                children: [
+                                  if (IconUtils.isEmoji(tag.iconName))
+                                    Text(
+                                      IconUtils.getDisplayIcon(tag.iconName),
+                                      style: const TextStyle(fontSize: 20),
+                                    )
+                                  else
+                                    Icon(IconUtils.getIconData(tag.iconName)),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      tag.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              value: isSelected,
+                              dense: true,
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              onChanged: (selected) {
+                                setState(() {
+                                  if (selected == true) {
+                                    _selectedTagIds.add(tag.id);
+                                  } else {
+                                    _selectedTagIds.remove(tag.id);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
 
-            // 显示已选标签
-            _selectedTagIds.isEmpty
-                ? const SizedBox.shrink()
-                : Container(
-                  margin: const EdgeInsets.only(top: 8),
+              // 显示已选标签
+              _selectedTagIds.isEmpty
+                  ? const SizedBox.shrink()
+                  : Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '已选标签',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4.0,
+                          runSpacing: 4.0,
+                          children:
+                              _selectedTagIds.map((tagId) {
+                                final tag = widget.tags.firstWhere(
+                                  (t) => t.id == tagId,
+                                  orElse:
+                                      () => NoteCategory(id: tagId, name: '未知标签'),
+                                );
+                                return Chip(
+                                  label: IconUtils.isEmoji(tag.iconName)
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            IconUtils.getDisplayIcon(tag.iconName),
+                                            style: const TextStyle(fontSize: 14),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            tag.name,
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                        ],
+                                      )
+                                    : Text(tag.name),
+                                  avatar: !IconUtils.isEmoji(tag.iconName)
+                                    ? Icon(
+                                        IconUtils.getIconData(tag.iconName),
+                                        size: 14,
+                                      )
+                                    : null,
+                                  deleteIcon: const Icon(Icons.close, size: 14),
+                                  onDeleted: () {
+                                    setState(() {
+                                      _selectedTagIds.remove(tagId);
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+              // AI分析结果
+              if (_aiSummary != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 16),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '已选标签',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 16,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'AI分析',
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 4.0,
-                        runSpacing: 4.0,
-                        children:
-                            _selectedTagIds.map((tagId) {
-                              final tag = widget.tags.firstWhere(
-                                (t) => t.id == tagId,
-                                orElse:
-                                    () => NoteCategory(id: tagId, name: '未知标签'),
-                              );
-                              return Chip(
-                                label: IconUtils.isEmoji(tag.iconName)
-                                  ? Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          IconUtils.getDisplayIcon(tag.iconName),
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          tag.name,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ],
-                                    )
-                                  : Text(tag.name),
-                                avatar: !IconUtils.isEmoji(tag.iconName)
-                                  ? Icon(
-                                      IconUtils.getIconData(tag.iconName),
-                                      size: 14,
-                                    )
-                                  : null,
-                                deleteIcon: const Icon(Icons.close, size: 14),
-                                onDeleted: () {
-                                  setState(() {
-                                    _selectedTagIds.remove(tagId);
-                                  });
-                                },
-                              );
-                            }).toList(),
-                      ),
+                      const SizedBox(height: 8),
+                      Text(_aiSummary!),
                     ],
                   ),
                 ),
 
-            // AI分析结果
-            if (_aiSummary != null)
-              Container(
-                margin: const EdgeInsets.only(top: 16),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'AI分析',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(_aiSummary!),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // AI分析按钮
+                  Builder(
+                    builder: (context) {
+                      // 检查API是否已配置
+                      final settingsService = Provider.of<SettingsService>(
+                        context,
+                        listen: false,
+                      );
+                      final settings = settingsService.aiSettings;
+                      final bool apiConfigured =
+                          settings.apiKey.isNotEmpty &&
+                          settings.apiUrl.isNotEmpty &&
+                          settings.model.isNotEmpty;
 
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // AI分析按钮
-                Builder(
-                  builder: (context) {
-                    // 检查API是否已配置
-                    final settingsService = Provider.of<SettingsService>(
-                      context,
-                      listen: false,
-                    );
-                    final settings = settingsService.aiSettings;
-                    final bool apiConfigured =
-                        settings.apiKey.isNotEmpty &&
-                        settings.apiUrl.isNotEmpty &&
-                        settings.model.isNotEmpty;
-
-                    if (_contentController.text.isNotEmpty &&
-                        _aiSummary == null &&
-                        apiConfigured) {
-                      return FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                      if (_contentController.text.isNotEmpty &&
+                          _aiSummary == null &&
+                          apiConfigured) {
+                        return FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                            ),
                           ),
-                        ),
-                        onPressed:
-                            _isAnalyzing
-                                ? null
-                                : () async {
-                                  setState(() => _isAnalyzing = true);
-                                  try {
-                                    final summary = await aiService
-                                        .summarizeNote(
-                                          Quote(
-                                            id: widget.initialQuote?.id ?? '',
-                                            content: _contentController.text,
-                                            date:
-                                                widget.initialQuote?.date ??
-                                                DateTime.now()
-                                                    .toIso8601String(),
+                          onPressed:
+                              _isAnalyzing
+                                  ? null
+                                  : () async {
+                                    setState(() => _isAnalyzing = true);
+                                    try {
+                                      final summary = await aiService
+                                          .summarizeNote(
+                                            Quote(
+                                              id: widget.initialQuote?.id ?? '',
+                                              content: _contentController.text,
+                                              date:
+                                                  widget.initialQuote?.date ??
+                                                  DateTime.now()
+                                                      .toIso8601String(),
+                                            ),
+                                          );
+                                      if (mounted) {
+                                        setState(() {
+                                          _aiSummary = summary;
+                                          _isAnalyzing = false;
+                                        });
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('AI分析失败: $e'),
+                                            backgroundColor: Colors.red,
                                           ),
                                         );
-                                    if (mounted) {
-                                      setState(() {
-                                        _aiSummary = summary;
-                                        _isAnalyzing = false;
-                                      });
+                                        setState(() => _isAnalyzing = false);
+                                      }
                                     }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('AI分析失败: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      setState(() => _isAnalyzing = false);
-                                    }
-                                  }
-                                },
-                        icon:
-                            _isAnalyzing
-                                ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : const Icon(Icons.auto_awesome),
-                        label: Text(_isAnalyzing ? '分析中...' : 'AI分析'),
-                      );
-                    }
+                                  },
+                          icon:
+                              _isAnalyzing
+                                  ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Icon(Icons.auto_awesome),
+                          label: Text(_isAnalyzing ? '分析中...' : 'AI分析'),
+                        );
+                      }
 
-                    return const SizedBox.shrink();
-                  },
-                ),
-                const Spacer(),
-                FilledButton.tonal(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                    ),
+                      return const SizedBox.shrink();
+                    },
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                  const Spacer(),
+                  FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                      ),
                     ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
                   ),
-                  onPressed: () async {
-                    if (_contentController.text.isNotEmpty) {
-                      // 创建或更新笔记
-                      final Quote quote = Quote(
-                        id: widget.initialQuote?.id ?? const Uuid().v4(),
-                        content: _contentController.text,
-                        date:
-                            widget.initialQuote?.date ??
-                            DateTime.now().toIso8601String(),
-                        aiAnalysis: _aiSummary,
-                        source: _formatSource(
-                          _authorController.text,
-                          _workController.text,
-                        ),
-                        sourceAuthor: _authorController.text,
-                        sourceWork: _workController.text,
-                        tagIds: _selectedTagIds,
-                        sentiment: widget.initialQuote?.sentiment,
-                        keywords: widget.initialQuote?.keywords,
-                        summary: widget.initialQuote?.summary,
-                        categoryId: widget.initialQuote?.categoryId,
-                        colorHex: _selectedColorHex,
-                        location: _includeLocation ? location : null,
-                        weather: _includeWeather ? weather : null,
-                        temperature: _includeWeather ? temperature : null,
-                      );
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (_contentController.text.isNotEmpty) {
+                        // 创建或更新笔记
+                        final Quote quote = Quote(
+                          id: widget.initialQuote?.id ?? const Uuid().v4(),
+                          content: _contentController.text,
+                          date:
+                              widget.initialQuote?.date ??
+                              DateTime.now().toIso8601String(),
+                          aiAnalysis: _aiSummary,
+                          source: _formatSource(
+                            _authorController.text,
+                            _workController.text,
+                          ),
+                          sourceAuthor: _authorController.text,
+                          sourceWork: _workController.text,
+                          tagIds: _selectedTagIds,
+                          sentiment: widget.initialQuote?.sentiment,
+                          keywords: widget.initialQuote?.keywords,
+                          summary: widget.initialQuote?.summary,
+                          categoryId: widget.initialQuote?.categoryId,
+                          colorHex: _selectedColorHex,
+                          location: _includeLocation ? location : null,
+                          weather: _includeWeather ? weather : null,
+                          temperature: _includeWeather ? temperature : null,
+                        );
 
-                      try {
-                        if (widget.initialQuote != null) {
-                          // 更新已有笔记
-                          await db.updateQuote(quote);
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('笔记已更新')),
-                          );
-                        } else {
-                          // 添加新笔记
-                          await db.addQuote(quote);
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('笔记已保存')),
-                          );
-                        }
+                        try {
+                          if (widget.initialQuote != null) {
+                            // 更新已有笔记
+                            await db.updateQuote(quote);
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('笔记已更新')),
+                            );
+                          } else {
+                            // 添加新笔记
+                            await db.addQuote(quote);
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('笔记已保存')),
+                            );
+                          }
 
-                        // 调用保存回调
-                        if (widget.onSave != null) {
-                          widget.onSave!(quote);
-                        }
+                          // 调用保存回调
+                          if (widget.onSave != null) {
+                            widget.onSave!(quote);
+                          }
 
-                        // 关闭对话框
-                        if (mounted) {
-                          Navigator.pop(context);
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('保存失败: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                          // 关闭对话框
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('保存失败: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         }
                       }
-                    }
-                  },
-                  child: Text(widget.initialQuote != null ? '更新' : '保存'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
+                    },
+                    child: Text(widget.initialQuote != null ? '更新' : '保存'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -971,17 +973,17 @@ class FullScreenNoteEditor extends StatefulWidget {
 }
 
 class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
-  late TextEditingController _controller;
+  late TextEditingController controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialText);
+    controller = TextEditingController(text: widget.initialText);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    controller.dispose();
     super.dispose();
   }
 
@@ -996,7 +998,7 @@ class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
             icon: const Icon(Icons.check),
             tooltip: '保存并返回',
             onPressed: () {
-              Navigator.pop(context, _controller.text);
+              Navigator.pop(context, controller.text);
             },
           ),
         ],
@@ -1004,7 +1006,7 @@ class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: TextField(
-          controller: _controller,
+          controller: controller,
           maxLines: null,
           autofocus: true,
           decoration: InputDecoration(

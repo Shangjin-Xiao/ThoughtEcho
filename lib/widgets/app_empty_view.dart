@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AppEmptyView extends StatelessWidget {
   final String svgAsset;
@@ -11,7 +10,7 @@ class AppEmptyView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(svgAsset, width: 120, height: 120),
+          Icon(Icons.inbox, size: 72, color: Theme.of(context).colorScheme.outline),
           const SizedBox(height: 16),
           Text(text, style: Theme.of(context).textTheme.bodyMedium),
         ],

@@ -169,64 +169,68 @@ class _EditPageState extends State<EditPage> {
       ),
       builder: (BuildContext context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      'AI助手',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+          child: SingleChildScrollView(
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'AI助手',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Divider(height: 1, color: theme.colorScheme.outline),
+                  ListTile(
+                    leading: const Icon(Icons.text_fields),
+                    title: const Text('智能分析来源'),
+                    subtitle: const Text('分析文本中可能的作者和作品'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _analyzeSource();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.brush),
+                    title: const Text('润色文本'),
+                    subtitle: const Text('优化文本表达，使其更加流畅、优美'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _polishText();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.add_circle_outline),
+                    title: const Text('续写内容'),
+                    subtitle: const Text('以相同的风格和语调延伸当前内容'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _continueText();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.analytics),
+                    title: const Text('深度分析'),
+                    subtitle: const Text('对笔记内容进行深入分析和解读'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _analyzeContent();
+                    },
+                  ),
+                ],
               ),
-              Divider(height: 1, color: theme.colorScheme.outline),
-              ListTile(
-                leading: const Icon(Icons.text_fields),
-                title: const Text('智能分析来源'),
-                subtitle: const Text('分析文本中可能的作者和作品'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _analyzeSource();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.brush),
-                title: const Text('润色文本'),
-                subtitle: const Text('优化文本表达，使其更加流畅、优美'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _polishText();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.add_circle_outline),
-                title: const Text('续写内容'),
-                subtitle: const Text('以相同的风格和语调延伸当前内容'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _continueText();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.analytics),
-                title: const Text('深度分析'),
-                subtitle: const Text('对笔记内容进行深入分析和解读'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _analyzeContent();
-                },
-              ),
-            ],
+            ),
           ),
         );
       },
