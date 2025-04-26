@@ -23,10 +23,12 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
   List<NoteCategory> _tags = [];
   List<String> _selectedTagIds = [];
+  bool _isLoadingTags = true; // 添加标签加载状态标志
 
   // 排序设置
   String _sortType = 'time';
@@ -36,21 +38,31 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final _searchController = NoteSearchController();
 
   late TabController _tabController;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // 初始化时标记为加载中
+    setState(() {
+      _isLoadingTags = true;
+    });
+
+    // 加载标签数据
     _loadTags();
     _initLocationAndWeather();
-    
+
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
-    
+
     // 使用延迟方法来确保在UI构建完成后执行剪贴板检查，避免冷启动问题
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 首次进入应用时检查剪贴板
       _checkClipboard();
+
+      // 确保标签在应用完全初始化后加载
+      _refreshTags();
     });
   }
 
@@ -67,7 +79,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-  
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 当应用从后台恢复时检查剪贴板
@@ -84,18 +96,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   // 检查剪贴板内容并处理
   Future<void> _checkClipboard() async {
     if (!mounted) return;
-    
+
     final clipboardService = Provider.of<ClipboardService>(
-      context, 
-      listen: false
+      context,
+      listen: false,
     );
-    
+
     // 如果剪贴板监控功能未启用，则不进行检查
     if (!clipboardService.enableClipboardMonitoring) {
       debugPrint('剪贴板监控已禁用，跳过检查');
       return;
     }
-    
+
     debugPrint('执行剪贴板检查');
     // 检查剪贴板内容
     final clipboardData = await clipboardService.checkClipboard();
@@ -105,11 +117,48 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  Future<void> _loadTags() async {
-    final categories = await context.read<DatabaseService>().getCategories();
+  // 切换到笔记列表时刷新标签
+  void _onTabChanged(int index) {
     setState(() {
-      _tags = categories;
+      _currentIndex = index;
     });
+
+    // 当切换到笔记列表页时，重新加载标签
+    if (_currentIndex == 1) {
+      _refreshTags();
+    }
+  }
+
+  // 刷新标签列表
+  Future<void> _refreshTags() async {
+    debugPrint('刷新标签列表');
+    setState(() {
+      _isLoadingTags = true;
+    });
+    await _loadTags();
+  }
+
+  // 改进标签加载逻辑
+  Future<void> _loadTags() async {
+    try {
+      debugPrint('加载标签数据...');
+      final categories = await context.read<DatabaseService>().getCategories();
+
+      if (mounted) {
+        setState(() {
+          _tags = categories;
+          _isLoadingTags = false;
+        });
+        debugPrint('标签加载完成，共 ${categories.length} 个标签');
+      }
+    } catch (e) {
+      debugPrint('加载标签时出错: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingTags = false;
+        });
+      }
+    }
   }
 
   // 初始化位置和天气服务
@@ -326,7 +375,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
-    
+
     // 直接用context.watch<bool>()获取服务初始化状态
     final bool servicesInitialized = context.watch<bool>();
 
@@ -337,19 +386,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         appBar: AppBar(
           title: const Text('心迹'),
           actions: [
+            // 显示标签加载状态
+            if (_isLoadingTags && _currentIndex == 1)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2.0),
+                ),
+              ),
+
             // 显示服务初始化状态指示器
             if (!servicesInitialized)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8.0),
                 child: SizedBox(
-                  width: 20, 
+                  width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.0,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2.0),
                 ),
               ),
-              
+
             // 显示位置和天气信息
             if (_currentIndex == 0 &&
                 locationService.city != null &&
@@ -359,7 +417,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(AppTheme.cardRadius),
@@ -377,14 +438,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       Text(
                         locationService.getDisplayLocation(),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '|',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer.withAlpha(128),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer.withAlpha(128),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -397,7 +461,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       Text(
                         '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -438,6 +503,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   onEdit: _showEditQuoteDialog,
                   onDelete: _showDeleteConfirmDialog,
                   onAskAI: _showAIQuestionDialog,
+                  isLoadingTags: _isLoadingTags, // 传递标签加载状态
                 );
               },
             ),
@@ -456,9 +522,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         bottomNavigationBar: NavigationBar(
           selectedIndex: _currentIndex,
           onDestinationSelected: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
+            _onTabChanged(index); // 使用新的方法处理标签切换
           },
           destinations: const [
             NavigationDestination(

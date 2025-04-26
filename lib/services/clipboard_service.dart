@@ -268,86 +268,66 @@ class ClipboardService extends ChangeNotifier {
     String? author,
     String? source,
   ) {
-    // 构建一个OverlayEntry
+    // 构建一个OverlayEntry，但不使用全屏覆盖层
     OverlayEntry? overlayEntry;
-
+    
     overlayEntry = OverlayEntry(
-      builder:
-          (context) => Stack(
-            children: [
-              // 透明全屏层，用于捕获点击外部事件
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    overlayEntry?.remove();
-                  },
-                  behavior: HitTestBehavior.translucent,
-                  child: Container(color: Colors.transparent),
+      builder: (context) => Positioned(
+        // 放置在屏幕上方合适位置
+        top: MediaQuery.of(context).size.height * 0.15,
+        left: 0,
+        right: 0,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () async {
+              overlayEntry?.remove();
+              if (context.mounted) {
+                _openEditPage(context, content, author, source);
+              }
+            },
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 320),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+                  boxShadow: AppTheme.defaultShadow,
                 ),
-              ),
-
-              // 弹窗内容，位于屏幕上方居中位置
-              Positioned(
-                top: MediaQuery.of(context).size.height * 0.15, // 屏幕高度15%的位置
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () async {
-                      overlayEntry?.remove();
-                      if (context.mounted) {
-                        _openEditPage(context, content, author, source);
-                      }
-                    },
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 320),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.content_paste,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    const Flexible(
+                      child: Text(
+                        '发现剪贴板内容，点击添加为笔记',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.dialogRadius,
-                          ),
-                          boxShadow: AppTheme.defaultShadow,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.content_paste,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            const Flexible(
-                              child: Text(
-                                '发现剪贴板内容，点击添加为笔记',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
+        ),
+      ),
     );
 
     // 添加到Overlay
     debugPrint('显示剪贴板通知弹窗');
     Overlay.of(context).insert(overlayEntry);
+    
     // 10秒后自动移除通知
     Future.delayed(const Duration(seconds: 10), () {
       if (overlayEntry?.mounted ?? false) {

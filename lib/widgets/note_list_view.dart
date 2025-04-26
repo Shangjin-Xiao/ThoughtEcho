@@ -22,6 +22,7 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onEdit;
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
+  final bool isLoadingTags; // 新增标签加载状态参数
 
   const NoteListView({
     super.key,
@@ -35,6 +36,7 @@ class NoteListView extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
+    this.isLoadingTags = false, // 默认为false
   });
 
   @override
