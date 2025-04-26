@@ -270,64 +270,70 @@ class ClipboardService extends ChangeNotifier {
   ) {
     // 构建一个OverlayEntry，但不使用全屏覆盖层
     OverlayEntry? overlayEntry;
-    
+
     overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        // 放置在屏幕上方合适位置
-        top: MediaQuery.of(context).size.height * 0.15,
-        left: 0,
-        right: 0,
-        child: Material(
-          color: Colors.transparent,
-          child: GestureDetector(
-            onTap: () async {
-              overlayEntry?.remove();
-              if (context.mounted) {
-                _openEditPage(context, content, author, source);
-              }
-            },
-            child: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 320),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
-                  boxShadow: AppTheme.defaultShadow,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.content_paste,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+      builder:
+          (context) => Positioned(
+            // 放置在屏幕上方合适位置
+            top: MediaQuery.of(context).size.height * 0.15,
+            left: 0,
+            right: 0,
+            child: Material(
+              color: Colors.transparent,
+              child: GestureDetector(
+                onTap: () async {
+                  overlayEntry?.remove();
+                  if (context.mounted) {
+                    _openEditPage(context, content, author, source);
+                  }
+                },
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
                     ),
-                    const SizedBox(width: 10),
-                    const Flexible(
-                      child: Text(
-                        '发现剪贴板内容，点击添加为笔记',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.dialogRadius,
                       ),
+                      boxShadow: AppTheme.defaultShadow,
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.content_paste,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        const Flexible(
+                          child: Text(
+                            '发现剪贴板内容，点击添加为笔记',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
     );
 
     // 添加到Overlay
     debugPrint('显示剪贴板通知弹窗');
     Overlay.of(context).insert(overlayEntry);
-    
+
     // 10秒后自动移除通知
     Future.delayed(const Duration(seconds: 10), () {
       if (overlayEntry?.mounted ?? false) {
