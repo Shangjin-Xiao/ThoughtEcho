@@ -107,7 +107,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 9, // 版本号增加，以支持添加索引
+        version: 10, // 版本号从9增加到10，以支持添加edit_source字段
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -253,6 +253,15 @@ class DatabaseService extends ChangeNotifier {
               'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
             );
             debugPrint('数据库升级：索引添加完成');
+          }
+
+          // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
+          if (oldVersion < 10) {
+            debugPrint(
+              '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段',
+            );
+            await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
+            debugPrint('数据库升级：edit_source 字段添加完成');
           }
         },
       );
