@@ -102,6 +102,7 @@ class _EditPageState extends State<EditPage> {
     _workController.text = work;
   }
 
+  // 格式化来源（从作者和作品）
   String _formatSource(String author, String work) {
     if (author.isEmpty && work.isEmpty) {
       return '';
@@ -113,7 +114,12 @@ class _EditPageState extends State<EditPage> {
     }
 
     if (work.isNotEmpty) {
-      result += ' 《$work》';
+      if (result.isNotEmpty) {
+        result += ' ';
+      } else {
+        result += '——';
+      }
+      result += '《$work》';
     }
 
     return result;

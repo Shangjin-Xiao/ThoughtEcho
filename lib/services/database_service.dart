@@ -107,7 +107,7 @@ class DatabaseService extends ChangeNotifier {
 
       _database = await openDatabase(
         path,
-        version: 10, // 版本号从9增加到10，以支持添加edit_source字段
+        version: 11, // 版本号升级至11，以支持添加edit_source和delta_content字段
         onCreate: (db, version) async {
           // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
           await db.execute('''
@@ -118,7 +118,7 @@ class DatabaseService extends ChangeNotifier {
               icon_name TEXT
             )
           ''');
-          // 创建引用（笔记）表，新增 category_id、source、source_author、source_work 和 color_hex 字段
+          // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content 字段
           await db.execute('''
             CREATE TABLE quotes(
               id TEXT PRIMARY KEY,
@@ -134,9 +134,11 @@ class DatabaseService extends ChangeNotifier {
               summary TEXT,
               category_id TEXT DEFAULT '',
               color_hex TEXT,
-              location TEXT, -- 从版本 8 开始添加
-              weather TEXT, -- 从版本 8 开始添加
-              temperature TEXT -- 从版本 8 开始添加
+              location TEXT,
+              weather TEXT,
+              temperature TEXT,
+              edit_source TEXT,
+              delta_content TEXT
             )
           ''');
 
@@ -263,6 +265,16 @@ class DatabaseService extends ChangeNotifier {
             await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
             debugPrint('数据库升级：edit_source 字段添加完成');
           }
+          // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
+          if (oldVersion < 11) {
+            debugPrint(
+              '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
+            );
+            await db.execute(
+              'ALTER TABLE quotes ADD COLUMN delta_content TEXT',
+            );
+            debugPrint('数据库升级：delta_content 字段添加完成');
+          }
         },
       );
 
@@ -352,8 +364,14 @@ class DatabaseService extends ChangeNotifier {
 
       debugPrint('当前quotes表列: $columnNames');
 
-      // 检查是否缺少location、weather、temperature列
-      final requiredColumns = {'location', 'weather', 'temperature'};
+      // 检查是否缺少location、weather、temperature、edit_source、delta_content列
+      final requiredColumns = {
+        'location',
+        'weather',
+        'temperature',
+        'edit_source',
+        'delta_content',
+      };
       final missingColumns = requiredColumns.difference(columnNames);
 
       if (missingColumns.isNotEmpty) {
@@ -956,7 +974,7 @@ class DatabaseService extends ChangeNotifier {
         quoteMap['date'] = DateTime.now().toIso8601String();
       }
 
-      // 检查数据库中是否存在location、weather、temperature列
+      // 检查数据库中是否存在location、weather、temperature、edit_source、delta_content列
       final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
       final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
 
@@ -964,6 +982,9 @@ class DatabaseService extends ChangeNotifier {
       if (!columnNames.contains('location')) quoteMap.remove('location');
       if (!columnNames.contains('weather')) quoteMap.remove('weather');
       if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
+      if (!columnNames.contains('edit_source')) quoteMap.remove('edit_source');
+      if (!columnNames.contains('delta_content'))
+        quoteMap.remove('delta_content');
 
       debugPrint('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
 
@@ -1164,7 +1185,7 @@ class DatabaseService extends ChangeNotifier {
         quoteMap['date'] = DateTime.now().toIso8601String();
       }
 
-      // 检查数据库中是否存在location、weather、temperature列
+      // 检查数据库中是否存在location、weather、temperature、edit_source、delta_content列
       final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
       final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
 
@@ -1172,6 +1193,9 @@ class DatabaseService extends ChangeNotifier {
       if (!columnNames.contains('location')) quoteMap.remove('location');
       if (!columnNames.contains('weather')) quoteMap.remove('weather');
       if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
+      if (!columnNames.contains('edit_source')) quoteMap.remove('edit_source');
+      if (!columnNames.contains('delta_content'))
+        quoteMap.remove('delta_content');
 
       debugPrint('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
 
