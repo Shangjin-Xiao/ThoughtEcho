@@ -14,7 +14,12 @@ class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
   final Quote? initialQuote;
   final List<NoteCategory>? allTags;
-  const NoteFullEditorPage({super.key, required this.initialContent, this.initialQuote, this.allTags});
+  const NoteFullEditorPage({
+    super.key,
+    required this.initialContent,
+    this.initialQuote,
+    this.allTags,
+  });
 
   @override
   State<NoteFullEditorPage> createState() => _NoteFullEditorPageState();
@@ -48,7 +53,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     super.initState();
     // 尝试将initialContent作为Delta解析，否则作为纯文本插入
     try {
-      final document = quill.Document.fromJson(jsonDecode(widget.initialContent));
+      final document = quill.Document.fromJson(
+        jsonDecode(widget.initialContent),
+      );
       _controller = quill.QuillController(
         document: document,
         selection: const TextSelection.collapsed(offset: 0),
@@ -60,8 +67,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       );
     }
     // 作者/作品
-    _authorController = TextEditingController(text: widget.initialQuote?.sourceAuthor ?? '');
-    _workController = TextEditingController(text: widget.initialQuote?.sourceWork ?? '');
+    _authorController = TextEditingController(
+      text: widget.initialQuote?.sourceAuthor ?? '',
+    );
+    _workController = TextEditingController(
+      text: widget.initialQuote?.sourceWork ?? '',
+    );
     // 标签
     _selectedTagIds = widget.initialQuote?.tagIds ?? [];
     // 颜色
@@ -70,7 +81,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _location = widget.initialQuote?.location;
     _weather = widget.initialQuote?.weather;
     _temperature = widget.initialQuote?.temperature;
-    
+
     // 如果已有位置和天气数据，则显示位置天气区域
     if (_location != null || _weather != null) {
       _showLocationWeather = true;
@@ -78,17 +89,21 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   Future<void> _fetchLocationWeather() async {
-    final locationService = Provider.of<LocationService>(context, listen: false);
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
     final weatherService = Provider.of<WeatherService>(context, listen: false);
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService.requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('无法获取位置权限')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('无法获取位置权限')));
         }
         return;
       }
@@ -101,7 +116,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       });
 
       // 获取天气
-      await weatherService.getWeatherData(position.latitude, position.longitude);
+      await weatherService.getWeatherData(
+        position.latitude,
+        position.longitude,
+      );
       setState(() {
         _weather = weatherService.currentWeather;
         _temperature = weatherService.temperature;
@@ -111,18 +129,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   Future<void> _saveContent() async {
     final db = Provider.of<DatabaseService>(context, listen: false);
+    final plainTextContent =
+        _controller.document.toPlainText().trim(); // 获取纯文本内容
     final deltaJson = jsonEncode(_controller.document.toDelta().toJson());
     final now = DateTime.now().toIso8601String();
-    
+
     // 明确区分编辑和新增模式
     final isEditing = widget.initialQuote != null;
+
+    // 构建笔记对象
     final quote = Quote(
-      id: isEditing ? widget.initialQuote!.id : const Uuid().v4(),
-      content: deltaJson,
-      date: isEditing ? widget.initialQuote!.date : now,
-      source: _authorController.text.isNotEmpty || _workController.text.isNotEmpty
-          ? '${_authorController.text}——${_workController.text}'
-          : null,
+      id: isEditing ? widget.initialQuote!.id : const Uuid().v4(), // 保持原ID
+      content: plainTextContent, // 使用纯文本内容而不是Delta JSON
+      date: isEditing ? widget.initialQuote!.date : now, // 保持原创建日期
+      source: _formatSource(_authorController.text, _workController.text),
       sourceAuthor: _authorController.text,
       sourceWork: _workController.text,
       tagIds: _selectedTagIds,
@@ -130,6 +150,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       location: _showLocationWeather ? _location : null,
       weather: _showLocationWeather ? _weather : null,
       temperature: _showLocationWeather ? _temperature : null,
+      // 保留原有AI分析和其他元数据
       aiAnalysis: widget.initialQuote?.aiAnalysis,
       sentiment: widget.initialQuote?.sentiment,
       keywords: widget.initialQuote?.keywords,
@@ -139,22 +160,25 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     try {
       if (isEditing) {
+        // 更新现有笔记
         await db.updateQuote(quote);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('笔记已更新')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('笔记已更新')));
+          // 成功更新后，关闭页面并返回
+          Navigator.of(context).pop(true); // 返回true表示更新成功
         }
       } else {
+        // 添加新笔记
         await db.addQuote(quote);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('笔记已保存')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('笔记已保存')));
+          // 成功添加后，关闭页面并返回
+          Navigator.of(context).pop(true); // 返回true表示保存成功
         }
-      }
-      if (mounted) {
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -163,6 +187,29 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         );
       }
     }
+  }
+
+  // 格式化来源（从作者和作品）
+  String _formatSource(String author, String work) {
+    if (author.isEmpty && work.isEmpty) {
+      return '';
+    }
+
+    String result = '';
+    if (author.isNotEmpty) {
+      result += '——$author';
+    }
+
+    if (work.isNotEmpty) {
+      if (result.isNotEmpty) {
+        result += ' ';
+      } else {
+        result += '——';
+      }
+      result += '《$work》';
+    }
+
+    return result;
   }
 
   @override
@@ -192,7 +239,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           children: [
             if (_showMeta)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -205,7 +255,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             decoration: const InputDecoration(
                               hintText: '作者/人物',
                               border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10,
+                                horizontal: 12,
+                              ),
                               isDense: true,
                             ),
                           ),
@@ -217,7 +270,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             decoration: const InputDecoration(
                               hintText: '作品/来源',
                               border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10,
+                                horizontal: 12,
+                              ),
                               isDense: true,
                             ),
                           ),
@@ -225,39 +281,41 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // 标签选择区域
                     SizedBox(
                       height: 36,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
-                        children: allTags.map((tag) {
-                          final selected = _selectedTagIds.contains(tag.id);
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: FilterChip(
-                              label: Text(tag.name),
-                              selected: selected,
-                              labelStyle: const TextStyle(fontSize: 12),
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              onSelected: (v) {
-                                setState(() {
-                                  if (v) {
-                                    _selectedTagIds.add(tag.id);
-                                  } else {
-                                    _selectedTagIds.remove(tag.id);
-                                  }
-                                });
-                              },
-                            ),
-                          );
-                        }).toList(),
+                        children:
+                            allTags.map((tag) {
+                              final selected = _selectedTagIds.contains(tag.id);
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: FilterChip(
+                                  label: Text(tag.name),
+                                  selected: selected,
+                                  labelStyle: const TextStyle(fontSize: 12),
+                                  padding: EdgeInsets.zero,
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  onSelected: (v) {
+                                    setState(() {
+                                      if (v) {
+                                        _selectedTagIds.add(tag.id);
+                                      } else {
+                                        _selectedTagIds.remove(tag.id);
+                                      }
+                                    });
+                                  },
+                                ),
+                              );
+                            }).toList(),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // 颜色选择与位置天气切换
                     Row(
                       children: [
@@ -272,8 +330,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           Colors.purple.shade100,
                           Colors.pink.shade100,
                         ].map((color) {
-                          final colorHex = color == null ? null : '#${color.value.toRadixString(16).substring(2)}';
-                          final isSelected = _selectedColorHex == colorHex || (color == null && _selectedColorHex == null);
+                          final colorHex =
+                              color == null
+                                  ? null
+                                  : '#${color.value.toRadixString(16).substring(2)}';
+                          final isSelected =
+                              _selectedColorHex == colorHex ||
+                              (color == null && _selectedColorHex == null);
                           return GestureDetector(
                             onTap: () {
                               setState(() {
@@ -287,52 +350,71 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               decoration: BoxDecoration(
                                 color: color ?? Colors.white,
                                 border: Border.all(
-                                  color: isSelected ? theme.colorScheme.primary : Colors.grey.shade300,
+                                  color:
+                                      isSelected
+                                          ? theme.colorScheme.primary
+                                          : Colors.grey.shade300,
                                   width: 2,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: isSelected
-                                  ? Center(
-                                      child: Icon(Icons.check, size: 14, color: theme.colorScheme.primary),
-                                    )
-                                  : null,
+                              child:
+                                  isSelected
+                                      ? Center(
+                                        child: Icon(
+                                          Icons.check,
+                                          size: 14,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      )
+                                      : null,
                             ),
                           );
                         }).toList(),
-                        
+
                         // 调色盘按钮
                         GestureDetector(
                           onTap: () async {
                             final color = await showDialog<Color>(
                               context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('选择自定义颜色'),
-                                content: ColorPicker(
-                                  color: _selectedColorHex != null
-                                      ? Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000)
-                                      : Colors.blue,
-                                  onColorChanged: (color) {
-                                    Navigator.of(context).pop(color);
-                                  },
-                                  pickersEnabled: const <ColorPickerType, bool>{
-                                    ColorPickerType.both: false,
-                                    ColorPickerType.primary: true,
-                                    ColorPickerType.accent: false,
-                                  },
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: 12,
-                                  spacing: 4,
-                                  runSpacing: 4,
-                                  showColorCode: false,
-                                  showRecentColors: false,
-                                ),
-                              ),
+                              builder:
+                                  (context) => AlertDialog(
+                                    title: const Text('选择自定义颜色'),
+                                    content: ColorPicker(
+                                      color:
+                                          _selectedColorHex != null
+                                              ? Color(
+                                                int.parse(
+                                                      _selectedColorHex!
+                                                          .substring(1),
+                                                      radix: 16,
+                                                    ) |
+                                                    0xFF000000,
+                                              )
+                                              : Colors.blue,
+                                      onColorChanged: (color) {
+                                        Navigator.of(context).pop(color);
+                                      },
+                                      pickersEnabled:
+                                          const <ColorPickerType, bool>{
+                                            ColorPickerType.both: false,
+                                            ColorPickerType.primary: true,
+                                            ColorPickerType.accent: false,
+                                          },
+                                      width: 24,
+                                      height: 24,
+                                      borderRadius: 12,
+                                      spacing: 4,
+                                      runSpacing: 4,
+                                      showColorCode: false,
+                                      showRecentColors: false,
+                                    ),
+                                  ),
                             );
                             if (color != null) {
                               setState(() {
-                                _selectedColorHex = '#${color.value.toRadixString(16).substring(2)}';
+                                _selectedColorHex =
+                                    '#${color.value.toRadixString(16).substring(2)}';
                               });
                             }
                           },
@@ -341,45 +423,101 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             height: 24,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                              border: Border.all(
+                                color: Colors.grey.shade400,
+                                width: 1.5,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.palette, size: 14, color: Colors.grey),
-                          ),
-                        ),
-                        
-                        const Spacer(),
-                        
-                        // 天气位置开关
-                        TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _showLocationWeather = !_showLocationWeather;
-                              // 如果开启了位置天气但还没有数据，则自动获取
-                              if (_showLocationWeather && _location == null && _weather == null) {
-                                _fetchLocationWeather();
-                              }
-                            });
-                          },
-                          icon: Icon(
-                            _showLocationWeather ? Icons.location_on : Icons.location_off,
-                            size: 16,
-                          ),
-                          label: Text(
-                            _showLocationWeather ? '隐藏位置天气' : '添加位置天气',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            child: const Icon(
+                              Icons.palette,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    
-                    // 位置天气信息（可选显示）
-                    if (_showLocationWeather)
+
+                    const SizedBox(height: 12),
+
+                    // 使用与短文本编辑框一致的天气和位置UI
+                    Row(
+                      children: [
+                        const Text('添加信息：', style: TextStyle(fontSize: 13)),
+                        const SizedBox(width: 8),
+                        // 位置信息按钮
+                        FilterChip(
+                          avatar: Icon(
+                            Icons.location_on,
+                            color:
+                                _showLocationWeather
+                                    ? theme.colorScheme.primary
+                                    : Colors.grey,
+                            size: 18,
+                          ),
+                          label: const Text('位置'),
+                          selected: _showLocationWeather && _location != null,
+                          onSelected: (value) {
+                            setState(() {
+                              _showLocationWeather = value;
+                              // 如果开启了位置天气但还没有数据，则自动获取
+                              if (_showLocationWeather && _location == null) {
+                                _fetchLocationWeather();
+                              }
+                            });
+                          },
+                          selectedColor: theme.colorScheme.primaryContainer,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        const SizedBox(width: 8),
+                        // 天气信息按钮
+                        FilterChip(
+                          avatar: Icon(
+                            _weather != null
+                                ? _getWeatherIcon(_weather!)
+                                : Icons.cloud,
+                            color:
+                                _showLocationWeather && _weather != null
+                                    ? theme.colorScheme.primary
+                                    : Colors.grey,
+                            size: 18,
+                          ),
+                          label: const Text('天气'),
+                          selected: _showLocationWeather && _weather != null,
+                          onSelected: (value) {
+                            setState(() {
+                              _showLocationWeather = value;
+                              // 如果开启了位置天气但还没有数据，则自动获取
+                              if (_showLocationWeather && _weather == null) {
+                                _fetchLocationWeather();
+                              }
+                            });
+                          },
+                          selectedColor: theme.colorScheme.primaryContainer,
+                          visualDensity: VisualDensity.compact,
+                        ),
+
+                        // 如果有位置或天气信息，显示刷新按钮
+                        if (_showLocationWeather &&
+                            (_location != null || _weather != null))
+                          IconButton(
+                            icon: const Icon(Icons.refresh, size: 16),
+                            tooltip: '刷新天气/位置',
+                            onPressed: _fetchLocationWeather,
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 30,
+                              minHeight: 30,
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    // 如果启用了位置天气，显示当前信息
+                    if (_showLocationWeather &&
+                        (_location != null || _weather != null))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
@@ -388,16 +526,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.wb_cloudy, size: 16),
-                                  const SizedBox(width: 2),
+                                  Icon(_getWeatherIcon(_weather!), size: 16),
+                                  const SizedBox(width: 4),
                                   Text(
                                     _weather!,
-                                    style: TextStyle(fontSize: 12),
+                                    style: const TextStyle(fontSize: 12),
                                   ),
-                                  if (_temperature != null) 
+                                  if (_temperature != null)
                                     Text(
                                       ' $_temperature',
-                                      style: TextStyle(fontSize: 12),
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                 ],
                               ),
@@ -409,26 +547,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.location_on, size: 16),
-                                    const SizedBox(width: 2),
+                                    const SizedBox(width: 4),
                                     Flexible(
                                       child: Text(
                                         _location!,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12),
+                                        style: const TextStyle(fontSize: 12),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.refresh, size: 16),
-                              tooltip: '刷新天气/位置',
-                              onPressed: _fetchLocationWeather,
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                            ),
                           ],
                         ),
                       ),
@@ -449,5 +578,21 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         ),
       ),
     );
+  }
+
+  IconData _getWeatherIcon(String weather) {
+    switch (weather) {
+      case '晴':
+        return Icons.wb_sunny;
+      case '阴':
+      case '多云':
+        return Icons.wb_cloudy;
+      case '雨':
+        return Icons.grain;
+      case '雪':
+        return Icons.ac_unit;
+      default:
+        return Icons.cloud;
+    }
   }
 }

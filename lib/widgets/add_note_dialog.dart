@@ -113,7 +113,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
 
     // 初始化标签future
-    _tagFuture = Provider.of<DatabaseService>(context, listen: false).getCategories();
+    _tagFuture =
+        Provider.of<DatabaseService>(context, listen: false).getCategories();
   }
 
   @override
@@ -336,7 +337,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       hintText: '写下你的感悟...',
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.edit),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16).copyWith(right: 48),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 16,
+                      ).copyWith(right: 48),
                     ),
                     maxLines: 3,
                     autofocus: true,
@@ -346,26 +350,35 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     right: 0,
                     child: Builder(
                       builder: (context) {
-                        final isLongContent = _contentController.text.length > 100;
+                        final isLongContent =
+                            _contentController.text.length > 100;
                         return IconButton(
                           tooltip: '全屏编辑',
                           icon: Icon(
                             Icons.fullscreen,
-                            color: isLongContent ? theme.colorScheme.primary : theme.iconTheme.color,
+                            color:
+                                isLongContent
+                                    ? theme.colorScheme.primary
+                                    : theme.iconTheme.color,
                           ),
                           onPressed: () async {
+                            // 首先关闭当前编辑框
+                            Navigator.pop(context);
+
+                            // 然后打开全屏编辑器
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => NoteFullEditorPage(
-                                  initialContent: _contentController.text,
-                                ),
+                                builder:
+                                    (context) => NoteFullEditorPage(
+                                      initialContent: _contentController.text,
+                                      initialQuote: widget.initialQuote,
+                                      allTags: widget.tags,
+                                    ),
                               ),
                             );
-                            if (result != null && result is String) {
-                              _contentController.text = result;
-                              setState(() {});
-                            }
+
+                            // 如果返回了结果，我们不需要处理，因为已经在全屏编辑器中保存了
                           },
                         );
                       },
@@ -509,24 +522,29 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(
-                              color: _selectedColorHex == null ? theme.colorScheme.primary : Colors.grey.shade300,
+                              color:
+                                  _selectedColorHex == null
+                                      ? theme.colorScheme.primary
+                                      : Colors.grey.shade300,
                               width: 2,
                             ),
                             borderRadius: BorderRadius.circular(18),
                           ),
-                          child: _selectedColorHex == null
-                              ? Center(
-                                  child: Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                )
-                              : null,
+                          child:
+                              _selectedColorHex == null
+                                  ? Center(
+                                    child: Icon(
+                                      Icons.check,
+                                      size: 18,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  )
+                                  : null,
                         ),
                       ),
                       ..._colorOptions.map((color) {
-                        final colorHex = '#${color.value.toRadixString(16).substring(2)}';
+                        final colorHex =
+                            '#${color.value.toRadixString(16).substring(2)}';
                         final isSelected = _selectedColorHex == colorHex;
                         return GestureDetector(
                           onTap: () {
@@ -540,25 +558,35 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             decoration: BoxDecoration(
                               color: color,
                               border: Border.all(
-                                color: isSelected ? theme.colorScheme.primary : Colors.grey.shade300,
+                                color:
+                                    isSelected
+                                        ? theme.colorScheme.primary
+                                        : Colors.grey.shade300,
                                 width: 2,
                               ),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: isSelected
-                                ? Center(
-                                    child: Icon(
-                                      Icons.check,
-                                      size: 18,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  )
-                                : null,
+                            child:
+                                isSelected
+                                    ? Center(
+                                      child: Icon(
+                                        Icons.check,
+                                        size: 18,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    )
+                                    : null,
                           ),
                         );
                       }),
                       // 自定义颜色（如果有且不在预设内）
-                      if (_selectedColorHex != null && !_colorOptions.map((c) => '#${c.value.toRadixString(16).substring(2)}').contains(_selectedColorHex))
+                      if (_selectedColorHex != null &&
+                          !_colorOptions
+                              .map(
+                                (c) =>
+                                    '#${c.value.toRadixString(16).substring(2)}',
+                              )
+                              .contains(_selectedColorHex))
                         GestureDetector(
                           onTap: () {
                             setState(() {
@@ -569,7 +597,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000),
+                              color: Color(
+                                int.parse(
+                                      _selectedColorHex!.substring(1),
+                                      radix: 16,
+                                    ) |
+                                    0xFF000000,
+                              ),
                               border: Border.all(
                                 color: theme.colorScheme.primary,
                                 width: 2,
@@ -590,33 +624,43 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         onTap: () async {
                           final color = await showDialog<Color>(
                             context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('选择自定义颜色'),
-                              content: ColorPicker(
-                                color: _selectedColorHex != null
-                                    ? Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000)
-                                    : Colors.blue,
-                                onColorChanged: (color) {
-                                  Navigator.of(context).pop(color);
-                                },
-                                pickersEnabled: <ColorPickerType, bool>{
-                                  ColorPickerType.both: false,
-                                  ColorPickerType.primary: true,
-                                  ColorPickerType.accent: false,
-                                },
-                                width: 28,
-                                height: 28,
-                                borderRadius: 14,
-                                spacing: 4,
-                                runSpacing: 4,
-                                showColorCode: false,
-                                showRecentColors: false,
-                              ),
-                            ),
+                            builder:
+                                (context) => AlertDialog(
+                                  title: const Text('选择自定义颜色'),
+                                  content: ColorPicker(
+                                    color:
+                                        _selectedColorHex != null
+                                            ? Color(
+                                              int.parse(
+                                                    _selectedColorHex!
+                                                        .substring(1),
+                                                    radix: 16,
+                                                  ) |
+                                                  0xFF000000,
+                                            )
+                                            : Colors.blue,
+                                    onColorChanged: (color) {
+                                      Navigator.of(context).pop(color);
+                                    },
+                                    pickersEnabled: <ColorPickerType, bool>{
+                                      ColorPickerType.both: false,
+                                      ColorPickerType.primary: true,
+                                      ColorPickerType.accent: false,
+                                    },
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 14,
+                                    spacing: 4,
+                                    runSpacing: 4,
+                                    showColorCode: false,
+                                    showRecentColors: false,
+                                  ),
+                                ),
                           );
                           if (color != null) {
                             setState(() {
-                              _selectedColorHex = '#${color.value.toRadixString(16).substring(2)}';
+                              _selectedColorHex =
+                                  '#${color.value.toRadixString(16).substring(2)}';
                             });
                           }
                         },
@@ -625,10 +669,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           height: 36,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                            border: Border.all(
+                              color: Colors.grey.shade400,
+                              width: 1.5,
+                            ),
                             borderRadius: BorderRadius.circular(18),
                           ),
-                          child: const Icon(Icons.palette, size: 18, color: Colors.grey),
+                          child: const Icon(
+                            Icons.palette,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
                     ],
@@ -651,7 +702,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   return ExpansionTile(
                     title: const Text(
                       '选择标签',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     leading: const Icon(Icons.tag),
                     initiallyExpanded: false,
@@ -754,31 +808,40 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 final tag = widget.tags.firstWhere(
                                   (t) => t.id == tagId,
                                   orElse:
-                                      () => NoteCategory(id: tagId, name: '未知标签'),
+                                      () =>
+                                          NoteCategory(id: tagId, name: '未知标签'),
                                 );
                                 return Chip(
-                                  label: IconUtils.isEmoji(tag.iconName)
-                                    ? Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            IconUtils.getDisplayIcon(tag.iconName),
-                                            style: const TextStyle(fontSize: 14),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            tag.name,
-                                            style: const TextStyle(fontSize: 12),
-                                          ),
-                                        ],
-                                      )
-                                    : Text(tag.name),
-                                  avatar: !IconUtils.isEmoji(tag.iconName)
-                                    ? Icon(
-                                        IconUtils.getIconData(tag.iconName),
-                                        size: 14,
-                                      )
-                                    : null,
+                                  label:
+                                      IconUtils.isEmoji(tag.iconName)
+                                          ? Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                IconUtils.getDisplayIcon(
+                                                  tag.iconName,
+                                                ),
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                tag.name,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                          : Text(tag.name),
+                                  avatar:
+                                      !IconUtils.isEmoji(tag.iconName)
+                                          ? Icon(
+                                            IconUtils.getIconData(tag.iconName),
+                                            size: 14,
+                                          )
+                                          : null,
                                   deleteIcon: const Icon(Icons.close, size: 14),
                                   onDeleted: () {
                                     setState(() {
@@ -851,7 +914,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         return FilledButton.icon(
                           style: FilledButton.styleFrom(
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.buttonRadius,
+                              ),
                             ),
                           ),
                           onPressed:
@@ -912,7 +977,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   FilledButton.tonal(
                     style: FilledButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.buttonRadius,
+                        ),
                       ),
                     ),
                     onPressed: () => Navigator.pop(context),
@@ -922,7 +989,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   FilledButton(
                     style: FilledButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.buttonRadius,
+                        ),
                       ),
                     ),
                     onPressed: () async {
