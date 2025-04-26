@@ -102,7 +102,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         !weatherLower.contains('阴')) {
       return Icons.wb_sunny;
     } else if (weatherLower.contains('多云') || weatherLower.contains('晴间多云')) {
-      return Icons.wb_cloudy; 
+      return Icons.wb_cloudy;
     } else if (weatherLower.contains('阴')) {
       return Icons.cloud;
     } else if (weatherLower.contains('雨') && weatherLower.contains('雪')) {
@@ -197,7 +197,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       keywords: widget.initialQuote?.keywords,
       summary: widget.initialQuote?.summary,
       categoryId: widget.initialQuote?.categoryId,
-      editSource: 'fullscreen', // 标记为全屏编辑器保存的笔记
     );
 
     try {
