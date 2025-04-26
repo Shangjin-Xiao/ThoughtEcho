@@ -29,6 +29,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late quill.QuillController _controller;
   late TextEditingController _authorController;
   late TextEditingController _workController;
+  late TextEditingController _tagSearchController; // 新增标签搜索控制器
+  String _tagSearchQuery = ''; // 新增标签搜索查询
   List<String> _selectedTagIds = [];
   String? _selectedColorHex;
   String? _location;
@@ -51,6 +53,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   @override
   void initState() {
     super.initState();
+    // 初始化控制器
+    _tagSearchController = TextEditingController(); // 初始化标签搜索控制器
+
     // 尝试将initialContent作为Delta解析，否则作为纯文本插入
     try {
       final document = quill.Document.fromJson(
@@ -86,6 +91,42 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (_location != null || _weather != null) {
       _showLocationWeather = true;
     }
+  }
+
+  // 天气图标映射方法
+  IconData _getWeatherIcon(String weather) {
+    final weatherLower = weather.toLowerCase();
+
+    if (weatherLower.contains('晴') &&
+        !weatherLower.contains('云') &&
+        !weatherLower.contains('阴')) {
+      return Icons.wb_sunny;
+    } else if (weatherLower.contains('多云') || weatherLower.contains('晴间多云')) {
+      return Icons.wb_cloudy; 
+    } else if (weatherLower.contains('阴')) {
+      return Icons.cloud;
+    } else if (weatherLower.contains('雨') && weatherLower.contains('雪')) {
+      return Icons.snowing;
+    } else if (weatherLower.contains('雨') && weatherLower.contains('雷')) {
+      return Icons.thunderstorm;
+    } else if (weatherLower.contains('雨')) {
+      if (weatherLower.contains('小')) {
+        return Icons.grain;
+      } else if (weatherLower.contains('中') || weatherLower.contains('大')) {
+        return Icons.water_drop;
+      } else {
+        return Icons.beach_access;
+      }
+    } else if (weatherLower.contains('雪')) {
+      return Icons.ac_unit;
+    } else if (weatherLower.contains('雾') || weatherLower.contains('霾')) {
+      return Icons.foggy;
+    } else if (weatherLower.contains('沙') || weatherLower.contains('尘')) {
+      return Icons.air;
+    }
+
+    // 默认图标
+    return Icons.wb_cloudy;
   }
 
   Future<void> _fetchLocationWeather() async {
@@ -156,6 +197,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       keywords: widget.initialQuote?.keywords,
       summary: widget.initialQuote?.summary,
       categoryId: widget.initialQuote?.categoryId,
+      editSource: 'fullscreen', // 标记为全屏编辑器保存的笔记
     );
 
     try {
@@ -280,41 +322,185 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
 
-                    // 标签选择区域
-                    SizedBox(
-                      height: 36,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children:
-                            allTags.map((tag) {
-                              final selected = _selectedTagIds.contains(tag.id);
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: FilterChip(
-                                  label: Text(tag.name),
-                                  selected: selected,
-                                  labelStyle: const TextStyle(fontSize: 12),
-                                  padding: EdgeInsets.zero,
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  onSelected: (v) {
-                                    setState(() {
-                                      if (v) {
-                                        _selectedTagIds.add(tag.id);
-                                      } else {
-                                        _selectedTagIds.remove(tag.id);
-                                      }
-                                    });
-                                  },
-                                ),
-                              );
-                            }).toList(),
+                    // 改进的标签选择区域 - 使用ExpansionTile与短文本编辑器保持一致
+                    ExpansionTile(
+                      title: const Text(
+                        '选择标签',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      leading: const Icon(Icons.tag),
+                      initiallyExpanded: false,
+                      childrenPadding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      children: [
+                        // 添加标签搜索框
+                        TextField(
+                          controller: _tagSearchController,
+                          decoration: const InputDecoration(
+                            hintText: '搜索标签...',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 8.0,
+                              horizontal: 12.0,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _tagSearchQuery = value.toLowerCase();
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        // 标签列表
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: allTags.length,
+                            itemBuilder: (context, index) {
+                              final tag = allTags[index];
+
+                              // 如果有搜索查询，过滤不匹配的标签
+                              if (_tagSearchQuery.isNotEmpty &&
+                                  !tag.name.toLowerCase().contains(
+                                    _tagSearchQuery,
+                                  )) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final isSelected = _selectedTagIds.contains(
+                                tag.id,
+                              );
+                              return CheckboxListTile(
+                                title: Row(
+                                  children: [
+                                    if (_isEmoji(tag.iconName))
+                                      Text(
+                                        _getDisplayIcon(tag.iconName),
+                                        style: const TextStyle(fontSize: 20),
+                                      )
+                                    else
+                                      Icon(_getIconData(tag.iconName)),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        tag.name,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                value: isSelected,
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.trailing,
+                                onChanged: (selected) {
+                                  setState(() {
+                                    if (selected == true) {
+                                      _selectedTagIds.add(tag.id);
+                                    } else {
+                                      _selectedTagIds.remove(tag.id);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
+
+                    // 显示已选标签
+                    _selectedTagIds.isEmpty
+                        ? const SizedBox.shrink()
+                        : Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '已选标签',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 4.0,
+                                runSpacing: 4.0,
+                                children:
+                                    _selectedTagIds.map((tagId) {
+                                      final tag = allTags.firstWhere(
+                                        (t) => t.id == tagId,
+                                        orElse:
+                                            () => NoteCategory(
+                                              id: tagId,
+                                              name: '未知标签',
+                                            ),
+                                      );
+                                      return Chip(
+                                        label:
+                                            _isEmoji(tag.iconName)
+                                                ? Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      _getDisplayIcon(
+                                                        tag.iconName,
+                                                      ),
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      tag.name,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                                : Text(tag.name),
+                                        avatar:
+                                            !_isEmoji(tag.iconName)
+                                                ? Icon(
+                                                  _getIconData(tag.iconName),
+                                                  size: 14,
+                                                )
+                                                : null,
+                                        deleteIcon: const Icon(
+                                          Icons.close,
+                                          size: 14,
+                                        ),
+                                        onDeleted: () {
+                                          setState(() {
+                                            _selectedTagIds.remove(tagId);
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                    const SizedBox(height: 12),
 
                     // 颜色选择与位置天气切换
                     Row(
@@ -580,19 +766,70 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
   }
 
-  IconData _getWeatherIcon(String weather) {
-    switch (weather) {
-      case '晴':
-        return Icons.wb_sunny;
-      case '阴':
-      case '多云':
-        return Icons.wb_cloudy;
-      case '雨':
-        return Icons.grain;
-      case '雪':
-        return Icons.ac_unit;
-      default:
-        return Icons.cloud;
+  // 辅助方法：判断图标是否为表情符号
+  bool _isEmoji(String? iconName) {
+    if (iconName == null || iconName.isEmpty) return false;
+    return !iconName.startsWith('icon:');
+  }
+
+  // 辅助方法：获取显示图标
+  String _getDisplayIcon(String? iconName) {
+    if (iconName == null || iconName.isEmpty) return '📝';
+    if (_isEmoji(iconName)) return iconName;
+    return '📝';
+  }
+
+  // 辅助方法：获取图标数据
+  IconData _getIconData(String? iconName) {
+    if (iconName == null || iconName.isEmpty) return Icons.label;
+
+    // 如果图标以 "icon:" 开头，解析后面的内容
+    if (iconName.startsWith('icon:')) {
+      final iconCode = iconName.substring(5);
+      switch (iconCode) {
+        case 'bookmark':
+          return Icons.bookmark;
+        case 'favorite':
+          return Icons.favorite;
+        case 'star':
+          return Icons.star;
+        case 'label':
+          return Icons.label;
+        case 'lightbulb':
+          return Icons.lightbulb;
+        case 'psychology':
+          return Icons.psychology;
+        case 'auto_stories':
+          return Icons.auto_stories;
+        case 'menu_book':
+          return Icons.menu_book;
+        case 'format_quote':
+          return Icons.format_quote;
+        case 'campaign':
+          return Icons.campaign;
+        case 'article':
+          return Icons.article;
+        case 'brush':
+          return Icons.brush;
+        case 'category':
+          return Icons.category;
+        case 'create':
+          return Icons.create;
+        case 'music_note':
+          return Icons.music_note;
+        case 'movie':
+          return Icons.movie;
+        case 'public':
+          return Icons.public;
+        case 'sports_esports':
+          return Icons.sports_esports;
+        case 'theaters':
+          return Icons.theaters;
+        default:
+          return Icons.label;
+      }
     }
+
+    return Icons.label;
   }
 }

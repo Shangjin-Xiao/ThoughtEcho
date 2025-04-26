@@ -352,34 +352,53 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       builder: (context) {
                         final isLongContent =
                             _contentController.text.length > 100;
-                        return IconButton(
-                          tooltip: '全屏编辑',
-                          icon: Icon(
-                            Icons.fullscreen,
-                            color:
-                                isLongContent
-                                    ? theme.colorScheme.primary
-                                    : theme.iconTheme.color,
-                          ),
-                          onPressed: () async {
-                            // 首先关闭当前编辑框
-                            Navigator.pop(context);
-
-                            // 然后打开全屏编辑器
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => NoteFullEditorPage(
-                                      initialContent: _contentController.text,
-                                      initialQuote: widget.initialQuote,
-                                      allTags: widget.tags,
-                                    ),
+                        return Stack(
+                          children: [
+                            // 如果是长文本，添加一个提示小红点
+                            if (isLongContent)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                               ),
-                            );
+                            IconButton(
+                              tooltip: isLongContent ? '建议全屏编辑长文本' : '全屏编辑',
+                              icon: Icon(
+                                Icons.fullscreen,
+                                color:
+                                    isLongContent
+                                        ? theme.colorScheme.primary
+                                        : theme.iconTheme.color,
+                              ),
+                              onPressed: () async {
+                                // 首先关闭当前编辑框
+                                Navigator.pop(context);
 
-                            // 如果返回了结果，我们不需要处理，因为已经在全屏编辑器中保存了
-                          },
+                                // 然后打开全屏编辑器
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => NoteFullEditorPage(
+                                          initialContent:
+                                              _contentController.text,
+                                          initialQuote: widget.initialQuote,
+                                          allTags: widget.tags,
+                                        ),
+                                  ),
+                                );
+
+                                // 如果返回了结果，我们不需要处理，因为已经在全屏编辑器中保存了
+                              },
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -642,7 +661,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                     onColorChanged: (color) {
                                       Navigator.of(context).pop(color);
                                     },
-                                    pickersEnabled: <ColorPickerType, bool>{
+                                    pickersEnabled: const <ColorPickerType, bool>{
                                       ColorPickerType.both: false,
                                       ColorPickerType.primary: true,
                                       ColorPickerType.accent: false,

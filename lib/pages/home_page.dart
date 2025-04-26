@@ -15,6 +15,7 @@ import '../widgets/add_note_dialog.dart';
 import 'insights_page.dart';
 import 'settings_page.dart';
 import '../theme/app_theme.dart';
+import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -251,19 +252,36 @@ class _HomePageState extends State<HomePage>
 
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder:
-          (context) => AddNoteDialog(
-            initialQuote: quote,
-            tags: _tags,
-            onSave: (_) {
-              // 笔记更新后刷新标签列表
-              _loadTags();
-            },
-          ),
-    );
+    // 检查笔记是否来自全屏编辑器
+    if (quote.editSource == 'fullscreen') {
+      // 如果是来自全屏编辑器的笔记，则直接打开全屏编辑页面
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => NoteFullEditorPage(
+                initialContent: quote.content,
+                initialQuote: quote,
+                allTags: _tags,
+              ),
+        ),
+      );
+    } else {
+      // 否则，打开常规编辑对话框
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder:
+            (context) => AddNoteDialog(
+              initialQuote: quote,
+              tags: _tags,
+              onSave: (_) {
+                // 笔记更新后刷新标签列表
+                _loadTags();
+              },
+            ),
+      );
+    }
   }
 
   // 显示删除确认对话框

@@ -786,7 +786,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
       // 创建导出文件名
       final now = DateTime.now();
       final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-      final exportFileName = 'thoughtecho_emergency_${timestamp}.db';
+      final exportFileName = 'thoughtecho_emergency_$timestamp.db';
       final exportFile = File(join(downloadsDir.path, exportFileName));
       
       // 复制文件

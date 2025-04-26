@@ -1,81 +1,152 @@
 class Quote {
   final String? id;
-  final String date;
   final String content;
-  final String? source;       // 保留用于兼容性
-  final String? sourceAuthor; // 添加作者字段
-  final String? sourceWork;   // 添加作品字段
+  final String date;
   final String? aiAnalysis;
+  final String? source;
+  final String? sourceAuthor;
+  final String? sourceWork;
+  final List<String> tagIds;
   final String? sentiment;
   final List<String>? keywords;
   final String? summary;
-  List<String> tagIds;
   final String? categoryId;
   final String? colorHex;
-  // 添加位置相关字段
-  final String? location;     // 格式: 国家,省/州,城市,区/县
-  // 添加天气相关字段
-  final String? weather;      // 天气状况 (如: 晴, 多云, 阴, 雨等)
-  final String? temperature;  // 温度 (如: 25°C)
+  final String? location;
+  final String? weather;
+  final String? temperature;
+  final String? editSource; // 新增：编辑来源 "fullscreen" 或 null
 
-  Quote({
+  const Quote({
     this.id,
-    required this.date,
     required this.content,
+    required this.date,
+    this.aiAnalysis,
     this.source,
     this.sourceAuthor,
     this.sourceWork,
-    this.aiAnalysis,
+    this.tagIds = const [],
     this.sentiment,
     this.keywords,
     this.summary,
-    this.tagIds = const [],
     this.categoryId,
     this.colorHex,
     this.location,
     this.weather,
     this.temperature,
+    this.editSource, // 新增：编辑来源
   });
 
-  Map<String, dynamic> toMap() {
+  // 从JSON构建Quote对象
+  factory Quote.fromJson(Map<String, dynamic> json) {
+    // 解析tagIds（确保它们是字符串列表）
+    List<String> parseTagIds() {
+      if (json['tag_ids'] == null) return [];
+      if (json['tag_ids'] is String) {
+        if ((json['tag_ids'] as String).isEmpty) return [];
+        return (json['tag_ids'] as String).split(',');
+      }
+      if (json['tag_ids'] is List) {
+        return (json['tag_ids'] as List).map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
+    // 解析keywords（确保它们是字符串列表）
+    List<String>? parseKeywords() {
+      if (json['keywords'] == null) return null;
+      if (json['keywords'] is String) {
+        if ((json['keywords'] as String).isEmpty) return null;
+        return (json['keywords'] as String).split(',');
+      }
+      if (json['keywords'] is List) {
+        return (json['keywords'] as List).map((e) => e.toString()).toList();
+      }
+      return null;
+    }
+
+    return Quote(
+      id: json['id'],
+      content: json['content'],
+      date: json['date'],
+      aiAnalysis: json['ai_analysis'],
+      source: json['source'],
+      sourceAuthor: json['source_author'],
+      sourceWork: json['source_work'],
+      tagIds: parseTagIds(),
+      sentiment: json['sentiment'],
+      keywords: parseKeywords(),
+      summary: json['summary'],
+      categoryId: json['category_id'],
+      colorHex: json['color_hex'],
+      location: json['location'],
+      weather: json['weather'],
+      temperature: json['temperature'],
+      editSource: json['edit_source'], // 新增：编辑来源
+    );
+  }
+
+  // 将Quote对象转换为JSON
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'date': date,
       'content': content,
+      'date': date,
+      'ai_analysis': aiAnalysis,
       'source': source,
       'source_author': sourceAuthor,
       'source_work': sourceWork,
-      'ai_analysis': aiAnalysis,
+      'tag_ids': tagIds.join(','),
       'sentiment': sentiment,
       'keywords': keywords?.join(','),
       'summary': summary,
-      'tag_ids': tagIds.join(','),
       'category_id': categoryId,
       'color_hex': colorHex,
       'location': location,
       'weather': weather,
       'temperature': temperature,
+      'edit_source': editSource, // 新增：编辑来源
     };
   }
 
-  factory Quote.fromMap(Map<String, dynamic> map) {
+  // 复制并修改当前Quote对象
+  Quote copyWith({
+    String? id,
+    String? content,
+    String? date,
+    String? aiAnalysis,
+    String? source,
+    String? sourceAuthor,
+    String? sourceWork,
+    List<String>? tagIds,
+    String? sentiment,
+    List<String>? keywords,
+    String? summary,
+    String? categoryId,
+    String? colorHex,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? editSource, // 新增：编辑来源
+  }) {
     return Quote(
-      id: map['id'],
-      date: map['date'],
-      content: map['content'],
-      source: map['source'],
-      sourceAuthor: map['source_author'],
-      sourceWork: map['source_work'],
-      aiAnalysis: map['ai_analysis'],
-      sentiment: map['sentiment'],
-      keywords: map['keywords']?.toString().split(','),
-      summary: map['summary'],
-      tagIds: (map['tag_ids']?.toString().split(',') ?? []).cast<String>(),
-      categoryId: map['category_id'],
-      colorHex: map['color_hex'],
-      location: map['location'],
-      weather: map['weather'],
-      temperature: map['temperature'],
+      id: id ?? this.id,
+      content: content ?? this.content,
+      date: date ?? this.date,
+      aiAnalysis: aiAnalysis ?? this.aiAnalysis,
+      source: source ?? this.source,
+      sourceAuthor: sourceAuthor ?? this.sourceAuthor,
+      sourceWork: sourceWork ?? this.sourceWork,
+      tagIds: tagIds ?? this.tagIds,
+      sentiment: sentiment ?? this.sentiment,
+      keywords: keywords ?? this.keywords,
+      summary: summary ?? this.summary,
+      categoryId: categoryId ?? this.categoryId,
+      colorHex: colorHex ?? this.colorHex,
+      location: location ?? this.location,
+      weather: weather ?? this.weather,
+      temperature: temperature ?? this.temperature,
+      editSource: editSource ?? this.editSource, // 新增：编辑来源
     );
   }
 }
@@ -85,7 +156,7 @@ class QuoteModel {
 
   // 添加 const 构造函数，默认值为空字符串
   const QuoteModel({this.author = ''});
-  
+
   String getDisplayAuthor() {
     return author?.toUpperCase() ?? 'UNKNOWN';
   }

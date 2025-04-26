@@ -932,7 +932,7 @@ class DatabaseService extends ChangeNotifier {
       final db = database;
       // 如果笔记中不包含 categoryId, 则设为空字符串
       final id = quote.id ?? _uuid.v4();
-      final quoteMap = quote.toMap();
+      final quoteMap = quote.toJson(); // 将 toMap 改为 toJson
       quoteMap['id'] = id;
       if (!quoteMap.containsKey('category_id')) {
         quoteMap['category_id'] = "";
@@ -1060,7 +1060,9 @@ class DatabaseService extends ChangeNotifier {
         limit: limit,
         offset: offset,
       );
-      return maps.map((m) => Quote.fromMap(m)).toList();
+      return maps
+          .map((m) => Quote.fromJson(m))
+          .toList(); // 将 fromMap 改为 fromJson
     } catch (e) {
       debugPrint('获取引用错误: $e');
       return [];
@@ -1142,7 +1144,7 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = database;
-      final quoteMap = quote.toMap();
+      final quoteMap = quote.toJson(); // 将 toMap 改为 toJson
 
       // 确保所有必需的字段都存在
       if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
