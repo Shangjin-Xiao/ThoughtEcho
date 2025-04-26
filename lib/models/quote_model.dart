@@ -15,7 +15,8 @@ class Quote {
   final String? location;
   final String? weather;
   final String? temperature;
-  final String? editSource; // 新增：编辑来源 "fullscreen" 或 null
+  final String? editSource; // "fullscreen" 或 null
+  final String? deltaContent; // 新增：用于存储富文本格式(Delta JSON)
 
   const Quote({
     this.id,
@@ -34,7 +35,8 @@ class Quote {
     this.location,
     this.weather,
     this.temperature,
-    this.editSource, // 新增：编辑来源
+    this.editSource,
+    this.deltaContent, // 新增：Delta JSON
   });
 
   // 从JSON构建Quote对象
@@ -82,7 +84,8 @@ class Quote {
       location: json['location'],
       weather: json['weather'],
       temperature: json['temperature'],
-      editSource: json['edit_source'], // 新增：编辑来源
+      editSource: json['edit_source'],
+      deltaContent: json['delta_content'], // 新增：Delta JSON
     );
   }
 
@@ -105,7 +108,8 @@ class Quote {
       'location': location,
       'weather': weather,
       'temperature': temperature,
-      'edit_source': editSource, // 新增：编辑来源
+      'edit_source': editSource,
+      'delta_content': deltaContent, // 新增：Delta JSON
     };
   }
 
@@ -127,7 +131,8 @@ class Quote {
     String? location,
     String? weather,
     String? temperature,
-    String? editSource, // 新增：编辑来源
+    String? editSource,
+    String? deltaContent, // 新增：Delta JSON
   }) {
     return Quote(
       id: id ?? this.id,
@@ -146,7 +151,8 @@ class Quote {
       location: location ?? this.location,
       weather: weather ?? this.weather,
       temperature: temperature ?? this.temperature,
-      editSource: editSource ?? this.editSource, // 新增：编辑来源
+      editSource: editSource ?? this.editSource,
+      deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
     );
   }
 }

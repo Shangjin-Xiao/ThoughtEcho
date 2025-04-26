@@ -11,6 +11,9 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../theme/app_theme.dart';
 
+// 添加 note_full_editor_page.dart 的导入
+import '../pages/note_full_editor_page.dart';
+
 class EditPage extends StatefulWidget {
   final Quote quote;
 
@@ -38,6 +41,13 @@ class _EditPageState extends State<EditPage> {
   @override
   void initState() {
     super.initState();
+
+    // 检查是否需要跳转到全屏编辑器
+    // 延迟执行，确保页面完全加载
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndNavigateToFullscreenEditor();
+    });
+
     _contentController = TextEditingController(text: widget.quote.content);
 
     // 从source解析出author和work（如果它们为空）
@@ -165,7 +175,9 @@ class _EditPageState extends State<EditPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.dialogRadius)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.dialogRadius),
+        ),
       ),
       builder: (BuildContext context) {
         return SafeArea(
@@ -178,7 +190,10 @@ class _EditPageState extends State<EditPage> {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+                        Icon(
+                          Icons.auto_awesome,
+                          color: theme.colorScheme.primary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'AI助手',
@@ -596,6 +611,34 @@ class _EditPageState extends State<EditPage> {
     }
   }
 
+  // 检查是否需要跳转到全屏编辑器
+  void _checkAndNavigateToFullscreenEditor() async {
+    // 如果Quote被标记为全屏编辑，则自动跳转到全屏编辑器
+    if (widget.quote.editSource == 'fullscreen' ||
+        widget.quote.deltaContent != null) {
+      // 获取所有标签
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
+      final allTags = await databaseService.getCategories();
+
+      if (mounted) {
+        // 关闭当前页面并打开全屏编辑器
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder:
+                (context) => NoteFullEditorPage(
+                  initialContent: widget.quote.content,
+                  initialQuote: widget.quote,
+                  allTags: allTags, // 传递所有标签
+                ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final databaseService = Provider.of<DatabaseService>(context);
@@ -899,7 +942,9 @@ class _EditPageState extends State<EditPage> {
                           ElevatedButton(
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.buttonRadius,
+                                ),
                               ),
                             ),
                             onPressed: () async {

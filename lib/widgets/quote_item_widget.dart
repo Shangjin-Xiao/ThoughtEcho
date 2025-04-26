@@ -4,6 +4,7 @@ import '../models/note_category.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'dart:convert';
+import '../widgets/quote_content_widget.dart';
 
 class QuoteItemWidget extends StatelessWidget {
   final Quote quote;
@@ -13,6 +14,7 @@ class QuoteItemWidget extends StatelessWidget {
   final Function() onEdit;
   final Function() onDelete;
   final Function() onAskAI;
+
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
 
@@ -28,50 +30,48 @@ class QuoteItemWidget extends StatelessWidget {
     this.tagBuilder,
   });
 
-  // 判断内容是否为富文本（Quill Delta JSON）
-  bool _isRichContent(String content) {
-    try {
-      final decoded = jsonDecode(content);
-      return decoded is List && decoded.isNotEmpty && decoded.first is Map && decoded.first.containsKey('insert');
-    } catch (_) {
-      return false;
+  // 判断是否需要展开按钮（富文本或长文本）
+  bool _needsExpansion(Quote quote) {
+    // 对于普通文本，检查长度
+    if (quote.deltaContent == null) {
+      return quote.content.length > 100;
     }
-  }
 
-  // 获取富文本的段落数
-  int _getRichParagraphCount(String content) {
+    // 对于富文本，尝试解析并检查段落数
     try {
-      final decoded = jsonDecode(content);
+      final decoded = jsonDecode(quote.deltaContent!);
       if (decoded is List) {
-        return decoded.where((op) => op is Map && op['insert'] != null && op['insert'].toString().contains('\n')).length;
+        // 计算段落标记数量
+        return decoded
+                .where(
+                  (op) =>
+                      op is Map &&
+                      op['insert'] != null &&
+                      op['insert'].toString().contains('\n'),
+                )
+                .length >
+            3;
       }
     } catch (_) {}
-    return 0;
-  }
 
-  // 判断是否需要展开按钮（富文本：段落数>3，纯文本：长度>100）
-  bool _needsExpansion(String text) {
-    if (_isRichContent(text)) {
-      return _getRichParagraphCount(text) > 3;
-    } else {
-      return text.length > 100;
-    }
+    // 默认根据内容长度判断
+    return quote.content.length > 100;
   }
 
   String _formatSource(String author, String work) {
     if (author.isEmpty && work.isEmpty) {
       return '';
     }
-    
+
     String result = '';
     if (author.isNotEmpty) {
       result += '——$author';
     }
-    
+
     if (work.isNotEmpty) {
       result += ' 《$work》';
     }
-    
+
     return result;
   }
 
@@ -90,7 +90,7 @@ class QuoteItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     // 格式化日期和时间段
     final DateTime quoteDate = DateTime.parse(quote.date);
     final int hour = quoteDate.hour;
@@ -111,16 +111,21 @@ class QuoteItemWidget extends StatelessWidget {
     } else {
       timeOfDay = '深夜';
     }
-    final String formattedDate = '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $timeOfDay';
-    
+    final String formattedDate =
+        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $timeOfDay';
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
       child: Material(
         elevation: 2,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        color: quote.colorHex != null 
-          ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000)
-          : theme.colorScheme.surfaceContainerHighest,
+        color:
+            quote.colorHex != null
+                ? Color(
+                  int.parse(quote.colorHex!.substring(1), radix: 16) |
+                      0xFF000000,
+                )
+                : theme.colorScheme.surfaceContainerHighest,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           child: Container(
@@ -158,15 +163,17 @@ class QuoteItemWidget extends StatelessWidget {
                               Icon(
                                 Icons.location_on,
                                 size: 14,
-                                color: theme.colorScheme.secondary.withOpacity(0.7),
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.7,
+                                ),
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 quote.location!.split(',').length >= 3
-                                  ? (quote.location!.split(',').length >= 4 
-                                    ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}'  // 显示 "城市·区县"
-                                    : quote.location!.split(',')[2]) // 只有城市
-                                  : quote.location!,
+                                    ? (quote.location!.split(',').length >= 4
+                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
+                                        : quote.location!.split(',')[2]) // 只有城市
+                                    : quote.location!,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.secondary,
                                   fontSize: 12,
@@ -179,7 +186,9 @@ class QuoteItemWidget extends StatelessWidget {
                               Icon(
                                 _getWeatherIcon(quote.weather!),
                                 size: 14,
-                                color: theme.colorScheme.secondary.withOpacity(0.7),
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.7,
+                                ),
                               ),
                               const SizedBox(width: 2),
                               Text(
@@ -195,27 +204,41 @@ class QuoteItemWidget extends StatelessWidget {
                     ],
                   ),
                 ),
-                
-                // 笔记内容
+
+                // 笔记内容 - 使用QuoteContent组件替换
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: _buildRichContent(context),
+                  child: QuoteContent(
+                    quote: quote,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.5,
+                    ),
+                    maxLines: isExpanded ? null : 3,
+                    showFullContent: isExpanded,
+                  ),
                 ),
-                
+
                 // 来源信息（如果有）
-                if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) || 
-                   (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+                if ((quote.sourceAuthor != null &&
+                        quote.sourceAuthor!.isNotEmpty) ||
+                    (quote.sourceWork != null &&
+                        quote.sourceWork!.isNotEmpty)) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                     child: Text(
-                      _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
+                      _formatSource(
+                        quote.sourceAuthor ?? '',
+                        quote.sourceWork ?? '',
+                      ),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withOpacity(0.75),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
                   ),
-                ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
+                ] else if (quote.source != null &&
+                    quote.source!.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                     child: Text(
@@ -227,9 +250,9 @@ class QuoteItemWidget extends StatelessWidget {
                     ),
                   ),
                 ],
-                
+
                 // 展开/折叠按钮（如果内容较长）
-                if (_needsExpansion(quote.content)) ...[
+                if (_needsExpansion(quote)) ...[
                   Center(
                     child: TextButton(
                       onPressed: () => onToggleExpanded(!isExpanded),
@@ -244,7 +267,9 @@ class QuoteItemWidget extends StatelessWidget {
                             ),
                           ),
                           Icon(
-                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            isExpanded
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
                             size: 16,
                             color: theme.colorScheme.primary,
                           ),
@@ -253,7 +278,7 @@ class QuoteItemWidget extends StatelessWidget {
                     ),
                   ),
                 ],
-                
+
                 // 底部工具栏
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
@@ -271,36 +296,48 @@ class QuoteItemWidget extends StatelessWidget {
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
-                              children: quote.tagIds.map((tagId) {
-                                final tag = tags.firstWhere(
-                                  (t) => t.id == tagId,
-                                  orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-                                );
-                                return tagBuilder != null
-                                  ? tagBuilder!(tag)
-                                  : Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        tag.name,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                      ),
+                              children:
+                                  quote.tagIds.map((tagId) {
+                                    final tag = tags.firstWhere(
+                                      (t) => t.id == tagId,
+                                      orElse:
+                                          () => NoteCategory(
+                                            id: tagId,
+                                            name: '未知标签',
+                                          ),
                                     );
-                              }).toList(),
+                                    return tagBuilder != null
+                                        ? tagBuilder!(tag)
+                                        : Container(
+                                          margin: const EdgeInsets.only(
+                                            right: 8,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.primary
+                                                .withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            tag.name,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                          ),
+                                        );
+                                  }).toList(),
                             ),
                           ),
                         ),
                       ],
-                      
+
                       // 操作按钮
                       PopupMenuButton<String>(
                         icon: Icon(
@@ -319,41 +356,50 @@ class QuoteItemWidget extends StatelessWidget {
                             onDelete();
                           }
                         },
-                        itemBuilder: (context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, color: theme.colorScheme.primary),
-                                const SizedBox(width: 8),
-                                const Text('编辑笔记'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'ask',
-                            child: Row(
-                              children: [
-                                Icon(Icons.question_answer, color: theme.colorScheme.primary),
-                                const SizedBox(width: 8),
-                                const Text('向AI提问'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.delete, color: Colors.red),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '删除笔记',
-                                  style: TextStyle(color: theme.colorScheme.error),
+                        itemBuilder:
+                            (context) => [
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text('编辑笔记'),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'ask',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.question_answer,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text('向AI提问'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.delete, color: Colors.red),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '删除笔记',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.error,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                       ),
                     ],
                   ),
@@ -364,62 +410,5 @@ class QuoteItemWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildRichContent(BuildContext context) {
-    if (_isRichContent(quote.content)) {
-      try {
-        final decoded = jsonDecode(quote.content);
-        final List richOps = decoded;
-        // 统计段落
-        int paraCount = 0;
-        List filteredOps = [];
-        if (!isExpanded) {
-          for (var op in richOps) {
-            filteredOps.add(op);
-            if (op is Map && op['insert'] != null && op['insert'].toString().contains('\n')) {
-              paraCount++;
-              if (paraCount >= 3) break;
-            }
-          }
-        } else {
-          filteredOps = richOps;
-        }
-        final document = quill.Document.fromJson(filteredOps);
-        final controller = quill.QuillController(
-          document: document,
-          selection: const TextSelection.collapsed(offset: 0),
-        );
-        return quill.QuillEditor.basic(
-          controller: controller,
-          config: const quill.QuillEditorConfig(
-            expands: false,
-            padding: EdgeInsets.zero,
-          ),
-        );
-      } catch (_) {
-        // 回退为纯文本
-        return Text(
-          quote.content,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-            height: 1.5,
-          ),
-          maxLines: isExpanded ? null : 3,
-          overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-        );
-      }
-    } else {
-      // 纯文本
-      return Text(
-        quote.content,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface,
-          height: 1.5,
-        ),
-        maxLines: isExpanded ? null : 3,
-        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-      );
-    }
   }
 }

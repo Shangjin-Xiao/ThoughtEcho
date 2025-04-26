@@ -29,15 +29,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late quill.QuillController _controller;
   late TextEditingController _authorController;
   late TextEditingController _workController;
-  late TextEditingController _tagSearchController; // 新增标签搜索控制器
-  String _tagSearchQuery = ''; // 新增标签搜索查询
+  late TextEditingController _tagSearchController; // 标签搜索控制器
+  String _tagSearchQuery = ''; // 标签搜索查询
   List<String> _selectedTagIds = [];
   String? _selectedColorHex;
   String? _location;
   String? _weather;
   String? _temperature;
   bool _showMeta = true;
-  bool _showLocationWeather = false; // 新增状态变量控制是否显示位置天气
+  // 分离位置和天气控制
+  bool _showLocation = false; 
+  bool _showWeather = false;
 
   // 预设颜色hex，与普通添加笔记页面一致
   final List<String> _presetColorHexes = [
@@ -57,20 +59,23 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _tagSearchController = TextEditingController(); // 初始化标签搜索控制器
 
     // 尝试将initialContent作为Delta解析，否则作为纯文本插入
-    try {
-      final document = quill.Document.fromJson(
-        jsonDecode(widget.initialContent),
-      );
-      _controller = quill.QuillController(
-        document: document,
-        selection: const TextSelection.collapsed(offset: 0),
-      );
-    } catch (_) {
-      _controller = quill.QuillController(
-        document: quill.Document()..insert(0, widget.initialContent),
-        selection: const TextSelection.collapsed(offset: 0),
-      );
+    if (widget.initialQuote?.deltaContent != null) {
+      // 如果有富文本内容，优先使用富文本
+      try {
+        final document = quill.Document.fromJson(
+          jsonDecode(widget.initialQuote!.deltaContent!),
+        );
+        _controller = quill.QuillController(
+          document: document,
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+      } catch (_) {
+        _initializeAsPlainText();
+      }
+    } else {
+      _initializeAsPlainText();
     }
+    
     // 作者/作品
     _authorController = TextEditingController(
       text: widget.initialQuote?.sourceAuthor ?? '',
@@ -82,15 +87,22 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _selectedTagIds = widget.initialQuote?.tagIds ?? [];
     // 颜色
     _selectedColorHex = widget.initialQuote?.colorHex;
-    // 位置/天气
+    // 位置/天气 - 分别设置状态
     _location = widget.initialQuote?.location;
     _weather = widget.initialQuote?.weather;
     _temperature = widget.initialQuote?.temperature;
 
-    // 如果已有位置和天气数据，则显示位置天气区域
-    if (_location != null || _weather != null) {
-      _showLocationWeather = true;
-    }
+    // 分别检查并设置位置和天气状态
+    _showLocation = _location != null;
+    _showWeather = _weather != null;
+  }
+
+  // 初始化为纯文本的辅助方法
+  void _initializeAsPlainText() {
+    _controller = quill.QuillController(
+      document: quill.Document()..insert(0, widget.initialContent),
+      selection: const TextSelection.collapsed(offset: 0),
+    );
   }
 
   // 天气图标映射方法
@@ -188,9 +200,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       sourceWork: _workController.text,
       tagIds: _selectedTagIds,
       colorHex: _selectedColorHex,
-      location: _showLocationWeather ? _location : null,
-      weather: _showLocationWeather ? _weather : null,
-      temperature: _showLocationWeather ? _temperature : null,
+      location: _showLocation ? _location : null,
+      weather: _showWeather ? _weather : null,
+      temperature: _showWeather ? _temperature : null,
+      // 标记为全屏编辑
+      editSource: 'fullscreen',
+      // 保存富文本内容
+      deltaContent: deltaJson,
       // 保留原有AI分析和其他元数据
       aiAnalysis: widget.initialQuote?.aiAnalysis,
       sentiment: widget.initialQuote?.sentiment,
@@ -555,7 +571,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                       : null,
                             ),
                           );
-                        }).toList(),
+                        }),
 
                         // 调色盘按钮
                         GestureDetector(
@@ -636,18 +652,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           avatar: Icon(
                             Icons.location_on,
                             color:
-                                _showLocationWeather
+                                _showLocation
                                     ? theme.colorScheme.primary
                                     : Colors.grey,
                             size: 18,
                           ),
                           label: const Text('位置'),
-                          selected: _showLocationWeather && _location != null,
+                          selected: _showLocation && _location != null,
                           onSelected: (value) {
                             setState(() {
-                              _showLocationWeather = value;
+                              _showLocation = value;
                               // 如果开启了位置天气但还没有数据，则自动获取
-                              if (_showLocationWeather && _location == null) {
+                              if (_showLocation && _location == null) {
                                 _fetchLocationWeather();
                               }
                             });
@@ -663,18 +679,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 ? _getWeatherIcon(_weather!)
                                 : Icons.cloud,
                             color:
-                                _showLocationWeather && _weather != null
+                                _showWeather && _weather != null
                                     ? theme.colorScheme.primary
                                     : Colors.grey,
                             size: 18,
                           ),
                           label: const Text('天气'),
-                          selected: _showLocationWeather && _weather != null,
+                          selected: _showWeather && _weather != null,
                           onSelected: (value) {
                             setState(() {
-                              _showLocationWeather = value;
+                              _showWeather = value;
                               // 如果开启了位置天气但还没有数据，则自动获取
-                              if (_showLocationWeather && _weather == null) {
+                              if (_showWeather && _weather == null) {
                                 _fetchLocationWeather();
                               }
                             });
@@ -684,7 +700,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         ),
 
                         // 如果有位置或天气信息，显示刷新按钮
-                        if (_showLocationWeather &&
+                        if (_showLocation &&
                             (_location != null || _weather != null))
                           IconButton(
                             icon: const Icon(Icons.refresh, size: 16),
@@ -701,7 +717,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                     ),
 
                     // 如果启用了位置天气，显示当前信息
-                    if (_showLocationWeather &&
+                    if (_showLocation &&
                         (_location != null || _weather != null))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -778,57 +794,59 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     return '📝';
   }
 
-  // 辅助方法：获取图标数据
+  // 辅助方法：获取图标数据 - 修复图标显示问题
   IconData _getIconData(String? iconName) {
     if (iconName == null || iconName.isEmpty) return Icons.label;
 
     // 如果图标以 "icon:" 开头，解析后面的内容
     if (iconName.startsWith('icon:')) {
       final iconCode = iconName.substring(5);
-      switch (iconCode) {
-        case 'bookmark':
-          return Icons.bookmark;
-        case 'favorite':
-          return Icons.favorite;
-        case 'star':
-          return Icons.star;
-        case 'label':
-          return Icons.label;
-        case 'lightbulb':
-          return Icons.lightbulb;
-        case 'psychology':
-          return Icons.psychology;
-        case 'auto_stories':
-          return Icons.auto_stories;
-        case 'menu_book':
-          return Icons.menu_book;
-        case 'format_quote':
-          return Icons.format_quote;
-        case 'campaign':
-          return Icons.campaign;
-        case 'article':
-          return Icons.article;
-        case 'brush':
-          return Icons.brush;
-        case 'category':
-          return Icons.category;
-        case 'create':
-          return Icons.create;
-        case 'music_note':
-          return Icons.music_note;
-        case 'movie':
-          return Icons.movie;
-        case 'public':
-          return Icons.public;
-        case 'sports_esports':
-          return Icons.sports_esports;
-        case 'theaters':
-          return Icons.theaters;
-        default:
-          return Icons.label;
-      }
+      
+      // 使用Map映射图标名称到IconData，避免使用大量if-else
+      final Map<String, IconData> iconMap = {
+        'bookmark': Icons.bookmark,
+        'favorite': Icons.favorite,
+        'star': Icons.star,
+        'label': Icons.label,
+        'lightbulb': Icons.lightbulb,
+        'psychology': Icons.psychology,
+        'auto_stories': Icons.auto_stories,
+        'menu_book': Icons.menu_book,
+        'format_quote': Icons.format_quote,
+        'campaign': Icons.campaign,
+        'article': Icons.article,
+        'brush': Icons.brush,
+        'category': Icons.category,
+        'create': Icons.create,
+        'music_note': Icons.music_note,
+        'movie': Icons.movie,
+        'public': Icons.public,
+        'sports_esports': Icons.sports_esports,
+        'theaters': Icons.theaters,
+        // 添加更多常用图标映射
+        'book': Icons.book,
+        'sentiment_satisfied': Icons.sentiment_satisfied,
+        'sentiment_dissatisfied': Icons.sentiment_dissatisfied,
+        'emoji_emotions': Icons.emoji_emotions,
+        'emoji_nature': Icons.emoji_nature,
+        'food_bank': Icons.food_bank,
+        'sports_basketball': Icons.sports_basketball,
+        'science': Icons.science,
+        'workspace_premium': Icons.workspace_premium,
+        'travel_explore': Icons.travel_explore,
+        'health_and_safety': Icons.health_and_safety,
+        'payments': Icons.payments,
+        'school': Icons.school,
+        'code': Icons.code,
+        'tips_and_updates': Icons.tips_and_updates,
+        'work': Icons.work,
+        'home': Icons.home,
+      };
+      
+      // 从映射中获取图标，如果没有找到则返回默认图标
+      return iconMap[iconCode] ?? Icons.label;
     }
 
-    return Icons.label;
+    return Icons.label; // 默认图标
   }
 }
