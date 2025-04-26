@@ -60,24 +60,29 @@ class _NoteListViewState extends State<NoteListView> {
   void initState() {
     super.initState();
     _searchController.text = widget.searchQuery;
-    _offset = 0; _hasMore = true;
+    _offset = 0;
+    _hasMore = true;
     _isLoading = true;
     // 初始订阅数据流
     final db = Provider.of<DatabaseService>(context, listen: false);
-    _quotesSub = db.watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
-      orderBy: widget.sortType == 'time'
-        ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-        : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-    ).listen((list) {
-      setState(() {
-        _quotes.clear();
-        _quotes.addAll(list);
-        _hasMore = list.length % _pageSize == 0;
-        _isLoading = false;
-      });
-    });
+    _quotesSub = db
+        .watchQuotes(
+          tagIds:
+              widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+          limit: _pageSize,
+          orderBy:
+              widget.sortType == 'time'
+                  ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+                  : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+        )
+        .listen((list) {
+          setState(() {
+            _quotes.clear();
+            _quotes.addAll(list);
+            _hasMore = list.length % _pageSize == 0;
+            _isLoading = false;
+          });
+        });
     // 加载第一页
     _loadMore();
   }
@@ -85,52 +90,56 @@ class _NoteListViewState extends State<NoteListView> {
   @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // 更新搜索控制器文本，避免与外部状态不同步
     if (oldWidget.searchQuery != widget.searchQuery) {
       _searchController.text = widget.searchQuery;
     }
-    
+
     // 检查是否有条件变化
     if (oldWidget.searchQuery != widget.searchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending) {
-      
       setState(() {
         _isLoading = true;
       });
-      
+
       // 使用更新条件的方式而不是重新订阅
       final db = Provider.of<DatabaseService>(context, listen: false);
-      
+
       // 取消现有订阅
       _quotesSub.cancel();
-      
+
       // 创建新的订阅
-      _quotesSub = db.watchQuotes(
-        tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-        limit: _pageSize,
-        orderBy: widget.sortType == 'time'
-            ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-            : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-        searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-      ).listen((list) {
-        setState(() {
-          _quotes.clear();
-          _quotes.addAll(list);
-          _hasMore = list.length % _pageSize == 0;
-          _isLoading = false;
-        });
-      });
-      
+      _quotesSub = db
+          .watchQuotes(
+            tagIds:
+                widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+            limit: _pageSize,
+            orderBy:
+                widget.sortType == 'time'
+                    ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+                    : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+            searchQuery:
+                widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+          )
+          .listen((list) {
+            setState(() {
+              _quotes.clear();
+              _quotes.addAll(list);
+              _hasMore = list.length % _pageSize == 0;
+              _isLoading = false;
+            });
+          });
+
       // 重置状态
       _offset = 0;
       _hasMore = true;
       _quotes.clear();
     }
   }
-  
+
   // 辅助方法：比较两个列表是否相等
   bool _areListsEqual(List<String> list1, List<String> list2) {
     if (list1.length != list2.length) return false;
@@ -165,18 +174,25 @@ class _NoteListViewState extends State<NoteListView> {
       return const AppLoadingView();
     }
     if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
-      return const AppEmptyView(svgAsset: 'assets/empty/empty_state.svg', text: '还没有笔记，开始记录吧！');
+      return const AppEmptyView(
+        svgAsset: 'assets/empty/empty_state.svg',
+        text: '还没有笔记，开始记录吧！',
+      );
     }
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
-      return const AppEmptyView(svgAsset: 'assets/empty/no_search_results.svg', text: '未找到相关笔记');
+      return const AppEmptyView(
+        svgAsset: 'assets/empty/no_search_results.svg',
+        text: '未找到相关笔记',
+      );
     }
-    
+
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
         // 预加载逻辑：当用户滚动到距离底部20%的位置时，提前加载下一页
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
-          if (metrics.pixels > metrics.maxScrollExtent - metrics.viewportDimension * 0.2) {
+          if (metrics.pixels >
+              metrics.maxScrollExtent - metrics.viewportDimension * 0.2) {
             _loadMore();
           }
         }
@@ -192,16 +208,13 @@ class _NoteListViewState extends State<NoteListView> {
             final quote = _quotes[index];
             // 获取展开状态，如果不存在则默认为折叠状态
             final bool isExpanded = _expandedItems[quote.id] ?? false;
-            
+
             // 使用FadeTransition为新项目添加淡入效果
             return FadeTransition(
               opacity: animation,
               child: SlideTransition(
                 position: animation.drive(
-                  Tween<Offset>(
-                    begin: const Offset(0.1, 0),
-                    end: Offset.zero,
-                  ),
+                  Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero),
                 ),
                 child: QuoteItemWidget(
                   quote: quote,
@@ -272,13 +285,44 @@ class _NoteListViewState extends State<NoteListView> {
 
   // 搜索内容变化回调
   void _onSearchChanged(String value) {
+    // 立即更新本地UI状态
+    setState(() {
+      // 如果搜索框被清空，立即重置加载状态
+      if (value.isEmpty && widget.searchQuery.isNotEmpty) {
+        _isLoading = true;
+        debugPrint('搜索内容被清空，重置加载状态');
+      } else if (value.isNotEmpty) {
+        _isLoading = true;
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.searchQuery != value) {
+        // 使用超时机制，避免搜索无限等待
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted && _isLoading) {
+            setState(() {
+              _isLoading = false;
+            });
+            debugPrint('搜索超时，已重置加载状态');
+          }
+        });
+
         // 触发父组件更新搜索参数
         widget.onSortChanged(widget.sortType, widget.sortAscending);
-        // 更新全局搜索状态
-        final searchController = Provider.of<NoteSearchController>(context, listen: false);
-        searchController.updateSearch(value);
+
+        // 更新全局搜索状态 - 使用立即更新以提高响应速度
+        final searchController = Provider.of<NoteSearchController>(
+          context,
+          listen: false,
+        );
+
+        // 如果是清空搜索，使用clearSearch方法，避免任何延迟
+        if (value.isEmpty) {
+          searchController.clearSearch();
+        } else {
+          searchController.updateSearch(value);
+        }
       }
     });
   }
@@ -292,7 +336,7 @@ class _NoteListViewState extends State<NoteListView> {
       builder: (context, constraints) {
         // 根据屏幕宽度自适应调整内容宽度
         double maxWidth;
-        
+
         if (constraints.maxWidth < 600) {
           maxWidth = constraints.maxWidth; // 小屏完全利用可用空间
         } else if (constraints.maxWidth < 960) {
@@ -302,16 +346,19 @@ class _NoteListViewState extends State<NoteListView> {
         } else {
           maxWidth = 1800; // 大屏更宽的最大宽度，充分利用大屏空间
         }
-        
+
         // 根据屏幕尺寸调整边距 - 小屏幕紧凑一些
         final horizontalPadding = constraints.maxWidth < 600 ? 4.0 : 8.0;
         final verticalPadding = constraints.maxWidth < 600 ? 2.0 : 4.0;
-        
+
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
+              ),
               child: Column(
                 children: [
                   Padding(
@@ -325,7 +372,8 @@ class _NoteListViewState extends State<NoteListView> {
                               hintText: '搜索笔记...',
                               prefixIcon: const Icon(Icons.search),
                               contentPadding: EdgeInsets.symmetric(
-                                vertical: constraints.maxWidth < 600 ? 8.0 : 12.0,
+                                vertical:
+                                    constraints.maxWidth < 600 ? 8.0 : 12.0,
                               ),
                               isDense: constraints.maxWidth < 600, // 小屏幕更紧凑
                               border: OutlineInputBorder(
@@ -339,29 +387,43 @@ class _NoteListViewState extends State<NoteListView> {
                         IconButton(
                           icon: const Icon(Icons.tune),
                           tooltip: '筛选/排序',
-                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40), // 更紧凑的按钮
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ), // 更紧凑的按钮
                           visualDensity: VisualDensity.compact,
                           onPressed: () {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true, // 允许更大的底部表单
                               shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
                               ),
-                              builder: (context) => NoteFilterSortSheet(
-                                allTags: widget.tags,
-                                selectedTagIds: widget.selectedTagIds,
-                                sortType: widget.sortType,
-                                sortAscending: widget.sortAscending,
-                                selectedWeathers: _selectedWeathers,
-                                onApply: (tagIds, sortType, sortAscending, selectedWeathers) {
-                                  widget.onTagSelectionChanged(tagIds);
-                                  widget.onSortChanged(sortType, sortAscending);
-                                  setState(() {
-                                    _selectedWeathers = selectedWeathers;
-                                  });
-                                },
-                              ),
+                              builder:
+                                  (context) => NoteFilterSortSheet(
+                                    allTags: widget.tags,
+                                    selectedTagIds: widget.selectedTagIds,
+                                    sortType: widget.sortType,
+                                    sortAscending: widget.sortAscending,
+                                    selectedWeathers: _selectedWeathers,
+                                    onApply: (
+                                      tagIds,
+                                      sortType,
+                                      sortAscending,
+                                      selectedWeathers,
+                                    ) {
+                                      widget.onTagSelectionChanged(tagIds);
+                                      widget.onSortChanged(
+                                        sortType,
+                                        sortAscending,
+                                      );
+                                      setState(() {
+                                        _selectedWeathers = selectedWeathers;
+                                      });
+                                    },
+                                  ),
                             );
                           },
                         ),

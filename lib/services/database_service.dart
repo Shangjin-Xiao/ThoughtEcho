@@ -262,7 +262,7 @@ class DatabaseService extends ChangeNotifier {
 
       // 更新分类流数据
       await _updateCategoriesStream();
-      
+
       // 修复: 初始化完成后，立即预加载笔记数据并触发监听器
       debugPrint('数据库初始化完成，开始预加载笔记数据...');
       // 重置流相关状态
@@ -279,26 +279,42 @@ class DatabaseService extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// 在初始化时预加载笔记数据
   Future<void> _prefetchInitialQuotes() async {
     try {
-      // 使用默认配置加载第一页数据
+      // 使用默认配置加载第一页数据，包括所有默认筛选条件
       final quotes = await getUserQuotes(
         limit: _watchLimit,
         offset: 0,
         orderBy: _watchOrderBy,
+        // 确保预加载不带任何筛选条件的数据，使首页初始状态能命中缓存
+        tagIds: null,
+        categoryId: null,
+        searchQuery: null,
       );
-      
+
       if (quotes.isNotEmpty) {
         debugPrint('初始预加载了 ${quotes.length} 条笔记');
-        
-        // 更新缓存
-        final cacheKey = _generateCacheKey(orderBy: _watchOrderBy);
+
+        // 确保使用完整的缓存键，与watchQuotes保持一致
+        final cacheKey = _generateCacheKey(
+          tagIds: null,
+          categoryId: null,
+          searchQuery: null,
+          orderBy: _watchOrderBy,
+        );
+
         _addToCache(cacheKey, quotes, 0);
-        
+
         // 确保笔记流控制器有最新数据
         if (_quotesController.hasListener) {
+          _quotesCache = quotes;
+          _watchOffset = quotes.length;
+          _watchHasMore = quotes.length == _watchLimit;
+          _quotesController.add(List.unmodifiable(quotes));
+        } else {
+          // 即使没有监听器，也将数据添加到流中，确保第一次监听时能立即获取数据
           _quotesCache = quotes;
           _watchOffset = quotes.length;
           _watchHasMore = quotes.length == _watchLimit;
@@ -306,10 +322,13 @@ class DatabaseService extends ChangeNotifier {
         }
       } else {
         debugPrint('数据库中没有笔记数据');
+        // 确保流控制器发出空列表而不是等待数据
+        _quotesController.add([]);
       }
     } catch (e) {
       debugPrint('预加载笔记时出错: $e');
-      // 预加载错误不会导致初始化失败
+      // 即使出错也要发出空列表，避免UI一直等待
+      _quotesController.add([]);
     }
   }
 
@@ -959,12 +978,12 @@ class DatabaseService extends ChangeNotifier {
       debugPrint('刷新笔记流数据');
       // 清除缓存，确保获取最新数据
       _filterCache.clear();
-      
+
       // 重置状态并加载新数据
       _watchOffset = 0;
       _quotesCache = [];
       _watchHasMore = true;
-      
+
       // 触发重新加载
       _loadNextQuotesPage();
     } else {
@@ -986,17 +1005,34 @@ class DatabaseService extends ChangeNotifier {
         // Web 平台内存过滤
         List<Quote> filtered = List.from(_memoryStore);
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered = filtered.where((q) => tagIds.any((id) => q.tagIds.contains(id))).toList();
+          filtered =
+              filtered
+                  .where((q) => tagIds.any((id) => q.tagIds.contains(id)))
+                  .toList();
         } else if (categoryId != null && categoryId.isNotEmpty) {
           filtered = filtered.where((q) => q.categoryId == categoryId).toList();
         }
         if (searchQuery != null && searchQuery.isNotEmpty) {
-          filtered = filtered.where((q) => q.content.toLowerCase().contains(searchQuery.toLowerCase())
-            || (q.source?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false)).toList();
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.content.toLowerCase().contains(
+                          searchQuery.toLowerCase(),
+                        ) ||
+                        (q.source?.toLowerCase().contains(
+                              searchQuery.toLowerCase(),
+                            ) ??
+                            false),
+                  )
+                  .toList();
         }
         filtered.sort((a, b) => b.date.compareTo(a.date));
         final start = offset < filtered.length ? offset : filtered.length;
-        final end = (offset + limit) < filtered.length ? (offset + limit) : filtered.length;
+        final end =
+            (offset + limit) < filtered.length
+                ? (offset + limit)
+                : filtered.length;
         return filtered.sublist(start, end);
       }
 
@@ -1039,7 +1075,13 @@ class DatabaseService extends ChangeNotifier {
   }) async {
     try {
       if (kIsWeb) {
-        return (await getUserQuotes(tagIds: tagIds, categoryId: categoryId, searchQuery: searchQuery, limit: 1000000, offset: 0)).length;
+        return (await getUserQuotes(
+          tagIds: tagIds,
+          categoryId: categoryId,
+          searchQuery: searchQuery,
+          limit: 1000000,
+          offset: 0,
+        )).length;
       }
       final db = database;
       List<String> conditions = [];
@@ -1056,8 +1098,12 @@ class DatabaseService extends ChangeNotifier {
         conditions.add('(content LIKE ? OR source LIKE ?)');
         args.addAll(['%$searchQuery%', '%$searchQuery%']);
       }
-      final whereClause = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM quotes $whereClause', args);
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quotes $whereClause',
+        args,
+      );
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
       debugPrint('获取笔记总数错误: $e');
@@ -1142,14 +1188,78 @@ class DatabaseService extends ChangeNotifier {
     String orderBy = 'date DESC',
     String? searchQuery,
   }) {
+    // 检查是否有筛选条件改变
+    bool hasFilterChanged = false;
+
+    // 检查标签是否变更
+    if (_watchTagIds != null && tagIds != null) {
+      if (_watchTagIds!.length != tagIds.length) {
+        hasFilterChanged = true;
+        debugPrint('标签数量变更: ${_watchTagIds!.length} -> ${tagIds.length}');
+      } else {
+        // 比较标签内容是否一致
+        for (int i = 0; i < _watchTagIds!.length; i++) {
+          if (!tagIds.contains(_watchTagIds![i])) {
+            hasFilterChanged = true;
+            debugPrint('标签内容变更');
+            break;
+          }
+        }
+      }
+    } else if ((_watchTagIds == null) != (tagIds == null)) {
+      hasFilterChanged = true;
+      debugPrint(
+        '标签筛选条件状态变更: ${_watchTagIds == null ? "无" : "有"} -> ${tagIds == null ? "无" : "有"}',
+      );
+    }
+
+    // 检查分类是否变更
+    if (_watchCategoryId != categoryId) {
+      hasFilterChanged = true;
+      debugPrint('分类变更: $_watchCategoryId -> $categoryId');
+    }
+
+    // 检查排序是否变更
+    if (_watchOrderBy != orderBy) {
+      hasFilterChanged = true;
+      debugPrint('排序变更: $_watchOrderBy -> $orderBy');
+    }
+
+    // 检查搜索条件是否变更
+    final normalizedSearchQuery =
+        (searchQuery != null && searchQuery.isNotEmpty) ? searchQuery : null;
+    if (_watchSearchQuery != normalizedSearchQuery) {
+      hasFilterChanged = true;
+      debugPrint('搜索条件变更: $_watchSearchQuery -> $normalizedSearchQuery');
+    }
+
+    // 更新筛选条件
     _watchTagIds = tagIds;
     _watchCategoryId = categoryId;
     _watchOrderBy = orderBy;
     _watchLimit = limit;
-    _watchOffset = 0;
-    _watchHasMore = true;
-    _quotesCache = [];
-    _watchSearchQuery = (searchQuery!=null && searchQuery.isNotEmpty)? searchQuery:null;
+    _watchSearchQuery = normalizedSearchQuery;
+
+    // 如果筛选条件变更，清空当前数据和缓存
+    if (hasFilterChanged) {
+      debugPrint('筛选条件已变更，清空缓存并重新加载数据');
+      _watchOffset = 0;
+      _watchHasMore = true;
+      _quotesCache = [];
+
+      // 清除相关的缓存条目
+      final cacheKey = _generateCacheKey(
+        tagIds: tagIds,
+        categoryId: categoryId,
+        searchQuery: searchQuery,
+        orderBy: orderBy,
+      );
+      _filterCache.remove(cacheKey);
+
+      // 立即通知监听器数据已清空，避免显示旧数据
+      _quotesController.add([]);
+    }
+
     // 首次加载
     _loadNextQuotesPage();
     return _quotesController.stream;
@@ -1164,7 +1274,7 @@ class DatabaseService extends ChangeNotifier {
   Future<void> _loadNextQuotesPage() async {
     // 如果已经没有更多数据，直接返回
     if (!_watchHasMore) return;
-    
+
     // 生成当前查询条件的缓存键
     final cacheKey = _generateCacheKey(
       tagIds: _watchTagIds,
@@ -1172,7 +1282,7 @@ class DatabaseService extends ChangeNotifier {
       searchQuery: _watchSearchQuery,
       orderBy: _watchOrderBy,
     );
-    
+
     // 先尝试从缓存获取数据
     final cachedQuotes = _getFromCache(cacheKey, _watchOffset, _watchLimit);
     if (cachedQuotes != null) {
@@ -1181,14 +1291,15 @@ class DatabaseService extends ChangeNotifier {
       _watchOffset += cachedQuotes.length;
       _watchHasMore = cachedQuotes.length == _watchLimit;
       _quotesController.add(List.unmodifiable(_quotesCache));
-      
+
       // 如果本次加载接近缓存末尾，提前加载下一页
       final cachedData = _filterCache[cacheKey];
-      if (cachedData != null && _watchOffset >= cachedData.length - _watchLimit / 2) {
+      if (cachedData != null &&
+          _watchOffset >= cachedData.length - _watchLimit / 2) {
         // 在后台预加载下一页数据
         _prefetchNextPage(cacheKey);
       }
-      
+
       return;
     }
 
@@ -1199,7 +1310,22 @@ class DatabaseService extends ChangeNotifier {
   // 从数据库加载数据
   Future<void> _loadFromDatabase(String cacheKey) async {
     try {
-      final newQuotes = await getUserQuotes(
+      debugPrint('从数据库加载笔记数据，搜索条件: ${_watchSearchQuery ?? "无"}');
+
+      // 添加超时检测
+      bool hasTimedOut = false;
+      final timeoutFuture = Future.delayed(const Duration(seconds: 8), () {
+        hasTimedOut = true;
+        debugPrint('数据库查询超时，返回空结果');
+        if (_quotesController.hasListener && _quotesCache.isEmpty) {
+          _quotesController.add([]);
+          _watchHasMore = false;
+        }
+        return <Quote>[];
+      });
+
+      // 实际数据库查询
+      final queryFuture = getUserQuotes(
         tagIds: _watchTagIds,
         categoryId: _watchCategoryId,
         limit: _watchLimit,
@@ -1207,17 +1333,23 @@ class DatabaseService extends ChangeNotifier {
         orderBy: _watchOrderBy,
         searchQuery: _watchSearchQuery,
       );
-      
+
+      // 使用Future.any等待最快完成的操作
+      final newQuotes = await Future.any([queryFuture, timeoutFuture]);
+
+      // 如果已经超时，不继续处理
+      if (hasTimedOut) return;
+
       debugPrint('从数据库加载 ${newQuotes.length} 条笔记 (偏移量: $_watchOffset)');
-      
+
       if (newQuotes.isNotEmpty) {
         _quotesCache.addAll(newQuotes);
         _watchOffset += newQuotes.length;
         _watchHasMore = newQuotes.length == _watchLimit;
-        
+
         // 将新获取的数据添加到缓存中
         _addToCache(cacheKey, newQuotes, _watchOffset - newQuotes.length);
-        
+
         // 如果加载了满页数据，触发预加载下一页
         if (newQuotes.length == _watchLimit) {
           // 延迟预加载，避免立即发起新请求
@@ -1230,7 +1362,7 @@ class DatabaseService extends ChangeNotifier {
       } else {
         _watchHasMore = false;
       }
-      
+
       // 通知监听器
       _quotesController.add(List.unmodifiable(_quotesCache));
     } catch (e) {
@@ -1245,19 +1377,19 @@ class DatabaseService extends ChangeNotifier {
     try {
       // 检查是否已经加载了所有数据
       if (!_watchHasMore) return;
-      
+
       // 计算下一页的偏移量
       final nextPageOffset = _watchOffset;
-      
+
       // 避免重复预加载：检查缓存中是否已经有了下一页数据
       final cachedData = _filterCache[cacheKey];
       if (cachedData != null && cachedData.length > nextPageOffset) {
         // 缓存中已有下一页数据，无需预加载
         return;
       }
-      
+
       debugPrint('预加载下一页数据，偏移量: $nextPageOffset');
-      
+
       // 预加载下一页数据
       final prefetchedQuotes = await getUserQuotes(
         tagIds: _watchTagIds,
@@ -1267,7 +1399,7 @@ class DatabaseService extends ChangeNotifier {
         orderBy: _watchOrderBy,
         searchQuery: _watchSearchQuery,
       );
-      
+
       // 将预加载的数据添加到缓存，但不更新当前显示
       if (prefetchedQuotes.isNotEmpty) {
         _addToCache(cacheKey, prefetchedQuotes, nextPageOffset);
@@ -1280,10 +1412,10 @@ class DatabaseService extends ChangeNotifier {
 
   // 生成缓存键，将过滤条件组合成唯一标识
   String _generateCacheKey({
-    List<String>? tagIds, 
-    String? categoryId, 
-    String? searchQuery, 
-    String orderBy = 'date DESC'
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    String orderBy = 'date DESC',
   }) {
     final tagKey = tagIds?.join(',') ?? '';
     final categoryKey = categoryId ?? '';
@@ -1295,14 +1427,16 @@ class DatabaseService extends ChangeNotifier {
   List<Quote>? _getFromCache(String cacheKey, int offset, int limit) {
     final cachedData = _filterCache[cacheKey];
     if (cachedData == null) return null;
-    
+
     // 检查是否缓存了足够的数据
     if (cachedData.length > offset) {
-      final end = (offset + limit) <= cachedData.length ? 
-                  (offset + limit) : cachedData.length;
+      final end =
+          (offset + limit) <= cachedData.length
+              ? (offset + limit)
+              : cachedData.length;
       return cachedData.sublist(offset, end);
     }
-    
+
     return null;
   }
 
@@ -1316,7 +1450,7 @@ class DatabaseService extends ChangeNotifier {
       }
       _filterCache[cacheKey] = [];
     }
-    
+
     // 如果是第一页，则清空缓存
     if (offset == 0) {
       _filterCache[cacheKey] = List.from(quotes);
