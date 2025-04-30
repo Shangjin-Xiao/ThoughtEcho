@@ -335,7 +335,7 @@ class ClipboardService extends ChangeNotifier {
     Overlay.of(context).insert(overlayEntry);
 
     // 10秒后自动移除通知
-    Future.delayed(const Duration(seconds: 10), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (overlayEntry?.mounted ?? false) {
         overlayEntry?.remove();
       }

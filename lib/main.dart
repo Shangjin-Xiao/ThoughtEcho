@@ -307,6 +307,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appTheme = context.watch<AppTheme>();
+    final settingsService = context.watch<SettingsService>();
     
     return MaterialApp(
       navigatorKey: navigatorKey,
@@ -316,7 +317,7 @@ class MyApp extends StatelessWidget {
       themeMode: appTheme.themeMode,
       home: isEmergencyMode 
         ? const EmergencyRecoveryPage() 
-        : const HomePage(),
+        : HomePage(initialPage: settingsService.appSettings.defaultStartPage),
       localizationsDelegates: const [
         quill.FlutterQuillLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

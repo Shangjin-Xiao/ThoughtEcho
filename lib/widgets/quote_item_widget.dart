@@ -32,29 +32,34 @@ class QuoteItemWidget extends StatelessWidget {
 
   // 判断是否需要展开按钮（富文本或长文本）
   bool _needsExpansion(Quote quote) {
-    // 对于普通文本，检查长度
-    if (quote.deltaContent == null) {
-      return quote.content.length > 100;
+    // 富文本内容处理
+    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
+      try {
+        final decoded = jsonDecode(quote.deltaContent!);
+        if (decoded is List) {
+          // 段落数超过3或总字符长度超过100，显示展开按钮
+          int paragraphCount = 0;
+          int totalLength = 0;
+          
+          for (var op in decoded) {
+            if (op is Map && op['insert'] != null) {
+              final String insert = op['insert'].toString();
+              totalLength += insert.length;
+              if (insert.contains('\n')) {
+                paragraphCount++;
+              }
+            }
+          }
+          
+          return paragraphCount > 3 || totalLength > 100;
+        }
+      } catch (_) {
+        // 解析失败，回退到内容长度判断
+      }
     }
 
-    // 对于富文本，尝试解析并检查段落数
-    try {
-      final decoded = jsonDecode(quote.deltaContent!);
-      if (decoded is List) {
-        // 计算段落标记数量
-        return decoded
-                .where(
-                  (op) =>
-                      op is Map &&
-                      op['insert'] != null &&
-                      op['insert'].toString().contains('\n'),
-                )
-                .length >
-            3;
-      }
-    } catch (_) {}
-
-    // 默认根据内容长度判断
+    // 如果没有富文本或解析失败，根据内容长度判断
+    // 提高阈值以保持一致性
     return quote.content.length > 100;
   }
 
@@ -337,6 +342,9 @@ class QuoteItemWidget extends StatelessWidget {
                           ),
                         ),
                       ],
+                      
+                      // 添加Spacer确保更多按钮始终在右侧
+                      const Spacer(),
 
                       // 操作按钮
                       PopupMenuButton<String>(

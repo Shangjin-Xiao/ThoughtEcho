@@ -18,7 +18,9 @@ import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final int initialPage; // 添加初始页面参数
+  
+  const HomePage({super.key, this.initialPage = 0});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -44,6 +46,9 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // 使用传入的初始页面参数
+    _currentIndex = widget.initialPage;
 
     // 初始化时标记为加载中
     setState(() {
@@ -401,95 +406,97 @@ class _HomePageState extends State<HomePage>
     return ChangeNotifierProvider.value(
       value: _searchController,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('心迹'),
-          actions: [
-            // 显示标签加载状态
-            if (_isLoadingTags && _currentIndex == 1)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.0),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2.0),
-                ),
-              ),
+        appBar: _currentIndex == 1 
+            ? null // 记录页不需要标题栏
+            : AppBar(
+                title: const Text('心迹'),
+                actions: [
+                  // 显示标签加载状态
+                  if (_isLoadingTags && _currentIndex == 1)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                      ),
+                    ),
 
-            // 显示服务初始化状态指示器
-            if (!servicesInitialized)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.0),
-                ),
-              ),
+                  // 显示服务初始化状态指示器
+                  if (!servicesInitialized)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                      ),
+                    ),
 
-            // 显示位置和天气信息
-            if (_currentIndex == 0 &&
-                locationService.city != null &&
-                !locationService.city!.contains("Throttled!") &&
-                weatherService.currentWeather != null &&
-                locationService.hasLocationPermission)
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    boxShadow: AppTheme.defaultShadow,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        locationService.getDisplayLocation(),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
+                  // 显示位置和天气信息
+                  if (_currentIndex == 0 &&
+                      locationService.city != null &&
+                      !locationService.city!.contains("Throttled!") &&
+                      weatherService.currentWeather != null &&
+                      locationService.hasLocationPermission)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                          boxShadow: AppTheme.defaultShadow,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              locationService.getDisplayLocation(),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color:
+                                    Theme.of(context).colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '|',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer.withAlpha(128),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              weatherService.getWeatherIconData(),
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color:
+                                    Theme.of(context).colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '|',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onPrimaryContainer.withAlpha(128),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        weatherService.getWeatherIconData(),
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
-          ],
-        ),
         body: IndexedStack(
           index: _currentIndex,
           children: [

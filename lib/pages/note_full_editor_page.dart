@@ -9,6 +9,7 @@ import '../models/note_category.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import '../utils/icon_utils.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -252,6 +253,255 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     return result;
   }
 
+  // 判断是否为表情符号
+  bool _isEmoji(String? iconName) {
+    if (iconName == null) return false;
+    return iconName.startsWith('emoji:');
+  }
+
+  // 获取显示图标
+  String _getDisplayIcon(String? iconName) {
+    if (iconName == null) return '🏷️';
+    if (iconName.startsWith('emoji:')) {
+      return iconName.substring(6); // 移除'emoji:'前缀
+    }
+    return '🏷️'; // 默认标签图标
+  }
+
+  // 获取图标数据
+  IconData _getIconData(String? iconName) {
+    if (iconName == null) return Icons.label;
+    if (iconName.startsWith('emoji:')) {
+      // 表情符号由Text组件处理，这里不需要返回IconData
+      return Icons.emoji_emotions;
+    }
+    
+    // 使用IconUtils转换图标名到图标数据
+    try {
+      final iconData = IconUtils.getIconData(iconName);
+      return iconData;
+    } catch (e) {
+      return Icons.label;
+    }
+  }
+
+  // 自定义颜色选择器
+  Future<void> _showCustomColorPicker(BuildContext context) async {
+    final Color initialColor = _selectedColorHex != null
+        ? Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000)
+        : Colors.transparent;
+        
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    
+    // 预设颜色列表 - 更现代的轻柔色调
+    final List<Color> presetColors = [
+      Colors.transparent, // 透明/无
+      const Color(0xFFF9E4E4), // 轻红色
+      const Color(0xFFFFF0E1), // 轻橙色
+      const Color(0xFFFFFBE5), // 轻黄色
+      const Color(0xFFE8F5E9), // 轻绿色
+      const Color(0xFFE1F5FE), // 轻蓝色
+      const Color(0xFFF3E5F5), // 轻紫色
+      const Color(0xFFFCE4EC), // 轻粉色
+      
+      const Color(0xFFFFCDD2), // 红色
+      const Color(0xFFFFE0B2), // 橙色
+      const Color(0xFFFFF9C4), // 黄色
+      const Color(0xFFC8E6C9), // 绿色
+      const Color(0xFFBBDEFB), // 蓝色
+      const Color(0xFFE1BEE7), // 紫色
+      const Color(0xFFF8BBD0), // 粉色
+      
+      const Color(0xFFEF9A9A), // 深红色
+      const Color(0xFFFFCC80), // 深橙色
+      const Color(0xFFFFF59D), // 深黄色
+      const Color(0xFFA5D6A7), // 深绿色
+      const Color(0xFF90CAF9), // 深蓝色
+      const Color(0xFFCE93D8), // 深紫色
+      const Color(0xFFF48FB1), // 深粉色
+    ];
+        
+    final Color? result = await showDialog<Color>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择卡片颜色'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 预设颜色网格
+              Container(
+                width: 280,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 8),
+                      child: Text(
+                        '预设颜色',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.start,
+                      children: presetColors.map((color) {
+                        String? colorHex;
+                        if (color != Colors.transparent) {
+                          colorHex = '#${color.value.toRadixString(16).substring(2)}';
+                        }
+                        
+                        final bool isSelected = color == Colors.transparent 
+                          ? _selectedColorHex == null
+                          : _selectedColorHex == colorHex;
+                          
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop(color);
+                          },
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(21),
+                              border: Border.all(
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : color == Colors.transparent
+                                        ? Colors.grey.withOpacity(0.5)
+                                        : Colors.transparent,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: isSelected
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: color == Colors.transparent || color.computeLuminance() > 0.7
+                                          ? colorScheme.primary
+                                          : Colors.white,
+                                      size: 24,
+                                    )
+                                  : color == Colors.transparent
+                                      ? const Icon(
+                                          Icons.block,
+                                          color: Colors.grey,
+                                          size: 18,
+                                        )
+                                      : null,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // 高级颜色选择按钮
+              OutlinedButton.icon(
+                icon: const Icon(Icons.color_lens),
+                label: const Text('自定义颜色'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  Navigator.pop(context); // 关闭当前对话框
+                  
+                  // 打开高级颜色选择器
+                  final Color? advancedColor = await showDialog<Color>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('自定义颜色'),
+                      content: SingleChildScrollView(
+                        child: ColorPicker(
+                          color: initialColor != Colors.transparent 
+                                ? initialColor
+                                : const Color(0xFFE1F5FE), // 默认蓝色
+                          onColorChanged: (color) {},
+                          width: 40,
+                          height: 40,
+                          spacing: 10,
+                          runSpacing: 10,
+                          borderRadius: 20,
+                          wheelDiameter: 200,
+                          enableShadesSelection: true,
+                          pickersEnabled: const {
+                            ColorPickerType.primary: true,
+                            ColorPickerType.accent: false,
+                            ColorPickerType.wheel: true,
+                          },
+                        ),
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(context).pop(initialColor),
+                          child: const Text('选择'),
+                        ),
+                      ],
+                    ),
+                  );
+                  
+                  if (advancedColor != null && mounted) {
+                    setState(() {
+                      _selectedColorHex = advancedColor == Colors.transparent
+                          ? null
+                          : '#${advancedColor.value.toRadixString(16).substring(2)}';
+                    });
+                  }
+                },
+              )
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+        ],
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+    
+    if (result != null) {
+      setState(() {
+        _selectedColorHex = result == Colors.transparent
+            ? null
+            : '#${result.value.toRadixString(16).substring(2)}';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -320,159 +570,217 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       ),
                       const SizedBox(height: 12),
 
-                      // 标签选择 - 与短文本编辑保持一致
-                      Text('标签：', style: TextStyle(fontSize: 13)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8.0,
-                        runSpacing: 8.0,
-                        children: widget.allTags!
-                            .map((tag) {
-                          final selected = _selectedTagIds.contains(tag.id);
-                          return FilterChip(
-                            selected: selected,
-                            label: Text(tag.name),
-                            avatar: _isEmoji(tag.iconName)
-                                ? Text(
-                                    _getDisplayIcon(tag.iconName),
-                                    style: const TextStyle(fontSize: 16),
-                                  )
-                                : Icon(_getIconData(tag.iconName), size: 16),
-                            onSelected: (bool value) {
-                              setState(() {
-                                if (value) {
-                                  _selectedTagIds.add(tag.id);
-                                } else {
-                                  _selectedTagIds.remove(tag.id);
-                                }
-                              });
+                      // 使用ExpansionTile替代标签选择，使之与普通添加笔记页面相似
+                      ExpansionTile(
+                        title: const Text(
+                          '选择标签',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        leading: const Icon(Icons.tag),
+                        initiallyExpanded: false,
+                        childrenPadding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        children: [
+                          // 搜索框
+                          TextField(
+                            decoration: const InputDecoration(
+                              hintText: '搜索标签...',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 8.0,
+                                horizontal: 12.0,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              // 可以添加标签搜索逻辑
                             },
-                            selectedColor: theme.colorScheme.primaryContainer,
-                            checkmarkColor: theme.colorScheme.primary,
-                          );
-                        }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+                          // 标签列表
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 200),
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: widget.allTags!
+                                    .map((tag) {
+                                  final selected = _selectedTagIds.contains(tag.id);
+                                  return FilterChip(
+                                    selected: selected,
+                                    label: Text(tag.name),
+                                    avatar: _isEmoji(tag.iconName)
+                                        ? Text(
+                                            _getDisplayIcon(tag.iconName),
+                                            style: const TextStyle(fontSize: 16),
+                                          )
+                                        : Icon(_getIconData(tag.iconName), size: 16),
+                                    onSelected: (bool value) {
+                                      setState(() {
+                                        if (value) {
+                                          _selectedTagIds.add(tag.id);
+                                        } else {
+                                          _selectedTagIds.remove(tag.id);
+                                        }
+                                      });
+                                    },
+                                    selectedColor: theme.colorScheme.primaryContainer,
+                                    checkmarkColor: theme.colorScheme.primary,
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      
+                      // 显示已选标签
+                      _selectedTagIds.isEmpty
+                          ? const SizedBox.shrink()
+                          : Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '已选标签',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 8.0,
+                                  runSpacing: 4.0,
+                                  children: _selectedTagIds.map((tagId) {
+                                    final tag = widget.allTags!.firstWhere(
+                                      (t) => t.id == tagId,
+                                      orElse: () => NoteCategory(
+                                        id: tagId,
+                                        name: '未知标签',
+                                      ),
+                                    );
+                                    return Chip(
+                                      label: Text(tag.name),
+                                      avatar: _isEmoji(tag.iconName)
+                                          ? Text(
+                                              _getDisplayIcon(tag.iconName),
+                                              style: const TextStyle(fontSize: 16),
+                                            )
+                                          : Icon(_getIconData(tag.iconName), size: 16),
+                                      onDeleted: () {
+                                        setState(() {
+                                          _selectedTagIds.remove(tagId);
+                                        });
+                                      },
+                                      visualDensity: VisualDensity.compact,
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
 
                       const SizedBox(height: 12),
 
-                      // 颜色选择与位置天气切换
-                      Row(
+                      // 颜色选择器 - 改进UI
+                      ExpansionTile(
+                        title: const Text(
+                          '颜色选择',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        leading: const Icon(Icons.palette),
+                        initiallyExpanded: false,
+                        childrenPadding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
                         children: [
-                          const Text('颜色：', style: TextStyle(fontSize: 13)),
-                          ...[
-                            null, // 无色
-                            Colors.red.shade100,
-                            Colors.orange.shade100,
-                            Colors.yellow.shade100,
-                            Colors.green.shade100,
-                            Colors.blue.shade100,
-                            Colors.purple.shade100,
-                            Colors.pink.shade100,
-                          ].map((color) {
-                            final colorHex =
-                                color == null
-                                    ? null
-                                    : '#${color.value.toRadixString(16).substring(2)}';
-                            final isSelected =
-                                _selectedColorHex == colorHex ||
-                                (color == null && _selectedColorHex == null);
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedColorHex = colorHex;
-                                });
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: color ?? Colors.white,
-                                  border: Border.all(
-                                    color:
-                                        isSelected
-                                            ? theme.colorScheme.primary
-                                            : Colors.grey.shade300,
-                                    width: 2,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child:
-                                    isSelected
-                                        ? Center(
-                                          child: Icon(
-                                            Icons.check,
-                                            size: 14,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        )
-                                        : null,
-                              ),
-                            );
-                          }),
-
-                          // 调色盘按钮
-                          GestureDetector(
-                            onTap: () async {
-                              final color = await showDialog<Color>(
-                                context: context,
-                                builder:
-                                    (context) => AlertDialog(
-                                      title: const Text('选择自定义颜色'),
-                                      content: ColorPicker(
-                                        color:
-                                            _selectedColorHex != null
-                                                ? Color(
-                                                  int.parse(
-                                                        _selectedColorHex!
-                                                            .substring(1),
-                                                        radix: 16,
-                                                      ) |
-                                                      0xFF000000,
-                                                )
-                                                : Colors.blue,
-                                        onColorChanged: (color) {
-                                          Navigator.of(context).pop(color);
-                                        },
-                                        pickersEnabled:
-                                            const <ColorPickerType, bool>{
-                                              ColorPickerType.both: false,
-                                              ColorPickerType.primary: true,
-                                              ColorPickerType.accent: false,
-                                            },
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: 12,
-                                        spacing: 4,
-                                        runSpacing: 4,
-                                        showColorCode: false,
-                                        showRecentColors: false,
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 当前选择显示
+                                Row(
+                                  children: [
+                                    Text(
+                                      '当前选择:',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: theme.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
-                              );
-                              if (color != null) {
-                                setState(() {
-                                  _selectedColorHex =
-                                      '#${color.value.toRadixString(16).substring(2)}';
-                                });
-                              }
-                            },
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(
-                                  color: Colors.grey.shade400,
-                                  width: 1.5,
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: _selectedColorHex != null
+                                            ? Color(
+                                                int.parse(_selectedColorHex!.substring(1), radix: 16) |
+                                                    0xFF000000,
+                                              )
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: _selectedColorHex == null
+                                              ? theme.colorScheme.outline
+                                              : Colors.transparent,
+                                        ),
+                                      ),
+                                      child: _selectedColorHex == null
+                                          ? Icon(
+                                              Icons.block,
+                                              size: 16,
+                                              color: theme.colorScheme.outline,
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _selectedColorHex == null ? '无' : '自定义',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.palette,
-                                size: 14,
-                                color: Colors.grey,
-                              ),
+                                
+                                const SizedBox(height: 16),
+                                
+                                // 预设颜色选项
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.palette),
+                                  label: const Text('选择卡片颜色'),
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(44),
+                                    backgroundColor: theme.colorScheme.primaryContainer,
+                                    foregroundColor: theme.colorScheme.onPrimaryContainer,
+                                  ),
+                                  onPressed: () => _showCustomColorPicker(context),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -618,74 +926,5 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         ),
       ),
     );
-  }
-
-  // 辅助方法：判断图标是否为表情符号
-  bool _isEmoji(String? iconName) {
-    if (iconName == null || iconName.isEmpty) return false;
-    return !iconName.startsWith('icon:');
-  }
-
-  // 辅助方法：获取显示图标
-  String _getDisplayIcon(String? iconName) {
-    if (iconName == null || iconName.isEmpty) return '📝';
-    if (_isEmoji(iconName)) return iconName;
-    return '📝';
-  }
-
-  // 辅助方法：获取图标数据 - 修复图标显示问题
-  IconData _getIconData(String? iconName) {
-    if (iconName == null || iconName.isEmpty) return Icons.label;
-
-    // 如果图标以 "icon:" 开头，解析后面的内容
-    if (iconName.startsWith('icon:')) {
-      final iconCode = iconName.substring(5);
-      
-      // 使用Map映射图标名称到IconData，避免使用大量if-else
-      final Map<String, IconData> iconMap = {
-        'bookmark': Icons.bookmark,
-        'favorite': Icons.favorite,
-        'star': Icons.star,
-        'label': Icons.label,
-        'lightbulb': Icons.lightbulb,
-        'psychology': Icons.psychology,
-        'auto_stories': Icons.auto_stories,
-        'menu_book': Icons.menu_book,
-        'format_quote': Icons.format_quote,
-        'campaign': Icons.campaign,
-        'article': Icons.article,
-        'brush': Icons.brush,
-        'category': Icons.category,
-        'create': Icons.create,
-        'music_note': Icons.music_note,
-        'movie': Icons.movie,
-        'public': Icons.public,
-        'sports_esports': Icons.sports_esports,
-        'theaters': Icons.theaters,
-        // 添加更多常用图标映射
-        'book': Icons.book,
-        'sentiment_satisfied': Icons.sentiment_satisfied,
-        'sentiment_dissatisfied': Icons.sentiment_dissatisfied,
-        'emoji_emotions': Icons.emoji_emotions,
-        'emoji_nature': Icons.emoji_nature,
-        'food_bank': Icons.food_bank,
-        'sports_basketball': Icons.sports_basketball,
-        'science': Icons.science,
-        'workspace_premium': Icons.workspace_premium,
-        'travel_explore': Icons.travel_explore,
-        'health_and_safety': Icons.health_and_safety,
-        'payments': Icons.payments,
-        'school': Icons.school,
-        'code': Icons.code,
-        'tips_and_updates': Icons.tips_and_updates,
-        'work': Icons.work,
-        'home': Icons.home,
-      };
-      
-      // 从映射中获取图标，如果没有找到则返回默认图标
-      return iconMap[iconCode] ?? Icons.label;
-    }
-
-    return Icons.label; // 默认图标
   }
 }

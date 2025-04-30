@@ -336,25 +336,34 @@ class AIService extends ChangeNotifier {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
 
-      final quotesText = quotes
-          .map((quote) {
-            String quoteText = '日期：${quote.date}\n内容：${quote.content}';
-            // 添加额外的笔记元数据，如果存在的话
-            if (quote.location != null && quote.location!.isNotEmpty) {
-              quoteText += '\n位置：${quote.location}';
-            }
-            if (quote.weather != null && quote.weather!.isNotEmpty) {
-              quoteText += '\n天气：${quote.weather}';
-            }
-            if (quote.temperature != null && quote.temperature!.isNotEmpty) {
-              quoteText += '\n温度：${quote.temperature}';
-            }
-            if (quote.source != null && quote.source!.isNotEmpty) {
-              quoteText += '\n来源：${quote.source}';
-            }
-            return quoteText;
-          })
-          .join('\n\n');
+      // 将笔记数据转换为与备份还原功能类似的JSON格式
+      final jsonData = {
+        'metadata': {
+          'app': '心迹',
+          'version': '1.0',
+          'exportTime': DateTime.now().toIso8601String(),
+          'analysisType': analysisType,
+          'analysisStyle': analysisStyle,
+        },
+        'quotes': quotes.map((quote) {
+          return {
+            'id': quote.id,
+            'content': quote.content,
+            'date': quote.date,
+            'source': quote.source,
+            'sourceAuthor': quote.sourceAuthor,
+            'sourceWork': quote.sourceWork,
+            'tagIds': quote.tagIds,
+            'categoryId': quote.categoryId,
+            'location': quote.location,
+            'weather': quote.weather,
+            'temperature': quote.temperature,
+          };
+        }).toList()
+      };
+
+      // 将数据转换为格式化的JSON字符串
+      final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
 
       // 根据分析类型选择系统提示词
       String systemPrompt = _getAnalysisTypePrompt(analysisType);
@@ -364,7 +373,7 @@ class AIService extends ChangeNotifier {
 
       final messages = [
         {'role': 'system', 'content': systemPrompt},
-        {'role': 'user', 'content': '请分析以下笔记内容：\n\n$quotesText'},
+        {'role': 'user', 'content': '请分析以下结构化的笔记数据：\n\n$quotesText'},
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
@@ -487,7 +496,21 @@ class AIService extends ChangeNotifier {
 
       final quotesText = quotes
           .map((quote) {
-            return '日期：${quote.date}\n内容：${quote.content}';
+            String quoteText = '日期：${quote.date}\n内容：${quote.content}';
+            // 添加额外的笔记元数据，如果存在的话
+            if (quote.location != null && quote.location!.isNotEmpty) {
+              quoteText += '\n位置：${quote.location}';
+            }
+            if (quote.weather != null && quote.weather!.isNotEmpty) {
+              quoteText += '\n天气：${quote.weather}';
+            }
+            if (quote.temperature != null && quote.temperature!.isNotEmpty) {
+              quoteText += '\n温度：${quote.temperature}';
+            }
+            if (quote.source != null && quote.source!.isNotEmpty) {
+              quoteText += '\n来源：${quote.source}';
+            }
+            return quoteText;
           })
           .join('\n\n');
 
@@ -496,7 +519,9 @@ class AIService extends ChangeNotifier {
           'role': 'system',
           'content': '''你是一位资深的笔记分析和个人成长顾问。你的任务是根据用户的特定要求，分析他们的笔记内容。
 请以专业、友好且有洞察力的方式回应用户的特定分析请求。注重提供有用、实用且个性化的洞察。
-避免使用过于学术或抽象的语言，保持回应亲切自然。请遵循用户的具体指示进行分析。''',
+避免使用过于学术或抽象的语言，保持回应亲切自然。请遵循用户的具体指示进行分析。
+
+分析时，请特别注意笔记中包含的环境因素（如位置、天气、温度）对用户心情和思考的潜在影响，如果这些信息可用的话。''',
         },
         {
           'role': 'user',

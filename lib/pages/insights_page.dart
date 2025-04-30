@@ -366,6 +366,44 @@ class _InsightsPageState extends State<InsightsPage>
               ],
             ),
           ),
+          
+          const SizedBox(height: 16),
+          
+          // AI 警告提示
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.amber,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'AI 分析使用说明',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '1. AI可能会生成不准确或误导性内容，请谨慎评估分析结果\n'
+                  '2. 使用此功能时，您的所有笔记信息（包括内容、日期、位置、天气和温度等）'
+                  '都会发送给AI进行全面分析\n'
+                  '3. 分析结果仅供参考，最终解释权归您自己\n'
+                  '4. 建议在网络良好的环境下使用此功能，以获得最佳体验',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

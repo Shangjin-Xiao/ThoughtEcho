@@ -5,6 +5,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:geolocator/geolocator.dart'; // 确保导入 geolocator
 import '../services/database_service.dart';
 import '../services/clipboard_service.dart'; // 添加剪贴板服务导入
+import '../services/settings_service.dart'; // 添加设置服务导入
 import 'ai_settings_page.dart';
 import 'tag_settings_page.dart';
 import 'hitokoto_settings_page.dart';
@@ -141,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    color: theme.colorScheme.outline.withAlpha((0.2 * 255).round()),
                   ),
                 ),
                 SwitchListTile(
@@ -259,7 +260,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         '当前显示位置: ${locationService.currentAddress ?? '未设置'}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).round()),
                         ),
                       ),
                        const SizedBox(height: 8.0),
@@ -307,6 +308,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onTap: null,
                   ),
+                  
+                  // 添加天气数据来源信息
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
+                    child: Text(
+                      '天气数据由 OpenMeteo 提供',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).round()),
+                      ),
+                    ),
+                  ),
 
                 const SizedBox(height: 8.0),
               ],
@@ -325,11 +338,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    color: theme.colorScheme.outline.withAlpha((0.2 * 255).round()),
                   ),
                 ),
                 // 添加剪贴板监控设置
                 _buildClipboardMonitoringItem(context),
+                
+                // 添加默认启动页面设置
+                _buildDefaultStartPageItem(context),
+
                 ListTile(
                   title: const Text('主题设置'),
                   subtitle: const Text('自定义应用的外观主题'),
@@ -379,7 +396,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     '一言服务由 Hitokoto 提供',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()),
                     ),
                   ),
                 ),
@@ -415,7 +432,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    color: theme.colorScheme.outline.withAlpha((0.2 * 255).round()),
                   ),
                 ),
                 ListTile(
@@ -547,6 +564,62 @@ class _SettingsPageState extends State<SettingsPage> {
       value: clipboardService.enableClipboardMonitoring,
       onChanged: (value) {
         clipboardService.setEnableClipboardMonitoring(value);
+      },
+    );
+  }
+
+  // 构建默认启动页面设置项
+  Widget _buildDefaultStartPageItem(BuildContext context) {
+    // 从 SettingsService 获取设置
+    final settingsService = Provider.of<SettingsService>(context);
+    final currentValue = settingsService.appSettings.defaultStartPage;
+    
+    return ListTile(
+      title: const Text('默认启动页面'),
+      subtitle: Text(currentValue == 0 ? '首页（每日一言）' : '记录（笔记列表）'),
+      leading: const Icon(Icons.home_outlined),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('选择默认启动页面'),
+            content: StatefulBuilder(
+              builder: (context, setState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<int>(
+                      title: const Text('首页（每日一言）'),
+                      value: 0,
+                      groupValue: currentValue,
+                      onChanged: (value) {
+                        if (value != null) {
+                          settingsService.updateAppSettings(
+                            settingsService.appSettings.copyWith(defaultStartPage: value)
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    RadioListTile<int>(
+                      title: const Text('记录（笔记列表）'),
+                      value: 1,
+                      groupValue: currentValue,
+                      onChanged: (value) {
+                        if (value != null) {
+                          settingsService.updateAppSettings(
+                            settingsService.appSettings.copyWith(defaultStartPage: value)
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
       },
     );
   }
@@ -728,7 +801,7 @@ class _SettingsPageState extends State<SettingsPage> {
                  TextButton(
                    onPressed: () => Navigator.pop(context),
                    child: const Text('确定'),
-                 ),
+                 )
                ],
              ),
            );

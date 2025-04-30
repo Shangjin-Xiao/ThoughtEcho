@@ -334,107 +334,141 @@ class _NoteListViewState extends State<NoteListView> {
     final db = Provider.of<DatabaseService>(context);
     final theme = Theme.of(context);
 
+    // 响应式设计：根据屏幕宽度调整布局
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width > 600;
+    final maxWidth = isTablet ? 800.0 : width;
+    final horizontalPadding = isTablet ? 16.0 : 8.0;
+    final verticalPadding = isTablet ? 16.0 : 8.0;
+
+    // 布局构建
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 根据屏幕宽度自适应调整内容宽度
-        double maxWidth;
-
-        if (constraints.maxWidth < 600) {
-          maxWidth = constraints.maxWidth; // 小屏完全利用可用空间
-        } else if (constraints.maxWidth < 960) {
-          maxWidth = constraints.maxWidth * 0.98; // 中小屏几乎铺满
-        } else if (constraints.maxWidth < 1280) {
-          maxWidth = constraints.maxWidth * 0.95; // 中屏更高利用率
-        } else {
-          maxWidth = 1800; // 大屏更宽的最大宽度，充分利用大屏空间
-        }
-
-        // 根据屏幕尺寸调整边距 - 小屏幕紧凑一些
-        final horizontalPadding = constraints.maxWidth < 600 ? 4.0 : 8.0;
-        final verticalPadding = constraints.maxWidth < 600 ? 2.0 : 4.0;
-
+        // 主体内容
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: verticalPadding,
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4), // 减少顶部组件间距
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: '搜索笔记...',
-                              prefixIcon: const Icon(Icons.search),
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical:
-                                    constraints.maxWidth < 600 ? 8.0 : 12.0,
-                              ),
-                              isDense: constraints.maxWidth < 600, // 小屏幕更紧凑
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+            child: Column(
+              children: [
+                // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding, 
+                    MediaQuery.of(context).padding.top + 8.0, // 顶部安全区域 + 一些额外空间
+                    horizontalPadding, 
+                    0
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: '搜索笔记...',
+                            prefixIcon: const Icon(Icons.search),
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical:
+                                  constraints.maxWidth < 600 ? 8.0 : 12.0,
+                            ),
+                            isDense: constraints.maxWidth < 600, // 小屏幕更紧凑
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onChanged: _onSearchChanged,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.tune),
+                        tooltip: '筛选/排序',
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ), // 更紧凑的按钮
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true, // 允许更大的底部表单
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(16),
                               ),
                             ),
-                            onChanged: _onSearchChanged,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          icon: const Icon(Icons.tune),
-                          tooltip: '筛选/排序',
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ), // 更紧凑的按钮
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true, // 允许更大的底部表单
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16),
-                                ),
-                              ),
-                              builder:
-                                  (context) => NoteFilterSortSheet(
-                                    allTags: widget.tags,
-                                    selectedTagIds: widget.selectedTagIds,
-                                    sortType: widget.sortType,
-                                    sortAscending: widget.sortAscending,
-                                    selectedWeathers: _selectedWeathers,
-                                    onApply: (
-                                      tagIds,
-                                      sortType,
-                                      sortAscending,
-                                      selectedWeathers,
-                                    ) {
-                                      widget.onTagSelectionChanged(tagIds);
-                                      widget.onSortChanged(
-                                        sortType,
-                                        sortAscending,
-                                      );
-                                      setState(() {
-                                        _selectedWeathers = selectedWeathers;
-                                      });
-                                    },
-                                  ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                            builder: (context) => NoteFilterSortSheet(
+                              allTags: widget.tags,
+                              selectedTagIds: widget.selectedTagIds,
+                              sortType: widget.sortType,
+                              sortAscending: widget.sortAscending,
+                              selectedWeathers: _selectedWeathers,
+                              onApply: (
+                                tagIds,
+                                sortType,
+                                sortAscending,
+                                selectedWeathers,
+                              ) {
+                                widget.onTagSelectionChanged(tagIds);
+                                widget.onSortChanged(
+                                  sortType,
+                                  sortAscending,
+                                );
+                                setState(() {
+                                  _selectedWeathers = selectedWeathers;
+                                });
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  Expanded(child: _buildNoteList(db, theme)),
-                ],
-              ),
+                ),
+                
+                // 标签筛选器
+                widget.selectedTagIds.isNotEmpty
+                    ? Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 8.0,
+                        ),
+                        width: double.infinity,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.selectedTagIds.map((tagId) {
+                            final tag = widget.tags.firstWhere(
+                              (tag) => tag.id == tagId,
+                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                            );
+                            return Chip(
+                              label: Text(tag.name),
+                              onDeleted: () {
+                                final newSelectedTags = List<String>.from(
+                                  widget.selectedTagIds,
+                                )..remove(tagId);
+                                widget.onTagSelectionChanged(newSelectedTags);
+                              },
+                              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+                
+                // 笔记列表
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                    ),
+                    child: _buildNoteList(db, theme),
+                  ),
+                ),
+              ],
             ),
           ),
         );
