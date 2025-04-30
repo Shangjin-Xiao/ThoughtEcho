@@ -41,7 +41,7 @@ class QuoteContent extends StatelessWidget {
           ),
           child: quill.QuillEditor.basic(
             controller: controller,
-            config: quill.QuillEditorConfig(
+            config: const quill.QuillEditorConfig(
               // 禁用编辑功能
               autoFocus: false,
               expands: false,

@@ -10,6 +10,11 @@ class SettingsService extends ChangeNotifier {
   static const String _aiSettingsKey = 'ai_settings';
   static const String _appSettingsKey = 'app_settings';
   static const String _themeModeKey = 'theme_mode';
+  static const String _lastVersionKey = 'last_version';
+  static const String _databaseMigrationCompleteKey = 'database_migration_complete';
+  // 使用应用安装标记替代版本号
+  static const String _appInstalledKey = 'app_installed_v2';
+  static const String _appUpgradedKey = 'app_upgraded_v2';
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
   late AISettings _aiSettings;
@@ -23,13 +28,53 @@ class SettingsService extends ChangeNotifier {
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
-
+  
   SettingsService(this._prefs);
 
   Future<void> _loadSettings() async {
     // 检查是否需要迁移数据
     await _migrateDataIfNeeded();
+    
+    // 检查应用是否是首次安装或升级
+    final bool wasInstalledBefore = _mmkv.getBool(_appInstalledKey) ?? false;
+    
+    // 如果是首次安装，标记为已安装
+    if (!wasInstalledBefore) {
+      debugPrint('检测到首次安装，将重置引导页面状态');
+      await _mmkv.setBool(_appInstalledKey, true);
+      
+      // 首次安装时，载入应用默认设置
+      _loadAppSettings();
+      _appSettings = _appSettings.copyWith(hasCompletedOnboarding: false);
+      await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    } else {
+      // 检查是否有升级标记
+      final hasUpgradeTag = _mmkv.getBool(_appUpgradedKey) ?? false;
+      
+      // 如果设置了升级标记，刷新引导状态
+      if (hasUpgradeTag) {
+        debugPrint('检测到应用升级标记，将重置引导页面状态');
+        
+        // 重置升级标记
+        await _mmkv.setBool(_appUpgradedKey, false);
+        
+        // 重置引导状态，但保留其他设置
+        _loadAppSettings();
+        _appSettings = _appSettings.copyWith(hasCompletedOnboarding: false);
+        await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+      }
+    }
+    
+    // 继续加载其他设置
+    _loadAISettings();
+    _loadAppSettings();
+    _loadThemeMode();
 
+    notifyListeners();
+  }
+
+  // 加载AI设置
+  Future<void> _loadAISettings() async {
     // 优先从MMKV加载数据
     final String? aiSettingsJson =
         _mmkv.getString(_aiSettingsKey) ?? _prefs.getString(_aiSettingsKey);
@@ -63,7 +108,10 @@ class SettingsService extends ChangeNotifier {
         json.encode(_aiSettings.copyWith(apiKey: '').toJson()),
       );
     }
-
+  }
+  
+  // 加载应用设置
+  void _loadAppSettings() {
     final String? appSettingsJson =
         _mmkv.getString(_appSettingsKey) ?? _prefs.getString(_appSettingsKey);
 
@@ -73,7 +121,7 @@ class SettingsService extends ChangeNotifier {
       // 确保一言类型不为空，如果为空则设置为默认全选
       if (_appSettings.hitokotoType.isEmpty) {
         _appSettings = AppSettings.defaultSettings();
-        await _mmkv.setString(
+        _mmkv.setString(
           _appSettingsKey,
           json.encode(_appSettings.toJson()),
         );
@@ -82,13 +130,16 @@ class SettingsService extends ChangeNotifier {
     } else {
       _appSettings = AppSettings.defaultSettings();
       // 首次启动时保存默认设置到存储
-      await _mmkv.setString(
+      _mmkv.setString(
         _appSettingsKey,
         json.encode(_appSettings.toJson()),
       );
       debugPrint('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
     }
-
+  }
+  
+  // 加载主题模式
+  void _loadThemeMode() {
     // 加载主题模式 - 优先从MMKV读取
     String? themeModeString = _mmkv.getString(_themeModeKey);
 
@@ -107,8 +158,6 @@ class SettingsService extends ChangeNotifier {
     } else {
       _themeMode = ThemeMode.system; // 默认 ThemeMode.system
     }
-
-    notifyListeners();
   }
 
   // 将数据从SharedPreferences迁移到MMKV (只在首次升级后执行一次)
@@ -204,6 +253,33 @@ class SettingsService extends ChangeNotifier {
   Future<void> updateThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     await _mmkv.setString(_themeModeKey, mode.name);
+    notifyListeners();
+  }
+
+  // 设置应用升级标记，用于触发显示引导页
+  Future<void> setAppUpgraded() async {
+    await _mmkv.setBool(_appUpgradedKey, true);
+  }
+
+  // 设置数据库迁移是否完成
+  Future<void> setDatabaseMigrationComplete(bool isComplete) async {
+    await _mmkv.setBool(_databaseMigrationCompleteKey, isComplete);
+  }
+  
+  // 检查数据库迁移是否已完成
+  bool isDatabaseMigrationComplete() {
+    return _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
+  }
+
+  // 通过检查应用设置中的引导完成标志判断用户是否完成了引导
+  bool hasCompletedOnboarding() {
+    return _appSettings.hasCompletedOnboarding;
+  }
+
+  // 设置用户是否完成了引导流程
+  Future<void> setHasCompletedOnboarding(bool completed) async {
+    _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
 }

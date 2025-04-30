@@ -23,7 +23,7 @@ class DatabaseService extends ChangeNotifier {
   final List<NoteCategory> _categoryStore = [];
 
   // 新增：流式分页加载笔记
-  final _quotesController = StreamController<List<Quote>>.broadcast();
+  StreamController<List<Quote>>? _quotesController;
   List<Quote> _quotesCache = [];
   List<String>? _watchTagIds;
   String? _watchCategoryId;
@@ -36,6 +36,16 @@ class DatabaseService extends ChangeNotifier {
   // 查询缓存，减少重复数据库查询
   final Map<String, List<Quote>> _filterCache = {};
   final int _maxCacheEntries = 10; // 最多缓存10组过滤条件的结果
+
+  // 添加存储天气筛选条件的变量
+  List<String>? _watchSelectedWeathers;
+
+  // 添加存储时间段筛选条件的变量
+  List<String>? _watchSelectedDayPeriods;
+
+  // 添加初始化状态标志
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
 
   Database get database {
     if (_database == null) {
@@ -74,11 +84,15 @@ class DatabaseService extends ChangeNotifier {
 
       // 触发更新
       _categoriesController.add(_categoryStore);
+      _isInitialized = true; // 标记为已初始化
       notifyListeners();
       return;
     }
 
-    if (_database != null) return;
+    if (_database != null) {
+      _isInitialized = true; // 如果数据库已经存在，标记为已初始化
+      return;
+    }
 
     debugPrint('初始化数据库...');
 
@@ -105,198 +119,248 @@ class DatabaseService extends ChangeNotifier {
         }
       }
 
-      _database = await openDatabase(
-        path,
-        version: 11, // 版本号升级至11，以支持添加edit_source和delta_content字段
-        onCreate: (db, version) async {
-          // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
-          await db.execute('''
-            CREATE TABLE categories(
-              id TEXT PRIMARY KEY,
-              name TEXT NOT NULL,
-              is_default BOOLEAN DEFAULT 0,
-              icon_name TEXT
-            )
-          ''');
-          // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content 字段
-          await db.execute('''
-            CREATE TABLE quotes(
-              id TEXT PRIMARY KEY,
-              content TEXT NOT NULL,
-              date TEXT NOT NULL,
-              source TEXT,
-              source_author TEXT,
-              source_work TEXT,
-              tag_ids TEXT DEFAULT '',
-              ai_analysis TEXT,
-              sentiment TEXT,
-              keywords TEXT,
-              summary TEXT,
-              category_id TEXT DEFAULT '',
-              color_hex TEXT,
-              location TEXT,
-              weather TEXT,
-              temperature TEXT,
-              edit_source TEXT,
-              delta_content TEXT
-            )
-          ''');
-
-          // 创建索引以加速常用查询
-          await db.execute(
-            'CREATE INDEX idx_quotes_category_id ON quotes(category_id)',
-          );
-          await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
-          // 虽然tag_ids是一个文本字段，但我们也可以为它创建索引，以加速LIKE查询
-          await db.execute(
-            'CREATE INDEX idx_quotes_tag_ids ON quotes(tag_ids)',
-          );
-        },
-        onUpgrade: (db, oldVersion, newVersion) async {
-          // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
-          if (oldVersion < 2) {
-            await db.execute(
-              'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""',
-            );
-          }
-          // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
-          if (oldVersion < 3) {
-            await db.execute(
-              'ALTER TABLE categories ADD COLUMN icon_name TEXT',
-            );
-          }
-          // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
-          if (oldVersion < 4) {
-            await db.execute(
-              'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""',
-            );
-          }
-
-          // 如果数据库版本低于 5，添加 quotes 表中的 source 字段
-          if (oldVersion < 5) {
-            await db.execute('ALTER TABLE quotes ADD COLUMN source TEXT');
-          }
-
-          // 如果数据库版本低于 6，添加 quotes 表中的 color_hex 字段
-          if (oldVersion < 6) {
-            await db.execute('ALTER TABLE quotes ADD COLUMN color_hex TEXT');
-          }
-
-          // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
-          if (oldVersion < 7) {
-            await db.execute(
-              'ALTER TABLE quotes ADD COLUMN source_author TEXT',
-            );
-            await db.execute('ALTER TABLE quotes ADD COLUMN source_work TEXT');
-
-            // 将现有的 source 字段数据拆分到新字段中
-            final quotes = await db.query(
-              'quotes',
-              where: 'source IS NOT NULL AND source != ""',
-            );
-            for (final quote in quotes) {
-              final String? source = quote['source'] as String?;
-              if (source != null && source.isNotEmpty) {
-                String? author;
-                String? work;
-
-                // 尝试分析现有source格式，提取author和work
-                if (source.contains('——') && source.contains('「')) {
-                  // 格式为"作者——「作品」"
-                  final parts = source.split('——');
-                  if (parts.length > 1) {
-                    author = parts[0].trim();
-                    final workMatch = RegExp(r'「(.+?)」').firstMatch(parts[1]);
-                    if (workMatch != null) {
-                      work = workMatch.group(1);
-                    }
-                  }
-                } else if (source.contains('——')) {
-                  // 格式为"作者——作品"
-                  final parts = source.split('——');
-                  if (parts.length > 1) {
-                    author = parts[0].trim();
-                    work = parts[1].trim();
-                  }
-                }
-
-                // 更新数据库条目
-                await db.update(
-                  'quotes',
-                  {'source_author': author, 'source_work': work},
-                  where: 'id = ?',
-                  whereArgs: [quote['id']],
-                );
-              }
-            }
-          }
-
-          // 如果数据库版本低于 8，添加位置和天气相关字段
-          if (oldVersion < 8) {
-            debugPrint(
-              '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段',
-            );
-            await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
-            await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
-            await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
-            debugPrint('数据库升级：location, weather, temperature 字段添加完成');
-          }
-
-          // 如果数据库版本低于 9，添加索引以提高查询性能
-          if (oldVersion < 9) {
-            debugPrint('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
-            await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
-            );
-            await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
-            );
-            await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
-            );
-            debugPrint('数据库升级：索引添加完成');
-          }
-
-          // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
-          if (oldVersion < 10) {
-            debugPrint(
-              '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段',
-            );
-            await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
-            debugPrint('数据库升级：edit_source 字段添加完成');
-          }
-          // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
-          if (oldVersion < 11) {
-            debugPrint(
-              '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
-            );
-            await db.execute(
-              'ALTER TABLE quotes ADD COLUMN delta_content TEXT',
-            );
-            debugPrint('数据库升级：delta_content 字段添加完成');
-          }
-        },
-      );
-
+      // 数据库初始化核心逻辑
+      _database = await _initDatabase(path);
+      
       // 检查并修复数据库结构
       await _checkAndFixDatabaseStructure();
-
+      
       // 更新分类流数据
       await _updateCategoriesStream();
-
-      // 修复: 初始化完成后，立即预加载笔记数据并触发监听器
+      
+      // 初始化完成后，预加载笔记数据
       debugPrint('数据库初始化完成，开始预加载笔记数据...');
       // 重置流相关状态
       _watchOffset = 0;
       _quotesCache = [];
       _filterCache.clear();
       _watchHasMore = true;
-      // 调用一次 _loadNextQuotesPage 来预加载数据
+      // 预加载数据
       await _prefetchInitialQuotes();
-      // 通知监听器数据已更新
+      
+      _isInitialized = true; // 数据库初始化完成
       notifyListeners();
     } catch (e) {
-      debugPrint('数据库初始化错误: $e');
+      debugPrint('数据库初始化失败: $e');
+      rethrow;
+    }
+  }
+  
+  // 抽取数据库初始化逻辑到单独方法，便于复用
+  Future<Database> _initDatabase(String path) async {
+    return await openDatabase(
+      path,
+      version: 11, // 版本号升级至11，以支持添加edit_source和delta_content字段
+      onCreate: (db, version) async {
+        // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
+        await db.execute('''
+          CREATE TABLE categories(
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            is_default BOOLEAN DEFAULT 0,
+            icon_name TEXT
+          )
+        ''');
+        // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content 字段
+        await db.execute('''
+          CREATE TABLE quotes(
+            id TEXT PRIMARY KEY,
+            content TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT,
+            source_author TEXT,
+            source_work TEXT,
+            tag_ids TEXT DEFAULT '',
+            ai_analysis TEXT,
+            sentiment TEXT,
+            keywords TEXT,
+            summary TEXT,
+            category_id TEXT DEFAULT '',
+            color_hex TEXT,
+            location TEXT,
+            weather TEXT,
+            temperature TEXT,
+            edit_source TEXT,
+            delta_content TEXT
+          )
+        ''');
+
+        // 创建索引以加速常用查询
+        await db.execute(
+          'CREATE INDEX idx_quotes_category_id ON quotes(category_id)',
+        );
+        await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
+        // 虽然tag_ids是一个文本字段，但我们也可以为它创建索引，以加速LIKE查询
+        await db.execute(
+          'CREATE INDEX idx_quotes_tag_ids ON quotes(tag_ids)',
+        );
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""',
+          );
+        }
+        // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
+        if (oldVersion < 3) {
+          await db.execute(
+            'ALTER TABLE categories ADD COLUMN icon_name TEXT',
+          );
+        }
+        // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
+        if (oldVersion < 4) {
+          await db.execute(
+            'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""',
+          );
+        }
+
+        // 如果数据库版本低于 5，添加 quotes 表中的 source 字段
+        if (oldVersion < 5) {
+          await db.execute('ALTER TABLE quotes ADD COLUMN source TEXT');
+        }
+
+        // 如果数据库版本低于 6，添加 quotes 表中的 color_hex 字段
+        if (oldVersion < 6) {
+          await db.execute('ALTER TABLE quotes ADD COLUMN color_hex TEXT');
+        }
+
+        // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
+        if (oldVersion < 7) {
+          await db.execute(
+            'ALTER TABLE quotes ADD COLUMN source_author TEXT',
+          );
+          await db.execute('ALTER TABLE quotes ADD COLUMN source_work TEXT');
+
+          // 将现有的 source 字段数据拆分到新字段中
+          final quotes = await db.query(
+            'quotes',
+            where: 'source IS NOT NULL AND source != ""',
+          );
+          for (final quote in quotes) {
+            final String? source = quote['source'] as String?;
+            if (source != null && source.isNotEmpty) {
+              String? author;
+              String? work;
+
+              // 尝试分析现有source格式，提取author和work
+              if (source.contains('——') && source.contains('「')) {
+                // 格式为"作者——「作品」"
+                final parts = source.split('——');
+                if (parts.length > 1) {
+                  author = parts[0].trim();
+                  final workMatch = RegExp(r'「(.+?)」').firstMatch(parts[1]);
+                  if (workMatch != null) {
+                    work = workMatch.group(1);
+                  }
+                }
+              } else if (source.contains('——')) {
+                // 格式为"作者——作品"
+                final parts = source.split('——');
+                if (parts.length > 1) {
+                  author = parts[0].trim();
+                  work = parts[1].trim();
+                }
+              }
+
+              // 更新数据库条目
+              await db.update(
+                'quotes',
+                {'source_author': author, 'source_work': work},
+                where: 'id = ?',
+                whereArgs: [quote['id']],
+              );
+            }
+          }
+        }
+
+        // 如果数据库版本低于 8，添加位置和天气相关字段
+        if (oldVersion < 8) {
+          debugPrint(
+            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段',
+          );
+          await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
+          await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
+          await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
+          debugPrint('数据库升级：location, weather, temperature 字段添加完成');
+        }
+
+        // 如果数据库版本低于 9，添加索引以提高查询性能
+        if (oldVersion < 9) {
+          debugPrint('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
+          );
+          debugPrint('数据库升级：索引添加完成');
+        }
+
+        // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
+        if (oldVersion < 10) {
+          debugPrint(
+            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段',
+          );
+          await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
+          debugPrint('数据库升级：edit_source 字段添加完成');
+        }
+        // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
+        if (oldVersion < 11) {
+          debugPrint(
+            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
+          );
+          await db.execute(
+            'ALTER TABLE quotes ADD COLUMN delta_content TEXT',
+          );
+          debugPrint('数据库升级：delta_content 字段添加完成');
+        }
+      },
+    );
+  }
+  
+  // 新增初始化新数据库方法，用于在迁移失败时创建新的数据库
+  Future<void> initializeNewDatabase() async {
+    if (_isInitialized) return;
+    
+    try {
+      // 确保数据库目录存在
+      if (Platform.isWindows) {
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+      }
+      
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, 'thoughtecho.db');
+      
+      // 如果文件已存在但可能损坏，先备份再删除
+      final file = File(path);
+      if (await file.exists()) {
+        try {
+          final backupPath = join(dbPath, 'thoughtecho_backup_${DateTime.now().millisecondsSinceEpoch}.db');
+          await file.copy(backupPath);
+          debugPrint('已将可能损坏的数据库备份到 $backupPath');
+          await file.delete();
+          debugPrint('已删除可能损坏的数据库文件');
+        } catch (e) {
+          debugPrint('备份或删除损坏数据库失败: $e');
+        }
+      }
+      
+      // 初始化新数据库
+      _database = await _initDatabase(path);
+      
+      // 创建默认分类
+      await initDefaultHitokotoCategories();
+      
+      _isInitialized = true;
+      notifyListeners();
+      debugPrint('成功初始化新数据库');
+    } catch (e) {
+      debugPrint('初始化新数据库失败: $e');
       rethrow;
     }
   }
@@ -304,52 +368,32 @@ class DatabaseService extends ChangeNotifier {
   /// 在初始化时预加载笔记数据
   Future<void> _prefetchInitialQuotes() async {
     try {
-      // 使用默认配置加载第一页数据，包括所有默认筛选条件
-      final quotes = await getUserQuotes(
-        limit: _watchLimit,
-        offset: 0,
-        orderBy: _watchOrderBy,
-        // 确保预加载不带任何筛选条件的数据，使首页初始状态能命中缓存
+      // 将当前查询状态重置为默认值
+      _currentQuotes = [];
+      _watchHasMore = true;
+      _isLoading = false;
+      
+      // 使用loadMoreQuotes加载第一页数据
+      await loadMoreQuotes(
         tagIds: null,
         categoryId: null,
-        searchQuery: null,
+        searchQuery: null
       );
-
-      if (quotes.isNotEmpty) {
-        debugPrint('初始预加载了 ${quotes.length} 条笔记');
-
-        // 确保使用完整的缓存键，与watchQuotes保持一致
-        final cacheKey = _generateCacheKey(
-          tagIds: null,
-          categoryId: null,
-          searchQuery: null,
-          orderBy: _watchOrderBy,
-        );
-
-        _addToCache(cacheKey, quotes, 0);
-
-        // 确保笔记流控制器有最新数据
-        if (_quotesController.hasListener) {
-          _quotesCache = quotes;
-          _watchOffset = quotes.length;
-          _watchHasMore = quotes.length == _watchLimit;
-          _quotesController.add(List.unmodifiable(quotes));
-        } else {
-          // 即使没有监听器，也将数据添加到流中，确保第一次监听时能立即获取数据
-          _quotesCache = quotes;
-          _watchOffset = quotes.length;
-          _watchHasMore = quotes.length == _watchLimit;
-          _quotesController.add(List.unmodifiable(quotes));
-        }
-      } else {
+      
+      // 通知初始化完成
+      if (_currentQuotes.isEmpty) {
         debugPrint('数据库中没有笔记数据');
         // 确保流控制器发出空列表而不是等待数据
-        _quotesController.add([]);
+        if (_quotesController != null && !_quotesController!.isClosed) {
+          _quotesController!.add([]);
+        }
       }
     } catch (e) {
       debugPrint('预加载笔记时出错: $e');
       // 即使出错也要发出空列表，避免UI一直等待
-      _quotesController.add([]);
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add([]);
+      }
     }
   }
 
@@ -364,13 +408,14 @@ class DatabaseService extends ChangeNotifier {
 
       debugPrint('当前quotes表列: $columnNames');
 
-      // 检查是否缺少location、weather、temperature、edit_source、delta_content列
+      // 检查是否缺少必要的字段
       final requiredColumns = {
         'location',
         'weather',
         'temperature',
         'edit_source',
         'delta_content',
+        'day_period', // 添加时间段字段
       };
       final missingColumns = requiredColumns.difference(columnNames);
 
@@ -983,8 +1028,9 @@ class DatabaseService extends ChangeNotifier {
       if (!columnNames.contains('weather')) quoteMap.remove('weather');
       if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
       if (!columnNames.contains('edit_source')) quoteMap.remove('edit_source');
-      if (!columnNames.contains('delta_content'))
+      if (!columnNames.contains('delta_content')) {
         quoteMap.remove('delta_content');
+      }
 
       debugPrint('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
 
@@ -1004,7 +1050,7 @@ class DatabaseService extends ChangeNotifier {
 
   // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
-    if (_quotesController.hasListener) {
+    if (_quotesController != null && _quotesController!.hasListener) {
       debugPrint('刷新笔记流数据');
       // 清除缓存，确保获取最新数据
       _filterCache.clear();
@@ -1013,49 +1059,74 @@ class DatabaseService extends ChangeNotifier {
       _watchOffset = 0;
       _quotesCache = [];
       _watchHasMore = true;
+      _currentQuotes = [];
 
       // 触发重新加载
-      _loadNextQuotesPage();
+      loadMoreQuotes();
     } else {
       debugPrint('笔记流无监听器，跳过刷新');
     }
   }
 
-  /// 分页获取笔记，支持标签、分类和搜索
+  /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
-    String? searchQuery,
-    int limit = 20,
     int offset = 0,
+    int limit = 10,
     String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers, // 天气筛选
+    List<String>? selectedDayPeriods, // 时间段筛选
   }) async {
     try {
       if (kIsWeb) {
-        // Web 平台内存过滤
-        List<Quote> filtered = List.from(_memoryStore);
+        var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered =
-              filtered
-                  .where((q) => tagIds.any((id) => q.tagIds.contains(id)))
-                  .toList();
-        } else if (categoryId != null && categoryId.isNotEmpty) {
-          filtered = filtered.where((q) => q.categoryId == categoryId).toList();
+          filtered = filtered
+              .where(
+                (q) => q.tagIds.any((tag) => tagIds.contains(tag)),
+              )
+              .toList();
+        }
+        if (categoryId != null && categoryId.isNotEmpty) {
+          filtered = filtered
+              .where(
+                (q) => q.categoryId == categoryId,
+              )
+              .toList();
         }
         if (searchQuery != null && searchQuery.isNotEmpty) {
-          filtered =
-              filtered
-                  .where(
-                    (q) =>
-                        q.content.toLowerCase().contains(
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.content.toLowerCase().contains(
                           searchQuery.toLowerCase(),
                         ) ||
-                        (q.source?.toLowerCase().contains(
-                              searchQuery.toLowerCase(),
-                            ) ??
-                            false),
-                  )
-                  .toList();
+                    (q.source?.toLowerCase().contains(
+                          searchQuery.toLowerCase(),
+                        ) ??
+                        false),
+              )
+              .toList();
+        }
+        // 天气筛选条件
+        if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+          filtered = filtered
+              .where(
+                (q) => q.weather != null && selectedWeathers.any(
+                  (weather) => q.weather!.contains(weather),
+                ),
+              )
+              .toList();
+        }
+        // 时间段筛选条件
+        if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+          filtered = filtered
+              .where(
+                (q) => q.dayPeriod != null && selectedDayPeriods.contains(q.dayPeriod),
+              )
+              .toList();
         }
         filtered.sort((a, b) => b.date.compareTo(a.date));
         final start = offset < filtered.length ? offset : filtered.length;
@@ -1081,6 +1152,16 @@ class DatabaseService extends ChangeNotifier {
         conditions.add('(content LIKE ? OR source LIKE ?)');
         args.addAll(['%$searchQuery%', '%$searchQuery%']);
       }
+      // 天气筛选条件
+      if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+        conditions.add(selectedWeathers.map((_) => 'weather LIKE ?').join(' OR '));
+        args.addAll(selectedWeathers.map((weather) => '%$weather%'));
+      }
+      // 时间段筛选条件
+      if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+        conditions.add(selectedDayPeriods.map((_) => 'day_period = ?').join(' OR '));
+        args.addAll(selectedDayPeriods);
+      }
       final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
       final maps = await db.query(
         'quotes',
@@ -1092,7 +1173,7 @@ class DatabaseService extends ChangeNotifier {
       );
       return maps
           .map((m) => Quote.fromJson(m))
-          .toList(); // 将 fromMap 改为 fromJson
+          .toList();
     } catch (e) {
       debugPrint('获取引用错误: $e');
       return [];
@@ -1194,8 +1275,9 @@ class DatabaseService extends ChangeNotifier {
       if (!columnNames.contains('weather')) quoteMap.remove('weather');
       if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
       if (!columnNames.contains('edit_source')) quoteMap.remove('edit_source');
-      if (!columnNames.contains('delta_content'))
+      if (!columnNames.contains('delta_content')) {
         quoteMap.remove('delta_content');
+      }
 
       debugPrint('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
 
@@ -1215,13 +1297,15 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 监听笔记列表，支持分页加载和搜索
+  /// 监听笔记列表，支持分页加载和筛选
   Stream<List<Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
     int limit = 20,
     String orderBy = 'date DESC',
     String? searchQuery,
+    List<String>? selectedWeathers, // 天气筛选
+    List<String>? selectedDayPeriods, // 时间段筛选
   }) {
     // 检查是否有筛选条件改变
     bool hasFilterChanged = false;
@@ -1268,180 +1352,123 @@ class DatabaseService extends ChangeNotifier {
       debugPrint('搜索条件变更: $_watchSearchQuery -> $normalizedSearchQuery');
     }
 
-    // 更新筛选条件
+    // 检查天气筛选条件是否变更
+    if (_watchSelectedWeathers != null && selectedWeathers != null) {
+      if (_watchSelectedWeathers!.length != selectedWeathers.length) {
+        hasFilterChanged = true;
+        debugPrint('天气筛选数量变更: ${_watchSelectedWeathers!.length} -> ${selectedWeathers.length}');
+      } else {
+        // 比较天气筛选内容是否一致
+        for (int i = 0; i < _watchSelectedWeathers!.length; i++) {
+          if (!selectedWeathers.contains(_watchSelectedWeathers![i])) {
+            hasFilterChanged = true;
+            debugPrint('天气筛选内容变更');
+            break;
+          }
+        }
+      }
+    } else if ((_watchSelectedWeathers == null) != (selectedWeathers == null)) {
+      hasFilterChanged = true;
+      debugPrint('天气筛选条件状态变更');
+    }
+
+    // 检查时间段筛选条件是否变更
+    if (_watchSelectedDayPeriods != null && selectedDayPeriods != null) {
+      if (_watchSelectedDayPeriods!.length != selectedDayPeriods.length) {
+        hasFilterChanged = true;
+        debugPrint('时间段筛选数量变更: ${_watchSelectedDayPeriods!.length} -> ${selectedDayPeriods.length}');
+      } else {
+        // 比较时间段筛选内容是否一致
+        for (int i = 0; i < _watchSelectedDayPeriods!.length; i++) {
+          if (!selectedDayPeriods.contains(_watchSelectedDayPeriods![i])) {
+            hasFilterChanged = true;
+            debugPrint('时间段筛选内容变更');
+            break;
+          }
+        }
+      }
+    } else if ((_watchSelectedDayPeriods == null) != (selectedDayPeriods == null)) {
+      hasFilterChanged = true;
+      debugPrint('时间段筛选条件状态变更');
+    }
+
+    // 更新当前的筛选参数
+    _watchOffset = 0;
+    _watchLimit = limit;
     _watchTagIds = tagIds;
     _watchCategoryId = categoryId;
     _watchOrderBy = orderBy;
-    _watchLimit = limit;
     _watchSearchQuery = normalizedSearchQuery;
+    _watchSelectedWeathers = selectedWeathers; // 保存天气筛选条件
+    _watchSelectedDayPeriods = selectedDayPeriods; // 保存时间段筛选条件
 
-    // 如果筛选条件变更，清空当前数据和缓存
-    if (hasFilterChanged) {
-      debugPrint('筛选条件已变更，清空缓存并重新加载数据');
-      _watchOffset = 0;
-      _watchHasMore = true;
-      _quotesCache = [];
-
-      // 清除相关的缓存条目
-      final cacheKey = _generateCacheKey(
+    // 如果有筛选条件变更或未初始化，重新创建流
+    if (hasFilterChanged || _quotesController == null) {
+      _quotesController?.close();
+      _quotesController = StreamController<List<Quote>>.broadcast();
+      _currentQuotes = [];
+      _isLoading = false;
+      
+      // 立即加载第一页数据
+      loadMoreQuotes(
         tagIds: tagIds,
         categoryId: categoryId,
         searchQuery: searchQuery,
-        orderBy: orderBy,
+        selectedWeathers: selectedWeathers,
+        selectedDayPeriods: selectedDayPeriods,
       );
-      _filterCache.remove(cacheKey);
-
-      // 立即通知监听器数据已清空，避免显示旧数据
-      _quotesController.add([]);
     }
 
-    // 首次加载
-    _loadNextQuotesPage();
-    return _quotesController.stream;
+    return _quotesController!.stream;
   }
 
-  /// 公共接口：加载下一页笔记
-  Future<void> loadMoreQuotes() async {
-    if (!_watchHasMore) return;
-    await _loadNextQuotesPage();
-  }
+  /// 加载更多笔记数据（用于分页）
+  Future<void> loadMoreQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+  }) async {
+    // 使用当前观察的参数作为默认值
+    tagIds ??= _watchTagIds;
+    categoryId ??= _watchCategoryId;
+    searchQuery ??= _watchSearchQuery;
+    selectedWeathers ??= _watchSelectedWeathers;
+    selectedDayPeriods ??= _watchSelectedDayPeriods;
 
-  Future<void> _loadNextQuotesPage() async {
-    // 如果已经没有更多数据，直接返回
-    if (!_watchHasMore) return;
+    // 如果正在加载，则忽略这次请求
+    if (_isLoading) return;
+    _isLoading = true;
 
-    // 生成当前查询条件的缓存键
-    final cacheKey = _generateCacheKey(
-      tagIds: _watchTagIds,
-      categoryId: _watchCategoryId,
-      searchQuery: _watchSearchQuery,
-      orderBy: _watchOrderBy,
-    );
-
-    // 先尝试从缓存获取数据
-    final cachedQuotes = _getFromCache(cacheKey, _watchOffset, _watchLimit);
-    if (cachedQuotes != null) {
-      debugPrint('从缓存加载 ${cachedQuotes.length} 条笔记 (偏移量: $_watchOffset)');
-      _quotesCache.addAll(cachedQuotes);
-      _watchOffset += cachedQuotes.length;
-      _watchHasMore = cachedQuotes.length == _watchLimit;
-      _quotesController.add(List.unmodifiable(_quotesCache));
-
-      // 如果本次加载接近缓存末尾，提前加载下一页
-      final cachedData = _filterCache[cacheKey];
-      if (cachedData != null &&
-          _watchOffset >= cachedData.length - _watchLimit / 2) {
-        // 在后台预加载下一页数据
-        _prefetchNextPage(cacheKey);
-      }
-
-      return;
-    }
-
-    // 缓存未命中，从数据库加载
-    _loadFromDatabase(cacheKey);
-  }
-
-  // 从数据库加载数据
-  Future<void> _loadFromDatabase(String cacheKey) async {
     try {
-      debugPrint('从数据库加载笔记数据，搜索条件: ${_watchSearchQuery ?? "无"}');
-
-      // 添加超时检测
-      bool hasTimedOut = false;
-      final timeoutFuture = Future.delayed(const Duration(seconds: 8), () {
-        hasTimedOut = true;
-        debugPrint('数据库查询超时，返回空结果');
-        if (_quotesController.hasListener && _quotesCache.isEmpty) {
-          _quotesController.add([]);
-          _watchHasMore = false;
-        }
-        return <Quote>[];
-      });
-
-      // 实际数据库查询
-      final queryFuture = getUserQuotes(
-        tagIds: _watchTagIds,
-        categoryId: _watchCategoryId,
+      final quotes = await getUserQuotes(
+        tagIds: tagIds,
+        categoryId: categoryId,
+        offset: _currentQuotes.length,
         limit: _watchLimit,
-        offset: _watchOffset,
         orderBy: _watchOrderBy,
-        searchQuery: _watchSearchQuery,
+        searchQuery: searchQuery,
+        selectedWeathers: selectedWeathers,
+        selectedDayPeriods: selectedDayPeriods,
       );
 
-      // 使用Future.any等待最快完成的操作
-      final newQuotes = await Future.any([queryFuture, timeoutFuture]);
-
-      // 如果已经超时，不继续处理
-      if (hasTimedOut) return;
-
-      debugPrint('从数据库加载 ${newQuotes.length} 条笔记 (偏移量: $_watchOffset)');
-
-      if (newQuotes.isNotEmpty) {
-        _quotesCache.addAll(newQuotes);
-        _watchOffset += newQuotes.length;
-        _watchHasMore = newQuotes.length == _watchLimit;
-
-        // 将新获取的数据添加到缓存中
-        _addToCache(cacheKey, newQuotes, _watchOffset - newQuotes.length);
-
-        // 如果加载了满页数据，触发预加载下一页
-        if (newQuotes.length == _watchLimit) {
-          // 延迟预加载，避免立即发起新请求
-          Future.delayed(const Duration(milliseconds: 200), () {
-            if (_quotesController.hasListener) {
-              _prefetchNextPage(cacheKey);
-            }
-          });
-        }
-      } else {
+      if (quotes.isEmpty) {
+        // 没有更多数据了
         _watchHasMore = false;
+      } else {
+        _currentQuotes.addAll(quotes);
+        _watchHasMore = quotes.length >= _watchLimit;
       }
 
-      // 通知监听器
-      _quotesController.add(List.unmodifiable(_quotesCache));
-    } catch (e) {
-      debugPrint('加载笔记时出错: $e');
-      // 出错时也需要通知，避免UI一直显示加载状态
-      _quotesController.add(List.unmodifiable(_quotesCache));
-    }
-  }
-
-  // 预加载下一页数据
-  Future<void> _prefetchNextPage(String cacheKey) async {
-    try {
-      // 检查是否已经加载了所有数据
-      if (!_watchHasMore) return;
-
-      // 计算下一页的偏移量
-      final nextPageOffset = _watchOffset;
-
-      // 避免重复预加载：检查缓存中是否已经有了下一页数据
-      final cachedData = _filterCache[cacheKey];
-      if (cachedData != null && cachedData.length > nextPageOffset) {
-        // 缓存中已有下一页数据，无需预加载
-        return;
-      }
-
-      debugPrint('预加载下一页数据，偏移量: $nextPageOffset');
-
-      // 预加载下一页数据
-      final prefetchedQuotes = await getUserQuotes(
-        tagIds: _watchTagIds,
-        categoryId: _watchCategoryId,
-        limit: _watchLimit,
-        offset: nextPageOffset,
-        orderBy: _watchOrderBy,
-        searchQuery: _watchSearchQuery,
-      );
-
-      // 将预加载的数据添加到缓存，但不更新当前显示
-      if (prefetchedQuotes.isNotEmpty) {
-        _addToCache(cacheKey, prefetchedQuotes, nextPageOffset);
+      // 通知订阅者
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add(List.from(_currentQuotes));
       }
     } catch (e) {
-      debugPrint('预加载笔记时出错: $e');
-      // 预加载错误可以被忽略，不影响主UI流
+      debugPrint('加载更多笔记失败: $e');
+    } finally {
+      _isLoading = false;
     }
   }
 
@@ -1493,5 +1520,89 @@ class DatabaseService extends ChangeNotifier {
       // 否则追加到现有缓存
       _filterCache[cacheKey]!.addAll(quotes);
     }
+  }
+
+  // 添加存储加载状态的变量
+  bool _isLoading = false;
+
+  // 添加存储当前加载的笔记列表的变量
+  List<Quote> _currentQuotes = [];
+
+  /// 更新分类信息
+  Future<void> updateCategory(String id, String name, {String? iconName}) async {
+    // 检查参数
+    if (name.trim().isEmpty) {
+      throw Exception('分类名称不能为空');
+    }
+
+    if (kIsWeb) {
+      // 检查是否已存在同名但ID不同的分类
+      final existsSameName = _categoryStore.any(
+        (c) => c.id != id && c.name.toLowerCase() == name.toLowerCase(),
+      );
+      if (existsSameName) {
+        throw Exception('已存在相同名称的分类');
+      }
+
+      // 查找并更新分类
+      final index = _categoryStore.indexWhere((c) => c.id == id);
+      if (index == -1) {
+        throw Exception('找不到指定的分类');
+      }
+
+      final oldCategory = _categoryStore[index];
+      final updatedCategory = NoteCategory(
+        id: id,
+        name: name,
+        isDefault: oldCategory.isDefault,
+        iconName: iconName ?? oldCategory.iconName,
+      );
+      _categoryStore[index] = updatedCategory;
+      _categoriesController.add(_categoryStore);
+      notifyListeners();
+      return;
+    }
+
+    final db = database;
+
+    // 检查是否存在同名但ID不同的分类
+    final existing = await db.query(
+      'categories',
+      where: 'LOWER(name) = ? AND id != ?',
+      whereArgs: [name.toLowerCase(), id],
+    );
+
+    if (existing.isNotEmpty) {
+      throw Exception('已存在相同名称的分类');
+    }
+
+    // 获取当前分类信息
+    final currentCategories = await db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (currentCategories.isEmpty) {
+      throw Exception('找不到指定的分类');
+    }
+
+    final currentCategory = NoteCategory.fromMap(currentCategories.first);
+    
+    final categoryMap = {
+      'name': name,
+      'icon_name': iconName ?? currentCategory.iconName,
+    };
+    
+    await db.update(
+      'categories',
+      categoryMap,
+      where: 'id = ?',
+      whereArgs: [id],
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    
+    await _updateCategoriesStream();
+    notifyListeners();
   }
 }

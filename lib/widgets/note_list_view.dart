@@ -57,6 +57,7 @@ class _NoteListViewState extends State<NoteListView> {
   static const int _pageSize = 20;
   late StreamSubscription<List<Quote>> _quotesSub;
   List<String> _selectedWeathers = [];
+  List<String> _selectedDayPeriods = []; // 添加时间段筛选状态
 
   @override
   void initState() {
@@ -76,6 +77,8 @@ class _NoteListViewState extends State<NoteListView> {
               widget.sortType == 'time'
                   ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
                   : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+          selectedWeathers: _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+          selectedDayPeriods: _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
         )
         .listen((list) {
           setState(() {
@@ -125,6 +128,8 @@ class _NoteListViewState extends State<NoteListView> {
                     : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
             searchQuery:
                 widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+            selectedWeathers: _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+            selectedDayPeriods: _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
           )
           .listen((list) {
             setState(() {
@@ -402,11 +407,13 @@ class _NoteListViewState extends State<NoteListView> {
                               sortType: widget.sortType,
                               sortAscending: widget.sortAscending,
                               selectedWeathers: _selectedWeathers,
+                              selectedDayPeriods: _selectedDayPeriods, // 传递时间段筛选状态
                               onApply: (
                                 tagIds,
                                 sortType,
                                 sortAscending,
                                 selectedWeathers,
+                                selectedDayPeriods, // 接收时间段筛选结果
                               ) {
                                 widget.onTagSelectionChanged(tagIds);
                                 widget.onSortChanged(
@@ -415,6 +422,7 @@ class _NoteListViewState extends State<NoteListView> {
                                 );
                                 setState(() {
                                   _selectedWeathers = selectedWeathers;
+                                  _selectedDayPeriods = selectedDayPeriods; // 更新时间段筛选状态
                                 });
                               },
                             ),

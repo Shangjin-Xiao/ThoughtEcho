@@ -19,7 +19,7 @@ import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'pages/onboarding_page.dart'; // 添加引导页面导入
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -34,7 +34,7 @@ Future<void> initializeDatabasePlatform() async {
 
       await Directory(dbPath).create(recursive: true);
 
-      final path = join(dbPath, 'mind_trace.db');
+      final path = join(dbPath, 'thoughtecho.db');
       if (!await Directory(dirname(path)).exists()) {
         await Directory(dirname(path)).create(recursive: true);
       }
@@ -163,7 +163,12 @@ void main() async {
       final locationService = LocationService();
       final weatherService = WeatherService();
       final clipboardService = ClipboardService();
+      
+      // 创建日志服务但默认设置为不记录日志
       final logService = LogService();
+      // 设置日志级别为none，不记录日志
+      await logService.setLogLevel(LogLevel.none);
+      
       final appTheme = AppTheme();
       
       // 初始化主题 - 这是UI显示必须的
@@ -221,33 +226,57 @@ void main() async {
             onTimeout: () => debugPrint('剪贴板服务初始化超时，将继续后续初始化'),
           );
           
-          // 初始化数据库，这通常是最耗时的操作
-          try {
-            await databaseService.init().timeout(
-              const Duration(seconds: 5),
-              onTimeout: () {
-                throw TimeoutException('数据库初始化超时');
-              },
-            );
-            
-            // 初始化默认一言分类
-            await databaseService.initDefaultHitokotoCategories();
-            debugPrint('数据库服务初始化完成');
-          } catch (e, stackTrace) {
-            debugPrint('数据库初始化失败: $e');
-            _isEmergencyMode = true;
-            
-            // 记录错误但继续执行其他服务初始化
-            logService.error(
-              '数据库初始化失败，进入紧急模式',
-              error: e,
-              stackTrace: stackTrace,
-              source: 'background_init',
-            );
-          }
+          // 检查设置服务中的数据库迁移状态
+          final hasMigrated = settingsService.isDatabaseMigrationComplete();
+          debugPrint('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}');
           
-          // 其他可能的服务初始化
-          // 注意: 地理位置和天气服务可以按需初始化，无需在启动时加载
+          // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
+          if (settingsService.hasCompletedOnboarding() && !hasMigrated) {
+            try {
+              // 初始化数据库，这通常是最耗时的操作
+              await databaseService.init().timeout(
+                const Duration(seconds: 5),
+                onTimeout: () {
+                  throw TimeoutException('数据库初始化超时');
+                },
+              );
+              
+              // 初始化默认一言分类
+              await databaseService.initDefaultHitokotoCategories();
+              
+              // 标记数据库迁移已完成
+              await settingsService.setDatabaseMigrationComplete(true);
+              
+              debugPrint('后台数据库迁移完成');
+            } catch (e, stackTrace) {
+              debugPrint('后台数据库迁移失败: $e');
+              
+              // 在紧急情况下尝试初始化新数据库
+              try {
+                await databaseService.initializeNewDatabase();
+                await settingsService.setDatabaseMigrationComplete(true);
+                debugPrint('后台初始化新数据库成功');
+              } catch (newDbError) {
+                debugPrint('后台初始化新数据库也失败: $newDbError');
+                _isEmergencyMode = true;
+              }
+              
+              // 记录错误但继续执行
+              logService.error(
+                '后台数据库迁移失败',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'background_init',
+              );
+            }
+          } else if (!settingsService.hasCompletedOnboarding()) {
+            // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
+            debugPrint('等待引导流程中的数据库迁移...');
+          } else {
+            // 引导已完成且数据库已迁移，正常初始化
+            debugPrint('数据库已迁移，执行常规初始化');
+            await _initializeDatabaseNormally(databaseService, logService);
+          }
           
           // 初始化完成，更新状态
           servicesInitialized.value = true;
@@ -306,66 +335,33 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appTheme = context.watch<AppTheme>();
-    final settingsService = context.watch<SettingsService>();
-    
+    // 获取设置服务实例
+    final settingsService = Provider.of<SettingsService>(context);
+    final appTheme = Provider.of<AppTheme>(context);
+    // 检查是否需要显示引导页面
+    final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
+
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: '心迹',
+      title: 'ThoughtEcho',
       theme: appTheme.createLightThemeData(),
       darkTheme: appTheme.createDarkThemeData(),
       themeMode: appTheme.themeMode,
-      home: isEmergencyMode 
-        ? const EmergencyRecoveryPage() 
-        : HomePage(initialPage: settingsService.appSettings.defaultStartPage),
+      debugShowCheckedModeBanner: false,
+      home: !hasCompletedOnboarding
+          ? const OnboardingPage() // 如果未完成引导，显示引导页面
+          : isEmergencyMode 
+            ? const EmergencyRecoveryPage() 
+            : HomePage(initialPage: settingsService.appSettings.defaultStartPage),
       localizationsDelegates: const [
-        quill.FlutterQuillLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('zh'),
-        Locale('en'),
-        // 你可以根据需要添加更多语言
+        Locale('zh', 'CN'),
+        Locale('en', 'US'),
       ],
-      builder: (context, child) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            // 更灵活的布局适应算法
-            double maxWidth;
-            double horizontalPadding;
-            
-            if (constraints.maxWidth < 600) {
-              // 小屏幕设备 (手机)
-              maxWidth = constraints.maxWidth;
-              horizontalPadding = 0;
-            } else if (constraints.maxWidth < 960) {
-              // 中等屏幕设备 (小平板)
-              maxWidth = constraints.maxWidth * 0.95;
-              horizontalPadding = 8;
-            } else if (constraints.maxWidth < 1280) {
-              // 大屏幕设备 (大平板/小桌面)
-              maxWidth = constraints.maxWidth * 0.9;
-              horizontalPadding = 16;
-            } else {
-              // 超大屏幕 (桌面)
-              maxWidth = 1600; // 更大的最大宽度
-              horizontalPadding = 24;
-            }
-            
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: child!,
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }
@@ -477,137 +473,158 @@ class EmergencyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '心迹 - 紧急恢复',
+      navigatorKey: navigatorKey, // 使用全局导航键
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.red,
           brightness: Brightness.light,
         ),
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('紧急恢复模式'),
-          backgroundColor: Colors.red,
-        ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(
-                  Icons.error_outline, 
-                  size: 64, 
-                  color: Colors.red
+      home: EmergencyHomePage(error: error, stackTrace: stackTrace),
+      routes: {
+        '/backup_restore': (context) => const BackupRestorePage(),
+      },
+    );
+  }
+}
+
+/// 紧急模式下的主页面
+class EmergencyHomePage extends StatelessWidget {
+  final String error;
+  final String stackTrace;
+  
+  const EmergencyHomePage({
+    super.key,
+    required this.error,
+    required this.stackTrace,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('紧急恢复模式'),
+        backgroundColor: Colors.red,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.error_outline, 
+                size: 64, 
+                color: Colors.red
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '应用启动失败',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '应用启动失败',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '心迹应用启动过程中发生严重错误。这可能是由于数据损坏或者存储权限问题导致。',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '心迹应用启动过程中发生严重错误。这可能是由于数据损坏或者存储权限问题导致。',
-                  style: TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '错误信息:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(error),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ExpansionTile(
-                  title: const Text('技术详情'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        color: Colors.grey.shade100,
-                        child: SelectableText(
-                          stackTrace,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                            color: Colors.grey.shade800,
-                          ),
+                    const Text(
+                      '错误信息:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(error),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ExpansionTile(
+                title: const Text('技术详情'),
+                children: [
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      color: Colors.grey.shade100,
+                      child: SelectableText(
+                        stackTrace,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          color: Colors.grey.shade800,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EmergencyBackupPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.backup),
-                  label: const Text('备份和恢复数据'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
+                ],
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EmergencyBackupPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.backup),
+                label: const Text('备份和恢复数据'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {
-                    // 尝试重新启动应用
-                    restartApp();
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('尝试重新启动应用'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  // 尝试重新启动应用
+                  restartApp();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('尝试重新启动应用'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    // 退出应用
-                    exit(0);
-                  },
-                  icon: const Icon(Icons.exit_to_app),
-                  label: const Text('退出应用'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    foregroundColor: Colors.red,
-                  ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  // 退出应用
+                  exit(0);
+                },
+                icon: const Icon(Icons.exit_to_app),
+                label: const Text('退出应用'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  foregroundColor: Colors.red,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。',
-                  style: TextStyle(
-                    fontSize: 14, 
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。',
+                style: TextStyle(
+                  fontSize: 14, 
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey,
                 ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
@@ -693,12 +710,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                     FilledButton.icon(
                       onPressed: () {
                         try {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const BackupRestorePage(),
-                            ),
-                          );
+                          Navigator.of(context).pushNamed('/backup_restore');
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -817,4 +829,31 @@ List<Map<String, dynamic>> getAndClearDeferredErrors() {
   final errors = List<Map<String, dynamic>>.from(_deferredErrors);
   _deferredErrors.clear();
   return errors;
+}
+
+// 提取常规数据库初始化为独立函数
+Future<void> _initializeDatabaseNormally(DatabaseService databaseService, LogService logService) async {
+  try {
+    await databaseService.init().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        throw TimeoutException('数据库初始化超时');
+      },
+    );
+    
+    // 初始化默认一言分类
+    await databaseService.initDefaultHitokotoCategories();
+    debugPrint('数据库服务初始化完成');
+  } catch (e, stackTrace) {
+    debugPrint('数据库初始化失败: $e');
+    _isEmergencyMode = true;
+    
+    // 记录错误但继续执行其他服务初始化
+    logService.error(
+      '数据库初始化失败，进入紧急模式',
+      error: e,
+      stackTrace: stackTrace,
+      source: 'background_init',
+    );
+  }
 }

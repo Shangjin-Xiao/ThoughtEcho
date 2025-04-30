@@ -84,7 +84,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           // 创建临时文件
           final now = DateTime.now();
           final formattedDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-          final fileName = '心记_备份_$formattedDate.json';
+          final fileName = '心迹_备份_$formattedDate.json';
           
           if (Platform.isWindows) {
             // Windows 平台特殊处理
@@ -169,8 +169,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             if (!mounted) return;
             await Share.shareXFiles(
               [XFile(path)],
-              text: '心记备份文件',
-              subject: '保存心记备份文件',
+              text: '心迹备份文件',
+              subject: '保存心迹备份文件',
             );
             
             ScaffoldMessenger.of(context).showSnackBar(
@@ -231,7 +231,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           if (!mounted) return;
           await Share.shareXFiles(
             [XFile(path)],
-            text: '心记应用数据备份',
+            text: '心迹应用数据备份',
           );
         }
       } catch (e) {
@@ -292,7 +292,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         _showErrorDialog(
           context, 
           '无效的备份文件', 
-          '所选文件不是有效的心记备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。'
+          '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。'
         );
         return;
       }

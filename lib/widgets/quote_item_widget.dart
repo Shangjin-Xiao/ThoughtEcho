@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'dart:convert';
 import '../widgets/quote_content_widget.dart';
 

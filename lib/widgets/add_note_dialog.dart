@@ -9,6 +9,7 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
+import '../utils/time_utils.dart';  // 导入时间工具类
 import '../theme/app_theme.dart';
 import '../pages/note_full_editor_page.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -646,34 +647,61 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             builder:
                                 (context) => AlertDialog(
                                   title: const Text('选择自定义颜色'),
-                                  content: ColorPicker(
-                                    color:
-                                        _selectedColorHex != null
-                                            ? Color(
-                                              int.parse(
+                                  content: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ColorPicker(
+                                          color: _selectedColorHex != null
+                                              ? Color(
+                                                int.parse(
                                                     _selectedColorHex!
                                                         .substring(1),
                                                     radix: 16,
                                                   ) |
                                                   0xFF000000,
-                                            )
-                                            : Colors.blue,
-                                    onColorChanged: (color) {
-                                      Navigator.of(context).pop(color);
-                                    },
-                                    pickersEnabled: const <ColorPickerType, bool>{
-                                      ColorPickerType.both: false,
-                                      ColorPickerType.primary: true,
-                                      ColorPickerType.accent: false,
-                                    },
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: 14,
-                                    spacing: 4,
-                                    runSpacing: 4,
-                                    showColorCode: false,
-                                    showRecentColors: false,
+                                              )
+                                              : Colors.blue,
+                                          onColorChanged: (color) {},
+                                          width: 40,
+                                          height: 40,
+                                          spacing: 10,
+                                          runSpacing: 10,
+                                          borderRadius: 20,
+                                          wheelDiameter: 200,
+                                          enableShadesSelection: true,
+                                          pickersEnabled: const {
+                                            ColorPickerType.primary: true,
+                                            ColorPickerType.accent: false,
+                                            ColorPickerType.wheel: true,
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('取消'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () {
+                                        // 获取当前选择的颜色
+                                        final currentColor = _selectedColorHex != null
+                                            ? Color(
+                                                int.parse(
+                                                    _selectedColorHex!
+                                                        .substring(1),
+                                                    radix: 16,
+                                                  ) |
+                                                  0xFF000000,
+                                              )
+                                            : Colors.blue;
+                                        Navigator.of(context).pop(currentColor);
+                                      },
+                                      child: const Text('选择'),
+                                    ),
+                                  ],
                                 ),
                           );
                           if (color != null) {
@@ -1015,6 +1043,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     ),
                     onPressed: () async {
                       if (_contentController.text.isNotEmpty) {
+                        // 获取当前时间段
+                        final String currentDayPeriod = TimeUtils.getCurrentDayPeriod();
+                        
                         // 创建或更新笔记
                         final Quote quote = Quote(
                           id: widget.initialQuote?.id ?? const Uuid().v4(),
@@ -1038,6 +1069,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           location: _includeLocation ? location : null,
                           weather: _includeWeather ? weather : null,
                           temperature: _includeWeather ? temperature : null,
+                          dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriod, // 添加时间段信息
                         );
 
                         try {

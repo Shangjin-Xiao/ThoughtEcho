@@ -44,3 +44,21 @@ Color adjustColor(Color color) {
 extension ColorValueExtension on Color {
   Color applyOpacity(double opacity) => Color.fromRGBO(red, green, blue, opacity);
 }
+
+/// 颜色工具类
+class ColorUtils {
+  /// 安全地设置颜色的透明度
+  /// 
+  /// 替代已弃用的Color.withOpacity方法
+  /// 参数opacity应该在0.0到1.0之间
+  static Color withOpacitySafe(Color color, double opacity) {
+    // 确保opacity在有效范围内
+    opacity = opacity.clamp(0.0, 1.0);
+    
+    // 将0-1的opacity转换为0-255的alpha值
+    final int alpha = (opacity * 255).round();
+    
+    // 创建带有新alpha值的颜色
+    return color.withAlpha(alpha);
+  }
+}

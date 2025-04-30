@@ -650,7 +650,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
         final dbService = Provider.of<DatabaseService>(context, listen: false);
 
-        final String fileName = '心记备份_${DateTime.now().toIso8601String().split('T').first}.json';
+        final String fileName = '心迹备份_${DateTime.now().toIso8601String().split('T').first}.json';
         final FileSaveLocation? result = await getSaveLocation(suggestedName: fileName);
 
         if (result == null) {

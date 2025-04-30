@@ -17,6 +17,7 @@ class Quote {
   final String? temperature;
   final String? editSource; // "fullscreen" 或 null
   final String? deltaContent; // 新增：用于存储富文本格式(Delta JSON)
+  final String? dayPeriod; // 新增：时间段标识(晨曦、午后、黄昏、夜晚等)
 
   const Quote({
     this.id,
@@ -37,6 +38,7 @@ class Quote {
     this.temperature,
     this.editSource,
     this.deltaContent, // 新增：Delta JSON
+    this.dayPeriod, // 新增：时间段
   });
 
   // 从JSON构建Quote对象
@@ -86,6 +88,7 @@ class Quote {
       temperature: json['temperature'],
       editSource: json['edit_source'],
       deltaContent: json['delta_content'], // 新增：Delta JSON
+      dayPeriod: json['day_period'], // 新增：时间段
     );
   }
 
@@ -110,6 +113,7 @@ class Quote {
       'temperature': temperature,
       'edit_source': editSource,
       'delta_content': deltaContent, // 新增：Delta JSON
+      'day_period': dayPeriod, // 新增：时间段
     };
   }
 
@@ -133,6 +137,7 @@ class Quote {
     String? temperature,
     String? editSource,
     String? deltaContent, // 新增：Delta JSON
+    String? dayPeriod, // 新增：时间段
   }) {
     return Quote(
       id: id ?? this.id,
@@ -153,6 +158,7 @@ class Quote {
       temperature: temperature ?? this.temperature,
       editSource: editSource ?? this.editSource,
       deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
+      dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
     );
   }
 }

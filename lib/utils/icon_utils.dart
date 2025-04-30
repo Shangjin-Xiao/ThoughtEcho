@@ -104,4 +104,19 @@ class IconUtils {
   static Map<String, List<String>> getCategorizedEmojis() {
     return emojiCategories;
   }
+
+  // 获取分类图标 - 适用于显示在UI中
+  static Widget getCategoryIcon(String? iconName) {
+    if (iconName == null || iconName.isEmpty) {
+      return const Icon(Icons.label);
+    }
+    
+    // 如果是emoji，返回文本widget
+    if (isEmoji(iconName)) {
+      return Text(iconName, style: const TextStyle(fontSize: 24));
+    }
+    
+    // 返回Material图标
+    return Icon(categoryIcons[iconName] ?? Icons.label);
+  }
 }

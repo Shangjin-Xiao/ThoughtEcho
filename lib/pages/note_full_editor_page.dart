@@ -8,6 +8,7 @@ import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
+import '../utils/time_utils.dart'; // 导入时间工具类
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
 
@@ -171,36 +172,34 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final deltaJson = jsonEncode(_controller.document.toDelta().toJson());
     final now = DateTime.now().toIso8601String();
 
-    // 明确区分编辑和新增模式
-    final isEditing = widget.initialQuote != null;
+    // 获取当前时间段
+    final String currentDayPeriod = TimeUtils.getCurrentDayPeriod();
 
     // 构建笔记对象
     final quote = Quote(
-      id: isEditing ? widget.initialQuote!.id : const Uuid().v4(), // 保持原ID
-      content: plainTextContent, // 使用纯文本内容而不是Delta JSON
-      date: isEditing ? widget.initialQuote!.date : now, // 保持原创建日期
+      id: widget.initialQuote?.id ?? const Uuid().v4(),
+      content: plainTextContent,
+      date: widget.initialQuote?.date ?? now,
+      aiAnalysis: widget.initialQuote?.aiAnalysis,
       source: _formatSource(_authorController.text, _workController.text),
       sourceAuthor: _authorController.text,
       sourceWork: _workController.text,
       tagIds: _selectedTagIds,
-      colorHex: _selectedColorHex,
-      location: _showLocation ? _location : null,
-      weather: _showWeather ? _weather : null,
-      temperature: _showWeather ? _temperature : null,
-      // 标记为全屏编辑
-      editSource: 'fullscreen',
-      // 保存富文本内容
-      deltaContent: deltaJson,
-      // 保留原有AI分析和其他元数据
-      aiAnalysis: widget.initialQuote?.aiAnalysis,
       sentiment: widget.initialQuote?.sentiment,
       keywords: widget.initialQuote?.keywords,
       summary: widget.initialQuote?.summary,
       categoryId: widget.initialQuote?.categoryId,
+      colorHex: _selectedColorHex,
+      location: _showLocation ? _location : null,
+      weather: _showWeather ? _weather : null,
+      temperature: _showWeather ? _temperature : null,
+      deltaContent: deltaJson,
+      editSource: 'fullscreen',
+      dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriod,
     );
 
     try {
-      if (isEditing) {
+      if (widget.initialQuote != null) {
         // 更新现有笔记
         await db.updateQuote(quote);
         if (mounted) {

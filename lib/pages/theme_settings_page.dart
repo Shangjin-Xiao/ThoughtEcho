@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
@@ -216,7 +217,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: isSelected
             ? Icon(
                 Icons.check,
-                color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                color: ThemeData.estimateBrightnessForColor(color) == Brightness.light 
+                    ? Colors.black 
+                    : Colors.white,
               )
             : null,
       ),
@@ -244,161 +247,40 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   }
 
   Future<void> _showColorPicker(BuildContext context, AppTheme appTheme) async {
-    final colorScheme = Theme.of(context).colorScheme;
-    final Color? result = await showDialog<Color>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('选择自定义颜色'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: appTheme.customColor ?? Colors.blue,
-            onColorChanged: (color) {
-              Navigator.of(context).pop(color);
-            },
-            colorScheme: colorScheme,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-        ],
-      ),
+    // 获取当前选择的颜色作为对话框的初始颜色
+    final Color initialColor = appTheme.customColor ?? Colors.blue;
+    // 创建一个变量来跟踪当前选择的颜色
+    Color selectedColor = initialColor;
+    
+    // 使用ColorPicker的showPickerDialog方法
+    // 注意：showPickerDialog返回bool值表示用户是否点击了确认按钮
+    final bool colorSelected = await ColorPicker(
+      color: initialColor,
+      onColorChanged: (Color color) {
+        // 保存用户当前选择的颜色
+        selectedColor = color;
+      },
+      width: 40,
+      height: 40,
+      spacing: 10,
+      runSpacing: 10,
+      borderRadius: 20,
+      wheelDiameter: 200,
+      enableShadesSelection: true,
+      pickersEnabled: const <ColorPickerType, bool>{
+        ColorPickerType.primary: true,
+        ColorPickerType.accent: false,
+        ColorPickerType.wheel: true,
+      },
+    ).showPickerDialog(
+      context,
     );
-
-    if (result != null) {
-      appTheme.setCustomColor(result);
+    
+    // 如果用户点击了确认按钮，则应用选择的颜色
+    if (colorSelected) {
+      appTheme.setCustomColor(selectedColor);
     }
   }
 }
 
-// 简单的颜色选择器组件
-class ColorPicker extends StatefulWidget {
-  final Color pickerColor;
-  final ValueChanged<Color> onColorChanged;
-  final ColorScheme colorScheme;
-
-  const ColorPicker({
-    super.key,
-    required this.pickerColor,
-    required this.onColorChanged,
-    required this.colorScheme,
-  });
-
-  @override
-  State<ColorPicker> createState() => _ColorPickerState();
-}
-
-class _ColorPickerState extends State<ColorPicker> {
-  late Color _currentColor;
-  
-  @override
-  void initState() {
-    super.initState();
-    _currentColor = widget.pickerColor;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 8),
-        // 颜色预览
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: _currentColor,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: widget.colorScheme.outline,
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: _currentColor.withOpacity(0.6),
-                blurRadius: 12,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // RGB滑块
-        _buildColorSlider(
-          label: 'R',
-          value: _currentColor.red.toDouble(),
-          color: Colors.red,
-          onChanged: (value) {
-            setState(() {
-              _currentColor = _currentColor.withRed(value.toInt());
-            });
-          },
-        ),
-        _buildColorSlider(
-          label: 'G',
-          value: _currentColor.green.toDouble(),
-          color: Colors.green,
-          onChanged: (value) {
-            setState(() {
-              _currentColor = _currentColor.withGreen(value.toInt());
-            });
-          },
-        ),
-        _buildColorSlider(
-          label: 'B',
-          value: _currentColor.blue.toDouble(),
-          color: Colors.blue,
-          onChanged: (value) {
-            setState(() {
-              _currentColor = _currentColor.withBlue(value.toInt());
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        // 确认按钮
-        FilledButton(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-            ),
-          ),
-          onPressed: () => widget.onColorChanged(_currentColor),
-          child: const Text('确定'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildColorSlider({
-    required String label,
-    required double value,
-    required Color color,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 16,
-          child: Text(label),
-        ),
-        Expanded(
-          child: Slider(
-            value: value,
-            min: 0,
-            max: 255,
-            divisions: 255,
-            activeColor: color,
-            onChanged: onChanged,
-          ),
-        ),
-        SizedBox(
-          width: 40,
-          child: Text(value.toInt().toString()),
-        ),
-      ],
-    );
-  }
-} 
+// 这里移除了自定义的ColorPicker组件，使用flex_color_picker包提供的组件 
