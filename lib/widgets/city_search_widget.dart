@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async'; // 导入 Timer
 import '../services/location_service.dart';
 
 class CitySearchWidget extends StatefulWidget {
@@ -19,7 +20,9 @@ class CitySearchWidget extends StatefulWidget {
 class _CitySearchWidgetState extends State<CitySearchWidget> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchActive = false;
-  
+  Timer? _debounce; // 添加防抖计时器
+  final Duration _debounceDuration = const Duration(milliseconds: 500); // 防抖延迟时间
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +33,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
   
   @override
   void dispose() {
+    _debounce?.cancel(); // 取消计时器
     _searchController.dispose();
     super.dispose();
   }
@@ -77,10 +81,34 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               fillColor: theme.colorScheme.surface,
             ),
             onChanged: (value) {
+              // 取消之前的计时器
+              _debounce?.cancel();
+              
+              // 更新搜索状态，但不立即搜索
               setState(() {
                 _isSearchActive = value.isNotEmpty;
+                // 如果输入为空，立即清空结果并停止搜索状态
+                if (!_isSearchActive) {
+                  locationService.clearSearchResults(); // 需要在 LocationService 添加此方法
+                }
               });
-              locationService.searchCity(value);
+
+              // 如果输入不为空，启动新的计时器
+              if (_isSearchActive) {
+                _debounce = Timer(_debounceDuration, () {
+                  // 只有在计时器触发时才执行搜索
+                  // 检查 context 是否仍然有效
+                  if (mounted) {
+                     final currentQuery = _searchController.text;
+                     // 再次检查输入是否为空，防止延迟期间用户清空输入
+                     if (currentQuery.isNotEmpty) {
+                        locationService.searchCity(currentQuery);
+                     } else {
+                        locationService.clearSearchResults(); // 清空结果
+                     }
+                  }
+                });
+              }
             },
           ),
         ),
@@ -199,42 +227,8 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           subtitle: Text(city.fullName),
           leading: const Icon(Icons.location_city),
           onTap: () async {
-            try {
-              // 显示加载指示器
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-              
-              // 设置选中的城市
-              locationService.setSelectedCity(city);
-              
-              // 确保UI已更新
-              await Future.delayed(const Duration(milliseconds: 100));
-              
-              if (context.mounted) {
-                // 关闭加载指示器
-                Navigator.of(context).pop();
-                // 关闭搜索页面
-                Navigator.of(context).pop();
-                // 触发选择回调
-                widget.onCitySelected(city);
-              }
-            } catch (e) {
-              if (context.mounted) {
-                // 关闭加载指示器（如果显示）
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('选择城市时发生错误，请重试'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            }
+            // 只调用回调
+            await widget.onCitySelected(city);
           },
         );
       },

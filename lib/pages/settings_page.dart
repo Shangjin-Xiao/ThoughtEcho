@@ -84,34 +84,75 @@ class _SettingsPageState extends State<SettingsPage> {
           child: CitySearchWidget(
             initialCity: locationService.city,
             onCitySelected: (cityInfo) async {
-              locationService.setSelectedCity(cityInfo);
+              // 获取 settings page 的 context，用于显示加载和关闭对话框
+              final settingsContext = context;
+              // 获取 dialog 的 context，用于关闭 dialog
+              final currentDialogContext = dialogContext;
 
-              final position = locationService.currentPosition;
-              if (position != null) {
-                 weatherService.getWeatherData(position.latitude, position.longitude)
-                    .then((_) {
-                       if (mounted) {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('天气已更新')),
-                           );
-                       }
-                    }).catchError((error) {
-                         if (mounted) {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(content: Text('天气更新失败: $error')),
-                           );
-                         }
-                    });
-              }
+              // 显示加载指示器（使用 settings page 的 context）
+              showDialog(
+                context: settingsContext,
+                barrierDismissible: false,
+                builder: (context) => const Center(child: CircularProgressIndicator()),
+              );
 
-              if (mounted) {
-                 setState(() {
-                   _locationController.text = locationService.getFormattedLocation();
-                 });
-                 ScaffoldMessenger.of(context).showSnackBar(
+              try {
+                // 1. 设置城市信息
+                await locationService.setSelectedCity(cityInfo);
+
+                // 2. 获取更新后的位置
+                final position = locationService.currentPosition;
+
+                // 3. 如果位置有效，获取天气
+                if (position != null) {
+                  await weatherService.getWeatherData(position.latitude, position.longitude);
+                  // 检查 settings page 是否仍然 mounted
+                  if (!settingsContext.mounted) return;
+                  // 根据 weatherService 的状态显示成功或失败提示
+                  if (weatherService.currentWeather != '天气数据获取失败') {
+                    ScaffoldMessenger.of(settingsContext).showSnackBar(
+                      const SnackBar(content: Text('天气已更新')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(settingsContext).showSnackBar(
+                      const SnackBar(content: Text('天气更新失败，请稍后重试')),
+                    );
+                  }
+                } else {
+                  if (!settingsContext.mounted) return;
+                  ScaffoldMessenger.of(settingsContext).showSnackBar(
+                    const SnackBar(content: Text('无法获取选中城市的位置信息')),
+                  );
+                }
+
+                // 4. 更新 SettingsPage 的状态
+                // 检查 settings page 是否仍然 mounted
+                if (!settingsContext.mounted) return;
+                // 使用 _SettingsPageState 的 setState
+                 if (mounted) { // Check if _SettingsPageState is mounted
+                   setState(() {
+                     _locationController.text = locationService.getFormattedLocation();
+                   });
+                 }
+                 ScaffoldMessenger.of(settingsContext).showSnackBar(
                    SnackBar(content: Text('已选择城市: ${cityInfo.name}')),
                  );
-                 Navigator.pop(dialogContext);
+
+                // 5. 关闭加载指示器（使用 settings page context）
+                Navigator.pop(settingsContext);
+                // 6. 关闭城市搜索对话框（使用 dialog context）
+                Navigator.pop(currentDialogContext);
+
+              } catch (e) {
+                // 捕获 setSelectedCity 或 getWeatherData 中的错误
+                // 检查 settings page 是否仍然 mounted
+                if (!settingsContext.mounted) return;
+                // 关闭加载指示器（如果它仍然存在）
+                Navigator.pop(settingsContext);
+                ScaffoldMessenger.of(settingsContext).showSnackBar(
+                  SnackBar(content: Text('处理城市选择时出错: $e')),
+                );
+                // 不需要关闭 dialogContext，因为错误发生在 dialog 内部的操作中
               }
             },
           ),
@@ -268,46 +309,59 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
 
+                // 天气信息 ListTile，增加 isLoading 判断
                 if (locationService.currentAddress != null)
-                  ListTile(
-                    title: const Text('当前天气'),
-                    subtitle: Text(
-                      (weatherService.currentWeather == null && weatherService.temperature == null)
-                          ? '点击右侧按钮刷新天气'
-                          : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                      ),
-                    ),
-                    leading: Icon(weatherService.getWeatherIconData()),
-                    trailing: IconButton(
-                       icon: const Icon(Icons.refresh),
-                       tooltip: '刷新天气',
-                       onPressed: () async {
-                         final position = locationService.currentPosition;
-                         if (position != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('正在刷新天气...'), duration: Duration(seconds: 1)),
-                            );
-                           await weatherService.getWeatherData(
-                             position.latitude,
-                             position.longitude
-                           );
-                           if (mounted) {
-                             ScaffoldMessenger.of(context).removeCurrentSnackBar();
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('天气已更新')),
-                             );
-                           }
-                         } else {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('无法获取位置信息以刷新天气')),
-                           );
-                         }
-                       },
-                    ),
-                    onTap: null,
-                  ),
+                  weatherService.isLoading
+                      ? const ListTile(
+                          leading: SizedBox(
+                            width: 24, // 与 Icon 大小一致
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          title: Text('正在加载天气...'),
+                        )
+                      : ListTile(
+                          title: const Text('当前天气'),
+                          subtitle: Text(
+                            (weatherService.currentWeather == null && weatherService.temperature == null)
+                                ? '点击右侧按钮刷新天气'
+                                : (weatherService.currentWeather == '天气数据获取失败'
+                                    ? '天气获取失败' // 直接显示错误信息
+                                    : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
+                            style: const TextStyle(
+                              fontSize: 12,
+                            ),
+                          ),
+                          leading: Icon(weatherService.getWeatherIconData()), // 图标会根据错误状态变化
+                          trailing: IconButton(
+                            icon: const Icon(Icons.refresh),
+                            tooltip: '刷新天气',
+                            onPressed: weatherService.isLoading ? null : () async { // 正在加载时禁用按钮
+                              final position = locationService.currentPosition;
+                              if (position != null) {
+                                // 不需要手动显示 SnackBar，isLoading 会处理 UI
+                                await weatherService.getWeatherData(
+                                  position.latitude,
+                                  position.longitude
+                                );
+                                if (mounted && weatherService.currentWeather != '天气数据获取失败') {
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     const SnackBar(content: Text('天气已更新')),
+                                   );
+                                } else if (mounted) {
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     const SnackBar(content: Text('天气更新失败，请稍后重试')),
+                                   );
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('无法获取位置信息以刷新天气')),
+                                );
+                              }
+                            },
+                          ),
+                          onTap: null,
+                        ),
                   
                   // 添加天气数据来源信息
                   Padding(

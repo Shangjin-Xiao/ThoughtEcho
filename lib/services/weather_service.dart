@@ -323,7 +323,8 @@ class WeatherService extends ChangeNotifier {
   // 获取格式化的天气字符串
   String getFormattedWeather() {
     if (_currentWeather == null || _temperature == null) return '';
-    return '$_currentWeather $_temperature';
+    // 使用 getWeatherDescription 将英文 key 转换为中文标签
+    return '${getWeatherDescription(_currentWeather!)} $_temperature';
   }
 
   // 判断当前网络状态并返回最佳的天气获取策略

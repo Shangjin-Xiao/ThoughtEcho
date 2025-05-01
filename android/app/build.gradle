@@ -96,6 +96,4 @@ flutter {
 
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
-    // 使用1.3.0版本，它对32位设备有良好支持
-    implementation 'com.tencent:mmkv:1.3.0'
 }

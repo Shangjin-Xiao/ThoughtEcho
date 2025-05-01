@@ -43,15 +43,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.initState();
     // 检查初始权限状态
     _checkInitialLocationPermission();
-    // 新增：如果是版本升级后进入，直接跳到最后一页并自动迁移
+    // 新版本更新时，只跳转到最后一页，但不自动关闭
     if (widget.showUpdateReady && !widget.showFullOnboarding) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // 只跳转到最后页面，不自动执行_finishOnboarding
         _pageController.jumpToPage(3);
-        // 自动执行迁移和提示
-        await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) {
-          _finishOnboarding();
-        }
+        
+        // 移除自动执行迁移和结束的代码
+        // await Future.delayed(const Duration(milliseconds: 600));
+        // if (mounted) {
+        //   _finishOnboarding();
+        // }
       });
     }
     // 添加延迟加载效果

@@ -1001,6 +1001,109 @@ class DatabaseService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 添加一条分类（使用指定ID）
+  Future<void> addCategoryWithId(String id, String name, {String? iconName}) async {
+    // 检查参数
+    if (name.trim().isEmpty) {
+      throw Exception('分类名称不能为空');
+    }
+    if (id.trim().isEmpty) {
+      throw Exception('分类ID不能为空');
+    }
+
+    if (kIsWeb) {
+      // 检查是否已存在同名分类
+      final exists = _categoryStore.any(
+        (c) => c.name.toLowerCase() == name.toLowerCase(),
+      );
+      if (exists) {
+        throw Exception('已存在相同名称的分类');
+      }
+
+      // 检查ID是否已被占用
+      final idExists = _categoryStore.any((c) => c.id == id);
+      if (idExists) {
+        // 如果ID已存在，不报错，静默更新此分类
+        final index = _categoryStore.indexWhere((c) => c.id == id);
+        if (index != -1) {
+          _categoryStore[index] = NoteCategory(
+            id: id,
+            name: name,
+            isDefault: _categoryStore[index].isDefault,
+            iconName: iconName ?? _categoryStore[index].iconName,
+          );
+        }
+      } else {
+        // 创建新分类
+        final newCategory = NoteCategory(
+          id: id,
+          name: name,
+          isDefault: false,
+          iconName: iconName ?? "",
+        );
+        _categoryStore.add(newCategory);
+      }
+      
+      _categoriesController.add(_categoryStore);
+      notifyListeners();
+      return;
+    }
+
+    final db = database;
+
+    // 检查是否已存在同名分类
+    final existing = await db.query(
+      'categories',
+      where: 'LOWER(name) = ?',
+      whereArgs: [name.toLowerCase()],
+    );
+
+    if (existing.isNotEmpty) {
+      // 如果存在同名分类但ID不同，报错
+      final existingId = existing.first['id'] as String;
+      if (existingId != id) {
+        throw Exception('已存在相同名称的分类');
+      }
+    }
+
+    // 检查ID是否已被占用
+    final existingById = await db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (existingById.isNotEmpty) {
+      // 如果ID已存在，更新此分类
+      final categoryMap = {
+        'name': name,
+        'icon_name': iconName ?? "",
+      };
+      await db.update(
+        'categories',
+        categoryMap,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } else {
+      // 创建新分类，使用指定的ID
+      final categoryMap = {
+        'id': id,
+        'name': name,
+        'is_default': 0,
+        'icon_name': iconName ?? "",
+      };
+      await db.insert(
+        'categories',
+        categoryMap,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await _updateCategoriesStream();
+    notifyListeners();
+  }
+
   /// 监听分类流
   Stream<List<NoteCategory>> watchCategories() {
     _updateCategoriesStream();
@@ -1843,51 +1946,8 @@ class DatabaseService extends ChangeNotifier {
       }
       notifyListeners();
       return;
-      /// 检查并迁移天气数据
-      Future<void> checkAndMigrateWeatherData() async {
-        try {
-          final db = database;
-          final weatherCheck = await db.query(
-            'quotes',
-            where: 'weather IS NOT NULL AND weather != ""',
-            limit: 1,
-          );
-          
-          if (weatherCheck.isNotEmpty) {
-            final weather = weatherCheck.first['weather'] as String?;
-            if (weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
-              debugPrint('检测到未迁移的weather数据，开始迁移...');
-              await migrateWeatherToKey();
-            }
-          }
-        } catch (e) {
-          debugPrint('天气数据迁移检查失败: $e');
-        }
-      }
-    
-      /// 检查并迁移时间段数据
-      Future<void> checkAndMigrateDayPeriodData() async {
-        try {
-          final db = database;
-          final dayPeriodCheck = await db.query(
-            'quotes',
-            where: 'day_period IS NOT NULL AND day_period != ""',
-            limit: 1,
-          );
-          
-          if (dayPeriodCheck.isNotEmpty) {
-            final dayPeriod = dayPeriodCheck.first['day_period'] as String?;
-            final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
-            if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
-              debugPrint('检测到未迁移的day_period数据，开始迁移...');
-              await migrateDayPeriodToKey();
-            }
-          }
-        } catch (e) {
-          debugPrint('时间段数据迁移检查失败: $e');
-        }
-      }
     }
+    
     final db = database;
     final maps = await db.query('quotes', columns: ['id', 'weather']);
     for (final m in maps) {
@@ -1896,65 +1956,6 @@ class DatabaseService extends ChangeNotifier {
       if (id != null && weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
         final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == weather).key;
         await db.update('quotes', {'weather': key}, where: 'id = ?', whereArgs: [id]);
-        /// 数据迁移检查和加载辅助方法
-        Future<void> ensureDataMigrationAndLoadData({
-          List<String>? tagIds,
-          String? categoryId,
-          String? searchQuery,
-          List<String>? selectedWeathers,
-          List<String>? selectedDayPeriods,
-        }) async {
-          if (!kIsWeb) {
-            try {
-              final db = database;
-              
-              // 检查weather数据是否需要迁移
-              final weatherCheck = await db.query(
-                'quotes',
-                where: 'weather IS NOT NULL AND weather != ""',
-                limit: 1,
-              );
-              
-              if (weatherCheck.isNotEmpty) {
-                final weather = weatherCheck.first['weather'] as String?;
-                if (weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
-                  debugPrint('检测到未迁移的weather数据，开始迁移...');
-                  await migrateWeatherToKey();
-                }
-              }
-              
-              // 检查day_period数据是否需要迁移
-              final dayPeriodCheck = await db.query(
-                'quotes',
-                where: 'day_period IS NOT NULL AND day_period != ""',
-                limit: 1,
-              );
-              
-              if (dayPeriodCheck.isNotEmpty) {
-                final dayPeriod = dayPeriodCheck.first['day_period'] as String?;
-                final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
-                if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
-                  debugPrint('检测到未迁移的day_period数据，开始迁移...');
-                  await migrateDayPeriodToKey();
-                }
-              }
-              
-              // 补全缺失的day_period数据
-              await patchQuotesDayPeriod();
-            } catch (e) {
-              debugPrint('数据迁移检查失败: $e');
-            }
-          }
-          
-          // 加载数据
-          await loadMoreQuotes(
-            tagIds: tagIds,
-            categoryId: categoryId,
-            searchQuery: searchQuery,
-            selectedWeathers: selectedWeathers,
-            selectedDayPeriods: selectedDayPeriods,
-          );
-        }
       }
     }
     debugPrint('已完成旧数据weather字段的key迁移');

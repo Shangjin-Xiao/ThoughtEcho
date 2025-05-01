@@ -108,13 +108,14 @@ class LocationService extends ChangeNotifier {
       // 检查位置权限状态
       LocationPermission permission = await Geolocator.checkPermission();
 
+      // 只检查权限，不自动请求
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
+        // permission = await Geolocator.requestPermission(); // 移除自动请求
+        // if (permission == LocationPermission.denied) {
           _hasLocationPermission = false;
           notifyListeners();
-          return false;
-        }
+          return false; // 直接返回 false，表示权限不足
+        // }
       }
 
       if (permission == LocationPermission.deniedForever) {
@@ -163,20 +164,24 @@ class LocationService extends ChangeNotifier {
 
     // 如果没有权限且之前未请求过，才请求权限
     if (!_hasLocationPermission) {
+      // 检查权限，但不自动请求
       final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        // 只在首次运行时请求权限
-        final requestResult = await Geolocator.requestPermission();
-        _hasLocationPermission = (requestResult == LocationPermission.whileInUse ||
-            requestResult == LocationPermission.always);
-      } else {
-        _hasLocationPermission = (permission == LocationPermission.whileInUse ||
-            permission == LocationPermission.always);
-      }
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always);
       
       if (!_hasLocationPermission) {
-        debugPrint('位置权限被拒绝');
-        return null;
+        debugPrint('位置权限不足，无法获取位置');
+        // 不再自动请求权限
+        // if (permission == LocationPermission.denied) {
+        //   // final requestResult = await Geolocator.requestPermission(); // 移除自动请求
+        //   // _hasLocationPermission = (requestResult == LocationPermission.whileInUse ||
+        //   //     requestResult == LocationPermission.always);
+        // }
+        
+        // if (!_hasLocationPermission) {
+        //   debugPrint('位置权限被拒绝');
+           return null; // 直接返回 null，表示无法获取位置
+        // }
       }
     }
 
@@ -497,6 +502,13 @@ class LocationService extends ChangeNotifier {
     }
 
     return _searchResults;
+  }
+  
+  // 清空搜索结果
+  void clearSearchResults() {
+    _searchResults = [];
+    _isSearching = false; // 确保搜索状态也重置
+    notifyListeners();
   }
 
   // 使用选定的城市信息设置位置

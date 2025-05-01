@@ -253,10 +253,34 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     String iconName,
   ) async {
     try {
-      // 查找标签
+      // 首先，检查是否有固定ID映射
+      String? fixedId;
+      String hitokotoType = '';
+      for (var entry in _hitokotoTypeToCategoryIdMap.entries) {
+        if (_convertHitokotoTypeToTagName(entry.key) == name) {
+          fixedId = entry.value;
+          hitokotoType = entry.key;
+          break;
+        }
+      }
+      
+      // 如果是"每日一言"标签
+      if (name == '每日一言') {
+        fixedId = DatabaseService.defaultCategoryIdHitokoto;
+      }
+      
+      // 如果有固定ID，优先通过ID查找
+      if (fixedId != null) {
+        final category = await db.getCategoryById(fixedId);
+        if (category != null) {
+          return category.id; // 返回已存在的固定ID标签
+        }
+      }
+      
+      // 然后再通过名称查找
       final categories = await db.getCategories();
       final existingTag = categories.firstWhere(
-        (tag) => tag.name == name,
+        (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteCategory(id: '', name: ''),
       );
 
@@ -264,14 +288,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       if (existingTag.id.isNotEmpty) {
         return existingTag.id;
       }
-
-      // 创建标签
-      await db.addCategory(name, iconName: iconName);
+      
+      // 如果有固定ID但未创建，使用固定ID创建
+      if (fixedId != null) {
+        // 使用固定ID创建标签
+        await db.addCategoryWithId(fixedId, name, iconName: iconName);
+        return fixedId;
+      } else {
+        // 创建新标签
+        await db.addCategory(name, iconName: iconName);
+      }
 
       // 获取新创建的标签
       final updatedCategories = await db.getCategories();
       final newTag = updatedCategories.firstWhere(
-        (tag) => tag.name == name,
+        (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteCategory(id: '', name: ''),
       );
 
@@ -351,7 +382,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         top: 16,
       ),
       child: SingleChildScrollView(
-        child: IntrinsicHeight(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1150,7 +1180,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               const SizedBox(height: 16),
             ],
           ),
-        ),
       ),
     );
   }
