@@ -444,33 +444,42 @@ class DatabaseService extends ChangeNotifier {
   /// 初始化默认一言分类标签
   Future<void> initDefaultHitokotoCategories() async {
     if (kIsWeb) {
-      // 为Web平台添加默认一言分类
+      // Web 平台逻辑：检查内存中的 _categoryStore
       final defaultCategories = _getDefaultHitokotoCategories();
+      final existingNamesLower = _categoryStore.map((c) => c.name.toLowerCase()).toSet();
       for (final category in defaultCategories) {
-        final exists = _categoryStore.any((c) => c.name == category.name);
-        if (!exists) {
+        if (!existingNamesLower.contains(category.name.toLowerCase())) {
           _categoryStore.add(category);
         }
       }
-      _categoriesController.add(_categoryStore);
+      // 确保流更新
+      if (!_categoriesController.isClosed) {
+        _categoriesController.add(List.unmodifiable(_categoryStore));
+      }
       return;
     }
 
     try {
       final db = database;
       final defaultCategories = _getDefaultHitokotoCategories();
+      
+      // 1. 一次性查询所有现有分类名称（小写）
+      final existingCategories = await db.query('categories', columns: ['name']);
+      final existingNamesLower = existingCategories
+          .map((row) => (row['name'] as String?)?.toLowerCase())
+          .where((name) => name != null)
+          .toSet();
+          
+      // 2. 筛选出数据库中尚不存在的默认分类
+      final categoriesToAdd = defaultCategories
+          .where((category) => !existingNamesLower.contains(category.name.toLowerCase()))
+          .toList();
 
-      // 检查每个默认分类是否已存在
+      // 3. 如果有需要添加的分类，则使用批处理插入
+      if (categoriesToAdd.isNotEmpty) {
+        final batch = db.batch();
       for (final category in defaultCategories) {
-        final existing = await db.query(
-          'categories',
-          where: 'name = ?',
-          whereArgs: [category.name],
-        );
-
-        // 如果不存在，则添加
-        if (existing.isEmpty) {
-          await db.insert('categories', {
+          batch.insert('categories', {
             'id': category.id,
             'name': category.name,
             'is_default': category.isDefault ? 1 : 0,
@@ -478,8 +487,10 @@ class DatabaseService extends ChangeNotifier {
           }, conflictAlgorithm: ConflictAlgorithm.ignore);
           debugPrint('添加默认一言分类: ${category.name}');
         }
+        await batch.commit(noResult: true);
+        debugPrint('批量添加了 ${categoriesToAdd.length} 个默认分类');
       }
-
+      
       // 更新分类流
       await _updateCategoriesStream();
     } catch (e) {
@@ -1666,27 +1677,35 @@ class DatabaseService extends ChangeNotifier {
       throw Exception('分类名称不能为空');
     }
 
-    if (kIsWeb) {
-      // 检查是否已存在同名但ID不同的分类
-      final existsSameName = _categoryStore.any(
-        (c) => c.id != id && c.name.toLowerCase() == name.toLowerCase(),
-      );
-      if (existsSameName) {
-        throw Exception('已存在相同名称的分类');
-      }
+    // 查找是否是默认分类
+    final defaultCategories = _getDefaultHitokotoCategories();
+    final isEditingDefault = defaultCategories.any((cat) => cat.id == id);
 
-      // 查找并更新分类
+    // // 如果是默认分类，不允许修改名称？(或者只允许修改图标) - 根据产品决定
+    // if (isEditingDefault) {
+    //   // 暂时允许修改默认分类的名称和图标，但ID不变
+    //   // 如果不允许修改名称，可以在这里抛出异常或只更新图标
+    //   // throw Exception('不允许修改默认分类的名称');
+    // }
+
+
+    if (kIsWeb) {
+      // Web 平台逻辑
       final index = _categoryStore.indexWhere((c) => c.id == id);
       if (index == -1) {
         throw Exception('找不到指定的分类');
       }
-
-      final oldCategory = _categoryStore[index];
+      // 检查新名称是否与 *其他* 分类冲突
+      final newNameLower = name.toLowerCase();
+      final conflict = _categoryStore.any((c) => c.id != id && c.name.toLowerCase() == newNameLower);
+      if (conflict) {
+        throw Exception('已存在相同名称的分类');
+      }
       final updatedCategory = NoteCategory(
-        id: id,
+        id: id, // ID 保持不变
         name: name,
-        isDefault: oldCategory.isDefault,
-        iconName: iconName ?? oldCategory.iconName,
+        isDefault: _categoryStore[index].isDefault, // isDefault 状态保持不变
+        iconName: iconName ?? _categoryStore[index].iconName,
       );
       _categoryStore[index] = updatedCategory;
       _categoriesController.add(_categoryStore);
@@ -1696,18 +1715,7 @@ class DatabaseService extends ChangeNotifier {
 
     final db = database;
 
-    // 检查是否存在同名但ID不同的分类
-    final existing = await db.query(
-      'categories',
-      where: 'LOWER(name) = ? AND id != ?',
-      whereArgs: [name.toLowerCase(), id],
-    );
-
-    if (existing.isNotEmpty) {
-      throw Exception('已存在相同名称的分类');
-    }
-
-    // 获取当前分类信息
+    // 检查要更新的分类是否存在
     final currentCategories = await db.query(
       'categories',
       where: 'id = ?',
@@ -1719,20 +1727,34 @@ class DatabaseService extends ChangeNotifier {
     }
 
     final currentCategory = NoteCategory.fromMap(currentCategories.first);
-    
+    final currentNameLower = currentCategory.name.toLowerCase();
+    final newNameLower = name.toLowerCase();
+
+    // 只有当新名称与当前名称不同时，才检查重复 (检查除自身以外的分类)
+    if (newNameLower != currentNameLower) {
+      final existing = await db.query(
+        'categories',
+        where: 'LOWER(name) = ? AND id != ?', // 排除自身
+        whereArgs: [newNameLower, id],
+      );
+      if (existing.isNotEmpty) {
+        throw Exception('已存在相同名称的分类');
+      }
+    }
+
     final categoryMap = {
       'name': name,
-      'icon_name': iconName ?? currentCategory.iconName,
+      'icon_name': iconName ?? currentCategory.iconName, // 如果未提供新图标，则保留旧图标
+      // 'is_default' 字段不应在此处更新，它在创建时确定
     };
-    
+
     await db.update(
       'categories',
       categoryMap,
       where: 'id = ?',
       whereArgs: [id],
-      conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     await _updateCategoriesStream();
     notifyListeners();
   }
