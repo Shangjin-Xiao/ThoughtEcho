@@ -7,6 +7,7 @@ import '../services/settings_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
+import '../services/log_service.dart'; // 添加 LogService 导入
 import '../theme/app_theme.dart';
 import 'home_page.dart';
 
@@ -24,8 +25,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _isClipboardMonitoringEnabled = false;
   final List<String> _selectedHitokotoTypes = ['a','b','c','d','e','f','g','h','i','j','k'];
   
-  bool _isDatabaseMigrated = false;
-  bool _isMigratingDatabase = false;
+  bool _isFinishing = false; // 添加状态，防止重复点击
   
   // 用于交互式引导
   bool _hasCompletedAddTask = false; // 确认 _hasCompletedCopyTask 已被注释或删除
@@ -36,17 +36,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   void initState() {
     super.initState();
-    // 使用Future.delayed让UI先显示，然后再开始数据库操作
-    Future.delayed(const Duration(milliseconds: 300), () {
+    // 添加延迟加载效果
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        _migrateDatabase();
-        // 添加延迟加载效果
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            setState(() {
-              _isLoaded = true;
-            });
-          }
+        setState(() {
+          _isLoaded = true;
         });
       }
     });
@@ -58,69 +52,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
-  // 数据库迁移 - 优化性能
-  Future<void> _migrateDatabase() async {
-    if (_isDatabaseMigrated || _isMigratingDatabase) return;
-    
-    setState(() {
-      _isMigratingDatabase = true;
-    });
-    
-    try {
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
-      
-      // 使用compute隔离执行数据库操作
-      await Future.microtask(() async {
-        // 执行数据库迁移操作
-        await databaseService.init();
-        
-        // 确保默认分类存在（为旧数据提供默认分类）
-        try {
-          await databaseService.initDefaultHitokotoCategories();
-          debugPrint('默认一言分类初始化完成');
-        } catch (e) {
-          debugPrint('初始化默认分类失败，将在首次使用时再次尝试: $e');
-        }
-        
-        // 保存数据库迁移完成标记到设置中
-        await settingsService.setDatabaseMigrationComplete(true);
-      });
-      
-      if (mounted) {
-        setState(() {
-          _isDatabaseMigrated = true;
-          _isMigratingDatabase = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('数据库迁移过程中出错: $e');
-      
-      if (mounted) {
-        setState(() {
-          _isMigratingDatabase = false;
-          _isDatabaseMigrated = true; // 即使出错也标记为已完成
-        });
-        
-        // 尝试使用新数据库继续
-        try {
-          final databaseService = Provider.of<DatabaseService>(context, listen: false);
-          final settingsService = Provider.of<SettingsService>(context, listen: false);
-          
-          await settingsService.setDatabaseMigrationComplete(true);
-          
-          if (!databaseService.isInitialized) {
-            await databaseService.initializeNewDatabase();
-          }
-        } catch (e) {
-          debugPrint('无法初始化新数据库: $e');
-        }
-      }
-    }
-  }
-
   void _nextPage() {
-    if (_currentPage < 4) {
+    if (_currentPage < 3) { // 调整页数判断
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -139,35 +72,126 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
-  void _finishOnboarding() {
-    // 保存设置
-    _saveSettings();
-    
-    // 标记为已完成引导
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
-    settingsService.setHasCompletedOnboarding(true);
-    
-    // 导航到主页
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const HomePage()),
+  Future<void> _finishOnboarding() async {
+    if (_isFinishing) return; // 防止重复执行
+    setState(() {
+      _isFinishing = true;
+    });
+
+    // 显示加载指示器
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final logService = Provider.of<LogService>(context, listen: false);
+
+      // 1. 保存用户在引导页选择的设置
+      _saveSettings();
+
+      // 2. 执行数据库初始化/迁移（如果尚未完成）
+      if (!settingsService.isInitialDatabaseSetupComplete()) {
+        debugPrint('开始执行引导流程中的数据库初始化/迁移...');
+        try {
+          // 初始化数据库（包含迁移逻辑）
+          await databaseService.init();
+          debugPrint('数据库初始化/迁移完成');
+
+          // 初始化默认分类
+          await databaseService.initDefaultHitokotoCategories();
+          debugPrint('默认一言分类初始化完成');
+
+          // 补全旧数据字段
+          await databaseService.patchQuotesDayPeriod();
+          debugPrint('旧数据 dayPeriod 字段补全完成');
+
+          // 标记数据库设置完成
+          await settingsService.setInitialDatabaseSetupComplete(true);
+          debugPrint('数据库初始设置标记完成');
+
+        } catch (e, stackTrace) {
+          debugPrint('引导流程中数据库操作失败: $e');
+          // 使用 mounted 检查
+          if (mounted) {
+            logService.error('引导流程数据库操作失败', error: e, stackTrace: stackTrace);
+          }
+          // 即使失败，也标记为完成，防止卡在引导页
+          await settingsService.setInitialDatabaseSetupComplete(true);
+          // 可以考虑显示错误提示
+          // 使用 mounted 检查
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('数据库设置时遇到问题，部分功能可能受限'), backgroundColor: Colors.orange),
+            );
+          }
+        }
+      } else {
+        debugPrint('数据库初始设置已完成，跳过初始化/迁移步骤');
+      }
+
+      // 3. 标记引导流程完成
+      await settingsService.setHasCompletedOnboarding(true);
+      debugPrint('引导流程标记完成');
+
+      // 关闭加载指示器
+      if (mounted) Navigator.pop(context);
+
+      // 4. 导航到主页
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+
+    } catch (e, stackTrace) {
+      debugPrint('完成引导流程时出错: $e');
+      // 使用 mounted 检查
+      if (mounted) {
+        final logService = Provider.of<LogService>(context, listen: false);
+        logService.error('完成引导流程失败', error: e, stackTrace: stackTrace);
+        // 关闭加载指示器
+        Navigator.pop(context);
+        // 显示错误提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('完成引导时出错，请稍后重试'), backgroundColor: Colors.red),
+        );
+      }
+      setState(() {
+        _isFinishing = false; // 允许重试
+      });
+    }
   }
 
   void _saveSettings() {
-    // 保存位置权限设置
-    if (_isLocationPermissionEnabled) {
-      final locationService = Provider.of<LocationService>(context, listen: false);
-      locationService.requestLocationPermission();
+    try {
+      // 保存位置权限设置
+      if (_isLocationPermissionEnabled) {
+        final locationService = Provider.of<LocationService>(context, listen: false);
+        locationService.requestLocationPermission(); // 异步请求，不阻塞
+      }
+      
+      // 保存剪贴板监控设置
+      final clipboardService = Provider.of<ClipboardService>(context, listen: false);
+      clipboardService.setEnableClipboardMonitoring(_isClipboardMonitoringEnabled);
+      
+      // 保存一言类型设置
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final hitokotoType = _selectedHitokotoTypes.join(',');
+      settingsService.updateHitokotoType(hitokotoType);
+      debugPrint('引导页设置已保存');
+    } catch (e) {
+      debugPrint('保存引导页设置时出错: $e');
+      // 记录错误，但不阻塞流程
+      // 使用 mounted 检查
+      if (mounted) {
+        final logService = Provider.of<LogService>(context, listen: false);
+        logService.info('保存引导页设置失败', error: e); // 将 warn 改为 info
+      }
     }
-    
-    // 保存剪贴板监控设置
-    final clipboardService = Provider.of<ClipboardService>(context, listen: false);
-    clipboardService.setEnableClipboardMonitoring(_isClipboardMonitoringEnabled);
-    
-    // 保存一言类型设置
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
-    final hitokotoType = _selectedHitokotoTypes.join(',');
-    settingsService.updateHitokotoType(hitokotoType);
   }
 
   @override
@@ -195,7 +219,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   _buildWelcomePage(theme),
                   _buildPermissionsPage(theme),
                   _buildHitokotoSettingsPage(theme),
-                  // _buildMoreSettingsPage(theme), // 移除更多设置页面
                   _buildInteractiveGuidePage(theme),
                 ],
               ),
@@ -223,15 +246,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       // 后退按钮
                       _currentPage > 0
                           ? TextButton.icon(
-                              onPressed: _previousPage,
+                              onPressed: _isFinishing ? null : _previousPage, // 禁用按钮
                               icon: const Icon(Icons.arrow_back),
                               label: const Text('上一步'),
                             )
-                          : const SizedBox(width: 90),
+                          : const SizedBox(width: 90), // 占位符
                       
                       // 页面指示器 (改为4页)
                       Row(
-                        children: List.generate(4, (index) {
+                        children: List.generate(4, (index) { // 页数改为4
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -248,16 +271,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                       
                       // 下一步/完成按钮 (改为判断 < 3)
-                      _currentPage < 3
+                      _currentPage < 3 // 页数改为3
                           ? FilledButton.icon(
-                              onPressed: _nextPage,
+                              onPressed: _isFinishing ? null : _nextPage, // 禁用按钮
                               icon: const Icon(Icons.arrow_forward),
                               label: const Text('下一步'),
                             )
                           : FilledButton.icon(
-                              onPressed: _finishOnboarding,
-                              icon: const Icon(Icons.check),
-                              label: const Text('开始使用'),
+                              onPressed: _isFinishing ? null : _finishOnboarding, // 禁用按钮
+                              icon: _isFinishing 
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.check),
+                              label: Text(_isFinishing ? '请稍候...' : '开始使用'),
                             ),
                     ],
                   ),
@@ -270,12 +295,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 right: 10,
                 child: _currentPage < 3 // 改为判断 < 3
                     ? TextButton.icon(
-                        onPressed: () {
+                        onPressed: _isFinishing ? null : () { // 禁用按钮
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('跳过引导'),
-                              content: const Text('您确定要跳过引导直接进入应用吗？'),
+                              content: const Text('您确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
@@ -284,9 +309,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                 FilledButton(
                                   onPressed: () {
                                     Navigator.pop(context);
-                                    _finishOnboarding();
+                                    _finishOnboarding(); // 跳过也执行完成逻辑
                                   },
-                                  child: const Text('确定'),
+                                  child: const Text('确定跳过'),
                                 ),
                               ],
                             ),
@@ -355,17 +380,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
               style: theme.textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
-            
-            // 显示数据库迁移状态 - 简化状态显示
-            const SizedBox(height: 40),
-            if (_isMigratingDatabase)
-              const CircularProgressIndicator()
-            else if (_isDatabaseMigrated)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
-                size: 40,
-              ),
           ],
         ),
       ),
@@ -726,12 +740,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return examples[DateTime.now().millisecond % examples.length];
   }
 
-  // // 第四页：更多设置页面 (已移除)
-  // Widget _buildMoreSettingsPage(ThemeData theme) { ... }
-  
-  // // 默认页面选项 (已移除)
-  // Widget _buildPageOption(ThemeData theme, String label, IconData icon, bool isSelected) { ... }
-
   // 第四页（原第五页）：交互式引导页面
   Widget _buildInteractiveGuidePage(ThemeData theme) {
     return Padding(
@@ -752,9 +760,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
               style: theme.textTheme.bodyLarge,
             ),
             const SizedBox(height: 20),
-            
-            // // 可选择文本卡片 - 真实可交互 (已移除)
-            // Container( ... ), // 确认整个 Container 已被移除
             
             // 笔记添加模拟
             Container(
@@ -876,12 +881,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // _buildTaskProgressItem( // 移除复制任务进度显示
-                    //   theme,
-                    //   '选择并复制文本',
-                    //   _hasCompletedCopyTask, // 移除引用
-                    // ),
-                    // const SizedBox(height: 8), // 移除间距
                     _buildTaskProgressItem(
                       theme,
                       '双击添加到笔记',
@@ -951,10 +950,4 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ],
     );
   }
-
-  // // 设置部分部件 (已移除)
-  // Widget _buildSettingSection(...) { ... }
-
-  // // 主题模式选项 (已移除)
-  // Widget _buildThemeModeOption(...) { ... }
 }

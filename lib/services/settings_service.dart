@@ -10,8 +10,10 @@ class SettingsService extends ChangeNotifier {
   static const String _aiSettingsKey = 'ai_settings';
   static const String _appSettingsKey = 'app_settings';
   static const String _themeModeKey = 'theme_mode';
-  static const String _lastVersionKey = 'last_version';
-  static const String _databaseMigrationCompleteKey = 'database_migration_complete';
+  // 旧Key，用于迁移检查，迁移完成后可以考虑移除
+  static const String _databaseMigrationCompleteKey = 'database_migration_complete'; 
+  // 新Key，表示初始数据库设置（包括首次创建或升级）是否已在引导流程中完成
+  static const String _initialDatabaseSetupCompleteKey = 'initial_database_setup_complete';
   // 使用应用安装标记替代版本号
   static const String _appInstalledKey = 'app_installed_v2';
   static const String _appUpgradedKey = 'app_upgraded_v2';
@@ -201,6 +203,17 @@ class SettingsService extends ChangeNotifier {
         debugPrint('API密钥已安全迁移到加密存储');
       }
 
+      // 检查旧的数据库迁移Key，如果存在且为true，则设置新的Key并移除旧Key
+      if (_mmkv.containsKey(_databaseMigrationCompleteKey)) {
+        final oldMigrationComplete = _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
+        if (oldMigrationComplete) {
+          await _mmkv.setBool(_initialDatabaseSetupCompleteKey, true);
+        }
+        // 移除旧Key - 使用正确的 remove 方法
+        await _mmkv.remove(_databaseMigrationCompleteKey);
+        debugPrint('迁移旧的数据库迁移完成标记到新的初始设置完成标记');
+      }
+
       // 标记迁移完成
       await _mmkv.setBool(_migrationCompleteKey, true);
       debugPrint('所有设置数据已成功迁移到MMKV');
@@ -268,6 +281,19 @@ class SettingsService extends ChangeNotifier {
   // 设置应用升级标记，用于触发显示引导页
   Future<void> setAppUpgraded() async {
     await _mmkv.setBool(_appUpgradedKey, true);
+  }
+
+  /// 设置初始数据库设置（创建/升级）已完成
+  Future<void> setInitialDatabaseSetupComplete(bool isComplete) async {
+    await _mmkv.setBool(_initialDatabaseSetupCompleteKey, isComplete);
+    debugPrint('初始数据库设置完成状态设置为: $isComplete');
+    // notifyListeners(); // 根据需要决定是否通知监听器
+  }
+
+  /// 检查初始数据库设置（创建/升级）是否已完成
+  bool isInitialDatabaseSetupComplete() {
+    // 默认返回 false，确保只有显式设置后才为 true
+    return _mmkv.getBool(_initialDatabaseSetupCompleteKey) ?? false;
   }
 
   // 设置数据库迁移是否完成

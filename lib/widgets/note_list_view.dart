@@ -40,10 +40,10 @@ class NoteListView extends StatefulWidget {
   });
 
   @override
-  State<NoteListView> createState() => _NoteListViewState();
+  State<NoteListView> createState() => NoteListViewState();
 }
 
-class _NoteListViewState extends State<NoteListView> {
+class NoteListViewState extends State<NoteListView> {
   final TextEditingController _searchController = TextEditingController();
   final Map<String, bool> _expandedItems = {};
   // 添加固定的GlobalKey，避免重建时生成新Key
@@ -163,7 +163,7 @@ class _NoteListViewState extends State<NoteListView> {
     super.dispose();
   }
 
-  Future<void> _resetAndLoad() async {
+  Future<void> resetAndLoad() async {
     _quotes.clear();
     _hasMore = true;
     _offset = 0;

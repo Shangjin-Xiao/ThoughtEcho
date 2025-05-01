@@ -42,6 +42,9 @@ class _HomePageState extends State<HomePage>
 
   late TabController _tabController;
 
+  // 新增：NoteListView的全局Key
+  final GlobalKey<NoteListViewState> _noteListViewKey = GlobalKey<NoteListViewState>();
+
   @override
   void initState() {
     super.initState();
@@ -250,6 +253,10 @@ class _HomePageState extends State<HomePage>
             onSave: (_) {
               // 笔记保存后刷新标签列表
               _loadTags();
+              // 新增：强制刷新NoteListView
+              if (_noteListViewKey.currentState != null) {
+                _noteListViewKey.currentState!.resetAndLoad();
+              }
             },
           ),
     );
@@ -514,6 +521,7 @@ class _HomePageState extends State<HomePage>
             Consumer<NoteSearchController>(
               builder: (context, searchController, child) {
                 return NoteListView(
+                  key: _noteListViewKey, // 绑定全局Key
                   tags: _tags,
                   selectedTagIds: _selectedTagIds,
                   onTagSelectionChanged: (tagIds) {

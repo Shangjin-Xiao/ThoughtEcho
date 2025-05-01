@@ -63,7 +63,7 @@ bool _isEmergencyMode = false;
 // 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
 
-void main() async {
+Future<void> main() async {
   await runZonedGuarded<Future<void>>(() async {
     // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
     WidgetsFlutterBinding.ensureInitialized();
