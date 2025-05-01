@@ -4,6 +4,8 @@ import '../models/note_category.dart';
 import '../theme/app_theme.dart';
 import 'dart:convert';
 import '../widgets/quote_content_widget.dart';
+import '../services/weather_service.dart';
+import '../utils/time_utils.dart';
 
 class QuoteItemWidget extends StatelessWidget {
   final Quote quote;
@@ -71,16 +73,9 @@ class QuoteItemWidget extends StatelessWidget {
     return result;
   }
 
-  // 根据天气描述获取图标
-  IconData _getWeatherIcon(String weather) {
-    if (weather.contains('晴')) return Icons.wb_sunny;
-    if (weather.contains('云') || weather.contains('阴')) return Icons.cloud;
-    if (weather.contains('雾') || weather.contains('霾')) return Icons.cloud;
-    if (weather.contains('雨') && weather.contains('雷')) return Icons.flash_on;
-    if (weather.contains('雨')) return Icons.water_drop;
-    if (weather.contains('雪')) return Icons.ac_unit;
-    if (weather.contains('风')) return Icons.air;
-    return Icons.cloud_queue;
+  // 根据天气key获取图标
+  IconData _getWeatherIcon(String weatherKey) {
+    return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
   @override
@@ -89,26 +84,12 @@ class QuoteItemWidget extends StatelessWidget {
 
     // 格式化日期和时间段
     final DateTime quoteDate = DateTime.parse(quote.date);
-    final int hour = quoteDate.hour;
-    String timeOfDay;
-    // 使用更诗意的表述
-    if (hour >= 5 && hour < 9) {
-      timeOfDay = '晨曦'; // 5:00 - 8:59
-    } else if (hour >= 9 && hour < 12) {
-      timeOfDay = '清晨'; // 9:00 - 11:59
-    } else if (hour >= 12 && hour < 14) {
-      timeOfDay = '正午'; // 12:00 - 13:59
-    } else if (hour >= 14 && hour < 17) {
-      timeOfDay = '午后'; // 14:00 - 16:59
-    } else if (hour >= 17 && hour < 19) {
-      timeOfDay = '黄昏'; // 17:00 - 18:59
-    } else if (hour >= 19 && hour < 23) {
-      timeOfDay = '夜晚'; // 19:00 - 22:59
-    } else {
-      timeOfDay = '深夜';
+    String dayPeriodLabel = '';
+    if (quote.dayPeriod != null && quote.dayPeriod!.isNotEmpty) {
+      dayPeriodLabel = TimeUtils.getDayPeriodLabel(quote.dayPeriod!);
     }
     final String formattedDate =
-        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $timeOfDay';
+        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
@@ -188,7 +169,7 @@ class QuoteItemWidget extends StatelessWidget {
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                '${quote.weather!}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
+                                '${WeatherService.getWeatherDescription(quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.secondary,
                                   fontSize: 12,

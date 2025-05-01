@@ -41,4 +41,37 @@ class TimeUtils {
         return Icons.access_time;
     }
   }
+
+  /// key到label映射
+  static const Map<String, String> dayPeriodKeyToLabel = {
+    'dawn': '晨曦',
+    'morning': '上午',
+    'afternoon': '午后',
+    'dusk': '黄昏',
+    'evening': '夜晚',
+    'midnight': '深夜',
+  };
+
+  static String getDayPeriodLabel(String key) {
+    return dayPeriodKeyToLabel[key] ?? key;
+  }
+
+  static IconData getDayPeriodIconByKey(String? key) {
+    switch (key) {
+      case 'dawn':
+        return Icons.wb_twilight;
+      case 'morning':
+        return Icons.wb_sunny_outlined;
+      case 'afternoon':
+        return Icons.wb_sunny;
+      case 'dusk':
+        return Icons.nights_stay_outlined;
+      case 'evening':
+        return Icons.nightlight_round;
+      case 'midnight':
+        return Icons.bedtime;
+      default:
+        return Icons.access_time;
+    }
+  }
 } 

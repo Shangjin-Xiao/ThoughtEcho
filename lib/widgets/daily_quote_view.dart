@@ -67,7 +67,7 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
         });
         
         // 添加重试机制，3秒后自动重试一次
-        Future.delayed(Duration(seconds: 3), () {
+        Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
             _loadDailyQuote();
           }
@@ -101,7 +101,7 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
     } catch (e) {
       debugPrint('获取每日提示失败: $e');
       // 添加重试机制
-      Future.delayed(Duration(seconds: 5), () {
+      Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
           _fetchDailyPrompt();
         }

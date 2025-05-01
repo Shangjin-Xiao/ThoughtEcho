@@ -34,6 +34,12 @@ class AIService extends ChangeNotifier {
     }
   }
 
+  // 新增：判断API Key是否有效
+  bool hasValidApiKey() {
+    final key = _settingsService.aiSettings.apiKey;
+    return key.isNotEmpty;
+  }
+
   Future<http.Response> _makeRequest(
     String url,
     Map<String, dynamic> body,
@@ -68,7 +74,7 @@ class AIService extends ChangeNotifier {
             body: json.encode(requestBody),
           )
           .timeout(
-            const Duration(seconds: 60), // 延长超时时间到60秒
+            const Duration(seconds: 300), // 超时时间改为300秒
             onTimeout: () {
               throw Exception('请求超时，AI分析可能需要更长时间，请稍后再试');
             },
@@ -91,6 +97,9 @@ class AIService extends ChangeNotifier {
   }
 
   Future<String> summarizeNote(Quote quote) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
@@ -257,26 +266,30 @@ class AIService extends ChangeNotifier {
 
     // --- 结合时间和天气的提示 ---
     if (weather != null) {
+      final weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
+        (k) => weather == k || weather == WeatherService.getWeatherDescription(k),
+        orElse: () => weather,
+      );
       if (timeOfDay == '早上') {
-        if (weather.contains('晴')) {
+        if (weatherKey == 'clear') {
           prompts.add("清晨的阳光洒满窗台，此刻你的心情如何？有什么新的计划吗？");
-        } else if (weather.contains('雨')) {
+        } else if (weatherKey == 'rain') {
           prompts.add("听着清晨的雨声，内心是否格外宁静？有什么特别的感悟？");
-        } else if (weather.contains('云') || weather.contains('阴')) {
+        } else if (weatherKey == 'cloudy' || weatherKey == 'partly_cloudy') {
           prompts.add("云层微厚的早晨，适合放慢脚步，思考一下最近的得失。");
         }
       } else if (timeOfDay == '下午') {
-        if (weather.contains('晴')) {
+        if (weatherKey == 'clear') {
           prompts.add("午后暖阳正好，适合小憩片刻，或是记录下此刻的惬意。");
-        } else if (weather.contains('雨')) {
+        } else if (weatherKey == 'rain') {
           prompts.add("雨天的午后，窗外滴答作响，屋内适合读一本书或写点什么。");
         }
       } else if (timeOfDay == '晚上' || timeOfDay == '深夜') {
-        if (weather.contains('晴')) {
+        if (weatherKey == 'clear') {
           prompts.add("夜幕降临，星光或月色正好，此刻有什么心事或梦想？");
-        } else if (weather.contains('雨')) {
+        } else if (weatherKey == 'rain') {
           prompts.add("雨夜漫漫，适合独处思考，最近有什么让你困惑或欣喜的事？");
-        } else if (weather.contains('风')) {
+        } else if (weatherKey == 'wind') {
           prompts.add("晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻的灵感吧。");
         }
       }
@@ -284,13 +297,17 @@ class AIService extends ChangeNotifier {
 
     // 基于天气的提示 (如果天气信息可用)
     if (weather != null) {
-      if (weather.contains('晴')) {
+      final weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
+        (k) => weather == k || weather == WeatherService.getWeatherDescription(k),
+        orElse: () => weather,
+      );
+      if (weatherKey == 'clear') {
         prompts.addAll(["阳光明媚的日子，有什么让你感到开心？", "这样的好天气，适合做些什么让你放松的事情？"]);
-      } else if (weather.contains('雨')) {
+      } else if (weatherKey == 'rain') {
         prompts.addAll(["听着雨声，你的心情是怎样的？", "雨天适合沉思，有什么想法在脑海中萦绕？"]);
-      } else if (weather.contains('云') || weather.contains('阴')) {
+      } else if (weatherKey == 'cloudy' || weatherKey == 'partly_cloudy') {
         prompts.addAll(["多云的天空下，你的思绪飘向了何方？", "阴天有时也别有韵味，它让你想起了什么？"]);
-      } else if (weather.contains('雪')) {
+      } else if (weatherKey == 'snow') {
         prompts.addAll(["窗外的雪景给你带来了怎样的感受？", "下雪天，适合窝在温暖的地方思考些什么？"]);
       }
     }
@@ -332,6 +349,9 @@ class AIService extends ChangeNotifier {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
   }) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
@@ -490,6 +510,9 @@ class AIService extends ChangeNotifier {
     List<Quote> quotes,
     String customPrompt,
   ) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;

@@ -69,7 +69,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage> {
           ...ApiService.hitokotoTypes.entries.map((entry) {
             return CheckboxListTile(
               title: Text(entry.value),
-              subtitle: Text('类型代码: ${entry.key}'),
+              subtitle: Text('类型代码: \\${entry.key}'),
               value: _selectedTypes.contains(entry.key),
               onChanged: (bool? value) {
                 setState(() {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart'; // Import IconUtils
+import '../services/weather_service.dart'; // Import WeatherService
+import '../utils/time_utils.dart'; // Import TimeUtils
 
 class NoteFilterSortSheet extends StatefulWidget {
   final List<NoteCategory> allTags;
@@ -33,6 +35,11 @@ class NoteFilterSortSheet extends StatefulWidget {
 }
 
 class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
+  static const Map<String, String> _sortTypeKeyToLabel = {
+    'time': '按时间排序',
+    'name': '按名称排序',
+  };
+
   late List<String> _tempSelectedTagIds;
   late String _tempSortType;
   late bool _tempSortAscending;
@@ -108,43 +115,31 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 spacing: 8.0,
                 runSpacing: 8.0,
                 children: [
-                  '晴', '多云', '阴', '雨', '雪', '风', '雾', '霾', '雷阵雨'
-                ].map((weather) {
-                  final isSelected = _tempSelectedWeathers.contains(weather);
-                  IconData icon;
-                  switch (weather) {
-                    case '晴': icon = Icons.wb_sunny; break;
-                    case '多云': icon = Icons.cloud_queue; break;
-                    case '阴': icon = Icons.cloud; break;
-                    case '雨': icon = Icons.umbrella; break;
-                    case '雪': icon = Icons.ac_unit; break;
-                    case '风': icon = Icons.air; break;
-                    case '雾': icon = Icons.blur_on; break;
-                    case '霾': icon = Icons.blur_on; break;
-                    case '雷阵雨': icon = Icons.flash_on; break;
-                    default: icon = Icons.wb_cloudy;
-                  }
-                  return FilterChip(
-                    selected: isSelected,
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon, size: 16),
-                        const SizedBox(width: 4),
-                        Text(weather, style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _tempSelectedWeathers.add(weather);
-                        } else {
-                          _tempSelectedWeathers.remove(weather);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+                  ...WeatherService.weatherKeyToLabel.keys.map((weatherKey) {
+                    final isSelected = _tempSelectedWeathers.contains(weatherKey);
+                    final icon = WeatherService.getWeatherIconDataByKey(weatherKey);
+                    return FilterChip(
+                      selected: isSelected,
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icon, size: 16),
+                          const SizedBox(width: 4),
+                          Text(WeatherService.getWeatherDescription(weatherKey), style: theme.textTheme.bodyMedium),
+                        ],
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _tempSelectedWeathers.add(weatherKey);
+                          } else {
+                            _tempSelectedWeathers.remove(weatherKey);
+                          }
+                        });
+                      },
+                    );
+                  }),
+                ],
               ),
               const SizedBox(height: 20),
               Text('时间段筛选', style: theme.textTheme.bodyLarge),
@@ -152,63 +147,44 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 spacing: 8.0,
                 runSpacing: 8.0,
                 children: [
-                  '晨曦', '上午', '午后', '黄昏', '夜晚', '深夜'
-                ].map((period) {
-                  final isSelected = _tempSelectedDayPeriods.contains(period);
-                  IconData icon;
-                  switch (period) {
-                    case '晨曦': icon = Icons.wb_twilight; break;
-                    case '上午': icon = Icons.sunny; break;
-                    case '午后': icon = Icons.wb_sunny; break;
-                    case '黄昏': icon = Icons.wb_twighlight; break;
-                    case '夜晚': icon = Icons.nightlight_round; break;
-                    case '深夜': icon = Icons.bedtime; break;
-                    default: icon = Icons.access_time;
-                  }
-                  return FilterChip(
-                    selected: isSelected,
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon, size: 16),
-                        const SizedBox(width: 4),
-                        Text(period, style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _tempSelectedDayPeriods.add(period);
-                        } else {
-                          _tempSelectedDayPeriods.remove(period);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+                  ...TimeUtils.dayPeriodKeyToLabel.keys.map((periodKey) {
+                    final isSelected = _tempSelectedDayPeriods.contains(periodKey);
+                    final icon = TimeUtils.getDayPeriodIconByKey(periodKey);
+                    return FilterChip(
+                      selected: isSelected,
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icon, size: 16),
+                          const SizedBox(width: 4),
+                          Text(TimeUtils.getDayPeriodLabel(periodKey), style: theme.textTheme.bodyMedium),
+                        ],
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _tempSelectedDayPeriods.add(periodKey);
+                          } else {
+                            _tempSelectedDayPeriods.remove(periodKey);
+                          }
+                        });
+                      },
+                    );
+                  }),
+                ],
               ),
               const SizedBox(height: 24),
               Text('排序方式', style: theme.textTheme.bodyLarge),
-              RadioListTile<String>(
-                title: const Text('按时间排序'),
-                value: 'time',
+              ..._sortTypeKeyToLabel.entries.map((entry) => RadioListTile<String>(
+                title: Text(entry.value),
+                value: entry.key,
                 groupValue: _tempSortType,
                 onChanged: (value) {
                   setState(() {
                     _tempSortType = value!;
                   });
                 },
-              ),
-              RadioListTile<String>(
-                title: const Text('按名称排序'),
-                value: 'name',
-                groupValue: _tempSortType,
-                onChanged: (value) {
-                  setState(() {
-                    _tempSortType = value!;
-                  });
-                },
-              ),
+              )),
               SwitchListTile(
                 title: const Text('升序'),
                 value: _tempSortAscending,

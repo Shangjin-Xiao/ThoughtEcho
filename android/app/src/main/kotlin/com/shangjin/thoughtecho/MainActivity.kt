@@ -8,10 +8,6 @@ import android.view.WindowManager
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 检测设备架构是否为32位，如果是则禁用硬件加速
-        if (!is64BitDevice()) {
-            // 使用clearFlags来禁用硬件加速
-            window.clearFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
-        }
         super.onCreate(savedInstanceState)
     }
     

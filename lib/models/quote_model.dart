@@ -161,6 +161,19 @@ class Quote {
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
     );
   }
+
+  // 静态key-label映射
+  static const Map<String, String> sentimentKeyToLabel = {
+    'positive': '积极',
+    'negative': '消极',
+    'neutral': '中性',
+    'mixed': '复杂',
+  };
+  static const Map<String, String> sourceTypeKeyToLabel = {
+    'manual': '手动',
+    'ai': 'AI生成',
+    'import': '导入',
+  };
 }
 
 class QuoteModel {

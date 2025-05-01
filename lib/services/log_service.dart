@@ -90,7 +90,7 @@ class LogEntry {
 class LogService with ChangeNotifier {
   static const String _logLevelKey = 'log_level';
   static const int _maxInMemoryLogs = 300; // 内存中保留的最大日志数量
-  static const int _maxStoredLogs = 10000; // 数据库中存储的最大日志数
+  static const int _maxStoredLogs = 500; // 数据库中存储的最大日志数，超过500自动删除
   static const Duration _batchSaveInterval = Duration(seconds: 2); // 批量保存日志的间隔时间
 
   // 单例实例

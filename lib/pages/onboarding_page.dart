@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import 'package:permission_handler/permission_handler.dart'; // 导入 permission_handler
 
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
@@ -10,6 +11,7 @@ import '../services/api_service.dart';
 import '../services/log_service.dart'; // 添加 LogService 导入
 import '../theme/app_theme.dart';
 import 'home_page.dart';
+import '../models/app_settings.dart'; // 导入 AppSettings
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -21,14 +23,13 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  PermissionStatus _locationPermissionStatus = PermissionStatus.denied; // 跟踪权限状态
   bool _isLocationPermissionEnabled = false;
   bool _isClipboardMonitoringEnabled = false;
   final List<String> _selectedHitokotoTypes = ['a','b','c','d','e','f','g','h','i','j','k'];
+  int _selectedStartPage = AppSettings.defaultSettings().defaultStartPage; // 使用 AppSettings.defaultSettings() 获取默认值
   
   bool _isFinishing = false; // 添加状态，防止重复点击
-  
-  // 用于交互式引导
-  bool _hasCompletedAddTask = false; // 确认 _hasCompletedCopyTask 已被注释或删除
   
   // 用于延迟加载和显示过渡效果
   bool _isLoaded = false;
@@ -36,6 +37,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   void initState() {
     super.initState();
+    // 检查初始权限状态
+    _checkInitialLocationPermission();
     // 添加延迟加载效果
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -46,6 +49,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
     });
   }
 
+  // 检查初始位置权限状态
+  Future<void> _checkInitialLocationPermission() async {
+    final status = await Permission.location.status;
+    if (mounted) {
+      setState(() {
+        _locationPermissionStatus = status;
+              _isLocationPermissionEnabled = _locationPermissionStatus.isGranted || _locationPermissionStatus.isLimited;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -53,7 +67,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _nextPage() {
-    if (_currentPage < 3) { // 调整页数判断
+    // 页数仍然是 4 页 (0, 1, 2, 3)
+    if (_currentPage < 3) { 
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -73,6 +88,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _finishOnboarding() async {
+    // ... (保持 _finishOnboarding 内部逻辑不变，数据库初始化等都在这里) ...
     if (_isFinishing) return; // 防止重复执行
     setState(() {
       _isFinishing = true;
@@ -90,8 +106,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
       final logService = Provider.of<LogService>(context, listen: false);
 
-      // 1. 保存用户在引导页选择的设置
-      _saveSettings();
+      // 1. 保存用户在引导页选择的设置 (包括启动页)
+      await _saveSettings();
 
       // 2. 执行数据库初始化/迁移（如果尚未完成）
       if (!settingsService.isInitialDatabaseSetupComplete()) {
@@ -108,6 +124,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
           // 补全旧数据字段
           await databaseService.patchQuotesDayPeriod();
           debugPrint('旧数据 dayPeriod 字段补全完成');
+
+          // 迁移旧weather字段为key
+          await databaseService.migrateWeatherToKey();
+          debugPrint('旧weather字段已迁移为key');
+
+          // 迁移旧dayPeriod字段为key
+          await databaseService.migrateDayPeriodToKey();
+          debugPrint('旧dayPeriod字段已迁移为key');
 
           // 标记数据库设置完成
           await settingsService.setInitialDatabaseSetupComplete(true);
@@ -166,28 +190,33 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
-  void _saveSettings() {
+  // 修改 _saveSettings 以包含启动页
+  Future<void> _saveSettings() async { 
     try {
-      // 保存位置权限设置
-      if (_isLocationPermissionEnabled) {
-        final locationService = Provider.of<LocationService>(context, listen: false);
-        locationService.requestLocationPermission(); // 异步请求，不阻塞
-      }
+      // 保存位置权限设置 - 注意：实际权限在开关切换时请求
+      // 这里可以考虑保存用户 *期望* 的状态，但实际状态由系统权限决定
       
-      // 保存剪贴板监控设置
+      // 保存剪贴板监控设置 - setEnableClipboardMonitoring 是同步方法，移除 await
       final clipboardService = Provider.of<ClipboardService>(context, listen: false);
       clipboardService.setEnableClipboardMonitoring(_isClipboardMonitoringEnabled);
       
       // 保存一言类型设置
       final settingsService = Provider.of<SettingsService>(context, listen: false);
       final hitokotoType = _selectedHitokotoTypes.join(',');
-      settingsService.updateHitokotoType(hitokotoType);
+      await settingsService.updateHitokotoType(hitokotoType);
+
+      // 保存默认启动页面设置
+      final currentAppSettings = settingsService.appSettings;
+      await settingsService.updateAppSettings(
+        currentAppSettings.copyWith(defaultStartPage: _selectedStartPage)
+      );
+
       debugPrint('引导页设置已保存');
     } catch (e) {
       debugPrint('保存引导页设置时出错: $e');
       // 记录错误，但不阻塞流程
       // 使用 mounted 检查
-      if (mounted) {
+      if (mounted) { // 添加 mounted 检查
         final logService = Provider.of<LogService>(context, listen: false);
         logService.info('保存引导页设置失败', error: e); // 将 warn 改为 info
       }
@@ -206,10 +235,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         body: SafeArea(
           child: Stack(
             children: [
-              // 页面内容
+              // 页面内容 - 更新 children
               PageView(
                 controller: _pageController,
-                physics: const ClampingScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(), // 禁止滑动切换
                 onPageChanged: (page) {
                   setState(() {
                     _currentPage = page;
@@ -219,11 +248,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   _buildWelcomePage(theme),
                   _buildPermissionsPage(theme),
                   _buildHitokotoSettingsPage(theme),
-                  _buildInteractiveGuidePage(theme),
+                  _buildStartPageSelectionPage(theme), // 替换为启动页选择
                 ],
               ),
               
-              // 底部导航按钮
+              // 底部导航按钮 - 保持不变 (页数仍为4)
               Positioned(
                 bottom: 10,
                 left: 0,
@@ -252,9 +281,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             )
                           : const SizedBox(width: 90), // 占位符
                       
-                      // 页面指示器 (改为4页)
+                      // 页面指示器 (仍为4页)
                       Row(
-                        children: List.generate(4, (index) { // 页数改为4
+                        children: List.generate(4, (index) { 
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -270,8 +299,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         }),
                       ),
                       
-                      // 下一步/完成按钮 (改为判断 < 3)
-                      _currentPage < 3 // 页数改为3
+                      // 下一步/完成按钮 (判断 < 3)
+                      _currentPage < 3 
                           ? FilledButton.icon(
                               onPressed: _isFinishing ? null : _nextPage, // 禁用按钮
                               icon: const Icon(Icons.arrow_forward),
@@ -289,11 +318,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
               
-              // 跳过按钮
+              // 跳过按钮 - 保持不变 (判断 < 3)
               Positioned(
                 top: 10,
                 right: 10,
-                child: _currentPage < 3 // 改为判断 < 3
+                child: _currentPage < 3 
                     ? TextButton.icon(
                         onPressed: _isFinishing ? null : () { // 禁用按钮
                           showDialog(
@@ -329,7 +358,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  // 第一页：欢迎页面
+  // 第一页：欢迎页面 - 保持不变
   Widget _buildWelcomePage(ThemeData theme) {
     return Center(
       child: SingleChildScrollView(  // 添加滚动支持防止溢出
@@ -386,7 +415,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  // 第二页：权限申请页面
+  // 第二页：权限申请页面 - 修改位置权限逻辑
   Widget _buildPermissionsPage(ThemeData theme) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
@@ -406,17 +435,44 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 24),
           
-          // 位置权限 - 更现代化的UI
+          // 位置权限 - 修改 onChanged
           Card(
             elevation: 0,
             color: theme.colorScheme.surfaceContainerHighest,
             margin: const EdgeInsets.only(bottom: 16),
             child: SwitchListTile(
               value: _isLocationPermissionEnabled,
-              onChanged: (value) {
-                setState(() {
-                  _isLocationPermissionEnabled = value;
-                });
+              onChanged: (value) async { 
+                final locationService = Provider.of<LocationService>(context, listen: false);
+                dynamic status;
+                if (value) {
+                  // 请求权限
+                  final result = await locationService.requestLocationPermission();
+                  if (result is PermissionStatus) {
+                    status = result;
+                  } else                  status = result ? PermissionStatus.granted : PermissionStatus.denied;
+                
+                } else {
+                  // 用户关闭开关，可以视为拒绝，或者引导去设置
+                  status = PermissionStatus.denied;
+                  // 可选：如果需要，引导用户去系统设置关闭权限
+                  // openAppSettings(); 
+                }
+                // 更新UI状态
+                if (mounted) {
+                  setState(() {
+                    if (status is PermissionStatus) {
+                      _locationPermissionStatus = status;
+                      _isLocationPermissionEnabled = status.isGranted || status.isLimited;
+                    } else if (status is bool) {
+                      _locationPermissionStatus = status ? PermissionStatus.granted : PermissionStatus.denied;
+                      _isLocationPermissionEnabled = status ? true : false;
+                    } else {
+                      _locationPermissionStatus = PermissionStatus.denied;
+                      _isLocationPermissionEnabled = false;
+                    }
+                  });
+                }
               },
               title: Row(
                 children: [
@@ -443,7 +499,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  '用于获取本地天气信息和在笔记中记录位置',
+                  _getLocationSubtitle(), // 根据状态显示不同文本
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
@@ -454,7 +510,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ),
           
-          // 剪贴板权限
+          // 剪贴板权限 - 保持不变
           Card(
             elevation: 0,
             color: theme.colorScheme.surfaceContainerHighest,
@@ -504,8 +560,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
           
           const SizedBox(height: 16),
           
-          // 权限说明
+          // 权限说明 - 保持不变
           Container(
+            // ... (代码不变) ...
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
@@ -556,7 +613,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  // 第三页：一言设置页面
+  // 根据权限状态获取位置权限的副标题
+  String _getLocationSubtitle() {
+    switch (_locationPermissionStatus) {
+      case PermissionStatus.granted:
+      case PermissionStatus.limited: // Limited access is also considered enabled
+        return '已授权。用于获取天气和记录位置。';
+      case PermissionStatus.denied:
+        return '用于获取本地天气信息和在笔记中记录位置';
+      case PermissionStatus.permanentlyDenied:
+        return '权限已被永久拒绝，请在系统设置中开启';
+      case PermissionStatus.restricted:
+        return '权限受限 (例如家长控制)';
+      default:
+        return '用于获取本地天气信息和在笔记中记录位置';
+    }
+  }
+
+  // 第三页：一言设置页面 - 保持不变
   Widget _buildHitokotoSettingsPage(ThemeData theme) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
@@ -684,7 +758,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       _selectedHitokotoTypes.add(entry.key);
                     } else {
                       _selectedHitokotoTypes.remove(entry.key);
-                      // 确保至少选择一种类型
                       if (_selectedHitokotoTypes.isEmpty) {
                         _selectedHitokotoTypes.add('a');
                       }
@@ -727,7 +800,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
   
-  // 生成随机一言示例
+  // 生成随机一言示例 - 保持不变
   String _getRandomHitokotoExample() {
     const examples = [
       "人生最曼妙的风景，是内心的淡定与从容。",
@@ -740,214 +813,141 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return examples[DateTime.now().millisecond % examples.length];
   }
 
-  // 第四页（原第五页）：交互式引导页面
-  Widget _buildInteractiveGuidePage(ThemeData theme) {
-    return Padding(
+  // 新增：第四页 - 默认启动页面选择
+  Widget _buildStartPageSelectionPage(ThemeData theme) {
+    // 定义启动页选项 - Key 修改为 int
+    final Map<int, String> startPageOptions = { 
+      0: '主页概览', // 0 代表主页
+      1: '笔记列表', // 1 代表笔记列表
+      // 2: '日历视图', // 如果有日历视图可以取消注释
+    };
+
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(  // 添加滚动支持防止溢出
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '快速上手',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '个性化设置',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 10),
-            Text(
-              '来体验心迹的核心功能！',
-              style: theme.textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 20),
-            
-            // 笔记添加模拟
-            Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              ),
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.symmetric(vertical: 10),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '选择您希望打开应用时首先看到的页面：',
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 24),
+          
+          // 使用 Card 包裹选项
+          Card(
+            elevation: 0,
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0), // 给内部一些垂直间距
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '快速添加笔记',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Icon(
-                        Icons.note_add,
-                        color: theme.colorScheme.primary,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  
-                  // 双击区域演示
-                  GestureDetector(
-                    onDoubleTap: () {
-                      if (!_hasCompletedAddTask) {
+                children: startPageOptions.entries.map((entry) {
+                  // 修改 RadioListTile 的类型为 int
+                  return RadioListTile<int>( 
+                    title: Text(entry.value),
+                    value: entry.key,
+                    groupValue: _selectedStartPage,
+                    onChanged: (int? value) { // 修改类型为 int?
+                      if (value != null) {
                         setState(() {
-                          _hasCompletedAddTask = true;
+                          _selectedStartPage = value;
                         });
-                        
-                        // 显示添加成功的动画
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (context) => Container(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.check_circle, color: Colors.green, size: 48),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '笔记已添加到收藏!',
-                                  style: theme.textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  '在应用中，双击任意内容可以快速添加到笔记',
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 20),
-                                FilledButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('了解了'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
                       }
                     },
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer.withAlpha(100),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: theme.colorScheme.primary.withAlpha(100),
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.touch_app, size: 30),
-                          const SizedBox(height: 8),
-                          Text(
-                            '双击这里添加到笔记',
-                            style: theme.textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          Text(
-                            '把这句话收藏到您的笔记中',
-                            style: theme.textTheme.bodySmall,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                    activeColor: theme.colorScheme.primary,
+                  );
+                }).toList(),
               ),
             ),
-            
-            const SizedBox(height: 20),
-            
-            // 任务完成状态 (只判断 _hasCompletedAddTask)
-            if (_hasCompletedAddTask)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          
+          const SizedBox(height: 24),
+
+          // 新增：核心操作提示 - 修改提示文本
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondaryContainer.withAlpha(100),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              border: Border.all(color: theme.colorScheme.secondary.withAlpha(60)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
+                    Icon(
+                      Icons.touch_app_outlined,
+                      color: theme.colorScheme.secondary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      '您的完成进度：',
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      '核心操作提示',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.secondary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildTaskProgressItem(
-                      theme,
-                      '双击添加到笔记',
-                      _hasCompletedAddTask,
-                    ),
                   ],
                 ),
-              ),
-              
-            if (_hasCompletedAddTask) // 只判断 _hasCompletedAddTask
-              Container(
-                margin: const EdgeInsets.only(top: 20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(40),
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(color: Colors.green),
+                const SizedBox(height: 8),
+                Text(
+                  // 修改提示文本，添加单击复制
+                  '💡 在主屏幕单击「每日一言」卡片可复制内容，双击则可将其快速添加到笔记！', 
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
                 ),
-                child: Row(
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 说明文字
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              border: Border.all(color: theme.colorScheme.outline.withAlpha(100)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 24,
+                    Icon(
+                      Icons.info_outline,
+                      color: theme.colorScheme.primary,
+                      size: 20,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        '恭喜！您已完成所有交互引导，点击"完成"开启心迹之旅！',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.green,
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '提示',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ],
                 ),
-              ),
-            
-            const SizedBox(height: 70), // 为底部按钮留出空间
-          ],
-        ),
-      ),
-    );
-  }
-  
-  // 任务进度显示部件
-  Widget _buildTaskProgressItem(ThemeData theme, String taskName, bool isCompleted) {
-    return Row(
-      children: [
-        Icon(
-          isCompleted ? Icons.check_circle : Icons.circle_outlined,
-          color: isCompleted ? Colors.green : theme.colorScheme.outline,
-          size: 20,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            taskName,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              decoration: isCompleted ? TextDecoration.lineThrough : null,
-              color: isCompleted
-                  ? theme.colorScheme.onSurface.withAlpha((255 * 0.7).round()) // 使用 withAlpha
-                  : theme.colorScheme.onSurface,
+                const SizedBox(height: 8),
+                Text(
+                  '您可以随时在应用的设置页面更改默认启动页。',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 70), // 为底部按钮留出空间
+        ],
+      ),
     );
   }
 }

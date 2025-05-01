@@ -190,10 +190,10 @@ class WeatherService extends ChangeNotifier {
             }
             
             if (weatherCode is int) { // Check type before using
-              _weatherDescription = _getWeatherDescription(weatherCode);
-              _weatherIcon = _getWeatherIconCode(weatherCode);
+              _weatherDescription = WeatherService.getWeatherKey(weatherCode);
+              _weatherIcon = WeatherService.getWeatherIconCode(_weatherDescription ?? 'unknown');
             } else {
-              _weatherDescription = '未知'; // Default if code is invalid
+              _weatherDescription = 'unknown'; // Default if code is invalid
               _weatherIcon = 'cloudy'; // Default icon
             }
             _currentWeather = _weatherDescription;
@@ -220,7 +220,7 @@ class WeatherService extends ChangeNotifier {
 
   // 设置天气数据获取失败的状态
   void setMockWeatherData() {
-    _weatherDescription = '获取失败';
+    _weatherDescription = 'unknown';
     _temperature = '- -';
     _temperature_value = null;
     _currentWeather = '天气数据获取失败';
@@ -229,68 +229,67 @@ class WeatherService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 根据OpenMeteo的天气代码获取中文天气描述
-  String _getWeatherDescription(int weatherCode) {
-    switch (weatherCode) {
-      case 0:
-        return '晴';
-      case 1:
-      case 2:
-        return '少云';
-      case 3:
-        return '多云';
-      case 45:
-      case 48:
-        return '雾';
-      case 51:
-      case 53:
-      case 55:
-        return '毛毛雨';
-      case 56:
-      case 57:
-        return '冻雨';
-      case 61:
-      case 63:
-      case 65:
-        return '雨';
-      case 66:
-      case 67:
-        return '冻雨';
-      case 71:
-      case 73:
-      case 75:
-        return '雪';
-      case 77:
-        return '雪粒';
-      case 80:
-      case 81:
-      case 82:
-        return '阵雨';
-      case 85:
-      case 86:
-        return '阵雪';
-      case 95:
-        return '雷雨';
-      case 96:
-      case 99:
-        return '雷暴雨';
-      default:
-        return '未知';
+  // 增加天气key到label的映射
+  static const weatherKeyToLabel = {
+    'clear': '晴',
+    'partly_cloudy': '少云',
+    'cloudy': '多云',
+    'fog': '雾',
+    'drizzle': '毛毛雨',
+    'freezing_rain': '冻雨',
+    'rain': '雨',
+    'snow': '雪',
+    'snow_grains': '雪粒',
+    'rain_shower': '阵雨',
+    'snow_shower': '阵雪',
+    'thunderstorm': '雷雨',
+    'thunderstorm_heavy': '雷暴雨',
+    'unknown': '未知',
+  };
+
+  static String getWeatherDescription(String key) {
+    return weatherKeyToLabel[key] ?? '未知';
+  }
+
+  static String getWeatherKey(int weatherCode) {
+    if (weatherCode == 0) return 'clear';
+    if (weatherCode == 1 || weatherCode == 2) return 'partly_cloudy';
+    if (weatherCode == 3) return 'cloudy';
+    if (weatherCode == 45 || weatherCode == 48) return 'fog';
+    if (weatherCode >= 51 && weatherCode <= 55) return 'drizzle';
+    if (weatherCode == 56 || weatherCode == 57) return 'freezing_rain';
+    if (weatherCode >= 61 && weatherCode <= 67) return 'rain';
+    if (weatherCode >= 71 && weatherCode <= 75) return 'snow';
+    if (weatherCode == 77) return 'snow_grains';
+    if (weatherCode >= 80 && weatherCode <= 82) return 'rain_shower';
+    if (weatherCode == 85 || weatherCode == 86) return 'snow_shower';
+    if (weatherCode == 95) return 'thunderstorm';
+    if (weatherCode == 96 || weatherCode == 99) return 'thunderstorm_heavy';
+    return 'unknown';
+  }
+
+  static String getWeatherIconCode(String key) {
+    switch (key) {
+      case 'clear': return 'clear_day';
+      case 'partly_cloudy': return 'cloudy';
+      case 'cloudy': return 'cloudy';
+      case 'fog': return 'fog';
+      case 'drizzle': return 'rainy';
+      case 'freezing_rain': return 'rainy';
+      case 'rain': return 'rainy';
+      case 'snow': return 'snowy';
+      case 'snow_grains': return 'snowy';
+      case 'rain_shower': return 'rainy';
+      case 'snow_shower': return 'snowy';
+      case 'thunderstorm': return 'thunderstorm';
+      case 'thunderstorm_heavy': return 'thunderstorm';
+      default: return 'cloudy';
     }
   }
 
   // 获取天气图标代码
-  String _getWeatherIconCode(int weatherCode) {
-    // OpenMeteo天气代码到图标映射
-    if (weatherCode == 0) return 'clear_day';
-    if (weatherCode >= 1 && weatherCode <= 3) return 'cloudy';
-    if (weatherCode >= 45 && weatherCode <= 48) return 'fog';
-    if (weatherCode >= 51 && weatherCode <= 67) return 'rainy';
-    if (weatherCode >= 71 && weatherCode <= 77) return 'snowy';
-    if (weatherCode >= 80 && weatherCode <= 82) return 'rainy';
-    if (weatherCode >= 85 && weatherCode <= 86) return 'snowy';
-    if (weatherCode >= 95) return 'thunderstorm';
-    return 'cloudy';
+  String _getWeatherIconCode(String weatherDescription) {
+    return getWeatherIconCode(weatherDescription);
   }
 
   // 根据天气图标代码获取图标
@@ -339,6 +338,31 @@ class WeatherService extends ChangeNotifier {
     } catch (e) {
       // 无法连接，表明很可能没有网络
       return true;
+    }
+  }
+
+  static IconData getWeatherIconDataByKey(String key) {
+    switch (getWeatherIconCode(key)) {
+      case 'clear_day':
+        return Icons.wb_sunny;
+      case 'clear_night':
+        return Icons.nightlight_round;
+      case 'cloudy':
+        return Icons.cloud;
+      case 'fog':
+        return Icons.cloud;
+      case 'rainy':
+        return Icons.water_drop;
+      case 'thunderstorm':
+        return Icons.flash_on;
+      case 'snowy':
+        return Icons.ac_unit;
+      case 'hail':
+        return Icons.grain;
+      case 'error':
+        return Icons.error_outline;
+      default:
+        return Icons.cloud_queue;
     }
   }
 }

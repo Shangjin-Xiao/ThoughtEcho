@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import 'package:uuid/uuid.dart';
+import '../services/weather_service.dart';
+import '../utils/time_utils.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
@@ -1010,6 +1012,29 @@ class DatabaseService extends ChangeNotifier {
         quoteMap['category_id'] = "";
       }
 
+      // 自动补全 day_period 字段
+      if (quoteMap['date'] != null) {
+        final dt = DateTime.tryParse(quoteMap['date']);
+        if (dt != null) {
+          final hour = dt.hour;
+          String dayPeriodKey;
+          if (hour >= 5 && hour < 8) {
+            dayPeriodKey = 'dawn';
+          } else if (hour >= 8 && hour < 12) {
+            dayPeriodKey = 'morning';
+          } else if (hour >= 12 && hour < 17) {
+            dayPeriodKey = 'afternoon';
+          } else if (hour >= 17 && hour < 20) {
+            dayPeriodKey = 'dusk';
+          } else if (hour >= 20 && hour < 23) {
+            dayPeriodKey = 'evening';
+          } else {
+            dayPeriodKey = 'midnight';
+          }
+          quoteMap['day_period'] = dayPeriodKey;
+        }
+      }
+
       // 确保所有必需的字段都存在
       if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
         throw Exception('笔记内容不能为空');
@@ -1050,7 +1075,7 @@ class DatabaseService extends ChangeNotifier {
       _refreshQuotesStream();
       
       // 延迟再次通知以确保UI更新
-      Future.delayed(Duration(milliseconds: 200), () {
+      Future.delayed(const Duration(milliseconds: 200), () {
         notifyListeners();
       });
     } catch (e) {
@@ -1267,6 +1292,28 @@ class DatabaseService extends ChangeNotifier {
 
       final db = database;
       final quoteMap = quote.toJson(); // 将 toMap 改为 toJson
+      // 自动补全 day_period 字段
+      if (quoteMap['date'] != null) {
+        final dt = DateTime.tryParse(quoteMap['date']);
+        if (dt != null) {
+          final hour = dt.hour;
+          String dayPeriodKey;
+          if (hour >= 5 && hour < 8) {
+            dayPeriodKey = 'dawn';
+          } else if (hour >= 8 && hour < 12) {
+            dayPeriodKey = 'morning';
+          } else if (hour >= 12 && hour < 17) {
+            dayPeriodKey = 'afternoon';
+          } else if (hour >= 17 && hour < 20) {
+            dayPeriodKey = 'dusk';
+          } else if (hour >= 20 && hour < 23) {
+            dayPeriodKey = 'evening';
+          } else {
+            dayPeriodKey = 'midnight';
+          }
+          quoteMap['day_period'] = dayPeriodKey;
+        }
+      }
 
       // 确保所有必需的字段都存在
       if (!quoteMap.containsKey('content') || quoteMap['content'] == null) {
@@ -1632,30 +1679,72 @@ class DatabaseService extends ChangeNotifier {
         } catch (_) {
           continue;
         }
-        // 推算时间段
+        // 推算时间段key
         final hour = dt.hour;
-        String dayPeriod;
+        String dayPeriodKey;
         if (hour >= 5 && hour < 8) {
-          dayPeriod = '晨曦';
+          dayPeriodKey = 'dawn';
         } else if (hour >= 8 && hour < 12) {
-          dayPeriod = '上午';
+          dayPeriodKey = 'morning';
         } else if (hour >= 12 && hour < 17) {
-          dayPeriod = '午后';
+          dayPeriodKey = 'afternoon';
         } else if (hour >= 17 && hour < 20) {
-          dayPeriod = '黄昏';
+          dayPeriodKey = 'dusk';
         } else if (hour >= 20 && hour < 23) {
-          dayPeriod = '夜晚';
+          dayPeriodKey = 'evening';
         } else {
-          dayPeriod = '深夜';
+          dayPeriodKey = 'midnight';
         }
         // 更新数据库
         await db.update(
           'quotes',
-          {'day_period': dayPeriod},
+          {'day_period': dayPeriodKey},
           where: 'id = ?',
           whereArgs: [map['id']],
         );
       }
     }
+  }
+
+  /// 迁移旧数据dayPeriod字段为英文key
+  Future<void> migrateDayPeriodToKey() async {
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query('quotes', columns: ['id', 'day_period']);
+    final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+    for (final map in maps) {
+      final id = map['id'] as String?;
+      final dayPeriod = map['day_period'] as String?;
+      if (id != null && dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
+        final key = labelToKey[dayPeriod]!;
+        await db.update('quotes', {'day_period': key}, where: 'id = ?', whereArgs: [id]);
+      }
+    }
+    debugPrint('已完成旧数据dayPeriod字段的key迁移');
+  }
+
+  /// 迁移旧数据weather字段为英文key
+  Future<void> migrateWeatherToKey() async {
+    if (kIsWeb) {
+      for (var i = 0; i < _memoryStore.length; i++) {
+        final q = _memoryStore[i];
+        if (q.weather != null && WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
+          final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == q.weather).key;
+          _memoryStore[i] = q.copyWith(weather: key);
+        }
+      }
+      notifyListeners();
+      return;
+    }
+    final db = database;
+    final maps = await db.query('quotes', columns: ['id', 'weather']);
+    for (final m in maps) {
+      final id = m['id'] as String?;
+      final weather = m['weather'] as String?;
+      if (id != null && weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
+        final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == weather).key;
+        await db.update('quotes', {'weather': key}, where: 'id = ?', whereArgs: [id]);
+      }
+    }
+    debugPrint('已完成旧数据weather字段的key迁移');
   }
 }

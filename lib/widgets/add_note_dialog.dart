@@ -746,6 +746,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     return Center(child: Text('加载标签失败: \\${snapshot.error}'));
                   }
                   final tags = snapshot.data ?? [];
+                  if (tags.isEmpty) {
+                    return const Center(child: Text('暂无可用标签，请先添加标签'));
+                  }
                   return ExpansionTile(
                     title: const Text(
                       '选择标签',

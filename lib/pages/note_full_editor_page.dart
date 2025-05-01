@@ -91,39 +91,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   // 天气图标映射方法
-  IconData _getWeatherIcon(String weather) {
-    final weatherLower = weather.toLowerCase();
-
-    if (weatherLower.contains('晴') &&
-        !weatherLower.contains('云') &&
-        !weatherLower.contains('阴')) {
-      return Icons.wb_sunny;
-    } else if (weatherLower.contains('多云') || weatherLower.contains('晴间多云')) {
-      return Icons.wb_cloudy;
-    } else if (weatherLower.contains('阴')) {
-      return Icons.cloud;
-    } else if (weatherLower.contains('雨') && weatherLower.contains('雪')) {
-      return Icons.snowing;
-    } else if (weatherLower.contains('雨') && weatherLower.contains('雷')) {
-      return Icons.thunderstorm;
-    } else if (weatherLower.contains('雨')) {
-      if (weatherLower.contains('小')) {
-        return Icons.grain;
-      } else if (weatherLower.contains('中') || weatherLower.contains('大')) {
-        return Icons.water_drop;
-      } else {
-        return Icons.beach_access;
-      }
-    } else if (weatherLower.contains('雪')) {
-      return Icons.ac_unit;
-    } else if (weatherLower.contains('雾') || weatherLower.contains('霾')) {
-      return Icons.foggy;
-    } else if (weatherLower.contains('沙') || weatherLower.contains('尘')) {
-      return Icons.air;
-    }
-
-    // 默认图标
-    return Icons.wb_cloudy;
+  IconData _getWeatherIcon(String weatherKey) {
+    return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
   Future<void> _fetchLocationWeather() async {

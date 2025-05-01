@@ -65,6 +65,35 @@ class _InsightsPageState extends State<InsightsPage>
   String _selectedAnalysisType = 'comprehensive';
   String _selectedAnalysisStyle = 'professional';
 
+  // 1. 静态key-label映射
+  static const Map<String, String> _analysisTypeKeyToLabel = {
+    'comprehensive': '全面分析',
+    'emotional': '情感洞察',
+    'mindmap': '思维导图',
+    'growth': '成长建议',
+  };
+  static const Map<String, String> _analysisStyleKeyToLabel = {
+    'professional': '专业分析',
+    'friendly': '友好导师',
+    'humorous': '风趣幽默',
+    'literary': '文学风格',
+  };
+  static const Map<String, String> sentimentKeyToLabel = {
+    'positive': '积极',
+    'negative': '消极',
+    'neutral': '中性',
+    'mixed': '复杂',
+  };
+  static const Map<String, String> sourceTypeKeyToLabel = {
+    'manual': '手动',
+    'ai': 'AI生成',
+    'import': '导入',
+  };
+  static const Map<String, String> sortTypeKeyToLabel = {
+    'time': '按时间排序',
+    'name': '按名称排序',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -79,15 +108,20 @@ class _InsightsPageState extends State<InsightsPage>
   }
 
   Future<void> _generateInsights() async {
+    final aiService = context.read<AIService>();
+    if (!aiService.hasValidApiKey()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先在设置中配置 API Key')),
+      );
+      return;
+    }
     if (!mounted) return;
-
     setState(() {
       _isLoading = true;
     });
 
     try {
       final databaseService = context.read<DatabaseService>();
-      final aiService = context.read<AIService>();
 
       final quotes = await databaseService.getUserQuotes();
       if (!mounted) return;
@@ -254,31 +288,27 @@ class _InsightsPageState extends State<InsightsPage>
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  _analysisStyles.map((style) {
-                    final isSelected = _selectedAnalysisStyle == style['style'];
-                    return ChoiceChip(
-                      label: Text(style['title']),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _selectedAnalysisStyle = style['style'];
-                          });
-                        }
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
-                      labelStyle: TextStyle(
-                        color:
-                            isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      tooltip: style['description'],
-                    );
-                  }).toList(),
+              children: _analysisStyles.map((style) {
+                final isSelected = _selectedAnalysisStyle == style['style'];
+                final String key = style['style'];
+                return ChoiceChip(
+                  label: Text(_analysisStyleKeyToLabel[key] ?? key),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedAnalysisStyle = key;
+                      });
+                    }
+                  },
+                  selectedColor: theme.colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  tooltip: style['description'],
+                );
+              }).toList(),
             ),
           ),
 
@@ -411,7 +441,7 @@ class _InsightsPageState extends State<InsightsPage>
 
   Widget _buildAnalysisTypeCard(ThemeData theme, Map<String, dynamic> type) {
     final isSelected = _selectedAnalysisType == type['prompt'];
-
+    final String key = type['prompt'];
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isSelected ? 4 : 1,
@@ -425,7 +455,7 @@ class _InsightsPageState extends State<InsightsPage>
       child: InkWell(
         onTap: () {
           setState(() {
-            _selectedAnalysisType = type['prompt'];
+            _selectedAnalysisType = key;
             _showCustomPrompt = false;
           });
         },
@@ -438,18 +468,12 @@ class _InsightsPageState extends State<InsightsPage>
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.secondaryContainer,
+                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.secondaryContainer,
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 ),
                 child: Icon(
                   type['icon'] as IconData,
-                  color:
-                      isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSecondaryContainer,
+                  color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSecondaryContainer,
                   size: 28,
                 ),
               ),
@@ -459,13 +483,10 @@ class _InsightsPageState extends State<InsightsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      type['title'],
+                      _analysisTypeKeyToLabel[key] ?? key,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color:
-                            isSelected
-                                ? theme.primaryColor
-                                : theme.textTheme.titleMedium?.color,
+                        color: isSelected ? theme.primaryColor : theme.textTheme.titleMedium?.color,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -613,17 +634,6 @@ class _InsightsPageState extends State<InsightsPage>
     if (_showCustomPrompt && _customPromptController.text.isNotEmpty) {
       return "自定义分析";
     }
-
-    switch (_selectedAnalysisType) {
-      case 'emotional':
-        return "情感洞察";
-      case 'mindmap':
-        return "思维导图";
-      case 'growth':
-        return "成长建议";
-      case 'comprehensive':
-      default:
-        return "全面分析";
-    }
+    return _analysisTypeKeyToLabel[_selectedAnalysisType] ?? _selectedAnalysisType;
   }
 }
