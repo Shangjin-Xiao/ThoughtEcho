@@ -100,7 +100,7 @@ class WeatherWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              weatherService.currentWeather ?? '未知',
+              WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown'),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 15),
             ),

@@ -14,7 +14,8 @@ import 'home_page.dart';
 import '../models/app_settings.dart'; // 导入 AppSettings
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key});
+  final bool showUpdateReady; // 新增参数，控制是否显示新版提示
+  const OnboardingPage({super.key, this.showUpdateReady = false});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -39,6 +40,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.initState();
     // 检查初始权限状态
     _checkInitialLocationPermission();
+    // 新增：如果是版本升级后进入，直接跳到最后一页
+    if (widget.showUpdateReady) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pageController.jumpToPage(3);
+      });
+    }
     // 添加延迟加载效果
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -945,6 +952,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ],
             ),
           ),
+          // 新增：如果是版本升级后进入，显示新版提示
+          if (widget.showUpdateReady)
+            Container(
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                border: Border.all(color: theme.colorScheme.primary.withAlpha(60)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.new_releases, color: theme.colorScheme.primary, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '🎉 新版本已准备就绪！欢迎体验更多新功能和优化。',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 70), // 为底部按钮留出空间
         ],
       ),

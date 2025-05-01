@@ -274,7 +274,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text(
                       (weatherService.currentWeather == null && weatherService.temperature == null)
                           ? '点击右侧按钮刷新天气'
-                          : '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
+                          : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}',
                       style: const TextStyle(
                         fontSize: 12,
                       ),

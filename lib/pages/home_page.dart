@@ -491,7 +491,7 @@ class _HomePageState extends State<HomePage>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${weatherService.currentWeather ?? ""} ${weatherService.temperature ?? ""}',
+                              WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown'),
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color:
                                     Theme.of(context).colorScheme.onPrimaryContainer,

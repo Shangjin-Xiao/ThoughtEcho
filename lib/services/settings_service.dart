@@ -27,6 +27,8 @@ class SettingsService extends ChangeNotifier {
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
 
+  static const String _lastVersionKey = 'lastVersion';
+
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
@@ -316,5 +318,15 @@ class SettingsService extends ChangeNotifier {
     _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
+  }
+
+  /// 获取上次记录的版本号
+  String? getAppVersion() {
+    return _mmkv.getString(_lastVersionKey);
+  }
+
+  /// 设置当前版本号
+  Future<void> setAppVersion(String version) async {
+    await _mmkv.setString(_lastVersionKey, version);
   }
 }

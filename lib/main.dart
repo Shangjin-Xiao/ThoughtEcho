@@ -21,6 +21,7 @@ import 'theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'pages/onboarding_page.dart'; // 添加引导页面导入
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -158,6 +159,15 @@ Future<void> main() async {
 
       // 初始化设置服务
       final settingsService = await SettingsService.create();
+      // 自动获取应用版本号
+      final packageInfo = await PackageInfo.fromPlatform();
+      final String currentVersion = packageInfo.version;
+      final String? lastVersion = settingsService.getAppVersion();
+      bool showUpdateReady = false;
+      if (lastVersion == null || lastVersion != currentVersion) {
+        showUpdateReady = true;
+        await settingsService.setAppVersion(currentVersion);
+      }
       
       // 创建服务实例但暂不初始化重量级服务
       final databaseService = DatabaseService();
@@ -211,6 +221,7 @@ Future<void> main() async {
           child: MyApp(
             navigatorKey: navigatorKey,
             isEmergencyMode: _isEmergencyMode,
+            showUpdateReady: showUpdateReady,
           ),
         ),
       );
@@ -327,11 +338,13 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final bool isEmergencyMode;
+  final bool showUpdateReady;
   
   const MyApp({
     super.key, 
     required this.navigatorKey, 
     this.isEmergencyMode = false,
+    this.showUpdateReady = false,
   });
 
   @override
@@ -349,7 +362,7 @@ class MyApp extends StatelessWidget {
       darkTheme: appTheme.createDarkThemeData(),
       themeMode: appTheme.themeMode,
       debugShowCheckedModeBanner: false,
-      home: !hasCompletedOnboarding
+      home: showUpdateReady ? OnboardingPage(showUpdateReady: true) : !hasCompletedOnboarding
           ? const OnboardingPage() // 如果未完成引导，显示引导页面
           : isEmergencyMode 
             ? const EmergencyRecoveryPage() 

@@ -808,6 +808,15 @@ class DatabaseService extends ChangeNotifier {
 
       await _updateCategoriesStream();
       notifyListeners();
+
+      // 导入后自动补全字段
+      await patchQuotesDayPeriod();
+      if (this.migrateWeatherToKey != null) {
+        await migrateWeatherToKey();
+      }
+      if (this.migrateDayPeriodToKey != null) {
+        await migrateDayPeriodToKey();
+      }
     } catch (e) {
       debugPrint('数据导入失败: $e');
       rethrow;

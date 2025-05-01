@@ -901,7 +901,7 @@ class _EditPageState extends State<EditPage> {
                                   ),
                                   if (_includeWeather && _weather != null)
                                     Text(
-                                      '${_weather!} ${_temperature ?? ""}',
+                                      '${WeatherService.getWeatherDescription(_weather!)} ${_temperature ?? ""}',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: Theme.of(context)

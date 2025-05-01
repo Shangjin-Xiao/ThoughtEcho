@@ -844,7 +844,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     Icon(_getWeatherIcon(_weather!), size: 16),
                                     const SizedBox(width: 4),
                                     Text(
-                                      _weather!,
+                                      WeatherService.getWeatherDescription(_weather!),
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                     if (_temperature != null)
