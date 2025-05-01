@@ -207,6 +207,7 @@ Future<void> main() async {
             ChangeNotifierProvider(create: (_) => clipboardService),
             ChangeNotifierProvider(create: (_) => logService),
             ChangeNotifierProvider(create: (_) => appTheme),
+            Provider.value(value: mmkvService), // 使用 Provider.value 提供 MMKVService
             // 提供初始化状态
             ValueListenableProvider<bool>.value(value: servicesInitialized),
             ChangeNotifierProxyProvider<SettingsService, AIService>(

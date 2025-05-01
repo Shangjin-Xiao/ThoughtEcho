@@ -54,8 +54,6 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-        // 设置应用程序类名为我们的自定义实现
-        manifestPlaceholders = [applicationName: "com.shangjin.thoughtecho.ThoughtEchoApplication"]
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }

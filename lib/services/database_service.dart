@@ -811,13 +811,9 @@ class DatabaseService extends ChangeNotifier {
 
       // 导入后自动补全字段
       await patchQuotesDayPeriod();
-      if (migrateWeatherToKey != null) {
-        await migrateWeatherToKey();
-      }
-      if (migrateDayPeriodToKey != null) {
-        await migrateDayPeriodToKey();
-      }
-    } catch (e) {
+      await migrateWeatherToKey();
+          await migrateDayPeriodToKey();
+        } catch (e) {
       debugPrint('数据导入失败: $e');
       rethrow;
     }
@@ -1812,7 +1808,7 @@ class DatabaseService extends ChangeNotifier {
       notifyListeners();
       return;
       /// 检查并迁移天气数据
-      Future<void> _checkAndMigrateWeatherData() async {
+      Future<void> checkAndMigrateWeatherData() async {
         try {
           final db = database;
           final weatherCheck = await db.query(
@@ -1834,7 +1830,7 @@ class DatabaseService extends ChangeNotifier {
       }
     
       /// 检查并迁移时间段数据
-      Future<void> _checkAndMigrateDayPeriodData() async {
+      Future<void> checkAndMigrateDayPeriodData() async {
         try {
           final db = database;
           final dayPeriodCheck = await db.query(
@@ -1865,7 +1861,7 @@ class DatabaseService extends ChangeNotifier {
         final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == weather).key;
         await db.update('quotes', {'weather': key}, where: 'id = ?', whereArgs: [id]);
         /// 数据迁移检查和加载辅助方法
-        Future<void> _ensureDataMigrationAndLoadData({
+        Future<void> ensureDataMigrationAndLoadData({
           List<String>? tagIds,
           String? categoryId,
           String? searchQuery,
