@@ -1070,6 +1070,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           weather: _includeWeather ? weather : null,
                           temperature: _includeWeather ? temperature : null,
                           dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriod, // 添加时间段信息
+                          editSource: widget.initialQuote?.editSource, // 保证兼容
+                          deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
                         );
 
                         try {

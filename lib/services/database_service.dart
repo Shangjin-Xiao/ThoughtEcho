@@ -1616,4 +1616,46 @@ class DatabaseService extends ChangeNotifier {
     await _updateCategoriesStream();
     notifyListeners();
   }
+
+  /// 批量为旧笔记补全 dayPeriod 字段（根据 date 字段推算并写入）
+  Future<void> patchQuotesDayPeriod() async {
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query('quotes');
+    for (final map in maps) {
+      if (map['day_period'] == null || (map['day_period'] as String).isEmpty) {
+        // 解析时间
+        String? dateStr = map['date'];
+        if (dateStr == null || dateStr.isEmpty) continue;
+        DateTime? dt;
+        try {
+          dt = DateTime.parse(dateStr);
+        } catch (_) {
+          continue;
+        }
+        // 推算时间段
+        final hour = dt.hour;
+        String dayPeriod;
+        if (hour >= 5 && hour < 8) {
+          dayPeriod = '晨曦';
+        } else if (hour >= 8 && hour < 12) {
+          dayPeriod = '上午';
+        } else if (hour >= 12 && hour < 17) {
+          dayPeriod = '午后';
+        } else if (hour >= 17 && hour < 20) {
+          dayPeriod = '黄昏';
+        } else if (hour >= 20 && hour < 23) {
+          dayPeriod = '夜晚';
+        } else {
+          dayPeriod = '深夜';
+        }
+        // 更新数据库
+        await db.update(
+          'quotes',
+          {'day_period': dayPeriod},
+          where: 'id = ?',
+          whereArgs: [map['id']],
+        );
+      }
+    }
+  }
 }

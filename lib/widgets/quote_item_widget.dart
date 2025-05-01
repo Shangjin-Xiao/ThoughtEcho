@@ -31,35 +31,27 @@ class QuoteItemWidget extends StatelessWidget {
 
   // 判断是否需要展开按钮（富文本或长文本）
   bool _needsExpansion(Quote quote) {
-    // 富文本内容处理
+    // 新笔记（富文本）
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       try {
         final decoded = jsonDecode(quote.deltaContent!);
         if (decoded is List) {
-          // 段落数超过3或总字符长度超过100，显示展开按钮
           int paragraphCount = 0;
           int totalLength = 0;
-          
           for (var op in decoded) {
             if (op is Map && op['insert'] != null) {
               final String insert = op['insert'].toString();
               totalLength += insert.length;
-              if (insert.contains('\n')) {
-                paragraphCount++;
-              }
+              paragraphCount += '\n'.allMatches(insert).length;
             }
           }
-          
           return paragraphCount > 3 || totalLength > 100;
         }
-      } catch (_) {
-        // 解析失败，回退到内容长度判断
-      }
+      } catch (_) {}
     }
-
-    // 如果没有富文本或解析失败，根据内容长度判断
-    // 提高阈值以保持一致性
-    return quote.content.length > 100;
+    // 旧笔记（纯文本）
+    final int paragraphCount = '\n'.allMatches(quote.content).length;
+    return paragraphCount > 3 || quote.content.length > 100;
   }
 
   String _formatSource(String author, String work) {
