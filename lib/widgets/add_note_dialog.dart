@@ -45,6 +45,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
   bool _isAnalyzing = false;
+  
+  // 分类选择
+  NoteCategory? _selectedCategory;
 
   // 位置和天气相关
   bool _includeLocation = false;
@@ -64,6 +67,22 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 缓存标签future，防止FutureBuilder多次请求导致闪屏
   Future<List<NoteCategory>>? _tagFuture;
+
+  // 一言类型到固定分类 ID 的映射
+  static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
+    'a': DatabaseService.defaultCategoryIdAnime,    // 动画
+    'b': DatabaseService.defaultCategoryIdComic,    // 漫画
+    'c': DatabaseService.defaultCategoryIdGame,     // 游戏
+    'd': DatabaseService.defaultCategoryIdNovel,    // 文学
+    'e': DatabaseService.defaultCategoryIdOriginal, // 原创
+    'f': DatabaseService.defaultCategoryIdInternet, // 来自网络
+    'g': DatabaseService.defaultCategoryIdOther,    // 其他
+    'h': DatabaseService.defaultCategoryIdMovie,    // 影视
+    'i': DatabaseService.defaultCategoryIdPoem,     // 诗词
+    'j': DatabaseService.defaultCategoryIdMusic,    // 网易云
+    'k': DatabaseService.defaultCategoryIdPhilosophy, // 哲学
+    'l': DatabaseService.defaultCategoryIdJoke,     // 抖机灵
+  };
 
   @override
   void initState() {
@@ -158,6 +177,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           if (typeTagId != null && !_selectedTagIds.contains(typeTagId)) {
             setState(() {
               _selectedTagIds.add(typeTagId);
+            });
+          }
+
+          // 设置分类
+          if (_hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
+            final categoryId = _hitokotoTypeToCategoryIdMap[hitokotoType];
+            final category = await db.getCategoryById(categoryId!);
+            setState(() {
+              _selectedCategory = category;
             });
           }
         }
@@ -1067,7 +1095,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           sentiment: widget.initialQuote?.sentiment,
                           keywords: widget.initialQuote?.keywords,
                           summary: widget.initialQuote?.summary,
-                          categoryId: widget.initialQuote?.categoryId,
+                          categoryId: _selectedCategory?.id ?? widget.initialQuote?.categoryId,
                           colorHex: _selectedColorHex,
                           location: _includeLocation ? location : null,
                           weather: _includeWeather ? weather : null,

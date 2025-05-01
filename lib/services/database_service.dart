@@ -24,6 +24,21 @@ class DatabaseService extends ChangeNotifier {
   // 内存存储分类数据
   final List<NoteCategory> _categoryStore = [];
 
+  // 定义默认一言分类的固定 ID
+  static const String defaultCategoryIdHitokoto = 'default_hitokoto';
+  static const String defaultCategoryIdAnime = 'default_anime';
+  static const String defaultCategoryIdComic = 'default_comic';
+  static const String defaultCategoryIdGame = 'default_game';
+  static const String defaultCategoryIdNovel = 'default_novel';
+  static const String defaultCategoryIdOriginal = 'default_original';
+  static const String defaultCategoryIdInternet = 'default_internet';
+  static const String defaultCategoryIdOther = 'default_other';
+  static const String defaultCategoryIdMovie = 'default_movie';
+  static const String defaultCategoryIdPoem = 'default_poem';
+  static const String defaultCategoryIdMusic = 'default_music';
+  static const String defaultCategoryIdPhilosophy = 'default_philosophy';
+  static const String defaultCategoryIdJoke = 'default_joke';
+
   // 新增：流式分页加载笔记
   StreamController<List<Quote>>? _quotesController;
   List<Quote> _quotesCache = [];
@@ -502,73 +517,73 @@ class DatabaseService extends ChangeNotifier {
   List<NoteCategory> _getDefaultHitokotoCategories() {
     return [
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdHitokoto, // 使用固定 ID
         name: '每日一言',
         isDefault: true,
         iconName: 'format_quote',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdAnime, // 使用固定 ID
         name: '动画',
         isDefault: true,
         iconName: 'movie',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdComic, // 使用固定 ID
         name: '漫画',
         isDefault: true,
         iconName: 'menu_book',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdGame, // 使用固定 ID
         name: '游戏',
         isDefault: true,
         iconName: 'sports_esports',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdNovel, // 使用固定 ID
         name: '文学',
         isDefault: true,
         iconName: 'auto_stories',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdOriginal, // 使用固定 ID
         name: '原创',
         isDefault: true,
         iconName: 'create',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdInternet, // 使用固定 ID
         name: '来自网络',
         isDefault: true,
         iconName: 'public',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdOther, // 使用固定 ID
         name: '其他',
         isDefault: true,
         iconName: 'category',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdMovie, // 使用固定 ID
         name: '影视',
         isDefault: true,
         iconName: 'theaters',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdPoem, // 使用固定 ID
         name: '诗词',
         isDefault: true,
-        iconName: 'brush', // 修改为毛笔图标，更符合诗词主题
+        iconName: 'brush',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdMusic, // 使用固定 ID
         name: '网易云',
         isDefault: true,
         iconName: 'music_note',
       ),
       NoteCategory(
-        id: _uuid.v4(),
+        id: defaultCategoryIdPhilosophy, // 使用固定 ID
         name: '哲学',
         isDefault: true,
         iconName: 'psychology',
@@ -1105,7 +1120,6 @@ class DatabaseService extends ChangeNotifier {
     if (_quotesController != null && !_quotesController!.isClosed) {
       debugPrint('刷新笔记流数据');
       // 清除缓存，确保获取最新数据
-      _filterCache.clear();
 
       // 重置状态并加载新数据
       _watchOffset = 0;
@@ -1944,5 +1958,35 @@ class DatabaseService extends ChangeNotifier {
       }
     }
     debugPrint('已完成旧数据weather字段的key迁移');
+  }
+
+  /// 根据 ID 获取分类
+  Future<NoteCategory?> getCategoryById(String id) async {
+    if (kIsWeb) {
+      try {
+        return _categoryStore.firstWhere((cat) => cat.id == id);
+      } catch (e) {
+        debugPrint('在内存中找不到 ID 为 $id 的分类: $e');
+        return null;
+      }
+    }
+
+    try {
+      final db = database;
+      final maps = await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (maps.isEmpty) {
+        return null;
+      }
+      
+      return NoteCategory.fromMap(maps.first);
+    } catch (e) {
+      debugPrint('根据 ID 获取分类失败: $e');
+      return null;
+    }
   }
 }
