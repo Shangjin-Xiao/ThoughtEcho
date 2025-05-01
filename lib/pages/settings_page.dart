@@ -15,6 +15,7 @@ import '../services/location_service.dart'; // 包含 CityInfo 定义
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
+import 'category_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -437,14 +438,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ListTile(
                   title: const Text('标签管理'),
-                  subtitle: const Text('添加和编辑标签'),
-                  leading: const Icon(Icons.tag),
+                  subtitle: const Text('添加、编辑或删除笔记标签'),
+                  leading: const Icon(Icons.label_outline),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const TagSettingsPage(),
+                        builder: (context) => const CategorySettingsPage(),
                       ),
                     );
                   },

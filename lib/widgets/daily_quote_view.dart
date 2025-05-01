@@ -59,14 +59,31 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
       if (mounted) {
         setState(() {
           dailyQuote = {
-            'content': '获取一言失败: ${e.toString()}',
+            'content': '获取一言失败，点击重试',
             'source': '',
             'author': '',
             'type': 'error',
           };
         });
+        
+        // 添加重试机制，3秒后自动重试一次
+        Future.delayed(Duration(seconds: 3), () {
+          if (mounted) {
+            _loadDailyQuote();
+          }
+        });
+        
+        debugPrint('获取一言失败: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('获取一言失败: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('获取一言失败: $e'), 
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: '重试',
+              onPressed: _loadDailyQuote,
+              textColor: Colors.white,
+            ),
+          ),
         );
       }
     }
@@ -83,6 +100,12 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
       }
     } catch (e) {
       debugPrint('获取每日提示失败: $e');
+      // 添加重试机制
+      Future.delayed(Duration(seconds: 5), () {
+        if (mounted) {
+          _fetchDailyPrompt();
+        }
+      });
     }
   }
 

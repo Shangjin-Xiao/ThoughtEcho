@@ -191,6 +191,15 @@ class SettingsService extends ChangeNotifier {
         await _mmkv.setString(_themeModeKey, themeMode);
         debugPrint('主题设置已迁移到MMKV');
       }
+      
+      // 迁移API密钥到安全存储
+      final apiKey = _prefs.getString('api_key');
+      if (apiKey != null && apiKey.isNotEmpty) {
+        await _secureStorage.saveApiKey(apiKey);
+        // 从普通存储中删除API密钥
+        await _prefs.remove('api_key');
+        debugPrint('API密钥已安全迁移到加密存储');
+      }
 
       // 标记迁移完成
       await _mmkv.setBool(_migrationCompleteKey, true);

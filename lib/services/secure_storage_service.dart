@@ -1,71 +1,67 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../utils/mmkv_adapter.dart';
 
+/// 安全存储服务，用于存储敏感信息如API密钥
 class SecureStorageService {
   static final SecureStorageService _instance = SecureStorageService._internal();
-  late final FlutterSecureStorage _storage;
-
-  // 安全存储的键名
-  static const String _apiKeyKey = 'api_key_secure';
+  static const String _apiKeyKey = 'secure_api_key';
+  static const String _apiUrlKey = 'secure_api_url';
+  late MMKVAdapter _storage;
+  bool _initialized = false;
 
   factory SecureStorageService() {
     return _instance;
   }
 
   SecureStorageService._internal() {
-    // 配置安全存储选项
-    const AndroidOptions androidOptions = AndroidOptions(
-      encryptedSharedPreferences: true,
-    );
-    
-    const IOSOptions iosOptions = IOSOptions(
-      accountName: 'thoughtecho_secure',
-    );
-
-    _storage = const FlutterSecureStorage(
-      aOptions: androidOptions,
-      iOptions: iosOptions,
-    );
+    _initStorage();
   }
 
-  /// 安全存储API密钥
-  Future<void> saveApiKey(String apiKey) async {
-    if (kIsWeb) {
-      debugPrint('Web平台不支持安全存储，跳过存储操作');
-      return;
+  Future<void> _initStorage() async {
+    if (!_initialized) {
+      _storage = MMKVAdapter();
+      await _storage.initialize();
+      _initialized = true;
+      debugPrint('安全存储服务初始化完成');
     }
-    
-    await _storage.write(key: _apiKeyKey, value: apiKey);
   }
 
-  /// 获取安全存储的API密钥
+  /// 确保存储已初始化
+  Future<void> ensureInitialized() async {
+    if (!_initialized) {
+      await _initStorage();
+    }
+  }
+
+  /// 保存API密钥
+  Future<void> saveApiKey(String key) async {
+    await ensureInitialized();
+    await _storage.setString(_apiKeyKey, key);
+    debugPrint('API密钥已安全保存');
+  }
+
+  /// 获取API密钥
   Future<String?> getApiKey() async {
-    if (kIsWeb) {
-      debugPrint('Web平台不支持安全存储，返回空值');
-      return null;
-    }
-    
-    return await _storage.read(key: _apiKeyKey);
+    await ensureInitialized();
+    return _storage.getString(_apiKeyKey);
   }
 
-  /// 删除安全存储的API密钥
-  Future<void> deleteApiKey() async {
-    if (kIsWeb) {
-      debugPrint('Web平台不支持安全存储，跳过删除操作');
-      return;
-    }
-    
-    await _storage.delete(key: _apiKeyKey);
+  /// 保存API URL
+  Future<void> saveApiUrl(String url) async {
+    await ensureInitialized();
+    await _storage.setString(_apiUrlKey, url);
   }
 
-  /// 检查是否存在安全存储的API密钥
-  Future<bool> hasApiKey() async {
-    if (kIsWeb) {
-      debugPrint('Web平台不支持安全存储，返回false');
-      return false;
-    }
-    
-    final value = await _storage.read(key: _apiKeyKey);
-    return value != null && value.isNotEmpty;
+  /// 获取API URL
+  Future<String?> getApiUrl() async {
+    await ensureInitialized();
+    return _storage.getString(_apiUrlKey);
+  }
+
+  /// 清除所有安全存储的数据
+  Future<void> clearAll() async {
+    await ensureInitialized();
+    await _storage.clear();
+    debugPrint('所有安全存储的数据已清除');
   }
 } 

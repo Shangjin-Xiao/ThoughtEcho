@@ -28,8 +28,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _isMigratingDatabase = false;
   
   // 用于交互式引导
-  bool _hasCompletedCopyTask = false;
-  bool _hasCompletedAddTask = false;
+  bool _hasCompletedAddTask = false; // 确认 _hasCompletedCopyTask 已被注释或删除
   
   // 用于延迟加载和显示过渡效果
   bool _isLoaded = false;
@@ -196,7 +195,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   _buildWelcomePage(theme),
                   _buildPermissionsPage(theme),
                   _buildHitokotoSettingsPage(theme),
-                  _buildMoreSettingsPage(theme),
+                  // _buildMoreSettingsPage(theme), // 移除更多设置页面
                   _buildInteractiveGuidePage(theme),
                 ],
               ),
@@ -230,9 +229,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             )
                           : const SizedBox(width: 90),
                       
-                      // 页面指示器
+                      // 页面指示器 (改为4页)
                       Row(
-                        children: List.generate(5, (index) {
+                        children: List.generate(4, (index) {
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -248,8 +247,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         }),
                       ),
                       
-                      // 下一步/完成按钮
-                      _currentPage < 4
+                      // 下一步/完成按钮 (改为判断 < 3)
+                      _currentPage < 3
                           ? FilledButton.icon(
                               onPressed: _nextPage,
                               icon: const Icon(Icons.arrow_forward),
@@ -269,7 +268,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               Positioned(
                 top: 10,
                 right: 10,
-                child: _currentPage < 4
+                child: _currentPage < 3 // 改为判断 < 3
                     ? TextButton.icon(
                         onPressed: () {
                           showDialog(
@@ -727,213 +726,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return examples[DateTime.now().millisecond % examples.length];
   }
 
-  // 第四页：更多设置页面
-  Widget _buildMoreSettingsPage(ThemeData theme) {
-    final appTheme = Provider.of<AppTheme>(context);
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '应用设置',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '个性化您的心迹应用体验：',
-            style: theme.textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 24),
-          
-          // 应用主题设置
-          _buildSettingSection(
-            theme,
-            icon: Icons.color_lens,
-            title: '应用主题',
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildThemeModeOption(
-                      context,
-                      appTheme,
-                      ThemeMode.light,
-                      '浅色',
-                      Icons.light_mode,
-                    ),
-                    _buildThemeModeOption(
-                      context,
-                      appTheme,
-                      ThemeMode.dark,
-                      '深色',
-                      Icons.dark_mode,
-                    ),
-                    _buildThemeModeOption(
-                      context,
-                      appTheme,
-                      ThemeMode.system,
-                      '跟随系统',
-                      Icons.brightness_auto,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // AI API 设置
-          _buildSettingSection(
-            theme,
-            icon: Icons.smart_toy,
-            title: 'AI 助手设置',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '配置AI助手来增强您的笔记体验',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                
-                // API密钥输入
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'API 密钥 (可选)',
-                    hintText: '输入您的OpenAI API密钥',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                    ),
-                    prefixIcon: const Icon(Icons.key),
-                  ),
-                  obscureText: true,
-                  onChanged: (value) {
-                    // 这里只是演示，实际上在完成设置后再保存
-                    // settingsService.updateApiKey(value);
-                  },
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // AI模型选择
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'AI 模型',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                    ),
-                    prefixIcon: const Icon(Icons.psychology),
-                  ),
-                  value: 'gpt-3.5-turbo',
-                  items: const [
-                    DropdownMenuItem(value: 'gpt-3.5-turbo', child: Text('GPT-3.5 Turbo')),
-                    DropdownMenuItem(value: 'gpt-4', child: Text('GPT-4')),
-                    DropdownMenuItem(value: 'gpt-4-turbo', child: Text('GPT-4 Turbo')),
-                  ],
-                  onChanged: (value) {},
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // 提示文本
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withAlpha(100),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: theme.colorScheme.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '完成引导后可以在设置中完整配置AI功能',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // 开始页面设置
-          _buildSettingSection(
-            theme,
-            icon: Icons.home,
-            title: '默认开始页面',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '选择应用启动时显示的页面',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                
-                // 页面选择
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    _buildPageOption(theme, '时间线', Icons.timeline, true),
-                    _buildPageOption(theme, '笔记本', Icons.book, false),
-                    _buildPageOption(theme, '统计', Icons.bar_chart, false),
-                    _buildPageOption(theme, '灵感', Icons.lightbulb, false),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 60), // 为底部区域留空间
-        ],
-      ),
-    );
-  }
+  // // 第四页：更多设置页面 (已移除)
+  // Widget _buildMoreSettingsPage(ThemeData theme) { ... }
   
-  // 默认页面选项
-  Widget _buildPageOption(ThemeData theme, String label, IconData icon, bool isSelected) {
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 6),
-          Text(label),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (value) {
-        // 这里只是演示，不需要实际实现
-      },
-      backgroundColor: theme.colorScheme.surface,
-      selectedColor: theme.colorScheme.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
-      ),
-    );
-  }
+  // // 默认页面选项 (已移除)
+  // Widget _buildPageOption(ThemeData theme, String label, IconData icon, bool isSelected) { ... }
 
-  // 第五页：交互式引导页面
+  // 第四页（原第五页）：交互式引导页面
   Widget _buildInteractiveGuidePage(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -954,93 +753,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             const SizedBox(height: 20),
             
-            // 可选择文本卡片 - 真实可交互
-            Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              ),
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '真实交互演示',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Icon(
-                        Icons.info_outline,
-                        color: theme.colorScheme.primary,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  
-                  // 实际可选择/复制的文本
-                  SelectableText(
-                    '生活不止眼前的苟且，还有诗和远方。\n—— 北岛',
-                    style: theme.textTheme.titleMedium,
-                    onSelectionChanged: (selection, cause) {
-                      if (!_hasCompletedCopyTask && selection.isValid && selection.isCollapsed == false) {
-                        // 用户已完成选择文本任务
-                        if (mounted) {
-                          setState(() {
-                            _hasCompletedCopyTask = true;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('成功选择文本！请尝试复制选择内容')),
-                          );
-                        }
-                      }
-                    },
-                    toolbarOptions: const ToolbarOptions(
-                      copy: true,
-                      selectAll: true,
-                      cut: false,
-                      paste: false,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  // 操作提示
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.touch_app, 
-                          size: 20,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '请尝试选择并复制上面的文本',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 20),
+            // // 可选择文本卡片 - 真实可交互 (已移除)
+            // Container( ... ), // 确认整个 Container 已被移除
             
             // 笔记添加模拟
             Container(
@@ -1144,8 +858,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
             
             const SizedBox(height: 20),
             
-            // 任务完成状态
-            if (_hasCompletedCopyTask || _hasCompletedAddTask)
+            // 任务完成状态 (只判断 _hasCompletedAddTask)
+            if (_hasCompletedAddTask)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1162,12 +876,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildTaskProgressItem(
-                      theme,
-                      '选择并复制文本',
-                      _hasCompletedCopyTask,
-                    ),
-                    const SizedBox(height: 8),
+                    // _buildTaskProgressItem( // 移除复制任务进度显示
+                    //   theme,
+                    //   '选择并复制文本',
+                    //   _hasCompletedCopyTask, // 移除引用
+                    // ),
+                    // const SizedBox(height: 8), // 移除间距
                     _buildTaskProgressItem(
                       theme,
                       '双击添加到笔记',
@@ -1177,7 +891,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
               
-            if (_hasCompletedCopyTask && _hasCompletedAddTask)
+            if (_hasCompletedAddTask) // 只判断 _hasCompletedAddTask
               Container(
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(16),
@@ -1228,8 +942,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
             taskName,
             style: theme.textTheme.bodyMedium?.copyWith(
               decoration: isCompleted ? TextDecoration.lineThrough : null,
-              color: isCompleted 
-                  ? theme.colorScheme.onSurface.withOpacity(0.7)
+              color: isCompleted
+                  ? theme.colorScheme.onSurface.withAlpha((255 * 0.7).round()) // 使用 withAlpha
                   : theme.colorScheme.onSurface,
             ),
           ),
@@ -1238,95 +952,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  // 设置部分部件
-  Widget _buildSettingSection(
-    ThemeData theme, {
-    required IconData icon,
-    required String title,
-    required Widget child,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.5),
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
+  // // 设置部分部件 (已移除)
+  // Widget _buildSettingSection(...) { ... }
 
-  // 主题模式选项
-  Widget _buildThemeModeOption(
-    BuildContext context,
-    AppTheme appTheme,
-    ThemeMode mode,
-    String label,
-    IconData icon,
-  ) {
-    final isSelected = appTheme.themeMode == mode;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => appTheme.setThemeMode(mode),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? colorScheme.primary : colorScheme.outline,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-} 
+  // // 主题模式选项 (已移除)
+  // Widget _buildThemeModeOption(...) { ... }
+}

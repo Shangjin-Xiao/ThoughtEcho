@@ -1028,9 +1028,7 @@ class DatabaseService extends ChangeNotifier {
       if (!columnNames.contains('weather')) quoteMap.remove('weather');
       if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
       if (!columnNames.contains('edit_source')) quoteMap.remove('edit_source');
-      if (!columnNames.contains('delta_content')) {
-        quoteMap.remove('delta_content');
-      }
+      if (!columnNames.contains('delta_content')) quoteMap.remove('delta_content');
 
       debugPrint('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
 
@@ -1040,8 +1038,21 @@ class DatabaseService extends ChangeNotifier {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       debugPrint('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
+      
+      // 清除缓存，确保数据刷新
+      _quotesCache.clear();
+      _currentQuotes.clear();
+      _filterCache.clear();
+      
       notifyListeners();
-      _refreshQuotesStream(); // 更新流
+      
+      // 确保刷新流和UI
+      _refreshQuotesStream();
+      
+      // 延迟再次通知以确保UI更新
+      Future.delayed(Duration(milliseconds: 200), () {
+        notifyListeners();
+      });
     } catch (e) {
       debugPrint('保存笔记到数据库时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
@@ -1050,7 +1061,7 @@ class DatabaseService extends ChangeNotifier {
 
   // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
-    if (_quotesController != null && _quotesController!.hasListener) {
+    if (_quotesController != null && !_quotesController!.isClosed) {
       debugPrint('刷新笔记流数据');
       // 清除缓存，确保获取最新数据
       _filterCache.clear();
@@ -1064,7 +1075,7 @@ class DatabaseService extends ChangeNotifier {
       // 触发重新加载
       loadMoreQuotes();
     } else {
-      debugPrint('笔记流无监听器，跳过刷新');
+      debugPrint('笔记流无监听器或已关闭，跳过刷新');
     }
   }
 

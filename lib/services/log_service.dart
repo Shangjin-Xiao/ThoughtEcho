@@ -137,10 +137,12 @@ class LogService with ChangeNotifier {
       await mmkv.initialize();
       
       // 从 MMKV 加载日志级别
-      final levelIndex = mmkv.getInt(_logLevelKey) ?? LogLevel.info.index;
-      if (levelIndex >= 0 && levelIndex < LogLevel.values.length) {
+      final levelIndex = mmkv.getInt(_logLevelKey);
+      // 这里是关键修改：只有当没有用户设置时才设置默认值
+      if (levelIndex != null && levelIndex >= 0 && levelIndex < LogLevel.values.length) {
         _currentLevel = LogLevel.values[levelIndex];
       } else {
+        // 默认情况下使用info级别
         _currentLevel = LogLevel.info;
         await mmkv.setInt(_logLevelKey, _currentLevel.index);
       }
@@ -157,7 +159,7 @@ class LogService with ChangeNotifier {
       _addLogEntry(LogEntry(
         timestamp: DateTime.now(),
         level: LogLevel.info,
-        message: '日志服务已启动',
+        message: '日志服务已启动，当前日志级别: ${_currentLevel.name}',
         source: 'LogService',
       ));
 

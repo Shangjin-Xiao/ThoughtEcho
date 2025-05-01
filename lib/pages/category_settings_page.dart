@@ -397,361 +397,83 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   }
 
   void _editCategory(BuildContext context, NoteCategory category) {
-    _categoryNameController.text = category.name;
-    String? selectedIconName = category.iconName;
-    
+    final nameController = TextEditingController(text: category.name);
+    String? selectedIcon = category.iconName;
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('编辑分类'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
+        return AlertDialog(
+          title: const Text('编辑标签'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: '标签名称'),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  TextField(
-                    controller: _categoryNameController,
-                    decoration: const InputDecoration(
-                      labelText: '分类名称',
-                      hintText: '输入分类名称',
-                    ),
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('选择图标：'),
-                      IconButton(
-                        icon: selectedIconName != null
-                            ? (IconUtils.isEmoji(selectedIconName!)
-                                ? Text(selectedIconName!, style: const TextStyle(fontSize: 24))
-                                : Icon(IconUtils.getIconData(selectedIconName)))
-                            : const Icon(Icons.label),
-                        onPressed: () {
-                          _showIconSelectorForEdit(context, (icon) {
-                            setState(() {
-                              selectedIconName = icon;
-                            });
-                          });
-                        },
-                      ),
-                    ],
+                  const Text('图标：'),
+                  IconButton(
+                    icon: IconUtils.getCategoryIcon(selectedIcon),
+                    onPressed: () async {
+                      final icon = await showDialog<String>(
+                        context: context,
+                        builder: (context) => _IconSelectorDialog(initialIcon: selectedIcon),
+                      );
+                      if (icon != null) setState(() => selectedIcon = icon);
+                    },
                   ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final name = _categoryNameController.text.trim();
-                    if (name.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('分类名称不能为空')),
-                      );
-                      return;
-                    }
-
-                    try {
-                      await Provider.of<DatabaseService>(context, listen: false)
-                          .updateCategory(
-                        category.id,
-                        name,
-                        iconName: selectedIconName,
-                      );
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('分类已更新')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('更新分类失败: ${e.toString()}')),
-                      );
-                    }
-                    _categoryNameController.clear();
-                  },
-                  child: const Text('保存'),
-                ),
-              ],
-            );
-          },
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newName = nameController.text.trim();
+                if (newName.isEmpty) return;
+                await Provider.of<DatabaseService>(context, listen: false)
+                    .updateCategory(category.id, newName, iconName: selectedIcon);
+                Navigator.pop(context);
+              },
+              child: const Text('保存'),
+            ),
+          ],
         );
       },
     );
   }
 
-  void _showIconSelectorForEdit(BuildContext context, Function(String) onIconSelected) {
-    final TextEditingController emojiSearchController = TextEditingController();
-    String searchQuery = '';
-    Map<String, bool> expandedCategories = {
-      '情感': true,
-      '思考': false,
-      '自然': false,
-      '心情': false, 
-      '生活': false,
-      '成长': false,
-      '奖励': false,
-      '系统图标': false,
-    };
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          final emojiCategories = IconUtils.getCategorizedEmojis();
-          Map<String, List<String>> filteredEmojis = {};
-          if (searchQuery.isEmpty) {
-            filteredEmojis = emojiCategories;
-          } else {
-            emojiCategories.forEach((category, emojis) {
-              filteredEmojis[category] = emojis;
-            });
-          }
-          
-          final materialIcons = IconUtils.categoryIcons.entries.toList();
-          
-          return AlertDialog(
-            title: const Text('选择图标'),
-            content: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              height: MediaQuery.of(context).size.height * 0.6,
-              child: Column(
-                children: [
-                  TextField(
-                    controller: emojiSearchController,
-                    decoration: InputDecoration(
-                      hintText: '直接输入表情符号...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: emojiSearchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                emojiSearchController.clear();
-                                setState(() => searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setState(() => searchQuery = value);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  if (emojiSearchController.text.isNotEmpty && emojiSearchController.text.characters.length == 1)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        children: [
-                          Text(
-                            '使用 "${emojiSearchController.text}" 作为图标', 
-                            style: const TextStyle(color: Colors.blue),
-                          ),
-                          const Spacer(),
-                          ElevatedButton(
-                            child: const Text('选择'),
-                            onPressed: () {
-                              onIconSelected(emojiSearchController.text);
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          ...filteredEmojis.entries.map((entry) {
-                            final category = entry.key;
-                            final emojis = entry.value;
-                            
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ListTile(
-                                  title: Text(
-                                    category,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  trailing: Icon(
-                                    expandedCategories[category] ?? false
-                                        ? Icons.expand_less
-                                        : Icons.expand_more,
-                                  ),
-                                  onTap: () {
-                                    setState(() {
-                                      expandedCategories[category] = !(expandedCategories[category] ?? false);
-                                    });
-                                  },
-                                ),
-                                
-                                if (expandedCategories[category] ?? false)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: Wrap(
-                                      spacing: 12,
-                                      runSpacing: 12,
-                                      children: emojis.map((emoji) {
-                                        return InkWell(
-                                          onTap: () {
-                                            onIconSelected(emoji);
-                                            Navigator.of(context).pop();
-                                          },
-                                          child: Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color: Colors.transparent,
-                                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                                              border: Border.all(
-                                                color: Theme.of(context).colorScheme.outline,
-                                              ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                emoji,
-                                                style: const TextStyle(fontSize: 24),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                
-                                const Divider(),
-                              ],
-                            );
-                          }),
-                          
-                          ListTile(
-                            title: const Text(
-                              '系统图标',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            trailing: Icon(
-                              expandedCategories['系统图标'] ?? false
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                            ),
-                            onTap: () {
-                              setState(() {
-                                expandedCategories['系统图标'] = !(expandedCategories['系统图标'] ?? false);
-                              });
-                            },
-                          ),
-                          
-                          if (expandedCategories['系统图标'] ?? false)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: Wrap(
-                                spacing: 4,
-                                runSpacing: 8,
-                                children: materialIcons.map((entry) {
-                                  final iconName = entry.key;
-                                  final iconData = entry.value;
-                                  
-                                  return SizedBox(
-                                    width: 70,
-                                    height: 70,
-                                    child: InkWell(
-                                      onTap: () {
-                                        onIconSelected(iconName);
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.transparent,
-                                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                                              border: Border.all(
-                                                color: Theme.of(context).colorScheme.outline,
-                                              ),
-                                            ),
-                                            child: Icon(iconData),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            iconName,
-                                            style: const TextStyle(fontSize: 10),
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildCategoryItem(NoteCategory category) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: ListTile(
-        leading: category.iconName != null 
-            ? (IconUtils.isEmoji(category.iconName)
-                ? Text(category.iconName!, style: const TextStyle(fontSize: 24))
-                : Icon(IconUtils.getIconData(category.iconName)))
-            : const Icon(Icons.label),
-        title: Text(category.name),
-        trailing: category.isDefault
-            ? const Chip(
-                label: Text('默认'),
-                backgroundColor: Colors.grey,
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 添加编辑按钮
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _editCategory(context, category),
-                    tooltip: '编辑分类',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () => _showDeleteConfirmDialog(category),
-                    tooltip: '删除分类',
-                  ),
-                ],
-              ),
+    return ListTile(
+      leading: IconUtils.getCategoryIcon(category.iconName),
+      title: Text(category.name),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: '编辑',
+            onPressed: () => _editCategory(context, category),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            tooltip: '删除',
+            onPressed: () => _deleteCategory(context, category),
+          ),
+        ],
       ),
+      onTap: () => _editCategory(context, category),
     );
   }
 
-  void _showDeleteConfirmDialog(NoteCategory category) {
+  void _deleteCategory(BuildContext context, NoteCategory category) {
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -787,5 +509,224 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
         }
       }
     });
+  }
+}
+
+class _IconSelectorDialog extends StatefulWidget {
+  final String? initialIcon;
+  const _IconSelectorDialog({this.initialIcon});
+
+  @override
+  State<_IconSelectorDialog> createState() => _IconSelectorDialogState();
+}
+
+class _IconSelectorDialogState extends State<_IconSelectorDialog> {
+  late String? _selectedIcon;
+  final TextEditingController _emojiSearchController = TextEditingController();
+  String _searchQuery = '';
+  Map<String, bool> expandedCategories = {
+    '情感': true,
+    '思考': false,
+    '自然': false,
+    '心情': false,
+    '生活': false,
+    '成长': false,
+    '奖励': false,
+    '系统图标': false,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIcon = widget.initialIcon;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final emojiCategories = IconUtils.getCategorizedEmojis();
+    final materialIcons = IconUtils.categoryIcons.entries.toList();
+    Map<String, List<String>> filteredEmojis = {};
+    if (_searchQuery.isEmpty) {
+      filteredEmojis = emojiCategories;
+    } else {
+      emojiCategories.forEach((category, emojis) {
+        filteredEmojis[category] = emojis;
+      });
+    }
+    return AlertDialog(
+      title: const Text('选择图标'),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.8,
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Column(
+          children: [
+            TextField(
+              controller: _emojiSearchController,
+              decoration: InputDecoration(
+                hintText: '直接输入表情符号...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _emojiSearchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _emojiSearchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                setState(() => _searchQuery = value);
+              },
+            ),
+            const SizedBox(height: 8),
+            if (_emojiSearchController.text.isNotEmpty && _emojiSearchController.text.characters.length == 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Text(
+                      '使用 "${_emojiSearchController.text}" 作为图标',
+                      style: const TextStyle(color: Colors.blue),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      child: const Text('选择'),
+                      onPressed: () {
+                        Navigator.of(context).pop(_emojiSearchController.text);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    ...filteredEmojis.entries.map((entry) {
+                      final category = entry.key;
+                      final emojis = entry.value;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            title: Text(category, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            trailing: Icon(
+                              expandedCategories[category] ?? false
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                            ),
+                            onTap: () {
+                              setState(() {
+                                expandedCategories[category] = !(expandedCategories[category] ?? false);
+                              });
+                            },
+                          ),
+                          if (expandedCategories[category] ?? false)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: emojis.map((emoji) {
+                                  final isSelected = _selectedIcon == emoji;
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).pop(emoji);
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Theme.of(context).colorScheme.primaryContainer
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Theme.of(context).colorScheme.primary
+                                              : Theme.of(context).colorScheme.outline,
+                                        ),
+                                      ),
+                                      child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                    ListTile(
+                      title: const Text('系统图标', style: TextStyle(fontWeight: FontWeight.bold)),
+                      trailing: Icon(
+                        expandedCategories['系统图标'] ?? false
+                            ? Icons.expand_less
+                            : Icons.expand_more,
+                      ),
+                      onTap: () {
+                        setState(() {
+                          expandedCategories['系统图标'] = !(expandedCategories['系统图标'] ?? false);
+                        });
+                      },
+                    ),
+                    if (expandedCategories['系统图标'] ?? false)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 8,
+                          children: materialIcons.map((entry) {
+                            final iconName = entry.key;
+                            final iconData = entry.value;
+                            final isSelected = _selectedIcon == iconName;
+                            return SizedBox(
+                              width: 70,
+                              height: 70,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop(iconName);
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Theme.of(context).colorScheme.primaryContainer
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Theme.of(context).colorScheme.primary
+                                              : Theme.of(context).colorScheme.outline,
+                                        ),
+                                      ),
+                                      child: Icon(iconData),
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+      ],
+    );
   }
 }

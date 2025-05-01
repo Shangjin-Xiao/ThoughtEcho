@@ -20,6 +20,7 @@ import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'pages/onboarding_page.dart'; // 添加引导页面导入
+import 'package:flutter_quill/flutter_quill.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -164,10 +165,10 @@ void main() async {
       final weatherService = WeatherService();
       final clipboardService = ClipboardService();
       
-      // 创建日志服务但默认设置为不记录日志
+      // 创建日志服务但从用户设置加载日志级别
       final logService = LogService();
-      // 设置日志级别为none，不记录日志
-      await logService.setLogLevel(LogLevel.none);
+      // 不再这里强制设置级别，让LogService从用户配置中加载
+      // await logService.setLogLevel(LogLevel.none);
       
       final appTheme = AppTheme();
       
@@ -357,6 +358,7 @@ class MyApp extends StatelessWidget {
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
       ],
       supportedLocales: const [
         Locale('zh', 'CN'),
