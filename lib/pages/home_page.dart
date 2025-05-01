@@ -491,10 +491,10 @@ class _HomePageState extends State<HomePage>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown'),
+                              '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
+                              '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color:
-                                    Theme.of(context).colorScheme.onPrimaryContainer,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

@@ -62,6 +62,8 @@ class LocationService extends ChangeNotifier {
     debugPrint('开始初始化位置服务');
     try {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      
+      // 只在位置服务启用时检查权限
       if (_isLocationServiceEnabled) {
         debugPrint('位置服务已启用');
         final permission = await Geolocator.checkPermission();
@@ -70,21 +72,26 @@ class LocationService extends ChangeNotifier {
                 permission == LocationPermission.always);
         debugPrint('位置权限状态: $_hasLocationPermission');
 
+        // 只在首次获取到权限时尝试获取位置
         if (_hasLocationPermission) {
-          // 默认先使用低精度定位，获取快速结果
           getCurrentLocation(highAccuracy: false).then((position) {
-            debugPrint(
-              '初始化时获取位置: ${position?.latitude}, ${position?.longitude}',
-            );
+            if (position != null) {
+              debugPrint(
+                '初始化时获取位置: ${position.latitude}, ${position.longitude}',
+              );
+            }
           });
         }
       } else {
+        _hasLocationPermission = false;
         debugPrint('位置服务未启用');
       }
 
       notifyListeners();
     } catch (e) {
       debugPrint('初始化位置服务错误: $e');
+      _hasLocationPermission = false;
+      notifyListeners();
     }
   }
 
@@ -145,14 +152,32 @@ class LocationService extends ChangeNotifier {
 
   // 获取当前位置
   Future<Position?> getCurrentLocation({bool highAccuracy = false}) async {
+    // 检查位置服务是否启用
     if (!_isLocationServiceEnabled) {
-      debugPrint('获取位置时，位置服务未启用');
-      return null;
+      _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!_isLocationServiceEnabled) {
+        debugPrint('位置服务未启用');
+        return null;
+      }
     }
 
+    // 如果没有权限且之前未请求过，才请求权限
     if (!_hasLocationPermission) {
-      debugPrint('获取位置时，未获得位置权限');
-      return null;
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        // 只在首次运行时请求权限
+        final requestResult = await Geolocator.requestPermission();
+        _hasLocationPermission = (requestResult == LocationPermission.whileInUse ||
+            requestResult == LocationPermission.always);
+      } else {
+        _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always);
+      }
+      
+      if (!_hasLocationPermission) {
+        debugPrint('位置权限被拒绝');
+        return null;
+      }
     }
 
     try {
@@ -285,7 +310,7 @@ class LocationService extends ChangeNotifier {
     }
   }
 
-  // 搜索城市 - Now always uses online search
+  // 搜索城市
   Future<List<CityInfo>> searchCity(String query) async {
     if (query.trim().isEmpty) {
       _searchResults = [];
@@ -293,16 +318,29 @@ class LocationService extends ChangeNotifier {
       return _searchResults;
     }
 
-    // Always attempt online search
+    _isSearching = true;
+    notifyListeners();
+
     try {
-      return await _searchCityOnline(query);
-    } catch (e) {
-      debugPrint('在线城市搜索失败: $e');
-      // Return empty list on failure
-      _searchResults = [];
-      _isSearching = false; // Ensure loading state is reset
-      notifyListeners();
+      // 首先尝试使用OpenMeteo API
+      final results = await _searchCityWithOpenMeteo(query);
+      if (results.isNotEmpty) {
+        _searchResults = results;
+        _isSearching = false;
+        notifyListeners();
+        return _searchResults;
+      }
+
+      // 如果OpenMeteo没有结果，尝试使用OpenStreetMap API
+      _searchResults = await _searchCityOnline(query);
       return _searchResults;
+    } catch (e) {
+      debugPrint('城市搜索失败: $e');
+      _searchResults = [];
+      return _searchResults;
+    } finally {
+      _isSearching = false;
+      notifyListeners();
     }
   }
 
@@ -462,31 +500,58 @@ class LocationService extends ChangeNotifier {
   }
 
   // 使用选定的城市信息设置位置
-  void setSelectedCity(CityInfo city) {
-    // 手动设置位置组件
-    _country = city.country;
-    _province = city.province;
-    _city = city.name;
-    _district = null;
+  Future<void> setSelectedCity(CityInfo city) async {
+    try {
+      if (city.name.isEmpty || city.country.isEmpty || city.province.isEmpty) {
+        throw Exception('城市信息不完整');
+      }
 
-    // 更新地址字符串
-    _currentAddress = '${city.country}, ${city.province}, ${city.name}';
+      // 手动设置位置组件
+      _country = city.country;
+      _province = city.province;
+      _city = city.name;
+      _district = null;
 
-    // 创建一个模拟的Position对象来保持API一致性
-    _currentPosition = Position(
-      latitude: city.lat,
-      longitude: city.lon,
-      timestamp: DateTime.now(),
-      accuracy: 0,
-      altitude: 0,
-      heading: 0,
-      speed: 0,
-      speedAccuracy: 0,
-      altitudeAccuracy: 0,
-      headingAccuracy: 0,
-    );
+      // 更新地址字符串
+      List<String> addressParts = [city.country, city.province, city.name]
+          .where((part) => part.isNotEmpty)
+          .toList();
+      _currentAddress = addressParts.join(', ');
 
-    notifyListeners();
+      // 验证经纬度的有效性
+      if (city.lat < -90 || city.lat > 90 || city.lon < -180 || city.lon > 180) {
+        throw Exception('无效的经纬度');
+      }
+
+      // 创建一个模拟的Position对象来保持API一致性
+      _currentPosition = Position(
+        latitude: city.lat,
+        longitude: city.lon,
+        timestamp: DateTime.now(),
+        accuracy: 0,
+        altitude: 0,
+        heading: 0,
+        speed: 0,
+        speedAccuracy: 0,
+        altitudeAccuracy: 0,
+        headingAccuracy: 0,
+      );
+
+      notifyListeners();
+      debugPrint('成功设置城市: $_currentAddress');
+    } catch (e) {
+      debugPrint('设置城市失败: $e');
+      // 重置所有状态
+      _country = null;
+      _province = null;
+      _city = null;
+      _district = null;
+      _currentAddress = null;
+      _currentPosition = null;
+      notifyListeners();
+      // 重新抛出异常以便UI层处理
+      rethrow;
+    }
   }
 
   // 获取格式化位置(国家,省份,城市,区县)

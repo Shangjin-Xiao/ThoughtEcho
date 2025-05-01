@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
-import 'package:permission_handler/permission_handler.dart'; // 导入 permission_handler
+import 'package:permission_handler/permission_handler.dart';
+import 'package:package_info_plus/package_info_plus.dart'; // 导入版本信息包
 
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../services/mmkv_service.dart'; // 导入 MMKV 服务
 import '../services/clipboard_service.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
@@ -14,8 +16,9 @@ import 'home_page.dart';
 import '../models/app_settings.dart'; // 导入 AppSettings
 
 class OnboardingPage extends StatefulWidget {
-  final bool showUpdateReady; // 新增参数，控制是否显示新版提示
-  const OnboardingPage({super.key, this.showUpdateReady = false});
+  final bool showUpdateReady; // 是否只显示最后一页（升级提示）
+  final bool showFullOnboarding; // 是否完整引导
+  const OnboardingPage({super.key, this.showUpdateReady = false, this.showFullOnboarding = false});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -40,10 +43,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.initState();
     // 检查初始权限状态
     _checkInitialLocationPermission();
-    // 新增：如果是版本升级后进入，直接跳到最后一页
-    if (widget.showUpdateReady) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 新增：如果是版本升级后进入，直接跳到最后一页并自动迁移
+    if (widget.showUpdateReady && !widget.showFullOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         _pageController.jumpToPage(3);
+        // 自动执行迁移和提示
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) {
+          _finishOnboarding();
+        }
       });
     }
     // 添加延迟加载效果
@@ -95,7 +103,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _finishOnboarding() async {
-    // ... (保持 _finishOnboarding 内部逻辑不变，数据库初始化等都在这里) ...
     if (_isFinishing) return; // 防止重复执行
     setState(() {
       _isFinishing = true;
@@ -112,61 +119,101 @@ class _OnboardingPageState extends State<OnboardingPage> {
       final settingsService = Provider.of<SettingsService>(context, listen: false);
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
       final logService = Provider.of<LogService>(context, listen: false);
+      final mmkvService = Provider.of<MMKVService>(context, listen: false); // 获取 MMKV 服务
 
-      // 1. 保存用户在引导页选择的设置 (包括启动页)
-      await _saveSettings();
+      // --- 版本检查与迁移逻辑 ---
+      const String mmkvKeyLastRunVersion = 'lastRunVersionBuildNumber';
+      const int migrationNeededFromBuildNumber = 12; // *** 定义需要迁移的起始版本号 ***
 
-      // 2. 执行数据库初始化/迁移（如果尚未完成）
-      if (!settingsService.isInitialDatabaseSetupComplete()) {
-        debugPrint('开始执行引导流程中的数据库初始化/迁移...');
-        try {
-          // 初始化数据库（包含迁移逻辑）
-          await databaseService.init();
-          debugPrint('数据库初始化/迁移完成');
+      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      String currentBuildNumberString = packageInfo.buildNumber;
+      int currentBuildNumber = int.tryParse(currentBuildNumberString) ?? 0;
 
-          // 初始化默认分类
-          await databaseService.initDefaultHitokotoCategories();
-          debugPrint('默认一言分类初始化完成');
+      String lastRunBuildNumberString = mmkvService.getString(mmkvKeyLastRunVersion) ?? '0';
+      int lastRunBuildNumber = int.tryParse(lastRunBuildNumberString) ?? 0;
 
-          // 补全旧数据字段
-          await databaseService.patchQuotesDayPeriod();
-          debugPrint('旧数据 dayPeriod 字段补全完成');
+      bool isFirstSetup = !settingsService.isInitialDatabaseSetupComplete();
+      bool isUpdateRequiringMigration = currentBuildNumber > lastRunBuildNumber && currentBuildNumber >= migrationNeededFromBuildNumber;
+      bool needsMigration = isFirstSetup || isUpdateRequiringMigration;
 
-          // 迁移旧weather字段为key
-          await databaseService.migrateWeatherToKey();
-          debugPrint('旧weather字段已迁移为key');
+      debugPrint('版本检查: 当前版本=$currentBuildNumber, 上次运行版本=$lastRunBuildNumber, 是否首次设置=$isFirstSetup, 是否需要迁移=$needsMigration');
 
-          // 迁移旧dayPeriod字段为key
-          await databaseService.migrateDayPeriodToKey();
-          debugPrint('旧dayPeriod字段已迁移为key');
+      try {
+        // 确保数据库已初始化
+        await databaseService.init();
+        debugPrint('数据库初始化完成 (引导流程)');
 
-          // 标记数据库设置完成
-          await settingsService.setInitialDatabaseSetupComplete(true);
-          debugPrint('数据库初始设置标记完成');
+        if (needsMigration) {
+          debugPrint('开始执行引导流程中的数据迁移...');
+          try {
+            // 补全旧数据字段
+            await databaseService.patchQuotesDayPeriod();
+            debugPrint('旧数据 dayPeriod 字段补全完成');
 
-        } catch (e, stackTrace) {
-          debugPrint('引导流程中数据库操作失败: $e');
-          // 使用 mounted 检查
-          if (mounted) {
-            logService.error('引导流程数据库操作失败', error: e, stackTrace: stackTrace);
+            // 迁移旧weather字段为key
+            await databaseService.migrateWeatherToKey();
+            debugPrint('旧weather字段已迁移为key');
+
+            // 迁移旧dayPeriod字段为key
+            await databaseService.migrateDayPeriodToKey();
+            debugPrint('旧dayPeriod字段已迁移为key');
+
+            // 如果是首次设置，标记完成
+            if (isFirstSetup) {
+              await settingsService.setInitialDatabaseSetupComplete(true);
+              debugPrint('数据库初始设置标记完成');
+            }
+            debugPrint('数据迁移成功完成');
+
+          } catch (e, stackTrace) {
+            debugPrint('引导流程中数据迁移失败: $e');
+            logService.error('引导流程数据迁移失败', error: e, stackTrace: stackTrace);
+            // 即使迁移失败，如果是首次设置，也标记完成，避免阻塞
+            if (isFirstSetup) {
+              await settingsService.setInitialDatabaseSetupComplete(true);
+            }
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('数据格式更新时遇到问题'), backgroundColor: Colors.orange),
+              );
+            }
           }
-          // 即使失败，也标记为完成，防止卡在引导页
-          await settingsService.setInitialDatabaseSetupComplete(true);
-          // 可以考虑显示错误提示
-          // 使用 mounted 检查
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('数据库设置时遇到问题，部分功能可能受限'), backgroundColor: Colors.orange),
-            );
-          }
+        } else {
+          debugPrint('无需执行数据迁移');
         }
-      } else {
-        debugPrint('数据库初始设置已完成，跳过初始化/迁移步骤');
+
+        // 迁移检查/执行完成后，如果版本号增加了，更新记录
+        if (currentBuildNumber > lastRunBuildNumber) {
+           await mmkvService.setString(mmkvKeyLastRunVersion, currentBuildNumberString);
+           debugPrint('已更新上次运行版本号记录为: $currentBuildNumberString');
+        }
+
+      } catch (e, stackTrace) {
+         debugPrint('引导流程中数据库初始化失败: $e');
+         logService.error('引导流程数据库初始化失败', error: e, stackTrace: stackTrace);
+         // 即使初始化失败，也标记完成首次设置，避免卡住引导
+         if (isFirstSetup) {
+            await settingsService.setInitialDatabaseSetupComplete(true);
+         }
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('数据库初始化时遇到问题'), backgroundColor: Colors.orange),
+           );
+         }
+      }
+      // --- 版本检查与迁移逻辑结束 ---
+
+
+      // 1. 保存用户在引导页选择的设置 (包括启动页) - 移到迁移逻辑之后
+      if (!widget.showUpdateReady || widget.showFullOnboarding) {
+        await _saveSettings();
       }
 
-      // 3. 标记引导流程完成
-      await settingsService.setHasCompletedOnboarding(true);
-      debugPrint('引导流程标记完成');
+      // 2. 标记引导流程完成（仅完整引导时设置） - 原来的步骤3
+      if (!widget.showUpdateReady || widget.showFullOnboarding) {
+        await settingsService.setHasCompletedOnboarding(true);
+        debugPrint('引导流程标记完成');
+      }
 
       // 关闭加载指示器
       if (mounted) Navigator.pop(context);
@@ -180,13 +227,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     } catch (e, stackTrace) {
       debugPrint('完成引导流程时出错: $e');
-      // 使用 mounted 检查
       if (mounted) {
         final logService = Provider.of<LogService>(context, listen: false);
         logService.error('完成引导流程失败', error: e, stackTrace: stackTrace);
-        // 关闭加载指示器
         Navigator.pop(context);
-        // 显示错误提示
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('完成引导时出错，请稍后重试'), backgroundColor: Colors.red),
         );
@@ -245,10 +289,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
               // 页面内容 - 更新 children
               PageView(
                 controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(), // 禁止滑动切换
-                onPageChanged: (page) {
+                physics: widget.showUpdateReady && !widget.showFullOnboarding ? const NeverScrollableScrollPhysics() : null,
+                onPageChanged: (index) {
                   setState(() {
-                    _currentPage = page;
+                    _currentPage = index;
                   });
                 },
                 children: [
@@ -256,6 +300,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   _buildPermissionsPage(theme),
                   _buildHitokotoSettingsPage(theme),
                   _buildStartPageSelectionPage(theme), // 替换为启动页选择
+                  _buildLastPage(),
                 ],
               ),
               
@@ -457,7 +502,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   final result = await locationService.requestLocationPermission();
                   if (result is PermissionStatus) {
                     status = result;
-                  } else                  status = result ? PermissionStatus.granted : PermissionStatus.denied;
+                  } else {
+                    status = result ? PermissionStatus.granted : PermissionStatus.denied;
+                  }
                 
                 } else {
                   // 用户关闭开关，可以视为拒绝，或者引导去设置
@@ -979,6 +1026,45 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ),
             ),
           const SizedBox(height: 70), // 为底部按钮留出空间
+        ],
+      ),
+    );
+  }
+
+  // 最后一页
+  Widget _buildLastPage() {
+    final theme = Theme.of(context);
+    final isUpdate = widget.showUpdateReady && !widget.showFullOnboarding;
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            isUpdate ? Icons.upgrade : Icons.emoji_emotions,
+            size: 64,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            isUpdate ? '程序已更新' : '欢迎使用心迹',
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isUpdate
+                ? '程序已成功升级至新版本，数据已自动迁移，无需手动操作。\n\n如遇到任何问题，请在设置页反馈。'
+                : '你已完成所有设置，随时可以开始记录和探索你的思想。',
+            style: theme.textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _isFinishing ? null : _finishOnboarding,
+            child: Text(isUpdate ? '进入应用' : '开始使用'),
+          ),
         ],
       ),
     );

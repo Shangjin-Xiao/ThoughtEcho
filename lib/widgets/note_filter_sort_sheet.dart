@@ -115,7 +115,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 spacing: 8.0,
                 runSpacing: 8.0,
                 children: [
-                  ...WeatherService.weatherKeyToLabel.keys.map((weatherKey) {
+                  ...WeatherService.weatherKeyToLabel.keys
+                      .where((key) => key != 'unknown')
+                      .map((weatherKey) {
                     final isSelected = _tempSelectedWeathers.contains(weatherKey);
                     final icon = WeatherService.getWeatherIconDataByKey(weatherKey);
                     return FilterChip(

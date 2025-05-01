@@ -91,34 +91,49 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
         ),
         
         // 当前位置按钮
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.my_location),
-            label: const Text('使用当前位置'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
+        if (locationService.isLocationServiceEnabled)
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.my_location),
+              label: const Text('使用当前位置'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+              ),
+              onPressed: () async {
+                try {
+                  final position = await locationService.getCurrentLocation();
+                  if (position != null && context.mounted) {
+                    Navigator.of(context).pop();
+                    widget.onCitySelected(CityInfo(
+                      name: locationService.city ?? '未知城市',
+                      fullName: locationService.getFormattedLocation(),
+                      lat: position.latitude,
+                      lon: position.longitude,
+                      country: locationService.country ?? '未知国家',
+                      province: locationService.province ?? '未知省份',
+                    ));
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('无法获取当前位置，请确保已授予位置权限'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('获取位置时发生错误，请稍后重试'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              },
             ),
-            onPressed: () async {
-              final position = await locationService.getCurrentLocation();
-              if (position != null && context.mounted) {
-                Navigator.of(context).pop();
-                widget.onCitySelected(CityInfo(
-                  name: locationService.city ?? '未知城市',
-                  fullName: locationService.getFormattedLocation(),
-                  lat: position.latitude,
-                  lon: position.longitude,
-                  country: locationService.country ?? '未知国家',
-                  province: locationService.province ?? '未知省份',
-                ));
-              } else if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('无法获取当前位置，请检查位置权限')),
-                );
-              }
-            },
           ),
-        ),
       ],
     );
   }
@@ -128,7 +143,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       return const Center(child: CircularProgressIndicator());
     }
     
-    if (locationService.searchResults.isEmpty) {
+    if (_isSearchActive && locationService.searchResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -137,13 +152,39 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
             const SizedBox(height: 16),
             const Text('没有找到匹配的城市'),
             const SizedBox(height: 8),
-            Text(
-              '尝试使用不同的关键词或城市名称',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            if (!locationService.isLocationServiceEnabled)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Text(
+                  '提示：当前设备的定位服务已关闭，但您仍可以手动搜索城市',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              Text(
+                '尝试使用不同的关键词或城市名称',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
               ),
-            ),
+          ],
+        ),
+      );
+    }
+
+    if (!_isSearchActive) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search, size: 48, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('输入城市名称开始搜索'),
           ],
         ),
       );
@@ -157,10 +198,43 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           title: Text(city.name),
           subtitle: Text(city.fullName),
           leading: const Icon(Icons.location_city),
-          onTap: () {
-            locationService.setSelectedCity(city);
-            widget.onCitySelected(city);
-            Navigator.of(context).pop();
+          onTap: () async {
+            try {
+              // 显示加载指示器
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+              
+              // 设置选中的城市
+              locationService.setSelectedCity(city);
+              
+              // 确保UI已更新
+              await Future.delayed(const Duration(milliseconds: 100));
+              
+              if (context.mounted) {
+                // 关闭加载指示器
+                Navigator.of(context).pop();
+                // 关闭搜索页面
+                Navigator.of(context).pop();
+                // 触发选择回调
+                widget.onCitySelected(city);
+              }
+            } catch (e) {
+              if (context.mounted) {
+                // 关闭加载指示器（如果显示）
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('选择城市时发生错误，请重试'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            }
           },
         );
       },

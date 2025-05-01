@@ -142,7 +142,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final now = DateTime.now().toIso8601String();
 
     // 获取当前时间段
-    final String currentDayPeriod = TimeUtils.getCurrentDayPeriod();
+    final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
 
     // 构建笔记对象
     final quote = Quote(
@@ -164,7 +164,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       temperature: _showWeather ? _temperature : null,
       deltaContent: deltaJson,
       editSource: 'fullscreen',
-      dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriod,
+      dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
     );
 
     try {

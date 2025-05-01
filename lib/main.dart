@@ -163,10 +163,18 @@ Future<void> main() async {
       final packageInfo = await PackageInfo.fromPlatform();
       final String currentVersion = packageInfo.version;
       final String? lastVersion = settingsService.getAppVersion();
-      bool showUpdateReady = false;
-      if (lastVersion == null || lastVersion != currentVersion) {
-        showUpdateReady = true;
+      final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
+
+      // 判断是否需要完整引导或升级引导
+      bool showFullOnboarding = !hasCompletedOnboarding;
+      bool showUpdateReady = hasCompletedOnboarding && (lastVersion != currentVersion);
+      if (showUpdateReady) {
+        // 只显示引导最后一页，自动迁移数据，升级完成后写入 lastVersion
         await settingsService.setAppVersion(currentVersion);
+      }
+      if (showFullOnboarding) {
+        // 完整引导完成后写入 lastVersion
+        // 由 OnboardingPage 负责设置 hasCompletedOnboarding 和 lastVersion
       }
       
       // 创建服务实例但暂不初始化重量级服务
@@ -222,6 +230,7 @@ Future<void> main() async {
             navigatorKey: navigatorKey,
             isEmergencyMode: _isEmergencyMode,
             showUpdateReady: showUpdateReady,
+            showFullOnboarding: showFullOnboarding,
           ),
         ),
       );
@@ -339,12 +348,14 @@ class MyApp extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final bool isEmergencyMode;
   final bool showUpdateReady;
+  final bool showFullOnboarding;
   
   const MyApp({
     super.key, 
     required this.navigatorKey, 
     this.isEmergencyMode = false,
     this.showUpdateReady = false,
+    this.showFullOnboarding = false,
   });
 
   @override
@@ -362,7 +373,7 @@ class MyApp extends StatelessWidget {
       darkTheme: appTheme.createDarkThemeData(),
       themeMode: appTheme.themeMode,
       debugShowCheckedModeBanner: false,
-      home: showUpdateReady ? OnboardingPage(showUpdateReady: true) : !hasCompletedOnboarding
+      home: showUpdateReady ? const OnboardingPage(showUpdateReady: true) : !hasCompletedOnboarding
           ? const OnboardingPage() // 如果未完成引导，显示引导页面
           : isEmergencyMode 
             ? const EmergencyRecoveryPage() 

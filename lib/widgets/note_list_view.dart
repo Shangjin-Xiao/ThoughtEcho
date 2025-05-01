@@ -101,60 +101,81 @@ class NoteListViewState extends State<NoteListView> {
       _searchController.text = widget.searchQuery;
     }
 
-    // 检查是否有条件变化
+    // 检查是否有条件变化（来自父组件的 props）
     if (oldWidget.searchQuery != widget.searchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // 使用更新条件的方式而不是重新订阅
-      final db = Provider.of<DatabaseService>(context, listen: false);
-
-      // 取消现有订阅
-      _quotesSub.cancel();
-
-      // 创建新的订阅
-      _quotesSub = db
-          .watchQuotes(
-            tagIds:
-                widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-            limit: _pageSize,
-            orderBy:
-                widget.sortType == 'time'
-                    ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-                    : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-            searchQuery:
-                widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-            selectedWeathers: _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
-            selectedDayPeriods: _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
-          )
-          .listen((list) {
-            setState(() {
-              _quotes.clear();
-              _quotes.addAll(list);
-              _hasMore = list.length % _pageSize == 0;
-              _isLoading = false;
-            });
-          });
-
-      // 重置状态
-      _offset = 0;
-      _hasMore = true;
-      _quotes.clear();
+      // 如果 props 变化，则更新流订阅
+      _updateStreamSubscription();
     }
   }
 
-  // 辅助方法：比较两个列表是否相等
-  bool _areListsEqual(List<String> list1, List<String> list2) {
+  // 辅助方法：比较两个列表是否相等（深比较）
+  bool _areListsEqual(List<dynamic> list1, List<dynamic> list2) {
     if (list1.length != list2.length) return false;
+    // 确保顺序一致，如果需要忽略顺序，可以先排序再比较
     for (int i = 0; i < list1.length; i++) {
       if (list1[i] != list2[i]) return false;
     }
     return true;
   }
+
+  // 新增方法：更新数据库监听流
+  void _updateStreamSubscription() {
+    setState(() {
+      _isLoading = true; // 开始加载
+      _offset = 0;       // 重置分页
+      _hasMore = true;     // 假设有更多数据
+      _quotes.clear();   // 清空当前列表
+    });
+
+    // 使用更新条件的方式而不是重新订阅
+    final db = Provider.of<DatabaseService>(context, listen: false);
+
+    // 取消现有订阅
+    _quotesSub.cancel();
+
+    // 创建新的订阅
+    _quotesSub = db
+        .watchQuotes(
+          tagIds:
+              widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+          limit: _pageSize, // 初始加载限制
+          // offset: _offset,   // 移除 offset，watchQuotes 不支持，分页由 loadMoreQuotes 处理
+          orderBy:
+              widget.sortType == 'time'
+                  ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+                  : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+          searchQuery:
+              widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+          selectedWeathers: _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+          selectedDayPeriods: _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
+        )
+        .listen((list) {
+          if (mounted) { // 确保组件仍然挂载
+            setState(() {
+              // _quotes.clear(); // 不再需要，因为在开始时已清空
+              _quotes.addAll(list);
+              _hasMore = list.length == _pageSize; // 判断是否还有更多
+              _isLoading = false; // 加载完成
+              _offset += list.length; // 更新偏移量
+            });
+          }
+        }, onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false; // 出错时停止加载
+            });
+            // 可以添加错误处理逻辑，例如显示 SnackBar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('加载笔记失败: $error')),
+            );
+          }
+        });
+  }
+
+  // 移除重复的 _areListsEqual 定义
 
   @override
   void dispose() {
@@ -424,6 +445,8 @@ class NoteListViewState extends State<NoteListView> {
                                   _selectedWeathers = selectedWeathers;
                                   _selectedDayPeriods = selectedDayPeriods; // 更新时间段筛选状态
                                 });
+                                // 在状态更新后，立即触发数据库流的更新
+                                _updateStreamSubscription();
                               },
                             ),
                           );

@@ -811,10 +811,10 @@ class DatabaseService extends ChangeNotifier {
 
       // 导入后自动补全字段
       await patchQuotesDayPeriod();
-      if (this.migrateWeatherToKey != null) {
+      if (migrateWeatherToKey != null) {
         await migrateWeatherToKey();
       }
-      if (this.migrateDayPeriodToKey != null) {
+      if (migrateDayPeriodToKey != null) {
         await migrateDayPeriodToKey();
       }
     } catch (e) {
@@ -1199,12 +1199,16 @@ class DatabaseService extends ChangeNotifier {
       }
       // 天气筛选条件
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        conditions.add(selectedWeathers.map((_) => 'weather LIKE ?').join(' OR '));
-        args.addAll(selectedWeathers.map((weather) => '%$weather%'));
+        // 考虑null值的情况，使用COALESCE确保null值也能被正确处理
+        final weatherConditions = selectedWeathers.map((_) => 'COALESCE(weather, "") = ?').join(' OR ');
+        conditions.add('($weatherConditions)');
+        args.addAll(selectedWeathers);
       }
       // 时间段筛选条件
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        conditions.add(selectedDayPeriods.map((_) => 'day_period = ?').join(' OR '));
+        // 考虑null值的情况，使用COALESCE确保null值也能被正确处理
+        final dayPeriodConditions = selectedDayPeriods.map((_) => 'COALESCE(day_period, "") = ?').join(' OR ');
+        conditions.add('($dayPeriodConditions)');
         args.addAll(selectedDayPeriods);
       }
       final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
@@ -1365,6 +1369,52 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 监听笔记列表，支持分页加载和筛选
+  /// 检查并迁移天气数据
+  Future<void> _checkAndMigrateWeatherData() async {
+    try {
+      final db = database;
+      final weatherCheck = await db.query(
+        'quotes',
+        where: 'weather IS NOT NULL AND weather != ""',
+        limit: 1,
+      );
+      
+      if (weatherCheck.isNotEmpty) {
+        final weather = weatherCheck.first['weather'] as String?;
+        if (weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
+          debugPrint('检测到未迁移的weather数据，开始迁移...');
+          await migrateWeatherToKey();
+        }
+      }
+    } catch (e) {
+      debugPrint('天气数据迁移检查失败: $e');
+    }
+  }
+
+  /// 检查并迁移时间段数据
+  Future<void> _checkAndMigrateDayPeriodData() async {
+    try {
+      final db = database;
+      final dayPeriodCheck = await db.query(
+        'quotes',
+        where: 'day_period IS NOT NULL AND day_period != ""',
+        limit: 1,
+      );
+      
+      if (dayPeriodCheck.isNotEmpty) {
+        final dayPeriod = dayPeriodCheck.first['day_period'] as String?;
+        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+        if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
+          debugPrint('检测到未迁移的day_period数据，开始迁移...');
+          await migrateDayPeriodToKey();
+        }
+      }
+    } catch (e) {
+      debugPrint('时间段数据迁移检查失败: $e');
+    }
+  }
+
+  /// 监听笔记列表，支持分页加载和筛选
   Stream<List<Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -1476,14 +1526,32 @@ class DatabaseService extends ChangeNotifier {
       _currentQuotes = [];
       _isLoading = false;
       
-      // 立即加载第一页数据
-      loadMoreQuotes(
-        tagIds: tagIds,
-        categoryId: categoryId,
-        searchQuery: searchQuery,
-        selectedWeathers: selectedWeathers,
-        selectedDayPeriods: selectedDayPeriods,
-      );
+      // 在新的异步上下文中执行初始化
+      Future(() async {
+        try {
+          if (!kIsWeb) {
+            // 检查并迁移天气数据
+            await _checkAndMigrateWeatherData();
+            // 检查并迁移时间段数据
+            await _checkAndMigrateDayPeriodData();
+            // 补全缺失的时间段数据
+            await patchQuotesDayPeriod();
+          }
+          
+          // 加载第一页数据
+          await loadMoreQuotes(
+            tagIds: tagIds,
+            categoryId: categoryId,
+            searchQuery: searchQuery,
+            selectedWeathers: selectedWeathers,
+            selectedDayPeriods: selectedDayPeriods,
+          );
+        } catch (e) {
+          debugPrint('数据初始化或加载失败: $e');
+          // 即使失败也发送空列表，避免UI挂起
+          _quotesController?.add([]);
+        }
+      });
     }
 
     return _quotesController!.stream;
@@ -1743,6 +1811,50 @@ class DatabaseService extends ChangeNotifier {
       }
       notifyListeners();
       return;
+      /// 检查并迁移天气数据
+      Future<void> _checkAndMigrateWeatherData() async {
+        try {
+          final db = database;
+          final weatherCheck = await db.query(
+            'quotes',
+            where: 'weather IS NOT NULL AND weather != ""',
+            limit: 1,
+          );
+          
+          if (weatherCheck.isNotEmpty) {
+            final weather = weatherCheck.first['weather'] as String?;
+            if (weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
+              debugPrint('检测到未迁移的weather数据，开始迁移...');
+              await migrateWeatherToKey();
+            }
+          }
+        } catch (e) {
+          debugPrint('天气数据迁移检查失败: $e');
+        }
+      }
+    
+      /// 检查并迁移时间段数据
+      Future<void> _checkAndMigrateDayPeriodData() async {
+        try {
+          final db = database;
+          final dayPeriodCheck = await db.query(
+            'quotes',
+            where: 'day_period IS NOT NULL AND day_period != ""',
+            limit: 1,
+          );
+          
+          if (dayPeriodCheck.isNotEmpty) {
+            final dayPeriod = dayPeriodCheck.first['day_period'] as String?;
+            final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+            if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
+              debugPrint('检测到未迁移的day_period数据，开始迁移...');
+              await migrateDayPeriodToKey();
+            }
+          }
+        } catch (e) {
+          debugPrint('时间段数据迁移检查失败: $e');
+        }
+      }
     }
     final db = database;
     final maps = await db.query('quotes', columns: ['id', 'weather']);
@@ -1752,6 +1864,65 @@ class DatabaseService extends ChangeNotifier {
       if (id != null && weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
         final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == weather).key;
         await db.update('quotes', {'weather': key}, where: 'id = ?', whereArgs: [id]);
+        /// 数据迁移检查和加载辅助方法
+        Future<void> _ensureDataMigrationAndLoadData({
+          List<String>? tagIds,
+          String? categoryId,
+          String? searchQuery,
+          List<String>? selectedWeathers,
+          List<String>? selectedDayPeriods,
+        }) async {
+          if (!kIsWeb) {
+            try {
+              final db = database;
+              
+              // 检查weather数据是否需要迁移
+              final weatherCheck = await db.query(
+                'quotes',
+                where: 'weather IS NOT NULL AND weather != ""',
+                limit: 1,
+              );
+              
+              if (weatherCheck.isNotEmpty) {
+                final weather = weatherCheck.first['weather'] as String?;
+                if (weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
+                  debugPrint('检测到未迁移的weather数据，开始迁移...');
+                  await migrateWeatherToKey();
+                }
+              }
+              
+              // 检查day_period数据是否需要迁移
+              final dayPeriodCheck = await db.query(
+                'quotes',
+                where: 'day_period IS NOT NULL AND day_period != ""',
+                limit: 1,
+              );
+              
+              if (dayPeriodCheck.isNotEmpty) {
+                final dayPeriod = dayPeriodCheck.first['day_period'] as String?;
+                final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+                if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
+                  debugPrint('检测到未迁移的day_period数据，开始迁移...');
+                  await migrateDayPeriodToKey();
+                }
+              }
+              
+              // 补全缺失的day_period数据
+              await patchQuotesDayPeriod();
+            } catch (e) {
+              debugPrint('数据迁移检查失败: $e');
+            }
+          }
+          
+          // 加载数据
+          await loadMoreQuotes(
+            tagIds: tagIds,
+            categoryId: categoryId,
+            searchQuery: searchQuery,
+            selectedWeathers: selectedWeathers,
+            selectedDayPeriods: selectedDayPeriods,
+          );
+        }
       }
     }
     debugPrint('已完成旧数据weather字段的key迁移');

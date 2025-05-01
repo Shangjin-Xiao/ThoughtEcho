@@ -1047,8 +1047,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     onPressed: () async {
                       if (_contentController.text.isNotEmpty) {
                         // 获取当前时间段
-                        final String currentDayPeriod = TimeUtils.getCurrentDayPeriod();
-                        
+                        final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
+
                         // 创建或更新笔记
                         final Quote quote = Quote(
                           id: widget.initialQuote?.id ?? const Uuid().v4(),
@@ -1072,7 +1072,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           location: _includeLocation ? location : null,
                           weather: _includeWeather ? weather : null,
                           temperature: _includeWeather ? temperature : null,
-                          dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriod, // 添加时间段信息
+                          dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
                           editSource: widget.initialQuote?.editSource, // 保证兼容
                           deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
                         );
