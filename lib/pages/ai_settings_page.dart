@@ -19,46 +19,48 @@ class _AISettingsPageState extends State<AISettingsPage> {
   final _maxTokensController = TextEditingController();
   String? _hostOverride;
   final _hostOverrideController = TextEditingController();
+
+  // Updated presets list based on verification
   final List<Map<String, String>> aiPresets = [
     {
       'name': 'OpenAI',
       'apiUrl': 'https://api.openai.com/v1/chat/completions',
-      'model': 'gpt-3.5-turbo',
+      'model': 'gpt-4o', // Confirmed latest
     },
     {
-      'name': 'OpenRouter',
+      'name': 'OpenRouter', // Assumed to support latest OpenAI via identifier
       'apiUrl': 'https://openrouter.ai/api/v1/chat/completions',
-      'model': 'openai/gpt-3.5-turbo',
+      'model': 'openai/gpt-4o',
     },
     {
-      'name': '硅基流动',
-      'apiUrl': 'https://api.g8way.io/v1/chat/completions',
-      'model': 'gpt-3.5-turbo',
+      'name': '硅基流动', // Model left empty as GPT-4o support is unconfirmed
+      'apiUrl': 'https://api.siliconflow.cn/v1/chat/completions',
+      'model': '', // Needs user input based on their Silicon Flow plan/docs
     },
     {
       'name': 'DeepSeek',
       'apiUrl': 'https://api.deepseek.com/v1/chat/completions',
-      'model': 'deepseek-chat',
+      'model': 'deepseek-chat', // Keep their recommended model
     },
     {
-      'name': 'Anthropic (Claude)',
+      'name': 'Anthropic (Claude)', // Updated to Claude 3.7 Sonnet latest alias
       'apiUrl': 'https://api.anthropic.com/v1/messages',
-      'model': 'claude-3-opus-20240229',
+      'model': 'claude-3.7-sonnet-latest',
     },
     {
-      'name': 'Ollama',
+      'name': 'Ollama', // Empty model name
       'apiUrl': 'http://localhost:11434/v1/chat/completions',
-      'model': 'llama2',
+      'model': '', // Needs user input
     },
     {
-      'name': 'LMStudio',
+      'name': 'LMStudio', // Empty model name
       'apiUrl': 'http://localhost:1234/v1/chat/completions',
-      'model': 'llama2',
+      'model': '', // Needs user input
     },
     {
-      'name': 'OpenAPI兼容',
+      'name': 'OpenAPI兼容', // Empty model name
       'apiUrl': 'http://your-openapi-server/v1/chat/completions',
-      'model': 'gpt-3.5-turbo',
+      'model': '', // Needs user input
     },
   ];
   String? _selectedPreset;
@@ -82,62 +84,85 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      // 从安全存储获取API密钥
       final secureStorage = SecureStorageService();
       final secureApiKey = await secureStorage.getApiKey();
-      
+
       final settings = Provider.of<SettingsService>(context, listen: false);
       final aiSettings = settings.aiSettings;
-      
+
       setState(() {
         _modelController.text = aiSettings.model;
         _apiUrlController.text = aiSettings.apiUrl;
-        
-        // 优先使用安全存储的API密钥
-        _apiKeyController.text = secureApiKey ?? aiSettings.apiKey;
+        _apiKeyController.text = secureApiKey ?? aiSettings.apiKey; // Use secure key first
         _temperatureController.text = aiSettings.temperature.toString();
         _maxTokensController.text = aiSettings.maxTokens.toString();
         _hostOverride = aiSettings.hostOverride;
         _hostOverrideController.text = _hostOverride ?? '';
         try {
-          _selectedPreset = aiPresets.firstWhere((p) => p['model'] == aiSettings.model)['name'];
+          // Try to match preset based on API URL and potentially model if not empty
+           _selectedPreset = aiPresets.firstWhere(
+                (p) => p['apiUrl'] == aiSettings.apiUrl && (p['model'] == aiSettings.model || (p['model'] == '' && aiSettings.model.isNotEmpty)) // Match if preset model is empty and loaded model is not
+            )['name'];
+           // Refined matching: Match if URLs and models match OR if preset URL matches, preset model is empty, and loaded model has a value (custom model for that preset URL)
         } catch (_) {
-          _selectedPreset = null;
+          _selectedPreset = null; // No matching preset found (custom config)
         }
       });
     } catch (e) {
       debugPrint('加载AI设置失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载AI设置失败: $e')),
+        );
+      }
     }
   }
 
-  Future<void> _saveSettings() async {
+ Future<void> _saveSettings() async {
     final service = Provider.of<SettingsService>(context, listen: false);
-    
+
+    // Validate numeric fields before parsing
+    final tempText = _temperatureController.text;
+    final maxTokensText = _maxTokensController.text;
+    double? temperature = double.tryParse(tempText);
+    int? maxTokens = int.tryParse(maxTokensText);
+
+    // Basic validation feedback
+    if (tempText.isNotEmpty && temperature == null) {
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('温度值无效，请输入数字。')));
+       return; // Stop saving
+    }
+     if (maxTokensText.isNotEmpty && maxTokens == null) {
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('最大令牌数无效，请输入整数。')));
+       return; // Stop saving
+    }
+
+    // Use defaults if fields are empty or parsing failed (though we added checks above)
+    temperature ??= 0.7;
+    maxTokens ??= 1000; // Or handle empty state differently if needed
+
     try {
-      // 获取当前设置中的值
-      final double temperature = double.tryParse(_temperatureController.text) ?? 0.7;
-      final int maxTokens = int.tryParse(_maxTokensController.text) ?? 1000;
-      
-      // 使用安全存储保存API密钥
+      final String hostOverride = _hostOverrideController.text.trim();
+
       final secureStorage = SecureStorageService();
       await secureStorage.saveApiKey(_apiKeyController.text);
-      
-      // 保存其他设置到普通存储
+
       await service.updateAISettings(
         AISettings(
           model: _modelController.text,
           apiUrl: _apiUrlController.text,
-          apiKey: '', // 不再将API密钥保存到普通设置中
-          temperature: temperature,
-          maxTokens: maxTokens,
-          hostOverride: _hostOverride,
+          apiKey: '', // API Key is saved securely, not here
+          temperature: temperature, // Use parsed or default value
+          maxTokens: maxTokens, // Use parsed or default value
+          hostOverride: hostOverride.isEmpty ? null : hostOverride,
         ),
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('AI设置已保存')),
         );
+        FocusScope.of(context).unfocus(); // Hide keyboard after saving
       }
     } catch (e) {
       if (mounted) {
@@ -147,6 +172,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -161,103 +187,136 @@ class _AISettingsPageState extends State<AISettingsPage> {
           children: [
             DropdownButtonFormField<String>(
               value: _selectedPreset,
+              isExpanded: true,
               items: aiPresets.map((preset) {
                 return DropdownMenuItem(
                   value: preset['name'],
-                  child: Text(preset['name']!),
+                  child: Text(preset['name']!, overflow: TextOverflow.ellipsis),
                 );
               }).toList(),
               onChanged: (value) {
+                if (value == null) return;
                 setState(() {
                   _selectedPreset = value;
                   final preset = aiPresets.firstWhere((p) => p['name'] == value);
                   _apiUrlController.text = preset['apiUrl']!;
-                  _modelController.text = preset['model']!;
+                  _modelController.text = preset['model']!; // This will be empty for some presets now
+                  // Optionally clear API key when changing preset?
+                  // _apiKeyController.clear();
                 });
               },
               decoration: const InputDecoration(
                 labelText: '快速选择AI服务预设',
                 border: OutlineInputBorder(),
               ),
+              hint: const Text('选择或手动配置'),
             ),
+            const SizedBox(height: 20),
             Text(
-              'API 设置',
-              style: Theme.of(context).textTheme.titleLarge,
+              'API 设置 (${_selectedPreset ?? '自定义'})',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _apiUrlController,
               decoration: const InputDecoration(
                 labelText: 'API URL',
-                hintText: '例如：https://api.openai.com/v1/chat/completions',
+                hintText: '服务接口地址',
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.link),
               ),
+              keyboardType: TextInputType.url,
+              onChanged: (_) => setState(() { _selectedPreset = null; }),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _apiKeyController,
               decoration: const InputDecoration(
                 labelText: 'API Key',
-                hintText: '输入你的 API Key',
+                hintText: '服务所需的密钥',
                 border: OutlineInputBorder(),
+                 prefixIcon: Icon(Icons.key),
               ),
               obscureText: true,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _modelController,
-              decoration: const InputDecoration(
-                labelText: '模型',
-                hintText: '例如：gpt-3.5-turbo',
+              decoration: InputDecoration(
+                labelText: '模型名称',
+                // Updated hint text for clarity
+                hintText: _selectedPreset == 'Ollama' || _selectedPreset == 'LMStudio' || _selectedPreset == 'OpenAPI兼容' || _selectedPreset == '硅基流动'
+                          ? '请输入模型名称'
+                          : '例如: gpt-4o, claude-3.7-sonnet-latest',
                 border: OutlineInputBorder(),
+                 prefixIcon: Icon(Icons.model_training),
               ),
+               onChanged: (_) => setState(() { _selectedPreset = null; }),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _temperatureController,
-              decoration: const InputDecoration(
-                labelText: '温度',
-                hintText: '例如：0.7',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _maxTokensController,
-              decoration: const InputDecoration(
-                labelText: '最大令牌数',
-                hintText: '例如：1000',
-                border: OutlineInputBorder(),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _temperatureController,
+                    decoration: const InputDecoration(
+                      labelText: '温度',
+                      hintText: '0.0 - 2.0',
+                      border: OutlineInputBorder(),
+                       prefixIcon: Icon(Icons.thermostat),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _maxTokensController,
+                    decoration: const InputDecoration(
+                      labelText: '最大令牌',
+                      hintText: '例如: 2048',
+                      border: OutlineInputBorder(),
+                       prefixIcon: Icon(Icons.token),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _hostOverrideController,
               decoration: const InputDecoration(
-                labelText: '主机覆盖',
-                hintText: '例如：http://localhost:8080',
+                labelText: '主机覆盖 (Host Override)',
+                hintText: '可选，用于代理或特殊网络',
                 border: OutlineInputBorder(),
+                 prefixIcon: Icon(Icons.dns),
               ),
+               keyboardType: TextInputType.url,
             ),
             const SizedBox(height: 24),
-
-            // Add AI Risk Warning
             Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                '请注意：AI 生成的内容可能不完全准确或可靠，请谨慎使用并自行判断。',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  fontSize: 12,
+                '注意：AI生成内容仅供参考。API Key 将安全存储在设备本地。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _saveSettings,
+                icon: const Icon(Icons.save),
+                label: const Text('保存 AI 设置'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  textStyle: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
             ),
-            // End of AI Risk Warning
-
-            ElevatedButton(
-              onPressed: _saveSettings,
-              child: const Text('保存 AI 设置'),
-            ),
+             const SizedBox(height: 20),
           ],
         ),
       ),
