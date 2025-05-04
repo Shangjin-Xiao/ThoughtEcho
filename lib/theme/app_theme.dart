@@ -6,10 +6,12 @@ class AppTheme with ChangeNotifier {
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
+  static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
   
   late SafeMMKV _storage;
   Color? _customColor;
   bool _useCustomColor = false;
+  bool _useDynamicColor = true; // 默认启用动态取色
   ColorScheme? _lightDynamicColorScheme;
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
@@ -27,6 +29,9 @@ class AppTheme with ChangeNotifier {
     ),
   ];
   
+  // 获取是否启用动态取色
+  bool get useDynamicColor => _useDynamicColor;
+  
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
     if (_useCustomColor && _customColor != null) {
@@ -35,7 +40,11 @@ class AppTheme with ChangeNotifier {
         brightness: Brightness.light,
       );
     }
-    return _lightDynamicColorScheme ?? ColorScheme.fromSeed(
+    // 只有在启用动态取色且有可用的动态颜色方案时才使用
+    if (_useDynamicColor && _lightDynamicColorScheme != null) {
+      return _lightDynamicColorScheme!;
+    }
+    return ColorScheme.fromSeed(
       seedColor: Colors.blue,
       brightness: Brightness.light,
     );
@@ -49,7 +58,11 @@ class AppTheme with ChangeNotifier {
         brightness: Brightness.dark,
       );
     }
-    return _darkDynamicColorScheme ?? ColorScheme.fromSeed(
+    // 只有在启用动态取色且有可用的动态颜色方案时才使用
+    if (_useDynamicColor && _darkDynamicColorScheme != null) {
+      return _darkDynamicColorScheme!;
+    }
+    return ColorScheme.fromSeed(
       seedColor: Colors.blue,
       brightness: Brightness.dark,
     );
@@ -66,12 +79,14 @@ class AppTheme with ChangeNotifier {
       await _storage.initialize();
       _loadCustomColor();
       _loadThemeMode();
-      debugPrint('主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 主题模式=$_themeMode');
+      _loadDynamicColorSettings();
+      debugPrint('主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 使用动态取色=$_useDynamicColor, 主题模式=$_themeMode');
     } catch (e) {
       debugPrint('初始化主题服务失败: $e');
       // 初始化失败时使用默认值
       _customColor = Colors.blue;
       _useCustomColor = false;
+      _useDynamicColor = true;
       _themeMode = ThemeMode.system;
     }
   }
@@ -118,6 +133,13 @@ class AppTheme with ChangeNotifier {
     notifyListeners();
   }
   
+  // 设置是否使用动态取色
+  Future<void> setUseDynamicColor(bool value) async {
+    _useDynamicColor = value;
+    await _storage.setBool(_useDynamicColorKey, value);
+    notifyListeners();
+  }
+  
   // 从持久化存储加载自定义颜色设置
   void _loadCustomColor() {
     try {
@@ -143,6 +165,19 @@ class AppTheme with ChangeNotifier {
     } catch (e) {
       debugPrint('加载主题模式失败: $e');
       _themeMode = ThemeMode.system;
+    }
+  }
+  
+  // 从持久化存储加载动态取色设置
+  void _loadDynamicColorSettings() {
+    try {
+      final useDynamic = _storage.getBool(_useDynamicColorKey);
+      if (useDynamic != null) {
+        _useDynamicColor = useDynamic;
+      }
+    } catch (e) {
+      debugPrint('加载动态取色设置失败: $e');
+      _useDynamicColor = true; // 默认启用
     }
   }
   

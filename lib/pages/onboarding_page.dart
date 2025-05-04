@@ -458,11 +458,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
-            Text(
-              '让我们一起，随心迹录！',
-              style: theme.textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
+            // Text( // Removed from here
+            //   '让我们一起，随心迹录！',
+            //   style: theme.textTheme.bodyLarge,
+            //   textAlign: TextAlign.center,
+            // ),
           ],
         ),
       ),
@@ -999,6 +999,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
             style: theme.textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
+          // Added the text here for the non-update case
+          if (!isUpdate) ...[
+            const SizedBox(height: 10),
+            Text(
+              '让我们一起，随心迹录！',
+              style: theme.textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: _isFinishing ? null : _finishOnboarding,

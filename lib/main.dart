@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
+import 'package:dynamic_color/dynamic_color.dart'; // 添加 dynamic_color 导入
 import 'services/database_service.dart';
 import 'services/settings_service.dart';
 import 'services/ai_service.dart';
@@ -367,28 +368,41 @@ class MyApp extends StatelessWidget {
     // 检查是否需要显示引导页面
     final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
 
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      title: 'ThoughtEcho',
-      theme: appTheme.createLightThemeData(),
-      darkTheme: appTheme.createDarkThemeData(),
-      themeMode: appTheme.themeMode,
-      debugShowCheckedModeBanner: false,
-      home: showUpdateReady ? const OnboardingPage(showUpdateReady: true) : !hasCompletedOnboarding
-          ? const OnboardingPage() // 如果未完成引导，显示引导页面
-          : isEmergencyMode 
-            ? const EmergencyRecoveryPage() 
-            : HomePage(initialPage: settingsService.appSettings.defaultStartPage),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        FlutterQuillLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('zh', 'CN'),
-        Locale('en', 'US'),
-      ],
+    // 使用 DynamicColorBuilder 以支持动态取色功能
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        // 更新主题中的动态颜色方案
+        if (lightDynamic != null || darkDynamic != null) {
+          // 只有在动态颜色方案发生变化时才更新
+          Future.microtask(() {
+            appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
+          });
+        }
+
+        return MaterialApp(
+          navigatorKey: navigatorKey,
+          title: 'ThoughtEcho',
+          theme: appTheme.createLightThemeData(),
+          darkTheme: appTheme.createDarkThemeData(),
+          themeMode: appTheme.themeMode,
+          debugShowCheckedModeBanner: false,
+          home: showUpdateReady ? const OnboardingPage(showUpdateReady: true) : !hasCompletedOnboarding
+              ? const OnboardingPage() // 如果未完成引导，显示引导页面
+              : isEmergencyMode 
+                ? const EmergencyRecoveryPage() 
+                : HomePage(initialPage: settingsService.appSettings.defaultStartPage),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('zh', 'CN'),
+            Locale('en', 'US'),
+          ],
+        );
+      },
     );
   }
 }
