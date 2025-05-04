@@ -18,7 +18,13 @@ import '../models/app_settings.dart'; // 导入 AppSettings
 class OnboardingPage extends StatefulWidget {
   final bool showUpdateReady; // 是否只显示最后一页（升级提示）
   final bool showFullOnboarding; // 是否完整引导
-  const OnboardingPage({super.key, this.showUpdateReady = false, this.showFullOnboarding = false});
+  final VoidCallback onOnboardingComplete; // 添加回调
+
+  const OnboardingPage({super.key, 
+                      this.showUpdateReady = false, 
+                      this.showFullOnboarding = false, 
+                      required this.onOnboardingComplete // 构造函数接收回调
+                     });
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -207,32 +213,37 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
 
       // 1. 保存用户在引导页选择的设置 (包括启动页) - 移到迁移逻辑之后
-      if (!widget.showUpdateReady || widget.showFullOnboarding) {
+      if (widget.showFullOnboarding) {
         await _saveSettings();
+        debugPrint('引导页设置已保存');
       }
 
-      // 2. 标记引导流程完成（仅完整引导时设置） - 原来的步骤3
-      if (!widget.showUpdateReady || widget.showFullOnboarding) {
-        await settingsService.setHasCompletedOnboarding(true);
-        debugPrint('引导流程标记完成');
-      }
+      // 2. 标记引导流程完成（仅完整引导时设置） - 移除此逻辑，由 AppWidget 处理
+      // if (!widget.showUpdateReady || widget.showFullOnboarding) {
+      //   await settingsService.setHasCompletedOnboarding(true);
+      //   debugPrint('引导流程标记完成');
+      // }
 
       // 关闭加载指示器
       if (mounted) Navigator.pop(context);
 
-      // 4. 导航到主页
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      }
+      // 3. 调用完成回调 (替代原来的导航逻辑)
+      widget.onOnboardingComplete();
+
+      // 4. 移除导航到主页的逻辑
+      // if (mounted) {
+      //   Navigator.of(context).pushReplacement(
+      //     MaterialPageRoute(builder: (context) => const HomePage()),
+      //   );
+      // }
 
     } catch (e, stackTrace) {
       debugPrint('完成引导流程时出错: $e');
       if (mounted) {
         final logService = Provider.of<LogService>(context, listen: false);
         logService.error('完成引导流程失败', error: e, stackTrace: stackTrace);
-        Navigator.pop(context);
+        // 尝试关闭加载对话框（如果还在显示）
+        try { Navigator.pop(context); } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('完成引导时出错，请稍后重试'), backgroundColor: Colors.red),
         );
@@ -741,56 +752,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
           
           const SizedBox(height: 20),
           
-          // 预览示例
-          if (_selectedHitokotoTypes.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withAlpha(100),
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withAlpha(60),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '预览示例',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      Icon(
-                        Icons.format_quote,
-                        color: theme.colorScheme.primary,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Text(
-                    _getRandomHitokotoExample(),
-                    style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '——《心迹》',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          
           // 类型选择网格
           Wrap(
             spacing: 10,
@@ -854,19 +815,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ],
       ),
     );
-  }
-  
-  // 生成随机一言示例 - 保持不变
-  String _getRandomHitokotoExample() {
-    const examples = [
-      "人生最曼妙的风景，是内心的淡定与从容。",
-      "有些烦恼，挥一挥手，就过去了。",
-      "真正的梦就是现实的彼岸。",
-      "不为模糊不清的未来担忧，只为清清楚楚的现在努力。",
-      "生活真象这杯浓酒，不经三番五次的提炼呵，就不会这样可口！",
-    ];
-    
-    return examples[DateTime.now().millisecond % examples.length];
   }
 
   // 新增：第四页 - 默认启动页面选择

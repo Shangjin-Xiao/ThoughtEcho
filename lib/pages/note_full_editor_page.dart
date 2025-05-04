@@ -36,7 +36,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   String? _location;
   String? _weather;
   String? _temperature;
-  bool _showMeta = true;
+  bool _showMeta = false;
   // 分离位置和天气控制
   bool _showLocation = false; 
   bool _showWeather = false;
@@ -80,6 +80,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 分别检查并设置位置和天气状态
     _showLocation = _location != null;
     _showWeather = _weather != null;
+    
+    // 默认折叠元数据区域
+    _showMeta = false;
   }
 
   // 初始化为纯文本的辅助方法
@@ -478,10 +481,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       appBar: AppBar(
         title: const SizedBox.shrink(),
         actions: [
+          // 使用悬浮按钮展示元数据编辑弹窗
           IconButton(
-            icon: Icon(_showMeta ? Icons.expand_less : Icons.expand_more),
-            tooltip: _showMeta ? '收起元数据' : '展开元数据',
-            onPressed: () => setState(() => _showMeta = !_showMeta),
+            icon: const Icon(Icons.edit_note),
+            tooltip: '编辑元数据',
+            onPressed: () => _showMetadataDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.save),
@@ -494,399 +498,76 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       body: SafeArea(
         child: Column(
           children: [
-            if (_showMeta)
-              // 可滚动的元数据区域，防止标签过多时溢出
-              SizedBox(
-                height: 240,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _authorController,
-                              decoration: const InputDecoration(
-                                hintText: '作者/人物',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 10,
-                                  horizontal: 12,
-                                ),
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _workController,
-                              decoration: const InputDecoration(
-                                hintText: '作品/来源',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 10,
-                                  horizontal: 12,
-                                ),
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // 使用ExpansionTile替代标签选择，使之与普通添加笔记页面相似
-                      ExpansionTile(
-                        title: const Text(
-                          '选择标签',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        leading: const Icon(Icons.tag),
-                        initiallyExpanded: false,
-                        childrenPadding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        children: [
-                          // 搜索框
-                          TextField(
-                            decoration: const InputDecoration(
-                              hintText: '搜索标签...',
-                              prefixIcon: Icon(Icons.search),
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 8.0,
-                                horizontal: 12.0,
-                              ),
-                            ),
-                            onChanged: (value) {
-                              // 可以添加标签搜索逻辑
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          // 标签列表
-                          Container(
-                            constraints: const BoxConstraints(maxHeight: 200),
-                            child: SingleChildScrollView(
-                              child: Wrap(
-                                spacing: 8.0,
-                                runSpacing: 8.0,
-                                children: widget.allTags!
-                                    .map((tag) {
-                                  final selected = _selectedTagIds.contains(tag.id);
-                                  return FilterChip(
-                                    selected: selected,
-                                    label: Text(tag.name),
-                                    avatar: _isEmoji(tag.iconName)
-                                        ? Text(
-                                            _getDisplayIcon(tag.iconName),
-                                            style: const TextStyle(fontSize: 16),
-                                          )
-                                        : Icon(_getIconData(tag.iconName), size: 16),
-                                    onSelected: (bool value) {
-                                      setState(() {
-                                        if (value) {
-                                          _selectedTagIds.add(tag.id);
-                                        } else {
-                                          _selectedTagIds.remove(tag.id);
-                                        }
-                                      });
-                                    },
-                                    selectedColor: theme.colorScheme.primaryContainer,
-                                    checkmarkColor: theme.colorScheme.primary,
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      // 显示已选标签
-                      _selectedTagIds.isEmpty
-                          ? const SizedBox.shrink()
-                          : Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '已选标签',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Wrap(
-                                  spacing: 8.0,
-                                  runSpacing: 4.0,
-                                  children: _selectedTagIds.map((tagId) {
-                                    final tag = widget.allTags!.firstWhere(
-                                      (t) => t.id == tagId,
-                                      orElse: () => NoteCategory(
-                                        id: tagId,
-                                        name: '未知标签',
-                                      ),
-                                    );
-                                    return Chip(
-                                      label: Text(tag.name),
-                                      avatar: _isEmoji(tag.iconName)
-                                          ? Text(
-                                              _getDisplayIcon(tag.iconName),
-                                              style: const TextStyle(fontSize: 16),
-                                            )
-                                          : Icon(_getIconData(tag.iconName), size: 16),
-                                      onDeleted: () {
-                                        setState(() {
-                                          _selectedTagIds.remove(tagId);
-                                        });
-                                      },
-                                      visualDensity: VisualDensity.compact,
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                      const SizedBox(height: 12),
-
-                      // 颜色选择器 - 改进UI
-                      ExpansionTile(
-                        title: const Text(
-                          '颜色选择',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        leading: const Icon(Icons.palette),
-                        initiallyExpanded: false,
-                        childrenPadding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 当前选择显示
-                                Row(
-                                  children: [
-                                    Text(
-                                      '当前选择:',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                        color: _selectedColorHex != null
-                                            ? Color(
-                                                int.parse(_selectedColorHex!.substring(1), radix: 16) |
-                                                    0xFF000000,
-                                              )
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: _selectedColorHex == null
-                                              ? theme.colorScheme.outline
-                                              : Colors.transparent,
-                                        ),
-                                      ),
-                                      child: _selectedColorHex == null
-                                          ? Icon(
-                                              Icons.block,
-                                              size: 16,
-                                              color: theme.colorScheme.outline,
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _selectedColorHex == null ? '无' : '自定义',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                
-                                const SizedBox(height: 16),
-                                
-                                // 预设颜色选项
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.palette),
-                                  label: const Text('选择卡片颜色'),
-                                  style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(44),
-                                    backgroundColor: theme.colorScheme.primaryContainer,
-                                    foregroundColor: theme.colorScheme.onPrimaryContainer,
-                                  ),
-                                  onPressed: () => _showCustomColorPicker(context),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // 使用与短文本编辑框一致的天气和位置UI
-                      Row(
-                        children: [
-                          const Text('添加信息：', style: TextStyle(fontSize: 13)),
-                          const SizedBox(width: 8),
-                          // 位置信息按钮
-                          FilterChip(
-                            avatar: Icon(
-                              Icons.location_on,
-                              color:
-                                  _showLocation
-                                      ? theme.colorScheme.primary
-                                      : Colors.grey,
-                              size: 18,
-                            ),
-                            label: const Text('位置'),
-                            selected: _showLocation && _location != null,
-                            onSelected: (value) {
-                              setState(() {
-                                _showLocation = value;
-                                // 如果开启了位置天气但还没有数据，则自动获取
-                                if (_showLocation && _location == null) {
-                                  _fetchLocationWeather();
-                                }
-                              });
-                            },
-                            selectedColor: theme.colorScheme.primaryContainer,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          const SizedBox(width: 8),
-                          // 天气信息按钮
-                          FilterChip(
-                            avatar: Icon(
-                              _weather != null
-                                  ? _getWeatherIcon(_weather!)
-                                  : Icons.cloud,
-                              color:
-                                  _showWeather && _weather != null
-                                      ? theme.colorScheme.primary
-                                      : Colors.grey,
-                              size: 18,
-                            ),
-                            label: const Text('天气'),
-                            selected: _showWeather && _weather != null,
-                            onSelected: (value) {
-                              setState(() {
-                                _showWeather = value;
-                                // 如果开启了位置天气但还没有数据，则自动获取
-                                if (_showWeather && _weather == null) {
-                                  _fetchLocationWeather();
-                                }
-                              });
-                            },
-                            selectedColor: theme.colorScheme.primaryContainer,
-                            visualDensity: VisualDensity.compact,
-                          ),
-
-                          // 如果有位置或天气信息，显示刷新按钮
-                          if (_showLocation &&
-                              (_location != null || _weather != null))
-                            IconButton(
-                              icon: const Icon(Icons.refresh, size: 16),
-                              tooltip: '刷新天气/位置',
-                              onPressed: _fetchLocationWeather,
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 30,
-                                minHeight: 30,
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      // 如果启用了位置天气，显示当前信息
-                      if (_showLocation &&
-                          (_location != null || _weather != null))
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Row(
-                            children: [
-                              if (_weather != null)
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(_getWeatherIcon(_weather!), size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      WeatherService.getWeatherDescription(_weather!),
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                    if (_temperature != null)
-                                      Text(
-                                        ' $_temperature',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                  ],
-                                ),
-                              if (_weather != null && _location != null)
-                                const SizedBox(width: 12),
-                              if (_location != null)
-                                Flexible(
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.location_on, size: 16),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          _location!,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                    ],
+            // 紧凑型工具栏
+            SizedBox(
+              height: 45,
+              child: quill.QuillSimpleToolbar(controller: _controller),
+            ),
+            // 显示已选元数据指示条
+            if (_selectedTagIds.isNotEmpty || _selectedColorHex != null || _showLocation || _showWeather)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLowest,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
                 ),
+                child: Row(
+                  children: [
+                    if (_selectedTagIds.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Chip(
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          label: Text('${_selectedTagIds.length}个标签'),
+                          avatar: Icon(Icons.tag, size: 16),
+                        ),
+                      ),
+                    if (_selectedColorHex != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Color(
+                              int.parse(_selectedColorHex!.substring(1), radix: 16) |
+                                  0xFF000000,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    if (_showLocation && _location != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(Icons.location_on, size: 16, color: theme.colorScheme.primary),
+                      ),
+                    if (_showWeather && _weather != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(_getWeatherIcon(_weather!), size: 16, color: theme.colorScheme.primary),
+                      ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => _showMetadataDialog(context),
+                      child: Text('编辑元数据', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
               ),
-            quill.QuillSimpleToolbar(controller: _controller),
+            // 编辑器主体
             Expanded(
               child: Container(
                 color: theme.colorScheme.surface,
+                padding: const EdgeInsets.all(16),
                 child: quill.QuillEditor.basic(
                   controller: _controller,
-                  config: const quill.QuillEditorConfig(),
                 ),
               ),
             ),
@@ -894,5 +575,450 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         ),
       ),
     );
+  }
+
+  // 显示元数据编辑弹窗
+  Future<void> _showMetadataDialog(BuildContext context) async {
+    final theme = Theme.of(context);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.6,
+              minChildSize: 0.4,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                      child: Row(
+                        children: [
+                          Text(
+                            '编辑元数据',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            icon: const Icon(Icons.check),
+                            label: const Text('完成'),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        children: [
+                          // 作者/作品输入
+                          const Text(
+                            '来源信息',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _authorController,
+                                  decoration: const InputDecoration(
+                                    hintText: '作者/人物',
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 12,
+                                    ),
+                                    isDense: true,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _workController,
+                                  decoration: const InputDecoration(
+                                    hintText: '作品/来源',
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 12,
+                                    ),
+                                    isDense: true,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // 标签选择
+                          Row(
+                            children: [
+                              const Text(
+                                '标签',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '已选择 ${_selectedTagIds.length} 个标签',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                            child: ExpansionTile(
+                              title: const Text('选择标签'),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(12)),
+                              ),
+                              tilePadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 0,
+                              ),
+                              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              children: [
+                                // 搜索框
+                                TextField(
+                                  decoration: const InputDecoration(
+                                    hintText: '搜索标签...',
+                                    prefixIcon: Icon(Icons.search),
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                      horizontal: 12.0,
+                                    ),
+                                  ),
+                                  onChanged: (value) {
+                                    // 可以添加标签搜索逻辑
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                // 标签列表
+                                Container(
+                                  constraints: const BoxConstraints(maxHeight: 200),
+                                  child: SingleChildScrollView(
+                                    child: Wrap(
+                                      spacing: 8.0,
+                                      runSpacing: 8.0,
+                                      children: widget.allTags!
+                                          .map((tag) {
+                                        final selected = _selectedTagIds.contains(tag.id);
+                                        return FilterChip(
+                                          selected: selected,
+                                          label: Text(tag.name),
+                                          avatar: _isEmoji(tag.iconName)
+                                              ? Text(
+                                                  _getDisplayIcon(tag.iconName),
+                                                  style: const TextStyle(fontSize: 16),
+                                                )
+                                              : Icon(_getIconData(tag.iconName), size: 16),
+                                          onSelected: (bool value) {
+                                            setState(() {
+                                              if (value) {
+                                                _selectedTagIds.add(tag.id);
+                                              } else {
+                                                _selectedTagIds.remove(tag.id);
+                                              }
+                                            });
+                                          },
+                                          selectedColor: theme.colorScheme.primaryContainer,
+                                          checkmarkColor: theme.colorScheme.primary,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 显示已选标签
+                          if (_selectedTagIds.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    '已选标签',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8.0,
+                                    runSpacing: 4.0,
+                                    children: _selectedTagIds.map((tagId) {
+                                      final tag = widget.allTags!.firstWhere(
+                                        (t) => t.id == tagId,
+                                        orElse: () => NoteCategory(
+                                          id: tagId,
+                                          name: '未知标签',
+                                        ),
+                                      );
+                                      return Chip(
+                                        label: Text(tag.name),
+                                        avatar: _isEmoji(tag.iconName)
+                                            ? Text(
+                                                _getDisplayIcon(tag.iconName),
+                                                style: const TextStyle(fontSize: 16),
+                                              )
+                                            : Icon(_getIconData(tag.iconName), size: 16),
+                                        onDeleted: () {
+                                          setState(() {
+                                            _selectedTagIds.remove(tagId);
+                                          });
+                                        },
+                                        visualDensity: VisualDensity.compact,
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                          
+                          // 颜色选择
+                          const Text(
+                            '颜色',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                            child: ListTile(
+                              title: const Text('选择卡片颜色'),
+                              subtitle: Text(
+                                _selectedColorHex == null ? '无颜色' : '已设置颜色',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              leading: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: _selectedColorHex != null
+                                      ? Color(
+                                          int.parse(_selectedColorHex!.substring(1), radix: 16) |
+                                              0xFF000000,
+                                        )
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: _selectedColorHex == null
+                                        ? theme.colorScheme.outline
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                                child: _selectedColorHex == null
+                                    ? Icon(
+                                        Icons.block,
+                                        size: 16,
+                                        color: theme.colorScheme.outline,
+                                      )
+                                    : null,
+                              ),
+                              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(12)),
+                              ),
+                              onTap: () => _showCustomColorPicker(context),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // 天气和位置
+                          const Text(
+                            '位置和天气',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              // 位置信息按钮
+                              FilterChip(
+                                avatar: Icon(
+                                  Icons.location_on,
+                                  color:
+                                      _showLocation
+                                          ? theme.colorScheme.primary
+                                          : Colors.grey,
+                                  size: 18,
+                                ),
+                                label: const Text('位置'),
+                                selected: _showLocation,
+                                onSelected: (value) {
+                                  setState(() {
+                                    _showLocation = value;
+                                    // 如果开启了位置但还没有数据，则自动获取
+                                    if (_showLocation && _location == null) {
+                                      _fetchLocationWeather();
+                                    }
+                                  });
+                                },
+                                selectedColor: theme.colorScheme.primaryContainer,
+                              ),
+                              const SizedBox(width: 8),
+                              // 天气信息按钮
+                              FilterChip(
+                                avatar: Icon(
+                                  _weather != null
+                                      ? _getWeatherIcon(_weather!)
+                                      : Icons.cloud,
+                                  color:
+                                      _showWeather
+                                          ? theme.colorScheme.primary
+                                          : Colors.grey,
+                                  size: 18,
+                                ),
+                                label: const Text('天气'),
+                                selected: _showWeather,
+                                onSelected: (value) {
+                                  setState(() {
+                                    _showWeather = value;
+                                    // 如果开启了天气但还没有数据，则自动获取
+                                    if (_showWeather && _weather == null) {
+                                      _fetchLocationWeather();
+                                    }
+                                  });
+                                },
+                                selectedColor: theme.colorScheme.primaryContainer,
+                              ),
+                              const Spacer(),
+                              // 刷新按钮
+                              IconButton(
+                                icon: const Icon(Icons.refresh),
+                                tooltip: '刷新位置和天气',
+                                onPressed: () {
+                                  _fetchLocationWeather();
+                                  setState(() {}); // 刷新UI
+                                },
+                              ),
+                            ],
+                          ),
+                          // 显示位置和天气信息
+                          if (_location != null || _weather != null)
+                            Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_location != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.location_on, size: 16),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _location!,
+                                              style: const TextStyle(fontSize: 14),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (_weather != null)
+                                    Row(
+                                      children: [
+                                        Icon(_getWeatherIcon(_weather!), size: 16),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          WeatherService.getWeatherDescription(_weather!),
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                        if (_temperature != null)
+                                          Text(
+                                            ' $_temperature',
+                                            style: const TextStyle(fontSize: 14),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+    
+    // 对话框关闭后刷新UI
+    setState(() {});
   }
 }

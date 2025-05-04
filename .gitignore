@@ -43,3 +43,30 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 敏感文件和密钥
+*.jks
+*.keystore
+*.key
+key.properties
+google-services.json
+firebase_options.dart
+GoogleService-Info.plist
+
+# 本地配置和环境变量
+.env
+.env.*
+env.g.dart
+env.dart
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# iOS相关
+ios/Flutter/flutter_export_environment.sh
+
+# 备份文件
+*.bak
+*.backup

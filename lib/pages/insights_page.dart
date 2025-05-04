@@ -6,6 +6,8 @@ import 'dart:math';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter/services.dart';
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
@@ -77,21 +79,6 @@ class _InsightsPageState extends State<InsightsPage>
     'friendly': '友好导师',
     'humorous': '风趣幽默',
     'literary': '文学风格',
-  };
-  static const Map<String, String> sentimentKeyToLabel = {
-    'positive': '积极',
-    'negative': '消极',
-    'neutral': '中性',
-    'mixed': '复杂',
-  };
-  static const Map<String, String> sourceTypeKeyToLabel = {
-    'manual': '手动',
-    'ai': 'AI生成',
-    'import': '导入',
-  };
-  static const Map<String, String> sortTypeKeyToLabel = {
-    'time': '按时间排序',
-    'name': '按名称排序',
   };
 
   @override
@@ -548,9 +535,11 @@ class _InsightsPageState extends State<InsightsPage>
                         tooltip: '复制到剪贴板',
                         onPressed: () {
                           // 复制分析结果
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('分析结果已复制')),
-                          );
+                          Clipboard.setData(ClipboardData(text: _insights)).then((_) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('分析结果已复制')),
+                            );
+                          });
                         },
                       ),
                     ],
@@ -558,7 +547,14 @@ class _InsightsPageState extends State<InsightsPage>
                   const Divider(),
                   const SizedBox(height: 8),
                   // 这里使用 SelectableText 让用户可以选择文本
-                  SelectableText(_insights, style: theme.textTheme.bodyMedium),
+                  MarkdownBody(
+                    data: _insights,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                      p: theme.textTheme.bodyMedium,
+                      // 可以根据需要自定义其他 Markdown 元素的样式
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -596,19 +592,6 @@ class _InsightsPageState extends State<InsightsPage>
         ],
       ),
     );
-  }
-
-  String _getRandomLoadingMessage() {
-    final messages = [
-      "正在提炼您笔记中的核心思想...",
-      "探索您思维的独特模式...",
-      "分析您的情感变化趋势...",
-      "寻找隐藏在文字背后的联系...",
-      "构建您的思维导图...",
-      "提炼个性化的成长建议...",
-      "汇总您的思考主题和关键词...",
-    ];
-    return messages[Random().nextInt(messages.length)];
   }
 
   IconData _getAnalysisIcon() {

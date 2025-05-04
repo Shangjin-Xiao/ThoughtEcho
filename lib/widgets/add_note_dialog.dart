@@ -13,6 +13,7 @@ import '../utils/time_utils.dart';  // 导入时间工具类
 import '../theme/app_theme.dart';
 import '../pages/note_full_editor_page.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -993,7 +994,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(_aiSummary!),
+                      MarkdownBody(
+                        data: _aiSummary!,
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                          p: theme.textTheme.bodyMedium,
+                        ),
+                      ),
                     ],
                   ),
                 ),

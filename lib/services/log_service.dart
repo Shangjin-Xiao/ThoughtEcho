@@ -5,9 +5,6 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:flutter/widgets.dart'; // Import WidgetsBinding
 
-// 导入main.dart中的全局函数
-import '../main.dart' show getAndClearDeferredErrors;
-
 // 定义日志级别
 enum LogLevel {
   verbose,
@@ -163,9 +160,6 @@ class LogService with ChangeNotifier {
         source: 'LogService',
       ));
 
-      // 处理缓存的早期错误（如果有的话）
-      _processDeferredErrors();
-      
     } catch (e, stack) {
       debugPrint('日志服务初始化失败: $e');
       debugPrint('$stack');
@@ -435,37 +429,6 @@ class LogService with ChangeNotifier {
   void error(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
       log(LogLevel.error, message, source: source, error: error, stackTrace: stackTrace);
 
-  /// 处理在日志服务初始化之前缓存的错误
-  Future<void> _processDeferredErrors() async {
-    try {
-      // 导入main.dart中定义的全局函数
-      // 使用 Function 类型来声明外部函数
-      // ignore: prefer_function_declarations_over_variables
-      const Function getAndClearDeferredErrorsFunc = getAndClearDeferredErrors;
-      
-      // 调用全局函数获取早期错误
-      final errorsList = getAndClearDeferredErrorsFunc();
-      
-      if (errorsList.isNotEmpty) {
-        // 将每个早期错误添加到日志系统
-        for (final errorMap in errorsList) {
-          log(
-            LogLevel.error,
-            errorMap['message'] as String? ?? '未知错误',
-            error: errorMap['error'],
-            stackTrace: errorMap['stackTrace'] != null 
-                ? StackTrace.fromString(errorMap['stackTrace'].toString()) 
-                : null,
-            source: errorMap['source'] as String? ?? 'unknown',
-          );
-        }
-        debugPrint('处理了 ${errorsList.length} 条早期缓存错误');
-      }
-    } catch (e) {
-      debugPrint('处理缓存错误时出错: $e');
-    }
-  }
-  
   /// 注册全局异常处理
   void registerGlobalErrorHandlers() {
     // 这个方法可以在应用启动时调用，添加全局的错误处理钩子

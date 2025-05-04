@@ -10,6 +10,7 @@ import '../utils/icon_utils.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../theme/app_theme.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 // 添加 note_full_editor_page.dart 的导入
 import '../pages/note_full_editor_page.dart';
@@ -514,7 +515,12 @@ class _EditPageState extends State<EditPage> {
               title: const Text('续写结果'),
               content: SizedBox(
                 width: double.maxFinite,
-                child: SingleChildScrollView(child: SelectableText(result)),
+                child: SingleChildScrollView(
+                  child: MarkdownBody(
+                    data: result,
+                    selectable: true,
+                  ),
+                ),
               ),
               actions: [
                 TextButton(
@@ -943,7 +949,15 @@ class _EditPageState extends State<EditPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('AI 分析:'),
-                          Text(_aiAnalysis.isEmpty ? '暂无分析' : _aiAnalysis),
+                          _aiAnalysis.isEmpty
+                              ? const Text('暂无分析')
+                              : MarkdownBody(
+                                data: _aiAnalysis,
+                                selectable: true,
+                                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                                  p: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
                           const SizedBox(height: 8),
                           ElevatedButton(
                             style: FilledButton.styleFrom(

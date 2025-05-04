@@ -146,6 +146,10 @@ class AppTheme with ChangeNotifier {
     }
   }
   
+  // 添加 getter 以直接获取 ThemeData 实例
+  ThemeData get lightTheme => createLightThemeData();
+  ThemeData get darkTheme => createDarkThemeData();
+  
   // 创建亮色主题数据
   ThemeData createLightThemeData() {
     return FlexThemeData.light(
