@@ -486,37 +486,47 @@ class LogDatabaseService {
   
   // 日志存储实现
   late final LogStorage _storage;
-  bool _isInitialized = false;
+  bool _initialized = false;
   
   // 获取数据库实例
   Future<void> get ready async {
-    if (!_isInitialized) {
+    if (!_initialized) {
       await _initialize();
     }
   }
   
   // 初始化日志存储
   Future<void> _initialize() async {
+    if (_initialized) return; // 如果已经初始化，直接返回
+
     try {
+      // 确定存储类型
       if (kIsWeb) {
+        // 在Web平台上使用SharedPreferences存储
         _storage = WebLogStorage();
       } else {
+        // 在原生平台上使用SQLite存储
         _storage = NativeLogStorage();
       }
-      
+
+      // 初始化存储
       await _storage.initialize();
-      _isInitialized = true;
-      debugPrint('日志存储初始化完成');
-    } catch (e, stack) {
+      
+      // 设置初始化完成标志
+      _initialized = true;
+      
+      // 清理旧日志
+      _cleanupOldLogs();
+      
+    } catch (e) {
       debugPrint('初始化日志存储失败: $e');
-      debugPrint('$stack');
-      rethrow;
+      throw e; // 重新抛出异常以便上层处理
     }
   }
   
   // 确保已初始化
   Future<void> _ensureInitialized() async {
-    if (!_isInitialized) {
+    if (!_initialized) {
       await _initialize();
     }
   }
@@ -583,9 +593,27 @@ class LogDatabaseService {
   
   /// 关闭数据库
   Future<void> close() async {
-    if (_isInitialized) {
+    if (_initialized) {
       await _storage.close();
-      _isInitialized = false;
+      _initialized = false;
+    }
+  }
+  
+  /// 清理旧日志
+  Future<void> _cleanupOldLogs() async {
+    try {
+      // 获取日志总数
+      final count = await _storage.getLogCount();
+      
+      // 如果超过最大限制，删除最旧的日志
+      const int maxLogsToKeep = 1000; // 保留最近1000条日志
+      if (count > maxLogsToKeep) {
+        final deleted = await _storage.deleteOldLogs(maxLogsToKeep);
+        debugPrint('已清理 $deleted 条旧日志，当前日志总数: ${count - deleted}');
+      }
+    } catch (e) {
+      debugPrint('清理旧日志失败: $e');
+      // 失败不抛出异常，因为这是非关键操作
     }
   }
 }

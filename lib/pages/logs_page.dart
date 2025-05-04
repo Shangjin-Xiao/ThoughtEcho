@@ -578,7 +578,13 @@ class _LogsPageState extends State<LogsPage> {
                         controller: _scrollController,
                         padding: const EdgeInsets.all(8.0),
                         itemCount: allLogs.length + (_isLoadingMore ? 1 : 0) + (_hasMoreLogs ? 1 : 0),
-                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        separatorBuilder: (context, index) {
+                          // 确保分隔符仅用于列表项之间，不包括加载指示器
+                          if (index >= allLogs.length - 1) {
+                            return const SizedBox.shrink();
+                          }
+                          return const Divider(height: 1);
+                        },
                         itemBuilder: (context, index) {
                           // 加载更多指示器
                           if (_isLoadingMore && index == allLogs.length) {
@@ -594,6 +600,11 @@ class _LogsPageState extends State<LogsPage> {
                               onPressed: _loadMoreLogs,
                               child: const Text('加载更多日志'),
                             );
+                          }
+                          
+                          // 确保index在有效范围内
+                          if (index >= allLogs.length) {
+                            return const SizedBox.shrink();
                           }
                           
                           // 正常日志项
