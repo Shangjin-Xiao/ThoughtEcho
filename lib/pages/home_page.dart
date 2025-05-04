@@ -179,9 +179,10 @@ class _HomePageState extends State<HomePage>
     );
     await locationService.init();
 
+    // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
     if (locationService.hasLocationPermission &&
         locationService.isLocationServiceEnabled) {
-      final position = await locationService.getCurrentLocation();
+      final position = await locationService.getCurrentLocation(skipPermissionRequest: true);
       if (position != null) {
         final weatherService = Provider.of<WeatherService>(
           context,

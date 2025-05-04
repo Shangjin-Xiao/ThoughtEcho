@@ -475,35 +475,91 @@ class DatabaseService extends ChangeNotifier {
     }
 
     try {
+      // 首先确保数据库已初始化
+      if (_database == null) {
+        debugPrint('数据库尚未初始化，尝试先进行初始化');
+        try {
+          await init();
+        } catch (e) {
+          debugPrint('数据库初始化失败，但仍将尝试创建默认标签: $e');
+        }
+      }
+      
+      // 即使init()失败，也尝试获取数据库，如果还是null则提前返回
+      if (_database == null) {
+        debugPrint('数据库仍为null，无法创建默认标签');
+        return;
+      }
+      
       final db = database;
       final defaultCategories = _getDefaultHitokotoCategories();
       
       // 1. 一次性查询所有现有分类名称（小写）
-      final existingCategories = await db.query('categories', columns: ['name']);
+      final existingCategories = await db.query('categories', columns: ['name', 'id']);
       final existingNamesLower = existingCategories
           .map((row) => (row['name'] as String?)?.toLowerCase())
           .where((name) => name != null)
           .toSet();
+      
+      // 同时创建ID到名称的映射，用于检查默认ID是否已被其它名称使用
+      final existingIdToName = {
+        for (var row in existingCategories)
+          row['id'] as String: row['name'] as String
+      };
           
       // 2. 筛选出数据库中尚不存在的默认分类
       final categoriesToAdd = defaultCategories
           .where((category) => !existingNamesLower.contains(category.name.toLowerCase()))
           .toList();
-
-      // 3. 如果有需要添加的分类，则使用批处理插入
-      if (categoriesToAdd.isNotEmpty) {
-        final batch = db.batch();
+      
+      // 3. 检查默认ID是否已被其他名称使用，如果是，需要更新名称
+      final idsToUpdate = <String, String>{};
       for (final category in defaultCategories) {
-          batch.insert('categories', {
-            'id': category.id,
-            'name': category.name,
-            'is_default': category.isDefault ? 1 : 0,
-            'icon_name': category.iconName,
-          }, conflictAlgorithm: ConflictAlgorithm.ignore);
-          debugPrint('添加默认一言分类: ${category.name}');
+        if (existingIdToName.containsKey(category.id) && 
+            existingIdToName[category.id]!.toLowerCase() != category.name.toLowerCase()) {
+          // 已存在此ID但名称不同，需要更新
+          idsToUpdate[category.id] = category.name;
         }
+      }
+
+      // 4. 如果有需要添加的分类，则使用批处理插入
+      final batch = db.batch();
+      
+      // 先处理更新
+      for (final entry in idsToUpdate.entries) {
+        batch.update(
+          'categories',
+          {
+            'name': entry.value,
+            'is_default': 1,
+          },
+          where: 'id = ?',
+          whereArgs: [entry.key]
+        );
+        debugPrint('更新ID为${entry.key}的分类名称为: ${entry.value}');
+      }
+      
+      // 再处理新增
+      for (final category in categoriesToAdd) {
+        // 跳过ID已经存在但名称不同的情况（已在上面处理）
+        if (idsToUpdate.containsKey(category.id)) {
+          continue;
+        }
+        batch.insert('categories', {
+          'id': category.id,
+          'name': category.name,
+          'is_default': category.isDefault ? 1 : 0,
+          'icon_name': category.iconName,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        debugPrint('添加默认一言分类: ${category.name}');
+      }
+      
+      // 提交批处理
+      if (categoriesToAdd.isNotEmpty || idsToUpdate.isNotEmpty) {
         await batch.commit(noResult: true);
-        debugPrint('批量添加了 ${categoriesToAdd.length} 个默认分类');
+        debugPrint('批量处理了 ${categoriesToAdd.length} 个新分类和 ${idsToUpdate.length} 个更新');
+      } else {
+        debugPrint('所有默认分类已存在，无需添加');
       }
       
       // 更新分类流
@@ -1017,7 +1073,7 @@ class DatabaseService extends ChangeNotifier {
         (c) => c.name.toLowerCase() == name.toLowerCase(),
       );
       if (exists) {
-        throw Exception('已存在相同名称的分类');
+        debugPrint('Web平台: 已存在相同名称的分类 "$name"，但将继续使用');
       }
 
       // 检查ID是否已被占用
@@ -1049,59 +1105,99 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    final db = database;
-
-    // 检查是否已存在同名分类
-    final existing = await db.query(
-      'categories',
-      where: 'LOWER(name) = ?',
-      whereArgs: [name.toLowerCase()],
-    );
-
-    if (existing.isNotEmpty) {
-      // 如果存在同名分类但ID不同，报错
-      final existingId = existing.first['id'] as String;
-      if (existingId != id) {
-        throw Exception('已存在相同名称的分类');
+    // 确保数据库已初始化
+    if (_database == null) {
+      try {
+        await init();
+      } catch (e) {
+        debugPrint('添加分类前初始化数据库失败: $e');
+        throw Exception('数据库未初始化，无法添加分类');
       }
     }
 
-    // 检查ID是否已被占用
-    final existingById = await db.query(
-      'categories',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final db = database;
 
-    if (existingById.isNotEmpty) {
-      // 如果ID已存在，更新此分类
-      final categoryMap = {
-        'name': name,
-        'icon_name': iconName ?? "",
-      };
-      await db.update(
-        'categories',
-        categoryMap,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    } else {
-      // 创建新分类，使用指定的ID
-      final categoryMap = {
-        'id': id,
-        'name': name,
-        'is_default': 0,
-        'icon_name': iconName ?? "",
-      };
-      await db.insert(
-        'categories',
-        categoryMap,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+    try {
+      // 使用事务确保操作的原子性
+      await db.transaction((txn) async {
+        // 检查是否已存在同名分类
+        final existing = await txn.query(
+          'categories',
+          where: 'LOWER(name) = ?',
+          whereArgs: [name.toLowerCase()],
+        );
+
+        if (existing.isNotEmpty) {
+          // 如果存在同名分类但ID不同，记录警告但继续
+          final existingId = existing.first['id'] as String;
+          if (existingId != id) {
+            debugPrint('警告: 已存在相同名称的分类 "$name"，但将继续使用指定ID创建');
+          }
+        }
+
+        // 检查ID是否已被占用
+        final existingById = await txn.query(
+          'categories',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        if (existingById.isNotEmpty) {
+          // 如果ID已存在，更新此分类
+          final categoryMap = {
+            'name': name,
+            'icon_name': iconName ?? "",
+          };
+          await txn.update(
+            'categories',
+            categoryMap,
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+          debugPrint('更新ID为 $id 的现有分类为 "$name"');
+        } else {
+          // 创建新分类，使用指定的ID
+          final categoryMap = {
+            'id': id,
+            'name': name,
+            'is_default': 0,
+            'icon_name': iconName ?? "",
+          };
+          await txn.insert(
+            'categories',
+            categoryMap,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          debugPrint('使用ID $id 创建新分类 "$name"');
+        }
+      });
+
+      // 操作成功后更新流和通知侦听器
+      await _updateCategoriesStream();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('添加指定ID分类失败: $e');
+      // 重试一次作为回退方案
+      try {
+        final categoryMap = {
+          'id': id,
+          'name': name,
+          'is_default': 0,
+          'icon_name': iconName ?? "",
+        };
+        await db.insert(
+          'categories',
+          categoryMap,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        await _updateCategoriesStream();
+        notifyListeners();
+        debugPrint('通过回退方式成功添加分类');
+      } catch (retryError) {
+        debugPrint('重试添加分类也失败: $retryError');
+        throw Exception('无法添加分类: $e');
+      }
     }
-
-    await _updateCategoriesStream();
-    notifyListeners();
   }
 
   /// 监听分类流

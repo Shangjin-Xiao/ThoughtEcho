@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
-import 'dart:math';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';

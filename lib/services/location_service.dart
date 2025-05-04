@@ -152,7 +152,10 @@ class LocationService extends ChangeNotifier {
   }
 
   // 获取当前位置
-  Future<Position?> getCurrentLocation({bool highAccuracy = false}) async {
+  Future<Position?> getCurrentLocation({
+    bool highAccuracy = false, 
+    bool skipPermissionRequest = false // 添加跳过权限请求的参数
+  }) async {
     // 检查位置服务是否启用
     if (!_isLocationServiceEnabled) {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -162,8 +165,8 @@ class LocationService extends ChangeNotifier {
       }
     }
 
-    // 如果没有权限且之前未请求过，才请求权限
-    if (!_hasLocationPermission) {
+    // 如果没有权限且需要请求权限
+    if (!_hasLocationPermission && !skipPermissionRequest) {
       // 检查权限，但不自动请求
       final permission = await Geolocator.checkPermission();
       _hasLocationPermission = (permission == LocationPermission.whileInUse ||
@@ -171,18 +174,12 @@ class LocationService extends ChangeNotifier {
       
       if (!_hasLocationPermission) {
         debugPrint('位置权限不足，无法获取位置');
-        // 不再自动请求权限
-        // if (permission == LocationPermission.denied) {
-        //   // final requestResult = await Geolocator.requestPermission(); // 移除自动请求
-        //   // _hasLocationPermission = (requestResult == LocationPermission.whileInUse ||
-        //   //     requestResult == LocationPermission.always);
-        // }
-        
-        // if (!_hasLocationPermission) {
-        //   debugPrint('位置权限被拒绝');
-           return null; // 直接返回 null，表示无法获取位置
-        // }
+        return null; // 直接返回 null，表示无法获取位置
       }
+    } else if (!_hasLocationPermission && skipPermissionRequest) {
+      // 如果没有权限但选择跳过权限请求
+      debugPrint('跳过权限请求，由于权限不足无法获取位置');
+      return null;
     }
 
     try {

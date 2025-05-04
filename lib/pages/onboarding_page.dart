@@ -18,13 +18,7 @@ import '../models/app_settings.dart'; // 导入 AppSettings
 class OnboardingPage extends StatefulWidget {
   final bool showUpdateReady; // 是否只显示最后一页（升级提示）
   final bool showFullOnboarding; // 是否完整引导
-  final VoidCallback onOnboardingComplete; // 添加回调
-
-  const OnboardingPage({super.key, 
-                      this.showUpdateReady = false, 
-                      this.showFullOnboarding = false, 
-                      required this.onOnboardingComplete // 构造函数接收回调
-                     });
+  const OnboardingPage({super.key, this.showUpdateReady = false, this.showFullOnboarding = false});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -213,37 +207,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
 
       // 1. 保存用户在引导页选择的设置 (包括启动页) - 移到迁移逻辑之后
-      if (widget.showFullOnboarding) {
+      if (!widget.showUpdateReady || widget.showFullOnboarding) {
         await _saveSettings();
-        debugPrint('引导页设置已保存');
       }
 
-      // 2. 标记引导流程完成（仅完整引导时设置） - 移除此逻辑，由 AppWidget 处理
-      // if (!widget.showUpdateReady || widget.showFullOnboarding) {
-      //   await settingsService.setHasCompletedOnboarding(true);
-      //   debugPrint('引导流程标记完成');
-      // }
+      // 2. 标记引导流程完成（仅完整引导时设置） - 原来的步骤3
+      if (!widget.showUpdateReady || widget.showFullOnboarding) {
+        await settingsService.setHasCompletedOnboarding(true);
+        debugPrint('引导流程标记完成');
+      }
 
       // 关闭加载指示器
       if (mounted) Navigator.pop(context);
 
-      // 3. 调用完成回调 (替代原来的导航逻辑)
-      widget.onOnboardingComplete();
-
-      // 4. 移除导航到主页的逻辑
-      // if (mounted) {
-      //   Navigator.of(context).pushReplacement(
-      //     MaterialPageRoute(builder: (context) => const HomePage()),
-      //   );
-      // }
+      // 4. 导航到主页
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
 
     } catch (e, stackTrace) {
       debugPrint('完成引导流程时出错: $e');
       if (mounted) {
         final logService = Provider.of<LogService>(context, listen: false);
         logService.error('完成引导流程失败', error: e, stackTrace: stackTrace);
-        // 尝试关闭加载对话框（如果还在显示）
-        try { Navigator.pop(context); } catch (_) {}
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('完成引导时出错，请稍后重试'), backgroundColor: Colors.red),
         );

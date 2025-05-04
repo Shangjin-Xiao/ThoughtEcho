@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
+import 'dart:math' show min; // 添加math包导入
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -525,7 +526,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           visualDensity: VisualDensity.compact,
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           label: Text('${_selectedTagIds.length}个标签'),
-                          avatar: Icon(Icons.tag, size: 16),
+                          avatar: const Icon(Icons.tag, size: 16),
                         ),
                       ),
                     if (_selectedColorHex != null)
@@ -556,7 +557,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                     const Spacer(),
                     TextButton(
                       onPressed: () => _showMetadataDialog(context),
-                      child: Text('编辑元数据', style: TextStyle(fontSize: 12)),
+                      child: const Text('编辑元数据', style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
@@ -802,23 +803,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         (t) => t.id == tagId,
                                         orElse: () => NoteCategory(
                                           id: tagId,
-                                          name: '未知标签',
+                                          name: '未知标签(ID:${tagId.substring(0, min(4, tagId.length))}...)',
+                                          iconName: 'help_outline',
                                         ),
                                       );
                                       return Chip(
                                         label: Text(tag.name),
-                                        avatar: _isEmoji(tag.iconName)
-                                            ? Text(
-                                                _getDisplayIcon(tag.iconName),
-                                                style: const TextStyle(fontSize: 16),
-                                              )
-                                            : Icon(_getIconData(tag.iconName), size: 16),
+                                        avatar: _buildTagIcon(tag),
                                         onDeleted: () {
                                           setState(() {
                                             _selectedTagIds.remove(tagId);
                                           });
                                         },
-                                        visualDensity: VisualDensity.compact,
                                       );
                                     }).toList(),
                                   ),
@@ -1020,5 +1016,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     
     // 对话框关闭后刷新UI
     setState(() {});
+  }
+
+  Widget _buildTagIcon(NoteCategory tag) {
+    if (_isEmoji(tag.iconName)) {
+      return Text(
+        _getDisplayIcon(tag.iconName),
+        style: const TextStyle(fontSize: 16),
+      );
+    } else {
+      return Icon(_getIconData(tag.iconName), size: 16);
+    }
   }
 }

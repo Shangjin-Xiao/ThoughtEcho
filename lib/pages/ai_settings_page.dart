@@ -248,8 +248,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 hintText: _selectedPreset == 'Ollama' || _selectedPreset == 'LMStudio' || _selectedPreset == 'OpenAPI兼容' || _selectedPreset == '硅基流动'
                           ? '请输入模型名称'
                           : '例如: gpt-4o, claude-3.7-sonnet-latest',
-                border: OutlineInputBorder(),
-                 prefixIcon: Icon(Icons.model_training),
+                border: const OutlineInputBorder(),
+                 prefixIcon: const Icon(Icons.model_training),
               ),
                onChanged: (_) => setState(() { _selectedPreset = null; }),
             ),
