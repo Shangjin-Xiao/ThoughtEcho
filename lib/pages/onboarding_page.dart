@@ -43,6 +43,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.initState();
     // 检查初始权限状态
     _checkInitialLocationPermission();
+    // 确保初始化时启用动态取色功能
     // 新版本更新时，只跳转到最后一页，但不自动关闭
     if (widget.showUpdateReady && !widget.showFullOnboarding) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {

@@ -500,9 +500,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         child: Column(
           children: [
             // 紧凑型工具栏
-            SizedBox(
-              height: 45,
-              child: quill.QuillSimpleToolbar(controller: _controller),
+            // Wrap the toolbar in a SingleChildScrollView for horizontal scrolling
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                height: 45,
+                child: quill.QuillSimpleToolbar(controller: _controller),
+              ),
             ),
             // 显示已选元数据指示条
             if (_selectedTagIds.isNotEmpty || _selectedColorHex != null || _showLocation || _showWeather)
