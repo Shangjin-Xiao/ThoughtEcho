@@ -16,6 +16,7 @@ import 'insights_page.dart';
 import 'settings_page.dart';
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
+import 'package:permission_handler/permission_handler.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -191,46 +192,7 @@ class _HomePageState extends State<HomePage>
           position.longitude,
         );
       }
-    } else if (mounted) {
-      // 修复 BuildContext 跨异步使用问题
-      _showLocationPermissionDialog();
     }
-  }
-
-  // 显示位置权限对话框
-  void _showLocationPermissionDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('需要位置权限'),
-            content: const Text('心迹需要访问位置信息以显示天气和在笔记中添加位置。如果不授予权限，相关功能将被禁用。'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('稍后再说'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  final locationService = Provider.of<LocationService>(
-                    context,
-                    listen: false,
-                  );
-                  final granted =
-                      await locationService.requestLocationPermission();
-                  if (granted && mounted) {
-                    // 修复 BuildContext 跨异步使用问题
-                    _initLocationAndWeather();
-                  }
-                },
-                child: const Text('授予权限'),
-              ),
-            ],
-          ),
-    );
   }
 
   // 显示添加笔记对话框

@@ -172,6 +172,8 @@ void _initializeBackgroundServices(
       // 注意：需要处理初始化失败的情况
       try {
         await databaseService.init();
+        // 在数据库初始化成功后，显式初始化默认分类
+        await databaseService.initDefaultHitokotoCategories();
       } catch (e, s) {
          debugPrint('数据库初始化失败: $e');
          _isEmergencyMode = true; // 进入紧急模式
