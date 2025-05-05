@@ -520,7 +520,7 @@ class LogDatabaseService {
       
     } catch (e) {
       debugPrint('初始化日志存储失败: $e');
-      throw e; // 重新抛出异常以便上层处理
+      rethrow; // 重新抛出异常以便上层处理
     }
   }
   

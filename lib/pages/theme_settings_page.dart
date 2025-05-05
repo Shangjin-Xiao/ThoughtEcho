@@ -185,7 +185,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         },
                         // 当使用自定义颜色时禁用此开关
                         activeColor: appTheme.useCustomColor 
-                            ? Theme.of(context).colorScheme.surfaceVariant 
+                            ? Theme.of(context).colorScheme.surfaceContainerHighest 
                             : null,
                       ),
                     ],
@@ -222,7 +222,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(

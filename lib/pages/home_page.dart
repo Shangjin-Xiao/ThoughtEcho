@@ -16,7 +16,6 @@ import 'insights_page.dart';
 import 'settings_page.dart';
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
-import 'package:permission_handler/permission_handler.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
