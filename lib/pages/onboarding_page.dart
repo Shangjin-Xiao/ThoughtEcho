@@ -145,6 +145,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         // 确保数据库已初始化
         await databaseService.init();
         debugPrint('数据库初始化完成 (引导流程)');
+        
+        // 添加此行: 明确初始化默认一言分类标签
+        await databaseService.initDefaultHitokotoCategories();
+        debugPrint('引导流程中已显式初始化默认一言分类标签');
 
         if (needsMigration) {
           debugPrint('开始执行引导流程中的数据迁移...');
@@ -939,10 +943,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ],
             ),
           ),
+          const SizedBox(height: 24), // 在提示和 Slogan 之间添加间距
+          Text( // 添加 Slogan
+            '让我们一起，随心迹录！',
+            style: theme.textTheme.titleLarge?.copyWith( // 使用 titleLarge 增大字号
+              color: theme.colorScheme.primary, // 改用主色调
+              fontWeight: FontWeight.bold, // 加粗
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16), // 在 Slogan 和版本提示之间添加间距 (如果显示)
+
           // 新增：如果是版本升级后进入，显示新版提示
           if (widget.showUpdateReady)
             Container(
-              margin: const EdgeInsets.only(bottom: 24),
+              margin: const EdgeInsets.only(top: 8, bottom: 24), // 调整版本提示的边距
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
@@ -965,7 +980,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ],
               ),
             ),
-          const SizedBox(height: 70), // 为底部按钮留出空间
+          const SizedBox(height: 50), // 稍微减少底部按钮的空间，因为增加了 Slogan
         ],
       ),
     );

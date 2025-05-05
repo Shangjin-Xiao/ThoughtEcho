@@ -38,7 +38,7 @@ class AIService extends ChangeNotifier {
       hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
       
       // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
-      if (hasApiKey && secureApiKey != null) {
+      if (hasApiKey) {
         effectiveApiKey = secureApiKey;
       }
     }

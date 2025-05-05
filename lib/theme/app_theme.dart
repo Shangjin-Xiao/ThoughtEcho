@@ -15,6 +15,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme? _lightDynamicColorScheme;
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
+  bool _hasInitialized = false; // 添加标记，用于追踪是否已初始化
   
   // 全局圆角和阴影参数
   static const double cardRadius = 16;
@@ -30,7 +31,13 @@ class AppTheme with ChangeNotifier {
   ];
   
   // 获取是否启用动态取色
-  bool get useDynamicColor => _useDynamicColor;
+  bool get useDynamicColor {
+    // 只有在系统支持动态取色时才返回true
+    if (_lightDynamicColorScheme == null && _darkDynamicColorScheme == null) {
+      return false;
+    }
+    return _useDynamicColor;
+  }
   
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
@@ -74,12 +81,23 @@ class AppTheme with ChangeNotifier {
   
   // 初始化主题服务
   Future<void> initialize() async {
+    if (_hasInitialized) return; // 防止重复初始化
+    
     try {
       _storage = SafeMMKV();
       await _storage.initialize();
       _loadCustomColor();
       _loadThemeMode();
-      _loadDynamicColorSettings();
+      
+      // 首次运行时，不读取存储的设置，保持默认开启
+      if (_storage.containsKey(_useDynamicColorKey)) {
+        _loadDynamicColorSettings();
+      } else {
+        // 首次运行，设置默认值
+        await _storage.setBool(_useDynamicColorKey, true);
+      }
+      
+      _hasInitialized = true;
       debugPrint('主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 使用动态取色=$_useDynamicColor, 主题模式=$_themeMode');
     } catch (e) {
       debugPrint('初始化主题服务失败: $e');
@@ -95,7 +113,7 @@ class AppTheme with ChangeNotifier {
   void updateDynamicColorScheme(ColorScheme? lightScheme, ColorScheme? darkScheme) {
     bool changed = false;
     
-    // 只在颜色方案实际变化时才更新
+    // 更新动态颜色方案
     if (_lightDynamicColorScheme != lightScheme) {
       _lightDynamicColorScheme = lightScheme;
       changed = true;
@@ -104,6 +122,17 @@ class AppTheme with ChangeNotifier {
     if (_darkDynamicColorScheme != darkScheme) {
       _darkDynamicColorScheme = darkScheme;
       changed = true;
+    }
+
+    // 检查系统是否支持动态取色
+    bool systemSupportsDynamicColor = (lightScheme != null || darkScheme != null);
+    
+    // 如果系统不支持动态取色，则自动回退到默认配色
+    if (!systemSupportsDynamicColor && _useDynamicColor) {
+      _useDynamicColor = false;
+      _storage.setBool(_useDynamicColorKey, false);
+      changed = true;
+      debugPrint('系统不支持动态取色，已自动回退到默认配色');
     }
     
     // 只在实际发生变化时通知监听器

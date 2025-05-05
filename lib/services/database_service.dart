@@ -141,10 +141,13 @@ class DatabaseService extends ChangeNotifier {
       
       // 检查并修复数据库结构
       await _checkAndFixDatabaseStructure();
-      
+
+      // 初始化默认分类/标签
+      await initDefaultHitokotoCategories();
+      debugPrint('默认分类初始化检查完成');
+
       // 更新分类流数据
       await _updateCategoriesStream();
-      
       // 初始化完成后，预加载笔记数据
       debugPrint('数据库初始化完成，开始预加载笔记数据...');
       // 重置流相关状态
