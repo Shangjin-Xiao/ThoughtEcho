@@ -30,15 +30,16 @@ class AIService extends ChangeNotifier {
     
     // 先检查settings中的API Key
     bool hasApiKey = settings.apiKey.isNotEmpty;
+    String effectiveApiKey = settings.apiKey;
     
     // 如果settings中没有API Key，则尝试从安全存储中获取
     if (!hasApiKey) {
       final secureApiKey = await secureStorage.getApiKey();
       hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
       
-      // 如果找到了安全存储的API Key，临时设置到settings中以供本次请求使用
+      // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
       if (hasApiKey && secureApiKey != null) {
-        settings.apiKey = secureApiKey;
+        effectiveApiKey = secureApiKey;
       }
     }
     

@@ -372,12 +372,8 @@ class MyApp extends StatelessWidget {
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         // 更新主题中的动态颜色方案
-        if (lightDynamic != null || darkDynamic != null) {
-          // 只有在动态颜色方案发生变化时才更新
-          Future.microtask(() {
-            appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
-          });
-        }
+        // 直接更新主题中的动态颜色方案，确保MaterialApp构建时能获取到
+        appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
 
         return MaterialApp(
           navigatorKey: navigatorKey,
