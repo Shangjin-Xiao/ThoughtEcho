@@ -85,15 +85,83 @@ class AIService extends ChangeNotifier {
       throw Exception('messages字段格式错误');
     }
 
-    final requestBody = {
-      'model': settings.model,
-      'messages': body['messages'],
-      'temperature': body['temperature'] ?? 0.7,
-      'max_tokens': body['max_tokens'] ?? 2500, // 增加 token 限制到 2500
-      'stream': false,
-    };
+    // 创建安全存储服务实例
+    final secureStorage = SecureStorageService();
+    
+    // 获取API密钥 - 首先尝试从安全存储中获取，如果为空则尝试使用设置中的密钥（向后兼容）
+    final secureApiKey = await secureStorage.getApiKey();
+    final effectiveApiKey = secureApiKey ?? settings.apiKey;
+    
+    if (effectiveApiKey.isEmpty) {
+      throw Exception('未找到有效的API密钥，请在设置中配置API密钥');
+    }
+
+    // 根据不同的AI服务提供商调整请求体格式
+    Map<String, dynamic> requestBody;
+    Map<String, String> headers = {'Content-Type': 'application/json'};
+    
+    // 判断服务提供商类型并相应调整请求
+    if (url.contains('anthropic.com')) {
+      // Anthropic Claude API格式
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'max_tokens': body['max_tokens'] ?? 2500,
+      };
+      
+      // Anthropic使用x-api-key头而非Bearer认证
+      headers['anthropic-version'] = '2023-06-01'; // 添加必需的API版本头
+      headers['x-api-key'] = effectiveApiKey; // 使用有效的API密钥
+      
+    } else if (url.contains('openrouter.ai')) {
+      // OpenRouter可能需要额外的头信息
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': false,
+      };
+      
+      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
+      headers['HTTP-Referer'] = 'https://thoughtecho.app';  // 可能需要指定来源
+      headers['X-Title'] = 'ThoughtEcho App';  // 应用名称
+      
+    } else if (url.contains('deepseek.com')) {
+      // DeepSeek API格式
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': false,
+      };
+      
+      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
+      
+    } else {
+      // 默认格式(适用于OpenAI及其兼容API)
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': false,
+      };
+      
+      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
+    }
 
     debugPrint('API请求体: ${json.encode(requestBody)}');
+    // 打印请求头但隐藏敏感信息
+    final safeHeaders = Map<String, String>.from(headers);
+    if (safeHeaders.containsKey('Authorization')) {
+      safeHeaders['Authorization'] = safeHeaders['Authorization']!.replaceFirst(effectiveApiKey, '[API_KEY_HIDDEN]');
+    }
+    if (safeHeaders.containsKey('x-api-key')) {
+      safeHeaders['x-api-key'] = '[API_KEY_HIDDEN]';
+    }
+    debugPrint('请求头: $safeHeaders');
 
     final Uri uri = Uri.parse(settings.apiUrl);
     debugPrint('请求URL: $uri,  完整URL: ${uri.toString()}');
@@ -103,10 +171,7 @@ class AIService extends ChangeNotifier {
       final response = await client
           .post(
             uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ${settings.apiKey}',
-            },
+            headers: headers,
             body: json.encode(requestBody),
           )
           .timeout(

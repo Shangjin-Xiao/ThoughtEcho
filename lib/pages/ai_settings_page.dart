@@ -258,25 +258,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _temperatureController,
-                    decoration: const InputDecoration(
-                      labelText: '温度',
-                      hintText: '0.0 - 2.0',
-                      border: OutlineInputBorder(),
-                       prefixIcon: Icon(Icons.thermostat),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
                     controller: _maxTokensController,
                     decoration: const InputDecoration(
                       labelText: '最大令牌',
                       hintText: '例如: 2048',
                       border: OutlineInputBorder(),
-                       prefixIcon: Icon(Icons.token),
+                      prefixIcon: Icon(Icons.token),
                     ),
                     keyboardType: TextInputType.number,
                   ),

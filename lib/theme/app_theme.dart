@@ -95,6 +95,7 @@ class AppTheme with ChangeNotifier {
       } else {
         // 首次运行，设置默认值
         await _storage.setBool(_useDynamicColorKey, true);
+        _useDynamicColor = true; // 确保内存中的值也同步更新
       }
       
       _hasInitialized = true;
@@ -127,13 +128,23 @@ class AppTheme with ChangeNotifier {
     // 检查系统是否支持动态取色
     bool systemSupportsDynamicColor = (lightScheme != null || darkScheme != null);
     
-    // 如果系统不支持动态取色，则自动回退到默认配色
+    // 如果系统不支持动态取色，我们仍然保持用户的 _useDynamicColor 设置不变。
+    // useDynamicColor getter 会处理实际的颜色方案回退。
+    // 这样，即使用户的设备暂时无法获取动态颜色，他们“启用动态取色”的偏好设置仍然保留。
+    // 当设备后续能够获取动态颜色时，应用将自动采用。
     if (!systemSupportsDynamicColor && _useDynamicColor) {
-      _useDynamicColor = false;
-      _storage.setBool(_useDynamicColorKey, false);
-      changed = true;
-      debugPrint('系统不支持动态取色，已自动回退到默认配色');
+      // 仅在调试时打印信息，不再修改 _useDynamicColor 或持久化状态
+      debugPrint('系统不支持动态取色，但用户已启用动态取色。将使用回退颜色方案。');
+      // changed 标志不需要在这里设置，因为 _useDynamicColor 的状态没有改变
+      // 颜色方案的实际变化由 lightColorScheme/darkColorScheme getter 处理
     }
+    
+    // 如果系统支持动态取色，但用户之前因为不支持而被设置为false，
+    // 并且他们最初的意图是使用动态取色（例如，通过存储中的_useDynamicColorKey判断），
+    // 此时可以考虑是否要自动重新启用。但为了简单和可预测性，
+    // 用户的显式设置（通过UI开关）应该优先。
+    // 目前的逻辑是：如果用户在UI上启用了动态取色，即使之前获取失败，
+    // 只要现在获取成功，就会使用动态颜色。
     
     // 只在实际发生变化时通知监听器
     if (changed) {
