@@ -9,7 +9,7 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
-import '../utils/time_utils.dart';  // 导入时间工具类
+import '../utils/time_utils.dart'; // 导入时间工具类
 import '../theme/app_theme.dart';
 import '../pages/note_full_editor_page.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -46,7 +46,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
   bool _isAnalyzing = false;
-  
+
   // 分类选择
   NoteCategory? _selectedCategory;
 
@@ -71,18 +71,18 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
-    'a': DatabaseService.defaultCategoryIdAnime,    // 动画
-    'b': DatabaseService.defaultCategoryIdComic,    // 漫画
-    'c': DatabaseService.defaultCategoryIdGame,     // 游戏
-    'd': DatabaseService.defaultCategoryIdNovel,    // 文学
+    'a': DatabaseService.defaultCategoryIdAnime, // 动画
+    'b': DatabaseService.defaultCategoryIdComic, // 漫画
+    'c': DatabaseService.defaultCategoryIdGame, // 游戏
+    'd': DatabaseService.defaultCategoryIdNovel, // 文学
     'e': DatabaseService.defaultCategoryIdOriginal, // 原创
     'f': DatabaseService.defaultCategoryIdInternet, // 来自网络
-    'g': DatabaseService.defaultCategoryIdOther,    // 其他
-    'h': DatabaseService.defaultCategoryIdMovie,    // 影视
-    'i': DatabaseService.defaultCategoryIdPoem,     // 诗词
-    'j': DatabaseService.defaultCategoryIdMusic,    // 网易云
+    'g': DatabaseService.defaultCategoryIdOther, // 其他
+    'h': DatabaseService.defaultCategoryIdMovie, // 影视
+    'i': DatabaseService.defaultCategoryIdPoem, // 诗词
+    'j': DatabaseService.defaultCategoryIdMusic, // 网易云
     'k': DatabaseService.defaultCategoryIdPhilosophy, // 哲学
-    'l': DatabaseService.defaultCategoryIdJoke,     // 抖机灵
+    'l': DatabaseService.defaultCategoryIdJoke, // 抖机灵
   };
 
   @override
@@ -126,16 +126,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         );
       }
     }
-    // 只有hitokotoData不为空时，才自动添加每日一言标签
-    else if (widget.hitokotoData != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _addDefaultHitokotoTags();
-      });
-    }
-
     // 初始化标签future
     _tagFuture =
         Provider.of<DatabaseService>(context, listen: false).getCategories();
+
+    // 只有hitokotoData不为空时，才自动添加每日一言标签
+    if (widget.hitokotoData != null) {
+      // 使用异步Post Frame Callback确保UI更新后再添加标签
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _addDefaultHitokotoTags();
+        if (mounted) {
+          setState(() {}); // 强制刷新UI
+        }
+      });
+    }
   }
 
   @override
@@ -147,7 +151,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   }
 
   // 添加默认的一言相关标签
-  void _addDefaultHitokotoTags() async {
+  Future<void> _addDefaultHitokotoTags() async {
     try {
       final db = Provider.of<DatabaseService>(context, listen: false);
 
@@ -191,6 +195,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           }
         }
       }
+
+      // 重要：添加标签后，刷新标签数据，确保UI能获取到最新的标签
+      setState(() {
+        _tagFuture = db.getCategories();
+      });
     } catch (e) {
       debugPrint('添加默认标签失败: $e');
     }
@@ -264,12 +273,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           break;
         }
       }
-      
+
       // 如果是"每日一言"标签
       if (name == '每日一言') {
         fixedId = DatabaseService.defaultCategoryIdHitokoto;
       }
-      
+
       // 如果有固定ID，优先通过ID查找
       if (fixedId != null) {
         final category = await db.getCategoryById(fixedId);
@@ -277,7 +286,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           return category.id; // 返回已存在的固定ID标签
         }
       }
-      
+
       // 然后再通过名称查找
       final categories = await db.getCategories();
       final existingTag = categories.firstWhere(
@@ -289,7 +298,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       if (existingTag.id.isNotEmpty) {
         return existingTag.id;
       }
-      
+
       // 如果有固定ID但未创建，使用固定ID创建
       if (fixedId != null) {
         try {
@@ -405,625 +414,564 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         top: 16,
       ),
       child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 16),
-              // 内容输入区，带全屏编辑按钮
-              const SizedBox(height: 16),
-              Stack(
-                children: [
-                  TextField(
-                    controller: _contentController,
-                    decoration: InputDecoration(
-                      hintText: '写下你的感悟...',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.edit),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 16,
-                      ).copyWith(right: 48),
-                    ),
-                    maxLines: 3,
-                    autofocus: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            // 内容输入区，带全屏编辑按钮
+            const SizedBox(height: 16),
+            Stack(
+              children: [
+                TextField(
+                  controller: _contentController,
+                  decoration: InputDecoration(
+                    hintText: '写下你的感悟...',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.edit),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ).copyWith(right: 48),
                   ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Builder(
-                      builder: (context) {
-                        final isLongContent =
-                            _contentController.text.length > 100;
-                        return Stack(
-                          children: [
-                            // 如果是长文本，添加一个提示小红点
-                            if (isLongContent)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.error,
-                                    shape: BoxShape.circle,
-                                  ),
+                  maxLines: 3,
+                  autofocus: true,
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Builder(
+                    builder: (context) {
+                      final isLongContent =
+                          _contentController.text.length > 100;
+                      return Stack(
+                        children: [
+                          // 如果是长文本，添加一个提示小红点
+                          if (isLongContent)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                            IconButton(
-                              tooltip: isLongContent ? '建议全屏编辑长文本' : '全屏编辑',
-                              icon: Icon(
-                                Icons.fullscreen,
-                                color:
-                                    isLongContent
-                                        ? theme.colorScheme.primary
-                                        : theme.iconTheme.color,
-                              ),
-                              onPressed: () async {
-                                // 首先关闭当前编辑框
-                                Navigator.pop(context);
-
-                                // 然后打开全屏编辑器
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => NoteFullEditorPage(
-                                          initialContent:
-                                              _contentController.text,
-                                          initialQuote: widget.initialQuote,
-                                          allTags: widget.tags,
-                                        ),
-                                  ),
-                                );
-
-                                // 如果返回了结果，我们不需要处理，因为已经在全屏编辑器中保存了
-                              },
                             ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // 拆分来源输入为作者和作品
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _authorController,
-                      decoration: const InputDecoration(
-                        hintText: '作者/人物',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      maxLines: 1,
-                      onChanged: (value) => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _workController,
-                      decoration: const InputDecoration(
-                        hintText: '作品名称',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.book),
-                      ),
-                      maxLines: 1,
-                      onChanged: (value) => setState(() {}),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // 显示格式化后的来源预览
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          IconButton(
+                            tooltip: isLongContent ? '建议全屏编辑长文本' : '全屏编辑',
+                            icon: Icon(
+                              Icons.fullscreen,
+                              color:
+                                  isLongContent
+                                      ? theme.colorScheme.primary
+                                      : theme.iconTheme.color,
+                            ),
+                            onPressed: () async {
+                              // 首先关闭当前编辑框
+                              Navigator.pop(context);
+
+                              // 然后打开全屏编辑器
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => NoteFullEditorPage(
+                                        initialContent: _contentController.text,
+                                        initialQuote: widget.initialQuote,
+                                        allTags: widget.tags,
+                                      ),
+                                ),
+                              );
+
+                              // 如果返回了结果，我们不需要处理，因为已经在全屏编辑器中保存了
+                            },
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 拆分来源输入为作者和作品
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _authorController,
+                    decoration: const InputDecoration(
+                      hintText: '作者/人物',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    maxLines: 1,
+                    onChanged: (value) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _workController,
+                    decoration: const InputDecoration(
+                      hintText: '作品名称',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.book),
+                    ),
+                    maxLines: 1,
+                    onChanged: (value) => setState(() {}),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // 显示格式化后的来源预览
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
               ),
+            ),
 
-              // 位置和天气选项
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    '添加信息',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 16),
-                  // 位置信息按钮
-                  Tooltip(
-                    message:
-                        '添加位置: ${locationService.currentAddress ?? location}',
-                    child: FilterChip(
-                      avatar: Icon(
-                        Icons.location_on,
-                        color:
-                            _includeLocation
-                                ? theme.colorScheme.primary
-                                : Colors.grey,
-                        size: 18,
-                      ),
-                      label: const Text('位置'),
-                      selected: _includeLocation,
-                      onSelected: (value) {
-                        setState(() {
-                          _includeLocation = value;
-                        });
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
+            // 位置和天气选项
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  '添加信息',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 16),
+                // 位置信息按钮
+                Tooltip(
+                  message:
+                      '添加位置: ${locationService.currentAddress ?? location}',
+                  child: FilterChip(
+                    avatar: Icon(
+                      Icons.location_on,
+                      color:
+                          _includeLocation
+                              ? theme.colorScheme.primary
+                              : Colors.grey,
+                      size: 18,
                     ),
+                    label: const Text('位置'),
+                    selected: _includeLocation,
+                    onSelected: (value) {
+                      setState(() {
+                        _includeLocation = value;
+                      });
+                    },
+                    selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                  const SizedBox(width: 8),
-                  // 天气信息按钮
-                  Tooltip(
-                    message:
-                        weather != null
-                            ? '添加天气: ${weatherService.getFormattedWeather()}'
-                            : '添加天气信息',
-                    child: FilterChip(
-                      avatar: Icon(
-                        weather != null
-                            ? weatherService.getWeatherIconData()
-                            : Icons.cloud,
-                        color:
-                            _includeWeather
-                                ? theme.colorScheme.primary
-                                : Colors.grey,
-                        size: 18,
-                      ),
-                      label: const Text('天气'),
-                      selected: _includeWeather,
-                      onSelected: (value) {
-                        setState(() {
-                          _includeWeather = value;
-                        });
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
+                ),
+                const SizedBox(width: 8),
+                // 天气信息按钮
+                Tooltip(
+                  message:
+                      weather != null
+                          ? '添加天气: ${weatherService.getFormattedWeather()}'
+                          : '添加天气信息',
+                  child: FilterChip(
+                    avatar: Icon(
+                      weather != null
+                          ? weatherService.getWeatherIconData()
+                          : Icons.cloud,
+                      color:
+                          _includeWeather
+                              ? theme.colorScheme.primary
+                              : Colors.grey,
+                      size: 18,
                     ),
+                    label: const Text('天气'),
+                    selected: _includeWeather,
+                    onSelected: (value) {
+                      setState(() {
+                        _includeWeather = value;
+                      });
+                    },
+                    selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                  const SizedBox(width: 8),
-                  // 颜色选择按钮
-                  Tooltip(
-                    message: _selectedColorHex != null ? '已设置卡片颜色' : '设置卡片颜色',
-                    child: FilterChip(
-                      avatar: _selectedColorHex != null
-                          ? Container(
+                ),
+                const SizedBox(width: 8),
+                // 颜色选择按钮
+                Tooltip(
+                  message: _selectedColorHex != null ? '已设置卡片颜色' : '设置卡片颜色',
+                  child: FilterChip(
+                    avatar:
+                        _selectedColorHex != null
+                            ? Container(
                               width: 18,
                               height: 18,
                               decoration: BoxDecoration(
                                 color: Color(
-                                  int.parse(_selectedColorHex!.substring(1), radix: 16) |
+                                  int.parse(
+                                        _selectedColorHex!.substring(1),
+                                        radix: 16,
+                                      ) |
                                       0xFF000000,
                                 ),
                                 borderRadius: BorderRadius.circular(9),
-                                border: Border.all(color: Colors.white, width: 1),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1,
+                                ),
                               ),
                             )
-                          : const Icon(Icons.color_lens, size: 18, color: Colors.grey),
-                      label: const Text('颜色'),
-                      selected: _selectedColorHex != null,
-                      onSelected: (value) {
-                        if (value) {
-                          _showCustomColorPicker(context);
-                        } else {
-                          setState(() {
-                            _selectedColorHex = null;
-                          });
-                        }
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
-                    ),
+                            : const Icon(
+                              Icons.color_lens,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                    label: const Text('颜色'),
+                    selected: _selectedColorHex != null,
+                    onSelected: (value) {
+                      if (value) {
+                        _showCustomColorPicker(context);
+                      } else {
+                        setState(() {
+                          _selectedColorHex = null;
+                        });
+                      }
+                    },
+                    selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              // 标签选择区域
-              const SizedBox(height: 16),
-              FutureBuilder<List<NoteCategory>>(
-                future: _tagFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('加载标签失败: \\${snapshot.error}'));
-                  }
-                  final tags = snapshot.data ?? [];
-                  if (tags.isEmpty) {
-                    return const Center(child: Text('暂无可用标签，请先添加标签'));
-                  }
-                  return ExpansionTile(
-                    title: const Text(
-                      '选择标签',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    leading: const Icon(Icons.tag),
-                    initiallyExpanded: false,
-                    childrenPadding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    children: [
-                      // 搜索框
-                      TextField(
-                        decoration: const InputDecoration(
-                          hintText: '搜索标签...',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 8.0,
-                            horizontal: 12.0,
-                          ),
+            // 标签选择区域
+            const SizedBox(height: 16),
+            FutureBuilder<List<NoteCategory>>(
+              future: _tagFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('加载标签失败: \\${snapshot.error}'));
+                }
+                final tags = snapshot.data ?? [];
+                if (tags.isEmpty) {
+                  return const Center(child: Text('暂无可用标签，请先添加标签'));
+                }
+                return ExpansionTile(
+                  title: const Text(
+                    '选择标签',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  leading: const Icon(Icons.tag),
+                  initiallyExpanded: false,
+                  childrenPadding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  children: [
+                    // 搜索框
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: '搜索标签...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 8.0,
+                          horizontal: 12.0,
                         ),
-                        onChanged: (value) {
-                          // 可以添加标签搜索逻辑
+                      ),
+                      onChanged: (value) {
+                        // 可以添加标签搜索逻辑
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    // 标签列表
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: tags.length,
+                        itemBuilder: (context, index) {
+                          final tag = tags[index];
+                          final isSelected = _selectedTagIds.contains(tag.id);
+                          return CheckboxListTile(
+                            title: Row(
+                              children: [
+                                if (IconUtils.isEmoji(tag.iconName))
+                                  Text(
+                                    IconUtils.getDisplayIcon(tag.iconName),
+                                    style: const TextStyle(fontSize: 20),
+                                  )
+                                else
+                                  Icon(IconUtils.getIconData(tag.iconName)),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    tag.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            value: isSelected,
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.trailing,
+                            onChanged: (selected) {
+                              setState(() {
+                                if (selected == true) {
+                                  _selectedTagIds.add(tag.id);
+                                } else {
+                                  _selectedTagIds.remove(tag.id);
+                                }
+                              });
+                            },
+                          );
                         },
                       ),
-                      const SizedBox(height: 8),
-                      // 标签列表
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 200),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: tags.length,
-                          itemBuilder: (context, index) {
-                            final tag = tags[index];
-                            final isSelected = _selectedTagIds.contains(tag.id);
-                            return CheckboxListTile(
-                              title: Row(
-                                children: [
-                                  if (IconUtils.isEmoji(tag.iconName))
-                                    Text(
-                                      IconUtils.getDisplayIcon(tag.iconName),
-                                      style: const TextStyle(fontSize: 20),
-                                    )
-                                  else
-                                    Icon(IconUtils.getIconData(tag.iconName)),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      tag.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              value: isSelected,
-                              dense: true,
-                              controlAffinity: ListTileControlAffinity.trailing,
-                              onChanged: (selected) {
-                                setState(() {
-                                  if (selected == true) {
-                                    _selectedTagIds.add(tag.id);
-                                  } else {
-                                    _selectedTagIds.remove(tag.id);
-                                  }
-                                });
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              // 显示已选标签
-              _selectedTagIds.isEmpty
-                  ? const SizedBox.shrink()
-                  : Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                );
+              },
+            ),
+
+            // 显示已选标签
+            _buildSelectedTags(theme),
+
+            // AI分析结果
+            if (_aiSummary != null)
+              Container(
+                margin: const EdgeInsets.only(top: 16),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        const Text(
-                          '已选标签',
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'AI分析',
                           style: TextStyle(
-                            fontSize: 12,
+                            color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 4.0,
-                          runSpacing: 4.0,
-                          children:
-                              _selectedTagIds.map((tagId) {
-                                final tag = widget.tags.firstWhere(
-                                  (t) => t.id == tagId,
-                                  orElse:
-                                      () =>
-                                          NoteCategory(id: tagId, name: '未知标签'),
-                                );
-                                return Chip(
-                                  label:
-                                      IconUtils.isEmoji(tag.iconName)
-                                          ? Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                IconUtils.getDisplayIcon(
-                                                  tag.iconName,
-                                                ),
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                tag.name,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                          : Text(tag.name),
-                                  avatar:
-                                      !IconUtils.isEmoji(tag.iconName)
-                                          ? Icon(
-                                            IconUtils.getIconData(tag.iconName),
-                                            size: 14,
-                                          )
-                                          : null,
-                                  deleteIcon: const Icon(Icons.close, size: 14),
-                                  onDeleted: () {
-                                    setState(() {
-                                      _selectedTagIds.remove(tagId);
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                        ),
                       ],
                     ),
-                  ),
-
-              // AI分析结果
-              if (_aiSummary != null)
-                Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 16,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'AI分析',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      MarkdownBody(
-                        data: _aiSummary!,
-                        selectable: true,
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                          p: theme.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 8),
+                    MarkdownBody(
+                      data: _aiSummary!,
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet.fromTheme(
+                        theme,
+                      ).copyWith(p: theme.textTheme.bodyMedium),
+                    ),
+                  ],
                 ),
+              ),
 
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // AI分析按钮
-                  Builder(
-                    builder: (context) {
-                      // 检查API是否已配置
-                      final settingsService = Provider.of<SettingsService>(
-                        context,
-                        listen: false,
-                      );
-                      final settings = settingsService.aiSettings;
-                      final bool apiConfigured =
-                          settings.apiKey.isNotEmpty &&
-                          settings.apiUrl.isNotEmpty &&
-                          settings.model.isNotEmpty;
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // AI分析按钮
+                Builder(
+                  builder: (context) {
+                    // 检查API是否已配置
+                    final settingsService = Provider.of<SettingsService>(
+                      context,
+                      listen: false,
+                    );
+                    final settings = settingsService.aiSettings;
+                    final bool apiConfigured =
+                        settings.apiKey.isNotEmpty &&
+                        settings.apiUrl.isNotEmpty &&
+                        settings.model.isNotEmpty;
 
-                      if (_contentController.text.isNotEmpty &&
-                          _aiSummary == null &&
-                          apiConfigured) {
-                        return FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.buttonRadius,
-                              ),
+                    if (_contentController.text.isNotEmpty &&
+                        _aiSummary == null &&
+                        apiConfigured) {
+                      return FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.buttonRadius,
                             ),
                           ),
-                          onPressed:
-                              _isAnalyzing
-                                  ? null
-                                  : () async {
-                                    setState(() => _isAnalyzing = true);
-                                    try {
-                                      final summary = await aiService
-                                          .summarizeNote(
-                                            Quote(
-                                              id: widget.initialQuote?.id ?? '',
-                                              content: _contentController.text,
-                                              date:
-                                                  widget.initialQuote?.date ??
-                                                  DateTime.now()
-                                                      .toIso8601String(),
-                                            ),
-                                          );
-                                      if (mounted) {
-                                        setState(() {
-                                          _aiSummary = summary;
-                                          _isAnalyzing = false;
-                                        });
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('AI分析失败: $e'),
-                                            backgroundColor: Colors.red,
+                        ),
+                        onPressed:
+                            _isAnalyzing
+                                ? null
+                                : () async {
+                                  setState(() => _isAnalyzing = true);
+                                  try {
+                                    final summary = await aiService
+                                        .summarizeNote(
+                                          Quote(
+                                            id: widget.initialQuote?.id ?? '',
+                                            content: _contentController.text,
+                                            date:
+                                                widget.initialQuote?.date ??
+                                                DateTime.now()
+                                                    .toIso8601String(),
                                           ),
                                         );
-                                        setState(() => _isAnalyzing = false);
-                                      }
+                                    if (mounted) {
+                                      setState(() {
+                                        _aiSummary = summary;
+                                        _isAnalyzing = false;
+                                      });
                                     }
-                                  },
-                          icon:
-                              _isAnalyzing
-                                  ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : const Icon(Icons.auto_awesome),
-                          label: Text(_isAnalyzing ? '分析中...' : 'AI分析'),
-                        );
-                      }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('AI分析失败: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      setState(() => _isAnalyzing = false);
+                                    }
+                                  }
+                                },
+                        icon:
+                            _isAnalyzing
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Icon(Icons.auto_awesome),
+                        label: Text(_isAnalyzing ? '分析中...' : 'AI分析'),
+                      );
+                    }
 
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                  const Spacer(),
-                  FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.buttonRadius,
-                        ),
+                    return const SizedBox.shrink();
+                  },
+                ),
+                const Spacer(),
+                FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.buttonRadius,
                       ),
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('取消'),
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.buttonRadius,
-                        ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.buttonRadius,
                       ),
                     ),
-                    onPressed: () async {
-                      if (_contentController.text.isNotEmpty) {
-                        // 获取当前时间段
-                        final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
+                  ),
+                  onPressed: () async {
+                    if (_contentController.text.isNotEmpty) {
+                      // 获取当前时间段
+                      final String currentDayPeriodKey =
+                          TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
 
-                        // 创建或更新笔记
-                        final Quote quote = Quote(
-                          id: widget.initialQuote?.id ?? const Uuid().v4(),
-                          content: _contentController.text,
-                          date:
-                              widget.initialQuote?.date ??
-                              DateTime.now().toIso8601String(),
-                          aiAnalysis: _aiSummary,
-                          source: _formatSource(
-                            _authorController.text,
-                            _workController.text,
-                          ),
-                          sourceAuthor: _authorController.text,
-                          sourceWork: _workController.text,
-                          tagIds: _selectedTagIds,
-                          sentiment: widget.initialQuote?.sentiment,
-                          keywords: widget.initialQuote?.keywords,
-                          summary: widget.initialQuote?.summary,
-                          categoryId: _selectedCategory?.id ?? widget.initialQuote?.categoryId,
-                          colorHex: _selectedColorHex,
-                          location: _includeLocation ? location : null,
-                          weather: _includeWeather ? weather : null,
-                          temperature: _includeWeather ? temperature : null,
-                          dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
-                          editSource: widget.initialQuote?.editSource, // 保证兼容
-                          deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
-                        );
+                      // 创建或更新笔记
+                      final Quote quote = Quote(
+                        id: widget.initialQuote?.id ?? const Uuid().v4(),
+                        content: _contentController.text,
+                        date:
+                            widget.initialQuote?.date ??
+                            DateTime.now().toIso8601String(),
+                        aiAnalysis: _aiSummary,
+                        source: _formatSource(
+                          _authorController.text,
+                          _workController.text,
+                        ),
+                        sourceAuthor: _authorController.text,
+                        sourceWork: _workController.text,
+                        tagIds: _selectedTagIds,
+                        sentiment: widget.initialQuote?.sentiment,
+                        keywords: widget.initialQuote?.keywords,
+                        summary: widget.initialQuote?.summary,
+                        categoryId:
+                            _selectedCategory?.id ??
+                            widget.initialQuote?.categoryId,
+                        colorHex: _selectedColorHex,
+                        location: _includeLocation ? location : null,
+                        weather: _includeWeather ? weather : null,
+                        temperature: _includeWeather ? temperature : null,
+                        dayPeriod:
+                            widget.initialQuote?.dayPeriod ??
+                            currentDayPeriodKey, // 保存 Key
+                        editSource: widget.initialQuote?.editSource, // 保证兼容
+                        deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
+                      );
 
-                        try {
-                          if (widget.initialQuote != null) {
-                            // 更新已有笔记
-                            await db.updateQuote(quote);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('笔记已更新')),
-                            );
-                          } else {
-                            // 添加新笔记
-                            await db.addQuote(quote);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('笔记已保存')),
-                            );
-                          }
+                      try {
+                        if (widget.initialQuote != null) {
+                          // 更新已有笔记
+                          await db.updateQuote(quote);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('笔记已更新')),
+                          );
+                        } else {
+                          // 添加新笔记
+                          await db.addQuote(quote);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('笔记已保存')),
+                          );
+                        }
 
-                          // 调用保存回调
-                          if (widget.onSave != null) {
-                            widget.onSave!(quote);
-                          }
+                        // 调用保存回调
+                        if (widget.onSave != null) {
+                          widget.onSave!(quote);
+                        }
 
-                          // 关闭对话框
-                          if (mounted) {
-                            Navigator.pop(context);
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('保存失败: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                        // 关闭对话框
+                        if (mounted) {
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('保存失败: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
                         }
                       }
-                    },
-                    child: Text(widget.initialQuote != null ? '更新' : '保存'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
+                    }
+                  },
+                  child: Text(widget.initialQuote != null ? '更新' : '保存'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -1059,10 +1007,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _showCustomColorPicker(BuildContext context) async {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final Color initialColor = _selectedColorHex != null
-        ? Color(int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000)
-        : Colors.transparent;
-        
+    final Color initialColor =
+        _selectedColorHex != null
+            ? Color(
+              int.parse(_selectedColorHex!.substring(1), radix: 16) |
+                  0xFF000000,
+            )
+            : Colors.transparent;
+
     // 预设颜色列表 - 更现代的轻柔色调
     final List<Color> presetColors = [
       Colors.transparent, // 透明/无
@@ -1073,15 +1025,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       const Color(0xFFE1F5FE), // 轻蓝色
       const Color(0xFFF3E5F5), // 轻紫色
       const Color(0xFFFCE4EC), // 轻粉色
-      
-      const Color(0xFFFFCDD2), // 红色
+
+      const Color(0xFFEF9A9A), // 红色
       const Color(0xFFFFE0B2), // 橙色
       const Color(0xFFFFF9C4), // 黄色
       const Color(0xFFC8E6C9), // 绿色
       const Color(0xFFBBDEFB), // 蓝色
       const Color(0xFFE1BEE7), // 紫色
       const Color(0xFFF8BBD0), // 粉色
-      
+
       const Color(0xFFEF9A9A), // 深红色
       const Color(0xFFFFCC80), // 深橙色
       const Color(0xFFFFF59D), // 深黄色
@@ -1090,186 +1042,287 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       const Color(0xFFCE93D8), // 深紫色
       const Color(0xFFF48FB1), // 深粉色
     ];
-        
+
     final Color? result = await showDialog<Color>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('选择卡片颜色'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 预设颜色网格
-              Container(
-                width: 280,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 8),
-                      child: Text(
-                        '预设颜色',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('选择卡片颜色'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 预设颜色网格
+                  Container(
+                    width: 280,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      alignment: WrapAlignment.start,
-                      children: presetColors.map((color) {
-                        String? colorHex;
-                        if (color != Colors.transparent) {
-                          colorHex = '#${color.value.toRadixString(16).substring(2)}';
-                        }
-                        
-                        final bool isSelected = color == Colors.transparent 
-                          ? _selectedColorHex == null
-                          : _selectedColorHex == colorHex;
-                          
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).pop(color);
-                          },
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(21),
-                              border: Border.all(
-                                color: isSelected
-                                    ? colorScheme.primary
-                                    : color == Colors.transparent
-                                        ? Colors.grey.withOpacity(0.5)
-                                        : Colors.transparent,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: isSelected
-                                  ? Icon(
-                                      Icons.check_circle,
-                                      color: color == Colors.transparent || color.computeLuminance() > 0.7
-                                          ? colorScheme.primary
-                                          : Colors.white,
-                                      size: 24,
-                                    )
-                                  : color == Colors.transparent
-                                      ? const Icon(
-                                          Icons.block,
-                                          color: Colors.grey,
-                                          size: 18,
-                                        )
-                                      : null,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: Text(
+                            '预设颜色',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // 高级颜色选择按钮
-              OutlinedButton.icon(
-                icon: const Icon(Icons.color_lens),
-                label: const Text('自定义颜色'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () async {
-                  Navigator.pop(context); // 关闭当前对话框
-                  
-                  // 打开高级颜色选择器
-                  final Color? advancedColor = await showDialog<Color>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('自定义颜色'),
-                      content: SingleChildScrollView(
-                        child: ColorPicker(
-                          color: initialColor != Colors.transparent 
-                                ? initialColor
-                                : const Color(0xFFE1F5FE), // 默认蓝色
-                          onColorChanged: (color) {},
-                          width: 40,
-                          height: 40,
-                          spacing: 10,
-                          runSpacing: 10,
-                          borderRadius: 20,
-                          wheelDiameter: 200,
-                          enableShadesSelection: true,
-                          pickersEnabled: const {
-                            ColorPickerType.primary: true,
-                            ColorPickerType.accent: false,
-                            ColorPickerType.wheel: true,
-                          },
                         ),
-                      ),
-                      actions: <Widget>[
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('取消'),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context).pop(initialColor),
-                          child: const Text('选择'),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.start,
+                          children:
+                              presetColors.map((color) {
+                                String? colorHex;
+                                if (color != Colors.transparent) {
+                                  colorHex =
+                                      '#${color.value.toRadixString(16).substring(2)}';
+                                }
+
+                                final bool isSelected =
+                                    color == Colors.transparent
+                                        ? _selectedColorHex == null
+                                        : _selectedColorHex == colorHex;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).pop(color);
+                                  },
+                                  child: Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      borderRadius: BorderRadius.circular(21),
+                                      border: Border.all(
+                                        color:
+                                            isSelected
+                                                ? colorScheme.primary
+                                                : color == Colors.transparent
+                                                ? Colors.grey.withOpacity(0.5)
+                                                : Colors.transparent,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          spreadRadius: 1,
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child:
+                                          isSelected
+                                              ? Icon(
+                                                Icons.check_circle,
+                                                color:
+                                                    color ==
+                                                                Colors
+                                                                    .transparent ||
+                                                            color.computeLuminance() >
+                                                                0.7
+                                                        ? colorScheme.primary
+                                                        : Colors.white,
+                                                size: 24,
+                                              )
+                                              : color == Colors.transparent
+                                              ? const Icon(
+                                                Icons.block,
+                                                color: Colors.grey,
+                                                size: 18,
+                                              )
+                                              : null,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                         ),
                       ],
                     ),
-                  );
-                  
-                  if (advancedColor != null && mounted) {
-                    setState(() {
-                      _selectedColorHex = advancedColor == Colors.transparent
-                          ? null
-                          : '#${advancedColor.value.toRadixString(16).substring(2)}';
-                    });
-                  }
-                },
-              )
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 高级颜色选择按钮
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.color_lens),
+                    label: const Text('自定义颜色'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(context); // 关闭当前对话框
+
+                      // 打开高级颜色选择器
+                      final Color? advancedColor = await showDialog<Color>(
+                        context: context,
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text('自定义颜色'),
+                              content: SingleChildScrollView(
+                                child: ColorPicker(
+                                  color:
+                                      initialColor != Colors.transparent
+                                          ? initialColor
+                                          : const Color(0xFFE1F5FE), // 默认蓝色
+                                  onColorChanged: (color) {},
+                                  width: 40,
+                                  height: 40,
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  borderRadius: 20,
+                                  wheelDiameter: 200,
+                                  enableShadesSelection: true,
+                                  pickersEnabled: const {
+                                    ColorPickerType.primary: true,
+                                    ColorPickerType.accent: false,
+                                    ColorPickerType.wheel: true,
+                                  },
+                                ),
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('取消'),
+                                ),
+                                FilledButton(
+                                  onPressed:
+                                      () => Navigator.of(
+                                        context,
+                                      ).pop(initialColor),
+                                  child: const Text('选择'),
+                                ),
+                              ],
+                            ),
+                      );
+
+                      if (advancedColor != null && mounted) {
+                        setState(() {
+                          _selectedColorHex =
+                              advancedColor == Colors.transparent
+                                  ? null
+                                  : '#${advancedColor.value.toRadixString(16).substring(2)}';
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
             ],
+            actionsPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-        ],
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
     );
-    
+
     if (result != null) {
       setState(() {
-        _selectedColorHex = result == Colors.transparent
-            ? null
-            : '#${result.value.toRadixString(16).substring(2)}';
+        _selectedColorHex =
+            result == Colors.transparent
+                ? null
+                : '#${result.value.toRadixString(16).substring(2)}';
       });
     }
+  }
+
+  // 渲染已选标签的Widget，使用FutureBuilder确保数据最新
+  Widget _buildSelectedTags(ThemeData theme) {
+    if (_selectedTagIds.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<List<NoteCategory>>(
+      future: _tagFuture, // 使用最新的标签数据Future
+      builder: (context, snapshot) {
+        // 优先使用最新加载的标签数据，如果为空则使用传入的标签数据
+        final tags = snapshot.data ?? widget.tags;
+
+        return Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '已选标签',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 4.0,
+                runSpacing: 4.0,
+                children:
+                    _selectedTagIds.map((tagId) {
+                      // 从最新的标签列表中查找
+                      final tag = tags.firstWhere(
+                        (t) => t.id == tagId,
+                        orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                      );
+                      return Chip(
+                        label:
+                            IconUtils.isEmoji(tag.iconName)
+                                ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      IconUtils.getDisplayIcon(tag.iconName),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      tag.name,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                )
+                                : Text(tag.name),
+                        avatar:
+                            !IconUtils.isEmoji(tag.iconName)
+                                ? Icon(
+                                  IconUtils.getIconData(tag.iconName),
+                                  size: 14,
+                                )
+                                : null,
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedTagIds.remove(tagId);
+                          });
+                        },
+                      );
+                    }).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
