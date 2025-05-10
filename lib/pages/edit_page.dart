@@ -136,7 +136,8 @@ class _EditPageState extends State<EditPage> {
   }
 
   // 获取当前位置和天气
-  Future<void> _getCurrentLocationAndWeather() async {    final locationService = Provider.of<LocationService>(
+  Future<void> _getCurrentLocationAndWeather() async {
+    final locationService = Provider.of<LocationService>(
       context,
       listen: false,
     );
@@ -288,12 +289,12 @@ class _EditPageState extends State<EditPage> {
             ),
           );
         },
-      );      // 调用AI分析来源
+      ); // 调用AI分析来源
       final result = await aiService.analyzeSource(_contentController.text);
 
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -458,7 +459,7 @@ class _EditPageState extends State<EditPage> {
     } catch (e) {
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -539,7 +540,7 @@ class _EditPageState extends State<EditPage> {
     } catch (e) {
       // 确保组件仍然挂载
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -595,7 +596,7 @@ class _EditPageState extends State<EditPage> {
 
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -626,25 +627,48 @@ class _EditPageState extends State<EditPage> {
     // 如果Quote被标记为全屏编辑，则自动跳转到全屏编辑器
     if (widget.quote.editSource == 'fullscreen' ||
         widget.quote.deltaContent != null) {
-      // 获取所有标签
-      final databaseService = Provider.of<DatabaseService>(
-        context,
-        listen: false,
-      );
-      final allTags = await databaseService.getCategories();
-
-      if (mounted) {
-        // 关闭当前页面并打开全屏编辑器
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder:
-                (context) => NoteFullEditorPage(
-                  initialContent: widget.quote.content,
-                  initialQuote: widget.quote,
-                  allTags: allTags, // 传递所有标签
-                ),
-          ),
+      try {
+        // 获取所有标签
+        final databaseService = Provider.of<DatabaseService>(
+          context,
+          listen: false,
         );
+        final allTags = await databaseService.getCategories();
+
+        if (mounted) {
+          // 关闭当前页面并打开全屏编辑器
+          Navigator.of(context)
+              .pushReplacement(
+                MaterialPageRoute(
+                  builder:
+                      (context) => NoteFullEditorPage(
+                        initialContent: widget.quote.content,
+                        initialQuote: widget.quote,
+                        allTags: allTags, // 传递所有标签
+                      ),
+                ),
+              )
+              .catchError((error) {
+                // 如果导航失败，显示错误
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('无法打开全屏编辑器: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return false;
+              });
+        }
+      } catch (e) {
+        if (mounted) {
+          // 显示错误信息
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('准备打开全屏编辑器时出错: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -753,9 +777,8 @@ class _EditPageState extends State<EditPage> {
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.applyOpacity(0.6), // Use applyOpacity
+                          color: Theme.of(context).colorScheme.onSurface
+                              .applyOpacity(0.6), // Use applyOpacity
                         ),
                       );
                     },
@@ -796,7 +819,9 @@ class _EditPageState extends State<EditPage> {
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.applyOpacity(0.5), // Use applyOpacity
+                                      ).colorScheme.onSurface.applyOpacity(
+                                        0.5,
+                                      ), // Use applyOpacity
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -824,10 +849,11 @@ class _EditPageState extends State<EditPage> {
                                       locationService.city ?? '',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .applyOpacity(0.6), // Use applyOpacity
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.applyOpacity(
+                                          0.6,
+                                        ), // Use applyOpacity
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -880,7 +906,9 @@ class _EditPageState extends State<EditPage> {
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.applyOpacity(0.5), // Use applyOpacity
+                                      ).colorScheme.onSurface.applyOpacity(
+                                        0.5,
+                                      ), // Use applyOpacity
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -908,10 +936,11 @@ class _EditPageState extends State<EditPage> {
                                       '${WeatherService.getWeatherDescription(_weather!)} ${_temperature ?? ""}',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .applyOpacity(0.6), // Use applyOpacity
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.applyOpacity(
+                                          0.6,
+                                        ), // Use applyOpacity
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -985,7 +1014,8 @@ class _EditPageState extends State<EditPage> {
                                         );
                                     setState(() {
                                       _aiAnalysis = summary;
-                                    });                                  } catch (e) {
+                                    });
+                                  } catch (e) {
                                     if (!mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('AI分析失败: $e')),

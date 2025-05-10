@@ -19,7 +19,7 @@ import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
-  
+
   const HomePage({super.key, this.initialPage = 0});
 
   @override
@@ -43,13 +43,14 @@ class _HomePageState extends State<HomePage>
   late TabController _tabController;
 
   // 新增：NoteListView的全局Key
-  final GlobalKey<NoteListViewState> _noteListViewKey = GlobalKey<NoteListViewState>();
+  final GlobalKey<NoteListViewState> _noteListViewKey =
+      GlobalKey<NoteListViewState>();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    
+
     // 使用传入的初始页面参数
     _currentIndex = widget.initialPage;
 
@@ -169,10 +170,11 @@ class _HomePageState extends State<HomePage>
       }
     }
   }
+
   // 初始化位置和天气服务
   Future<void> _initLocationAndWeather() async {
     if (!mounted) return;
-    
+
     final locationService = Provider.of<LocationService>(
       context,
       listen: false,
@@ -185,11 +187,13 @@ class _HomePageState extends State<HomePage>
     // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
     if (locationService.hasLocationPermission &&
         locationService.isLocationServiceEnabled) {
-      final position = await locationService.getCurrentLocation(skipPermissionRequest: true);
-      
+      final position = await locationService.getCurrentLocation(
+        skipPermissionRequest: true,
+      );
+
       // 再次确保组件仍然挂载
       if (!mounted) return;
-      
+
       if (position != null) {
         final weatherService = Provider.of<WeatherService>(
           context,
@@ -237,17 +241,39 @@ class _HomePageState extends State<HomePage>
     // 检查笔记是否来自全屏编辑器
     if (quote.editSource == 'fullscreen') {
       // 如果是来自全屏编辑器的笔记，则直接打开全屏编辑页面
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (context) => NoteFullEditorPage(
-                initialContent: quote.content,
-                initialQuote: quote,
-                allTags: _tags,
-              ),
-        ),
-      );
+      try {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => NoteFullEditorPage(
+                  initialContent: quote.content,
+                  initialQuote: quote,
+                  allTags: _tags,
+                ),
+          ),
+        ).then((value) {
+          if (value == true) {
+            // 编辑成功后强制刷新列表
+            if (_noteListViewKey.currentState != null) {
+              _noteListViewKey.currentState!.resetAndLoad();
+            }
+          }
+        });
+      } catch (e) {
+        // 显示错误信息
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('无法打开全屏编辑器: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: '重试',
+              onPressed: () => _showEditQuoteDialog(quote),
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
     } else {
       // 否则，打开常规编辑对话框
       showModalBottomSheet(
@@ -305,54 +331,57 @@ class _HomePageState extends State<HomePage>
     final aiService = context.read<AIService>();
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('问笔记'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: '请输入你的问题'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (controller.text.isEmpty) return;
-              Navigator.pop(dialogContext);
-              try {
-                final answer = await aiService.askQuestion(
-                  quote,
-                  controller.text,
-                );
-                if (!mounted) return;
-                showDialog(
-                  context: context,
-                  builder: (answerDialogContext) => AlertDialog(
-                    title: const Text('回答'),
-                    content: Text(answer),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(answerDialogContext),
-                        child: const Text('关闭'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('问笔记'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(hintText: '请输入你的问题'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (controller.text.isEmpty) return;
+                  Navigator.pop(dialogContext);
+                  try {
+                    final answer = await aiService.askQuestion(
+                      quote,
+                      controller.text,
+                    );
+                    if (!mounted) return;
+                    showDialog(
+                      context: context,
+                      builder:
+                          (answerDialogContext) => AlertDialog(
+                            title: const Text('回答'),
+                            content: Text(answer),
+                            actions: [
+                              TextButton(
+                                onPressed:
+                                    () => Navigator.pop(answerDialogContext),
+                                child: const Text('关闭'),
+                              ),
+                            ],
+                          ),
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('获取回答失败：$e'),
+                        backgroundColor: Colors.red,
                       ),
-                    ],
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('获取回答失败：$e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('提问'),
+                    );
+                  }
+                },
+                child: const Text('提问'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -376,97 +405,119 @@ class _HomePageState extends State<HomePage>
     return ChangeNotifierProvider.value(
       value: _searchController,
       child: Scaffold(
-        appBar: _currentIndex == 1 
-            ? null // 记录页不需要标题栏
-            : AppBar(
-                title: const Text('心迹'),
-                actions: [
-                  // 显示标签加载状态
-                  if (_isLoadingTags && _currentIndex == 1)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2.0),
-                      ),
-                    ),
-
-                  // 显示服务初始化状态指示器
-                  if (!servicesInitialized)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.0),
-                      ),
-                    ),
-
-                  // 显示位置和天气信息
-                  if (_currentIndex == 0 &&
-                      locationService.city != null &&
-                      !locationService.city!.contains("Throttled!") &&
-                      weatherService.currentWeather != null &&
-                      locationService.hasLocationPermission)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+        appBar:
+            _currentIndex == 1
+                ? null // 记录页不需要标题栏
+                : AppBar(
+                  title: const Text('心迹'),
+                  actions: [
+                    // 显示标签加载状态
+                    if (_isLoadingTags && _currentIndex == 1)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2.0),
                         ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                          boxShadow: AppTheme.defaultShadow,
+                      ),
+
+                    // 显示服务初始化状态指示器
+                    if (!servicesInitialized)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.0),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+
+                    // 显示位置和天气信息
+                    if (_currentIndex == 0 &&
+                        locationService.city != null &&
+                        !locationService.city!.contains("Throttled!") &&
+                        weatherService.currentWeather != null &&
+                        locationService.hasLocationPermission)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.cardRadius,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              locationService.getDisplayLocation(),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            boxShadow: AppTheme.defaultShadow,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
                                 color:
-                                    Theme.of(context).colorScheme.onPrimaryContainer,
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '|',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(
+                              const SizedBox(width: 4),
+                              Text(
+                                locationService.getDisplayLocation(),
+                                style: Theme.of(
                                   context,
-                                ).colorScheme.onPrimaryContainer.withAlpha(128),
+                                ).textTheme.bodySmall?.copyWith(
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimaryContainer,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              weatherService.getWeatherIconData(),
-                              size: 18,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
-                              '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.w600,
+                              const SizedBox(width: 8),
+                              Text(
+                                '|',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                      .withAlpha(128),
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Icon(
+                                weatherService.getWeatherIconData(),
+                                size: 18,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
+                                '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
         body: IndexedStack(
           index: _currentIndex,
           children: [

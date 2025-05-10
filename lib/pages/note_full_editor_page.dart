@@ -46,22 +46,32 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   @override
   void initState() {
     super.initState();
-    // 尝试将initialContent作为Delta解析，否则作为纯文本插入
-    if (widget.initialQuote?.deltaContent != null) {
-      // 如果有富文本内容，优先使用富文本
-      try {
-        final document = quill.Document.fromJson(
-          jsonDecode(widget.initialQuote!.deltaContent!),
-        );
-        _controller = quill.QuillController(
-          document: document,
-          selection: const TextSelection.collapsed(offset: 0),
-        );
-      } catch (_) {
+
+    try {
+      // 尝试将initialContent作为Delta解析，否则作为纯文本插入
+      if (widget.initialQuote?.deltaContent != null) {
+        // 如果有富文本内容，优先使用富文本
+        try {
+          final document = quill.Document.fromJson(
+            jsonDecode(widget.initialQuote!.deltaContent!),
+          );
+          _controller = quill.QuillController(
+            document: document,
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+          debugPrint('成功初始化富文本编辑器');
+        } catch (e) {
+          debugPrint('富文本解析失败: $e，将使用纯文本初始化');
+          _initializeAsPlainText();
+        }
+      } else {
+        debugPrint('使用纯文本初始化编辑器');
         _initializeAsPlainText();
       }
-    } else {
-      _initializeAsPlainText();
+    } catch (e) {
+      // 如果所有初始化方法都失败，使用空文档
+      debugPrint('编辑器初始化失败: $e，使用空文档');
+      _controller = quill.QuillController.basic();
     }
 
     // 作者/作品
@@ -86,10 +96,25 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 初始化为纯文本的辅助方法
   void _initializeAsPlainText() {
-    _controller = quill.QuillController(
-      document: quill.Document()..insert(0, widget.initialContent),
-      selection: const TextSelection.collapsed(offset: 0),
-    );
+    try {
+      _controller = quill.QuillController(
+        document: quill.Document()..insert(0, widget.initialContent),
+        selection: const TextSelection.collapsed(offset: 0),
+      );
+    } catch (e) {
+      // 如果即使初始化纯文本也失败，使用空文档
+      debugPrint('初始化编辑器为纯文本失败: $e');
+      _controller = quill.QuillController.basic();
+
+      // 尝试安全地添加内容
+      try {
+        if (widget.initialContent.isNotEmpty) {
+          _controller.document.insert(0, widget.initialContent);
+        }
+      } catch (_) {
+        // 忽略失败的内容插入
+      }
+    }
   }
 
   // 天气图标映射方法
@@ -138,9 +163,36 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   Future<void> _saveContent() async {
     final db = Provider.of<DatabaseService>(context, listen: false);
-    final plainTextContent =
-        _controller.document.toPlainText().trim(); // 获取纯文本内容
-    final deltaJson = jsonEncode(_controller.document.toDelta().toJson());
+
+    // 获取纯文本内容
+    String plainTextContent = '';
+    String deltaJson = '';
+
+    try {
+      plainTextContent = _controller.document.toPlainText().trim();
+      deltaJson = jsonEncode(_controller.document.toDelta().toJson());
+    } catch (e) {
+      debugPrint('获取文档内容失败: $e');
+      // 显示错误但继续尝试保存
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('处理富文本时出现问题，尝试以纯文本保存: $e'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      // 尝试获取内容
+      try {
+        plainTextContent = _controller.document.toPlainText().trim();
+        if (plainTextContent.isEmpty) {
+          plainTextContent = widget.initialContent; // 回退到初始内容
+        }
+        // 不设置deltaJson，这样将不会保存富文本格式
+      } catch (_) {
+        plainTextContent = widget.initialContent; // 回退到初始内容
+      }
+    }
+
     final now = DateTime.now().toIso8601String();
 
     // 获取当前时间段
@@ -360,13 +412,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             isSelected
                                                 ? colorScheme.primary
                                                 : color == Colors.transparent
-                                                ? Colors.grey.applyOpacity(0.5) // MODIFIED
+                                                ? Colors.grey.applyOpacity(
+                                                  0.5,
+                                                ) // MODIFIED
                                                 : Colors.transparent,
                                         width: 2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.applyOpacity(0.05), // MODIFIED
+                                          color: Colors.black.applyOpacity(
+                                            0.05,
+                                          ), // MODIFIED
                                           spreadRadius: 1,
                                           blurRadius: 3,
                                           offset: const Offset(0, 1),
@@ -555,7 +611,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   color: theme.colorScheme.surfaceContainerLowest,
                   border: Border(
                     bottom: BorderSide(
-                      color: theme.colorScheme.outlineVariant.applyOpacity(0.3), // MODIFIED
+                      color: theme.colorScheme.outlineVariant.applyOpacity(
+                        0.3,
+                      ), // MODIFIED
                       width: 1,
                     ),
                   ),
@@ -662,9 +720,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurfaceVariant.applyOpacity( // MODIFIED
-                            0.4,
-                          ),
+                          color: theme.colorScheme.onSurfaceVariant
+                              .applyOpacity(
+                                // MODIFIED
+                                0.4,
+                              ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1268,7 +1328,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1352,12 +1412,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));        }
+          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));
+        }
       }
     } catch (e) {
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1513,7 +1574,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       // 确保组件仍然挂载
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1564,12 +1625,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         location: _showLocation ? _location : null,
         weather: _showWeather ? _weather : null,
         temperature: _showWeather ? _temperature : null,
-      );      // 调用AI分析
+      ); // 调用AI分析
       final analysisResult = await aiService.summarizeNote(quote);
 
       // 确保组件仍然挂载
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
       if (mounted) {
@@ -1597,7 +1658,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       // 确保组件仍然挂载
       if (!mounted) return;
-      
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 

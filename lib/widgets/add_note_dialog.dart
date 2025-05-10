@@ -38,7 +38,8 @@ class AddNoteDialog extends StatefulWidget {
   State<AddNoteDialog> createState() => _AddNoteDialogState();
 }
 
-class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingController _contentController;
+class _AddNoteDialogState extends State<AddNoteDialog> {
+  late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _workController;
   final List<String> _selectedTagIds = [];
@@ -457,7 +458,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
                               color: theme.colorScheme.primary,
                             ),
                             onPressed: () async {
-                              // 我们不需要处理返回结果，因为已经在全屏编辑器中保存了
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => FullScreenNoteEditor(
+                                        initialText: _contentController.text,
+                                      ),
+                                ),
+                              );
+
+                              if (result != null && result is String) {
+                                setState(() {
+                                  _contentController.text = result;
+                                });
+                              }
                             },
                           ),
                         ],
@@ -507,7 +522,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
-                  color: theme.colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+                  color: theme.colorScheme.onSurface.applyOpacity(
+                    0.6,
+                  ), // MODIFIED
                 ),
               ),
             ),
@@ -617,7 +634,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
                     },
                     selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                ),                const SizedBox(width: 8),
+                ),
+                const SizedBox(width: 8),
               ],
             ),
 
@@ -755,7 +773,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
                     ),
                   ],
                 ),
-              ),            const SizedBox(height: 16),
+              ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -878,7 +897,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
     );
   }
 
-
   // 自定义颜色选择器
   Future<void> _showCustomColorPicker(BuildContext context) async {
     final theme = Theme.of(context);
@@ -982,13 +1000,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
                                             isSelected
                                                 ? colorScheme.primary
                                                 : color == Colors.transparent
-                                                ? Colors.grey.applyOpacity(0.5) // MODIFIED
+                                                ? Colors.grey.applyOpacity(
+                                                  0.5,
+                                                ) // MODIFIED
                                                 : Colors.transparent,
                                         width: 2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.applyOpacity(0.05), // MODIFIED
+                                          color: Colors.black.applyOpacity(
+                                            0.05,
+                                          ), // MODIFIED
                                           spreadRadius: 1,
                                           blurRadius: 3,
                                           offset: const Offset(0, 1),
@@ -1077,7 +1099,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingContro
                                   child: const Text('取消'),
                                 ),
                                 FilledButton(
-                                  onPressed: () => Navigator.of(context).pop(selectedColor),
+                                  onPressed:
+                                      () => Navigator.of(
+                                        context,
+                                      ).pop(selectedColor),
                                   child: const Text('选择'),
                                 ),
                               ],
@@ -1210,13 +1235,20 @@ class FullScreenNoteEditor extends StatefulWidget {
   State<FullScreenNoteEditor> createState() => _FullScreenNoteEditorState(); // Ensure createState is present
 }
 
-class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> { // Ensure correct extension
+class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
+  // Ensure correct extension
   late TextEditingController controller;
 
   @override
   void initState() {
     super.initState();
-    controller = TextEditingController(text: widget.initialText);
+    try {
+      controller = TextEditingController(text: widget.initialText);
+    } catch (e) {
+      // 如果初始化失败，使用空文本作为备选方案
+      debugPrint('全屏编辑器初始化失败: $e');
+      controller = TextEditingController(text: '');
+    }
   }
 
   @override
@@ -1236,7 +1268,16 @@ class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> { // Ensure
             icon: const Icon(Icons.check),
             tooltip: '保存并返回',
             onPressed: () {
-              Navigator.pop(context, controller.text);
+              try {
+                Navigator.pop(context, controller.text);
+              } catch (e) {
+                debugPrint('返回全屏编辑器内容失败: $e');
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('保存内容失败: $e')));
+                // 尝试再次返回，这次不带内容
+                Navigator.pop(context);
+              }
             },
           ),
         ],
