@@ -55,15 +55,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 颜色选择
   String? _selectedColorHex;
-  final List<Color> _colorOptions = [
-    Colors.red.shade100,
-    Colors.orange.shade100,
-    Colors.yellow.shade100,
-    Colors.green.shade100,
-    Colors.blue.shade100,
-    Colors.purple.shade100,
-    Colors.pink.shade100,
-  ];
 
   // 缓存标签future，防止FutureBuilder多次请求导致闪屏
   Future<List<NoteCategory>>? _tagFuture;
@@ -264,11 +255,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     try {
       // 首先，检查是否有固定ID映射
       String? fixedId;
-      String hitokotoType = '';
       for (var entry in _hitokotoTypeToCategoryIdMap.entries) {
         if (_convertHitokotoTypeToTagName(entry.key) == name) {
           fixedId = entry.value;
-          hitokotoType = entry.key;
           break;
         }
       }
@@ -398,7 +387,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final db = Provider.of<DatabaseService>(context);
-    final aiService = Provider.of<AIService>(context);
     final locationService = Provider.of<LocationService>(context);
     final weatherService = Provider.of<WeatherService>(context);
 

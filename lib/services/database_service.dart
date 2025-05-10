@@ -138,7 +138,7 @@ class DatabaseService extends ChangeNotifier {
 
       // 数据库初始化核心逻辑
       _database = await _initDatabase(path);
-      
+
       // 检查并修复数据库结构
       await _checkAndFixDatabaseStructure();
 
@@ -157,7 +157,7 @@ class DatabaseService extends ChangeNotifier {
       _watchHasMore = true;
       // 预加载数据
       await _prefetchInitialQuotes();
-      
+
       _isInitialized = true; // 数据库初始化完成
       notifyListeners();
     } catch (e) {
@@ -165,7 +165,7 @@ class DatabaseService extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
@@ -211,9 +211,7 @@ class DatabaseService extends ChangeNotifier {
         );
         await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
         // 虽然tag_ids是一个文本字段，但我们也可以为它创建索引，以加速LIKE查询
-        await db.execute(
-          'CREATE INDEX idx_quotes_tag_ids ON quotes(tag_ids)',
-        );
+        await db.execute('CREATE INDEX idx_quotes_tag_ids ON quotes(tag_ids)');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
@@ -224,9 +222,7 @@ class DatabaseService extends ChangeNotifier {
         }
         // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
         if (oldVersion < 3) {
-          await db.execute(
-            'ALTER TABLE categories ADD COLUMN icon_name TEXT',
-          );
+          await db.execute('ALTER TABLE categories ADD COLUMN icon_name TEXT');
         }
         // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
         if (oldVersion < 4) {
@@ -247,9 +243,7 @@ class DatabaseService extends ChangeNotifier {
 
         // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
         if (oldVersion < 7) {
-          await db.execute(
-            'ALTER TABLE quotes ADD COLUMN source_author TEXT',
-          );
+          await db.execute('ALTER TABLE quotes ADD COLUMN source_author TEXT');
           await db.execute('ALTER TABLE quotes ADD COLUMN source_work TEXT');
 
           // 将现有的 source 字段数据拆分到新字段中
@@ -333,34 +327,35 @@ class DatabaseService extends ChangeNotifier {
           debugPrint(
             '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
           );
-          await db.execute(
-            'ALTER TABLE quotes ADD COLUMN delta_content TEXT',
-          );
+          await db.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
           debugPrint('数据库升级：delta_content 字段添加完成');
         }
       },
     );
   }
-  
+
   // 新增初始化新数据库方法，用于在迁移失败时创建新的数据库
   Future<void> initializeNewDatabase() async {
     if (_isInitialized) return;
-    
+
     try {
       // 确保数据库目录存在
       if (Platform.isWindows) {
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
       }
-      
+
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'thoughtecho.db');
-      
+
       // 如果文件已存在但可能损坏，先备份再删除
       final file = File(path);
       if (await file.exists()) {
         try {
-          final backupPath = join(dbPath, 'thoughtecho_backup_${DateTime.now().millisecondsSinceEpoch}.db');
+          final backupPath = join(
+            dbPath,
+            'thoughtecho_backup_${DateTime.now().millisecondsSinceEpoch}.db',
+          );
           await file.copy(backupPath);
           debugPrint('已将可能损坏的数据库备份到 $backupPath');
           await file.delete();
@@ -369,13 +364,13 @@ class DatabaseService extends ChangeNotifier {
           debugPrint('备份或删除损坏数据库失败: $e');
         }
       }
-      
+
       // 初始化新数据库
       _database = await _initDatabase(path);
-      
+
       // 创建默认分类
       await initDefaultHitokotoCategories();
-      
+
       _isInitialized = true;
       notifyListeners();
       debugPrint('成功初始化新数据库');
@@ -392,14 +387,10 @@ class DatabaseService extends ChangeNotifier {
       _currentQuotes = [];
       _watchHasMore = true;
       _isLoading = false;
-      
+
       // 使用loadMoreQuotes加载第一页数据
-      await loadMoreQuotes(
-        tagIds: null,
-        categoryId: null,
-        searchQuery: null
-      );
-      
+      await loadMoreQuotes(tagIds: null, categoryId: null, searchQuery: null);
+
       // 通知初始化完成
       if (_currentQuotes.isEmpty) {
         debugPrint('数据库中没有笔记数据');
@@ -464,7 +455,8 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       // Web 平台逻辑：检查内存中的 _categoryStore
       final defaultCategories = _getDefaultHitokotoCategories();
-      final existingNamesLower = _categoryStore.map((c) => c.name.toLowerCase()).toSet();
+      final existingNamesLower =
+          _categoryStore.map((c) => c.name.toLowerCase()).toSet();
       for (final category in defaultCategories) {
         if (!existingNamesLower.contains(category.name.toLowerCase())) {
           _categoryStore.add(category);
@@ -487,39 +479,48 @@ class DatabaseService extends ChangeNotifier {
           debugPrint('数据库初始化失败，但仍将尝试创建默认标签: $e');
         }
       }
-      
+
       // 即使init()失败，也尝试获取数据库，如果还是null则提前返回
       if (_database == null) {
         debugPrint('数据库仍为null，无法创建默认标签');
         return;
       }
-      
+
       final db = database;
       final defaultCategories = _getDefaultHitokotoCategories();
-      
+
       // 1. 一次性查询所有现有分类名称（小写）
-      final existingCategories = await db.query('categories', columns: ['name', 'id']);
-      final existingNamesLower = existingCategories
-          .map((row) => (row['name'] as String?)?.toLowerCase())
-          .where((name) => name != null)
-          .toSet();
-      
+      final existingCategories = await db.query(
+        'categories',
+        columns: ['name', 'id'],
+      );
+      final existingNamesLower =
+          existingCategories
+              .map((row) => (row['name'] as String?)?.toLowerCase())
+              .where((name) => name != null)
+              .toSet();
+
       // 同时创建ID到名称的映射，用于检查默认ID是否已被其它名称使用
       final existingIdToName = {
         for (var row in existingCategories)
-          row['id'] as String: row['name'] as String
+          row['id'] as String: row['name'] as String,
       };
-          
+
       // 2. 筛选出数据库中尚不存在的默认分类
-      final categoriesToAdd = defaultCategories
-          .where((category) => !existingNamesLower.contains(category.name.toLowerCase()))
-          .toList();
-      
+      final categoriesToAdd =
+          defaultCategories
+              .where(
+                (category) =>
+                    !existingNamesLower.contains(category.name.toLowerCase()),
+              )
+              .toList();
+
       // 3. 检查默认ID是否已被其他名称使用，如果是，需要更新名称
       final idsToUpdate = <String, String>{};
       for (final category in defaultCategories) {
-        if (existingIdToName.containsKey(category.id) && 
-            existingIdToName[category.id]!.toLowerCase() != category.name.toLowerCase()) {
+        if (existingIdToName.containsKey(category.id) &&
+            existingIdToName[category.id]!.toLowerCase() !=
+                category.name.toLowerCase()) {
           // 已存在此ID但名称不同，需要更新
           idsToUpdate[category.id] = category.name;
         }
@@ -527,21 +528,18 @@ class DatabaseService extends ChangeNotifier {
 
       // 4. 如果有需要添加的分类，则使用批处理插入
       final batch = db.batch();
-      
+
       // 先处理更新
       for (final entry in idsToUpdate.entries) {
         batch.update(
           'categories',
-          {
-            'name': entry.value,
-            'is_default': 1,
-          },
+          {'name': entry.value, 'is_default': 1},
           where: 'id = ?',
-          whereArgs: [entry.key]
+          whereArgs: [entry.key],
         );
         debugPrint('更新ID为${entry.key}的分类名称为: ${entry.value}');
       }
-      
+
       // 再处理新增
       for (final category in categoriesToAdd) {
         // 跳过ID已经存在但名称不同的情况（已在上面处理）
@@ -556,15 +554,17 @@ class DatabaseService extends ChangeNotifier {
         }, conflictAlgorithm: ConflictAlgorithm.ignore);
         debugPrint('添加默认一言分类: ${category.name}');
       }
-      
+
       // 提交批处理
       if (categoriesToAdd.isNotEmpty || idsToUpdate.isNotEmpty) {
         await batch.commit(noResult: true);
-        debugPrint('批量处理了 ${categoriesToAdd.length} 个新分类和 ${idsToUpdate.length} 个更新');
+        debugPrint(
+          '批量处理了 ${categoriesToAdd.length} 个新分类和 ${idsToUpdate.length} 个更新',
+        );
       } else {
         debugPrint('所有默认分类已存在，无需添加');
       }
-      
+
       // 更新分类流
       await _updateCategoriesStream();
     } catch (e) {
@@ -897,8 +897,8 @@ class DatabaseService extends ChangeNotifier {
       // 导入后自动补全字段
       await patchQuotesDayPeriod();
       await migrateWeatherToKey();
-          await migrateDayPeriodToKey();
-        } catch (e) {
+      await migrateDayPeriodToKey();
+    } catch (e) {
       debugPrint('数据导入失败: $e');
       rethrow;
     }
@@ -1061,7 +1061,11 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 添加一条分类（使用指定ID）
-  Future<void> addCategoryWithId(String id, String name, {String? iconName}) async {
+  Future<void> addCategoryWithId(
+    String id,
+    String name, {
+    String? iconName,
+  }) async {
     // 检查参数
     if (name.trim().isEmpty) {
       throw Exception('分类名称不能为空');
@@ -1102,7 +1106,7 @@ class DatabaseService extends ChangeNotifier {
         );
         _categoryStore.add(newCategory);
       }
-      
+
       _categoriesController.add(_categoryStore);
       notifyListeners();
       return;
@@ -1147,10 +1151,7 @@ class DatabaseService extends ChangeNotifier {
 
         if (existingById.isNotEmpty) {
           // 如果ID已存在，更新此分类
-          final categoryMap = {
-            'name': name,
-            'icon_name': iconName ?? "",
-          };
+          final categoryMap = {'name': name, 'icon_name': iconName ?? ""};
           await txn.update(
             'categories',
             categoryMap,
@@ -1286,7 +1287,9 @@ class DatabaseService extends ChangeNotifier {
       if (!columnNames.contains('weather')) quoteMap.remove('weather');
       if (!columnNames.contains('temperature')) quoteMap.remove('temperature');
       if (!columnNames.contains('edit_source')) quoteMap.remove('edit_source');
-      if (!columnNames.contains('delta_content')) quoteMap.remove('delta_content');
+      if (!columnNames.contains('delta_content')) {
+        quoteMap.remove('delta_content');
+      }
 
       debugPrint('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
 
@@ -1296,17 +1299,17 @@ class DatabaseService extends ChangeNotifier {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       debugPrint('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
-      
+
       // 清除缓存，确保数据刷新
       _quotesCache.clear();
       _currentQuotes.clear();
       _filterCache.clear();
-      
+
       notifyListeners();
-      
+
       // 确保刷新流和UI
       _refreshQuotesStream();
-      
+
       // 延迟再次通知以确保UI更新
       Future.delayed(const Duration(milliseconds: 200), () {
         notifyListeners();
@@ -1351,50 +1354,52 @@ class DatabaseService extends ChangeNotifier {
       if (kIsWeb) {
         var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) => q.tagIds.any((tag) => tagIds.contains(tag)),
-              )
-              .toList();
+          filtered =
+              filtered
+                  .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+                  .toList();
         }
         if (categoryId != null && categoryId.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) => q.categoryId == categoryId,
-              )
-              .toList();
+          filtered = filtered.where((q) => q.categoryId == categoryId).toList();
         }
         if (searchQuery != null && searchQuery.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) =>
-                    q.content.toLowerCase().contains(
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.content.toLowerCase().contains(
                           searchQuery.toLowerCase(),
                         ) ||
-                    (q.source?.toLowerCase().contains(
-                          searchQuery.toLowerCase(),
-                        ) ??
-                        false),
-              )
-              .toList();
+                        (q.source?.toLowerCase().contains(
+                              searchQuery.toLowerCase(),
+                            ) ??
+                            false),
+                  )
+                  .toList();
         }
         // 天气筛选条件
         if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) => q.weather != null && selectedWeathers.any(
-                  (weather) => q.weather!.contains(weather),
-                ),
-              )
-              .toList();
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.weather != null &&
+                        selectedWeathers.any(
+                          (weather) => q.weather!.contains(weather),
+                        ),
+                  )
+                  .toList();
         }
         // 时间段筛选条件
         if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) => q.dayPeriod != null && selectedDayPeriods.contains(q.dayPeriod),
-              )
-              .toList();
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.dayPeriod != null &&
+                        selectedDayPeriods.contains(q.dayPeriod),
+                  )
+                  .toList();
         }
         filtered.sort((a, b) => b.date.compareTo(a.date));
         final start = offset < filtered.length ? offset : filtered.length;
@@ -1423,14 +1428,18 @@ class DatabaseService extends ChangeNotifier {
       // 天气筛选条件
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
         // 考虑null值的情况，使用COALESCE确保null值也能被正确处理
-        final weatherConditions = selectedWeathers.map((_) => 'COALESCE(weather, "") = ?').join(' OR ');
+        final weatherConditions = selectedWeathers
+            .map((_) => 'COALESCE(weather, "") = ?')
+            .join(' OR ');
         conditions.add('($weatherConditions)');
         args.addAll(selectedWeathers);
       }
       // 时间段筛选条件
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
         // 考虑null值的情况，使用COALESCE确保null值也能被正确处理
-        final dayPeriodConditions = selectedDayPeriods.map((_) => 'COALESCE(day_period, "") = ?').join(' OR ');
+        final dayPeriodConditions = selectedDayPeriods
+            .map((_) => 'COALESCE(day_period, "") = ?')
+            .join(' OR ');
         conditions.add('($dayPeriodConditions)');
         args.addAll(selectedDayPeriods);
       }
@@ -1443,9 +1452,7 @@ class DatabaseService extends ChangeNotifier {
         limit: limit,
         offset: offset,
       );
-      return maps
-          .map((m) => Quote.fromJson(m))
-          .toList();
+      return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
       debugPrint('获取引用错误: $e');
       return [];
@@ -1601,10 +1608,11 @@ class DatabaseService extends ChangeNotifier {
         where: 'weather IS NOT NULL AND weather != ""',
         limit: 1,
       );
-      
+
       if (weatherCheck.isNotEmpty) {
         final weather = weatherCheck.first['weather'] as String?;
-        if (weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
+        if (weather != null &&
+            WeatherService.weatherKeyToLabel.values.contains(weather)) {
           debugPrint('检测到未迁移的weather数据，开始迁移...');
           await migrateWeatherToKey();
         }
@@ -1623,10 +1631,12 @@ class DatabaseService extends ChangeNotifier {
         where: 'day_period IS NOT NULL AND day_period != ""',
         limit: 1,
       );
-      
+
       if (dayPeriodCheck.isNotEmpty) {
         final dayPeriod = dayPeriodCheck.first['day_period'] as String?;
-        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
+          (k, v) => MapEntry(v, k),
+        );
         if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
           debugPrint('检测到未迁移的day_period数据，开始迁移...');
           await migrateDayPeriodToKey();
@@ -1696,7 +1706,9 @@ class DatabaseService extends ChangeNotifier {
     if (_watchSelectedWeathers != null && selectedWeathers != null) {
       if (_watchSelectedWeathers!.length != selectedWeathers.length) {
         hasFilterChanged = true;
-        debugPrint('天气筛选数量变更: ${_watchSelectedWeathers!.length} -> ${selectedWeathers.length}');
+        debugPrint(
+          '天气筛选数量变更: ${_watchSelectedWeathers!.length} -> ${selectedWeathers.length}',
+        );
       } else {
         // 比较天气筛选内容是否一致
         for (int i = 0; i < _watchSelectedWeathers!.length; i++) {
@@ -1716,7 +1728,9 @@ class DatabaseService extends ChangeNotifier {
     if (_watchSelectedDayPeriods != null && selectedDayPeriods != null) {
       if (_watchSelectedDayPeriods!.length != selectedDayPeriods.length) {
         hasFilterChanged = true;
-        debugPrint('时间段筛选数量变更: ${_watchSelectedDayPeriods!.length} -> ${selectedDayPeriods.length}');
+        debugPrint(
+          '时间段筛选数量变更: ${_watchSelectedDayPeriods!.length} -> ${selectedDayPeriods.length}',
+        );
       } else {
         // 比较时间段筛选内容是否一致
         for (int i = 0; i < _watchSelectedDayPeriods!.length; i++) {
@@ -1727,7 +1741,8 @@ class DatabaseService extends ChangeNotifier {
           }
         }
       }
-    } else if ((_watchSelectedDayPeriods == null) != (selectedDayPeriods == null)) {
+    } else if ((_watchSelectedDayPeriods == null) !=
+        (selectedDayPeriods == null)) {
       hasFilterChanged = true;
       debugPrint('时间段筛选条件状态变更');
     }
@@ -1748,7 +1763,7 @@ class DatabaseService extends ChangeNotifier {
       _quotesController = StreamController<List<Quote>>.broadcast();
       _currentQuotes = [];
       _isLoading = false;
-      
+
       // 在新的异步上下文中执行初始化
       Future(() async {
         try {
@@ -1760,7 +1775,7 @@ class DatabaseService extends ChangeNotifier {
             // 补全缺失的时间段数据
             await patchQuotesDayPeriod();
           }
-          
+
           // 加载第一页数据
           await loadMoreQuotes(
             tagIds: tagIds,
@@ -1887,7 +1902,11 @@ class DatabaseService extends ChangeNotifier {
   List<Quote> _currentQuotes = [];
 
   /// 更新分类信息
-  Future<void> updateCategory(String id, String name, {String? iconName}) async {
+  Future<void> updateCategory(
+    String id,
+    String name, {
+    String? iconName,
+  }) async {
     // 检查参数
     if (name.trim().isEmpty) {
       throw Exception('分类名称不能为空');
@@ -1904,7 +1923,6 @@ class DatabaseService extends ChangeNotifier {
     //   // throw Exception('不允许修改默认分类的名称');
     // }
 
-
     if (kIsWeb) {
       // Web 平台逻辑
       final index = _categoryStore.indexWhere((c) => c.id == id);
@@ -1913,7 +1931,9 @@ class DatabaseService extends ChangeNotifier {
       }
       // 检查新名称是否与 *其他* 分类冲突
       final newNameLower = name.toLowerCase();
-      final conflict = _categoryStore.any((c) => c.id != id && c.name.toLowerCase() == newNameLower);
+      final conflict = _categoryStore.any(
+        (c) => c.id != id && c.name.toLowerCase() == newNameLower,
+      );
       if (conflict) {
         throw Exception('已存在相同名称的分类');
       }
@@ -2020,14 +2040,26 @@ class DatabaseService extends ChangeNotifier {
   /// 迁移旧数据dayPeriod字段为英文key
   Future<void> migrateDayPeriodToKey() async {
     final db = database;
-    final List<Map<String, dynamic>> maps = await db.query('quotes', columns: ['id', 'day_period']);
-    final labelToKey = TimeUtils.dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+    final List<Map<String, dynamic>> maps = await db.query(
+      'quotes',
+      columns: ['id', 'day_period'],
+    );
+    final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
+      (k, v) => MapEntry(v, k),
+    );
     for (final map in maps) {
       final id = map['id'] as String?;
       final dayPeriod = map['day_period'] as String?;
-      if (id != null && dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
+      if (id != null &&
+          dayPeriod != null &&
+          labelToKey.containsKey(dayPeriod)) {
         final key = labelToKey[dayPeriod]!;
-        await db.update('quotes', {'day_period': key}, where: 'id = ?', whereArgs: [id]);
+        await db.update(
+          'quotes',
+          {'day_period': key},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
       }
     }
     debugPrint('已完成旧数据dayPeriod字段的key迁移');
@@ -2038,23 +2070,37 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       for (var i = 0; i < _memoryStore.length; i++) {
         final q = _memoryStore[i];
-        if (q.weather != null && WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
-          final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == q.weather).key;
+        if (q.weather != null &&
+            WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
+          final key =
+              WeatherService.weatherKeyToLabel.entries
+                  .firstWhere((e) => e.value == q.weather)
+                  .key;
           _memoryStore[i] = q.copyWith(weather: key);
         }
       }
       notifyListeners();
       return;
     }
-    
+
     final db = database;
     final maps = await db.query('quotes', columns: ['id', 'weather']);
     for (final m in maps) {
       final id = m['id'] as String?;
       final weather = m['weather'] as String?;
-      if (id != null && weather != null && WeatherService.weatherKeyToLabel.values.contains(weather)) {
-        final key = WeatherService.weatherKeyToLabel.entries.firstWhere((e) => e.value == weather).key;
-        await db.update('quotes', {'weather': key}, where: 'id = ?', whereArgs: [id]);
+      if (id != null &&
+          weather != null &&
+          WeatherService.weatherKeyToLabel.values.contains(weather)) {
+        final key =
+            WeatherService.weatherKeyToLabel.entries
+                .firstWhere((e) => e.value == weather)
+                .key;
+        await db.update(
+          'quotes',
+          {'weather': key},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
       }
     }
     debugPrint('已完成旧数据weather字段的key迁移');
@@ -2082,7 +2128,7 @@ class DatabaseService extends ChangeNotifier {
       if (maps.isEmpty) {
         return null;
       }
-      
+
       return NoteCategory.fromMap(maps.first);
     } catch (e) {
       debugPrint('根据 ID 获取分类失败: $e');

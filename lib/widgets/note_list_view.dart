@@ -53,7 +53,6 @@ class NoteListViewState extends State<NoteListView> {
   final List<Quote> _quotes = [];
   bool _isLoading = true;
   bool _hasMore = true;
-  int _offset = 0;
   static const int _pageSize = 20;
   late StreamSubscription<List<Quote>> _quotesSub;
   List<String> _selectedWeathers = [];
@@ -63,7 +62,6 @@ class NoteListViewState extends State<NoteListView> {
   void initState() {
     super.initState();
     _searchController.text = widget.searchQuery;
-    _offset = 0;
     _hasMore = true;
     _isLoading = true;
     // 初始订阅数据流
@@ -77,8 +75,10 @@ class NoteListViewState extends State<NoteListView> {
               widget.sortType == 'time'
                   ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
                   : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-          selectedWeathers: _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
-          selectedDayPeriods: _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
+          selectedWeathers:
+              _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+          selectedDayPeriods:
+              _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
         )
         .listen((list) {
           setState(() {
@@ -125,9 +125,8 @@ class NoteListViewState extends State<NoteListView> {
   void _updateStreamSubscription() {
     setState(() {
       _isLoading = true; // 开始加载
-      _offset = 0;       // 重置分页
-      _hasMore = true;     // 假设有更多数据
-      _quotes.clear();   // 清空当前列表
+      _hasMore = true; // 假设有更多数据
+      _quotes.clear(); // 清空当前列表
     });
 
     // 使用更新条件的方式而不是重新订阅
@@ -149,30 +148,35 @@ class NoteListViewState extends State<NoteListView> {
                   : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
           searchQuery:
               widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-          selectedWeathers: _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
-          selectedDayPeriods: _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
+          selectedWeathers:
+              _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+          selectedDayPeriods:
+              _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
         )
-        .listen((list) {
-          if (mounted) { // 确保组件仍然挂载
-            setState(() {
-              // _quotes.clear(); // 不再需要，因为在开始时已清空
-              _quotes.addAll(list);
-              _hasMore = list.length == _pageSize; // 判断是否还有更多
-              _isLoading = false; // 加载完成
-              _offset += list.length; // 更新偏移量
-            });
-          }
-        }, onError: (error) {
-          if (mounted) {
-            setState(() {
-              _isLoading = false; // 出错时停止加载
-            });
-            // 可以添加错误处理逻辑，例如显示 SnackBar
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('加载笔记失败: $error')),
-            );
-          }
-        });
+        .listen(
+          (list) {
+            if (mounted) {
+              // 确保组件仍然挂载
+              setState(() {
+                // _quotes.clear(); // 不再需要，因为在开始时已清空
+                _quotes.addAll(list);
+                _hasMore = list.length == _pageSize; // 判断是否还有更多
+                _isLoading = false; // 加载完成
+              });
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false; // 出错时停止加载
+              });
+              // 可以添加错误处理逻辑，例如显示 SnackBar
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('加载笔记失败: $error')));
+            }
+          },
+        );
   }
 
   // 移除重复的 _areListsEqual 定义
@@ -187,7 +191,6 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> resetAndLoad() async {
     _quotes.clear();
     _hasMore = true;
-    _offset = 0;
     _loadMore();
   }
 
@@ -365,7 +368,6 @@ class NoteListViewState extends State<NoteListView> {
     final isTablet = width > 600;
     final maxWidth = isTablet ? 800.0 : width;
     final horizontalPadding = isTablet ? 16.0 : 8.0;
-    final verticalPadding = isTablet ? 16.0 : 8.0;
 
     // 布局构建
     return LayoutBuilder(
@@ -379,10 +381,10 @@ class NoteListViewState extends State<NoteListView> {
                 // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
                 Container(
                   padding: EdgeInsets.fromLTRB(
-                    horizontalPadding, 
+                    horizontalPadding,
                     MediaQuery.of(context).padding.top + 8.0, // 顶部安全区域 + 一些额外空间
-                    horizontalPadding, 
-                    0
+                    horizontalPadding,
+                    0,
                   ),
                   child: Row(
                     children: [
@@ -393,8 +395,7 @@ class NoteListViewState extends State<NoteListView> {
                             hintText: '搜索笔记...',
                             prefixIcon: const Icon(Icons.search),
                             contentPadding: EdgeInsets.symmetric(
-                              vertical:
-                                  constraints.maxWidth < 600 ? 8.0 : 12.0,
+                              vertical: constraints.maxWidth < 600 ? 8.0 : 12.0,
                             ),
                             isDense: constraints.maxWidth < 600, // 小屏幕更紧凑
                             border: OutlineInputBorder(
@@ -422,74 +423,80 @@ class NoteListViewState extends State<NoteListView> {
                                 top: Radius.circular(16),
                               ),
                             ),
-                            builder: (context) => NoteFilterSortSheet(
-                              allTags: widget.tags,
-                              selectedTagIds: widget.selectedTagIds,
-                              sortType: widget.sortType,
-                              sortAscending: widget.sortAscending,
-                              selectedWeathers: _selectedWeathers,
-                              selectedDayPeriods: _selectedDayPeriods, // 传递时间段筛选状态
-                              onApply: (
-                                tagIds,
-                                sortType,
-                                sortAscending,
-                                selectedWeathers,
-                                selectedDayPeriods, // 接收时间段筛选结果
-                              ) {
-                                widget.onTagSelectionChanged(tagIds);
-                                widget.onSortChanged(
-                                  sortType,
-                                  sortAscending,
-                                );
-                                setState(() {
-                                  _selectedWeathers = selectedWeathers;
-                                  _selectedDayPeriods = selectedDayPeriods; // 更新时间段筛选状态
-                                });
-                                // 在状态更新后，立即触发数据库流的更新
-                                _updateStreamSubscription();
-                              },
-                            ),
+                            builder:
+                                (context) => NoteFilterSortSheet(
+                                  allTags: widget.tags,
+                                  selectedTagIds: widget.selectedTagIds,
+                                  sortType: widget.sortType,
+                                  sortAscending: widget.sortAscending,
+                                  selectedWeathers: _selectedWeathers,
+                                  selectedDayPeriods:
+                                      _selectedDayPeriods, // 传递时间段筛选状态
+                                  onApply: (
+                                    tagIds,
+                                    sortType,
+                                    sortAscending,
+                                    selectedWeathers,
+                                    selectedDayPeriods, // 接收时间段筛选结果
+                                  ) {
+                                    widget.onTagSelectionChanged(tagIds);
+                                    widget.onSortChanged(
+                                      sortType,
+                                      sortAscending,
+                                    );
+                                    setState(() {
+                                      _selectedWeathers = selectedWeathers;
+                                      _selectedDayPeriods =
+                                          selectedDayPeriods; // 更新时间段筛选状态
+                                    });
+                                    // 在状态更新后，立即触发数据库流的更新
+                                    _updateStreamSubscription();
+                                  },
+                                ),
                           );
                         },
                       ),
                     ],
                   ),
                 ),
-                
+
                 // 标签筛选器
                 widget.selectedTagIds.isNotEmpty
                     ? Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: horizontalPadding,
-                          vertical: 8.0,
-                        ),
-                        width: double.infinity,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: widget.selectedTagIds.map((tagId) {
-                            final tag = widget.tags.firstWhere(
-                              (tag) => tag.id == tagId,
-                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-                            );
-                            return Chip(
-                              label: Text(tag.name),
-                              onDeleted: () {
-                                final newSelectedTags = List<String>.from(
-                                  widget.selectedTagIds,
-                                )..remove(tagId);
-                                widget.onTagSelectionChanged(newSelectedTags);
-                              },
-                              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      )
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 8.0,
+                      ),
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            widget.selectedTagIds.map((tagId) {
+                              final tag = widget.tags.firstWhere(
+                                (tag) => tag.id == tagId,
+                                orElse:
+                                    () => NoteCategory(id: tagId, name: '未知标签'),
+                              );
+                              return Chip(
+                                label: Text(tag.name),
+                                onDeleted: () {
+                                  final newSelectedTags = List<String>.from(
+                                    widget.selectedTagIds,
+                                  )..remove(tagId);
+                                  widget.onTagSelectionChanged(newSelectedTags);
+                                },
+                                backgroundColor: theme.colorScheme.primary
+                                    .withOpacity(0.1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    )
                     : const SizedBox.shrink(),
-                
+
                 // 笔记列表
                 Expanded(
                   child: Padding(

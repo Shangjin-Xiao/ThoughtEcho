@@ -31,33 +31,40 @@ MaterialColor createMaterialColor(Color color) {
     );
   }
 
-  return MaterialColor(color.value, swatch);
+  return MaterialColor(color.toARGB32(), swatch);
 }
 
 Color adjustColor(Color color) {
-  // 使用 color.value 替代 toARGB32
-  final int newValue = color.value;
+  // 使用 toARGB32 替代 color.value
+  final int newValue = color.toARGB32();
   return Color(newValue);
 }
 
 // 新增扩展方法，将 withOpacity 替换为 applyOpacity
 extension ColorValueExtension on Color {
-  Color applyOpacity(double opacity) => Color.fromRGBO(red, green, blue, opacity);
+  Color applyOpacity(double opacity) =>
+      Color.fromRGBO(red, green, blue, opacity);
+}
+
+// 新增扩展方法，将已弃用的 withOpacity 替换为安全的实现
+extension ColorExtension on Color {
+  /// 安全地设置颜色的透明度，替代已弃用的 withOpacity
+  Color withAlpha(double opacity) => Color.fromRGBO(red, green, blue, opacity);
 }
 
 /// 颜色工具类
 class ColorUtils {
   /// 安全地设置颜色的透明度
-  /// 
+  ///
   /// 替代已弃用的Color.withOpacity方法
   /// 参数opacity应该在0.0到1.0之间
   static Color withOpacitySafe(Color color, double opacity) {
     // 确保opacity在有效范围内
     opacity = opacity.clamp(0.0, 1.0);
-    
+
     // 将0-1的opacity转换为0-255的alpha值
     final int alpha = (opacity * 255).round();
-    
+
     // 创建带有新alpha值的颜色
     return color.withAlpha(alpha);
   }

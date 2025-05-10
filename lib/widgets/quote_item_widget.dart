@@ -110,7 +110,9 @@ class QuoteItemWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.08),
+                  color: theme.shadowColor.withValues(
+                    alpha: (0.08 * 255).round().toDouble(),
+                  ),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -314,7 +316,7 @@ class QuoteItemWidget extends StatelessWidget {
                           ),
                         ),
                       ],
-                      
+
                       // 添加Spacer确保更多按钮始终在右侧
                       const Spacer(),
 

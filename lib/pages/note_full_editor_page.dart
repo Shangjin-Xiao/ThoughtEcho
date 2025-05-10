@@ -38,7 +38,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   String? _location;
   String? _weather;
   String? _temperature;
-  bool _showMeta = false;
   // 分离位置和天气控制
   bool _showLocation = false;
   bool _showWeather = false;
@@ -82,9 +81,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 分别检查并设置位置和天气状态
     _showLocation = _location != null;
     _showWeather = _weather != null;
-
-    // 默认折叠元数据区域
-    _showMeta = false;
   }
 
   // 初始化为纯文本的辅助方法
@@ -520,8 +516,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           ),
           // AI助手按钮
           IconButton(
-            icon: const Text('✨', style: TextStyle(fontSize: 20)),
-            tooltip: 'AI',
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'AI助手',
             onPressed: () => _showAIOptions(context),
           ),
           IconButton(

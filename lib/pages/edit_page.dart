@@ -992,12 +992,15 @@ class _EditPageState extends State<EditPage> {
                                   }
                                 },
                                 icon: const Icon(Icons.auto_awesome, size: 18),
-                                label: const Text('AI分析'),
+                                label: const Text('AI'),
                               ),
                               const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.analytics),
+                                tooltip: '分析内容',
+                                onPressed: _analyzeContent,
+                              ),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert),
-                                tooltip: 'AI工具',
                                 onSelected: (String value) {
                                   switch (value) {
                                     case 'polish':

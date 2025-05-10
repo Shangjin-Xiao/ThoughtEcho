@@ -20,29 +20,26 @@ class _LogsPageState extends State<LogsPage> {
   String? _filterSource;
   String? _searchQuery;
   final TextEditingController _searchController = TextEditingController();
-  
-  // 详情查看
-  LogEntry? _selectedLog;
-  
+
   // 正在加载更多日志
   bool _isLoadingMore = false;
-  
+
   // 分页相关
   int _currentPage = 0;
   static const int _pageSize = 50;
   final List<LogEntry> _historyLogs = [];
   bool _hasMoreLogs = true;
-  
+
   // 滚动控制器
   final ScrollController _scrollController = ScrollController();
-  
+
   @override
   void initState() {
     super.initState();
     // 监听滚动事件，用于实现滚动到底部加载更多
     _scrollController.addListener(_scrollListener);
   }
-  
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -50,32 +47,33 @@ class _LogsPageState extends State<LogsPage> {
     _scrollController.dispose();
     super.dispose();
   }
-  
+
   // 滚动监听器，用于加载更多日志
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
-    
+
     // 当滚动到底部时加载更多历史日志
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       _loadMoreLogs();
     }
   }
-  
+
   // 加载更多历史日志
   Future<void> _loadMoreLogs() async {
     final logService = Provider.of<LogService>(context, listen: false);
-    
+
     // 如果没有更多日志可加载，或已在加载中，则返回
     if (!_hasMoreLogs || _isLoadingMore) return;
-    
+
     setState(() {
       _isLoadingMore = true;
     });
-    
+
     try {
       // 计算要跳过的日志数量
       final offset = _currentPage * _pageSize;
-      
+
       // 查询下一页日志
       final moreLogs = await logService.queryLogs(
         level: _filterLevel,
@@ -84,7 +82,7 @@ class _LogsPageState extends State<LogsPage> {
         limit: _pageSize,
         offset: offset,
       );
-      
+
       if (moreLogs.isEmpty) {
         // 没有更多日志
         setState(() {
@@ -100,9 +98,9 @@ class _LogsPageState extends State<LogsPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('加载更多日志失败: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('加载更多日志失败: $e')));
       setState(() {
         _isLoadingMore = false;
       });
@@ -112,7 +110,7 @@ class _LogsPageState extends State<LogsPage> {
       );
     }
   }
-  
+
   // 刷新日志列表
   Future<void> _refreshLogs() async {
     setState(() {
@@ -120,17 +118,17 @@ class _LogsPageState extends State<LogsPage> {
       _historyLogs.clear();
       _hasMoreLogs = true;
     });
-    
+
     await _loadMoreLogs();
   }
-  
+
   // 过滤日志
   bool _filterLog(LogEntry log) {
     // 级别过滤
     if (_filterLevel != null && log.level != _filterLevel) {
       return false;
     }
-    
+
     // 源过滤
     if (_filterSource != null && _filterSource!.isNotEmpty) {
       final source = log.source ?? '';
@@ -138,38 +136,30 @@ class _LogsPageState extends State<LogsPage> {
         return false;
       }
     }
-    
+
     // 文本搜索
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
       return log.message.toLowerCase().contains(_searchQuery!.toLowerCase()) ||
-             (log.error ?? '').toLowerCase().contains(_searchQuery!.toLowerCase());
+          (log.error ?? '').toLowerCase().contains(_searchQuery!.toLowerCase());
     }
-    
+
     return true;
   }
-  
+
   // 显示日志详情对话框
   void _showLogDetails(LogEntry log) {
-    setState(() {
-      _selectedLog = log;
-    });
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildLogDetailsSheet(log),
-    ).then((_) {
-      setState(() {
-        _selectedLog = null;
-      });
-    });
+    );
   }
-  
+
   // 构建日志详情底部表
   Widget _buildLogDetailsSheet(LogEntry log) {
     final theme = Theme.of(context);
-    
+
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
       minChildSize: 0.3,
@@ -188,7 +178,10 @@ class _LogsPageState extends State<LogsPage> {
             children: [
               // 标题栏
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: const BorderRadius.only(
@@ -230,7 +223,7 @@ class _LogsPageState extends State<LogsPage> {
                   ],
                 ),
               ),
-              
+
               // 详细内容（可滚动）
               Expanded(
                 child: ListView(
@@ -238,14 +231,12 @@ class _LogsPageState extends State<LogsPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 消息
-                    Text(
-                      '消息:',
-                      style: theme.textTheme.labelLarge,
-                    ),
+                    Text('消息:', style: theme.textTheme.labelLarge),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: SelectableText(
@@ -255,7 +246,7 @@ class _LogsPageState extends State<LogsPage> {
                         ),
                       ),
                     ),
-                    
+
                     // 错误信息（如果存在）
                     if (log.error != null && log.error!.isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -268,7 +259,9 @@ class _LogsPageState extends State<LogsPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer.withOpacity(0.3),
+                          color: theme.colorScheme.errorContainer.withOpacity(
+                            0.3,
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: SelectableText(
@@ -280,18 +273,17 @@ class _LogsPageState extends State<LogsPage> {
                         ),
                       ),
                     ],
-                    
+
                     // 堆栈跟踪（如果存在）
-                    if (log.stackTrace != null && log.stackTrace!.isNotEmpty) ...[
+                    if (log.stackTrace != null &&
+                        log.stackTrace!.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Text(
-                        '堆栈跟踪:',
-                        style: theme.textTheme.labelLarge,
-                      ),
+                      Text('堆栈跟踪:', style: theme.textTheme.labelLarge),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withOpacity(0.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: SelectableText(
@@ -311,33 +303,33 @@ class _LogsPageState extends State<LogsPage> {
       },
     );
   }
-  
+
   // 复制日志内容到剪贴板
   void _copyLogToClipboard(LogEntry log) {
     final buffer = StringBuffer();
     buffer.write('时间: ${log.timestamp.toLocal().toString()}\n');
     buffer.write('级别: ${log.level.name.toUpperCase()}\n');
-    
+
     if (log.source != null && log.source!.isNotEmpty) {
       buffer.write('来源: ${log.source}\n');
     }
-    
+
     buffer.write('消息: ${log.message}\n');
-    
+
     if (log.error != null && log.error!.isNotEmpty) {
       buffer.write('错误: ${log.error}\n');
     }
-    
+
     if (log.stackTrace != null && log.stackTrace!.isNotEmpty) {
       buffer.write('堆栈跟踪: ${log.stackTrace}\n');
     }
-    
+
     Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('日志详情已复制到剪贴板')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('日志详情已复制到剪贴板')));
   }
-  
+
   // 获取日志级别对应的图标
   IconData _getLogLevelIcon(LogLevel level) {
     switch (level) {
@@ -355,7 +347,7 @@ class _LogsPageState extends State<LogsPage> {
         return Icons.block;
     }
   }
-  
+
   // 获取日志级别对应的颜色
   Color _getLogLevelColor(LogLevel level, ThemeData theme) {
     switch (level) {
@@ -373,18 +365,19 @@ class _LogsPageState extends State<LogsPage> {
         return theme.colorScheme.onSurface;
     }
   }
-  
+
   // 构建过滤器横幅
   Widget _buildFiltersBanner() {
-    final hasFilters = _filterLevel != null || 
-                       (_filterSource != null && _filterSource!.isNotEmpty) || 
-                       (_searchQuery != null && _searchQuery!.isNotEmpty);
-                       
+    final hasFilters =
+        _filterLevel != null ||
+        (_filterSource != null && _filterSource!.isNotEmpty) ||
+        (_searchQuery != null && _searchQuery!.isNotEmpty);
+
     if (!hasFilters) return const SizedBox.shrink();
-    
+
     final theme = Theme.of(context);
     final List<Widget> filterChips = [];
-    
+
     // 级别过滤器
     if (_filterLevel != null) {
       filterChips.add(
@@ -405,7 +398,7 @@ class _LogsPageState extends State<LogsPage> {
         ),
       );
     }
-    
+
     // 源过滤器
     if (_filterSource != null && _filterSource!.isNotEmpty) {
       filterChips.add(
@@ -422,7 +415,7 @@ class _LogsPageState extends State<LogsPage> {
         ),
       );
     }
-    
+
     // 搜索过滤器
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
       filterChips.add(
@@ -440,7 +433,7 @@ class _LogsPageState extends State<LogsPage> {
         ),
       );
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       color: theme.colorScheme.surface,
@@ -488,15 +481,18 @@ class _LogsPageState extends State<LogsPage> {
         return Scaffold(
           appBar: AppBar(title: const Text('日志查看')),
           body: Center(
-            child: Text('日志服务未就绪或Provider异常：\n$e', style: const TextStyle(color: Colors.red)),
+            child: Text(
+              '日志服务未就绪或Provider异常：\n$e',
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         );
       }
-      
+
       // 获取内存中的日志（实时）与历史日志
       final memoryLogs = logService.logs.where(_filterLog).toList();
       final allLogs = [...memoryLogs, ..._historyLogs.where(_filterLog)];
-      
+
       return Scaffold(
         appBar: AppBar(
           title: const Text('日志查看'),
@@ -531,18 +527,19 @@ class _LogsPageState extends State<LogsPage> {
                   border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(8.0)),
                   ),
-                  suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = null;
-                            });
-                            _refreshLogs();
-                          },
-                        )
-                      : null,
+                  suffixIcon:
+                      _searchQuery != null && _searchQuery!.isNotEmpty
+                          ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = null;
+                              });
+                              _refreshLogs();
+                            },
+                          )
+                          : null,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -564,141 +561,178 @@ class _LogsPageState extends State<LogsPage> {
                 },
               ),
             ),
-            
+
             // 过滤器横幅
             _buildFiltersBanner(),
-            
+
             // 日志列表
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refreshLogs,
-                child: allLogs.isEmpty
-                    ? const AppEmptyView(svgAsset: 'assets/empty/empty_logs.svg', text: '暂无日志')
-                    : ListView.separated(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(8.0),
-                        itemCount: allLogs.length + (_isLoadingMore ? 1 : 0) + (_hasMoreLogs ? 1 : 0),
-                        separatorBuilder: (context, index) {
-                          // 确保分隔符仅用于列表项之间，不包括加载指示器
-                          if (index >= allLogs.length - 1) {
-                            return const SizedBox.shrink();
-                          }
-                          return const Divider(height: 1);
-                        },
-                        itemBuilder: (context, index) {
-                          // 加载更多指示器
-                          if (_isLoadingMore && index == allLogs.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: AppLoadingView(),
+                child:
+                    allLogs.isEmpty
+                        ? const AppEmptyView(
+                          svgAsset: 'assets/empty/empty_logs.svg',
+                          text: '暂无日志',
+                        )
+                        : ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(8.0),
+                          itemCount:
+                              allLogs.length +
+                              (_isLoadingMore ? 1 : 0) +
+                              (_hasMoreLogs ? 1 : 0),
+                          separatorBuilder: (context, index) {
+                            // 确保分隔符仅用于列表项之间，不包括加载指示器
+                            if (index >= allLogs.length - 1) {
+                              return const SizedBox.shrink();
+                            }
+                            return const Divider(height: 1);
+                          },
+                          itemBuilder: (context, index) {
+                            // 加载更多指示器
+                            if (_isLoadingMore && index == allLogs.length) {
+                              return const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: AppLoadingView(),
+                              );
+                            }
+
+                            // 加载更多按钮
+                            if (_hasMoreLogs &&
+                                !_isLoadingMore &&
+                                index == allLogs.length) {
+                              return TextButton(
+                                onPressed: _loadMoreLogs,
+                                child: const Text('加载更多日志'),
+                              );
+                            }
+
+                            // 确保index在有效范围内
+                            if (index >= allLogs.length) {
+                              return const SizedBox.shrink();
+                            }
+
+                            // 正常日志项
+                            final log = allLogs[index];
+                            final logColor = _getLogLevelColor(
+                              log.level,
+                              theme,
                             );
-                          }
-                          
-                          // 加载更多按钮
-                          if (_hasMoreLogs && !_isLoadingMore && index == allLogs.length) {
-                            return TextButton(
-                              onPressed: _loadMoreLogs,
-                              child: const Text('加载更多日志'),
-                            );
-                          }
-                          
-                          // 确保index在有效范围内
-                          if (index >= allLogs.length) {
-                            return const SizedBox.shrink();
-                          }
-                          
-                          // 正常日志项
-                          final log = allLogs[index];
-                          final logColor = _getLogLevelColor(log.level, theme);
-                          
-                          return InkWell(
-                            onTap: () => _showLogDetails(log),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                                border: Border.all(
-                                  color: theme.colorScheme.outline,
+
+                            return InkWell(
+                              onTap: () => _showLogDetails(log),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                  horizontal: 4.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.cardRadius,
+                                  ),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // 日志头部（时间和级别）
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          _getLogLevelIcon(log.level),
+                                          size: 16,
+                                          color: logColor,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          log.level.name.toUpperCase(),
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: logColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (log.source != null &&
+                                            log.source!.isNotEmpty)
+                                          Expanded(
+                                            child: Text(
+                                              '[${log.source}]',
+                                              style: theme.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.7),
+                                                  ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        Text(
+                                          _formatTimestamp(log.timestamp),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.5),
+                                                fontSize: 10,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    // 日志消息
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 4.0,
+                                        left: 20.0,
+                                      ),
+                                      child: Text(
+                                        log.message,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(height: 1.2),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+
+                                    // 错误指示器（如果有）
+                                    if (log.error != null &&
+                                        log.error!.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4.0,
+                                          left: 20.0,
+                                        ),
+                                        child: Text(
+                                          '包含错误信息',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: theme.colorScheme.error,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 日志头部（时间和级别）
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        _getLogLevelIcon(log.level),
-                                        size: 16,
-                                        color: logColor,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        log.level.name.toUpperCase(),
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: logColor,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      if (log.source != null && log.source!.isNotEmpty)
-                                        Expanded(
-                                          child: Text(
-                                            '[${log.source}]',
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              color: theme.colorScheme.onSurface.withOpacity(0.7),
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      Text(
-                                        _formatTimestamp(log.timestamp),
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  
-                                  // 日志消息
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4.0, left: 20.0),
-                                    child: Text(
-                                      log.message,
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        height: 1.2,
-                                      ),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  
-                                  // 错误指示器（如果有）
-                                  if (log.error != null && log.error!.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4.0, left: 20.0),
-                                      child: Text(
-                                        '包含错误信息',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.error,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
               ),
             ),
-            
+
             // 底部状态栏
             Container(
               color: theme.colorScheme.surface,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Text(
                 '已显示 ${allLogs.length} 条日志 • 长按日志可复制 • 点击查看详情',
                 style: theme.textTheme.bodySmall,
@@ -718,9 +752,17 @@ class _LogsPageState extends State<LogsPage> {
               children: [
                 const Icon(Icons.error, color: Colors.red, size: 48),
                 const SizedBox(height: 16),
-                Text('日志页渲染异常:\n\n${e.toString()}', style: const TextStyle(color: Colors.red)),
+                Text(
+                  '日志页渲染异常:\n\n${e.toString()}',
+                  style: const TextStyle(color: Colors.red),
+                ),
                 const SizedBox(height: 8),
-                Text(stack.toString(), maxLines: 10, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  stack.toString(),
+                  maxLines: 10,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -728,29 +770,31 @@ class _LogsPageState extends State<LogsPage> {
       );
     }
   }
-  
+
   // 格式化时间戳为友好格式
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final local = timestamp.toLocal();
     final difference = now.difference(local);
-    
+
     // 今天的日志只显示时间
-    if (local.year == now.year && local.month == now.month && local.day == now.day) {
+    if (local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day) {
       return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
-    } 
+    }
     // 一周内的日志显示星期几和时间
     else if (difference.inDays < 7) {
       final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
       final weekday = weekdays[(local.weekday - 1) % 7];
       return '$weekday ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    } 
+    }
     // 更久的日志显示日期和时间
     else {
       return '${local.month}-${local.day} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
     }
   }
-  
+
   // 显示过滤对话框
   void _showFilterDialog() {
     showModalBottomSheet(
@@ -760,18 +804,20 @@ class _LogsPageState extends State<LogsPage> {
       builder: (context) => _buildFilterBottomSheet(),
     );
   }
-  
+
   // 构建过滤底部表
   Widget _buildFilterBottomSheet() {
     final theme = Theme.of(context);
-    
+
     // 过滤状态
     late LogLevel? tempFilterLevel = _filterLevel;
     String? tempFilterSource = _filterSource;
-    
+
     // 创建用于源过滤的文本控制器，并设置初始值
-    final sourceController = TextEditingController(text: tempFilterSource ?? '');
-    
+    final sourceController = TextEditingController(
+      text: tempFilterSource ?? '',
+    );
+
     return StatefulBuilder(
       builder: (context, setState) {
         return Container(
@@ -799,10 +845,7 @@ class _LogsPageState extends State<LogsPage> {
                   children: [
                     const Icon(Icons.filter_list),
                     const SizedBox(width: 8),
-                    Text(
-                      '日志过滤选项',
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text('日志过滤选项', style: theme.textTheme.titleMedium),
                     const Spacer(),
                     TextButton(
                       onPressed: () {
@@ -817,49 +860,50 @@ class _LogsPageState extends State<LogsPage> {
                   ],
                 ),
               ),
-              
+
               // 过滤选项
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 日志级别过滤
-                    Text(
-                      '按日志级别过滤',
-                      style: theme.textTheme.titleSmall,
-                    ),
+                    Text('按日志级别过滤', style: theme.textTheme.titleSmall),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8.0,
                       runSpacing: 8.0,
-                      children: LogLevel.values
-                          .where((level) => level != LogLevel.none) // 排除"不记录"选项
-                          .map((level) => FilterChip(
-                                label: Text(level.name.toUpperCase()),
-                                selected: tempFilterLevel == level,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    tempFilterLevel = selected ? level : null;
-                                  });
-                                },
-                                avatar: Icon(
-                                  _getLogLevelIcon(level),
-                                  color: _getLogLevelColor(level, theme),
-                                  size: 18,
+                      children:
+                          LogLevel.values
+                              .where(
+                                (level) => level != LogLevel.none,
+                              ) // 排除"不记录"选项
+                              .map(
+                                (level) => FilterChip(
+                                  label: Text(level.name.toUpperCase()),
+                                  selected: tempFilterLevel == level,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      tempFilterLevel = selected ? level : null;
+                                    });
+                                  },
+                                  avatar: Icon(
+                                    _getLogLevelIcon(level),
+                                    color: _getLogLevelColor(level, theme),
+                                    size: 18,
+                                  ),
+                                  backgroundColor:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  selectedColor:
+                                      theme.colorScheme.secondaryContainer,
                                 ),
-                                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                                selectedColor: theme.colorScheme.secondaryContainer,
-                              ))
-                          .toList(),
+                              )
+                              .toList(),
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // 源过滤
-                    Text(
-                      '按来源过滤',
-                      style: theme.textTheme.titleSmall,
-                    ),
+                    Text('按来源过滤', style: theme.textTheme.titleSmall),
                     const SizedBox(height: 8),
                     TextField(
                       controller: sourceController,
@@ -877,7 +921,7 @@ class _LogsPageState extends State<LogsPage> {
                   ],
                 ),
               ),
-              
+
               // 底部确认取消按钮
               Container(
                 padding: const EdgeInsets.all(16),
@@ -904,7 +948,7 @@ class _LogsPageState extends State<LogsPage> {
                           _filterLevel = tempFilterLevel;
                           _filterSource = tempFilterSource;
                         });
-                        
+
                         Navigator.of(context).pop();
                         _refreshLogs();
                       },
@@ -919,72 +963,78 @@ class _LogsPageState extends State<LogsPage> {
       },
     );
   }
-  
+
   // 显示清除日志对话框
   void _showClearLogsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('清除日志'),
-        content: const Text('您想清除哪些日志？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('清除日志'),
+            content: const Text('您想清除哪些日志？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final logService = Provider.of<LogService>(
+                    context,
+                    listen: false,
+                  );
+                  logService.clearMemoryLogs();
+
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('内存中的日志已清除')));
+                },
+                child: const Text('仅清除内存日志'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+
+                  // 显示加载指示器
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder:
+                        (context) =>
+                            const Center(child: CircularProgressIndicator()),
+                  );
+
+                  try {
+                    final logService = Provider.of<LogService>(
+                      context,
+                      listen: false,
+                    );
+                    await logService.clearAllLogs();
+
+                    Navigator.of(context).pop(); // 关闭加载指示器
+
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('所有日志记录已清除')));
+
+                    // 刷新日志
+                    setState(() {
+                      _historyLogs.clear();
+                      _currentPage = 0;
+                      _hasMoreLogs = true;
+                    });
+                  } catch (e) {
+                    Navigator.of(context).pop(); // 关闭加载指示器
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('清除日志失败: $e')));
+                  }
+                },
+                child: const Text('清除全部日志'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              final logService = Provider.of<LogService>(context, listen: false);
-              logService.clearMemoryLogs();
-              
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('内存中的日志已清除')),
-              );
-            },
-            child: const Text('仅清除内存日志'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              
-              // 显示加载指示器
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-              
-              try {
-                final logService = Provider.of<LogService>(context, listen: false);
-                await logService.clearAllLogs();
-                
-                Navigator.of(context).pop(); // 关闭加载指示器
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('所有日志记录已清除')),
-                );
-                
-                // 刷新日志
-                setState(() {
-                  _historyLogs.clear();
-                  _currentPage = 0;
-                  _hasMoreLogs = true;
-                });
-                
-              } catch (e) {
-                Navigator.of(context).pop(); // 关闭加载指示器
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('清除日志失败: $e')),
-                );
-              }
-            },
-            child: const Text('清除全部日志'),
-          ),
-        ],
-      ),
     );
   }
 }
