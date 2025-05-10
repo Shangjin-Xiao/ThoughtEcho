@@ -3,17 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
-import '../services/ai_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import '../theme/app_theme.dart';
-import '../pages/note_full_editor_page.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
+import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -39,13 +38,11 @@ class AddNoteDialog extends StatefulWidget {
   State<AddNoteDialog> createState() => _AddNoteDialogState();
 }
 
-class _AddNoteDialogState extends State<AddNoteDialog> {
-  late TextEditingController _contentController;
+class _AddNoteDialogState extends State<AddNoteDialog> {  late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _workController;
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
-  bool _isAnalyzing = false;
 
   // 分类选择
   NoteCategory? _selectedCategory;
@@ -441,11 +438,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               right: 0,
                               top: 0,
                               child: Container(
-                                width: 8,
-                                height: 8,
+                                width: 10,
+                                height: 10,
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.error,
+                                  color: Colors.red,
                                   shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: theme.colorScheme.surface,
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
                             ),
@@ -453,28 +454,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             tooltip: isLongContent ? '建议全屏编辑长文本' : '全屏编辑',
                             icon: Icon(
                               Icons.fullscreen,
-                              color:
-                                  isLongContent
-                                      ? theme.colorScheme.primary
-                                      : theme.iconTheme.color,
+                              color: theme.colorScheme.primary,
                             ),
                             onPressed: () async {
-                              // 首先关闭当前编辑框
-                              Navigator.pop(context);
-
-                              // 然后打开全屏编辑器
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => NoteFullEditorPage(
-                                        initialContent: _contentController.text,
-                                        initialQuote: widget.initialQuote,
-                                        allTags: widget.tags,
-                                      ),
-                                ),
-                              );
-
                               // 我们不需要处理返回结果，因为已经在全屏编辑器中保存了
                             },
                           ),
@@ -635,7 +617,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     },
                     selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                ),
+                ),                const SizedBox(width: 8),
               ],
             ),
 
@@ -773,87 +755,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     ),
                   ],
                 ),
-              ),
-
-            const SizedBox(height: 16),
+              ),            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // AI分析按钮
-                Builder(
-                  builder: (context) {
-                    // 检查API是否已配置
-                    final aiService = Provider.of<AIService>(
-                      context,
-                      listen: false,
-                    );
-
-                    // 使用AI服务的检查方法，它会基于已有配置判断API Key是否有效
-                    final bool apiConfigured = aiService.hasValidApiKey();
-
-                    if (_contentController.text.isNotEmpty &&
-                        _aiSummary == null &&
-                        apiConfigured) {
-                      return FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.buttonRadius,
-                            ),
-                          ),
-                        ),
-                        onPressed:
-                            _isAnalyzing
-                                ? null
-                                : () async {
-                                  setState(() => _isAnalyzing = true);
-                                  try {
-                                    final summary = await aiService
-                                        .summarizeNote(
-                                          Quote(
-                                            id: widget.initialQuote?.id ?? '',
-                                            content: _contentController.text,
-                                            date:
-                                                widget.initialQuote?.date ??
-                                                DateTime.now()
-                                                    .toIso8601String(),
-                                          ),
-                                        );
-                                    if (mounted) {
-                                      setState(() {
-                                        _aiSummary = summary;
-                                        _isAnalyzing = false;
-                                      });
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('AI分析失败: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      setState(() => _isAnalyzing = false);
-                                    }
-                                  }
-                                },
-                        icon:
-                            _isAnalyzing
-                                ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : const Icon(Icons.auto_awesome),
-                        label: Text(_isAnalyzing ? '分析中...' : 'AI分析'),
-                      );
-                    }
-
-                    return const SizedBox.shrink();
+                // AI助手按钮
+                AddNoteAIMenu(
+                  contentController: _contentController,
+                  authorController: _authorController,
+                  workController: _workController,
+                  onAiAnalysisCompleted: (result) {
+                    setState(() {
+                      _aiSummary = result;
+                    });
                   },
                 ),
                 const Spacer(),
