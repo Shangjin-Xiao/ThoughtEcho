@@ -274,20 +274,22 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         }
       }
 
-      // 如果是"每日一言"标签
+      // 如果是"每日一言"标签的特殊情况
       if (name == '每日一言') {
         fixedId = DatabaseService.defaultCategoryIdHitokoto;
       }
 
-      // 如果有固定ID，优先通过ID查找
+      // 无论标签是否被重命名，优先通过固定ID查找
+      // 这样可以确保即使标签被重命名，仍然能正确关联
       if (fixedId != null) {
         final category = await db.getCategoryById(fixedId);
         if (category != null) {
-          return category.id; // 返回已存在的固定ID标签
+          debugPrint('通过固定ID找到标签: ${category.name}(ID=${category.id})');
+          return category.id; // 返回已存在的固定ID标签，即使它已被重命名
         }
       }
 
-      // 然后再通过名称查找
+      // 如果固定ID没有找到对应标签，再通过名称查找
       final categories = await db.getCategories();
       final existingTag = categories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
