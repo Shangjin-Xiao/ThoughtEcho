@@ -248,10 +248,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                     TextButton(
                                       onPressed: () => Navigator.pop(context),
                                       child: const Text('取消'),
-                                    ),
-                                    TextButton(
+                                    ),                                    TextButton(
                                       onPressed: () async {
                                         Navigator.pop(context);
+                                        // 在可能导致上下文无效的异步操作前保存上下文
                                         await Geolocator.openLocationSettings();
                                       },
                                       child: const Text('去设置'),

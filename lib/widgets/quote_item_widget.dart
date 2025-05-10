@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 
 class QuoteItemWidget extends StatelessWidget {
   final Quote quote;
@@ -81,6 +82,15 @@ class QuoteItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
+
+    // Determine the background color of the card
+    // If the quote has a color, use it, otherwise use the theme's surface container high color
+    final Color cardColor = quote.colorHex != null && quote.colorHex!.isNotEmpty
+        ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000) // Ensure alpha for hex string
+        : theme.colorScheme.surfaceContainerHigh;
+
+    // Determine the text color based on the card color
 
     // 格式化日期和时间段
     final DateTime quoteDate = DateTime.parse(quote.date);
@@ -96,13 +106,7 @@ class QuoteItemWidget extends StatelessWidget {
       child: Material(
         elevation: 2,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        color:
-            quote.colorHex != null
-                ? Color(
-                  int.parse(quote.colorHex!.substring(1), radix: 16) |
-                      0xFF000000,
-                )
-                : theme.colorScheme.surfaceContainerHighest,
+        color: cardColor,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           child: Container(
@@ -110,9 +114,7 @@ class QuoteItemWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withValues(
-                    alpha: (0.08 * 255).round().toDouble(),
-                  ),
+                  color: theme.shadowColor.withOpacity(0.08), // Corrected: Used withOpacity
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -131,7 +133,7 @@ class QuoteItemWidget extends StatelessWidget {
                       Text(
                         formattedDate,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.applyOpacity(0.7), // MODIFIED
                         ),
                       ),
                       if (quote.location != null || quote.weather != null)
@@ -142,7 +144,7 @@ class QuoteItemWidget extends StatelessWidget {
                               Icon(
                                 Icons.location_on,
                                 size: 14,
-                                color: theme.colorScheme.secondary.withOpacity(
+                                color: theme.colorScheme.secondary.applyOpacity( // MODIFIED
                                   0.7,
                                 ),
                               ),
@@ -165,7 +167,7 @@ class QuoteItemWidget extends StatelessWidget {
                               Icon(
                                 _getWeatherIcon(quote.weather!),
                                 size: 14,
-                                color: theme.colorScheme.secondary.withOpacity(
+                                color: theme.colorScheme.secondary.applyOpacity( // MODIFIED
                                   0.7,
                                 ),
                               ),
@@ -211,7 +213,7 @@ class QuoteItemWidget extends StatelessWidget {
                         quote.sourceWork ?? '',
                       ),
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.75),
+                        color: theme.colorScheme.onSurface.applyOpacity(0.75), // MODIFIED
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -223,7 +225,7 @@ class QuoteItemWidget extends StatelessWidget {
                     child: Text(
                       quote.source!,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.75),
+                        color: theme.colorScheme.onSurface.applyOpacity(0.75), // MODIFIED
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -268,7 +270,7 @@ class QuoteItemWidget extends StatelessWidget {
                         Icon(
                           Icons.label_outline,
                           size: 16,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -297,7 +299,7 @@ class QuoteItemWidget extends StatelessWidget {
                                           ),
                                           decoration: BoxDecoration(
                                             color: theme.colorScheme.primary
-                                                .withOpacity(0.1),
+                                                .applyOpacity(0.1), // MODIFIED
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
@@ -324,7 +326,7 @@ class QuoteItemWidget extends StatelessWidget {
                       PopupMenuButton<String>(
                         icon: Icon(
                           Icons.more_vert,
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.applyOpacity(0.7), // MODIFIED
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

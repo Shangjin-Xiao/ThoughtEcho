@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+Thumbs.db
 .DS_Store
 .atom/
 .build/
@@ -32,6 +33,9 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+pubspec.lock
+.metadata
+devtools_options.yaml
 
 # Symbolication related
 app.*.symbols
@@ -43,6 +47,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/local.properties
+
+# Platform Build Artifacts
+ios/build/
+windows/build/
 
 # 敏感文件和密钥
 *.pem
@@ -73,7 +82,6 @@ env.dart
 *.sqlite3
 
 # 日志文件
-*.log
 *.trace
 
 # 备份文件
@@ -83,9 +91,8 @@ env.dart
 
 # 缓存文件
 .cache/
-*.swp
 *.swo
 *.swn
 
 # IDE和编辑器相关
-android/local.properties
+# android/local.properties # Already covered in line 46

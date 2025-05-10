@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/sliding_card.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -225,7 +226,7 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: theme.shadowColor.withOpacity(0.26),
+                        color: theme.shadowColor.applyOpacity(0.26), // MODIFIED
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),

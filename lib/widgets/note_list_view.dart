@@ -10,6 +10,7 @@ import 'dart:async';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -267,7 +268,7 @@ class NoteListViewState extends State<NoteListView> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.applyOpacity(0.1), // MODIFIED
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -487,7 +488,7 @@ class NoteListViewState extends State<NoteListView> {
                                   widget.onTagSelectionChanged(newSelectedTags);
                                 },
                                 backgroundColor: theme.colorScheme.primary
-                                    .withOpacity(0.1),
+                                    .applyOpacity(0.1), // MODIFIED
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20),
                                 ),

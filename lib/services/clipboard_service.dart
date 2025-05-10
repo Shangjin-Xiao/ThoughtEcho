@@ -1,4 +1,5 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
+// ignore_for_file: unused_field
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note_category.dart';

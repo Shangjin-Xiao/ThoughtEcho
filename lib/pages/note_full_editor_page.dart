@@ -12,6 +12,7 @@ import '../services/ai_service.dart'; // 导入AI服务
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
 
 class NoteFullEditorPage extends StatefulWidget {
@@ -279,7 +280,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       const Color(0xFFF3E5F5), // 轻紫色
       const Color(0xFFFCE4EC), // 轻粉色
 
-      const Color(0xFFFFCDD2), // 红色
+      const Color(0xFFEF9A9A), // 红色
       const Color(0xFFFFE0B2), // 橙色
       const Color(0xFFFFF9C4), // 黄色
       const Color(0xFFC8E6C9), // 绿色
@@ -359,13 +360,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             isSelected
                                                 ? colorScheme.primary
                                                 : color == Colors.transparent
-                                                ? Colors.grey.withOpacity(0.5)
+                                                ? Colors.grey.applyOpacity(0.5) // MODIFIED
                                                 : Colors.transparent,
                                         width: 2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
+                                          color: Colors.black.applyOpacity(0.05), // MODIFIED
                                           spreadRadius: 1,
                                           blurRadius: 3,
                                           offset: const Offset(0, 1),
@@ -554,7 +555,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   color: theme.colorScheme.surfaceContainerLowest,
                   border: Border(
                     bottom: BorderSide(
-                      color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                      color: theme.colorScheme.outlineVariant.applyOpacity(0.3), // MODIFIED
                       width: 1,
                     ),
                   ),
@@ -661,7 +662,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          color: theme.colorScheme.onSurfaceVariant.applyOpacity( // MODIFIED
                             0.4,
                           ),
                           borderRadius: BorderRadius.circular(2),
@@ -1265,6 +1266,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       // 调用AI分析来源
       final result = await aiService.analyzeSource(plainText);
 
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1348,10 +1352,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));
-        }
+          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));        }
       }
     } catch (e) {
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1392,11 +1398,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             ),
           );
         },
-      );
-
-      // 调用AI润色文本
+      );      // 调用AI润色文本
       final result = await aiService.polishText(plainText);
 
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1476,11 +1483,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             ),
           );
         },
-      );
-
-      // 调用AI续写文本
+      );      // 调用AI续写文本
       final result = await aiService.continueText(plainText);
 
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1514,9 +1522,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               ],
             );
           },
-        );
-      }
+        );      }
     } catch (e) {
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1567,11 +1577,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         location: _showLocation ? _location : null,
         weather: _showWeather ? _weather : null,
         temperature: _showWeather ? _temperature : null,
-      );
-
-      // 调用AI分析
+      );      // 调用AI分析
       final analysisResult = await aiService.summarizeNote(quote);
 
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -1593,12 +1604,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                     Navigator.of(context).pop();
                   },
                 ),
-              ],
-            );
+              ],            );
           },
         );
       }
     } catch (e) {
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 

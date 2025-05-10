@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../utils/color_utils.dart'; // Import color_utils.dart
 
 // 添加 note_full_editor_page.dart 的导入
 import '../pages/note_full_editor_page.dart';
@@ -135,8 +136,7 @@ class _EditPageState extends State<EditPage> {
   }
 
   // 获取当前位置和天气
-  Future<void> _getCurrentLocationAndWeather() async {
-    final locationService = Provider.of<LocationService>(
+  Future<void> _getCurrentLocationAndWeather() async {    final locationService = Provider.of<LocationService>(
       context,
       listen: false,
     );
@@ -146,16 +146,16 @@ class _EditPageState extends State<EditPage> {
       bool permissionGranted =
           await locationService.requestLocationPermission();
       if (!permissionGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('无法获取位置权限')));
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('无法获取位置权限')));
         return;
       }
     }
 
     final position = await locationService.getCurrentLocation();
+    if (!mounted) return;
     if (position != null) {
       setState(() {
         _includeLocation = true;
@@ -167,6 +167,7 @@ class _EditPageState extends State<EditPage> {
         position.latitude,
         position.longitude,
       );
+      if (!mounted) return;
       setState(() {
         _includeWeather = true;
         _weather = weatherService.currentWeather;
@@ -287,11 +288,12 @@ class _EditPageState extends State<EditPage> {
             ),
           );
         },
-      );
-
-      // 调用AI分析来源
+      );      // 调用AI分析来源
       final result = await aiService.analyzeSource(_contentController.text);
 
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -418,11 +420,12 @@ class _EditPageState extends State<EditPage> {
             ),
           );
         },
-      );
-
-      // 调用AI润色文本
+      );      // 调用AI润色文本
       final result = await aiService.polishText(_contentController.text);
 
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -456,9 +459,11 @@ class _EditPageState extends State<EditPage> {
               ],
             );
           },
-        );
-      }
+        );      }
     } catch (e) {
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -498,11 +503,12 @@ class _EditPageState extends State<EditPage> {
             ),
           );
         },
-      );
-
-      // 调用AI续写文本
+      );      // 调用AI续写文本
       final result = await aiService.continueText(_contentController.text);
 
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -542,6 +548,9 @@ class _EditPageState extends State<EditPage> {
         );
       }
     } catch (e) {
+      // 确保组件仍然挂载
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -595,6 +604,9 @@ class _EditPageState extends State<EditPage> {
 
       final result = await aiService.summarizeNote(quote);
 
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+      
       // 关闭加载对话框
       Navigator.of(context).pop();
 
@@ -754,7 +766,7 @@ class _EditPageState extends State<EditPage> {
                           fontStyle: FontStyle.italic,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.applyOpacity(0.6), // Use applyOpacity
                         ),
                       );
                     },
@@ -795,7 +807,7 @@ class _EditPageState extends State<EditPage> {
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.withOpacity(0.5),
+                                      ).colorScheme.onSurface.applyOpacity(0.5), // Use applyOpacity
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -826,7 +838,7 @@ class _EditPageState extends State<EditPage> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6),
+                                            .applyOpacity(0.6), // Use applyOpacity
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -879,7 +891,7 @@ class _EditPageState extends State<EditPage> {
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.withOpacity(0.5),
+                                      ).colorScheme.onSurface.applyOpacity(0.5), // Use applyOpacity
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -910,7 +922,7 @@ class _EditPageState extends State<EditPage> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6),
+                                            .applyOpacity(0.6), // Use applyOpacity
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -984,8 +996,8 @@ class _EditPageState extends State<EditPage> {
                                         );
                                     setState(() {
                                       _aiAnalysis = summary;
-                                    });
-                                  } catch (e) {
+                                    });                                  } catch (e) {
+                                    if (!mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('AI分析失败: $e')),
                                     );

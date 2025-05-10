@@ -169,19 +169,27 @@ class _HomePageState extends State<HomePage>
       }
     }
   }
-
   // 初始化位置和天气服务
   Future<void> _initLocationAndWeather() async {
+    if (!mounted) return;
+    
     final locationService = Provider.of<LocationService>(
       context,
       listen: false,
     );
     await locationService.init();
 
+    // 确保组件仍然挂载
+    if (!mounted) return;
+
     // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
     if (locationService.hasLocationPermission &&
         locationService.isLocationServiceEnabled) {
       final position = await locationService.getCurrentLocation(skipPermissionRequest: true);
+      
+      // 再次确保组件仍然挂载
+      if (!mounted) return;
+      
       if (position != null) {
         final weatherService = Provider.of<WeatherService>(
           context,

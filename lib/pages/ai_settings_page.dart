@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
 import '../models/ai_settings.dart';
 import '../services/secure_storage_service.dart';
+import '../utils/color_utils.dart'; // Import color_utils.dart
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -87,6 +88,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
       final secureStorage = SecureStorageService();
       final secureApiKey = await secureStorage.getApiKey();
 
+      // 在异步操作后检查 mounted 状态
+      if (!mounted) return;
+
       final settings = Provider.of<SettingsService>(context, listen: false);
       final aiSettings = settings.aiSettings;
 
@@ -110,16 +114,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
       });
     } catch (e) {
       debugPrint('加载AI设置失败: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载AI设置失败: $e')),
-        );
-      }
+      // 在异步操作后检查 mounted 状态
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('加载AI设置失败: $e')),
+      );
     }
   }
 
  Future<void> _saveSettings() async {
-    final service = Provider.of<SettingsService>(context, listen: false);
+    // 异步操作开始前，如果 context 可能在操作过程中变得无效，则先获取需要的服务实例
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context); // 获取 ScaffoldMessenger
 
     // Validate numeric fields before parsing
     final tempText = _temperatureController.text;
@@ -129,11 +135,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     // Basic validation feedback
     if (tempText.isNotEmpty && temperature == null) {
-       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('温度值无效，请输入数字。')));
+       // 检查 mounted 状态
+       if (!mounted) return;
+       scaffoldMessenger.showSnackBar(const SnackBar(content: Text('温度值无效，请输入数字。')));
        return; // Stop saving
     }
      if (maxTokensText.isNotEmpty && maxTokens == null) {
-       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('最大令牌数无效，请输入整数。')));
+       // 检查 mounted 状态
+       if (!mounted) return;
+       scaffoldMessenger.showSnackBar(const SnackBar(content: Text('最大令牌数无效，请输入整数。')));
        return; // Stop saving
     }
 
@@ -147,7 +157,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
       final secureStorage = SecureStorageService();
       await secureStorage.saveApiKey(_apiKeyController.text);
 
-      await service.updateAISettings(
+      // 在异步操作后检查 mounted 状态
+      if (!mounted) return;
+
+      await settingsService.updateAISettings(
         AISettings(
           model: _modelController.text,
           apiUrl: _apiUrlController.text,
@@ -158,18 +171,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
         ),
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI设置已保存')),
-        );
-        FocusScope.of(context).unfocus(); // Hide keyboard after saving
-      }
+      // 在异步操作后检查 mounted 状态
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar( // 使用获取到的 scaffoldMessenger
+        const SnackBar(content: Text('AI设置已保存')),
+      );
+      FocusScope.of(context).unfocus(); // Hide keyboard after saving
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存设置失败: $e')),
-        );
-      }
+      // 在异步操作后检查 mounted 状态
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar( // 使用获取到的 scaffoldMessenger
+        SnackBar(content: Text('保存设置失败: $e')),
+      );
     }
   }
 
@@ -287,7 +300,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
               child: Text(
                 '注意：AI生成内容仅供参考。API Key 将安全存储在设备本地。',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.7),
                     ),
                 textAlign: TextAlign.center,
               ),

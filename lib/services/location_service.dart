@@ -346,17 +346,6 @@ class LocationService extends ChangeNotifier {
     }
   }
 
-  // 本地搜索城市 - Now returns empty list as data source is removed
-  List<CityInfo> _searchCityLocal(String query) {
-    _isSearching = true;
-    notifyListeners();
-    debugPrint("本地城市搜索已停用，因硬编码数据已移除。");
-    _searchResults = []; // Always return empty
-    _isSearching = false;
-    notifyListeners();
-    return _searchResults;
-  }
-
   // 使用OpenMeteo的地理编码API搜索城市
   Future<List<CityInfo>> _searchCityWithOpenMeteo(String query) async {
     try {

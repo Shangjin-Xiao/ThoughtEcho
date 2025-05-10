@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 
 class HitokotoWidget extends StatelessWidget {
   final Map<String, dynamic> quote;
@@ -45,7 +46,7 @@ class HitokotoWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
                   ),
                   textAlign: TextAlign.right,
                 ),
@@ -55,4 +56,4 @@ class HitokotoWidget extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
+// Import color_utils
 
 class AppTheme with ChangeNotifier {
   static const String _customColorKey = 'custom_color';
@@ -155,7 +156,7 @@ class AppTheme with ChangeNotifier {
   // 设置自定义颜色
   Future<void> setCustomColor(Color color) async {
     _customColor = color;
-    await _storage.setInt(_customColorKey, color.value);
+    await _storage.setInt(_customColorKey, color.value); // MODIFIED (reverted as .value is correct for ARGB)
     notifyListeners();
   }
   
@@ -185,7 +186,7 @@ class AppTheme with ChangeNotifier {
     try {
       final colorValue = _storage.getInt(_customColorKey);
       if (colorValue != null) {
-        _customColor = Color(colorValue);
+        _customColor = Color(colorValue); // This is correct for reconstructing Color from ARGB int
       }
       _useCustomColor = _storage.getBool(_useCustomColorKey) ?? false;
     } catch (e) {

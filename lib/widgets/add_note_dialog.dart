@@ -13,6 +13,7 @@ import '../theme/app_theme.dart';
 import '../pages/note_full_editor_page.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
+import '../utils/color_utils.dart'; // Import color_utils
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -524,7 +525,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  color: theme.colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
                 ),
               ),
             ),
@@ -1093,13 +1094,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                             isSelected
                                                 ? colorScheme.primary
                                                 : color == Colors.transparent
-                                                ? Colors.grey.withOpacity(0.5)
+                                                ? Colors.grey.applyOpacity(0.5) // MODIFIED
                                                 : Colors.transparent,
                                         width: 2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
+                                          color: Colors.black.applyOpacity(0.05), // MODIFIED
                                           spreadRadius: 1,
                                           blurRadius: 3,
                                           offset: const Offset(0, 1),
@@ -1200,7 +1201,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           _selectedColorHex =
                               advancedColor == Colors.transparent
                                   ? null
-                                  : '#${advancedColor.value.toRadixString(16).substring(2)}';
+                                  : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}'; // MODIFIED
                         });
                       }
                     },
@@ -1229,7 +1230,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         _selectedColorHex =
             result == Colors.transparent
                 ? null
-                : '#${result.value.toRadixString(16).substring(2)}';
+                : '#${result.toARGB32().toRadixString(16).substring(2)}'; // MODIFIED
       });
     }
   }
@@ -1318,10 +1319,10 @@ class FullScreenNoteEditor extends StatefulWidget {
   const FullScreenNoteEditor({super.key, required this.initialText});
 
   @override
-  State<FullScreenNoteEditor> createState() => _FullScreenNoteEditorState();
+  State<FullScreenNoteEditor> createState() => _FullScreenNoteEditorState(); // Ensure createState is present
 }
 
-class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
+class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> { // Ensure correct extension
   late TextEditingController controller;
 
   @override

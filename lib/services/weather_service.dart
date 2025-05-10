@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, non_constant_identifier_names
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../utils/http_utils.dart';
@@ -5,11 +6,10 @@ import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 
 class WeatherService extends ChangeNotifier {
   String? _currentWeather;
-  String? _temperature;
-  String? _weatherDescription;
+  String? _temperature;  String? _weatherDescription;
   bool _isLoading = false;
   String? _weatherIcon;
-  double? _temperature_value;
+  double? _temperatureValue;
   
   // 缓存相关
   static const _cacheKey = 'weather_cache';
@@ -25,7 +25,7 @@ class WeatherService extends ChangeNotifier {
   String? get weatherDescription => _weatherDescription;
   bool get isLoading => _isLoading;
   String? get weatherIcon => _weatherIcon;
-  double? get temperatureValue => _temperature_value;
+  double? get temperatureValue => _temperatureValue;
   
   // 构造函数
   WeatherService() {
@@ -108,7 +108,7 @@ class WeatherService extends ChangeNotifier {
               _weatherDescription = cacheData['weather_description'];
               _currentWeather = _weatherDescription;
               _temperature = cacheData['temperature'];
-              _temperature_value = cacheData['temperature_value'];
+              _temperatureValue = cacheData['temperature_value'];
               _weatherIcon = cacheData['weather_icon'];
               
               debugPrint('使用缓存的天气数据: $_weatherDescription, $_temperature');
@@ -138,7 +138,7 @@ class WeatherService extends ChangeNotifier {
         'longitude': longitude,
         'weather_description': _weatherDescription,
         'temperature': _temperature,
-        'temperature_value': _temperature_value,
+        'temperature_value': _temperatureValue,
         'weather_icon': _weatherIcon,
         'timestamp': DateTime.now().toIso8601String(),
       };
@@ -181,10 +181,9 @@ class WeatherService extends ChangeNotifier {
             
             // Safely access data with null checks or default values
             final weatherCode = current['weather_code'];
-            _temperature_value = current['temperature_2m'] as double?; // Use 'as double?' for safe casting
-            
-            if (_temperature_value != null) {
-              _temperature = '${_temperature_value?.toStringAsFixed(0)}°C';
+            _temperatureValue = current['temperature_2m'] as double?; // Use 'as double?' for safe casting
+              if (_temperatureValue != null) {
+              _temperature = '${_temperatureValue?.toStringAsFixed(0)}°C';
             } else {
               _temperature = '- -'; // Default if null
             }
@@ -222,7 +221,7 @@ class WeatherService extends ChangeNotifier {
   void setMockWeatherData() {
     _weatherDescription = 'unknown';
     _temperature = '- -';
-    _temperature_value = null;
+    _temperatureValue = null;
     _currentWeather = '天气数据获取失败';
     _weatherIcon = 'error'; // 使用错误图标
     debugPrint('天气数据获取失败，显示错误状态');

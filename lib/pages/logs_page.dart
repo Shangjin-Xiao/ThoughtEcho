@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_error_view.dart';
+import '../utils/color_utils.dart'; // Import color_utils.dart
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -98,6 +99,8 @@ class _LogsPageState extends State<LogsPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
+      
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('加载更多日志失败: $e')));
@@ -236,7 +239,7 @@ class _LogsPageState extends State<LogsPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
-                            .withOpacity(0.5),
+                            .applyOpacity(0.5), // Use applyOpacity
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: SelectableText(
@@ -259,7 +262,7 @@ class _LogsPageState extends State<LogsPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer.withOpacity(
+                          color: theme.colorScheme.errorContainer.applyOpacity( // Use applyOpacity
                             0.3,
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -283,7 +286,7 @@ class _LogsPageState extends State<LogsPage> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHighest
-                              .withOpacity(0.5),
+                              .applyOpacity(0.5), // Use applyOpacity
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: SelectableText(
@@ -587,7 +590,7 @@ class _LogsPageState extends State<LogsPage> {
                             if (index >= allLogs.length - 1) {
                               return const SizedBox.shrink();
                             }
-                            return const Divider(height: 1);
+                            return Divider(height: 1, color: Theme.of(context).dividerColor.applyOpacity(0.5)); // Use applyOpacity
                           },
                           itemBuilder: (context, index) {
                             // 加载更多指示器
@@ -666,7 +669,7 @@ class _LogsPageState extends State<LogsPage> {
                                                     color: theme
                                                         .colorScheme
                                                         .onSurface
-                                                        .withOpacity(0.7),
+                                                        .applyOpacity(0.7), // Use applyOpacity
                                                   ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -678,7 +681,7 @@ class _LogsPageState extends State<LogsPage> {
                                                 color: theme
                                                     .colorScheme
                                                     .onSurface
-                                                    .withOpacity(0.5),
+                                                    .applyOpacity(0.5), // Use applyOpacity
                                                 fontSize: 10,
                                               ),
                                         ),
@@ -1009,8 +1012,9 @@ class _LogsPageState extends State<LogsPage> {
                     final logService = Provider.of<LogService>(
                       context,
                       listen: false,
-                    );
-                    await logService.clearAllLogs();
+                    );                    await logService.clearAllLogs();
+                    
+                    if (!mounted) return;
 
                     Navigator.of(context).pop(); // 关闭加载指示器
 
@@ -1023,8 +1027,9 @@ class _LogsPageState extends State<LogsPage> {
                       _historyLogs.clear();
                       _currentPage = 0;
                       _hasMoreLogs = true;
-                    });
-                  } catch (e) {
+                    });                  } catch (e) {
+                    if (!mounted) return;
+                    
                     Navigator.of(context).pop(); // 关闭加载指示器
                     ScaffoldMessenger.of(
                       context,

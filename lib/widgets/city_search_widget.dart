@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async'; // 导入 Timer
 import '../services/location_service.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 
 class CitySearchWidget extends StatefulWidget {
   final Function(CityInfo) onCitySelected;
@@ -187,7 +188,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   '提示：当前设备的定位服务已关闭，但您仍可以手动搜索城市',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -197,7 +198,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                 '尝试使用不同的关键词或城市名称',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
                 ),
               ),
           ],

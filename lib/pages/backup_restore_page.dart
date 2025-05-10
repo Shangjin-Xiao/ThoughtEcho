@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart'; 
 import '../services/database_service.dart';
 import 'home_page.dart';
+import '../utils/color_utils.dart'; // Import color_utils.dart
 
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
@@ -16,16 +17,20 @@ class BackupRestorePage extends StatefulWidget {
 
 class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _handleExport(BuildContext context) async {
+    // 在异步操作开始前，如果 context 可能在操作过程中变得无效，则先获取需要的服务实例
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final dbService = Provider.of<DatabaseService>(context, listen: false);
+
     try {
       // 显示备份选项对话框
-      if (!mounted) return;
-      
+      // 检查 mounted 状态已在行 18
+
       // 显示加载指示器
       final loadingOverlay = _showLoadingOverlay(context, '准备导出数据...');
-      
+
       // 确保数据库服务已初始化
-      final dbService = Provider.of<DatabaseService>(context, listen: false);
-      
+      // final dbService = Provider.of<DatabaseService>(context, listen: false); // 已在方法开头获取
+
       // 尝试预先验证能否导出
       bool canExport = false; // 默认值为false，需要通过验证
       try {
@@ -34,20 +39,18 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       } catch (e) {
         debugPrint('数据库访问验证失败: $e');
       }
-      
+
       // 关闭加载指示器
-      loadingOverlay.remove();
-      
-      if (!canExport) {
+      loadingOverlay.remove();      if (!canExport) {
         if (!mounted) return;
         _showErrorDialog(
-          context, 
-          '数据访问错误', 
+          context,
+          '数据访问错误',
           '无法访问数据库，请确保应用有足够的存储权限，然后重试。'
         );
         return;
       }
-      
+        if (!mounted) return;
       final choice = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
@@ -71,33 +74,34 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ),
         ),
       );
-      
+
       if (choice == null) return;
-      
-      String path = '';
-      
-      // 显示导出进度
+      if (!mounted) return;
+
+      String path = '';      // 显示导出进度
+      if (!mounted) return;
       final progressOverlay = _showLoadingOverlay(context, '正在导出数据...');
-      
+
       try {
         if (choice == 'save') {
           // 创建临时文件
           final now = DateTime.now();
           final formattedDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
           final fileName = '心迹_备份_$formattedDate.json';
-          
+
           if (Platform.isWindows) {
             // Windows 平台特殊处理
             // 先创建备份文件到临时目录
             final tempDir = await getTemporaryDirectory();
             final tempFilePath = '${tempDir.path}/$fileName';
-            
+
             // 导出到临时文件
             final tempFile = await dbService.exportAllData(customPath: tempFilePath);
-            
+
             // 关闭进度指示器
             progressOverlay.remove();
-            
+
+            if (!mounted) return;
             // 然后使用系统对话框保存
             final saveLocation = await getSaveLocation(
               suggestedName: fileName,
@@ -108,7 +112,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ),
               ],
             );
-            
+
             if (saveLocation == null) {
               // 用户取消了保存，删除临时文件
               try {
@@ -116,22 +120,22 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               } catch (_) {}
               return;
             }
-            
+            if (!mounted) return;
             // 创建新的进度指示器
             final saveOverlay = _showLoadingOverlay(context, '正在保存文件...');
-            
+
             try {
               // 复制临时文件到用户选择的位置
               await File(tempFile).copy(saveLocation.path);
-              
+
               // 删除临时文件
               await File(tempFile).delete();
-              
+
               path = saveLocation.path;
               saveOverlay.remove();
-              
+
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('备份已保存到: $path'),
                   duration: const Duration(seconds: 5),
@@ -146,34 +150,34 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             // 先导出到应用专用目录
             final docsDir = await getApplicationDocumentsDirectory();
             final localPath = '${docsDir.path}/$fileName';
-            
+
             // 导出数据
             path = await dbService.exportAllData(customPath: localPath);
-            
+
             // 关闭进度指示器
             progressOverlay.remove();
-            
+
             // 使用分享功能让用户选择保存位置
             if (!mounted) return;
-            
-            ScaffoldMessenger.of(context).showSnackBar(
+
+            scaffoldMessenger.showSnackBar(
               const SnackBar(
                 content: Text('备份文件已生成，即将打开分享选项...'),
                 duration: Duration(seconds: 2),
               ),
             );
-            
+
             // 延迟一下再打开分享，让用户看到提示
             await Future.delayed(const Duration(seconds: 1));
-            
+
             if (!mounted) return;
             await Share.shareXFiles(
               [XFile(path)],
               text: '心迹备份文件',
               subject: '保存心迹备份文件',
             );
-            
-            ScaffoldMessenger.of(context).showSnackBar(
+            if (!mounted) return;
+            scaffoldMessenger.showSnackBar(
               const SnackBar(
                 content: Text('提示: 选择"保存到设备"可将备份文件保存到本地存储'),
                 duration: Duration(seconds: 5),
@@ -182,6 +186,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           } else {
             // 其他平台使用常规方式
             try {
+              if (!mounted) return;
               final saveLocation = await getSaveLocation(
                 suggestedName: fileName,
                 acceptedTypeGroups: [
@@ -191,22 +196,22 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   ),
                 ],
               );
-              
+
               // 关闭进度指示器
               progressOverlay.remove();
-              
+
               if (saveLocation == null) return;
-              
+              if (!mounted) return;
               // 重新显示进度，因为用户选择了保存位置
               final exportOverlay = _showLoadingOverlay(context, '正在保存数据...');
-              
+
               try {
                 path = await dbService.exportAllData(customPath: saveLocation.path);
-                
+
                 exportOverlay.remove();
-                
+
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   SnackBar(
                     content: Text('备份已保存到: $path'),
                     duration: const Duration(seconds: 5),
@@ -225,9 +230,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         } else {
           // 使用默认路径并分享
           path = await dbService.exportAllData();
-          
+
           progressOverlay.remove();
-          
+
           if (!mounted) return;
           await Share.shareXFiles(
             [XFile(path)],
@@ -237,21 +242,25 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       } catch (e) {
         // 确保关闭进度指示器
         progressOverlay.remove();
-        
+
         if (!mounted) return;
         _showErrorDialog(
-          context, 
-          '备份失败', 
+          context,
+          '备份失败',
           '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。'
         );
       }
-    } catch (e) {
-      if (!mounted) return;
+    } catch (e) {      if (!mounted) return;
       _showErrorDialog(context, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
+      // 注意：此处已用mounted检查，context安全
     }
   }
 
   Future<void> _handleImport(BuildContext context) async {
+    // 在异步操作开始前，如果 context 可能在操作过程中变得无效，则先获取需要的服务实例
+    final navigator = Navigator.of(context);
+    final dbService = Provider.of<DatabaseService>(context, listen: false);
+
     try {
       // 使用file_selector替代file_picker
       const XTypeGroup jsonTypeGroup = XTypeGroup(
@@ -261,24 +270,24 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final XFile? file = await openFile(
         acceptedTypeGroups: [jsonTypeGroup],
       );
-      
+
       // 转换为与原代码兼容的格式
       final result = file != null ? {'files': [file]} : null;
-      
+
       if (result == null) return;
-      
+
       if (!mounted) return;
-      
+
       // 先尝试验证备份文件格式
-      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      // final dbService = Provider.of<DatabaseService>(context, listen: false); // 已在方法开头获取
       final selectedFile = result['files']![0];
-      
+
       // 显示加载指示器
       final validateOverlay = _showLoadingOverlay(context, '正在验证备份文件...');
-      
+
       bool isValidBackup = false;
       String errorMessage = '';
-      
+
       try {
         isValidBackup = await dbService.validateBackupFile(selectedFile.path);
       } catch (e) {
@@ -286,17 +295,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       } finally {
         validateOverlay.remove();
       }
-      
+
       if (!isValidBackup) {
         if (!mounted) return;
         _showErrorDialog(
-          context, 
-          '无效的备份文件', 
+          context,
+          '无效的备份文件',
           '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。'
         );
         return;
       }
-      
+
       // 添加选项让用户选择是清空原有数据还是合并数据
       if (!mounted) return;
       final importOption = await showDialog<String>(
@@ -320,9 +329,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ],
         ),
       );
-      
-      if (importOption == 'cancel' || importOption == null || !mounted) return;
-      
+
+      if (importOption == 'cancel' || importOption == null) return;
+      if (!mounted) return;
+
       // 如果选择清空并导入，再次确认
       if (importOption == 'clear') {
         // 直接确认清空操作，删除了自动备份提示
@@ -344,21 +354,22 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             ],
           ),
         );
-        
-        if (confirmed != true || !mounted) return;
+
+        if (confirmed != true) return;
+        if (!mounted) return;
       }
-      
+
       // 显示导入进度
       final importOverlay = _showLoadingOverlay(context, '正在导入数据...');
-      
+
       try {
         final bool clearExisting = importOption == 'clear';
         await dbService.importData(selectedFile.path, clearExisting: clearExisting);
-        
+
         importOverlay.remove();
-        
+
         if (!mounted) return;
-        
+
         // 显示成功对话框而不是SnackBar，确保用户看到
         await showDialog(
           context: context,
@@ -371,8 +382,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 onPressed: () {
                   Navigator.pop(dialogContext);
                   // 重启应用
-                  Navigator.pushAndRemoveUntil(
-                    context,
+                  if (!mounted) return; // 在导航前再次检查
+                  navigator.pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const HomePage()),
                     (route) => false,
                   );
@@ -397,7 +408,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   OverlayEntry _showLoadingOverlay(BuildContext context, String message) {
     final overlay = OverlayEntry(
       builder: (context) => Container(
-        color: Colors.black.withValues(alpha: 0.5),
+        color: Colors.black.withOpacity(0.5),
         child: Center(
           child: Card(
             margin: const EdgeInsets.all(16),
@@ -423,6 +434,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   
   /// 显示错误对话框
   void _showErrorDialog(BuildContext context, String title, String message) {
+    // 确保在调用 showDialog 前 context 仍然有效
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -450,7 +463,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               '定期备份数据可以帮助您防止意外数据丢失。建议每次进行重要更改后都创建一个备份。',
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.7), // Use applyOpacity
               ),
             ),
           ),
@@ -468,20 +481,20 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             onTap: () => _handleImport(context),
           ),
           const Divider(),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Card(
-              color: Colors.amber,
+              color: Colors.amber, // This is a const color, so it should be fine.
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.warning, size: 20),
-                        SizedBox(width: 8),
-                        Text(
+                        Icon(Icons.warning, size: 20, color: Theme.of(context).colorScheme.onError.applyOpacity(0.8)),
+                        const SizedBox(width: 8),
+                        const Text(
                           '数据安全提示',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -489,13 +502,36 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
-                    Text(
+                    const SizedBox(height: 8),
+                    const Text(
                       '1. 请在多个位置保存备份文件，如云存储和本地存储\n'
                       '2. 导入前建议先备份当前数据，以防导入失败\n'
                       '3. 确保备份文件来源可靠，避免导入损坏的文件\n'
                       '4. 推荐在重要操作或APP更新前进行备份',
                       style: TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '重要提示：',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onError.applyOpacity(0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '• 恢复数据时，如果选择“清空并导入”，当前设备上的所有笔记和标签都将被删除，并替换为备份文件中的数据。此操作无法撤销。',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onError.applyOpacity(0.85)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• 如果选择“合并数据”，备份文件中的数据将尝试与现有数据合并。如果存在ID冲突的笔记或标签，备份文件中的版本将覆盖现有版本。',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onError.applyOpacity(0.85)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• 请确保您从可信任的来源导入备份文件，以避免潜在的数据损坏或安全风险。',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onError.applyOpacity(0.85)),
                     ),
                   ],
                 ),

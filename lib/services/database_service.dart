@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_field
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -1910,14 +1911,12 @@ class DatabaseService extends ChangeNotifier {
     // 检查参数
     if (name.trim().isEmpty) {
       throw Exception('分类名称不能为空');
-    }
-
-    // 查找是否是默认分类
-    final defaultCategories = _getDefaultHitokotoCategories();
-    final isEditingDefault = defaultCategories.any((cat) => cat.id == id);
-
+    }    
+    // 查找是否是默认分类 - 注释掉未使用的变量
+    // final List<NoteCategory> defaultCats = _getDefaultHitokotoCategories();
+    
     // // 如果是默认分类，不允许修改名称？(或者只允许修改图标) - 根据产品决定
-    // if (isEditingDefault) {
+    // if (_defaultCats.any((cat) => cat.id == id)) {
     //   // 暂时允许修改默认分类的名称和图标，但ID不变
     //   // 如果不允许修改名称，可以在这里抛出异常或只更新图标
     //   // throw Exception('不允许修改默认分类的名称');

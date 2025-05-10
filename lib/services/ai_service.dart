@@ -26,11 +26,9 @@ class AIService extends ChangeNotifier {
     final settings = _settingsService.aiSettings;
 
     // 创建安全存储服务实例
-    final secureStorage = SecureStorageService();
-
-    // 先检查settings中的API Key
+    final secureStorage = SecureStorageService();    // 先检查settings中的API Key
     bool hasApiKey = settings.apiKey.isNotEmpty;
-    String effectiveApiKey = settings.apiKey;
+    // String? effectiveApiKey; // 在这里声明 // -- 已移除
 
     // 如果settings中没有API Key，则尝试从安全存储中获取
     if (!hasApiKey) {
@@ -38,10 +36,12 @@ class AIService extends ChangeNotifier {
       hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
 
       // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
-      if (hasApiKey) {
-        effectiveApiKey = secureApiKey;
-      }
-    }
+      // if (hasApiKey) { // -- 已移除
+        // effectiveApiKey = secureApiKey; // 初始化 // -- 已移除
+      // } // -- 已移除
+    } // else { // -- 已移除，因为不再需要为 effectiveApiKey 赋值
+      // effectiveApiKey = settings.apiKey; // 如果设置中有，则使用设置中的 // -- 已移除
+    // } // -- 已移除
 
     // 最终验证API Key
     if (!hasApiKey) {
@@ -868,6 +868,7 @@ class AIService extends ChangeNotifier {
 class AiService {
   void analyzeData(dynamic data) {
     if (data is! String) return;
-    print("Analyzing data: $data");
+    // 使用日志记录代替print
+    debugPrint("Analyzing data: $data");
   }
 }

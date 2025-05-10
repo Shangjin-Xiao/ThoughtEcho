@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 MaterialColor createMaterialColor(Color color) {
   List strengths = <double>[.05];
-  Map<int, Color> swatch = <int, Color>{};
-  final int r = color.red, g = color.green, b = color.blue;
+  Map<int, Color> swatch = <int, Color>{};  
+  final int r = color.r.toInt(), g = color.g.toInt(), b = color.b.toInt(); // 转换为整数
 
   for (int i = 1; i < 10; i++) {
     strengths.add(0.1 * i);
@@ -31,25 +31,25 @@ MaterialColor createMaterialColor(Color color) {
     );
   }
 
-  return MaterialColor(color.toARGB32(), swatch);
+  return MaterialColor(color.toARGB32(), swatch); // 使用 toARGB32() 替代 value
 }
 
 Color adjustColor(Color color) {
   // 使用 toARGB32 替代 color.value
-  final int newValue = color.toARGB32();
+  final int newValue = color.toARGB32(); // 使用 toARGB32() 替代 value
   return Color(newValue);
 }
 
 // 新增扩展方法，将 withOpacity 替换为 applyOpacity
 extension ColorValueExtension on Color {
   Color applyOpacity(double opacity) =>
-      Color.fromRGBO(red, green, blue, opacity);
+      Color.fromRGBO(r.toInt(), g.toInt(), b.toInt(), opacity); // 转换为整数并移除 this
 }
 
 // 新增扩展方法，将已弃用的 withOpacity 替换为安全的实现
 extension ColorExtension on Color {
   /// 安全地设置颜色的透明度，替代已弃用的 withOpacity
-  Color withAlpha(double opacity) => Color.fromRGBO(red, green, blue, opacity);
+  Color withAlpha(double opacity) => Color.fromRGBO(r.toInt(), g.toInt(), b.toInt(), opacity); // 转换为整数并移除 this
 }
 
 /// 颜色工具类

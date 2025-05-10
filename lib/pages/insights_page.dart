@@ -535,6 +535,8 @@ class _InsightsPageState extends State<InsightsPage>
                         onPressed: () {
                           // 复制分析结果
                           Clipboard.setData(ClipboardData(text: _insights)).then((_) {
+                            if (!mounted) return;
+                            
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('分析结果已复制')),
                             );

@@ -110,9 +110,8 @@ class ApiService {
     final random = DateTime.now().millisecondsSinceEpoch % quotes.length;
     return quotes[random];
   }
-
   void fetchData() {
     const req = Request();
-    print("请求发送：${req.toString()}");
+    debugPrint("请求发送：${req.toString()}");
   }
 }

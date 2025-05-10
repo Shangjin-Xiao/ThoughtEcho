@@ -416,10 +416,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                 children: [
                   const Text('图标：'),
                   IconButton(
-                    icon: IconUtils.getCategoryIcon(selectedIcon),
-                    onPressed: () async {
+                    icon: IconUtils.getCategoryIcon(selectedIcon),                    onPressed: () async {
+                      // 保存当前上下文，避免在异步操作后使用不安全的上下文
+                      final BuildContext currentContext = context;
                       final icon = await showDialog<String>(
-                        context: context,
+                        context: currentContext,
                         builder: (context) => _IconSelectorDialog(initialIcon: selectedIcon),
                       );
                       if (icon != null) setState(() => selectedIcon = icon);
@@ -434,12 +435,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
               onPressed: () => Navigator.pop(context),
               child: const Text('取消'),
             ),
-            ElevatedButton(
-              onPressed: () async {
+            ElevatedButton(              onPressed: () async {
                 final newName = nameController.text.trim();
-                if (newName.isEmpty) return;
-                await Provider.of<DatabaseService>(context, listen: false)
+                if (newName.isEmpty) return;                await Provider.of<DatabaseService>(context, listen: false)
                     .updateCategory(category.id, newName, iconName: selectedIcon);
+                if (!mounted) return;
                 Navigator.pop(context);
               },
               child: const Text('保存'),

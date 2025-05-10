@@ -445,8 +445,10 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async { // 标记为 async
+                    // 导航前检查 mounted 状态
+                    if (!context.mounted) return;
+                    await Navigator.push( // 使用 await
                       context,
                       MaterialPageRoute(
                         builder: (context) => const BackupRestorePage(),
@@ -462,8 +464,10 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pushReplacement(
+                  onPressed: () async { // 标记为 async
+                    // 导航前检查 mounted 状态
+                    if (!context.mounted) return;
+                    await Navigator.pushReplacement( // 使用 await
                       context,
                       MaterialPageRoute(
                         builder: (context) => const HomePage(),
