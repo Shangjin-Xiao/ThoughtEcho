@@ -228,7 +228,7 @@ class AIService extends ChangeNotifier {
     final settings = _settingsService.aiSettings;
 
     // 检查 AI 配置是否有效
-    if (settings.apiKey.isEmpty ||
+    if (!hasValidApiKey() ||
         settings.apiUrl.isEmpty ||
         settings.model.isEmpty) {
       debugPrint('AI服务未配置，生成基于上下文的提示');
@@ -237,12 +237,44 @@ class AIService extends ChangeNotifier {
 
     // AI 配置有效，尝试调用 API
     try {
+      // 获取当前上下文信息
+      final now = DateTime.now();
+      final hour = now.hour;
+      final weather = _weatherService.currentWeather;
+      final temperature = _weatherService.temperature;
+      final city = _locationService.city;
+
+      // 确定时间段
+      String timeOfDay;
+      if (hour >= 5 && hour < 12) {
+        timeOfDay = '早上';
+      } else if (hour >= 12 && hour < 18) {
+        timeOfDay = '下午';
+      } else if (hour >= 18 && hour < 23) {
+        timeOfDay = '晚上';
+      } else {
+        timeOfDay = '深夜';
+      }
+
+      // 构建上下文字符串
+      String contextInfo = '当前时间段：$timeOfDay';
+      if (city != null && city.isNotEmpty) {
+        contextInfo += '，位置：$city';
+      }
+      if (weather != null) {
+        contextInfo += '，天气：${WeatherService.getWeatherDescription(weather)}';
+      }
+      if (temperature != null && temperature.isNotEmpty) {
+        contextInfo += '，温度：$temperature';
+      }
+
       final messages = [
         {
           'role': 'system',
-          'content': '你是一个富有哲理和智慧的导师，请生成一个发人深省的问题或提示，引导用户进行思考和写作。',
+          'content':
+              '你是一位充满文学素养的思考引导者。请根据提供的上下文信息（时间、位置、天气），生成一个富有诗意且引人深思的提示（不超过40个汉字），引导用户记录当下的思绪或感受。语言要优美、富有意境，像古典诗词或现代散文中的句子，可以适当使用比喻、拟人等修辞手法，但要确保简洁明了、一读即懂。',
         },
-        {'role': 'user', 'content': '请生成一个今日提示，帮助用户进行思考和写作。'},
+        {'role': 'user', 'content': '请根据以下上下文生成今日思考提示：$contextInfo'},
       ];
 
       try {
@@ -280,16 +312,16 @@ class AIService extends ChangeNotifier {
   // 获取默认的每日提示
   String _getDefaultPrompt() {
     final List<String> defaultPrompts = [
-      "今天，你有什么让自己感到特别感恩的事情吗？",
-      "如果你能给过去的自己一个建议，那会是什么？",
-      "你今天学到了什么新东西？有什么启发吗？",
-      "有什么一直想尝试却还没有行动的事情？是什么阻碍了你？",
-      "反思一下：最近有什么事情让你感到特别快乐或有成就感？",
-      "你最近克服了什么困难？这个经历教会了你什么？",
-      "如果时间和金钱都不是问题，明天你会做什么？",
-      "今天遇到的最大挑战是什么？你是如何应对的？",
-      "有哪些小习惯正在积极地改变你的生活？",
-      "你最珍视的三个价值观是什么？为什么它们对你如此重要？",
+      "今天有什么值得感恩的事？",
+      "给过去的自己一句话，会说什么？",
+      "今天学到了什么新东西？",
+      "什么事想做却还没行动？",
+      "最近什么让你感到快乐？",
+      "克服困难后有什么感悟？",
+      "如果明天完全自由，你会做什么？",
+      "今天的挑战是什么？",
+      "哪些小习惯正在改变你？",
+      "此刻，你想对自己说什么？",
     ];
 
     // 使用日期为种子选择一个提示，确保同一天显示相同提示
