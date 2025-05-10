@@ -35,20 +35,23 @@ class QuoteContent extends StatelessWidget {
         );
 
         // 使用与项目中其他部分相同的 API 方式
-        return Container(
+        return ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: showFullContent ? double.infinity : 200,
           ),
-          child: quill.QuillEditor.basic(
-            controller: controller,
-            config: const quill.QuillEditorConfig(
-              // 禁用编辑功能
-              autoFocus: false,
-              expands: false,
-              padding: EdgeInsets.zero,
-              scrollable: false,
-              enableInteractiveSelection: false,
-              placeholder: '',
+          child: ClipRect(
+            // 使用ClipRect确保内容不会溢出
+            child: quill.QuillEditor.basic(
+              controller: controller,
+              config: const quill.QuillEditorConfig(
+                // 禁用编辑功能
+                autoFocus: false,
+                expands: false,
+                padding: EdgeInsets.zero,
+                scrollable: false,
+                enableInteractiveSelection: false,
+                placeholder: '',
+              ),
             ),
           ),
         );
