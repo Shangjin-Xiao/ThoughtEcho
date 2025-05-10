@@ -516,10 +516,7 @@ class _EditPageState extends State<EditPage> {
               content: SizedBox(
                 width: double.maxFinite,
                 child: SingleChildScrollView(
-                  child: MarkdownBody(
-                    data: result,
-                    selectable: true,
-                  ),
+                  child: MarkdownBody(data: result, selectable: true),
                 ),
               ),
               actions: [
@@ -954,42 +951,106 @@ class _EditPageState extends State<EditPage> {
                               : MarkdownBody(
                                 data: _aiAnalysis,
                                 selectable: true,
-                                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                                styleSheet: MarkdownStyleSheet.fromTheme(
+                                  Theme.of(context),
+                                ).copyWith(
                                   p: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
                           const SizedBox(height: 8),
-                          ElevatedButton(
-                            style: FilledButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppTheme.buttonRadius,
-                                ),
-                              ),
-                            ),
-                            onPressed: () async {
-                              try {
-                                final aiService = Provider.of<AIService>(
-                                  context,
-                                  listen: false,
-                                );
-                                final summary = await aiService.summarizeNote(
-                                  Quote(
-                                    id: widget.quote.id,
-                                    content: _contentController.text,
-                                    date: widget.quote.date,
+                          Row(
+                            children: [
+                              ElevatedButton.icon(
+                                style: FilledButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.buttonRadius,
+                                    ),
                                   ),
-                                );
-                                setState(() {
-                                  _aiAnalysis = summary;
-                                });
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('AI分析失败: $e')),
-                                );
-                              }
-                            },
-                            child: const Text('生成AI分析'),
+                                ),
+                                onPressed: () async {
+                                  try {
+                                    final aiService = Provider.of<AIService>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    final summary = await aiService
+                                        .summarizeNote(
+                                          Quote(
+                                            id: widget.quote.id,
+                                            content: _contentController.text,
+                                            date: widget.quote.date,
+                                          ),
+                                        );
+                                    setState(() {
+                                      _aiAnalysis = summary;
+                                    });
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('AI分析失败: $e')),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.auto_awesome, size: 18),
+                                label: const Text('AI分析'),
+                              ),
+                              const SizedBox(width: 8),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                tooltip: 'AI工具',
+                                onSelected: (String value) {
+                                  switch (value) {
+                                    case 'polish':
+                                      _polishText();
+                                      break;
+                                    case 'continue':
+                                      _continueText();
+                                      break;
+                                    case 'source':
+                                      _analyzeSource();
+                                      break;
+                                  }
+                                },
+                                itemBuilder:
+                                    (
+                                      BuildContext context,
+                                    ) => <PopupMenuEntry<String>>[
+                                      const PopupMenuItem<String>(
+                                        value: 'polish',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.brush, size: 20),
+                                            SizedBox(width: 8),
+                                            Text('润色文本'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem<String>(
+                                        value: 'continue',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.add_circle_outline,
+                                              size: 20,
+                                            ),
+                                            SizedBox(width: 8),
+                                            Text('续写内容'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem<String>(
+                                        value: 'source',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.text_fields, size: 20),
+                                            SizedBox(width: 8),
+                                            Text('分析来源'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                              ),
+                            ],
                           ),
                         ],
                       )

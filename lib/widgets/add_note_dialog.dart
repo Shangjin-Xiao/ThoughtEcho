@@ -6,7 +6,6 @@ import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
-import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
@@ -528,7 +527,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(width: 8),
             // 显示格式化后的来源预览
             Align(
               alignment: Alignment.centerLeft,
@@ -1166,6 +1165,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       Navigator.pop(context); // 关闭当前对话框
 
                       // 打开高级颜色选择器
+                      Color selectedColor = initialColor;
                       final Color? advancedColor = await showDialog<Color>(
                         context: context,
                         builder:
@@ -1177,7 +1177,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                       initialColor != Colors.transparent
                                           ? initialColor
                                           : const Color(0xFFE1F5FE), // 默认蓝色
-                                  onColorChanged: (color) {},
+                                  onColorChanged: (color) {
+                                    selectedColor = color;
+                                  },
                                   width: 40,
                                   height: 40,
                                   spacing: 10,
@@ -1198,10 +1200,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   child: const Text('取消'),
                                 ),
                                 FilledButton(
-                                  onPressed:
-                                      () => Navigator.of(
-                                        context,
-                                      ).pop(initialColor),
+                                  onPressed: () => Navigator.of(context).pop(selectedColor),
                                   child: const Text('选择'),
                                 ),
                               ],

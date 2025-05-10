@@ -272,7 +272,7 @@ class AIService extends ChangeNotifier {
         {
           'role': 'system',
           'content':
-              '你是一位充满文学素养的思考引导者。请根据提供的上下文信息（时间、位置、天气），生成一个富有诗意且引人深思的提示（不超过40个汉字），引导用户记录当下的思绪或感受。语言要优美、富有意境，像古典诗词或现代散文中的句子，可以适当使用比喻、拟人等修辞手法，但要确保简洁明了、一读即懂。',
+              '你是一位充满文学素养的思考引导者。请根据提供的上下文信息（时间、位置、天气），生成一个富有诗意且引人深思的提示（不超过40个汉字），引导用户记录当下的思绪或感受。语言要优美、富有意境，像古典诗词或现代散文中的句子，可以适当使用比喻、拟人等修辞手法，但要确保简洁明了、一读即懂。注意：只需要输出你创作的内容，不要包含注解或者创作意图解释等其他内容！',
         },
         {'role': 'user', 'content': '请根据以下上下文生成今日思考提示：$contextInfo'},
       ];
@@ -282,7 +282,7 @@ class AIService extends ChangeNotifier {
           'messages': messages,
           'temperature': 0.9,
         }, settings).timeout(
-          const Duration(seconds: 15),
+          const Duration(seconds: 30), // 超时时间为30秒
           onTimeout: () {
             debugPrint('生成每日提示超时');
             throw Exception('请求超时');
