@@ -276,7 +276,7 @@ class _EditPageState extends State<EditPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -310,7 +310,7 @@ class _EditPageState extends State<EditPage> {
         if (mounted) {
           showDialog(
             context: context,
-            builder: (BuildContext context) {
+            builder: (dialogContext) {
               return AlertDialog(
                 title: Text('分析结果 (可信度: $confidence)'),
                 content: Column(
@@ -359,13 +359,13 @@ class _EditPageState extends State<EditPage> {
                             _workController.text = work;
                           }
                         });
-                        Navigator.of(context).pop();
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                   TextButton(
                     child: const Text('关闭'),
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogContext).pop();
                     },
                   ),
                 ],
@@ -408,7 +408,7 @@ class _EditPageState extends State<EditPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -420,20 +420,14 @@ class _EditPageState extends State<EditPage> {
             ),
           );
         },
-      );      // 调用AI润色文本
+      );
       final result = await aiService.polishText(_contentController.text);
-
-      // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
-      // 关闭加载对话框
       Navigator.of(context).pop();
-
-      // 显示结果对话框
       if (mounted) {
         showDialog(
           context: context,
-          builder: (BuildContext context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('润色结果'),
               content: SizedBox(
@@ -447,19 +441,20 @@ class _EditPageState extends State<EditPage> {
                     setState(() {
                       _contentController.text = result;
                     });
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
                 TextButton(
                   child: const Text('取消'),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
               ],
             );
           },
-        );      }
+        );
+      }
     } catch (e) {
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
@@ -491,7 +486,7 @@ class _EditPageState extends State<EditPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -503,20 +498,14 @@ class _EditPageState extends State<EditPage> {
             ),
           );
         },
-      );      // 调用AI续写文本
+      );
       final result = await aiService.continueText(_contentController.text);
-
-      // 确保组件仍然挂载
       if (!mounted) return;
-      
-      // 关闭加载对话框
       Navigator.of(context).pop();
-
-      // 显示结果对话框
       if (mounted) {
         showDialog(
           context: context,
-          builder: (BuildContext context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('续写结果'),
               content: SizedBox(
@@ -533,13 +522,13 @@ class _EditPageState extends State<EditPage> {
                       _contentController.text =
                           '${_contentController.text}\n\n$result';
                     });
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
                 TextButton(
                   child: const Text('取消'),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
               ],
@@ -578,7 +567,7 @@ class _EditPageState extends State<EditPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,

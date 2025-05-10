@@ -1003,33 +1003,27 @@ class _LogsPageState extends State<LogsPage> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder:
-                        (context) =>
-                            const Center(child: CircularProgressIndicator()),
+                    builder: (dialogContext) => const Center(child: CircularProgressIndicator()),
                   );
 
                   try {
                     final logService = Provider.of<LogService>(
                       context,
                       listen: false,
-                    );                    await logService.clearAllLogs();
-                    
+                    );
+                    await logService.clearAllLogs();
                     if (!mounted) return;
-
                     Navigator.of(context).pop(); // 关闭加载指示器
-
                     ScaffoldMessenger.of(
                       context,
                     ).showSnackBar(const SnackBar(content: Text('所有日志记录已清除')));
-
-                    // 刷新日志
                     setState(() {
                       _historyLogs.clear();
                       _currentPage = 0;
                       _hasMoreLogs = true;
-                    });                  } catch (e) {
+                    });
+                  } catch (e) {
                     if (!mounted) return;
-                    
                     Navigator.of(context).pop(); // 关闭加载指示器
                     ScaffoldMessenger.of(
                       context,

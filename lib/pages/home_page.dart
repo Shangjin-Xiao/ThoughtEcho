@@ -303,63 +303,56 @@ class _HomePageState extends State<HomePage>
   void _showAIQuestionDialog(Quote quote) {
     final controller = TextEditingController();
     final aiService = context.read<AIService>();
-
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('问笔记'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(hintText: '请输入你的问题'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (controller.text.isEmpty) return;
-                  Navigator.pop(context);
-
-                  try {
-                    final answer = await aiService.askQuestion(
-                      quote,
-                      controller.text,
-                    );
-
-                    if (!mounted) return; // 添加 mounted 检查
-
-                    showDialog(
-                      context: context,
-                      builder:
-                          (dialogContext) => AlertDialog(
-                            // 使用新的 BuildContext 避免使用旧的跨异步上下文
-                            title: const Text('回答'),
-                            content: Text(answer),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(dialogContext),
-                                child: const Text('关闭'),
-                              ),
-                            ],
-                          ),
-                    );
-                  } catch (e) {
-                    if (!mounted) return; // 添加 mounted 检查
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('获取回答失败：$e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                child: const Text('提问'),
-              ),
-            ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('问笔记'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: '请输入你的问题'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () async {
+              if (controller.text.isEmpty) return;
+              Navigator.pop(dialogContext);
+              try {
+                final answer = await aiService.askQuestion(
+                  quote,
+                  controller.text,
+                );
+                if (!mounted) return;
+                showDialog(
+                  context: context,
+                  builder: (answerDialogContext) => AlertDialog(
+                    title: const Text('回答'),
+                    content: Text(answer),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(answerDialogContext),
+                        child: const Text('关闭'),
+                      ),
+                    ],
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('获取回答失败：$e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('提问'),
+          ),
+        ],
+      ),
     );
   }
 

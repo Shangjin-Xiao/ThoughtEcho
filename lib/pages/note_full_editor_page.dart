@@ -1249,7 +1249,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1285,7 +1285,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           showDialog(
             context: context,
-            builder: (BuildContext context) {
+            builder: (dialogContext) {
               return AlertDialog(
                 title: Text('分析结果 (可信度: $confidence)'),
                 content: Column(
@@ -1334,13 +1334,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             _workController.text = work;
                           }
                         });
-                        Navigator.of(context).pop();
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                   TextButton(
                     child: const Text('关闭'),
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogContext).pop();
                     },
                   ),
                 ],
@@ -1386,7 +1386,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1398,20 +1398,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             ),
           );
         },
-      );      // 调用AI润色文本
+      );
       final result = await aiService.polishText(plainText);
-
-      // 确保组件仍然挂载
       if (!mounted) return;
-      
-      // 关闭加载对话框
       Navigator.of(context).pop();
-
-      // 显示结果对话框
       if (mounted) {
         showDialog(
           context: context,
-          builder: (BuildContext context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('润色结果'),
               content: SizedBox(
@@ -1423,18 +1417,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   child: const Text('应用更改'),
                   onPressed: () {
                     setState(() {
-                      // 更新编辑器内容
                       _controller.document = quill.Document.fromJson([
                         {"insert": result},
                       ]);
                     });
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
                 TextButton(
                   child: const Text('取消'),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
               ],
@@ -1471,7 +1464,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1483,20 +1476,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             ),
           );
         },
-      );      // 调用AI续写文本
+      );
       final result = await aiService.continueText(plainText);
-
-      // 确保组件仍然挂载
       if (!mounted) return;
-      
-      // 关闭加载对话框
       Navigator.of(context).pop();
-
-      // 显示结果对话框
       if (mounted) {
         showDialog(
           context: context,
-          builder: (BuildContext context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('续写结果'),
               content: SizedBox(
@@ -1507,22 +1494,22 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                 TextButton(
                   child: const Text('附加到原文'),
                   onPressed: () {
-                    // 在文档末尾附加新内容
                     final int length = _controller.document.length;
                     _controller.document.insert(length, '\n\n$result');
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
                 TextButton(
                   child: const Text('取消'),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
               ],
             );
           },
-        );      }
+        );
+      }
     } catch (e) {
       // 确保组件仍然挂载
       if (!mounted) return;
@@ -1555,7 +1542,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (dialogContext) {
           return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1585,12 +1572,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       
       // 关闭加载对话框
       Navigator.of(context).pop();
-
-      // 显示结果对话框
       if (mounted) {
         showDialog(
           context: context,
-          builder: (BuildContext context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('分析结果'),
               content: SizedBox(
@@ -1601,10 +1586,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                 TextButton(
                   child: const Text('关闭'),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                 ),
-              ],            );
+              ],
+            );
           },
         );
       }

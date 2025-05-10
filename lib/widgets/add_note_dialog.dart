@@ -463,7 +463,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               Navigator.pop(context);
 
                               // 然后打开全屏编辑器
-                              final result = await Navigator.push(
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder:
@@ -475,7 +475,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 ),
                               );
 
-                              // 如果返回了结果，我们不需要处理，因为已经在全屏编辑器中保存了
+                              // 我们不需要处理返回结果，因为已经在全屏编辑器中保存了
                             },
                           ),
                         ],
@@ -964,32 +964,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     );
   }
 
-  // 显示对话框的静态方法
-  static Future<void> show({
-    required BuildContext context,
-    Quote? initialQuote,
-    String? prefilledContent,
-    String? prefilledAuthor,
-    String? prefilledWork,
-    Map<String, dynamic>? hitokotoData,
-    required List<NoteCategory> tags,
-    Function(Quote)? onSave,
-  }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder:
-          (context) => AddNoteDialog(
-            initialQuote: initialQuote,
-            prefilledContent: prefilledContent,
-            prefilledAuthor: prefilledAuthor,
-            prefilledWork: prefilledWork,
-            hitokotoData: hitokotoData,
-            tags: tags,
-            onSave: onSave,
-          ),
-    );
-  }
 
   // 自定义颜色选择器
   Future<void> _showCustomColorPicker(BuildContext context) async {
