@@ -13,6 +13,7 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
+import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -458,20 +459,54 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               color: theme.colorScheme.primary,
                             ),
                             onPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => FullScreenNoteEditor(
-                                        initialText: _contentController.text,
-                                      ),
-                                ),
-                              );
+                              try {
+                                // 获取所有标签数据
+                                final databaseService =
+                                    Provider.of<DatabaseService>(
+                                      context,
+                                      listen: false,
+                                    );
+                                final allTags =
+                                    await databaseService.getCategories();
 
-                              if (result != null && result is String) {
-                                setState(() {
-                                  _contentController.text = result;
-                                });
+                                // 创建临时Quote对象
+                                final tempQuote = Quote(
+                                  id: const Uuid().v4(),
+                                  content: _contentController.text,
+                                  date: DateTime.now().toIso8601String(),
+                                  sourceAuthor: _authorController.text,
+                                  sourceWork: _workController.text,
+                                  tagIds: _selectedTagIds,
+                                  colorHex: _selectedColorHex,
+                                  editSource: 'fullscreen',
+                                );
+
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => NoteFullEditorPage(
+                                          initialContent:
+                                              _contentController.text,
+                                          initialQuote: tempQuote,
+                                          allTags: allTags,
+                                        ),
+                                  ),
+                                );
+
+                                if (result != null && result == true) {
+                                  // 如果笔记已在全屏编辑器中保存，关闭本对话框
+                                  if (mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('打开全屏编辑器失败: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
                               }
                             },
                           ),
@@ -1227,77 +1262,4 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   }
 }
 
-class FullScreenNoteEditor extends StatefulWidget {
-  final String initialText;
-  const FullScreenNoteEditor({super.key, required this.initialText});
-
-  @override
-  State<FullScreenNoteEditor> createState() => _FullScreenNoteEditorState(); // Ensure createState is present
-}
-
-class _FullScreenNoteEditorState extends State<FullScreenNoteEditor> {
-  // Ensure correct extension
-  late TextEditingController controller;
-
-  @override
-  void initState() {
-    super.initState();
-    try {
-      controller = TextEditingController(text: widget.initialText);
-    } catch (e) {
-      // 如果初始化失败，使用空文本作为备选方案
-      debugPrint('全屏编辑器初始化失败: $e');
-      controller = TextEditingController(text: '');
-    }
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('全屏编辑'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            tooltip: '保存并返回',
-            onPressed: () {
-              try {
-                Navigator.pop(context, controller.text);
-              } catch (e) {
-                debugPrint('返回全屏编辑器内容失败: $e');
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('保存内容失败: $e')));
-                // 尝试再次返回，这次不带内容
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: TextField(
-          controller: controller,
-          maxLines: null,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: '请输入内容...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-            ),
-            filled: true,
-            fillColor: theme.colorScheme.surface,
-          ),
-        ),
-      ),
-    );
-  }
-}
+// 删除简陋的全屏编辑器实现，直接使用 lib/pages/note_full_editor_page.dart 中的 NoteFullEditorPage
