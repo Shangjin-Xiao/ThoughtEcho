@@ -795,15 +795,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 Builder(
                   builder: (context) {
                     // 检查API是否已配置
-                    final settingsService = Provider.of<SettingsService>(
+                    final aiService = Provider.of<AIService>(
                       context,
                       listen: false,
                     );
-                    final settings = settingsService.aiSettings;
-                    final bool apiConfigured =
-                        settings.apiKey.isNotEmpty &&
-                        settings.apiUrl.isNotEmpty &&
-                        settings.model.isNotEmpty;
+
+                    // 使用AI服务的检查方法，它会基于已有配置判断API Key是否有效
+                    final bool apiConfigured = aiService.hasValidApiKey();
 
                     if (_contentController.text.isNotEmpty &&
                         _aiSummary == null &&

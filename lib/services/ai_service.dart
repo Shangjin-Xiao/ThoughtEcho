@@ -24,56 +24,50 @@ class AIService extends ChangeNotifier {
 
   Future<void> _validateSettings() async {
     final settings = _settingsService.aiSettings;
-    
+
     // 创建安全存储服务实例
     final secureStorage = SecureStorageService();
-    
+
     // 先检查settings中的API Key
     bool hasApiKey = settings.apiKey.isNotEmpty;
     String effectiveApiKey = settings.apiKey;
-    
+
     // 如果settings中没有API Key，则尝试从安全存储中获取
     if (!hasApiKey) {
       final secureApiKey = await secureStorage.getApiKey();
       hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
-      
+
       // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
       if (hasApiKey) {
         effectiveApiKey = secureApiKey;
       }
     }
-    
+
     // 最终验证API Key
     if (!hasApiKey) {
       throw Exception('请先在设置中配置 API Key');
     }
-    
+
     if (settings.apiUrl.isEmpty) {
       throw Exception('请先在设置中配置 API URL');
     }
-    
+
     if (settings.model.isEmpty) {
       throw Exception('请先在设置中配置 AI 模型');
     }
   }
 
-  // 新增：判断API Key是否有效
+  // 判断API Key是否有效 (同步检查，用于UI显示判断)
   bool hasValidApiKey() {
     final key = _settingsService.aiSettings.apiKey;
-    // 检查apiKey是否为空的同时，尝试从SecureStorage获取
     if (key.isNotEmpty) {
-      return true;
-    } else {
-      // 使用同步方法检查SecureStorage中是否有API Key
-      try {
-        // 这里我们暂时返回true，因为SecureStorage的API是异步的
-        // 真正的检查将在_validateSettings中完成
-        return true;
-      } catch (e) {
-        debugPrint('检查SecureStorage中的API Key失败: $e');
-        return false;
-      }
+      return true; // 如果设置中有key则直接返回true
     }
+
+    // 否则，我们无法同步获取安全存储的key
+    // 对于UI判断，我们假定如果apiUrl和model已经配置，那么key也很可能已配置
+    final settings = _settingsService.aiSettings;
+    return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
   }
 
   Future<http.Response> _makeRequest(
@@ -87,11 +81,11 @@ class AIService extends ChangeNotifier {
 
     // 创建安全存储服务实例
     final secureStorage = SecureStorageService();
-    
+
     // 获取API密钥 - 首先尝试从安全存储中获取，如果为空则尝试使用设置中的密钥（向后兼容）
     final secureApiKey = await secureStorage.getApiKey();
     final effectiveApiKey = secureApiKey ?? settings.apiKey;
-    
+
     if (effectiveApiKey.isEmpty) {
       throw Exception('未找到有效的API密钥，请在设置中配置API密钥');
     }
@@ -99,7 +93,7 @@ class AIService extends ChangeNotifier {
     // 根据不同的AI服务提供商调整请求体格式
     Map<String, dynamic> requestBody;
     Map<String, String> headers = {'Content-Type': 'application/json'};
-    
+
     // 判断服务提供商类型并相应调整请求
     if (url.contains('anthropic.com')) {
       // Anthropic Claude API格式
@@ -108,11 +102,10 @@ class AIService extends ChangeNotifier {
         'messages': body['messages'],
         'max_tokens': body['max_tokens'] ?? 2500,
       };
-      
+
       // Anthropic使用x-api-key头而非Bearer认证
       headers['anthropic-version'] = '2023-06-01'; // 添加必需的API版本头
       headers['x-api-key'] = effectiveApiKey; // 使用有效的API密钥
-      
     } else if (url.contains('openrouter.ai')) {
       // OpenRouter可能需要额外的头信息
       requestBody = {
@@ -122,11 +115,10 @@ class AIService extends ChangeNotifier {
         'max_tokens': body['max_tokens'] ?? 2500,
         'stream': false,
       };
-      
+
       headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-      headers['HTTP-Referer'] = 'https://thoughtecho.app';  // 可能需要指定来源
-      headers['X-Title'] = 'ThoughtEcho App';  // 应用名称
-      
+      headers['HTTP-Referer'] = 'https://thoughtecho.app'; // 可能需要指定来源
+      headers['X-Title'] = 'ThoughtEcho App'; // 应用名称
     } else if (url.contains('deepseek.com')) {
       // DeepSeek API格式
       requestBody = {
@@ -136,9 +128,8 @@ class AIService extends ChangeNotifier {
         'max_tokens': body['max_tokens'] ?? 2500,
         'stream': false,
       };
-      
+
       headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-      
     } else {
       // 默认格式(适用于OpenAI及其兼容API)
       requestBody = {
@@ -148,7 +139,7 @@ class AIService extends ChangeNotifier {
         'max_tokens': body['max_tokens'] ?? 2500,
         'stream': false,
       };
-      
+
       headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
     }
 
@@ -156,7 +147,10 @@ class AIService extends ChangeNotifier {
     // 打印请求头但隐藏敏感信息
     final safeHeaders = Map<String, String>.from(headers);
     if (safeHeaders.containsKey('Authorization')) {
-      safeHeaders['Authorization'] = safeHeaders['Authorization']!.replaceFirst(effectiveApiKey, '[API_KEY_HIDDEN]');
+      safeHeaders['Authorization'] = safeHeaders['Authorization']!.replaceFirst(
+        effectiveApiKey,
+        '[API_KEY_HIDDEN]',
+      );
     }
     if (safeHeaders.containsKey('x-api-key')) {
       safeHeaders['x-api-key'] = '[API_KEY_HIDDEN]';
@@ -169,11 +163,7 @@ class AIService extends ChangeNotifier {
     try {
       final client = http.Client();
       final response = await client
-          .post(
-            uri,
-            headers: headers,
-            body: json.encode(requestBody),
-          )
+          .post(uri, headers: headers, body: json.encode(requestBody))
           .timeout(
             const Duration(seconds: 300), // 超时时间改为300秒
             onTimeout: () {
@@ -368,7 +358,8 @@ class AIService extends ChangeNotifier {
     // --- 结合时间和天气的提示 ---
     if (weather != null) {
       final weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
-        (k) => weather == k || weather == WeatherService.getWeatherDescription(k),
+        (k) =>
+            weather == k || weather == WeatherService.getWeatherDescription(k),
         orElse: () => weather,
       );
       if (timeOfDay == '早上') {
@@ -399,7 +390,8 @@ class AIService extends ChangeNotifier {
     // 基于天气的提示 (如果天气信息可用)
     if (weather != null) {
       final weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
-        (k) => weather == k || weather == WeatherService.getWeatherDescription(k),
+        (k) =>
+            weather == k || weather == WeatherService.getWeatherDescription(k),
         orElse: () => weather,
       );
       if (weatherKey == 'clear') {
@@ -466,21 +458,22 @@ class AIService extends ChangeNotifier {
           'analysisType': analysisType,
           'analysisStyle': analysisStyle,
         },
-        'quotes': quotes.map((quote) {
-          return {
-            'id': quote.id,
-            'content': quote.content,
-            'date': quote.date,
-            'source': quote.source,
-            'sourceAuthor': quote.sourceAuthor,
-            'sourceWork': quote.sourceWork,
-            'tagIds': quote.tagIds,
-            'categoryId': quote.categoryId,
-            'location': quote.location,
-            'weather': quote.weather,
-            'temperature': quote.temperature,
-          };
-        }).toList()
+        'quotes':
+            quotes.map((quote) {
+              return {
+                'id': quote.id,
+                'content': quote.content,
+                'date': quote.date,
+                'source': quote.source,
+                'sourceAuthor': quote.sourceAuthor,
+                'sourceWork': quote.sourceWork,
+                'tagIds': quote.tagIds,
+                'categoryId': quote.categoryId,
+                'location': quote.location,
+                'weather': quote.weather,
+                'temperature': quote.temperature,
+              };
+            }).toList(),
       };
 
       // 将数据转换为格式化的JSON字符串
@@ -649,8 +642,7 @@ class AIService extends ChangeNotifier {
         },
         {
           'role': 'user',
-          'content':
-              '请根据以下要求分析我的笔记：\n\n$customPrompt\n\n笔记内容：\n\n$quotesText',
+          'content': '请根据以下要求分析我的笔记：\n\n$customPrompt\n\n笔记内容：\n\n$quotesText',
         },
       ];
 
