@@ -1,95 +1,292 @@
-# Mind Trace - 心迹
+<div align="center">
+  <img src="res/icon.png" alt="心迹 Logo / ThoughtEcho Logo" width="120">
+  
+  # 心迹 (ThoughtEcho)
+  
+  <p>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?include_prereleases&style=flat-square&color=green&label=最新版本" alt="Latest Release / 最新版本">
+    </a>
+    <!-- TODO: If CI is set up later, uncomment and potentially update the workflow filename -->
+    <!-- <img src="https://img.shields.io/github/workflow/status/Shangjin-Xiao/ThoughtEcho/CI?style=flat-square" alt="Build Status / 构建状态"> -->
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
+      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=yellow" alt="Stars">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/network/members">
+      <img src="https://img.shields.io/github/forks/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=blue" alt="Forks">
+    </a>
+  </p>
 
-[![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev/)
+  <p>
+    <b>📝 一款使用 Flutter 构建的本地优先笔记应用<br>
+    捕捉思绪轨迹，释放 AI 洞察的力量 ✨</b>
+  </p>
+  
+  <p>
+    <a href="#-english-version"><b>English</b></a> • 
+    <a href="#-中文版本"><b>中文</b></a>
+  </p>
+  
+</div>
 
-**追踪你的思想轨迹，释放 AI 洞察的力量**
+---
 
-## 💡 理念
+<div id="-中文版本">
 
-- **「心」**：  捕捉内心的每一个细微波动，记录灵感与感悟，与内心共鸣。
-- **「迹」**：  描绘个人思考的轨迹，沉淀生命的印记，见证自我成长。
+## ✨ 当前功能
 
-**Mind Trace - 心迹**  不仅仅是一款简洁的日记应用，更是一个强大的 **个人思想追踪器** 和 **AI 洞察助手**。  它帮助你捕捉和记录日常思绪，并利用先进的 AI 技术，深入分析你的笔记内容，挖掘潜在的模式、情感和洞察，从而促进自我认知、提升思考深度，实现个人成长。
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="33%"><b>✍️ 笔记管理</b><br>创建、编辑、查看和删除笔记</td>
+      <td align="center" width="33%"><b>🏷️ 标签系统</b><br>便捷地分类与检索笔记</td>
+      <td align="center" width="33%"><b>🎨 个性化主题</b><br>浅色/深色模式与自定义颜色</td>
+    </tr>
+    <tr>
+      <td align="center"><b>💬 一言集成</b><br>展示精选句子，类型可筛选</td>
+      <td align="center"><b>💾 数据备份与恢复</b><br>保护你的宝贵想法</td>
+      <td align="center"><b>✨ AI 洞察</b><br>智能分析笔记内容 (开发中)</td>
+    </tr>
+  </table>
+</div>
 
-## ✨ 功能特点
+## 📸 应用截图
 
-- **✍️  心迹记录**：  简洁优雅的界面，让你专注于快速记录想法、感悟、灵感，捕捉每一个心动瞬间。
-- **🧠  AI 智能洞察**：  集成强大的 AI 服务，深度分析你的笔记内容，提供多维度智能洞察：
-    - **情感分析**：  洞察笔记的情感倾向，了解情绪变化。
-    - **核心思想提炼**：  提取笔记的核心主题和关键信息，把握思考重点。
-    - **行动建议**：  根据笔记内容，提供个性化的行动建议，指导个人成长。
-    - **思维模式分析**：  分析笔记的思维模式，发现潜在的认知偏差和思维盲点。
-- **🤔  每日思考提示**：  每天为你生成一个发人深省的哲学或智慧提示，激发深度思考，拓展思维边界。
-- **🗂️  分类管理**：  自定义笔记分类，灵活组织和管理你的心迹，方便回顾和检索。
-- **🔍  关键词搜索**：  强大的关键词搜索功能， мгновенно 定位所需笔记，快速回顾特定时期的思考。
-- **🌙  深色模式**：  提供舒适的深色模式，呵护你的双眼，适应不同光线环境。
-- **📱  跨平台支持**：  基于 Flutter 框架开发，同时支持移动端和桌面端，随时随地记录和回顾你的心迹。
-- **🔒  本地存储**：  所有笔记数据均存储在本地设备，无需担心数据泄露，保障个人隐私安全。
-- **🎨  Material Design 3**：  采用 Material Design 3 规范设计，界面美观现代，操作流畅自然。
+| 主页 | 添加/编辑笔记 | 标签管理 |
+|:---:|:---:|:---:|
+| ![主页](res/homepage.jpg) | ![添加/编辑笔记](res/add.jpg) | ![标签管理](res/tags.jpg) |
+| **主题设置** | **一言类型选择** | **设置与备份** |
+| ![主题设置](res/theme_setting.jpg) | ![一言类型选择](res/choose_yiyan.jpg) | ![设置与备份](res/settingpage.jpg) |
 
-## 🚀 开始使用
 
-1. **安装 Flutter SDK**：  请确保你的开发环境已安装 [Flutter SDK](https://flutter.dev/docs/get-started/install)。
-2. **克隆项目**：
+## 🛠️ 技术栈
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>框架</b></td>
+      <td>Flutter (Dart)</td>
+    </tr>
+    <tr>
+      <td align="center"><b>状态管理</b></td>
+      <td>provider, get_it</td>
+    </tr>
+    <tr>
+      <td align="center"><b>本地数据库</b></td>
+      <td>sqflite</td>
+    </tr>
+    <tr>
+      <td align="center"><b>核心依赖</b></td>
+      <td>file_picker, path_provider, permission_handler, flutter_colorpicker, share_plus, flutter_local_notifications</td>
+    </tr>
+  </table>
+</div>
+
+## 🚀 快速开始
+
+1. **环境准备** 
+   
+   确保已安装 Flutter 3.x+ 环境。运行 `flutter doctor` 检查配置。
+
+2. **获取代码**
    ```bash
-   git clone [你的 GitHub 仓库地址]
-   cd mind-trace
+   git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
+   cd ThoughtEcho
    ```
-3. **获取 API 服务信息**：  要体验 AI 洞察等增强功能，你需要注册并获取 **AI 服务提供商** 提供的 **API URL** 和 **API Key**。
-4. **配置 API**：  启动应用后，进入 **设置** 页面，配置 **API URL**、**API Key** 和 **模型名称**。  详细配置步骤请参考 **[配置](#配置)** 章节。
-5. **安装 Flutter 依赖**：
+
+3. **安装依赖**
    ```bash
    flutter pub get
    ```
-6. **连接设备或启动模拟器**
-7. **运行应用**：
+
+4. **运行应用**
    ```bash
    flutter run
    ```
 
-## ⚙️ 配置
+5. **AI 功能配置** (可选)
+   
+   在应用设置中配置 API Key 以启用 AI 功能。
 
-要使用 AI 洞察和每日提示等 AI 增强功能，你需要配置 API 服务。
+## 🗺️ 发展路线图
 
-1. **获取 API 服务信息**:  你需要从 **AI 服务提供商** 处获取 **API URL** 和 **API Key**。  部分 AI 服务可能还需要配置 **模型名称**。
-2. **打开应用设置页面**:  在 Mind Trace 应用中，点击底部导航栏的 **设置** 图标，进入设置页面。
-3. **配置 API 设置**:  在设置页面中，找到 **AI 设置** 或类似的选项，点击进入 AI 设置页面。
-4. **输入 API URL**:  在 **API URL** 输入框中，粘贴你从 **AI 服务提供商** 处获取的 API URL。  **请确保 API URL 以 `http://` 或 `https://` 开头，并且包含 API 端点路径 (例如 `/v1/chat/completions`)。**
-5. **输入 API Key**:  在 **API Key** 输入框中，粘贴你从 **AI 服务提供商** 处获取的 API Key。  **请务必妥善保管你的 API Key，不要泄露给他人。**
-6. **(可选) 配置模型名称**:  如果你的 **API 服务提供商** 需要配置模型名称，请在 **模型名称** 输入框中输入模型名称。  否则，可以留空使用默认模型。
-7. **保存设置**:  点击 **保存** 或 **应用** 按钮，保存你的 API 设置。
+<div align="center">
+  <table>
+    <tr>
+      <th>已完成 ✅</th>
+      <th>近期 (Q2 2024) 🚧</th>
+      <th>中期 (Q3 2024) 📅</th>
+      <th>长期规划 💡</th>
+    </tr>
+    <tr>
+      <td>
+        • 剪贴板智能检测与快速添加<br>
+        • 用户引导流程和教程<br>
+        • 全屏沉浸式编辑器<br>
+        • Material 3 现代化界面<br>
+        • 数据库性能优化<br>
+        • 基础标签和分类系统
+      </td>
+      <td>
+        • 每日一言推送通知<br>
+        • 支持插入本地图片
+      </td>
+      <td>
+        • 富文本编辑与预览<br>
+        • AI分析功能增强<br>
+        • 高级数据可视化
+      </td>
+      <td>
+        • UI、功能高度自定义<br>
+        • 离线AI分析能力<br>
+        • 多设备实时同步<br>
+        • 地图选点添加位置<br>
+        • 桌面端独立应用
+      </td>
+    </tr>
+  </table>
+</div>
 
-## 来源
+## 🤝 如何贡献
 
-本项目使用了以下 API：
+1. **提交问题或建议**：通过 [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues) 反馈
 
-- **[Hitokoto（一言）](https://hitokoto.cn/)** -  每日一句 API，提供精美的一句话文案。
-- **AI 服务 API** -  提供 AI 智能洞察和每日思考提示等 AI 增强功能。  具体 API 服务提供商由用户配置。
+2. **贡献代码**：
+   - Fork 仓库并创建功能分支 `feature/YourFeature`
+   - 提交更改 `git commit -m 'feat: Add feature'`
+   - 创建 Pull Request 到主仓库
 
-## 🤝 贡献指南
+## 📄 许可证
 
-欢迎任何形式的贡献，包括但不限于：
+本项目基于 [MIT 许可证](LICENSE) 发布。
+</div>
 
-* 🐛  **Bug 报告**：  提交 Bug 报告，帮助我们发现和修复应用缺陷。
-* 💡  **功能建议**：  提出新的功能建议，共同完善应用功能。
-* 💻  **代码贡献**：  提交代码 Pull Request，贡献你的代码，参与项目开发。
-* 📝  **文档完善**：  帮助改进和完善项目文档，使文档更清晰易懂。
-* 🌍  **多语言支持**：  贡献多语言翻译，帮助应用走向世界。
-* 🎨  **界面美化**：  提供 UI/UX 改进建议，或直接参与界面美化工作。
+---
 
-期待你的加入，共同打造更优秀的 Mind Trace！
+<details id="-english-version">
+<summary><h2>🇬🇧 English Version</h2></summary>
 
-## 🙏 致谢
+## ✨ Current Features
 
-- **[Hitokoto](https://hitokoto.cn/)** -  感谢 Hitokoto 提供的免费一句话 API 服务。
-- **AI 服务提供商** -  感谢 AI 服务提供商提供的强大 AI 技术支持。
-- **[Flutter](https://flutter.dev/)** -  感谢 Flutter 团队提供的优秀 UI 框架。
-- **[所有贡献者](https://github.com/你的用户名/mind-trace/graphs/contributors)** -  感谢所有为本项目做出贡献的开发者和用户。
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="33%"><b>✍️ Note Management</b><br>Create, edit, view, and delete notes</td>
+      <td align="center" width="33%"><b>🏷️ Tag System</b><br>Organize and retrieve notes easily</td>
+      <td align="center" width="33%"><b>🎨 Personalized Themes</b><br>Light/dark modes & custom colors</td>
+    </tr>
+    <tr>
+      <td align="center"><b>💬 Hitokoto Integration</b><br>Display quotes with type filtering</td>
+      <td align="center"><b>💾 Data Backup & Restore</b><br>Protect your valuable ideas</td>
+      <td align="center"><b>✨ AI Insights</b><br>Smart note analysis (WIP)</td>
+    </tr>
+  </table>
+</div>
 
-## 📜 许可证
+## 📸 Application Screenshots
 
-本项目采用 MIT 开源许可证，详情请查看 [LICENSE](LICENSE) 文件。
+| Homepage | Add/Edit Note | Tag Management |
+|:---:|:---:|:---:|
+| ![Homepage](res/homepage.jpg) | ![Add/Edit Note](res/add.jpg) | ![Tag Management](res/tags.jpg) |
+| **Theme Settings** | **Hitokoto Types** | **Settings & Backup** |
+| ![Theme Settings](res/theme_setting.jpg) | ![Hitokoto Types](res/choose_yiyan.jpg) | ![Settings & Backup](res/settingpage.jpg) |
 
-## ⚠️ 声明
 
-**本项目仅供学习交流使用，不
+## 🛠️ Tech Stack
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>Framework</b></td>
+      <td>Flutter (Dart)</td>
+    </tr>
+    <tr>
+      <td align="center"><b>State Management</b></td>
+      <td>provider, get_it</td>
+    </tr>
+    <tr>
+      <td align="center"><b>Local Database</b></td>
+      <td>sqflite</td>
+    </tr>
+    <tr>
+      <td align="center"><b>Core Dependencies</b></td>
+      <td>file_picker, path_provider, permission_handler, flutter_colorpicker, share_plus, flutter_local_notifications</td>
+    </tr>
+  </table>
+</div>
+
+## 🚀 Quick Start
+
+1. **Prerequisites** 
+   
+   Ensure Flutter 3.x+ is installed. Run `flutter doctor` to check.
+
+2. **Get the Code**
+   ```bash
+   git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
+   cd ThoughtEcho
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+4. **Run the App**
+   ```bash
+   flutter run
+   ```
+
+5. **AI Feature Configuration** (Optional)
+   
+   Configure the API Key in app settings to enable AI features.
+
+## 🗺️ Development Roadmap
+
+<div align="center">
+  <table>
+    <tr>
+      <th>Near Term (Q2 2024) 🚧</th>
+      <th>Mid Term (Q3 2024) 📅</th>
+      <th>Long Term 💡</th>
+    </tr>
+    <tr>
+      <td>
+        • New user onboarding flow<br>
+        • Smart clipboard detection<br>
+        • Daily Hitokoto notifications<br>
+        • Database performance optimization<br>
+        • Bug fixes & stability
+      </td>
+      <td>
+        • Markdown editing & preview<br>
+        • Image & file support<br>
+        • AI feature enhancement<br>
+        • Deep UI customization
+      </td>
+      <td>
+        • Local AI analysis<br>
+        • Code refactoring<br>
+        • Cloud sync (to be evaluated)
+      </td>
+    </tr>
+  </table>
+</div>
+
+## 🤝 How to Contribute
+
+1. **Report Issues or Suggestions**: Via [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues)
+
+2. **Contribute Code**:
+   - Fork the repo and create feature branch `feature/YourFeature`
+   - Commit changes `git commit -m 'feat: Add feature'`
+   - Create Pull Request to main repository
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+</details>

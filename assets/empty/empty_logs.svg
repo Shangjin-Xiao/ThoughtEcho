@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景装饰元素 -->
+  <circle cx="180" cy="450" r="12" fill="#E3F2FD" opacity="0.6"/>
+  <circle cx="700" cy="220" r="15" fill="#BBDEFB" opacity="0.5"/>
+  <circle cx="150" cy="250" r="10" fill="#90CAF9" opacity="0.4"/>
+  
+  <!-- 日历/日志图标 - Material风格 -->
+  <rect x="300" y="180" width="200" height="220" rx="8" fill="#2196F3" opacity="0.9"/>
+  <rect x="310" y="210" width="180" height="180" rx="4" fill="#FFFFFF"/>
+  
+  <!-- 日历顶部 -->
+  <rect x="310" y="190" width="180" height="20" rx="4" fill="#1976D2"/>
+  
+  <!-- 空日历线条 -->
+  <line x1="330" y1="240" x2="470" y2="240" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="270" x2="470" y2="270" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="300" x2="470" y2="300" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="330" x2="470" y2="330" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="360" x2="470" y2="360" stroke="#EEEEEE" stroke-width="2"/>
+  
+  <!-- 时钟图标 -->
+  <circle cx="550" cy="280" r="60" fill="#E3F2FD" stroke="#2196F3" stroke-width="8"/>
+  <circle cx="550" cy="280" r="5" fill="#2196F3"/>
+  <line x1="550" y1="280" x2="550" y2="240" stroke="#2196F3" stroke-width="6" stroke-linecap="round"/>
+  <line x1="550" y1="280" x2="580" y2="300" stroke="#2196F3" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Material风格卡片 - 空日志卡片 -->
+  <rect x="280" y="430" width="240" height="50" rx="4" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="300" y="450" width="200" height="10" rx="5" fill="#F5F5F5"/>
+  
+  <!-- Material风格波浪装饰 -->
+  <path d="M150 520C200 500 250 540 300 520C350 500 400 540 450 520C500 500 550 540 600 520" stroke="#E3F2FD" stroke-width="8" stroke-linecap="round"/>
+</svg>

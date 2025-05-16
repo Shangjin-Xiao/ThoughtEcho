@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景装饰元素 -->
+  <circle cx="200" cy="450" r="15" fill="#E3F2FD" opacity="0.7"/>
+  <circle cx="650" cy="200" r="20" fill="#BBDEFB" opacity="0.5"/>
+  <circle cx="120" cy="250" r="10" fill="#90CAF9" opacity="0.6"/>
+  <circle cx="700" cy="480" r="12" fill="#64B5F6" opacity="0.5"/>
+  
+  <!-- 笔记本 -->
+  <rect x="300" y="200" width="200" height="250" rx="8" fill="#2196F3" opacity="0.9"/>
+  <rect x="310" y="210" width="180" height="230" rx="4" fill="#FFFFFF"/>
+  
+  <!-- 笔记线条 -->
+  <line x1="330" y1="250" x2="470" y2="250" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="280" x2="470" y2="280" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="310" x2="470" y2="310" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="340" x2="470" y2="340" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="370" x2="470" y2="370" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="330" y1="400" x2="470" y2="400" stroke="#EEEEEE" stroke-width="2"/>
+  
+  <!-- 思维气泡 -->
+  <circle cx="550" cy="180" r="40" fill="#2196F3" opacity="0.2"/>
+  <circle cx="590" cy="230" r="25" fill="#2196F3" opacity="0.3"/>
+  <circle cx="615" cy="260" r="15" fill="#2196F3" opacity="0.4"/>
+  
+  <!-- 铅笔 -->
+  <path d="M230 320L280 270L290 280L240 330L230 320Z" fill="#FFC107"/>
+  <path d="M240 330L230 320L220 350L240 330Z" fill="#FF9800"/>
+  <rect x="280" y="270" width="14" height="14" transform="rotate(-45 280 270)" fill="#E91E63"/>
+  
+  <!-- Material设计元素：悬浮按钮暗示 -->
+  <circle cx="550" cy="400" r="30" fill="#2196F3"/>
+  <path d="M550 390V410M540 400H560" stroke="white" stroke-width="4" stroke-linecap="round"/>
+</svg>

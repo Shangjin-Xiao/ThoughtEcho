@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景装饰元素 -->
+  <circle cx="160" cy="480" r="15" fill="#E3F2FD" opacity="0.6"/>
+  <circle cx="700" cy="200" r="12" fill="#BBDEFB" opacity="0.5"/>
+  <circle cx="120" cy="320" r="10" fill="#90CAF9" opacity="0.4"/>
+  
+  <!-- 云朵 - Material风格 -->
+  <path d="M500 220C500 192.386 477.614 170 450 170C427.909 170 409.177 183.854 402.769 203.077C396.425 200.396 389.406 199 382 199C356.043 199 335 220.043 335 246C335 271.957 356.043 293 382 293H450H500C522.091 293 540 275.091 540 253C540 230.909 522.091 213 500 213V220Z" fill="#BBDEFB"/>
+  
+  <!-- 断开的wifi信号图标 -->
+  <path d="M300 350C350 320 450 320 500 350" stroke="#2196F3" stroke-width="10" stroke-linecap="round"/>
+  <path d="M330 380C365 360 435 360 470 380" stroke="#2196F3" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="400" cy="420" r="10" fill="#2196F3"/>
+  
+  <!-- 断线效果 -->
+  <line x1="290" y1="300" x2="510" y2="400" stroke="#F44336" stroke-width="6" stroke-linecap="round" stroke-dasharray="1 15"/>
+  
+  <!-- Material设计风格的错误提示卡片 -->
+  <rect x="280" y="480" width="240" height="60" rx="4" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="290" y="495" width="40" height="30" rx="15" fill="#F44336" opacity="0.1"/>
+  <path d="M305 505H315" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+  <path d="M310 500V510" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+  <line x1="340" y1="510" x2="510" y2="510" stroke="#EEEEEE" stroke-width="2"/>
+  
+  <!-- Material风格波浪装饰 -->
+  <path d="M150 450C200 430 250 470 300 450C350 430 400 460 450 440" stroke="#E3F2FD" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -1,3 +1,0 @@
-
-rootProject.name = "mind-trace"
-// ...existing code...
