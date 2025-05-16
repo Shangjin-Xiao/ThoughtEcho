@@ -2,11 +2,13 @@ class NoteCategory {
   final String id;
   final String name;
   final bool isDefault;
+  final String? iconName;
 
   NoteCategory({
     required this.id,
     required this.name,
     this.isDefault = false,
+    this.iconName,
   });
 
   Map<String, dynamic> toMap() {
@@ -14,6 +16,7 @@ class NoteCategory {
       'id': id,
       'name': name,
       'is_default': isDefault ? 1 : 0,
+      'icon_name': iconName,
     };
   }
 
@@ -22,6 +25,7 @@ class NoteCategory {
       id: map['id'],
       name: map['name'],
       isDefault: map['is_default'] == 1,
+      iconName: map['icon_name'],
     );
   }
 }

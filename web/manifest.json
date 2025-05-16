@@ -1,11 +1,11 @@
 {
-    "name": "daily_quote",
-    "short_name": "daily_quote",
+    "name": "心迹",
+    "short_name": "心迹",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "一款帮助你记录笔记和思想的应用",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

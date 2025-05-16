@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景装饰元素 -->
+  <circle cx="180" cy="450" r="12" fill="#E3F2FD" opacity="0.6"/>
+  <circle cx="680" cy="180" r="15" fill="#BBDEFB" opacity="0.5"/>
+  <circle cx="100" cy="280" r="8" fill="#90CAF9" opacity="0.4"/>
+  
+  <!-- 搜索图标 - Material风格 -->
+  <circle cx="400" cy="280" r="100" stroke="#2196F3" stroke-width="12" opacity="0.8"/>
+  <line x1="470" y1="350" x2="520" y2="400" stroke="#2196F3" stroke-width="12" stroke-linecap="round"/>
+  
+  <!-- 空的搜索结果卡片 - Material卡片风格 -->
+  <rect x="300" y="420" width="200" height="50" rx="4" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="320" y="440" width="120" height="10" rx="5" fill="#F5F5F5"/>
+  
+  <rect x="300" y="480" width="200" height="50" rx="4" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="320" y="500" width="160" height="10" rx="5" fill="#F5F5F5"/>
+  
+  <!-- 问号图标 -->
+  <circle cx="400" cy="280" r="30" fill="#FFFFFF"/>
+  <path d="M395 290V285C395 280 400 275 405 275C410 275 415 280 415 285C415 290 410 290 410 295" stroke="#2196F3" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="410" cy="305" r="3" fill="#2196F3"/>
+  
+  <!-- Material设计波浪装饰 -->
+  <path d="M150 350C200 330 250 380 300 350C350 320 400 350 450 320C500 290 550 320 600 290C650 260 700 290 750 260" stroke="#E3F2FD" stroke-width="8" stroke-linecap="round"/>
+</svg>

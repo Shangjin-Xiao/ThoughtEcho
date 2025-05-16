@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+Thumbs.db
 .DS_Store
 .atom/
 .build/
@@ -11,6 +12,15 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+Desktop.ini
+$RECYCLE.BIN/
+Spotlight-V100
+.Trashes
+*.lnk
+*.stackdump
+*~
+.fuse_hidden*
+.directory
 
 # IntelliJ related
 *.iml
@@ -32,6 +42,9 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+# pubspec.lock     # CI/CD可能需要这个文件来确保依赖版本一致
+# .metadata        # Flutter工具使用的元数据文件，可能需要提交
+# devtools_options.yaml  # DevTools配置文件，可能需要提交
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +56,198 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/local.properties
+
+# Platform Build Artifacts
+ios/build/
+windows/build/
+
+# 敏感文件和密钥
+*.pem
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.key
+*.asc
+key.properties
+google-services.json
+firebase_options.dart
+GoogleService-Info.plist
+
+# 本地配置和环境变量
+.env
+.env.*
+env.g.dart
+env.dart
+*.secrets
+*.config
+*.properties
+.fvm/
+.fastlane/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+/coverage/
+.coverage
+coverage.xml
+htmlcov/
+.scannerwork/
+sonar-project.properties
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志文件
+*.trace
+*.log
+**/logs/
+**/log/
+log.txt
+logs.txt
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+error.log
+access.log
+crash-report.log
+crash.log
+firebase-debug.log
+flutter_01.log
+flutter-*.log
+flutter_*.log
+adb_*.log
+xcodebuild_*.log
+*report.xml
+jest_*.log
+
+# 备份文件
+*.bak
+*.backup
+*.tmp
+
+# 缓存文件
+.cache/
+*.swo
+*.swn
+**/tmp/
+**/temp/
+**/.tmp/
+**/.temp/
+**/caches/
+**/__pycache__/
+**/.pytest_cache/
+**/.rpt2_cache/
+**/.sass-cache/
+**/.eslintcache
+**/.npm
+.yarn/cache
+.pnp.*
+
+# 应用生成的日志和临时文件
+**/debug_info/
+**/crash_dumps/
+**/diagnostics/
+**/error_reports/
+UserInterfaceState.xcuserstate
+**/*.ipa
+**/*.apk
+**/*.aab
+**/*.hprof
+**/captures/
+**/.last_build_id
+
+# GitHub相关
+.github/promote/
+# 确保不忽略GitHub Actions工作流
+!.github/workflows/
+
+# Gradle相关
+.gradle/
+**/.gradle/
+# gradle/           # 注释掉，因为gradle wrapper文件夹需要提交
+# **/gradle/        # 注释掉，因为gradle wrapper文件夹需要提交
+gradle-app.setting
+.gradletasknamecache
+**/.project
+**/.classpath
+
+# IDE和编辑器相关
+# android/local.properties # Already covered in line 46
+**/.project
+**/.settings/
+**/.factorypath
+.classpath
+.factorypath
+.settings/
+.project
+
+# 本地构建文件和目录
+**/.externalNativeBuild/
+**/.cxx/
+**/.bundle/
+**/vendor/
+**/out/
+**/gen/
+# **/bin/        # 某些项目可能需要保留bin目录中的脚本
+# **/obj/        # 可能需要保留某些obj文件
+# 更具体地指定忽略的构建目录，而不是全部忽略
+/build/
+/android/app/build/
+/ios/build/
+/web/build/
+/windows/build/
+/macos/build/
+/linux/build/
+**/_site/
+**/dist/
+**/node_modules/
+
+# Flutter 特定缓存和日志
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/ServiceDefinitions.json
+**/ios/.vagrant/
+**/ios/DerivedData/
+**/ios/.generated/
+**/ios/.netrc
+# **/ios/Flutter/Flutter.podspec       # 可能需要用于CI构建
+# **/ios/Flutter/Generated.xcconfig    # 可能需要用于CI构建
+**/ios/Runner.xcworkspace/xcuserdata/
+**/ios/Runner.xcodeproj/xcuserdata/
+# **/ios/Flutter/flutter_export_environment.sh  # 可能需要用于CI构建
+
+**/macos/Pods/
+**/macos/.symlinks/
+**/macos/Flutter/ephemeral/
+# **/macos/Flutter/Flutter-Debug.xcconfig      # 可能需要用于CI构建
+# **/macos/Flutter/Flutter-Release.xcconfig    # 可能需要用于CI构建
+# **/macos/Flutter/Generated.xcconfig         # 可能需要用于CI构建
+
+# Flutter 测试和性能分析文件
+**/.dart_tool/pana/
+**/.dart_tool/pub/
+**/coverage/
+**/test/coverage_helper_test.dart
+**/.test_coverage.dart
+**/.test_runner.dart
+# flutter_export_environment.sh        # 可能需要用于CI构建
+flutter_crash_report_*.txt
+
+# 只忽略特定的flutter_*.json文件，不是所有的
+flutter_01.log
+flutter_build_*_report.json
+flutter_test_*_report.json
+
+# Flutter Web 编译输出
+**/web/flutter_service_worker.js
+**/web/flutter.js
+**/web/canvaskit/
+**/web/assets/FontManifest.json
+**/web/assets/fonts/MaterialIcons-*.ttf

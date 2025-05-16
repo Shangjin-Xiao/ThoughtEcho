@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="zh-CN"> <!-- Default lang attribute -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="心迹 - 追踪你的思想轨迹，释放AI洞察的力量。一款使用Flutter构建的本地优先笔记应用。">
+    <title>心迹 - 追踪你的思想轨迹，释放AI洞察的力量</title>
+    <link rel="icon" type="image/png" href="icon.png"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 主题变量定义 */
+        :root {
+            /* 浅色主题 - 优化配色方案 */
+            --primary-color: #1976D2;
+            --primary-light: #BBDEFB;
+            --primary-dark: #0D47A1;
+            --accent-color: #FF4081;
+            --secondary-color: #49454F;
+            --background-color: #F8FAFD; /* 稍微调亮背景色 */
+            --surface-color: #FFFFFF;
+            --error-color: #B3261E;
+            --text-primary: #1C1B1F;
+            --text-secondary: #49454F;
+            --text-tertiary: #79747E;
+            --border-color: #E7E0EC;
+            --card-shadow: 0 6px 16px rgba(0, 0, 0, 0.06); /* 柔和阴影 */
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* 更平滑的过渡 */
+            scroll-behavior: smooth;
+        }
+
+        /* 深色主题变量 - 优化深色配色 */
+        body.dark-theme {
+            --primary-color: #90CAF9;
+            --primary-light: #E3F2FD;
+            --primary-dark: #42A5F5;
+            --accent-color: #FF80AB;
+            --secondary-color: #CCC2DC;
+            --background-color: #121212;
+            --surface-color: #1E1E1E;
+            --error-color: #F2B8B5;
+            --text-primary: #E6E1E5;
+            --text-secondary: #CAC4D0;
+            --text-tertiary: #938F99;
+            --border-color: #49454F;
+            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Noto Sans', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-color);
+            padding-top: 60px; /* 预留导航栏空间 */
+            font-weight: 300;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Apply Noto Sans first when English is selected */
+        body.lang-en {
+            font-family: 'Noto Sans', 'Noto Sans SC', sans-serif;
+        }
+
+        nav {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 8%;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-logo img {
+            width: 32px;
+            height: 32px;
+            margin-right: 0.5rem;
+        }
+
+        .nav-logo h2 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 400;
+            transition: var(--transition);
+            font-size: 0.95rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            opacity: 0.9;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-switch, .lang-switch {
+            display: flex
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 16px;
+        }
+
+        .theme-switch:hover, .lang-switch:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            text-align: center;
+            padding: 6rem 1rem; /* 增大页头空间 */
+            margin-top: 0;
+            transition: background 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 添加页头背景效果 */
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 800 800"><g fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"><path d="M769 229L1037 260.9M927 880L731 737 520 660 309 538 40 599 295 764 126.5 879.5 40 599-197 493 102 382-31 229 126.5 79.5-69-63"/><path d="M-31 229L237 261 390 382 603 493 308.5 537.5 101.5 381.5M370 905L295 764"/><path d="M520 660L578 842 731 737 840 599 603 493 520 660 295 764 309 538 390 382 539 269 769 229 577.5 41.5 370 105 295 -36 126.5 79.5-69-63"/><path d="M520-140L578.5 42.5 731-63M603 493L539 269 237 261 370 105M902 382L539 269M390 382L102 382"/><path d="M-222 42L126.5 79.5 370 105 539 269 577.5 41.5 927 80 769 229 902 382 603 493 731 737M295-36L577.5 41.5M578 842L295 764M40-201L127 80M102 382L-261 269"/></g></svg>');
+            opacity: 0.3;
+            z-index: 0;
+            animation: headerBgMove 60s linear infinite;
+        }
+
+        @keyframes headerBgMove {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 5%;
+        }
+
+        .logo-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo {
+            width: 100px; /* 放大logo */
+            height: 100px;
+            margin-right: 1rem;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25)); /* 增强阴影 */
+            animation: pulse 3s infinite alternate; /* 添加缓慢脉动效果 */
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        h1 {
+            font-size: 3rem; /* 增大标题字号 */
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px; /* 字母间距微调 */
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin: 2.5rem 0 1.2rem;
+            color: var(--primary-color);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin: 1.8rem 0 1rem;
+            color: var(--primary-color);
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            transition: color 0.3s ease;
+        }
+
+        .tagline {
+            font-size: 1.4rem; /* 增大副标题字号 */
+            margin-bottom: 2.5rem;
+            opacity: 0.95; /* 增加不透明度 */
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* 文字阴影 */
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 16px 36px; /* 加大按钮 */
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 2rem;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 增强按钮阴影 */
+            position: relative;
+            z-index: 1;
+            border: 2px solid transparent; /* 为悬停效果准备 */
+        }
+
+        .cta-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-4px); /* 增加悬停效果 */
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cta-button:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .section {
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
+        }
+        .section:last-of-type {
+             border-bottom: none;
+        }
+
+        .section-title-container {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-subtitle {
+            color: var(--text-tertiary);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 1rem;
+            transition: color 0.3s ease;
+        }
+
+        /* --- Features Section --- */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        /* 为功能卡片增加更精致的动画 */
+        .feature {
+            background-color: var(--surface-color);
+            border-radius: 16px; /* 增加圆角 */
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            cursor: pointer;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .feature:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-light);
+        }
+        
+        .feature:hover::after {
+            opacity: 1;
+        }
+
+        .feature-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            border-radius: 50%;
+            width: 60px; /* 增大图标尺寸 */
+            height: 60px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+            transition: var(--transition);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .feature:hover .feature-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-title-container {
+             flex-grow: 1;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+        }
+
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 0;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+        .feature:hover .feature-title {
+            color: var(--primary-color);
+        }
+
+        .feature-toggle-icon {
+            font-size: 0.9rem;
+            color: var(--text-tertiary);
+            margin-left: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .feature.expanded .feature-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .short-desc {
+            margin-bottom: 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .feature-details {
+            margin-top: 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, opacity 0.4s ease-out, padding-top 0.5s ease-out, margin-top 0.5s ease-out; /* Added padding/margin transition */
+            opacity: 0;
+            border-top: 1px solid var(--border-color);
+            padding-top: 0; /* Start with zero padding */
+            margin-top: 0; /* Start with zero margin */
+        }
+
+        .feature.expanded .feature-details {
+            max-height: 1000px; /* Increased max-height */
+            opacity: 1;
+            padding-top: 1.5rem; /* Apply padding when expanded */
+            margin-top: 1.5rem; /* Apply margin when expanded */
+            transition: max-height 0.5s ease-in, opacity 0.4s ease-in 0.1s, padding-top 0.5s ease-in, margin-top 0.5s ease-in; /* Added padding/margin transition */
+        }
+
+        .long-desc {
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .long-desc p {
+             margin-bottom: 1rem;
+        }
+
+        .feature-details img {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 8px;
+            margin: 0 auto;
+            display: block;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+            cursor: zoom-in; /* Indicate image is clickable */
+        }
+        /* --- End Features Section --- */
+
+
+        /* --- Roadmap Section --- */
+        .roadmap-container {
+            display: flex;
+            flex-direction: column;
+            margin: 2.5rem 0;
+            position: relative;
+        }
+
+        .roadmap-timeline {
+            position: relative;
+            margin-left: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        .roadmap-timeline:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px; /* 增加宽度 */
+            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
+            border-radius: 3px;
+            transition: background 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 3.5rem;
+        }
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -0.6rem;
+            top: 0.5rem;
+            width: 1.4rem; /* 增大时间点 */
+            height: 1.4rem;
+            border-radius: 50%;
+            transition: var(--transition);
+            border: 3px solid var(--background-color);
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03); /* 添加外发光效果 */
+        }
+        
+        /* 添加时间点悬浮效果 */
+        .timeline-item:hover::before {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 6px rgba(var(--primary-color-rgb), 0.1);
+        }
+
+         /* Style timeline point based on status */
+         .timeline-item[data-status="completed"]::before { background-color: #4CAF50; } /* Green */
+         .timeline-item[data-status="in-progress"]::before { background-color: var(--primary-color); } /* Blue */
+         .timeline-item[data-status="planned"]::before { background-color: #BDBDBD; } /* Grey */
+
+
+        .timeline-date {
+            font-weight: 500;
+            color: var(--primary-color);
+            margin-bottom: 0.8rem;
+            font-size: 1.1rem;
+            display: inline-block;
+            background-color: var(--primary-light);
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            transition: color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .timeline-content {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .timeline-content:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .timeline-content h4 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+        .timeline-content h4 .status {
+             margin-right: 0.8rem;
+        }
+
+
+        .timeline-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .timeline-content li {
+            margin-bottom: 0.8rem;
+            padding-left: 1.5rem;
+            position: relative;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+         .timeline-content li:last-child {
+             margin-bottom: 0;
+         }
+
+        .timeline-content li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .status {
+            display: inline-block;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .status.completed {
+            background-color: #C8E6C9; /* Light Green */
+            color: #2E7D32; /* Dark Green */
+        }
+
+        .status.in-progress {
+            background-color: var(--primary-light); /* Light Blue */
+            color: var(--primary-dark); /* Dark Blue */
+        }
+
+        .status.planned {
+            background-color: #E0E0E0; /* Light Grey */
+            color: #616161; /* Dark Grey */
+        }
+
+
+        .roadmap-footer {
+            margin-top: 3rem;
+            text-align: center;
+            background-color: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        /* --- End Roadmap Section --- */
+
+        /* --- Guide Section --- */
+        .guide-section {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+            box-shadow: var(--card-shadow);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .guide-section ol {
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .guide-section ol li {
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+
+        .guide-section pre {
+            background-color: var(--background-color);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .guide-buttons {
+            text-align: center;
+            margin-top: 2.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        /* --- End Guide Section --- */
+
+        /* --- Footer --- */
+        footer {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            padding: 4rem 0 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+            position: relative;
+            display: inline-block;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .footer-section h3::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 3px;
+            background-color: var(--primary-color);
+            border-radius: 3px;
+            transition: background-color 0.3s ease;
+        }
+
+        .footer-section p {
+            color: var (--text-secondary);
+            margin-bottom: 1.2rem;
+            transition: color 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.8rem;
+            transition: var(--transition);
+        }
+
+        .footer-section ul li:hover {
+            transform: translateX(5px);
+        }
+
+        .footer-section a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+
+        .footer-section a::before {
+            content: '→';
+            margin-right: 0.6rem;
+            font-size: 0.9em;
+            color: var(--primary-color);
+            transition: var(--transition);
+        }
+
+        .footer-section a:hover {
+            color: var(--primary-color);
+        }
+
+        .footer-section a:hover::before {
+            transform: translateX(3px);
+        }
+        .social-links {
+             margin-top: 1rem;
+        }
+        .social-links a {
+            margin-right: 1rem;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+        }
+         .social-links a:hover {
+             color: var(--primary-color);
+         }
+         .social-links a::before {
+             content: none;
+         }
+
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
+        }
+
+        .footer-bottom p {
+            color: var(--text-tertiary);
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+        /* --- End Footer --- */
+
+
+        /* --- Mobile Optimizations --- */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 55px;
+            }
+
+            nav {
+                padding: 0.5rem 5%;
+            }
+
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 55px;
+                left: 0;
+                width: 100%;
+                background-color: var(--surface-color);
+                flex-direction: column;
+                padding: 1rem 0;
+                box-shadow: var(--card-shadow);
+                text-align: center;
+                border-top: 1px solid var(--border-color);
+                z-index: 999;
+            }
+             .nav-links a {
+                 padding: 0.8rem 1rem;
+                 border-bottom: 1px solid var(--border-color);
+             }
+             .nav-links a:last-child {
+                 border-bottom: none;
+             }
+
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .nav-controls {
+                 margin-left: auto;
+                 padding-right: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+            .section {
+                 padding: 2.5rem 0;
+             }
+
+            .features {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .feature {
+                 padding: 1rem;
+             }
+             .feature-header {
+                 margin-bottom: 0.8rem;
+             }
+             .feature-icon {
+                 width: 45px;
+                 height: 45px;
+                 font-size: 1.6rem;
+             }
+             .feature-title {
+                 font-size: 1.1rem;
+             }
+             .feature-details {
+                 margin-top: 1rem;
+                 padding-top: 1rem;
+             }
+
+
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+
+            .roadmap-timeline {
+                margin-left: 0.5rem;
+                padding-left: 1rem;
+            }
+            .timeline-item {
+                padding-left: 1.5rem;
+                margin-bottom: 2.5rem;
+            }
+             .timeline-item::before {
+                 left: -0.5rem;
+                 width: 1rem;
+                 height: 1rem;
+             }
+
+            .timeline-content {
+                padding: 1.2rem 1.5rem;
+            }
+
+            .guide-section {
+                padding: 1.5rem;
+            }
+
+            .guide-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .guide-buttons .cta-button {
+                width: 100%;
+                padding: 12px 24px;
+            }
+
+            footer {
+                padding: 2.5rem 0 1.5rem;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                text-align: center;
+            }
+             .footer-section h3::after {
+                 left: 50%;
+                 transform: translateX(-50%);
+             }
+             .footer-section ul {
+                 text-align: center;
+             }
+              .social-links {
+                  justify-content: center;
+                  display: flex;
+              }
+
+        }
+        /* --- End Mobile Optimizations --- */
+
+        /* --- Utility & Animation --- */
+        /* Image Modal - Optimized Animation */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease; /* Fade in background */
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            background-color: var(--surface-color);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease; /* Smoother scale/fade */
+            transform: scale(0.8); /* Start smaller */
+            opacity: 0;
+            display: flex; /* Use flex for content alignment */
+            flex-direction: column;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-image-container { /* Added container for potential spinner */
+             flex-grow: 1; /* Allow image container to grow */
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             position: relative; /* For spinner positioning */
+             min-height: 100px; /* Ensure some height for spinner */
+             background-color: rgba(0, 0, 0, 0.03); /* 添加微妙背景色 */
+             border-radius: 8px 8px 0 0;
+        }
+        /* Basic Spinner Style (Hidden by default) */
+         .modal-spinner {
+             width: 40px;
+             height: 40px;
+             border: 4px solid var(--primary-light);
+             border-top: 4px solid var(--primary-color);
+             border-radius: 50%;
+             animation: spin 1s linear infinite;
+             position: absolute;
+             display: none; /* Hidden initially */
+         }
+         .modal-content.loading .modal-spinner {
+             display: block; /* Show spinner when loading */
+         }
+         .modal-content.loading .modal-image {
+             opacity: 0; /* Hide image while loading */
+         }
+
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            max-height: calc(90vh - 60px); /* Adjust max height considering caption */
+            object-fit: contain;
+            display: block;
+            opacity: 1; /* Visible by default */
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-caption {
+            padding: 15px 20px;
+            color: var(--text-primary);
+            background-color: var(--surface-color);
+            text-align: center;
+            font-weight: 500;
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0; /* Prevent caption from shrinking */
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px; /* Adjusted position */
+            right: 10px; /* Adjusted position */
+            width: 35px;
+            height: 35px;
+            background-color: rgba(30, 30, 30, 0.6); /* Darker background */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            font-size: 20px;
+            color: white; /* White cross */
+            border: none;
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+            z-index: 10;
+        }
+
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+        /* End Image Modal Optimization */
+
+
+        .floating-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 900;
+        }
+
+        .control-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 20px;
+            transition: var(--transition), opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+        }
+         .control-button.visible {
+             opacity: 1;
+             visibility: visible;
+             transform: translateY(0);
+         }
+
+        .control-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+         #backToTopBtn::before {
+             content: "↑";
+             font-weight: bold;
+         }
+
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--primary-light);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* --- Language Switching CSS --- */
+        body.lang-zh .content-en {
+            display: none;
+        }
+
+        body.lang-en .content-zh {
+            display: none;
+        }
+        /* --- End Language Switching CSS --- */
+
+
+        /* 改进动画效果 */
+        .animated {
+            opacity: 0;
+            transform: translateY(30px); /* 增加初始偏移 */
+            transition: opacity 0.7s ease-out, transform 0.7s cubic-bezier(0.19, 1, 0.22, 1); /* 使用更平滑的缓动函数 */
+        }
+        
+        .animated.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* --- End Utility & Animation --- */
+
+    </style>
+</head>
+<body class="lang-zh"> <!-- Default class on body -->
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <nav>
+        <div class="nav-logo">
+            <img src="icon.png" alt="心迹图标">
+            <h2 class="content-zh">心迹</h2>
+            <h2 class="content-en">ThoughtEcho</h2>
+        </div>
+        <div class="nav-links" id="navLinks">
+            <a href="#overview" class="content-zh">概述</a>
+            <a href="#overview" class="content-en">Overview</a>
+            <a href="#features" class="content-zh">功能</a>
+            <a href="#features" class="content-en">Features</a>
+            <a href="#roadmap" class="content-zh">路线图</a>
+            <a href="#roadmap" class="content-en">Roadmap</a>
+            <a href="#guide" class="content-zh">使用指南</a>
+            <a href="#guide" class="content-en">Guide</a>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub</a>
+        </div>
+        <div class="nav-controls">
+            <button class="theme-switch" id="themeSwitch" aria-label="切换主题">🌙</button>
+            <button class="lang-switch" id="langSwitch" aria-label="切换语言">En</button>
+        </div>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">☰</button>
+    </nav>
+
+    <header id="overview">
+        <div class="container">
+            <div class="logo-container animated">
+                <img src="icon.png" alt="心迹 Logo" class="logo">
+            </div>
+            <h1 class="animated" style="transition-delay: 0.1s;">
+                <span class="content-zh">心迹</span>
+                <span class="content-en">ThoughtEcho</span>
+            </h1>
+            <p class="tagline animated" style="transition-delay: 0.2s;">
+                <span class="content-zh">追踪你的思想轨迹，释放AI洞察的力量</span>
+                <span class="content-en">Track your train of thought, unleash the power of AI insights</span>
+            </p>
+            <div class="cta-buttons animated" style="transition-delay: 0.3s;">
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" class="cta-button">
+                    <span class="content-zh">获取最新版本</span>
+                    <span class="content-en">Get Latest Release</span>
+                </a>
+                <a href="#features" class="cta-button" style="background: transparent; border-color: white; margin-left: 16px;">
+                    <span class="content-zh">探索功能</span>
+                    <span class="content-en">Explore Features</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="features" class="section">
+            <div class="container">
+                <div class="section-title-container animated">
+                    <h2 class="content-zh">核心功能</h2>
+                    <h2 class="content-en">Core Features</h2>
+                    <p class="section-subtitle content-zh">探索心迹如何帮助你捕捉、整理和深化你的想法。点击下方卡片查看详情。</p>
+                    <p class="section-subtitle content-en">Discover how ThoughtEcho helps you capture, organize, and deepen your ideas. Click cards below for details.</p>
+                </div>
+                <div class="features">
+                    <!-- 功能1: 灵感捕捉 -->
+                    <div class="feature animated" style="transition-delay: 0.1s;">
+                        <div class="feature-header">
+                            <span class="feature-icon">✍️</span>
+                            <div class="feature-title-container">
+                                <h3 class="feature-title content-zh">灵感捕捉</h3>
+                                <h3 class="feature-title content-en">Inspiration Capture</h3>
+                                <span class="feature-toggle-icon">▼</span>
+                            </div>
+                        </div>
+                        <p class="short-desc content-zh">随时随地记录文字、想法和待办事项（计划支持 Markdown）...</p>
+                        <p class="short-desc content-en">Record text, ideas, and to-dos anytime, anywhere (Markdown support planned)...</p>
+                        <div class="feature-details">
+                            <div class="long-desc">
+                                <p class="content-zh">心迹提供了一个简洁的编辑器，让你能快速记录瞬间的灵感、深入的思考或是简单的待办列表。我们计划在未来版本中添加标准的 Markdown 语法支持，让你的笔记排版更清晰、重点更突出。</p>
+                                <p class="content-en">ThoughtEcho provides a clean editor for quickly capturing fleeting inspirations, deep thoughts, or simple to-do lists. We plan to add standard Markdown syntax support in future versions, making your notes better organized and highlighting key points.</p>
+                             </div>
+                            <img src="add.jpg" alt="添加笔记界面截图 / Add Note Interface Screenshot" loading="lazy">
+                        </div>
+                    </div>
+                    <!-- 功能2: 标签管理 -->
+                    <div class="feature animated" style="transition-delay: 0.2s;">
+                         <div class="feature-header">
+                             <span class="feature-icon">🏷️</span>
+                             <div class="feature-title-container">
+                                <h3 class="feature-title content-zh">标签管理</h3>
+                                <h3 class="feature-title content-en">Tag Management</h3>
+                                <span class="feature-toggle-icon">▼</span>
+                            </div>
+                        </div>
+                        <p class="short-desc content-zh">使用灵活的标签系统组织笔记...</p>
+                        <p class="short-desc content-en">Organize notes with a flexible tagging system...</p>
+                        <div class="feature-details">
+                            <div class="long-desc">
+                                <p class="content-zh">告别混乱！通过为笔记添加一个或多个标签，你可以轻松地对信息进行归类和连接。需要查找所有关于"项目A"的笔记？或者所有"读书心得"？只需点击对应标签即可。标签管理界面让你方便地查看、重命名或删除标签。</p>
+                                <p class="content-en">Say goodbye to chaos! By adding one or more tags to your notes, you can easily categorize and connect information. Need to find all notes about "Project A"? Or all "Book Reviews"? Just click the corresponding tag. The tag management interface allows you to conveniently view, rename, or delete tags.</p>
+                            </div>
+                            <img src="tags.jpg" alt="标签管理界面截图 / Tag Management Interface Screenshot" loading="lazy">
+                        </div>
+                    </div>
+                    <!-- 功能3: AI 洞察 -->
+                    <div class="feature animated" style="transition-delay: 0.3s;">
+                        <div class="feature-header">
+                            <span class="feature-icon">✨</span>
+                            <div class="feature-title-container">
+                                <h3 class="feature-title content-zh">AI 洞察 (开发中)</h3>
+                                <h3 class="feature-title content-en">AI Insights (WIP)</h3>
+                                <span class="feature-toggle-icon">▼</span>
+                            </div>
+                        </div>
+                        <p class="short-desc content-zh">利用 AI 分析笔记内容，提供总结、关联...</p>
+                        <p class="short-desc content-en">Leverage AI to analyze note content, providing summaries, connections...</p>
+                        <div class="feature-details">
+                             <div class="long-desc">
+                                <p class="content-zh">这不仅仅是记录。我们正在探索如何利用 AI 的力量，让你的笔记活起来。未来的版本中，AI 或许能帮你自动总结长篇笔记、发现不同笔记间的隐藏联系，甚至在你写作时提供启发性的建议。敬请期待！</p>
+                                <p class="content-en">It's more than just recording. We are exploring how to leverage the power of AI to bring your notes to life. In future versions, AI might help you automatically summarize long notes, discover hidden connections between different notes, or even provide inspiring suggestions as you write. Stay tuned!</p>
+                             </div>
+                        </div>
+                    </div>
+                     <!-- 功能4: 个性化主题 -->
+                    <div class="feature animated" style="transition-delay: 0.4s;">
+                        <div class="feature-header">
+                            <span class="feature-icon">🎨</span>
+                            <div class="feature-title-container">
+                                <h3 class="feature-title content-zh">个性化主题</h3>
+                                <h3 class="feature-title content-en">Personalized Themes</h3>
+                                <span class="feature-toggle-icon">▼</span>
+                            </div>
+                        </div>
+                        <p class="short-desc content-zh">支持浅色、深色模式，并可自定义主题颜色...</p>
+                        <p class="short-desc content-en">Supports light and dark modes, with customizable theme colors...</p>
+                        <div class="feature-details">
+                            <div class="long-desc">
+                                <p class="content-zh">你的应用，你做主。心迹内置了精心设计的浅色和深色主题，适应不同光线环境。更进一步，你可以从预设的调色板中选择你喜欢的主题色，或者直接指定颜色值，打造完全符合你审美的专属界面。</p>
+                                <p class="content-en">Your app, your rules. ThoughtEcho comes with well-designed light and dark themes to suit different lighting conditions. Furthermore, you can choose your favorite theme color from a preset palette or specify a color value directly to create an exclusive interface that perfectly matches your aesthetic.</p>
+                            </div>
+                             <img src="theme_setting.jpg" alt="主题设置界面截图 / Theme Setting Interface Screenshot" loading="lazy">
+                        </div>
+                    </div>
+                     <!-- 功能6: 一言集成 -->
+                     <div class="feature animated" style="transition-delay: 0.5s;">
+                        <div class="feature-header">
+                            <span class="feature-icon">💬</span>
+                            <div class="feature-title-container">
+                                <h3 class="feature-title content-zh">一言集成</h3>
+                                <h3 class="feature-title content-en">Hitokoto Integration</h3>
+                                <span class="feature-toggle-icon">▼</span>
+                            </div>
+                        </div>
+                        <p class="short-desc content-zh">集成一言接口，获取富有人生哲理的句子...</p>
+                        <p class="short-desc content-en">Integrates with the Hitokoto API to display philosophical quotes...</p>
+                        <div class="feature-details">
+                            <div class="long-desc">
+                                <p class="content-zh">在记录想法的间隙，不妨停下来欣赏一句"一言"。心迹集成了 Hitokoto 接口，可以在应用特定位置（如主页或设置页）展示一句来自 ACGN 或网络的富有哲理或趣味的话。你还可以选择偏好的句子类型，让每次遇见都充满惊喜。</p>
+                                <p class="content-en">Take a moment between recording thoughts to appreciate a "Hitokoto". ThoughtEcho integrates the Hitokoto API to display a philosophical or interesting quote from ACGN or the web in specific app locations (like the homepage or settings). You can also choose preferred sentence types, making each encounter a delightful surprise.</p>
+                            </div>
+                             <img src="choose_yiyan.jpg" alt="一言类型选择界面截图 / Hitokoto Type Selection Interface Screenshot" loading="lazy">
+                        </div>
+                    </div>
+                     <!-- 功能7: 备份与恢复 (根据文件结构推断) -->
+                     <div class="feature animated" style="transition-delay: 0.6s;">
+                         <div class="feature-header">
+                             <span class="feature-icon">💾</span>
+                             <div class="feature-title-container">
+                                 <h3 class="feature-title content-zh">备份与恢复</h3>
+                                 <h3 class="feature-title content-en">Backup & Restore</h3>
+                                 <span class="feature-toggle-icon">▼</span>
+                             </div>
+                         </div>
+                         <p class="short-desc content-zh">手动备份和恢复你的笔记数据...</p>
+                         <p class="short-desc content-en">Manually back up and restore your note data...</p>
+                         <div class="feature-details">
+                             <div class="long-desc">
+                                 <p class="content-zh">数据安全很重要。心迹允许你手动将所有笔记和设置导出为备份文件，妥善保管。当需要时（例如更换设备或重装应用），可以轻松地从备份文件中恢复你的宝贵数据。</p>
+                                 <p class="content-en">Data security is important. ThoughtEcho allows you to manually export all your notes and settings into a backup file for safekeeping. When needed (e.g., changing devices or reinstalling the app), you can easily restore your valuable data from the backup file.</p>
+                             </div>
+                             <!-- No specific image for backup/restore, maybe use settings page? -->
+                             <img src="settingpage.jpg" alt="设置界面截图 / Settings Interface Screenshot" loading="lazy">
+                         </div>
+                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="roadmap" class="section">
+            <div class="container">
+                <div class="section-title-container animated">
+                    <h2 class="content-zh">发展路线图</h2>
+                    <h2 class="content-en">Development Roadmap</h2>
+                    <p class="section-subtitle content-zh">了解我们的开发计划和未来方向。</p>
+                    <p class="section-subtitle content-en">Learn about our development plans and future direction.</p>
+                </div>
+                <div class="roadmap-container">
+                    <div class="roadmap-timeline">
+                        <!-- 已完成 -->
+                        <div class="timeline-item animated" data-status="completed">
+                            <span class="timeline-date">已完成</span>
+                            <div class="timeline-content">
+                                <h4><span class="status completed content-zh">已完成</span><span class="status completed content-en">Completed</span> <span class="content-zh">基础功能</span><span class="content-en">Basic Features</span></h4>
+                                <ul>
+                                    <li class="content-zh">剪贴板智能检测与快速添加</li>
+                                    <li class="content-en">Smart clipboard detection & quick add</li>
+                                    <li class="content-zh">用户引导流程和教程</li>
+                                    <li class="content-en">User onboarding flow & tutorial</li>
+                                    <li class="content-zh">全屏沉浸式编辑器</li>
+                                    <li class="content-en">Fullscreen immersive editor</li>
+                                    <li class="content-zh">Material 3 现代化界面</li>
+                                    <li class="content-en">Material 3 modern UI</li>
+                                    <li class="content-zh">数据库性能优化</li>
+                                    <li class="content-en">Database performance optimization</li>
+                                    <li class="content-zh">基础标签和分类系统</li>
+                                    <li class="content-en">Basic tag & category system</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <!-- 近期（Q2 2024） -->
+                        <div class="timeline-item animated" data-status="in-progress">
+                            <span class="timeline-date">Q2 2024</span>
+                            <div class="timeline-content">
+                                <h4><span class="status in-progress content-zh">近期</span><span class="status in-progress content-en">Near Term</span> <span class="content-zh">体验优化</span><span class="content-en">Experience Optimization</span></h4>
+                                <ul>
+                                    <li class="content-zh">每日一言推送通知</li>
+                                    <li class="content-en">Daily Hitokoto push notification</li>
+                                    <li class="content-zh">支持插入本地图片</li>
+                                    <li class="content-en">Support inserting local images</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <!-- 中期（Q3 2024） -->
+                        <div class="timeline-item animated" data-status="planned">
+                            <span class="timeline-date">Q3 2024</span>
+                            <div class="timeline-content">
+                                <h4><span class="status planned content-zh">中期</span><span class="status planned content-en">Mid Term</span> <span class="content-zh">功能增强</span><span class="content-en">Feature Enhancement</span></h4>
+                                <ul>
+                                    <li class="content-zh">富文本编辑与预览</li>
+                                    <li class="content-en">Rich text editing & preview</li>
+                                    <li class="content-zh">AI分析功能增强</li>
+                                    <li class="content-en">AI analysis enhancement</li>
+                                    <li class="content-zh">高级数据可视化</li>
+                                    <li class="content-en">Advanced data visualization</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <!-- 长期规划 -->
+                        <div class="timeline-item animated" data-status="planned">
+                            <span class="timeline-date">长期规划</span>
+                            <div class="timeline-content">
+                                <h4><span class="status planned content-zh">长期</span><span class="status planned content-en">Long Term</span> <span class="content-zh">未来扩展</span><span class="content-en">Future Expansion</span></h4>
+                                <ul>
+                                    <li class="content-zh">UI、功能高度自定义</li>
+                                    <li class="content-en">Highly customizable UI & features</li>
+                                    <li class="content-zh">离线AI分析能力</li>
+                                    <li class="content-en">Offline AI analysis</li>
+                                    <li class="content-zh">多设备实时同步</li>
+                                    <li class="content-en">Real-time multi-device sync</li>
+                                    <li class="content-zh">地图选点添加位置</li>
+                                    <li class="content-en">Add location via map selection</li>
+                                    <li class="content-zh">桌面端独立应用</li>
+                                    <li class="content-en">Standalone desktop app</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="roadmap-footer animated">
+                        <p class="content-zh">路线图会根据用户反馈和开发进度动态调整。</p>
+                        <p class="content-en">The roadmap is subject to change based on user feedback and development progress.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide" class="section">
+            <div class="container">
+                <div class="section-title-container animated"></div>
+                    <h2 class="content-zh">快速上手</h2>
+                    <h2 class="content-en">Quick Start Guide</h2>
+                    <p class="section-subtitle content-zh">简单几步，开始使用心迹记录你的想法。</p>
+                    <p class="section-subtitle content-en">Start using ThoughtEcho to record your ideas in just a few simple steps.</p>
+                </div>
+
+                <div class="guide-section animated">
+                    <h3 class="content-zh">安装与运行</h3>
+                    <h3 class="content-en">Installation & Running</h3>
+                    <ol>
+                        <li class="content-zh">前往 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank">GitHub Releases</a> 页面下载适合你平台的最新版本。</li>
+                        <li class="content-en">Go to the <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank">GitHub Releases</a> page to download the latest version for your platform.</li>
+                        <li class="content-zh">根据你的操作系统进行安装或直接运行。</li>
+                        <li class="content-en">Install or run the application according to your operating system.</li>
+                        <li class="content-zh">(可选) 如果你想自行构建，请确保已安装 Flutter 环境，然后运行以下命令：</li>
+                        <li class="content-en">(Optional) If you want to build it yourself, ensure you have the Flutter environment set up, then run the following commands:</li>
+                    </ol>
+                    <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
+cd ThoughtEcho
+flutter pub get
+flutter run</code></pre>
+                </div>
+
+                <div class="guide-section animated" style="transition-delay: 0.1s;">
+                    <h3 class="content-zh">基本操作</h3>
+                    <h3 class="content-en">Basic Operations</h3>
+                    <ul>
+                        <li class="content-zh"><strong>创建笔记</strong>：点击主页右下角的 '+' 按钮。</li>
+                        <li class="content-en"><strong>Create Note</strong>: Click the '+' button on the bottom right of the homepage.</li>
+                        <li class="content-zh"><strong>编辑笔记</strong>：在笔记列表或笔记详情页点击笔记内容。</li>
+                        <li class="content-en"><strong>Edit Note</strong>: Click on the note content in the list or detail view.</li>
+                        <li class="content-zh"><strong>添加标签</strong>：在笔记编辑页面，点击标签图标进行添加或管理。</li>
+                        <li class="content-en"><strong>Add Tags</strong>: In the note editing page, click the tag icon to add or manage tags.</li>
+                        <li class="content-zh"><strong>切换主题</strong>：在设置页面选择浅色、深色模式或自定义颜色。</li>
+                        <li class="content-en"><strong>Switch Theme</strong>: Choose light, dark mode, or custom colors in the settings page.</li>
+                        <li class="content-zh"><strong>备份恢复</strong>：在设置页面找到备份与恢复选项。</li>
+                        <li class="content-en"><strong>Backup/Restore</strong>: Find backup and restore options in the settings page.</li>
+                        <li class="content-zh"><strong>查看功能详情</strong>：在"核心功能"区域点击卡片即可展开。</li>
+                        <li class="content-en"><strong>View Feature Details</strong>: Click on a card in the "Core Features" section to expand it.</li>
+                    </ul>
+                </div>
+
+                <div class="guide-buttons animated" style="transition-delay: 0.2s;">
+                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank" class="cta-button">
+                        <span class="content-zh">报告问题</span>
+                        <span class="content-en">Report an Issue</span>
+                    </a>
+                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" class="cta-button">
+                         <span class="content-zh">查看源码</span>
+                         <span class="content-en">View Source Code</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section animated">
+                    <h3 class="content-zh">关于心迹</h3>
+                    <h3 class="content-en">About ThoughtEcho</h3>
+                    <p class="content-zh">一款简洁高效的 Flutter 应用，旨在帮助用户捕捉、整理和深化思考。</p>
+                    <p class="content-en">A clean and efficient Flutter app designed to help users capture, organize, and deepen their thoughts.</p>
+                </div>
+                <div class="footer-section animated" style="transition-delay: 0.1s;">
+                    <h3 class="content-zh">相关链接</h3>
+                    <h3 class="content-en">Related Links</h3>
+                    <ul>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub Repo</a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank"><span class="content-zh">下载发布版</span><span class="content-en">Downloads</span></a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank"><span class="content-zh">问题反馈</span><span class="content-en">Issue Tracker</span></a></li>
+                        <li><a href="https://flutter.dev" target="_blank">Flutter</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section animated" style="transition-delay: 0.2s;">
+                    <h3 class="content-zh">联系我</h3>
+                    <h3 class="content-en">Contact Me</h3>
+                    <ul>
+                         <li><a href="https://github.com/Shangjin-Xiao" target="_blank">GitHub Profile</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom animated" style="transition-delay: 0.3s;"></div>
+                <p>&copy; <span id="currentYear"></span> Shangjin-Xiao. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+     <!-- 图片模态框 -->
+     <div class="modal" id="imageModal">
+         <button class="modal-close" id="modalCloseBtn" aria-label="关闭">&times;</button>
+         <div class="modal-content">
+             <div class="modal-image-container">
+                 <div class="modal-spinner"></div> <!-- Spinner added -->
+                 <img src="" alt="放大后的图片" class="modal-image" id="modalImage">
+             </div>
+             <div class="modal-caption" id="modalCaption"></div>
+         </div>
+     </div>
+
+     <!-- 返回顶部按钮 -->
+     <div class="floating-controls">
+        <button class="control-button" id="backToTopBtn" aria-label="返回顶部"></button>
+     </div>
+
+
+    <script>
+        // --- 页面加载与入场动画 ---
+        window.addEventListener('load', () => {
+            addScrollIndicator();
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if(loadingOverlay) loadingOverlay.classList.add('fade-out');
+            const animatedElements = document.querySelectorAll('.animated');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            animatedElements.forEach(el => {
+                observer.observe(el);
+            });
+        });
+
+        // --- 移动端菜单 ---
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+        if(mobileMenuBtn && navLinks){
+            mobileMenuBtn.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+            });
+            navLinks.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    navLinks.classList.remove('active');
+                });
+            });
+        }
+
+
+        // --- 主题切换 ---
+        const themeSwitch = document.getElementById('themeSwitch');
+        const body = document.body;
+        const currentTheme = localStorage.getItem('theme');
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                body.classList.add('dark-theme');
+                if(themeSwitch) themeSwitch.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.remove('dark-theme');
+                 if(themeSwitch) themeSwitch.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        if (currentTheme) {
+            setTheme(currentTheme);
+        } else {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            setTheme(prefersDark ? 'dark' : 'light');
+        }
+
+        if(themeSwitch) {
+            themeSwitch.addEventListener('click', () => {
+                const newTheme = body.classList.contains('dark-theme') ? 'light' : 'dark';
+                setTheme(newTheme);
+            });
+        }
+
+
+        // --- 语言切换 ---
+        const langSwitch = document.getElementById('langSwitch');
+        const html = document.documentElement;
+
+        function setLanguage(lang) {
+            html.lang = lang === 'zh-CN' ? 'zh-CN' : 'en';
+            body.classList.toggle('lang-en', lang === 'en');
+            body.classList.toggle('lang-zh', lang === 'zh-CN');
+            if(langSwitch) langSwitch.textContent = lang === 'en' ? '中' : 'En';
+            localStorage.setItem('language', lang);
+        }
+
+        const currentLang = localStorage.getItem('language') || 'zh-CN';
+        setLanguage(currentLang);
+
+        if(langSwitch) {
+            langSwitch.addEventListener('click', () => {
+                const newLang = body.classList.contains('lang-en') ? 'zh-CN' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
+
+        // --- 页脚年份 ---
+        const currentYearEl = document.getElementById('currentYear');
+        if(currentYearEl) {
+            currentYearEl.textContent = new Date().getFullYear();
+        }
+
+
+        // --- 功能特性展开/收起 ---
+        const featuresContainer = document.querySelector('.features');
+        if (featuresContainer) {
+            featuresContainer.addEventListener('click', (event) => {
+                const featureElement = event.target.closest('.feature');
+                 if (event.target.tagName === 'IMG' && event.target.closest('.feature-details')) {
+                     return; // Don't toggle card if clicking image inside details
+                 }
+
+                if (featureElement) {
+                    // Close other expanded features (optional)
+                    // featuresContainer.querySelectorAll('.feature.expanded').forEach(openFeature => {
+                    //     if (openFeature !== featureElement) {
+                    //         openFeature.classList.remove('expanded');
+                    //     }
+                    // });
+                    featureElement.classList.toggle('expanded');
+                }
+            });
+        }
+
+
+        // --- 图片模态框 - Optimized with Loading State ---
+        const imageModal = document.getElementById('imageModal');
+        const modalContent = imageModal ? imageModal.querySelector('.modal-content') : null; // Get content element
+        const modalImage = document.getElementById('modalImage');
+        const modalCaption = document.getElementById('modalCaption');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        document.querySelectorAll('.feature-details img').forEach(img => {
+            img.style.cursor = 'zoom-in';
+            img.addEventListener('click', (e) => {
+                 e.stopPropagation();
+                 if (!imageModal || !modalContent || !modalImage || !modalCaption) return; // Safety check
+
+                 modalCaption.textContent = img.alt; // Set caption immediately
+                 modalContent.classList.add('loading'); // Show spinner
+                 modalImage.style.opacity = '0'; // Hide image initially
+
+                 // Preload image
+                 const tempImage = new Image();
+                 tempImage.onload = () => {
+                     modalImage.src = tempImage.src;
+                     modalContent.classList.remove('loading'); // Hide spinner
+                     modalImage.style.opacity = '1'; // Show image
+                 };
+                 tempImage.onerror = () => {
+                     // Handle image loading error (optional)
+                     modalCaption.textContent = "Error loading image.";
+                     modalContent.classList.remove('loading');
+                 };
+                 tempImage.src = img.src; // Start loading
+
+                 imageModal.classList.add('show'); // Show modal background
+             });
+        });
+
+
+        function closeModal() {
+            if(imageModal) imageModal.classList.remove('show');
+            // Reset image src to prevent showing old image briefly on next open (optional)
+            // if(modalImage) modalImage.src = "";
+        }
+
+        if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
+        if(imageModal) {
+            imageModal.addEventListener('click', (e) => {
+                if (e.target === imageModal) { // Click on background
+                    closeModal();
+                }
+            });
+        }
+
+
+        // --- 返回顶部按钮 ---
+        const backToTopBtn = document.getElementById('backToTopBtn');
+
+        window.addEventListener('scroll', () => {
+             if(!backToTopBtn) return;
+            if ((window.pageYOffset || document.documentElement.scrollTop) > 300) { // More robust scroll check
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+
+        if(backToTopBtn) {
+             backToTopBtn.addEventListener('click', () => {
+                 window.scrollTo({ top: 0, behavior: 'smooth' });
+             });
+        }
+
+        // --- 导航链接高亮 ---
+        const sections = document.querySelectorAll('main section[id]');
+        const navLi = document.querySelectorAll('.nav-links a');
+
+        function updateActiveNav() {
+            let current = '';
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            const offset = 100; // Offset for activation point
+
+            // Find current section based on scroll position
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                if (scrollPosition >= sectionTop - offset && scrollPosition < sectionTop + sectionHeight - offset) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            // Handle header/overview section separately
+            const header = document.getElementById('overview');
+            if (header && scrollPosition < header.offsetTop + header.offsetHeight - offset) {
+                current = 'overview';
+            }
+
+            // Update active class on nav links
+            let activeLinkFound = false;
+            navLi.forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && href === `#${current}`) {
+                    a.classList.add('active');
+                    activeLinkFound = true;
+                } else {
+                    a.classList.remove('active');
+                }
+            });
+
+            // Fallback: If near top or no section matched, activate overview
+            if (!activeLinkFound && scrollPosition < sections[0]?.offsetTop - offset) {
+                 const overviewLink = document.queryselector('.nav-links a[href="#overview"]');
+                 if (overviewLink) overviewLink.classList.add('active');
+            }
+        }
+
+        window.addEventListener('scroll', updateActiveNav);
+        window.addEventListener('load', updateActiveNav);
+
+        // 添加滚动进度指示器
+        const addScrollIndicator = () => {
+            const indicator = document.createElement('div');
+            indicator.style.position = 'fixed';
+            indicator.style.top = '0';
+            indicator.style.left = '0';
+            indicator.style.height = '4px';
+            indicator.style.backgroundColor = 'var(--primary-color)';
+            indicator.style.zIndex = '2000';
+            indicator.style.width = '0%';
+            indicator.style.transition = 'width 0.1s ease';
+            document.body.appendChild(indicator);
+            
+            window.addEventListener('scroll', () => {
+                const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (scrollTop / scrollHeight) * 100;
+                indicator.style.width = scrolled + '%';
+            });
+        };
+
+    </script>
+</body>
+</html>
