@@ -22,10 +22,10 @@ class EditPage extends StatefulWidget {
   const EditPage({super.key, required this.quote});
 
   @override
-  _EditPageState createState() => _EditPageState();
+  EditPageState createState() => EditPageState();
 }
 
-class _EditPageState extends State<EditPage> {
+class EditPageState extends State<EditPage> {
   late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _workController;
@@ -1020,9 +1020,12 @@ class _EditPageState extends State<EditPage> {
                                     });
                                   } catch (e) {
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('AI分析失败: $e')),
-                                    );
+                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                    if (mounted) {
+                                      scaffoldMessenger.showSnackBar(
+                                        SnackBar(content: Text('AI分析失败: $e')),
+                                      );
+                                    }
                                   }
                                 },
                                 icon: const Icon(Icons.auto_awesome, size: 18),

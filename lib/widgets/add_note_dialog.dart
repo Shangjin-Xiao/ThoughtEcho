@@ -476,7 +476,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 获取当前输入的内容和元数据，但不创建Quote对象
                                 // 不传递initialQuote，这样全屏编辑器会使用addQuote逻辑
 
-                                final navigator = Navigator.of(context); // 在 await 前获取 navigator
+                                final navigator = Navigator.of(context);
+                                if (!mounted) return;
                                 final result = await navigator.push(
                                   MaterialPageRoute(
                                     builder:
