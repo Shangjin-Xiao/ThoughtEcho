@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
+import '../services/ai_analysis_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
+import '../models/ai_analysis_model.dart';
+import '../models/quote_model.dart';
+import 'ai_analysis_history_page.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
+import 'dart:async'; // Import for StreamSubscription
+
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
@@ -18,10 +24,15 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
-  String _insights = '';
+  Stream<String>? _insightsStream; // Used only to provide stream to StreamBuilder for connection state
+  String _currentInsightsText = ''; // Not used for display anymore
+  bool _isGenerating = false; // 新增状态变量表示是否正在生成
   late TabController _tabController;
   final TextEditingController _customPromptController = TextEditingController();
   bool _showCustomPrompt = false;
+  late AIAnalysisDatabaseService _aiAnalysisDatabaseService;
+  String _accumulatedInsightsText = ''; // Added state variable for accumulated insights text
+  StreamSubscription<String>? _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
   final List<Map<String, dynamic>> _analysisTypes = [
@@ -84,13 +95,118 @@ class _InsightsPageState extends State<InsightsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _aiAnalysisDatabaseService = AIAnalysisDatabaseService();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _customPromptController.dispose();
+    _insightsSubscription?.cancel(); // Cancel the subscription
     super.dispose();
+  }
+  
+  /// 将当前分析结果保存为AI分析记录
+  Future<void> _saveAnalysis(String content) async {
+    if (content.isEmpty) return;
+    
+    try {
+      // 创建一个新的AI分析对象
+      final analysis = AIAnalysis(
+        title: _getAnalysisTitle(), // 使用当前选择的分析类型作为标题
+        content: content,
+        analysisType: _selectedAnalysisType,
+        analysisStyle: _selectedAnalysisStyle,
+        customPrompt: _showCustomPrompt ? _customPromptController.text : null,
+        createdAt: DateTime.now().toIso8601String(),
+        quoteCount: await context.read<DatabaseService>().getUserQuotesCount(),
+      );
+      
+      // 保存到数据库
+      await _aiAnalysisDatabaseService.saveAnalysis(analysis);
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('分析结果已保存'),
+          action: SnackBarAction(
+            label: '查看历史',
+            onPressed: () {
+              // 导航到分析历史记录页面
+              Navigator.push(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => const AIAnalysisHistoryPage(),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存分析失败: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  /// 将分析结果保存为笔记
+  Future<void> _saveAsNote(String content) async {
+    if (content.isEmpty) return;
+    
+    try {
+      final databaseService = context.read<DatabaseService>();
+      
+      // 创建一个Quote对象
+      final quote = Quote(
+        content: "# ${_getAnalysisTitle()}\n\n$content",
+        date: DateTime.now().toIso8601String(),
+        source: "AI分析",
+        sourceAuthor: "心迹AI",
+        sourceWork: _getAnalysisTitle(),
+        aiAnalysis: null, // 笔记本身就是分析，不需要再保存分析
+      );
+      
+      // 使用DatabaseService保存为笔记
+      await databaseService.addQuote(quote);
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已保存为新笔记')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存为笔记失败: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+  
+  /// 分享分析结果
+  Future<void> _shareAnalysis(String content) async {
+    if (content.isEmpty) return;
+    
+    try {
+      // 复制到剪贴板
+      await Clipboard.setData(ClipboardData(text: content));
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('分析结果已复制到剪贴板，可以粘贴分享')),
+      );
+      
+      // TODO: 如果需要使用分享插件，可以在这里添加
+      // 目前先简化为复制到剪贴板
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('分享失败: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   Future<void> _generateInsights() async {
@@ -104,6 +220,12 @@ class _InsightsPageState extends State<InsightsPage>
     if (!mounted) return;
     setState(() {
       _isLoading = true;
+      _isGenerating = true;
+      _currentInsightsText = ''; // Clear previous text (not used for display)
+      _accumulatedInsightsText = ''; // Clear accumulated text
+      _insightsStream = null; // Clear previous stream to reset StreamBuilder
+      _insightsSubscription?.cancel(); // Cancel previous subscription
+      _insightsSubscription = null; // Clear previous subscription reference
     });
 
     try {
@@ -118,41 +240,79 @@ class _InsightsPageState extends State<InsightsPage>
         ).showSnackBar(const SnackBar(content: Text('没有找到笔记，请先添加一些笔记')));
         setState(() {
           _isLoading = false;
+          _isGenerating = false;
         });
         return;
       }
 
-      String insights;
-      if (_showCustomPrompt && _customPromptController.text.isNotEmpty) {
-        insights = await aiService.generateCustomInsights(
-          quotes,
-          _customPromptController.text,
-        );
-      } else {
-        insights = await aiService.generateInsights(
+      // Get the stream
+      final Stream<String> insightsStream = aiService.streamGenerateInsights(
           quotes,
           analysisType: _selectedAnalysisType,
           analysisStyle: _selectedAnalysisStyle,
-        );
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _insights = insights;
-        // 自动切换到结果标签页
-        _tabController.animateTo(1);
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('生成洞察时出错：$e'), backgroundColor: Colors.red),
+        customPrompt: _showCustomPrompt && _customPromptController.text.isNotEmpty
+            ? _customPromptController.text
+            : null,
       );
-    } finally {
+
+      if (!mounted) return; // Ensure mounted before setting stream and listening
+
+      // Set the stream variable so StreamBuilder can react to connection state changes
+      setState(() {
+        _insightsStream = insightsStream; // Set the new stream
+        _tabController.animateTo(1); // Switch to result tab
+      });
+
+      // Listen to the stream and accumulate text
+      _insightsSubscription = insightsStream.listen(
+        (String chunk) {
+          // Append the new chunk and update state to trigger UI rebuild
+          if (mounted) {
+            setState(() {
+              _accumulatedInsightsText += chunk;
+            });
+          }
+        },
+        onError: (error) {
+          // Handle errors
+          debugPrint('生成洞察流出错: $error');
+          if (mounted) {
+            setState(() {
+              _accumulatedInsightsText = '生成洞察失败: ${error.toString()}';
+              _isGenerating = false; // Stop generating state on error
+            });
+             ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('生成洞察失败: ${error.toString()}'), backgroundColor: Colors.red),
+            );
+          }
+        },
+        onDone: () {
+          debugPrint('生成洞察流完成');
+          // Stream finished, update loading state
+          if (mounted) {
+            setState(() {
+              _isLoading = false; // Stop full loading state on done
+              _isGenerating = false; // Stop generating state on done
+            });
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('洞察生成完成')),
+            );
+          }
+        },
+        cancelOnError: true, // Cancel subscription if an error occurs
+      );
+
+    } catch (e) {
+      debugPrint('生成洞察失败 (setup): $e');
       if (mounted) {
         setState(() {
+          _accumulatedInsightsText = '生成洞察失败: ${e.toString()}';
           _isLoading = false;
+          _isGenerating = false;
         });
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('生成洞察失败: ${e.toString()}'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -178,20 +338,21 @@ class _InsightsPageState extends State<InsightsPage>
                     ),
                   ),
                   const Spacer(),
-                  _isLoading
-                      ? SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: theme.primaryColor,
-                        ),
-                      )
-                      : IconButton(
-                        icon: Icon(Icons.refresh, color: theme.primaryColor),
+                  _isGenerating
+                       ? SizedBox(
+                         width: 24,
+                         height: 24,
+                         child: CircularProgressIndicator(
+                           strokeWidth: 2,
+                           color: theme.primaryColor,
+                         ),
+                       )
+                       : IconButton(
+                        icon: const Icon(Icons.refresh),
+                        color: theme.primaryColor,
                         tooltip: '重新生成',
-                        onPressed: _insights.isEmpty ? null : _generateInsights,
-                      ),
+                        onPressed: _isGenerating || _currentInsightsText.isEmpty ? null : _generateInsights, // 生成中或无内容时禁用
+                       ),
                 ],
               ),
             ),
@@ -490,108 +651,143 @@ class _InsightsPageState extends State<InsightsPage>
   }
 
   Widget _buildAnalysisResultTab(ThemeData theme) {
-    if (_isLoading) {
-      return const AppLoadingView();
-    }
-
-    if (_insights.isEmpty) {
-      return const AppEmptyView(
-        svgAsset: 'assets/empty/empty_state.svg',
-        text: '选择分析类型并点击"开始分析"\n洞察将帮助你发现笔记中的思维模式和规律',
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 分析结果卡片
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(_getAnalysisIcon(), color: theme.primaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        _getAnalysisTitle(),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.primaryColor,
+    // 使用 StreamBuilder 监听 _insightsStream 的连接状态变化，并根据 _accumulatedInsightsText 显示内容
+    return StreamBuilder<String>(
+      stream: _insightsStream, // Listen to stream for connection state and errors
+      builder: (context, snapshot) {
+        // 根据生成状态和累积文本显示不同内容
+        if (_isGenerating && _accumulatedInsightsText.isEmpty) {
+          // 正在生成且还没有收到任何文本时，显示加载动画
+          return const AppLoadingView();
+        } else if (_accumulatedInsightsText.isNotEmpty) {
+          // 已经有累积文本时，显示结果卡片
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 分析结果卡片
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(_getAnalysisIcon(), color: theme.primaryColor),
+                            const SizedBox(width: 8),
+                            Text(
+                              _getAnalysisTitle(),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.primaryColor,
+                              ),
+                            ),
+                            const Spacer(),
+                            // 复制按钮只在生成完成后显示
+                            if (!_isGenerating && _accumulatedInsightsText.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.copy),
+                                tooltip: '复制到剪贴板',
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: _accumulatedInsightsText)).then((_) {
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('分析结果已复制')),
+                                    );
+                                  });
+                                },
+                              ),
+                            // 加载指示器在生成过程中显示
+                            if (_isGenerating)
+                               SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: theme.primaryColor),
+                              ),
+                          ],
                         ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.copy),
-                        tooltip: '复制到剪贴板',
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        // 这里使用 MarkdownBody 渲染累积的文本
+                        MarkdownBody(
+                          data: _accumulatedInsightsText, // 使用累积的文本
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                            p: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                // 分享和保存按钮只在生成完成后显示
+                if (!_isGenerating && _accumulatedInsightsText.isNotEmpty)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
                         onPressed: () {
-                          // 复制分析结果
-                          Clipboard.setData(ClipboardData(text: _insights)).then((_) {
-                            if (!mounted) return;
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('分析结果已复制')),
-                            );
-                          });
+                          // 保存为笔记
+                          _saveAsNote(_accumulatedInsightsText);
                         },
+                        icon: const Icon(Icons.note_add),
+                        label: const Text('保存为笔记'),
+                      ),
+                      const SizedBox(width: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          // 保存分析结果
+                          _saveAnalysis(_accumulatedInsightsText);
+                        },
+                        icon: const Icon(Icons.save),
+                        label: const Text('保存分析'),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // 实现分享功能
+                          _shareAnalysis(_accumulatedInsightsText);
+                        },
+                        icon: const Icon(Icons.share),
+                        label: const Text('分享洞察'),
                       ),
                     ],
                   ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  // 这里使用 SelectableText 让用户可以选择文本
-                  MarkdownBody(
-                    data: _insights,
-                    selectable: true,
-                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                      p: theme.textTheme.bodyMedium,
-                      // 可以根据需要自定义其他 Markdown 元素的样式
-                    ),
-                  ),
-                ],
+              ],
+            ),
+          );
+        } else if (snapshot.hasError) {
+           // 处理错误，只在没有累积文本时显示错误信息
+           // Error handling will be managed by the listener now, updating _accumulatedInsightsText directly.
+           // We can just check if _accumulatedInsightsText contains an error message.
+           // However, if the error occurs immediately before any data is received, snapshot.hasError will be true.
+           // Let's keep this error handling for initial errors.
+           return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '生成洞察时出错: ${snapshot.error.toString()}',
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
               ),
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // 分享和保存按钮
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  // 实现保存为笔记的功能
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('已保存为新笔记')));
-                },
-                icon: const Icon(Icons.save),
-                label: const Text('保存为笔记'),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // 实现分享功能
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('已分享')));
-                },
-                icon: const Icon(Icons.share),
-                label: const Text('分享洞察'),
-              ),
-            ],
-          ),
-        ],
-      ),
+          );
+        } else {
+          // 初始状态或没有生成且没有累积文本时显示空状态
+           return const AppEmptyView(
+              svgAsset: 'assets/empty/empty_state.svg',
+              text: '选择分析类型并点击"开始分析"\n洞察将帮助你发现笔记中的思维模式和规律',
+            );
+        }
+      },
     );
   }
 
