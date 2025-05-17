@@ -1005,7 +1005,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 String? colorHex;
                                 if (color != Colors.transparent) {
                                   colorHex =
-                                      '#${color.value.toRadixString(16).substring(2)}';
+                                      '#${color.toARGB32().toRadixString(16).substring(2)}';
                                 }
 
                                 final bool isSelected =

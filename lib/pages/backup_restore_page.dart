@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart'; 
+import 'package:path_provider/path_provider.dart';
 import '../services/database_service.dart';
 import 'home_page.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
@@ -37,26 +37,27 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (!mounted) return;
       final choice = await showDialog<String>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('选择备份方式'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.save),
-                title: const Text('保存到本地'),
-                subtitle: const Text('选择保存位置'),
-                onTap: () => Navigator.pop(dialogContext, 'save'),
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('选择备份方式'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.save),
+                    title: const Text('保存到本地'),
+                    subtitle: const Text('选择保存位置'),
+                    onTap: () => Navigator.pop(dialogContext, 'save'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.share),
+                    title: const Text('分享备份文件'),
+                    subtitle: const Text('通过其他应用分享'),
+                    onTap: () => Navigator.pop(dialogContext, 'share'),
+                  ),
+                ],
               ),
-              ListTile(
-                leading: const Icon(Icons.share),
-                title: const Text('分享备份文件'),
-                subtitle: const Text('通过其他应用分享'),
-                onTap: () => Navigator.pop(dialogContext, 'share'),
-              ),
-            ],
-          ),
-        ),
+            ),
       );
       if (!mounted) return;
       if (choice == null) return;
@@ -66,12 +67,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       try {
         if (choice == 'save') {
           final now = DateTime.now();
-          final formattedDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+          final formattedDate =
+              '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
           final fileName = '心迹_备份_$formattedDate.json';
           if (Platform.isWindows) {
             final tempDir = await getTemporaryDirectory();
             final tempFilePath = '${tempDir.path}/$fileName';
-            final tempFile = await dbService.exportAllData(customPath: tempFilePath);
+            final tempFile = await dbService.exportAllData(
+              customPath: tempFilePath,
+            );
             progressOverlay.remove();
             if (!mounted) return;
             final saveLocation = await getSaveLocation(
@@ -81,7 +85,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ],
             );
             if (saveLocation == null) {
-              try { File(tempFile).deleteSync(); } catch (_) {}
+              try {
+                File(tempFile).deleteSync();
+              } catch (_) {}
               return;
             }
             if (!mounted) return;
@@ -142,7 +148,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               if (!mounted) return;
               final exportOverlay = _showLoadingOverlay(context, '正在保存数据...');
               try {
-                path = await dbService.exportAllData(customPath: saveLocation.path);
+                path = await dbService.exportAllData(
+                  customPath: saveLocation.path,
+                );
                 exportOverlay.remove();
                 if (!mounted) return;
                 scaffoldMessenger.showSnackBar(
@@ -164,10 +172,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           path = await dbService.exportAllData();
           progressOverlay.remove();
           if (!mounted) return;
-          await Share.shareXFiles(
-            [XFile(path)],
-            text: '心迹应用数据备份',
-          );
+          await Share.shareXFiles([XFile(path)], text: '心迹应用数据备份');
         }
       } catch (e) {
         progressOverlay.remove();
@@ -184,9 +189,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     final navigator = Navigator.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
     try {
-      const XTypeGroup jsonTypeGroup = XTypeGroup(label: 'JSON', extensions: ['json']);
+      const XTypeGroup jsonTypeGroup = XTypeGroup(
+        label: 'JSON',
+        extensions: ['json'],
+      );
       final XFile? file = await openFile(acceptedTypeGroups: [jsonTypeGroup]);
-      final result = file != null ? {'files': [file]} : null;
+      final result =
+          file != null
+              ? {
+                'files': [file],
+              }
+              : null;
       if (result == null) return;
       if (!mounted) return;
       final selectedFile = result['files']![0];
@@ -205,52 +218,54 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         _showErrorDialog(
           context,
           '无效的备份文件',
-          '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。'
+          '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。',
         );
         return;
       }
       if (!mounted) return;
       final importOption = await showDialog<String>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('导入选项'),
-          content: const Text('请选择导入方式：'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, 'cancel'),
-              child: const Text('取消'),
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('导入选项'),
+              content: const Text('请选择导入方式：'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'cancel'),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'clear'),
+                  child: const Text('清空并导入'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'merge'),
+                  child: const Text('合并数据'),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, 'clear'),
-              child: const Text('清空并导入'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, 'merge'),
-              child: const Text('合并数据'),
-            ),
-          ],
-        ),
       );
       if (!mounted) return;
       if (importOption == 'cancel' || importOption == null) return;
       if (importOption == 'clear') {
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('确认清空数据'),
-            content: const Text('这将清空当前所有数据，确定要继续吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('取消'),
+          builder:
+              (dialogContext) => AlertDialog(
+                title: const Text('确认清空数据'),
+                content: const Text('这将清空当前所有数据，确定要继续吗？'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('确定清空并导入'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('确定清空并导入'),
-              ),
-            ],
-          ),
         );
         if (confirmed != true) return;
         if (!mounted) return;
@@ -258,29 +273,33 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final importOverlay = _showLoadingOverlay(context, '正在导入数据...');
       try {
         final bool clearExisting = importOption == 'clear';
-        await dbService.importData(selectedFile.path, clearExisting: clearExisting);
+        await dbService.importData(
+          selectedFile.path,
+          clearExisting: clearExisting,
+        );
         importOverlay.remove();
         if (!mounted) return;
         await showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('导入成功'),
-            content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  if (!mounted) return;
-                  navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const HomePage()),
-                    (route) => false,
-                  );
-                },
-                child: const Text('重启应用'),
+          builder:
+              (dialogContext) => AlertDialog(
+                title: const Text('导入成功'),
+                content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      if (!mounted) return;
+                      navigator.pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text('重启应用'),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
       } catch (e) {
         importOverlay.remove();
@@ -292,48 +311,50 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       _showErrorDialog(context, '恢复失败', '无法访问或读取备份文件: $e');
     }
   }
-  
+
   OverlayEntry _showLoadingOverlay(BuildContext context, String message) {
     if (!mounted) return OverlayEntry(builder: (_) => const SizedBox.shrink());
     final overlay = OverlayEntry(
-      builder: (overlayContext) => Container(
-        color: Colors.black.withOpacity(0.5),
-        child: Center(
-          child: Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(message),
-                ],
+      builder:
+          (overlayContext) => Container(
+            color: Colors.black.withOpacity(0.5),
+            child: Center(
+              child: Card(
+                margin: const EdgeInsets.all(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(message),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
     );
     Overlay.of(context).insert(overlay);
     return overlay;
   }
-  
+
   void _showErrorDialog(BuildContext context, String title, String message) {
     if (!mounted) return;
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('确定'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('确定'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -349,7 +370,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               '定期备份数据可以帮助您防止意外数据丢失。建议每次进行重要更改后都创建一个备份。',
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.7), // Use applyOpacity
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.applyOpacity(0.7), // Use applyOpacity
               ),
             ),
           ),
@@ -370,7 +393,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Card(
-              color: Colors.amber, // This is a const color, so it should be fine.
+              color:
+                  Colors.amber, // This is a const color, so it should be fine.
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -378,13 +402,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.warning, size: 20, color: Theme.of(context).colorScheme.onError.applyOpacity(0.8)),
+                        Icon(
+                          Icons.warning,
+                          size: 20,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onError.applyOpacity(0.8),
+                        ),
                         const SizedBox(width: 8),
                         const Text(
                           '数据安全提示',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -401,23 +429,37 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                       '重要提示：',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onError.applyOpacity(0.9),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onError.applyOpacity(0.9),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       '• 恢复数据时，如果选择“清空并导入”，当前设备上的所有笔记和标签都将被删除，并替换为备份文件中的数据。此操作无法撤销。',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onError.applyOpacity(0.85)),
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onError.applyOpacity(0.85),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '• 如果选择“合并数据”，备份文件中的数据将尝试与现有数据合并。如果存在ID冲突的笔记或标签，备份文件中的版本将覆盖现有版本。',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onError.applyOpacity(0.85)),
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onError.applyOpacity(0.85),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '• 请确保您从可信任的来源导入备份文件，以避免潜在的数据损坏或安全风险。',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onError.applyOpacity(0.85)),
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onError.applyOpacity(0.85),
+                      ),
                     ),
                   ],
                 ),

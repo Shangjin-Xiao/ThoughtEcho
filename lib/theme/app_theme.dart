@@ -156,7 +156,7 @@ class AppTheme with ChangeNotifier {
   // 设置自定义颜色
   Future<void> setCustomColor(Color color) async {
     _customColor = color;
-    await _storage.setInt(_customColorKey, color.value); // MODIFIED (reverted as .value is correct for ARGB)
+    await _storage.setInt(_customColorKey, color.toARGB32()); // MODIFIED (reverted as .value is correct for ARGB)
     notifyListeners();
   }
   

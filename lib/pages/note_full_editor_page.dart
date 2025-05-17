@@ -409,7 +409,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 String? colorHex;
                                 if (color != Colors.transparent) {
                                   colorHex =
-                                      '#${color.value.toRadixString(16).substring(2)}';
+                                      '#${color.toARGB32().toRadixString(16).substring(2)}';
                                 }
 
                                 final bool isSelected =
@@ -544,7 +544,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           _selectedColorHex =
                               advancedColor == Colors.transparent
                                   ? null
-                                  : '#${advancedColor.value.toRadixString(16).substring(2)}';
+                                  : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}';
                         });
 
                         // 使用单独的延迟setState确保UI完全刷新
@@ -590,7 +590,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _selectedColorHex =
             result == Colors.transparent
                 ? null
-                : '#${result.value.toRadixString(16).substring(2)}';
+                : '#${result.toARGB32().toRadixString(16).substring(2)}';
       });
 
       // 使用单独的延迟setState确保UI完全刷新
