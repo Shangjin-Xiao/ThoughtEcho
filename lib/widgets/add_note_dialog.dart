@@ -1025,6 +1025,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 return GestureDetector(
                                   onTap: () {
+                                    if (!mounted) return;
                                     Navigator.of(context).pop(color);
                                   },
                                   child: Container(

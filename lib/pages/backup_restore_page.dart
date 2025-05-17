@@ -15,26 +15,29 @@ class BackupRestorePage extends StatefulWidget {
   State<BackupRestorePage> createState() => _BackupRestorePageState();
 }
 
-class _BackupRestorePageState extends State<BackupRestorePage> {
-  Future<void> _handleExport(BuildContext context) async {
+class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _handleExport(BuildContext context) async {
     // 在异步操作前获取所有需要的context相关对象
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
+    final overlayState = Overlay.of(context); // 在调用 _showLoadingOverlay 前获取 OverlayState
 
     try {
-      final loadingOverlay = _showLoadingOverlay(context, '准备导出数据...');
+      if (!mounted) return;
+      final loadingOverlay = _showLoadingOverlay(overlayState, '准备导出数据...'); // 传递 overlayState
       bool canExport = false;
       try {
         canExport = await dbService.checkCanExport();
       } catch (e) {
         debugPrint('数据库访问验证失败: $e');
       }
-      loadingOverlay.remove();      if (!mounted) return;
+      if (!mounted) return;
+      loadingOverlay.remove(); // 移动到 mounted 检查之后
+
+      if (!mounted) return; // 在调用 _showErrorDialog 前添加 mounted 检查
       if (!canExport) {
         _showErrorDialog(context, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
         return;
-      }
-      if (!mounted) return;
+      }      if (!mounted) return;
       final choice = await showDialog<String>(
         context: context,
         builder:
@@ -63,7 +66,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (choice == null) return;
       String path = '';
       if (!mounted) return;
-      final progressOverlay = _showLoadingOverlay(context, '正在导出数据...');
+      final progressOverlay = _showLoadingOverlay(overlayState, '正在导出数据...');
       try {
         if (choice == 'save') {
           final now = DateTime.now();
@@ -89,9 +92,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 File(tempFile).deleteSync();
               } catch (_) {}
               return;
-            }
-            if (!mounted) return;
-            final saveOverlay = _showLoadingOverlay(context, '正在保存文件...');
+            }            if (!mounted) return;
+            final saveOverlay = _showLoadingOverlay(overlayState, '正在保存文件...');
             try {
               await File(tempFile).copy(saveLocation.path);
               await File(tempFile).delete();              path = saveLocation.path;
@@ -143,9 +145,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ],
               );
               progressOverlay.remove();
-              if (saveLocation == null) return;
-              if (!mounted) return;
-              final exportOverlay = _showLoadingOverlay(context, '正在保存数据...');
+              if (saveLocation == null) return;              if (!mounted) return;
+              final exportOverlay = _showLoadingOverlay(overlayState, '正在保存数据...');
               try {
                 path = await dbService.exportAllData(
                   customPath: saveLocation.path,
@@ -203,7 +204,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (result == null) return;
       if (!mounted) return;
       final selectedFile = result['files']![0];
-      final validateOverlay = _showLoadingOverlay(context, '正在验证备份文件...');
+      final validateOverlay = _showLoadingOverlay(Overlay.of(context), '正在验证备份文件...');
       bool isValidBackup = false;
       String errorMessage = '';
       try {
@@ -269,7 +270,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         if (confirmed != true) return;
         if (!mounted) return;
       }
-      final importOverlay = _showLoadingOverlay(context, '正在导入数据...');
+      final importOverlay = _showLoadingOverlay(Overlay.of(context), '正在导入数据...');
       try {
         final bool clearExisting = importOption == 'clear';
         await dbService.importData(
@@ -286,7 +287,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 title: const Text('导入成功'),
                 content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
                 actions: [
-                  TextButton(                    onPressed: () {
+                  TextButton(
+                    onPressed: () {
                       Navigator.pop(dialogContext);
                       if (!mounted) return;
                       navigator.pushAndRemoveUntil(
@@ -299,6 +301,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ],
               ),
         );
+        if (!mounted) return;
       } catch (e) {
         importOverlay.remove();
         if (!mounted) return;
@@ -310,11 +313,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     }
   }
 
-  OverlayEntry _showLoadingOverlay(BuildContext context, String message) {
+  OverlayEntry _showLoadingOverlay(OverlayState overlayState, String message) {
     if (!mounted) return OverlayEntry(builder: (_) => const SizedBox.shrink());
 
     // 在使用context前先获取需要的overlay
-    final overlayState = Overlay.of(context);
+    // final overlayState = Overlay.of(context); // 这行将被移除，OverlayState 已作为参数传入
 
     final overlay = OverlayEntry(
       builder:
@@ -438,7 +441,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '• 恢复数据时，如果选择“清空并导入”，当前设备上的所有笔记和标签都将被删除，并替换为备份文件中的数据。此操作无法撤销。',
+                      '• 恢复数据时，如果选择"清空并导入"，当前设备上的所有笔记和标签都将被删除，并替换为备份文件中的数据。此操作无法撤销。',
                       style: TextStyle(
                         color: Theme.of(
                           context,
@@ -447,7 +450,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '• 如果选择“合并数据”，备份文件中的数据将尝试与现有数据合并。如果存在ID冲突的笔记或标签，备份文件中的版本将覆盖现有版本。',
+                      '• 如果选择"合并数据"，备份文件中的数据将尝试与现有数据合并。如果存在ID冲突的笔记或标签，备份文件中的版本将覆盖现有版本。',
                       style: TextStyle(
                         color: Theme.of(
                           context,
