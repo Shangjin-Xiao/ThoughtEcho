@@ -5,7 +5,8 @@ import '../services/api_service.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/sliding_card.dart';
-import '../utils/color_utils.dart'; // Import color_utils
+import 'dart:async'; // Import async for StreamController and StreamSubscription
+import '../theme/app_theme.dart'; // Import AppTheme for defaultShadow
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -24,13 +25,11 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
     'author': '',
     'type': 'a',
   };
-  String? dailyPrompt;
 
   @override
   void initState() {
     super.initState();
     _loadDailyQuote();
-    _fetchDailyPrompt();
   }
 
   Future<void> _loadDailyQuote() async {
@@ -90,26 +89,6 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
     }
   }
 
-  Future<void> _fetchDailyPrompt() async {
-    try {
-      final aiService = context.read<AIService>();
-      final prompt = await aiService.generateDailyPrompt();
-      if (mounted) {
-        setState(() {
-          dailyPrompt = prompt;
-        });
-      }
-    } catch (e) {
-      debugPrint('获取每日提示失败: $e');
-      // 添加重试机制
-      Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) {
-          _fetchDailyPrompt();
-        }
-      });
-    }
-  }
-
   // 格式化一言的来源显示
   String formatHitokotoSource(String? author, String? source) {
     if ((author == null || author.isEmpty) &&
@@ -137,10 +116,11 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([_loadDailyQuote(), _fetchDailyPrompt()]);
+        // When refreshing, we want to fetch both the daily quote and the daily prompt.
+        // _fetchDailyPrompt will handle whether to use AI or default based on config.
+        await _loadDailyQuote();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -217,52 +197,15 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
                   ),
                 ),
               ),
-              if (dailyPrompt != null)
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.shadowColor.applyOpacity(0.26), // MODIFIED
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '今日思考',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        dailyPrompt!,
-                        style: theme.textTheme.bodyLarge,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

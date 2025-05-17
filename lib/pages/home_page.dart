@@ -16,6 +16,8 @@ import 'insights_page.dart';
 import 'settings_page.dart';
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
+import '../services/settings_service.dart'; // Import SettingsService
+import '../utils/daily_prompt_generator.dart'; // Import DailyPromptGenerator
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -46,6 +48,94 @@ class _HomePageState extends State<HomePage>
   final GlobalKey<NoteListViewState> _noteListViewKey =
       GlobalKey<NoteListViewState>();
 
+  // --- 每日提示相关状态和逻辑 ---
+  Stream<String>? _dailyPromptStream; // Stream for daily prompt
+  String _accumulatedPromptText = ''; // Accumulated text for daily prompt
+  StreamSubscription<String>? _promptSubscription; // Stream subscription for daily prompt
+  bool _isGeneratingDailyPrompt = false; // Loading state for daily prompt
+
+  // 获取每日提示的方法
+  Future<void> _fetchDailyPrompt({bool initialLoad = false}) async {
+    // 如果是初始加载，并且已经有订阅或累积文本，则不重复加载
+    if (initialLoad && (_promptSubscription != null || _accumulatedPromptText.isNotEmpty)) {
+      debugPrint('Daily prompt already loaded or loading, skipping initial fetch.');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _accumulatedPromptText = ''; // Clear previous text
+      _isGeneratingDailyPrompt = true; // Set loading state
+      _dailyPromptStream = null; // Clear previous stream
+      _promptSubscription?.cancel(); // Cancel previous subscription
+      _promptSubscription = null;
+    });
+
+    try {
+      final aiService = context.read<AIService>();
+      // Call the new stream method
+      final Stream<String> promptStream = aiService.streamGenerateDailyPrompt();
+
+      if (!mounted) return; // Ensure mounted before setting stream and listening
+
+      // Set the stream variable so StreamBuilder can react to connection state changes
+      setState(() {
+        _dailyPromptStream = promptStream; // Set the new stream
+      });
+
+      // Listen to the stream and accumulate text
+      _promptSubscription = promptStream.listen(
+        (String chunk) {
+          // Append the new chunk and update state to trigger UI rebuild
+          if (mounted) {
+            setState(() {
+              _accumulatedPromptText += chunk;
+            });
+          }
+        },
+        onError: (error) {
+          // Handle errors
+          debugPrint('获取每日提示流出错: $error');
+          if (mounted) {
+            setState(() {
+              _accumulatedPromptText = '获取每日思考失败: ${error.toString()}';
+              _isGeneratingDailyPrompt = false; // Stop loading on error
+            });
+             ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('获取每日提示失败: ${error.toString()}'), backgroundColor: Colors.red),
+            );
+          }
+        },
+        onDone: () {
+          debugPrint('每日提示流完成');
+          // Stream finished, update loading state
+          if (mounted) {
+            setState(() {
+              _isGeneratingDailyPrompt = false; // Stop loading on done
+            });
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('每日思考生成完成')),
+            );
+          }
+        },
+        cancelOnError: true, // Cancel subscription if an error occurs
+      );
+
+    } catch (e) {
+      debugPrint('获取每日提示失败 (setup): $e');
+      if (mounted) {
+        setState(() {
+          _accumulatedPromptText = '获取每日提示失败: ${e.toString()}';
+          _isGeneratingDailyPrompt = false; // Stop loading on setup error
+        });
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('获取每日提示失败: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+  // --- 每日提示相关状态和逻辑结束 ---
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +163,9 @@ class _HomePageState extends State<HomePage>
 
       // 确保标签在应用完全初始化后加载
       _refreshTags();
+
+      // 首次加载每日提示
+      _fetchDailyPrompt(initialLoad: true);
     });
   }
 
@@ -87,6 +180,7 @@ class _HomePageState extends State<HomePage>
     _tabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
+    _promptSubscription?.cancel(); // Cancel daily prompt subscription
     super.dispose();
   }
 
@@ -182,7 +276,7 @@ class _HomePageState extends State<HomePage>
     );
     await locationService.init();
 
-    // 确保组件仍然挂载
+    // 再次确保组件仍然挂载
     if (!mounted) return;
 
     // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
@@ -333,56 +427,87 @@ class _HomePageState extends State<HomePage>
     showDialog(
       context: context,
       builder:
-          (dialogContext) => AlertDialog(
+          (dialogContext) {
+        String currentAnswer = '';
+        bool isLoading = false;
+
+        return AlertDialog(
             title: const Text('问笔记'),
-            content: TextField(
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return SingleChildScrollView(
+                child: ListBody(
+                  children: <Widget>[
+                    TextField(
               controller: controller,
               decoration: const InputDecoration(hintText: '请输入你的问题'),
+                      enabled: !isLoading, // 提问过程中禁用输入框
+                    ),
+                    if (isLoading) ...[
+                      const SizedBox(height: 16),
+                      const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 8),
+                      const Center(child: Text('正在获取回答...')),
+                    ] else if (currentAnswer.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text('回答:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SelectableText(currentAnswer), // 使用 SelectableText 允许复制
+                    ],
+                  ],
+                ),
+              );
+            },
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('取消'),
+              child: const Text('关闭'),
               ),
               TextButton(
-                onPressed: () async {
+              onPressed: isLoading ? null : () async { // 提问过程中禁用按钮
                   if (controller.text.isEmpty) return;
-                  Navigator.pop(dialogContext);
+                setState(() {
+                  isLoading = true;
+                  currentAnswer = ''; // 清空之前的回答
+                });
                   try {
-                    final answer = await aiService.askQuestion(
+                  final stream = aiService.streamAskQuestion(
                       quote,
                       controller.text,
                     );
-                    if (!mounted) return;
-                    showDialog(
-                      context: context,
-                      builder:
-                          (answerDialogContext) => AlertDialog(
-                            title: const Text('回答'),
-                            content: Text(answer),
-                            actions: [
-                              TextButton(
-                                onPressed:
-                                    () => Navigator.pop(answerDialogContext),
-                                child: const Text('关闭'),
-                              ),
-                            ],
-                          ),
+                  stream.listen(
+                    (chunk) {
+                      setState(() {
+                        currentAnswer += chunk;
+                      });
+                    },
+                    onDone: () {
+                      setState(() {
+                        isLoading = false;
+                      });
+                    },
+                    onError: (error) {
+                      debugPrint('流式问答错误: $error');
+                      setState(() {
+                        isLoading = false;
+                        currentAnswer += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
+                      });
+                    },
                     );
                   } catch (e) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('获取回答失败：$e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
+                  debugPrint('提问失败: $e');
+                  setState(() {
+                    isLoading = false;
+                    currentAnswer = '获取回答失败: ${e.toString()}'; // 显示错误信息
+                  });
                   }
                 },
-                child: const Text('提问'),
+              child: Text(isLoading ? '' : '提问'), // 提问中不显示文本
               ),
             ],
-          ),
+        );
+      },
     );
   }
 
@@ -398,9 +523,17 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
+    final theme = Theme.of(context);
+    final aiService = context.watch<AIService>(); // Watch AIService for key changes
+    final settingsService = context.watch<SettingsService>(); // Watch SettingsService for settings changes
 
     // 直接用context.watch<bool>()获取服务初始化状态
     final bool servicesInitialized = context.watch<bool>();
+
+     // Determine if AI is configured (including checking for valid API Key)
+    final bool isAiConfigured = aiService.hasValidApiKey() &&
+        settingsService.aiSettings.apiUrl.isNotEmpty &&
+        settingsService.aiSettings.model.isNotEmpty;
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
     return ChangeNotifierProvider.value(
@@ -522,15 +655,97 @@ class _HomePageState extends State<HomePage>
         body: IndexedStack(
           index: _currentIndex,
           children: [
-            // 首页 - 每日一言
-            DailyQuoteView(
-              onAddQuote:
-                  (content, author, work, hitokotoData) => _showAddQuoteDialog(
-                    prefilledContent: content,
-                    prefilledAuthor: author,
-                    prefilledWork: work,
-                    hitokotoData: hitokotoData,
+            // 首页 - 每日一言 和 每日提示
+            // 使用SingleChildScrollView包裹Column，让整个首页内容可滚动
+            SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                   // 每日一言部分
+                   DailyQuoteView(
+                    onAddQuote:
+                        (content, author, work, hitokotoData) => _showAddQuoteDialog(
+                          prefilledContent: content,
+                          prefilledAuthor: author,
+                          prefilledWork: work,
+                          hitokotoData: hitokotoData,
+                        ),
                   ),
+
+                  // 每日提示部分 - 放在底部
+                  // 使用一个Padding包裹Container来提供外部边距
+                  Padding(
+                    padding: const EdgeInsets.all(16.0), // 提供与DailyQuoteView卡片相似的外部边距
+                    child: Container(
+                      padding: const EdgeInsets.all(16), // 应用旧版内边距
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface, // 应用旧版背景色
+                        borderRadius: BorderRadius.circular(16), // 应用旧版圆角
+                        boxShadow: AppTheme.defaultShadow, // 应用旧版阴影
+                      ),
+                       child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center, // 内容居中
+                          children: [
+                             Row(
+                                mainAxisAlignment: MainAxisAlignment.center, // 标题居中
+                                children: [
+                                  Icon(
+                                    Icons.lightbulb_outline,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '今日思考',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8), // 标题和提示内容之间的间距
+                              // 显示累积的每日提示文本或加载/错误状态
+                             _isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty
+                                ? Column(
+                                    children: [
+                                       SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        isAiConfigured ? '正在加载今日思考...' : '正在获取默认提示...',
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  )
+                                : _accumulatedPromptText.isNotEmpty
+                                    ? Text(
+                                        _accumulatedPromptText, // 直接显示累积的文本
+                                        style: theme.textTheme.bodyLarge, // 应用旧版文本样式
+                                        textAlign: TextAlign.center,
+                                      )
+                                    : // 初始或错误状态且无文本时显示占位或错误信息
+                                      Text(
+                                        isAiConfigured && _accumulatedPromptText.isEmpty ? '等待今日思考...' : _accumulatedPromptText.isEmpty ? '未获取到今日思考' : _accumulatedPromptText, // 根据状态显示不同文本
+                                        style: theme.textTheme.bodyLarge?.copyWith(
+                                          color: _accumulatedPromptText.contains('失败') ? Colors.red : theme.textTheme.bodyLarge?.color,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                          ],
+                       ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             // 笔记列表页
             Consumer<NoteSearchController>(

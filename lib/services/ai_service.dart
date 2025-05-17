@@ -7,9 +7,8 @@ import '../services/settings_service.dart' show SettingsService;
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/secure_storage_service.dart';
-import 'dart:math';
 import 'dart:async'; // 添加异步流支持
-
+import '../utils/daily_prompt_generator.dart';
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
 typedef StreamingCompleteCallback = void Function(String fullText);
@@ -423,7 +422,7 @@ class AIService extends ChangeNotifier {
           debugPrint('流式响应错误: $e');
           onError(e);
           client.close();
-        },
+        }
       );
     } catch (e) {
       debugPrint('API请求错误: $e');
@@ -521,6 +520,7 @@ class AIService extends ChangeNotifier {
           },
           // 当发生错误时
           (error) {
+            debugPrint('流式笔记分析错误: $error');
             if (!controller.isClosed) {
               controller.addError(error);
               controller.close();
@@ -539,249 +539,104 @@ class AIService extends ChangeNotifier {
     return controller.stream;
   }
   
-  Future<String> generateDailyPrompt() async {
-    final settings = _settingsService.aiSettings;
-
-    // 检查 AI 配置是否有效
-    if (!hasValidApiKey() ||
-        settings.apiUrl.isEmpty ||
-        settings.model.isEmpty) {
-      debugPrint('AI服务未配置，生成基于上下文的提示');
-      return _generatePromptBasedOnContext();
-    }
-
-    // AI 配置有效，尝试调用 API
-    try {
-      // 获取当前上下文信息
-      final now = DateTime.now();
-      final hour = now.hour;
-      final weather = _weatherService.currentWeather;
-      final temperature = _weatherService.temperature;
-      final city = _locationService.city;
-
-      // 确定时间段
-      String timeOfDay;
-      if (hour >= 5 && hour < 12) {
-        timeOfDay = '早上';
-      } else if (hour >= 12 && hour < 18) {
-        timeOfDay = '下午';
-      } else if (hour >= 18 && hour < 23) {
-        timeOfDay = '晚上';
-      } else {
-        timeOfDay = '深夜';
+  // 新增：流式生成每日提示
+  Stream<String> streamGenerateDailyPrompt() async* {
+    // 检查API Key是否有效
+    if (!hasValidApiKey()) {
+      debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
+      // 获取位置和天气信息用于生成上下文相关的提示
+      String? city;
+      String? weather;
+      String? temperature;
+      
+      // 使用之前注入但未使用的位置服务
+      if (_locationService.city != null) {
+        city = _locationService.city;
       }
-
-      // 构建上下文字符串
-      String contextInfo = '当前时间段：$timeOfDay';
-      if (city != null && city.isNotEmpty) {
-        contextInfo += '，位置：$city';
+      
+      // 使用之前注入但未使用的天气服务
+      if (_weatherService.currentWeather != null) {
+        weather = _weatherService.currentWeather;
+        temperature = _weatherService.temperature;
       }
-      if (weather != null) {
-        contextInfo += '，天气：${WeatherService.getWeatherDescription(weather)}';
-      }
-      if (temperature != null && temperature.isNotEmpty) {
-        contextInfo += '，温度：$temperature';
-      }
-
-      final messages = [
-        {
-          'role': 'system',
-          'content':
-              '你是一位充满文学素养的思考引导者。请根据提供的上下文信息（时间、位置、天气），生成一个富有诗意且引人深思的提示（不超过40个汉字），引导用户记录当下的思绪或感受。语言要优美、富有意境，像古典诗词或现代散文中的句子，可以适当使用比喻、拟人等修辞手法，但要确保简洁明了、一读即懂。注意：只需要输出你创作的内容，不要包含注解或者创作意图解释等其他内容！',
-        },
-        {'role': 'user', 'content': '请根据以下上下文生成今日思考提示：$contextInfo'},
-      ];
-
+      
+      // 使用上下文信息生成个性化的提示
+      yield DailyPromptGenerator.generatePromptBasedOnContext(
+        city: city,
+        weather: weather,
+        temperature: temperature,
+      );
+      // 为了模拟流式效果，可以稍作延迟（可选）
+      await Future.delayed(const Duration(milliseconds: 50));
+    } else {
+      // 如果API Key有效，调用AI生成流式提示
+      debugPrint('API Key有效，使用AI生成每日提示');
       try {
-        final response = await _makeRequest(settings.apiUrl, {
-          'messages': messages,
-          'temperature': 0.9,
-        }, settings).timeout(
-          const Duration(seconds: 30), // 超时时间为30秒
-          onTimeout: () {
-            debugPrint('生成每日提示超时');
-            throw Exception('请求超时');
+        await _validateSettings(); // 确保其他设置也有效
+        final settings = _settingsService.aiSettings;
+
+        // 构建给AI的提示
+        final messages = [
+          {
+            'role': 'system',
+            'content':
+                '你是一位富有智慧和启发性的思考引导者，每天为用户提供一个简洁的、引发深度思考的提示或问题，帮助用户进行日记记录。提示词应该简短、有新意、不重复，直接提出一个问题或一个观察点，激发用户写作的灵感。例如："今天让你停下来思考的小事是什么？"或"一个你最近学到的、改变了你对某事的看法是什么？"。只提供一个提示，不需要任何前缀或解释。',
+          },
+           {
+            'role': 'user',
+            'content': '请给我一个今天的思考提示。',
+          }
+        ];
+
+        // 使用StreamController来桥接_makeStreamRequest的回调和async* stream
+        final controller = StreamController<String>();
+
+        _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 1.0, // 可以调整温度以获得更有创意的提示
+            'max_tokens': 100, // 限制提示的长度
+          },
+          settings,
+          (chunk) {
+            // 当接收到数据块时，添加到StreamController
+            if (!controller.isClosed) {
+              controller.add(chunk);
+            }
+          },
+          (fullText) {
+            // 当流完成时
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          (error) {
+            // 当发生错误时
+             if (!controller.isClosed) {
+                controller.addError(error);
+                controller.close();
+             }
           },
         );
 
-        final data = json.decode(response.body);
-        if (data['choices'] != null &&
-            data['choices'].isNotEmpty &&
-            data['choices'][0]['message'] != null) {
-          return data['choices'][0]['message']['content'];
-        } else {
-          debugPrint('API响应格式错误: ${response.body}');
-          throw Exception('API响应格式错误');
-        }
+        // 通过yield* 将StreamController的流内容输出到async* stream
+        yield* controller.stream;
+
       } catch (e) {
-        debugPrint('生成每日提示网络错误: $e');
-        return _getDefaultPrompt();
+        debugPrint('AI生成每日提示错误: $e');
+        // 在流中发送错误信息
+        yield* Stream.error(e);
       }
-    } catch (e) {
-      // API 调用失败（例如网络错误），返回默认提示
-      debugPrint('调用 AI 生成每日提示失败: $e');
-      return _getDefaultPrompt();
     }
   }
 
-  // 获取默认的每日提示
-  String _getDefaultPrompt() {
-    final List<String> defaultPrompts = [
-      "今天有什么值得感恩的事？",
-      "给过去的自己一句话，会说什么？",
-      "今天学到了什么新东西？",
-      "什么事想做却还没行动？",
-      "最近什么让你感到快乐？",
-      "克服困难后有什么感悟？",
-      "如果明天完全自由，你会做什么？",
-      "今天的挑战是什么？",
-      "哪些小习惯正在改变你？",
-      "此刻，你想对自己说什么？",
-    ];
-
-    // 使用日期为种子选择一个提示，确保同一天显示相同提示
-    final today = DateTime.now();
-    final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
-    final index = dayOfYear % defaultPrompts.length;
-    return defaultPrompts[index];
-  }
-
-  // 根据时间和天气生成提示
-  String _generatePromptBasedOnContext() {
-    final now = DateTime.now();
-    final hour = now.hour;
-    final weather = _weatherService.currentWeather;
-    final temperature = _weatherService.temperature;
-    final city = _locationService.city;
-
-    String timeOfDay;
-    if (hour >= 5 && hour < 12) {
-      timeOfDay = '早上';
-    } else if (hour >= 12 && hour < 18) {
-      timeOfDay = '下午';
-    } else if (hour >= 18 && hour < 23) {
-      timeOfDay = '晚上';
-    } else {
-      timeOfDay = '深夜';
-    }
-
-    List<String> prompts = [];
-
-    // 通用提示
-    prompts.addAll([
-      "此刻，你有什么特别的想法或感受想要记录下来吗？",
-      "回顾今天，有什么让你印象深刻的瞬间？",
-      "静下心来，感受一下当下的情绪，它想告诉你什么？",
-    ]);
-
-    // 基于时间的提示
-    if (timeOfDay == '早上') {
-      prompts.addAll([
-        "新的一天开始了，你对今天有什么期待？",
-        "早晨的空气闻起来怎么样？它让你想起了什么？",
-        "为今天设定一个小目标吧，可以是什么呢？",
-      ]);
-    } else if (timeOfDay == '下午') {
-      prompts.addAll([
-        "午后的阳光或微风，让你有什么感触？",
-        "今天过半，有什么进展顺利或遇到挑战的事情吗？",
-        "花点时间放松一下，想想让你感到平静的事物。",
-      ]);
-    } else if (timeOfDay == '晚上') {
-      prompts.addAll([
-        "夜幕降临，回顾今天，有什么值得回味或反思的？",
-        "此刻的宁静适合思考，你脑海中浮现了什么？",
-        "为明天做个简单的计划或设想吧。",
-      ]);
-    } else {
-      // 深夜
-      prompts.addAll([
-        "夜深人静，有什么心事或灵感悄然浮现？",
-        "此刻的寂静让你想到了什么？",
-        "睡前放下杂念，记录下此刻的心情。",
-      ]);
-    }
-
-    // --- 结合时间和天气的提示 ---
-    if (weather != null) {
-      final weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
-        (k) =>
-            weather == k || weather == WeatherService.getWeatherDescription(k),
-        orElse: () => weather,
-      );
-      if (timeOfDay == '早上') {
-        if (weatherKey == 'clear') {
-          prompts.add("清晨的阳光洒满窗台，此刻你的心情如何？有什么新的计划吗？");
-        } else if (weatherKey == 'rain') {
-          prompts.add("听着清晨的雨声，内心是否格外宁静？有什么特别的感悟？");
-        } else if (weatherKey == 'cloudy' || weatherKey == 'partly_cloudy') {
-          prompts.add("云层微厚的早晨，适合放慢脚步，思考一下最近的得失。");
-        }
-      } else if (timeOfDay == '下午') {
-        if (weatherKey == 'clear') {
-          prompts.add("午后暖阳正好，适合小憩片刻，或是记录下此刻的惬意。");
-        } else if (weatherKey == 'rain') {
-          prompts.add("雨天的午后，窗外滴答作响，屋内适合读一本书或写点什么。");
-        }
-      } else if (timeOfDay == '晚上' || timeOfDay == '深夜') {
-        if (weatherKey == 'clear') {
-          prompts.add("夜幕降临，星光或月色正好，此刻有什么心事或梦想？");
-        } else if (weatherKey == 'rain') {
-          prompts.add("雨夜漫漫，适合独处思考，最近有什么让你困惑或欣喜的事？");
-        } else if (weatherKey == 'wind') {
-          prompts.add("晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻的灵感吧。");
-        }
-      }
-    }
-
-    // 基于天气的提示 (如果天气信息可用)
-    if (weather != null) {
-      final weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
-        (k) =>
-            weather == k || weather == WeatherService.getWeatherDescription(k),
-        orElse: () => weather,
-      );
-      if (weatherKey == 'clear') {
-        prompts.addAll(["阳光明媚的日子，有什么让你感到开心？", "这样的好天气，适合做些什么让你放松的事情？"]);
-      } else if (weatherKey == 'rain') {
-        prompts.addAll(["听着雨声，你的心情是怎样的？", "雨天适合沉思，有什么想法在脑海中萦绕？"]);
-      } else if (weatherKey == 'cloudy' || weatherKey == 'partly_cloudy') {
-        prompts.addAll(["多云的天空下，你的思绪飘向了何方？", "阴天有时也别有韵味，它让你想起了什么？"]);
-      } else if (weatherKey == 'snow') {
-        prompts.addAll(["窗外的雪景给你带来了怎样的感受？", "下雪天，适合窝在温暖的地方思考些什么？"]);
-      }
-    }
-
-    // 基于温度的提示 (如果温度信息可用)
-    if (temperature != null) {
-      try {
-        final tempValue = double.parse(temperature.replaceAll('°C', '').trim());
-        if (tempValue > 28) {
-          prompts.add("天气有点热，此刻你最想做什么来降降温？");
-        } else if (tempValue < 10) {
-          prompts.add("天气有点冷，注意保暖的同时，有什么温暖的想法吗？");
-        }
-      } catch (e) {
-        debugPrint("解析温度失败: $e");
-      }
-    }
-
-    // 基于城市的提示 (如果城市信息可用)
-    if (city != null && city.isNotEmpty) {
-      prompts.add("身在 $city，这座城市今天给你带来了什么灵感？");
-    }
-
-    // 随机选择一条提示（修改为只返回一条）
-    final random = Random();
-    prompts.shuffle(random); // 打乱列表顺序
-
-    // 如果没有提示，返回一个默认值
-    if (prompts.isEmpty) {
-      return "今天，你有什么新的感悟或想法呢？";
-    }
-
-    // 返回随机选中的一条提示
-    return prompts.first;
+  // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
+  // 它将直接返回DailyPromptGenerator的当前提示
+  String generateDailyPrompt() {
+     debugPrint('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
+     // 旧方法仍然返回 DailyPromptGenerator 的默认提示
+     return DailyPromptGenerator.getDefaultPrompt();
   }
 
   Future<String> generateInsights(
@@ -813,7 +668,7 @@ class AIService extends ChangeNotifier {
                 'date': quote.date,
                 'source': quote.source,
                 'sourceAuthor': quote.sourceAuthor,
-                'sourceWork': quote.sourceWork,
+               
                 'tagIds': quote.tagIds,
                 'categoryId': quote.categoryId,
                 'location': quote.location,
@@ -857,25 +712,27 @@ class AIService extends ChangeNotifier {
       rethrow;
     }
   }
+
   // 流式生成洞察
   Stream<String> streamGenerateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
+    String? customPrompt,
   }) {
     final controller = StreamController<String>();
-    
+
     () async {
       if (!hasValidApiKey()) {
         controller.addError(Exception('请先在设置中配置 API Key'));
         controller.close();
         return;
       }
-      
+
       try {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
-        
+
         // 将笔记数据转换为与备份还原功能类似的JSON格式
         final jsonData = {
           'metadata': {
@@ -884,198 +741,16 @@ class AIService extends ChangeNotifier {
             'exportTime': DateTime.now().toIso8601String(),
             'analysisType': analysisType,
             'analysisStyle': analysisStyle,
+            'customPromptUsed': customPrompt != null && customPrompt.isNotEmpty,
           },
           'quotes':
               quotes.map((quote) {
-                return {
-                  'id': quote.id,
-                  'content': quote.content,
-                  'date': quote.date,
-                  'source': quote.source,
-                  'sourceAuthor': quote.sourceAuthor,
-                  'sourceWork': quote.sourceWork,
-                  'tagIds': quote.tagIds,
-                  'categoryId': quote.categoryId,
-                  'location': quote.location,
-                  'weather': quote.weather,
-                  'temperature': quote.temperature,
-                };
-              }).toList(),
-        };
-
-        // 将数据转换为格式化的JSON字符串
-        final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
-
-        // 根据分析类型选择系统提示词
-        String systemPrompt = _getAnalysisTypePrompt(analysisType);
-
-        // 根据分析风格修改提示词
-        systemPrompt = _appendAnalysisStylePrompt(systemPrompt, analysisStyle);
-
-        final messages = [
-          {'role': 'system', 'content': systemPrompt},
-          {'role': 'user', 'content': '请分析以下结构化的笔记数据：\n\n$quotesText'},
-        ];
-        
-        await _makeStreamRequest(
-          settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 0.7,
-            'max_tokens': 2500,
-          },
-          settings,
-          // 当收到新内容时
-          (String text) {
-            if (!controller.isClosed) {
-              controller.add(text);
-            }
-          },
-          // 当完成时
-          (String fullText) {
-            if (!controller.isClosed) {
-              controller.close();
-            }
-          },
-          // 当发生错误时
-          (error) {
-            if (!controller.isClosed) {
-              controller.addError(error);
-              controller.close();
-            }
-          }
-        );
-      } catch (e) {
-        debugPrint('流式生成洞察错误: $e');
-        if (!controller.isClosed) {
-          controller.addError(e);
-          controller.close();
-        }
-      }
-    }();
-    
-    return controller.stream;
-  }
-  
-  // 使用自定义提示词生成洞察
-  Future<String> generateCustomInsights(
-    List<Quote> quotes,
-    String customPrompt,
-  ) async {
-    if (!hasValidApiKey()) {
-      throw Exception('请先在设置中配置 API Key');
-    }
-    try {
-      await _validateSettings();
-      final settings = _settingsService.aiSettings;
-
-      // 将笔记数据转换为JSON格式
-      final jsonData = {
-        'metadata': {
-          'app': '心迹',
-          'version': '1.0',
-          'exportTime': DateTime.now().toIso8601String(),
-          'analysisType': 'custom',
-        },
-        'quotes': quotes.map((quote) {
-          return {
-            'id': quote.id,
-            'content': quote.content,
-            'date': quote.date,
-            'source': quote.source,
-            'sourceAuthor': quote.sourceAuthor,
-            'sourceWork': quote.sourceWork,
-            'tagIds': quote.tagIds,
-            'categoryId': quote.categoryId,
-            'location': quote.location,
-            'weather': quote.weather,
-            'temperature': quote.temperature,
-          };
-        }).toList(),
-      };
-
-      // 将数据转换为格式化的JSON字符串
-      final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
-
-      const systemPrompt = '''你是一位专业的思想分析师和洞察专家。请根据用户的自定义指示分析他们的笔记。
-
-分析要求：
-1. 根据用户提供的具体指示进行分析
-2. 保持客观、深入的分析风格
-3. 提供有意义的洞察和建议
-4. 使用合适的结构组织你的分析
-
-格式要求：
-- 使用markdown格式增强可读性
-- 确保结构清晰，层次分明
-- 适当使用标题、列表等元素''';
-
-      final messages = [
-        {'role': 'system', 'content': systemPrompt},
-        {'role': 'user', 'content': '''请根据以下指示分析笔记数据：
-
-$customPrompt
-
-笔记数据：
-
-$quotesText'''},
-      ];
-
-      final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,
-        'temperature': 0.7,
-        'max_tokens': 2500,
-      }, settings);
-
-      final data = json.decode(response.body);
-      if (data['choices'] != null &&
-          data['choices'].isNotEmpty &&
-          data['choices'][0]['message'] != null) {
-        return data['choices'][0]['message']['content'];
-      } else {
-        debugPrint('API响应格式错误: ${response.body}');
-        throw Exception('API响应格式错误');
-      }
-    } catch (e) {
-      debugPrint('生成自定义洞察错误: $e');
-      rethrow;
-    }
-  }
-
-  // 流式生成自定义洞察
-  Stream<String> streamGenerateCustomInsights(
-    List<Quote> quotes,
-    String customPrompt,
-  ) {
-    final controller = StreamController<String>();
-    
-    () async {
-      if (!hasValidApiKey()) {
-        controller.addError(Exception('请先在设置中配置 API Key'));
-        controller.close();
-        return;
-      }
-      
-      try {
-        await _validateSettings();
-        final settings = _settingsService.aiSettings;
-        
-        // 将笔记数据转换为JSON格式
-        final jsonData = {
-          'metadata': {
-            'app': '心迹',
-            'version': '1.0',
-            'exportTime': DateTime.now().toIso8601String(),
-            'analysisType': 'custom',
-          },
-          'quotes': quotes.map((quote) {
             return {
               'id': quote.id,
               'content': quote.content,
               'date': quote.date,
               'source': quote.source,
               'sourceAuthor': quote.sourceAuthor,
-              'sourceWork': quote.sourceWork,
               'tagIds': quote.tagIds,
               'categoryId': quote.categoryId,
               'location': quote.location,
@@ -1088,30 +763,20 @@ $quotesText'''},
         // 将数据转换为格式化的JSON字符串
         final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
 
-        const systemPrompt = '''你是一位专业的思想分析师和洞察专家。请根据用户的自定义指示分析他们的笔记。
-
-分析要求：
-1. 根据用户提供的具体指示进行分析
-2. 保持客观、深入的分析风格
-3. 提供有意义的洞察和建议
-4. 使用合适的结构组织你的分析
-
-格式要求：
-- 使用markdown格式增强可读性
-- 确保结构清晰，层次分明
-- 适当使用标题、列表等元素''';
+        // 根据分析类型选择系统提示词 或 使用自定义提示词
+        String systemPrompt;
+        if (customPrompt != null && customPrompt.isNotEmpty) {
+          systemPrompt = customPrompt;
+        } else {
+          systemPrompt = _getAnalysisTypePrompt(analysisType);
+          systemPrompt = _appendAnalysisStylePrompt(systemPrompt, analysisStyle);
+        }
 
         final messages = [
           {'role': 'system', 'content': systemPrompt},
-          {'role': 'user', 'content': '''请根据以下指示分析笔记数据：
-
-$customPrompt
-
-笔记数据：
-
-$quotesText'''},
+          {'role': 'user', 'content': '请分析以下结构化的笔记数据：\n\n$quotesText'},
         ];
-        
+
         await _makeStreamRequest(
           settings.apiUrl,
           {
@@ -1134,24 +799,25 @@ $quotesText'''},
           },
           // 当发生错误时
           (error) {
+            debugPrint('流式生成洞察错误: $error');
             if (!controller.isClosed) {
               controller.addError(error);
               controller.close();
             }
-          }
+          },
         );
       } catch (e) {
-        debugPrint('流式生成自定义洞察错误: $e');
+        debugPrint('流式生成洞察异常: $e');
         if (!controller.isClosed) {
           controller.addError(e);
           controller.close();
         }
       }
     }();
-    
+
     return controller.stream;
   }
-  
+
   // 分析文本来源
   Future<String> analyzeSource(String content) async {
     if (!hasValidApiKey()) {
@@ -1758,13 +1424,5 @@ $question'''},
     }
     
     return '$systemPrompt\n\n$stylePrompt';
-  }
-}
-
-class AiService {
-  void analyzeData(dynamic data) {
-    if (data is! String) return;
-    // 使用日志记录代替print
-    debugPrint("Analyzing data: $data");
   }
 }

@@ -16,6 +16,7 @@ import 'services/weather_service.dart';
 import 'services/mmkv_service.dart';
 import 'services/clipboard_service.dart';
 import 'services/log_service.dart';
+import 'services/ai_analysis_database_service.dart';
 import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
@@ -212,8 +213,8 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
               ChangeNotifierProvider(create: (_) => clipboardService),
-              ChangeNotifierProvider(create: (_) => logService),
-              ChangeNotifierProvider(create: (_) => appTheme),
+              ChangeNotifierProvider(create: (_) => logService),              ChangeNotifierProvider(create: (_) => appTheme),
+              ChangeNotifierProvider(create: (_) => AIAnalysisDatabaseService()),
               Provider.value(
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService

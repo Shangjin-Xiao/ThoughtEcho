@@ -481,7 +481,7 @@ class DatabaseService extends ChangeNotifier {
         }
       }
 
-      // 即使init()失败，也尝试获取数据库，如果还是null则提前返回
+      // 即使init()失败，也尝试获取数据库，如果還是null則提前返回
       if (_database == null) {
         debugPrint('数据库仍为null，无法创建默认标签');
         return;
@@ -779,8 +779,7 @@ class DatabaseService extends ChangeNotifier {
               'ai_analysis': q['aiAnalysis'],
               'sentiment': q['sentiment'],
               'keywords': q['keywords'],
-              'summary': q['summary'],
-              'category_id': q['categoryId'],
+              'summary': q['summary'],              'category_id': q['categoryId'],
               'color_hex': q['colorHex'],
               'location': q['location'],
               'weather': q['weather'],
@@ -1458,6 +1457,11 @@ class DatabaseService extends ChangeNotifier {
       debugPrint('获取引用错误: $e');
       return [];
     }
+  }
+
+  /// 获取用户笔记总数
+  Future<int> getUserQuotesCount() async {
+    return getQuotesCount();
   }
 
   /// 获取笔记总数，用于分页

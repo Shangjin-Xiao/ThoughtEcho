@@ -15,6 +15,7 @@ import '../utils/color_utils.dart'; // Import color_utils.dart
 
 // 添加 note_full_editor_page.dart 的导入
 import '../pages/note_full_editor_page.dart';
+import '../widgets/streaming_text_dialog.dart'; // 导入流式文本对话框
 
 class EditPage extends StatefulWidget {
   final Quote quote;
@@ -403,60 +404,23 @@ class EditPageState extends State<EditPage> {
     }
 
     // 在异步操作前获取必要的context相关对象
-    final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
-      // 显示加载对话框
+      // 显示流式结果对话框
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在润色文本...'),
-              ],
-            ),
-          );
-        },
-      );
-      final result = await aiService.polishText(_contentController.text);
-      if (!mounted) return;
-      if (!context.mounted) return;
-      navigator.pop();
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('润色结果'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(child: SelectableText(result)),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('应用更改'),
-                onPressed: () {
-                  setState(() {
-                    _contentController.text = result;
-                  });
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('取消'),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
-            ],
+          return StreamingTextDialog(
+            title: '润色结果',
+            textStream: aiService.streamPolishText(_contentController.text),
+            applyButtonText: '应用更改',
+            onApply: (polishedText) {
+              _contentController.text = polishedText;
+            },
+            onCancel: () {},
           );
         },
       );
@@ -464,10 +428,9 @@ class EditPageState extends State<EditPage> {
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
 
-      // 关闭加载对话框
-      navigator.pop();
-
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('润色失败: $e')));
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(SnackBar(content: Text('润色失败: $e')));
+      }
     }
   }
 
@@ -483,67 +446,25 @@ class EditPageState extends State<EditPage> {
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
-      // 显示加载对话框
+      // 显示流式结果对话框
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在续写内容...'),
-              ],
-            ),
+          return StreamingTextDialog(
+            title: '续写结果',
+            textStream: aiService.streamContinueText(_contentController.text),
+            applyButtonText: '追加到笔记',
+            onApply: (continuedText) {
+              _contentController.text += continuedText;
+            },
+            onCancel: () {},
           );
         },
       );
-      final result = await aiService.continueText(_contentController.text);
-      if (!mounted) return;
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('续写结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(
-                  child: MarkdownBody(data: result, selectable: true),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('附加到原文'),
-                  onPressed: () {
-                    setState(() {
-                      _contentController.text =
-                          '${_contentController.text}\n\n$result';
-                    });
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
     } catch (e) {
-      // 确保组件仍然挂载
+      // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
 
       if (mounted) {
         ScaffoldMessenger.of(
@@ -565,45 +486,33 @@ class EditPageState extends State<EditPage> {
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
-      // 显示加载对话框
+      // 显示流式结果对话框
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在分析内容...'),
-              ],
-            ),
+          final quote = Quote(
+            id: widget.quote.id,
+            content: _contentController.text,
+            date: widget.quote.date,
+            location: _includeLocation ? _location : null,
+            weather: _includeWeather ? _weather : null,
+            temperature: _includeWeather ? _temperature : null,
+          );
+          return StreamingTextDialog(
+            title: '笔记分析',
+            textStream: aiService.streamSummarizeNote(quote),
+            applyButtonText: '更新分析结果', // 或者其他合适的文本
+            onApply: (analysisResult) {
+              setState(() {
+                _aiAnalysis = analysisResult;
+              });
+            },
+            onCancel: () {},
+            isMarkdown: true, // 分析结果通常是Markdown格式
           );
         },
       );
-
-      // 调用AI分析
-      final quote = Quote(
-        id: widget.quote.id,
-        content: _contentController.text,
-        date: widget.quote.date,
-        location: _includeLocation ? _location : null,
-        weather: _includeWeather ? _weather : null,
-        temperature: _includeWeather ? _temperature : null,
-      );
-
-      final result = await aiService.summarizeNote(quote);
-
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      setState(() {
-        _aiAnalysis = result;
-      });
 
       // 显示成功提示
       if (mounted) {
@@ -612,9 +521,6 @@ class EditPageState extends State<EditPage> {
         ).showSnackBar(const SnackBar(content: Text('分析完成')));
       }
     } catch (e) {
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
       if (mounted) {
         ScaffoldMessenger.of(
           context,

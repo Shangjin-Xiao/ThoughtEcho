@@ -14,6 +14,9 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
+import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -1517,243 +1520,156 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
   }
 
-  // 润色文本
+  // 润色文本 (使用流式传输)
   Future<void> _polishText() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      if(mounted) {
+         ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      }
       return;
     }
 
     final aiService = Provider.of<AIService>(context, listen: false);
 
-    try {
-      // 显示加载对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在润色文本...'),
-              ],
-            ),
-          );
-        },
-      );
-      final result = await aiService.polishText(plainText);
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('润色结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(child: SelectableText(result)),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('应用更改'),
-                  onPressed: () {
-                    setState(() {
-                      _controller.document = quill.Document.fromJson([
-                        {"insert": result},
-                      ]);
-                    });
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
+    // 显示流式文本对话框
+    // 注意：这里await showDialog会等待对话框关闭并返回结果
+    String? finalResult = await showDialog<String?>(
+      context: context,
+      barrierDismissible: false, // 不允许点击外部关闭
+      builder: (dialogContext) {
+        return StreamingTextDialog(
+          title: '正在润色文本...',
+          textStream: aiService.streamPolishText(plainText), // 调用流式方法，使用正确的参数名
+          applyButtonText: '应用更改', // 应用按钮文本
+          onApply: (fullText) {
+            // 用户点击"应用更改"时调用
+             // 返回结果给showDialog的await调用
+            Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
           },
+          onCancel: () {
+             // 用户点击"取消"时调用
+             Navigator.of(dialogContext).pop(null); // 返回null表示取消
+          },
+           // StreamingTextDialog 内部处理 onError 和 onComplete
         );
-      }
-    } catch (e) {
-      // 关闭加载对话框
-      Navigator.of(context).pop();
+      },
+    );
 
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('润色失败: $e')));
-      }
+    // 如果showDialog返回了结果 (用户点击了应用)，更新编辑器内容
+    if (finalResult != null && mounted) {
+      setState(() {
+        _controller.document = quill.Document.fromJson([
+          {"insert": finalResult},
+        ]);
+      });
     }
   }
 
-  // 续写文本
+  // 续写文本 (使用流式传输)
   Future<void> _continueText() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+       if(mounted) {
+         ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+       }
       return;
     }
 
     final aiService = Provider.of<AIService>(context, listen: false);
 
-    try {
-      // 显示加载对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在续写内容...'),
-              ],
-            ),
-          );
-        },
-      );
-      final result = await aiService.continueText(plainText);
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('续写结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(child: Text(result)),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('附加到原文'),
-                  onPressed: () {
-                    final int length = _controller.document.length;
-                    _controller.document.insert(length, '\n\n$result');
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
+    // 显示流式文本对话框
+     String? finalResult = await showDialog<String?>(
+      context: context,
+      barrierDismissible: false, // 不允许点击外部关闭
+      builder: (dialogContext) {
+        return StreamingTextDialog(
+          title: '正在续写内容...',
+          textStream: aiService.streamContinueText(plainText), // 调用流式方法，使用正确的参数名
+          applyButtonText: '附加到原文', // 应用按钮文本
+          onApply: (fullText) {
+             // 用户点击"附加到原文"时调用
+             // 返回结果给showDialog的await调用
+             Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
           },
+          onCancel: () {
+             // 用户点击"取消"时调用
+             Navigator.of(dialogContext).pop(null); // 返回null表示取消
+          },
+          // StreamingTextDialog 内部处理 onError 和 onComplete
         );
-      }
-    } catch (e) {
-      // 确保组件仍然挂载
-      if (!mounted) return;
+      },
+    );
 
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('续写失败: $e')));
-      }
+     // 如果showDialog返回了结果 (用户点击了应用)，附加到编辑器内容
+    if (finalResult != null && mounted) {
+       final int length = _controller.document.length;
+       // 在文档末尾插入续写内容，确保在最后一行
+       _controller.document.insert(length, '\n\n$finalResult');
+       // 移动光标到文档末尾
+       _controller.updateSelection(TextSelection.collapsed(offset: _controller.document.length), quill.ChangeSource.local);
     }
   }
 
-  // 深度分析内容
+  // 深度分析内容 (使用流式传输)
   Future<void> _analyzeContent() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+       if(mounted) {
+         ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+       }
       return;
     }
 
     final aiService = Provider.of<AIService>(context, listen: false);
 
-    try {
-      // 显示加载对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在分析内容...'),
-              ],
-            ),
-          );
-        },
-      );
-
-      // 创建临时Quote对象进行分析
-      final quote = Quote(
-        id: widget.initialQuote?.id ?? const Uuid().v4(),
-        content: plainText,
-        date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-        location: _showLocation ? _location : null,
-        weather: _showWeather ? _weather : null,
-        temperature: _showWeather ? _temperature : null,
-      ); // 调用AI分析
-      final analysisResult = await aiService.summarizeNote(quote);
-
-      // 确保组件仍然挂载
-      if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('分析结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(child: Text(analysisResult)),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('关闭'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
-          },
+    // 显示流式文本对话框
+     // 对于分析功能，我们只关心对话框的显示，不需要await返回值来更新编辑器
+     await showDialog<void>(
+      context: context,
+      barrierDismissible: false, // 不允许点击外部关闭
+      builder: (dialogContext) {
+        // 创建临时Quote对象进行分析
+         final quote = Quote(
+          id: widget.initialQuote?.id ?? const Uuid().v4(),
+          content: plainText,
+          date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
+          location: _showLocation ? _location : null,
+          weather: _showWeather ? _weather : null,
+          temperature: _showWeather ? _temperature : null,
         );
-      }
-    } catch (e) {
-      // 确保组件仍然挂载
-      if (!mounted) return;
 
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
-      }
-    }
+        return StreamingTextDialog(
+          title: '正在分析内容...',
+          textStream: aiService.streamSummarizeNote(quote), // 调用流式方法，使用正确的参数名
+          applyButtonText: '复制结果', // 分析结果的应用按钮可以是复制
+          onApply: (fullText) {
+            // 用户点击"复制结果"时调用
+             Clipboard.setData(ClipboardData(text: fullText)).then((_) {
+              if(mounted) {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('分析结果已复制到剪贴板')),
+                 );
+              }
+            });
+             Navigator.of(dialogContext).pop(); // 关闭对话框
+          },
+          onCancel: () {
+             // 用户点击"关闭"时调用
+             Navigator.of(dialogContext).pop();
+          },
+          isMarkdown: true, // 分析结果通常是Markdown格式
+          // StreamingTextDialog 内部处理 onError 和 onComplete
+        );
+      },
+    );
+     // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
+     // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
   }
 }

@@ -233,60 +233,29 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
-      // 显示加载对话框
+      // 显示流式结果对话框
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在润色文本...'),
-              ],
-            ),
+          return _StreamingTextDialog(
+            title: '润色结果',
+            textStream: aiService.streamPolishText(widget.contentController.text),
+            applyButtonText: '应用更改',
+            onApply: (polishedText) {
+              widget.contentController.text = polishedText;
+            },
+            onCancel: () {},
+            isMarkdown: false,
           );
         },
       );
-      final result = await aiService.polishText(widget.contentController.text);
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('润色结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(child: SelectableText(result)),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('应用更改'),
-                  onPressed: () {
-                    widget.contentController.text = result;
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                TextButton(                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
     } catch (e) {
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
-      // 关闭加载对话框
-      Navigator.of(context).pop();
+
+      // 如果流式对话框已显示，无需手动关闭加载框
+      // Navigator.of(context).pop();
 
       if (mounted) {
         ScaffoldMessenger.of(
@@ -308,63 +277,29 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
-      // 显示加载对话框
+      // 显示流式结果对话框
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在续写内容...'),
-              ],
-            ),
+          return _StreamingTextDialog(
+            title: '续写结果',
+            textStream: aiService.streamContinueText(widget.contentController.text),
+            applyButtonText: '追加到笔记',
+            onApply: (continuedText) {
+              widget.contentController.text += continuedText;
+            },
+            onCancel: () {},
+            isMarkdown: false,
           );
         },
       );
-      final result = await aiService.continueText(widget.contentController.text);
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('续写结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(
-                  child: MarkdownBody(data: result, selectable: true),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('附加到原文'),
-                  onPressed: () {
-                    widget.contentController.text += "\n\n$result";
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
     } catch (e) {
-      // 确保组件仍然挂载
+      // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
-      // 关闭加载对话框
-      Navigator.of(context).pop();
+
+      // 如果流式对话框已显示，无需手动关闭加载框
+      // Navigator.of(context).pop();
 
       if (mounted) {
         ScaffoldMessenger.of(
@@ -386,41 +321,28 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
-      // 显示加载对话框
+      // 显示流式结果对话框
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在分析内容...'),
-              ],
-            ),
+          final quote = Quote(
+            id: '',
+            content: widget.contentController.text,
+            date: DateTime.now().toIso8601String(),
+          );
+          return _StreamingTextDialog(
+            title: '笔记分析',
+            textStream: aiService.streamSummarizeNote(quote),
+            applyButtonText: '应用到笔记', // 或者其他合适的文本
+            onApply: (analysisResult) {
+              widget.onAiAnalysisCompleted(analysisResult);
+            },
+            onCancel: () {},
+            isMarkdown: true, // 分析结果通常是Markdown格式
           );
         },
       );
-
-      // 调用AI分析
-      final quote = Quote(
-        id: '',
-        content: widget.contentController.text,
-        date: DateTime.now().toIso8601String(),
-      );
-
-      final result = await aiService.summarizeNote(quote);
-
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-      
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      // 回调通知父组件更新AI分析结果
-      widget.onAiAnalysisCompleted(result);
 
       // 显示成功提示
       if (mounted) {
@@ -429,9 +351,6 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         ).showSnackBar(const SnackBar(content: Text('分析完成')));
       }
     } catch (e) {
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -453,6 +372,90 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       icon: const Icon(Icons.auto_awesome),
       tooltip: 'AI助手',
       onPressed: () => _showAIOptions(context),
+    );
+  }
+}
+
+class _StreamingTextDialog extends StatefulWidget {
+  final Stream<String> textStream;
+  final String title;
+  final String applyButtonText;
+  final Function(String) onApply;
+  final VoidCallback onCancel;
+  final bool isMarkdown;
+
+  const _StreamingTextDialog({
+    required this.textStream,
+    required this.title,
+    required this.applyButtonText,
+    required this.onApply,
+    required this.onCancel,
+    this.isMarkdown = false,
+  });
+
+  @override
+  State<_StreamingTextDialog> createState() => _StreamingTextDialogState();
+}
+
+class _StreamingTextDialogState extends State<_StreamingTextDialog> {
+  String _currentText = '';
+  bool _isStreamingComplete = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.textStream.listen(
+      (chunk) {
+        setState(() {
+          _currentText += chunk;
+        });
+      },
+      onDone: () {
+        setState(() {
+          _isStreamingComplete = true;
+        });
+      },
+      onError: (error) {
+        debugPrint('流式传输错误: $error');
+        setState(() {
+          _currentText += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
+          _isStreamingComplete = true; // 标记完成以显示按钮
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: widget.isMarkdown
+            ? MarkdownBody(
+                data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                selectable: true,
+              )
+            : SelectableText(
+                _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            widget.onCancel();
+            Navigator.of(context).pop();
+          },
+          child: const Text('取消'),
+        ),
+        if (_isStreamingComplete && _currentText.isNotEmpty && !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
+          TextButton(
+            onPressed: () {
+              widget.onApply(_currentText);
+              Navigator.of(context).pop();
+            },
+            child: Text(widget.applyButtonText),
+          ),
+      ],
     );
   }
 }
