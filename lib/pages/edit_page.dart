@@ -1019,13 +1019,10 @@ class EditPageState extends State<EditPage> {
                                       _aiAnalysis = summary;
                                     });
                                   } catch (e) {
-                                    if (!mounted) return;
-                                    final scaffoldMessenger = ScaffoldMessenger.of(context);
-                                    if (mounted) {
-                                      scaffoldMessenger.showSnackBar(
-                                        SnackBar(content: Text('AI分析失败: $e')),
-                                      );
-                                    }
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('AI分析失败: $e')),
+                                    );
                                   }
                                 },
                                 icon: const Icon(Icons.auto_awesome, size: 18),

@@ -476,8 +476,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 获取当前输入的内容和元数据，但不创建Quote对象
                                 // 不传递initialQuote，这样全屏编辑器会使用addQuote逻辑
 
+                                if (!context.mounted) return;
                                 final navigator = Navigator.of(context);
-                                if (!mounted) return;
                                 final result = await navigator.push(
                                   MaterialPageRoute(
                                     builder:
@@ -495,10 +495,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 if (result != null && result == true) {
                                   // 如果笔记已在全屏编辑器中保存，关闭本对话框
-                                  Navigator.pop(context);
+                                  // State's mounted status is already checked by `if (!mounted) return;` above.
+                                  // Pop using the State's context.
+                                  if (this.context.mounted) {
+                                    Navigator.pop(this.context);
+                                  }
                                 }
+
                               } catch (e) {
-                                if (mounted) {
+                                // 使用 context.mounted 检查 Builder 的 context 是否仍然有效
+                                if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('打开全屏编辑器失败: $e'),
@@ -891,14 +897,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         if (widget.initialQuote != null) {
                           // 更新已有笔记
                           await db.updateQuote(quote);
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('笔记已更新')),
                           );
                         } else {
                           // 添加新笔记
                           await db.addQuote(quote);
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('笔记已保存')),
                           );
@@ -910,11 +916,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         }
 
                         // 关闭对话框
-                        if (mounted) {
+                        if (this.context.mounted) {
                           Navigator.of(context).pop();
                         }
                       } catch (e) {
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('保存失败: $e'),
@@ -960,12 +966,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       const Color(0xFFFCE4EC), // 轻粉色
 
       const Color(0xFFEF9A9A), // 红色
-      const Color(0xFFFFE0B2), // 橙色
-      const Color(0xFFFFF9C4), // 黄色
-      const Color(0xFFC8E6C9), // 绿色
-      const Color(0xFFBBDEFB), // 蓝色
-      const Color(0xFFE1BEE7), // 紫色
-      const Color(0xFFF8BBD0), // 粉色
+      const Color(0xFFFFCC80), // 橙色
+      const Color(0xFFFFF59D), // 黄色
+      const Color(0xFFA5D6A7), // 绿色
+      const Color(0xFF90CAF9), // 蓝色
+      const Color(0xFFCE93D8), // 紫色
+      const Color(0xFFF48FB1), // 粉色
 
       const Color(0xFFEF9A9A), // 深红色
       const Color(0xFFFFCC80), // 深橙色
@@ -1233,7 +1239,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   children: [
                                     Text(
                                       IconUtils.getDisplayIcon(tag.iconName),
-                                      style: const TextStyle(fontSize: 14),
+                                      style: const TextStyle(fontSize: 20),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(

@@ -4,10 +4,16 @@ import 'package:http/http.dart' as http;
 import '../models/quote_model.dart';
 import '../models/ai_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
-import '../services/location_service.dart'; // 新增导入
-import '../services/weather_service.dart'; // 新增导入
-import '../services/secure_storage_service.dart'; // 添加安全存储服务导入
-import 'dart:math'; // 用于随机选择
+import '../services/location_service.dart';
+import '../services/weather_service.dart';
+import '../services/secure_storage_service.dart';
+import 'dart:math';
+import 'dart:async'; // 添加异步流支持
+
+// 定义流式响应的回调类型
+typedef StreamingResponseCallback = void Function(String text);
+typedef StreamingCompleteCallback = void Function(String fullText);
+typedef StreamingErrorCallback = void Function(dynamic error);
 
 class AIService extends ChangeNotifier {
   final SettingsService _settingsService;
@@ -183,7 +189,255 @@ class AIService extends ChangeNotifier {
       if (e.toString().contains('Failed host lookup')) {
         throw Exception('无法连接到AI服务器，请检查网络连接或服务器状态');
       }
+      
+      // 特殊处理本地服务器连接错误
+      if (e.toString().contains('Connection refused') && 
+          uri.toString().contains('0.0.0.0')) {
+        throw Exception('无法连接到本地AI服务器，请确保服务器已启动或更改API URL');
+      }
+      
       rethrow;
+    }
+  }
+
+  // 新增：流式API请求方法
+  Future<void> _makeStreamRequest(
+    String url,
+    Map<String, dynamic> body,
+    AISettings settings,
+    StreamingResponseCallback onResponse,
+    StreamingCompleteCallback onComplete,
+    StreamingErrorCallback onError,
+  ) async {
+    if (body['messages'] is! List) {
+      onError(Exception('messages字段格式错误'));
+      return;
+    }
+
+    // 创建安全存储服务实例
+    final secureStorage = SecureStorageService();
+
+    // 获取API密钥 - 首先尝试从安全存储中获取，如果为空则尝试使用设置中的密钥
+    final secureApiKey = await secureStorage.getApiKey();
+    final effectiveApiKey = secureApiKey ?? settings.apiKey;
+
+    if (effectiveApiKey.isEmpty) {
+      onError(Exception('未找到有效的API密钥，请在设置中配置API密钥'));
+      return;
+    }
+
+    // 根据不同的AI服务提供商调整请求体格式
+    Map<String, dynamic> requestBody;
+    Map<String, String> headers = {'Content-Type': 'application/json'};
+
+    // 判断服务提供商类型并相应调整请求
+    if (url.contains('anthropic.com')) {
+      // Anthropic Claude API格式
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': true, // 设置为true以启用流式响应
+      };
+
+      // Anthropic使用x-api-key头而非Bearer认证
+      headers['anthropic-version'] = '2023-06-01'; // 添加必需的API版本头
+      headers['x-api-key'] = effectiveApiKey; // 使用有效的API密钥
+    } else if (url.contains('openrouter.ai')) {
+      // OpenRouter可能需要额外的头信息
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': true, // 设置为true以启用流式响应
+      };
+
+      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
+      headers['HTTP-Referer'] = 'https://thoughtecho.app'; // 可能需要指定来源
+      headers['X-Title'] = 'ThoughtEcho App'; // 应用名称
+    } else if (url.contains('deepseek.com')) {
+      // DeepSeek API格式
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': true, // 设置为true以启用流式响应
+      };
+
+      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
+    } else {
+      // 默认格式(适用于OpenAI及其兼容API)
+      requestBody = {
+        'model': settings.model,
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': true, // 设置为true以启用流式响应
+      };
+
+      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
+    }
+
+    debugPrint('API请求体: ${json.encode(requestBody)}');
+    // 打印请求头但隐藏敏感信息
+    final safeHeaders = Map<String, String>.from(headers);
+    if (safeHeaders.containsKey('Authorization')) {
+      safeHeaders['Authorization'] = safeHeaders['Authorization']!.replaceFirst(
+        effectiveApiKey,
+        '[API_KEY_HIDDEN]',
+      );
+    }
+    if (safeHeaders.containsKey('x-api-key')) {
+      safeHeaders['x-api-key'] = '[API_KEY_HIDDEN]';
+    }
+    debugPrint('请求头: $safeHeaders');
+
+    final Uri uri = Uri.parse(settings.apiUrl);
+    debugPrint('请求URL: $uri,  完整URL: ${uri.toString()}');
+
+    try {
+      final client = http.Client();
+      final request = http.Request('POST', uri);
+      request.headers.addAll(headers);
+      request.body = json.encode(requestBody);
+
+      final streamedResponse = await client.send(request).timeout(
+        const Duration(seconds: 300), // 超时时间为300秒
+        onTimeout: () {
+          onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
+          return http.StreamedResponse(
+            Stream.fromIterable([]), // 空流
+            408, // Request Timeout
+          );
+        },
+      );
+
+      if (streamedResponse.statusCode != 200) {
+        // 读取错误响应
+        final errorBody = await streamedResponse.stream.bytesToString();
+        debugPrint('API错误响应: $errorBody');
+        
+        // 增强错误处理，提供更具体的错误信息
+        if (errorBody.contains('rate_limit_exceeded') || 
+            errorBody.contains('rate limit') || 
+            errorBody.contains('429')) {
+          onError(Exception('请求频率超限，请稍后再试 (429 错误)'));
+        } else if (errorBody.contains('authentication') || 
+                 errorBody.contains('invalid_api_key') || 
+                 errorBody.contains('401')) {
+          onError(Exception('API密钥无效或已过期，请更新API密钥 (401 错误)'));
+        } else if (errorBody.contains('insufficient_quota') || 
+                 errorBody.contains('billing') || 
+                 errorBody.contains('429')) {
+          onError(Exception('API额度不足，请检查账户余额 (429 错误)'));
+        } else {
+          onError(Exception('AI服务请求失败：${streamedResponse.statusCode}\n$errorBody'));
+        }
+        return;
+      }
+    
+      // 处理流式响应
+      String fullText = '';
+      String currentChunk = '';
+
+      streamedResponse.stream
+          .transform(utf8.decoder)
+          .listen(
+        (String chunk) {
+          currentChunk += chunk;
+          
+          // 尝试从数据块中提取有效部分
+          final lines = currentChunk.split('\n');
+          currentChunk = '';
+          
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            
+            // 如果不是最后一行，或者是完整的行
+            if (i < lines.length - 1 || line.endsWith('\n') || line.trim().isEmpty) {
+              if (line.startsWith('data: ') && line != 'data: [DONE]') {
+                try {
+                  final jsonData = line.substring(6).trim();
+                  if (jsonData.isNotEmpty) {
+                    final data = json.decode(jsonData);
+                    if (data['choices'] != null && 
+                        data['choices'].isNotEmpty) {
+                      String content = '';
+                      // 处理不同API的响应格式
+                      if (data['choices'][0]['delta'] != null &&
+                          data['choices'][0]['delta']['content'] != null) {
+                        content = data['choices'][0]['delta']['content'];
+                      } else if (data['choices'][0]['text'] != null) {
+                        content = data['choices'][0]['text'];
+                      } else if (data['choices'][0]['message'] != null &&
+                               data['choices'][0]['message']['content'] != null) {
+                        content = data['choices'][0]['message']['content'];
+                      }
+                      
+                      if (content.isNotEmpty) {
+                        fullText += content;
+                        onResponse(content);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  debugPrint('解析流式响应数据失败: $e, 行内容: $line');
+                  // 尝试更宽松的解析方式，获取可能的内容
+                  try {
+                    if (line.contains('"content"')) {
+                      final contentIndex = line.indexOf('"content"');
+                      final colonIndex = line.indexOf(':', contentIndex);
+                      if (colonIndex != -1) {
+                        final quoteIndex = line.indexOf('"', colonIndex);
+                        if (quoteIndex != -1) {
+                          final endQuoteIndex = line.indexOf('"', quoteIndex + 1);
+                          if (endQuoteIndex != -1) {
+                            final content = line.substring(quoteIndex + 1, endQuoteIndex);
+                            if (content.isNotEmpty) {
+                              fullText += content;
+                              onResponse(content);
+                            }
+                          }
+                        }
+                      }
+                    }
+                  } catch (e2) {
+                    debugPrint('备选解析方法也失败: $e2');
+                  }
+                }
+              }
+            } else {
+              // 不完整的行，保留到下一个块处理
+              currentChunk = line;
+            }
+          }
+        },
+        onDone: () {
+          debugPrint('流式响应接收完毕');
+          onComplete(fullText);
+          client.close();
+        },
+        onError: (e) {
+          debugPrint('流式响应错误: $e');
+          onError(e);
+          client.close();
+        },
+      );
+    } catch (e) {
+      debugPrint('API请求错误: $e');
+      if (e.toString().contains('Failed host lookup')) {
+        onError(Exception('无法连接到AI服务器，请检查网络连接或服务器状态'));
+      } else if (e.toString().contains('Connection refused') && 
+          uri.toString().contains('0.0.0.0') || 
+          uri.toString().contains('localhost')) {
+        onError(Exception('无法连接到本地AI服务器，请确保服务器已启动或更改API URL'));
+      } else if (e.toString().contains('certificate')) {
+        onError(Exception('证书验证失败，请检查HTTPS配置或使用HTTP连接'));
+      } else {
+        onError(e);
+      }
     }
   }
 
@@ -222,8 +476,69 @@ class AIService extends ChangeNotifier {
       debugPrint('笔记分析错误: $e');
       rethrow;
     }
+  }  // 流式笔记分析
+  Stream<String> streamSummarizeNote(Quote quote) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
+      }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        final messages = [
+          {
+            'role': 'system',
+            'content':
+                '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
+          },
+          {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.7,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式笔记分析错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
   }
-
+  
   Future<String> generateDailyPrompt() async {
     final settings = _settingsService.aiSettings;
 
@@ -542,95 +857,106 @@ class AIService extends ChangeNotifier {
       rethrow;
     }
   }
+  // 流式生成洞察
+  Stream<String> streamGenerateInsights(
+    List<Quote> quotes, {
+    String analysisType = 'comprehensive',
+    String analysisStyle = 'professional',
+  }) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
+      }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        // 将笔记数据转换为与备份还原功能类似的JSON格式
+        final jsonData = {
+          'metadata': {
+            'app': '心迹',
+            'version': '1.0',
+            'exportTime': DateTime.now().toIso8601String(),
+            'analysisType': analysisType,
+            'analysisStyle': analysisStyle,
+          },
+          'quotes':
+              quotes.map((quote) {
+                return {
+                  'id': quote.id,
+                  'content': quote.content,
+                  'date': quote.date,
+                  'source': quote.source,
+                  'sourceAuthor': quote.sourceAuthor,
+                  'sourceWork': quote.sourceWork,
+                  'tagIds': quote.tagIds,
+                  'categoryId': quote.categoryId,
+                  'location': quote.location,
+                  'weather': quote.weather,
+                  'temperature': quote.temperature,
+                };
+              }).toList(),
+        };
 
-  // 根据分析类型获取基础提示词
-  String _getAnalysisTypePrompt(String analysisType) {
-    switch (analysisType) {
-      case 'emotional':
-        return '''你是一位专注情感分析的心理学家，擅长从文字中解读人们的情感状态和变化。
-请分析用户的笔记内容，提供深入的情感洞察：
+        // 将数据转换为格式化的JSON字符串
+        final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
 
-1. 情感状态总结：概括用户笔记中表达的主要情绪和情感状态
-2. 情绪波动和模式：识别情绪变化的模式和可能触发因素
-3. 积极/消极情绪比例：分析笔记中积极和消极情绪的大致比例
-4. 情绪管理建议：提供有针对性的情绪管理策略和建议
+        // 根据分析类型选择系统提示词
+        String systemPrompt = _getAnalysisTypePrompt(analysisType);
 
-请使用温和、理解的语气，像一位支持性的朋友一样，而非冷冰冰的分析。避免使用过于专业的术语，用通俗易懂的语言表达你的洞察。记住，你的目标是帮助用户更好地理解自己的情感世界。''';
+        // 根据分析风格修改提示词
+        systemPrompt = _appendAnalysisStylePrompt(systemPrompt, analysisStyle);
 
-      case 'mindmap':
-        return '''你是一位思维导图专家和认知分析师，擅长分析人们的思考模式和思维结构。
-请分析用户的笔记内容，揭示其思维模式和结构：
-
-1. 核心思考主题：识别用户笔记中反复出现的核心概念和主题
-2. 思维模式分析：分析用户的思维风格（如系统性思考、创造性思维、批判性思考等）
-3. 思维连接：发现不同笔记之间的隐藏联系和思维路径
-4. 思维盲点：温和地指出可能的思维盲区或固定思维模式
-5. 思维拓展建议：提出拓展思考的方向和具体建议
-
-请以清晰、结构化的方式组织你的回应，使用思维导图的概念来呈现分析结果。用友好、鼓励的语气，激发用户的思考深度和广度。''';
-
-      case 'growth':
-        return '''你是一位成长型思维教练和个人发展顾问，擅长发现人们的成长潜力和进步路径。
-请分析用户的笔记内容，提供个性化的成长和进步建议：
-
-1. 个人优势识别：发现并强调用户笔记中展现的能力和优势
-2. 成长机会：识别潜在的个人成长机会和领域
-3. 目标与价值观：从笔记中提炼用户可能的核心价值观和潜在目标
-4. 具体行动建议：提供3-5个具体、可行的行动建议，帮助用户在个人成长道路上前进
-5. 长期成长方向：温和地提出一些长期发展的可能方向和愿景
-
-请使用鼓励、支持的语气，像一位有智慧的导师，而不是居高临下的评判者。注重实用性和可行动性，使你的建议切实可行。''';
-
-      case 'comprehensive':
-      default:
-        return '''你是一位经验丰富、洞察敏锐的个人成长分析师和思维教练。你擅长从用户的日常记录中发现隐藏的模式和连接，并提供深刻的个人成长洞察。
-
-请以一位贴心的私人顾问身份，分析以下笔记内容，创建一份结构清晰、内容丰富的个人洞察报告，帮助用户更好地了解自己：
-
-1. 核心主题与思考焦点：发现笔记中反复出现的主题、关键概念和思考方向
-2. 情感状态分析：解读笔记中表达的情绪变化和情感模式，以及可能的位置、天气等环境因素影响
-3. 思维模式特点：分析用户的思考风格、视角和思维习惯
-4. 个人成长亮点：指出笔记中展现的进步、成长和积极变化
-5. 前进方向建议：根据分析结果，提供3-5个具体、个性化的成长建议
-
-请使用温和、支持的语气，避免居高临下的评判。确保你的分析既有深度，又具有实用性，能真正帮助用户获得关于自己的新见解。''';
-    }
+        final messages = [
+          {'role': 'system', 'content': systemPrompt},
+          {'role': 'user', 'content': '请分析以下结构化的笔记数据：\n\n$quotesText'},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.7,
+            'max_tokens': 2500,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式生成洞察错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
   }
-
-  // 根据分析风格调整提示词
-  String _appendAnalysisStylePrompt(String basePrompt, String analysisStyle) {
-    String styleAppendix = '';
-
-    switch (analysisStyle) {
-      case 'friendly':
-        styleAppendix = '''
-        
-风格指导：请以非常友好、亲切的方式表达你的分析，就像与老朋友聊天一样。使用温暖、鼓励的语气，偶尔可以加入一些轻松的表达。避免过于正式或学术化的语言，保持亲近感和共情。使用"我们"、"你"等代词增强亲近感，并确保你的建议是鼓励性的，而不是指导性的。''';
-        break;
-
-      case 'humorous':
-        styleAppendix = '''
-        
-风格指导：请以风趣幽默的方式呈现你的分析，像网易云音乐的歌单锐评一样。可以适当加入一些诙谐的比喻、俏皮的表达和轻松的调侃（但要尊重用户）。使用生动有趣的语言，避免过于严肃的表达方式。可以使用一些流行梗或轻松的修辞手法，让分析读起来既有深度又有趣味。记住，目标是让用户在会心一笑的同时获得有价值的洞察。''';
-        break;
-
-      case 'literary':
-        styleAppendix = '''
-        
-风格指导：请以优美的文学风格呈现你的分析，仿佛在撰写一篇散文或随笔。使用富有诗意的语言、生动的比喻和优雅的表达。可以引用一些经典文学作品或古诗词来点缀你的分析。结构上可以更加灵活流畅，像讲述一个故事一样展开你的洞察。通过文学性的表达方式，让用户感受到思考的美和自我探索的意义。''';
-        break;
-
-      case 'professional':
-      default:
-        styleAppendix = '''
-        
-风格指导：请保持专业、清晰的分析风格，注重逻辑性和实用性。使用结构化的段落和清晰的标题，确保分析易于理解和应用。语言应该精确但不过于学术化，避免使用过多专业术语。保持适度的客观性，同时传达出足够的理解和支持。''';
-        break;
-    }
-
-    return basePrompt + styleAppendix;
-  }
-
+  
   // 使用自定义提示词生成洞察
   Future<String> generateCustomInsights(
     List<Quote> quotes,
@@ -643,45 +969,62 @@ class AIService extends ChangeNotifier {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
 
-      final quotesText = quotes
-          .map((quote) {
-            String quoteText = '日期：${quote.date}\n内容：${quote.content}';
-            // 添加额外的笔记元数据，如果存在的话
-            if (quote.location != null && quote.location!.isNotEmpty) {
-              quoteText += '\n位置：${quote.location}';
-            }
-            if (quote.weather != null && quote.weather!.isNotEmpty) {
-              quoteText += '\n天气：${quote.weather}';
-            }
-            if (quote.temperature != null && quote.temperature!.isNotEmpty) {
-              quoteText += '\n温度：${quote.temperature}';
-            }
-            if (quote.source != null && quote.source!.isNotEmpty) {
-              quoteText += '\n来源：${quote.source}';
-            }
-            return quoteText;
-          })
-          .join('\n\n');
+      // 将笔记数据转换为JSON格式
+      final jsonData = {
+        'metadata': {
+          'app': '心迹',
+          'version': '1.0',
+          'exportTime': DateTime.now().toIso8601String(),
+          'analysisType': 'custom',
+        },
+        'quotes': quotes.map((quote) {
+          return {
+            'id': quote.id,
+            'content': quote.content,
+            'date': quote.date,
+            'source': quote.source,
+            'sourceAuthor': quote.sourceAuthor,
+            'sourceWork': quote.sourceWork,
+            'tagIds': quote.tagIds,
+            'categoryId': quote.categoryId,
+            'location': quote.location,
+            'weather': quote.weather,
+            'temperature': quote.temperature,
+          };
+        }).toList(),
+      };
+
+      // 将数据转换为格式化的JSON字符串
+      final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
+
+      const systemPrompt = '''你是一位专业的思想分析师和洞察专家。请根据用户的自定义指示分析他们的笔记。
+
+分析要求：
+1. 根据用户提供的具体指示进行分析
+2. 保持客观、深入的分析风格
+3. 提供有意义的洞察和建议
+4. 使用合适的结构组织你的分析
+
+格式要求：
+- 使用markdown格式增强可读性
+- 确保结构清晰，层次分明
+- 适当使用标题、列表等元素''';
 
       final messages = [
-        {
-          'role': 'system',
-          'content': '''你是一位资深的笔记分析和个人成长顾问。你的任务是根据用户的特定要求，分析他们的笔记内容。
-请以专业、友好且有洞察力的方式回应用户的特定分析请求。注重提供有用、实用且个性化的洞察。
-避免使用过于学术或抽象的语言，保持回应亲切自然。请遵循用户的具体指示进行分析。
+        {'role': 'system', 'content': systemPrompt},
+        {'role': 'user', 'content': '''请根据以下指示分析笔记数据：
 
-分析时，请特别注意笔记中包含的环境因素（如位置、天气、温度）对用户心情和思考的潜在影响，如果这些信息可用的话。''',
-        },
-        {
-          'role': 'user',
-          'content': '请根据以下要求分析我的笔记：\n\n$customPrompt\n\n笔记内容：\n\n$quotesText',
-        },
+$customPrompt
+
+笔记数据：
+
+$quotesText'''},
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.7,
-        'max_tokens': 3000,
+        'max_tokens': 2500,
       }, settings);
 
       final data = json.decode(response.body);
@@ -699,38 +1042,121 @@ class AIService extends ChangeNotifier {
     }
   }
 
-  Future<String> askQuestion(Quote quote, String question) async {
-    try {
-      await _validateSettings();
-      final settings = _settingsService.aiSettings;
-
-      final messages = [
-        {'role': 'system', 'content': '你是一个专业的笔记分析助手，请根据用户的笔记内容回答问题。'},
-        {'role': 'user', 'content': '笔记内容：${quote.content}\n\n问题：$question'},
-      ];
-
-      final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,
-        'temperature': 0.7,
-      }, settings);
-
-      final data = json.decode(response.body);
-      if (data['choices'] != null &&
-          data['choices'].isNotEmpty &&
-          data['choices'][0]['message'] != null) {
-        return data['choices'][0]['message']['content'];
-      } else {
-        debugPrint('API响应格式错误: ${response.body}');
-        throw Exception('API响应格式错误');
+  // 流式生成自定义洞察
+  Stream<String> streamGenerateCustomInsights(
+    List<Quote> quotes,
+    String customPrompt,
+  ) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
       }
-    } catch (e) {
-      debugPrint('提问错误: $e');
-      rethrow;
-    }
-  }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        // 将笔记数据转换为JSON格式
+        final jsonData = {
+          'metadata': {
+            'app': '心迹',
+            'version': '1.0',
+            'exportTime': DateTime.now().toIso8601String(),
+            'analysisType': 'custom',
+          },
+          'quotes': quotes.map((quote) {
+            return {
+              'id': quote.id,
+              'content': quote.content,
+              'date': quote.date,
+              'source': quote.source,
+              'sourceAuthor': quote.sourceAuthor,
+              'sourceWork': quote.sourceWork,
+              'tagIds': quote.tagIds,
+              'categoryId': quote.categoryId,
+              'location': quote.location,
+              'weather': quote.weather,
+              'temperature': quote.temperature,
+            };
+          }).toList(),
+        };
 
-  // 分析来源，返回JSON格式的结果
+        // 将数据转换为格式化的JSON字符串
+        final quotesText = const JsonEncoder.withIndent('  ').convert(jsonData);
+
+        const systemPrompt = '''你是一位专业的思想分析师和洞察专家。请根据用户的自定义指示分析他们的笔记。
+
+分析要求：
+1. 根据用户提供的具体指示进行分析
+2. 保持客观、深入的分析风格
+3. 提供有意义的洞察和建议
+4. 使用合适的结构组织你的分析
+
+格式要求：
+- 使用markdown格式增强可读性
+- 确保结构清晰，层次分明
+- 适当使用标题、列表等元素''';
+
+        final messages = [
+          {'role': 'system', 'content': systemPrompt},
+          {'role': 'user', 'content': '''请根据以下指示分析笔记数据：
+
+$customPrompt
+
+笔记数据：
+
+$quotesText'''},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.7,
+            'max_tokens': 2500,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式生成自定义洞察错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
+  }
+  
+  // 分析文本来源
   Future<String> analyzeSource(String content) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
@@ -778,8 +1204,88 @@ class AIService extends ChangeNotifier {
     }
   }
 
+  // 流式分析来源
+  Stream<String> streamAnalyzeSource(String content) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
+      }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        final messages = [
+          {
+            'role': 'system',
+            'content': '''你是一个专业的文本分析助手，你的任务是分析文本中可能提到的作者和作品。
+请以JSON格式返回以下信息：
+{
+  "author": "推测的作者名称，如果无法确定则留空",
+  "work": "推测的作品名称，如果无法确定则留空",
+  "confidence": "高/中/低，表示你的推测置信度",
+  "explanation": "简短解释你的推测依据"
+}
+
+非常重要：
+1. 只返回JSON格式的数据，不要有其他文字说明
+2. 如果你不确定或无法分析，请确保在适当的字段中返回空字符串，不要胡乱猜测
+3. 对于中文引述格式常见形式是："——作者《作品》"
+4. 作者名应该只包含人名，不包含头衔或其他描述词
+5. 对于作品名，请去掉引号《》等标记符号''',
+          },
+          {'role': 'user', 'content': '请分析以下文本的可能来源：\n\n$content'},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.4, // 使用较低的温度确保格式一致性
+            'max_tokens': 500,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式分析来源错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
+  }
+
   // 润色文本
   Future<String> polishText(String content) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
@@ -816,13 +1322,87 @@ class AIService extends ChangeNotifier {
         throw Exception('API响应格式错误');
       }
     } catch (e) {
-      debugPrint('润色文本错误: $e');
+      debugPrint('文本润色错误: $e');
       rethrow;
     }
   }
 
+  // 流式润色文本
+  Stream<String> streamPolishText(String content) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
+      }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        final messages = [
+          {
+            'role': 'system',
+            'content': '''你是一个专业的文字润色助手，擅长改进文本的表达和结构。
+请对用户提供的文本进行润色，使其更加流畅、优美、有深度。保持原文的核心意思和情感基调，但提升其文学价值和表达力。
+
+注意：
+1. 保持原文的核心思想不变
+2. 提高语言的表现力和优美度
+3. 修正语法、标点等问题
+4. 适当使用修辞手法增强表达力
+5. 返回完整的润色后文本''',
+          },
+          {'role': 'user', 'content': '请润色以下文本：\n\n$content'},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.7,
+            'max_tokens': 1000,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式润色文本错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
+  }
+  
   // 续写文本
   Future<String> continueText(String content) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
     try {
       await _validateSettings();
       final settings = _settingsService.aiSettings;
@@ -830,22 +1410,22 @@ class AIService extends ChangeNotifier {
       final messages = [
         {
           'role': 'system',
-          'content': '''你是一个专业的文本创作助手，擅长根据已有内容进行续写。
-请根据用户提供的文本，以相同的风格和语调进行自然的延伸和续写。在保持连贯性和一致性的同时，提供有深度和意义的内容。
+          'content': '''你是一个专业的文字续写助手，擅长根据已有文本继续创作。
+请为用户提供的文本进行有创意且连贯的续写，保持一致的风格、语调和思路。
 
 注意：
-1. 保持与原文一致的风格、语气和主题
-2. 续写的内容应当是原文的自然延伸
-3. 不要重复原文的内容
-4. 续写的长度大约为原文的一半到相当长度
-5. 确保内容有深度，不要流于表面''',
+1. 续写内容应自然衔接原文末尾
+2. 保持原文的风格、语气和写作特点
+3. 延续原文的思路和主题
+4. 创作至少100-200字的后续内容
+5. 返回完整的续写部分，不要重复原文''',
         },
         {'role': 'user', 'content': '请续写以下文本：\n\n$content'},
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
-        'temperature': 0.8, // 使用较高的创意性
+        'temperature': 0.8, // 使用较高的温度以增加创意性
         'max_tokens': 1000,
       }, settings);
 
@@ -859,9 +1439,325 @@ class AIService extends ChangeNotifier {
         throw Exception('API响应格式错误');
       }
     } catch (e) {
-      debugPrint('续写文本错误: $e');
+      debugPrint('文本续写错误: $e');
       rethrow;
     }
+  }
+
+  // 流式续写文本
+  Stream<String> streamContinueText(String content) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
+      }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        final messages = [
+          {
+            'role': 'system',
+            'content': '''你是一个专业的文字续写助手，擅长根据已有文本继续创作。
+请为用户提供的文本进行有创意且连贯的续写，保持一致的风格、语调和思路。
+
+注意：
+1. 续写内容应自然衔接原文末尾
+2. 保持原文的风格、语气和写作特点
+3. 延续原文的思路和主题
+4. 创作至少100-200字的后续内容
+5. 返回完整的续写部分，不要重复原文''',
+          },
+          {'role': 'user', 'content': '请续写以下文本：\n\n$content'},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.8, // 使用较高的温度以增加创意性
+            'max_tokens': 1000,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式续写文本错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
+  }
+
+  // 向笔记提问
+  Future<String> askQuestion(Quote quote, String question) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+    try {
+      await _validateSettings();
+      final settings = _settingsService.aiSettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '''你是一个专业的笔记助手，擅长回答关于用户笔记内容的问题。
+请根据用户的笔记内容，回答他们提出的问题。
+
+注意：
+1. 只基于笔记中提供的信息回答问题
+2. 如果笔记中没有相关信息，请诚实说明无法回答
+3. 不要编造不在笔记中的信息
+4. 回答应该有深度且有洞察力
+5. 回答应该清晰、简洁且有条理''',
+        },
+        {'role': 'user', 'content': '''笔记内容：
+
+${quote.content}
+
+我的问题：
+$question'''},
+      ];
+
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.5,
+        'max_tokens': 1000,
+      }, settings);
+
+      final data = json.decode(response.body);
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
+          data['choices'][0]['message'] != null) {
+        return data['choices'][0]['message']['content'];
+      } else {
+        debugPrint('API响应格式错误: ${response.body}');
+        throw Exception('API响应格式错误');
+      }
+    } catch (e) {
+      debugPrint('问答错误: $e');
+      rethrow;
+    }
+  }
+
+  // 流式问答
+  Stream<String> streamAskQuestion(Quote quote, String question) {
+    final controller = StreamController<String>();
+    
+    () async {
+      if (!hasValidApiKey()) {
+        controller.addError(Exception('请先在设置中配置 API Key'));
+        controller.close();
+        return;
+      }
+      
+      try {
+        await _validateSettings();
+        final settings = _settingsService.aiSettings;
+        
+        final messages = [
+          {
+            'role': 'system',
+            'content': '''你是一个专业的笔记助手，擅长回答关于用户笔记内容的问题。
+请根据用户的笔记内容，回答他们提出的问题。
+
+注意：
+1. 只基于笔记中提供的信息回答问题
+2. 如果笔记中没有相关信息，请诚实说明无法回答
+3. 不要编造不在笔记中的信息
+4. 回答应该有深度且有洞察力
+5. 回答应该清晰、简洁且有条理''',
+          },
+          {'role': 'user', 'content': '''笔记内容：
+
+${quote.content}
+
+我的问题：
+$question'''},
+        ];
+        
+        await _makeStreamRequest(
+          settings.apiUrl,
+          {
+            'messages': messages,
+            'temperature': 0.5,
+            'max_tokens': 1000,
+          },
+          settings,
+          // 当收到新内容时
+          (String text) {
+            if (!controller.isClosed) {
+              controller.add(text);
+            }
+          },
+          // 当完成时
+          (String fullText) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          },
+          // 当发生错误时
+          (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
+          }
+        );
+      } catch (e) {
+        debugPrint('流式问答错误: $e');
+        if (!controller.isClosed) {
+          controller.addError(e);
+          controller.close();
+        }
+      }
+    }();
+    
+    return controller.stream;
+  }
+
+  // 根据分析类型选择系统提示词
+  String _getAnalysisTypePrompt(String analysisType) {
+    switch (analysisType) {
+      case 'emotional':
+        return '''你是一位专业的心理分析师和情感咨询师。请分析用户笔记中的情感状态、情绪变化和心理健康。
+          
+任务：
+1. 识别笔记中表达的主要情绪和情感模式
+2. 分析情绪变化的趋势和可能的触发因素
+3. 提供关于情绪管理和心理健康的建议
+4. 以尊重和专业的方式表达你的分析
+
+格式要求：
+- 使用"# 情感洞察分析"作为主标题
+- 包含"## 总体情感状态"部分
+- 包含"## 情绪变化趋势"部分
+- 包含"## 建议与反思"部分
+- 适当使用markdown格式增强可读性''';
+      
+      case 'mindmap':
+        return '''你是一位专业的思维导图和知识系统构建专家。请分析用户笔记，构建他们思考的结构和思维习惯。
+          
+任务：
+1. 识别笔记中的主要思考主题和思维模式
+2. 分析这些主题之间的联系和层次结构
+3. 评估思维的深度、广度和连贯性
+4. 提供关于如何拓展和深化思考的建议
+
+格式要求：
+- 使用"# 思维导图分析"作为主标题
+- 包含"## 核心思考主题"部分
+- 包含"## 思维结构图"部分(用文字描述思维图的结构)
+- 包含"## 思维特点分析"部分
+- 包含"## 思维发展建议"部分
+- 适当使用markdown格式增强可读性''';
+          
+      case 'growth':
+        return '''你是一位专业的个人成长教练和学习顾问。请基于用户笔记分析他们的成长轨迹并提供发展建议。
+          
+任务：
+1. 识别用户的兴趣、价值观和目标
+2. 分析用户的学习模式和成长轨迹
+3. 发现可能的成长盲点和发展机会
+4. 提供具体、实用的成长和进步建议
+
+格式要求：
+- 使用"# 成长建议分析"作为主标题
+- 包含"## 个人特质与价值观"部分
+- 包含"## 成长轨迹分析"部分
+- 包含"## 发展机会"部分
+- 包含"## 具体行动建议"部分
+- 适当使用markdown格式增强可读性''';
+      
+      case 'comprehensive':
+      default:
+        return '''你是一位专业的思想分析师和洞察专家。请全面分析用户的笔记内容，发掘其中的思想价值和模式。
+
+任务：
+1. 分析笔记中的核心思想和主题
+2. 识别重复出现的关键概念和模式
+3. 探究潜在的思维模式和价值观
+4. 提供有深度的洞察和反思建议
+
+格式要求：
+- 使用"# 思想洞察分析"作为主标题
+- 包含"## 核心思想概述"部分
+- 包含"## 主题与模式"部分
+- 包含"## 深度洞察"部分
+- 包含"## 思考与建议"部分
+- 适当使用markdown格式增强可读性''';
+    }
+  }
+  // 根据分析风格修改提示词
+  String _appendAnalysisStylePrompt(String systemPrompt, String analysisStyle) {
+    String stylePrompt;
+    
+    switch (analysisStyle) {
+      case 'friendly':
+        stylePrompt = '''表达风格：
+- 使用温暖、鼓励和支持性的语言
+- 以友好的"你"称呼读者
+- 像一位知心朋友或支持性的导师给予建议
+- 避免过于学术或技术化的语言
+- 强调积极的方面和成长的可能性''';
+        break;
+        
+      case 'humorous':
+        stylePrompt = '''表达风格：
+- 运用适当的幽默和风趣元素
+- 使用生动的比喻和有趣的类比
+- 保持轻松愉快的语调
+- 在严肃洞察中穿插幽默观察
+- 避免过于严肃或教条的表达方式''';
+        break;
+        
+      case 'literary':
+        stylePrompt = '''表达风格：
+- 使用优美、富有文学色彩的语言
+- 适当引用诗歌、文学作品或哲学观点
+- 运用丰富的修辞手法和意象
+- 以优雅流畅的叙事风格展开分析
+- 注重文字的节奏感和美感''';
+        break;
+        
+      case 'professional':
+      default:
+        stylePrompt = '''表达风格：
+- 保持客观、清晰和专业的语调
+- 使用精确的语言和分析性表达
+- 基于事实和观察提供见解
+- 结构化呈现信息和分析
+- 保持适当的专业距离''';
+        break;
+    }
+    
+    return '$systemPrompt\n\n$stylePrompt';
   }
 }
 
