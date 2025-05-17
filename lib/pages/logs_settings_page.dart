@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/log_service.dart'; // 导入日志服务
 import 'logs_page.dart'; // 导入日志查看页面
+import '../utils/color_utils.dart'; // 导入颜色工具
 
 class LogsSettingsPage extends StatelessWidget {
   const LogsSettingsPage({super.key});
@@ -22,9 +23,7 @@ class LogsSettingsPage extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const LogsPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const LogsPage()),
               );
             },
           ),
@@ -37,7 +36,7 @@ class LogsSettingsPage extends StatelessWidget {
             child: Text(
               '选择应用记录的日志详细程度。更详细的日志有助于调试，但可能会影响性能并占用更多存储空间（如果未来实现日志文件存储）。',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.applyOpacity(0.7),
               ),
             ),
           ),
@@ -46,7 +45,7 @@ class LogsSettingsPage extends StatelessWidget {
           ...LogLevel.values.map((level) {
             // 为 none 添加特殊说明
             String subtitle = '';
-            switch(level) {
+            switch (level) {
               case LogLevel.verbose:
                 subtitle = '记录所有详细信息，用于深入调试。';
                 break;
@@ -68,7 +67,9 @@ class LogsSettingsPage extends StatelessWidget {
             }
 
             return RadioListTile<LogLevel>(
-              title: Text(level.name[0].toUpperCase() + level.name.substring(1)), // 首字母大写
+              title: Text(
+                level.name[0].toUpperCase() + level.name.substring(1),
+              ), // 首字母大写
               subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
               value: level,
               groupValue: logService.currentLevel,

@@ -317,7 +317,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     final overlay = OverlayEntry(
       builder:
           (overlayContext) => Container(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.applyOpacity(0.5),
             child: Center(
               child: Card(
                 margin: const EdgeInsets.all(16),

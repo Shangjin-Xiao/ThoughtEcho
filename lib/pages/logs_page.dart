@@ -100,7 +100,7 @@ class _LogsPageState extends State<LogsPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('加载更多日志失败: $e')));
@@ -262,7 +262,8 @@ class _LogsPageState extends State<LogsPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer.applyOpacity( // Use applyOpacity
+                          color: theme.colorScheme.errorContainer.applyOpacity(
+                            // Use applyOpacity
                             0.3,
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -590,7 +591,12 @@ class _LogsPageState extends State<LogsPage> {
                             if (index >= allLogs.length - 1) {
                               return const SizedBox.shrink();
                             }
-                            return Divider(height: 1, color: Theme.of(context).dividerColor.applyOpacity(0.5)); // Use applyOpacity
+                            return Divider(
+                              height: 1,
+                              color: Theme.of(
+                                context,
+                              ).dividerColor.applyOpacity(0.5),
+                            ); // Use applyOpacity
                           },
                           itemBuilder: (context, index) {
                             // 加载更多指示器
@@ -669,7 +675,9 @@ class _LogsPageState extends State<LogsPage> {
                                                     color: theme
                                                         .colorScheme
                                                         .onSurface
-                                                        .applyOpacity(0.7), // Use applyOpacity
+                                                        .applyOpacity(
+                                                          0.7,
+                                                        ), // Use applyOpacity
                                                   ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -681,7 +689,9 @@ class _LogsPageState extends State<LogsPage> {
                                                 color: theme
                                                     .colorScheme
                                                     .onSurface
-                                                    .applyOpacity(0.5), // Use applyOpacity
+                                                    .applyOpacity(
+                                                      0.5,
+                                                    ), // Use applyOpacity
                                                 fontSize: 10,
                                               ),
                                         ),
@@ -932,7 +942,7 @@ class _LogsPageState extends State<LogsPage> {
                   color: theme.colorScheme.surface,
                   border: Border(
                     top: BorderSide(
-                      color: theme.colorScheme.outline.withOpacity(0.2),
+                      color: theme.colorScheme.outline.applyOpacity(0.2),
                     ),
                   ),
                 ),
@@ -1003,7 +1013,9 @@ class _LogsPageState extends State<LogsPage> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (dialogContext) => const Center(child: CircularProgressIndicator()),
+                    builder:
+                        (dialogContext) =>
+                            const Center(child: CircularProgressIndicator()),
                   );
 
                   try {

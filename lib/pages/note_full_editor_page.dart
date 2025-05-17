@@ -555,7 +555,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             });
                           }
                         });
-                        
+
                         // 额外调用一次setState让卡片指示条能立即更新
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (mounted) {
@@ -601,7 +601,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           });
         }
       });
-      
+
       // 额外调用一次setState让卡片指示条能立即更新
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -702,12 +702,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             borderRadius: BorderRadius.circular(8),
                             // 添加边框以增加可见性
                             border: Border.all(
-                              color: theme.colorScheme.outline.withOpacity(0.2),
+                              color: theme.colorScheme.outline.applyOpacity(
+                                0.2,
+                              ),
                               width: 1,
                             ),
                           ),
                           // 添加关键的key使Flutter强制重建此widget
-                          key: ValueKey('color-indicator-${_selectedColorHex}'),
+                          key: ValueKey('color-indicator-$_selectedColorHex'),
                         ),
                       ),
                     if (_showLocation && _location != null)
@@ -1263,7 +1265,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     setState(() {
       // 强制刷新所有状态
     });
-    
+
     // 使用延迟setState确保更新被正确应用
     Future.microtask(() {
       if (mounted) {
@@ -1272,7 +1274,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         });
       }
     });
-    
+
     // 额外调用一次框架级别的重建确保元数据指示条正确显示
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
