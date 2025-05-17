@@ -73,6 +73,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
                             setState(() => _isLoading = true);
                             try {
+                              if (!context.mounted) return;
                               await context.read<DatabaseService>().addCategory(
                                 _categoryController.text,
                                 iconName: _selectedIconName,
@@ -485,6 +486,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     icon: IconUtils.getCategoryIcon(selectedIcon),
                     onPressed: () async {
                       final BuildContext currentContext = dialogContext;
+                      if (!context.mounted) return;
                       final icon = await showDialog<String>(
                         context: currentContext,
                         builder:

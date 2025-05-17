@@ -461,6 +461,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               color: theme.colorScheme.primary,
                             ),
                             onPressed: () async {
+                              if (!context.mounted) return;
                               try {
                                 // 获取所有标签数据
                                 final databaseService =
@@ -475,7 +476,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 获取当前输入的内容和元数据，但不创建Quote对象
                                 // 不传递initialQuote，这样全屏编辑器会使用addQuote逻辑
 
-                                final result = await Navigator.of(context).push(
+                                final navigator = Navigator.of(context); // 在 await 前获取 navigator
+                                final result = await navigator.push(
                                   MaterialPageRoute(
                                     builder:
                                         (context) => NoteFullEditorPage(

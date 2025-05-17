@@ -234,6 +234,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       bool serviceEnabled =
                           await Geolocator.isLocationServiceEnabled();
+                      if (!mounted) return;
                       if (!serviceEnabled) {
                         if (mounted) {
                           showDialog(
@@ -251,6 +252,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ),
                                     TextButton(
                                       onPressed: () async {
+                                        if (!mounted) return;
                                         Navigator.pop(context);
                                         // 在可能导致上下文无效的异步操作前保存上下文
                                         await Geolocator.openLocationSettings();
@@ -274,6 +276,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       }
                       final position =
                           await locationService.getCurrentLocation();
+                      if (!mounted) return;
                       if (position != null && mounted) {
                         await weatherService.getWeatherData(
                           position.latitude,
@@ -295,6 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         );
                       }
                     } else {
+                      if (!mounted) return;
                       ScaffoldMessenger.of(
                         context,
                       ).showSnackBar(const SnackBar(content: Text('位置服务已禁用')));

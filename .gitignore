@@ -251,3 +251,5 @@ flutter_test_*_report.json
 **/web/canvaskit/
 **/web/assets/FontManifest.json
 **/web/assets/fonts/MaterialIcons-*.ttf
+pubspec.lock
+android/local.properties

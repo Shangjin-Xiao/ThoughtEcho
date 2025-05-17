@@ -29,8 +29,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       } catch (e) {
         debugPrint('数据库访问验证失败: $e');
       }
-      loadingOverlay.remove();
-      if (!mounted) return;
+      loadingOverlay.remove();      if (!mounted) return;
       if (!canExport) {
         _showErrorDialog(context, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
         return;
@@ -95,8 +94,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             final saveOverlay = _showLoadingOverlay(context, '正在保存文件...');
             try {
               await File(tempFile).copy(saveLocation.path);
-              await File(tempFile).delete();
-              path = saveLocation.path;
+              await File(tempFile).delete();              path = saveLocation.path;
               saveOverlay.remove();
               if (!mounted) return;
               scaffoldMessenger.showSnackBar(
@@ -174,8 +172,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           progressOverlay.remove();
           if (!mounted) return;
           await Share.shareXFiles([XFile(path)], text: '心迹应用数据备份');
-        }
-      } catch (e) {
+        }      } catch (e) {
         progressOverlay.remove();
         if (!mounted) return;
         _showErrorDialog(context, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
@@ -215,8 +212,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         errorMessage = e.toString();
       } finally {
         validateOverlay.remove();
-      }
-      if (!mounted) return;
+      }      if (!mounted) return;
       if (!isValidBackup) {
         _showErrorDialog(
           context,
@@ -290,8 +286,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 title: const Text('导入成功'),
                 content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
                 actions: [
-                  TextButton(
-                    onPressed: () {
+                  TextButton(                    onPressed: () {
                       Navigator.pop(dialogContext);
                       if (!mounted) return;
                       navigator.pushAndRemoveUntil(
