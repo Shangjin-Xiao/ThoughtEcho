@@ -16,8 +16,11 @@ class BackupRestorePage extends StatefulWidget {
 }
 
 class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _handleExport(BuildContext context) async {
-    // 在异步操作前获取所有需要的context相关对象
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    // 检查组件已挂载
+    if (!mounted) return;
+    
+    // 创建上下文快照 - 在异步操作前获取所有需要的context相关对象，以便在异步操作后可以安全使用
+    final scaffoldMessengerState = ScaffoldMessenger.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
     final overlayState = Overlay.of(context); // 在调用 _showLoadingOverlay 前获取 OverlayState
 
@@ -30,38 +33,50 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
       } catch (e) {
         debugPrint('数据库访问验证失败: $e');
       }
-      if (!mounted) return;
-      loadingOverlay.remove(); // 移动到 mounted 检查之后
-
-      if (!mounted) return; // 在调用 _showErrorDialog 前添加 mounted 检查
-      if (!canExport) {
-        _showErrorDialog(context, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
+      
+      if (!mounted) {
+        loadingOverlay.remove();
         return;
-      }      if (!mounted) return;
-      final choice = await showDialog<String>(
-        context: context,
-        builder:
-            (dialogContext) => AlertDialog(
-              title: const Text('选择备份方式'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.save),
-                    title: const Text('保存到本地'),
-                    subtitle: const Text('选择保存位置'),
-                    onTap: () => Navigator.pop(dialogContext, 'save'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.share),
-                    title: const Text('分享备份文件'),
-                    subtitle: const Text('通过其他应用分享'),
-                    onTap: () => Navigator.pop(dialogContext, 'share'),
-                  ),
-                ],
+      }
+      loadingOverlay.remove(); // 移动到 mounted 检查之后      if (!mounted) return; 
+      if (!canExport) {
+        if (mounted) { // 在调用 _showErrorDialog 前添加 mounted 检查
+          final currentContext = context;
+          if (mounted) {
+            _showErrorDialog(currentContext, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
+          }
+        }
+        return;
+      }
+      if (!mounted) return;
+      
+      String? choice;
+      if (mounted) {
+        choice = await showDialog<String>(
+          context: context,
+          builder:
+              (dialogContext) => AlertDialog(
+                title: const Text('选择备份方式'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.save),
+                      title: const Text('保存到本地'),
+                      subtitle: const Text('选择保存位置'),
+                      onTap: () => Navigator.pop(dialogContext, 'save'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.share),
+                      title: const Text('分享备份文件'),
+                      subtitle: const Text('通过其他应用分享'),
+                      onTap: () => Navigator.pop(dialogContext, 'share'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-      );
+        );
+      }
       if (!mounted) return;
       if (choice == null) return;
       String path = '';
@@ -96,15 +111,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
             final saveOverlay = _showLoadingOverlay(overlayState, '正在保存文件...');
             try {
               await File(tempFile).copy(saveLocation.path);
-              await File(tempFile).delete();              path = saveLocation.path;
+              await File(tempFile).delete();                path = saveLocation.path;
               saveOverlay.remove();
               if (!mounted) return;
-              scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text('备份已保存到: $path'),
-                  duration: const Duration(seconds: 5),
-                ),
-              );
+              if (mounted) {
+                scaffoldMessengerState.showSnackBar(
+                  SnackBar(
+                    content: Text('备份已保存到: $path'),
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              }
             } catch (e) {
               saveOverlay.remove();
               rethrow;
@@ -114,13 +131,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
             final localPath = '${docsDir.path}/$fileName';
             path = await dbService.exportAllData(customPath: localPath);
             progressOverlay.remove();
-            if (!mounted) return;
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('备份文件已生成，即将打开分享选项...'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            if (!mounted) return;            if (mounted) {
+              scaffoldMessengerState.showSnackBar(
+                const SnackBar(
+                  content: Text('备份文件已生成，即将打开分享选项...'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+            
             await Future.delayed(const Duration(seconds: 1));
             if (!mounted) return;
             await Share.shareXFiles(
@@ -128,13 +147,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
               text: '心迹备份文件',
               subject: '保存心迹备份文件',
             );
-            if (!mounted) return;
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('提示: 选择"保存到设备"可将备份文件保存到本地存储'),
-                duration: Duration(seconds: 5),
-              ),
-            );
+            
+            if (!mounted) return;            if (mounted) {
+              scaffoldMessengerState.showSnackBar(
+                const SnackBar(
+                  content: Text('提示: 选择"保存到设备"可将备份文件保存到本地存储'),
+                  duration: Duration(seconds: 5),
+                ),
+              );
+            }
           } else {
             try {
               if (!mounted) return;
@@ -152,8 +173,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
                   customPath: saveLocation.path,
                 );
                 exportOverlay.remove();
-                if (!mounted) return;
-                scaffoldMessenger.showSnackBar(
+                if (!mounted) return;                scaffoldMessengerState.showSnackBar(
                   SnackBar(
                     content: Text('备份已保存到: $path'),
                     duration: const Duration(seconds: 5),
@@ -174,20 +194,29 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
           if (!mounted) return;
           await Share.shareXFiles([XFile(path)], text: '心迹应用数据备份');
         }      } catch (e) {
-        progressOverlay.remove();
-        if (!mounted) return;
-        _showErrorDialog(context, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
+        progressOverlay.remove();        if (!mounted) return;
+        if (mounted) {
+          final currentContext = context;
+          if (mounted) {
+            _showErrorDialog(currentContext, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
+          }
+        }
       }
-    } catch (e) {
-      if (!mounted) return;
-      _showErrorDialog(context, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
+    } catch (e) {      if (!mounted) return;
+      if (mounted) {
+        final currentContext = context;
+        if (mounted) {
+          _showErrorDialog(currentContext, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
+        }
+      }
     }
   }
 
   Future<void> _handleImport(BuildContext context) async {
-    // 在异步操作前获取所有需要的context相关对象
+    // 异步操作前获取所有需要的context相关对象
     final navigator = Navigator.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
+    final overlayState = Overlay.of(context); // 提前获取 OverlayState
 
     try {
       const XTypeGroup jsonTypeGroup = XTypeGroup(
@@ -204,7 +233,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
       if (result == null) return;
       if (!mounted) return;
       final selectedFile = result['files']![0];
-      final validateOverlay = _showLoadingOverlay(Overlay.of(context), '正在验证备份文件...');
+      final validateOverlay = _showLoadingOverlay(overlayState, '正在验证备份文件...');
       bool isValidBackup = false;
       String errorMessage = '';
       try {
@@ -213,13 +242,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
         errorMessage = e.toString();
       } finally {
         validateOverlay.remove();
-      }      if (!mounted) return;
+      }
+        if (!mounted) return;
       if (!isValidBackup) {
-        _showErrorDialog(
-          context,
-          '无效的备份文件',
-          '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。',
-        );
+        if (mounted) {
+          final currentContext = context;
+          if (mounted) {
+            _showErrorDialog(
+              currentContext,
+              '无效的备份文件',
+              '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。',
+            );
+          }
+        }
         return;
       }
       if (!mounted) return;
@@ -270,7 +305,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
         if (confirmed != true) return;
         if (!mounted) return;
       }
-      final importOverlay = _showLoadingOverlay(Overlay.of(context), '正在导入数据...');
+      final importOverlay = _showLoadingOverlay(overlayState, '正在导入数据...');
       try {
         final bool clearExisting = importOption == 'clear';
         await dbService.importData(
@@ -279,37 +314,47 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
         );
         importOverlay.remove();
         if (!mounted) return;
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder:
-              (dialogContext) => AlertDialog(
-                title: const Text('导入成功'),
-                content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(dialogContext);
-                      if (!mounted) return;
-                      navigator.pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const HomePage()),
-                        (route) => false,
-                      );
-                    },
-                    child: const Text('重启应用'),
-                  ),
-                ],
-              ),
-        );
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder:
+                (dialogContext) => AlertDialog(
+                  title: const Text('导入成功'),
+                  content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        if (mounted) {
+                          navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (_) => const HomePage()),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      child: const Text('重启应用'),
+                    ),
+                  ],
+                ),
+          );
+        }
+      } catch (e) {        importOverlay.remove();
         if (!mounted) return;
-      } catch (e) {
-        importOverlay.remove();
-        if (!mounted) return;
-        _showErrorDialog(context, '导入失败', '导入数据时发生错误: $e');
+        if (mounted) {
+          final currentContext = context;
+          if (mounted) {
+            _showErrorDialog(currentContext, '导入失败', '导入数据时发生错误: $e');
+          }
+        }
       }
-    } catch (e) {
-      if (!mounted) return;
-      _showErrorDialog(context, '恢复失败', '无法访问或读取备份文件: $e');
+    } catch (e) {      if (!mounted) return;
+      if (mounted) {
+        final currentContext = context;
+        if (mounted) {
+          _showErrorDialog(currentContext, '恢复失败', '无法访问或读取备份文件: $e');
+        }
+      }
     }
   }
 
@@ -347,6 +392,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
 
   void _showErrorDialog(BuildContext context, String title, String message) {
     if (!mounted) return;
+    // 已经在方法开始有 mounted 检查，并且是同步调用 showDialog，所以这里不需要额外的 mounted 检查
     showDialog(
       context: context,
       builder:

@@ -80,18 +80,24 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               );
 
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('分类添加成功')),
-                              );
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              if (mounted) {
+                                scaffoldMessenger.showSnackBar(
+                                  const SnackBar(content: Text('分类添加成功')),
+                                );
+                              }
                               _categoryController.clear();
                               setState(() {
                                 _selectedIconName = null;
                               });
                             } catch (e) {
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('添加分类失败：$e')),
-                              );
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              if (mounted) {
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(content: Text('添加分类失败：$e')),
+                                );
+                              }
                             } finally {
                               if (mounted) {
                                 setState(() => _isLoading = false);
@@ -580,17 +586,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       if (confirmed == true && mounted) {
         try {
           final dbService = context.read<DatabaseService>();
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
           await dbService.deleteCategory(category.id);
 
           if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('分类删除成功')));
+          scaffoldMessenger.showSnackBar(const SnackBar(content: Text('分类删除成功')));
         } catch (e) {
           if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          if (mounted) {
+            scaffoldMessenger.showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
+          }
         }
       }
     });
