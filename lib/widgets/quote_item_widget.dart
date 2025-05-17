@@ -86,9 +86,12 @@ class QuoteItemWidget extends StatelessWidget {
 
     // Determine the background color of the card
     // If the quote has a color, use it, otherwise use the theme's surface container high color
-    final Color cardColor = quote.colorHex != null && quote.colorHex!.isNotEmpty
-        ? Color(int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000) // Ensure alpha for hex string
-        : theme.colorScheme.surfaceContainerHigh;
+    final Color cardColor =
+        quote.colorHex != null && quote.colorHex!.isNotEmpty
+            ? Color(
+              int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
+            ) // Ensure alpha for hex string
+            : theme.colorScheme.surfaceContainerHigh;
 
     // Determine the text color based on the card color
 
@@ -114,7 +117,9 @@ class QuoteItemWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.08), // Corrected: Used withOpacity
+                  color: theme.shadowColor.applyOpacity(
+                    0.08,
+                  ), // 使用 applyOpacity 替代 withOpacity
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -133,7 +138,9 @@ class QuoteItemWidget extends StatelessWidget {
                       Text(
                         formattedDate,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.applyOpacity(0.7), // MODIFIED
+                          color: theme.colorScheme.onSurface.applyOpacity(
+                            0.7,
+                          ), // MODIFIED
                         ),
                       ),
                       if (quote.location != null || quote.weather != null)
@@ -144,7 +151,8 @@ class QuoteItemWidget extends StatelessWidget {
                               Icon(
                                 Icons.location_on,
                                 size: 14,
-                                color: theme.colorScheme.secondary.applyOpacity( // MODIFIED
+                                color: theme.colorScheme.secondary.applyOpacity(
+                                  // MODIFIED
                                   0.7,
                                 ),
                               ),
@@ -167,7 +175,8 @@ class QuoteItemWidget extends StatelessWidget {
                               Icon(
                                 _getWeatherIcon(quote.weather!),
                                 size: 14,
-                                color: theme.colorScheme.secondary.applyOpacity( // MODIFIED
+                                color: theme.colorScheme.secondary.applyOpacity(
+                                  // MODIFIED
                                   0.7,
                                 ),
                               ),
@@ -213,7 +222,9 @@ class QuoteItemWidget extends StatelessWidget {
                         quote.sourceWork ?? '',
                       ),
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.applyOpacity(0.75), // MODIFIED
+                        color: theme.colorScheme.onSurface.applyOpacity(
+                          0.75,
+                        ), // MODIFIED
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -225,7 +236,9 @@ class QuoteItemWidget extends StatelessWidget {
                     child: Text(
                       quote.source!,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.applyOpacity(0.75), // MODIFIED
+                        color: theme.colorScheme.onSurface.applyOpacity(
+                          0.75,
+                        ), // MODIFIED
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -270,7 +283,9 @@ class QuoteItemWidget extends StatelessWidget {
                         Icon(
                           Icons.label_outline,
                           size: 16,
-                          color: theme.colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+                          color: theme.colorScheme.onSurface.applyOpacity(
+                            0.6,
+                          ), // MODIFIED
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -326,7 +341,9 @@ class QuoteItemWidget extends StatelessWidget {
                       PopupMenuButton<String>(
                         icon: Icon(
                           Icons.more_vert,
-                          color: theme.colorScheme.onSurface.applyOpacity(0.7), // MODIFIED
+                          color: theme.colorScheme.onSurface.applyOpacity(
+                            0.7,
+                          ), // MODIFIED
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

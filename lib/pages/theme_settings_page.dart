@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import '../utils/color_utils.dart'; // 导入颜色工具
 
 class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
@@ -29,9 +30,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     final appTheme = Provider.of<AppTheme>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('主题设置'),
-      ),
+      appBar: AppBar(title: const Text('主题设置')),
       body: ListView(
         children: [
           Card(
@@ -51,10 +50,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 children: [
                   const Text(
                     '主题模式',
-                    style: TextStyle(
-                      fontSize: 16, 
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -108,7 +104,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       const Text(
                         '使用自定义主题色',
                         style: TextStyle(
-                          fontSize: 16, 
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -160,7 +156,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           const Text(
                             '动态取色',
                             style: TextStyle(
-                              fontSize: 16, 
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -169,13 +165,18 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             '从系统提取主题颜色',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
                       ),
                       Switch(
-                        value: appTheme.useDynamicColor && !appTheme.useCustomColor,
+                        value:
+                            appTheme.useDynamicColor &&
+                            !appTheme.useCustomColor,
                         onChanged: (value) {
                           // 如果启用动态取色，需要禁用自定义主题色
                           if (value) {
@@ -184,18 +185,23 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           appTheme.setUseDynamicColor(value);
                         },
                         // 当使用自定义颜色时禁用此开关
-                        activeColor: appTheme.useCustomColor 
-                            ? Theme.of(context).colorScheme.surfaceContainerHighest 
-                            : null,
+                        activeColor:
+                            appTheme.useCustomColor
+                                ? Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest
+                                : null,
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  if (appTheme.useCustomColor) 
+                  if (appTheme.useCustomColor)
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.errorContainer.applyOpacity(0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -211,7 +217,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                               '已启用自定义主题色，动态取色功能已暂时禁用',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onErrorContainer,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
                               ),
                             ),
                           ),
@@ -222,7 +231,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest.applyOpacity(0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -230,7 +241,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           Icon(
                             Icons.info_outline,
                             size: 20,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 8),
                           const Expanded(
@@ -318,20 +330,23 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: colorScheme.primary.withOpacity(0.4),
+                color: colorScheme.primary.applyOpacity(0.4),
                 blurRadius: 8,
                 spreadRadius: 2,
               ),
           ],
         ),
-        child: isSelected
-            ? Icon(
-                Icons.check,
-                color: ThemeData.estimateBrightnessForColor(color) == Brightness.light 
-                    ? Colors.black 
-                    : Colors.white,
-              )
-            : null,
+        child:
+            isSelected
+                ? Icon(
+                  Icons.check,
+                  color:
+                      ThemeData.estimateBrightnessForColor(color) ==
+                              Brightness.light
+                          ? Colors.black
+                          : Colors.white,
+                )
+                : null,
       ),
     );
   }
@@ -361,7 +376,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     final Color initialColor = appTheme.customColor ?? Colors.blue;
     // 创建一个变量来跟踪当前选择的颜色
     Color selectedColor = initialColor;
-    
+
     // 使用ColorPicker的showPickerDialog方法
     // 注意：showPickerDialog返回bool值表示用户是否点击了确认按钮
     final bool colorSelected = await ColorPicker(
@@ -382,10 +397,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         ColorPickerType.accent: false,
         ColorPickerType.wheel: true,
       },
-    ).showPickerDialog(
-      context,
-    );
-    
+    ).showPickerDialog(context);
+
     // 如果用户点击了确认按钮，则应用选择的颜色
     if (colorSelected) {
       appTheme.setCustomColor(selectedColor);
