@@ -389,7 +389,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                         position.latitude,
                                         position.longitude,
                                       );
-                                      if (mounted &&
+                                      if (context.mounted &&
                                           weatherService.currentWeather !=
                                               '天气数据获取失败') {
                                         ScaffoldMessenger.of(
@@ -399,7 +399,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             content: Text('天气已更新'),
                                           ),
                                         );
-                                      } else if (mounted) {
+                                      } else if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
