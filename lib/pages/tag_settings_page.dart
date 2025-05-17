@@ -74,15 +74,21 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           : () async {
                             if (_tagController.text.isEmpty) return;
 
+                            // 在异步操作前获取上下文的参数和服务
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+                            final dbService = context.read<DatabaseService>();
+
                             setState(() => _isLoading = true);
                             try {
-                              await context.read<DatabaseService>().addCategory(
+                              await dbService.addCategory(
                                 _tagController.text,
                                 iconName: _selectedIconName,
                               ); // 替换 addTag 为 addCategory
 
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 const SnackBar(content: Text('标签添加成功')),
                               );
                               _tagController.clear();
@@ -91,7 +97,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               });
                             } catch (e) {
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 SnackBar(content: Text('添加标签失败：$e')),
                               );
                             } finally {
@@ -148,6 +154,12 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               : IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () async {
+                                  // 在异步操作前获取上下文的参数和服务
+                                  final scaffoldMessenger =
+                                      ScaffoldMessenger.of(context);
+                                  final dbService =
+                                      context.read<DatabaseService>();
+
                                   final confirmed = await showDialog<bool>(
                                     context: context,
                                     builder:
@@ -177,25 +189,17 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         ),
                                   );
 
-                                  if (confirmed == true && mounted) {
+                                  if (confirmed == true) {
                                     try {
-                                      await context
-                                          .read<DatabaseService>()
-                                          .deleteCategory(
-                                            tag.id,
-                                          ); // 替换 deleteTag 为 deleteCategory
+                                      await dbService.deleteCategory(tag.id);
 
                                       if (!mounted) return;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
+                                      scaffoldMessenger.showSnackBar(
                                         const SnackBar(content: Text('标签删除成功')),
                                       );
                                     } catch (e) {
                                       if (!mounted) return;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
+                                      scaffoldMessenger.showSnackBar(
                                         SnackBar(content: Text('删除标签失败：$e')),
                                       );
                                     }
@@ -380,7 +384,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                               : Colors
                                                                   .transparent,
                                                       borderRadius:
-                                                          BorderRadius.circular(AppTheme.cardRadius),
+                                                          BorderRadius.circular(
+                                                            AppTheme.cardRadius,
+                                                          ),
                                                       border: Border.all(
                                                         color:
                                                             isSelected
@@ -389,7 +395,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                                     )
                                                                     .colorScheme
                                                                     .primary
-                                                                : Theme.of(context).colorScheme.outline,
+                                                                : Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .outline,
                                                         width:
                                                             isSelected ? 2 : 1,
                                                       ),
@@ -408,7 +418,10 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         ),
                                       ),
 
-                                    Divider(color: Theme.of(context).colorScheme.outline),
+                                    Divider(
+                                      color:
+                                          Theme.of(context).colorScheme.outline,
+                                    ),
                                   ],
                                 );
                               }),
@@ -477,7 +490,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                               : Colors
                                                                   .transparent,
                                                       borderRadius:
-                                                          BorderRadius.circular(AppTheme.cardRadius),
+                                                          BorderRadius.circular(
+                                                            AppTheme.cardRadius,
+                                                          ),
                                                       border: Border.all(
                                                         color:
                                                             isSelected
@@ -486,7 +501,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                                     )
                                                                     .colorScheme
                                                                     .primary
-                                                                : Theme.of(context).colorScheme.outline,
+                                                                : Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .outline,
                                                       ),
                                                     ),
                                                     child: Icon(iconData),

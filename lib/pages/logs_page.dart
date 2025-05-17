@@ -1007,7 +1007,15 @@ class _LogsPageState extends State<LogsPage> {
               ),
               FilledButton(
                 onPressed: () async {
-                  Navigator.of(context).pop();
+                  // 在异步操作前获取所需的 context 相关服务和对象
+                  final navigator = Navigator.of(context);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  final logService = Provider.of<LogService>(
+                    context,
+                    listen: false,
+                  );
+
+                  navigator.pop();
 
                   // 显示加载指示器
                   showDialog(
@@ -1019,16 +1027,12 @@ class _LogsPageState extends State<LogsPage> {
                   );
 
                   try {
-                    final logService = Provider.of<LogService>(
-                      context,
-                      listen: false,
-                    );
                     await logService.clearAllLogs();
                     if (!mounted) return;
-                    Navigator.of(context).pop(); // 关闭加载指示器
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('所有日志记录已清除')));
+                    navigator.pop(); // 关闭加载指示器
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(content: Text('所有日志记录已清除')),
+                    );
                     setState(() {
                       _historyLogs.clear();
                       _currentPage = 0;
@@ -1036,10 +1040,10 @@ class _LogsPageState extends State<LogsPage> {
                     });
                   } catch (e) {
                     if (!mounted) return;
-                    Navigator.of(context).pop(); // 关闭加载指示器
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('清除日志失败: $e')));
+                    navigator.pop(); // 关闭加载指示器
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text('清除日志失败: $e')),
+                    );
                   }
                 },
                 child: const Text('清除全部日志'),

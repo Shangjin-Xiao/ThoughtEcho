@@ -17,6 +17,7 @@ class BackupRestorePage extends StatefulWidget {
 
 class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _handleExport(BuildContext context) async {
+    // 在异步操作前获取所有需要的context相关对象
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
 
@@ -186,8 +187,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   }
 
   Future<void> _handleImport(BuildContext context) async {
+    // 在异步操作前获取所有需要的context相关对象
     final navigator = Navigator.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
+
     try {
       const XTypeGroup jsonTypeGroup = XTypeGroup(
         label: 'JSON',
@@ -314,6 +317,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   OverlayEntry _showLoadingOverlay(BuildContext context, String message) {
     if (!mounted) return OverlayEntry(builder: (_) => const SizedBox.shrink());
+
+    // 在使用context前先获取需要的overlay
+    final overlayState = Overlay.of(context);
+
     final overlay = OverlayEntry(
       builder:
           (overlayContext) => Container(
@@ -336,7 +343,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             ),
           ),
     );
-    Overlay.of(context).insert(overlay);
+    overlayState.insert(overlay);
     return overlay;
   }
 

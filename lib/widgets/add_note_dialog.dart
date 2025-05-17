@@ -386,7 +386,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final db = Provider.of<DatabaseService>(context);
+    // 使用 Provider.of<DatabaseService>(context, listen: true)
+    // 这样UI会在数据库变化时自动更新
+    // 移除未使用的数据库服务变量
     final locationService = Provider.of<LocationService>(context);
     final weatherService = Provider.of<WeatherService>(context);
 
@@ -473,8 +475,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 获取当前输入的内容和元数据，但不创建Quote对象
                                 // 不传递initialQuote，这样全屏编辑器会使用addQuote逻辑
 
-                                final result = await Navigator.push(
-                                  context,
+                                final result = await Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder:
                                         (context) => NoteFullEditorPage(
@@ -487,19 +488,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   ),
                                 );
 
+                                if (!mounted) return;
+
                                 if (result != null && result == true) {
                                   // 如果笔记已在全屏编辑器中保存，关闭本对话框
-                                  if (mounted) {
-                                    Navigator.pop(context);
-                                  }
+                                  Navigator.pop(context);
                                 }
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('打开全屏编辑器失败: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('打开全屏编辑器失败: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -877,6 +880,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       );
 
                       try {
+                        final db = Provider.of<DatabaseService>(
+                          context,
+                          listen: false,
+                        );
+
                         if (widget.initialQuote != null) {
                           // 更新已有笔记
                           await db.updateQuote(quote);
@@ -900,7 +908,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                         // 关闭对话框
                         if (mounted) {
-                          Navigator.pop(context);
+                          Navigator.of(context).pop();
                         }
                       } catch (e) {
                         if (mounted) {

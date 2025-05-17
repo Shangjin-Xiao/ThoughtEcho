@@ -402,6 +402,9 @@ class _EditPageState extends State<EditPage> {
       return;
     }
 
+    // 在异步操作前获取必要的context相关对象
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final aiService = Provider.of<AIService>(context, listen: false);
 
     try {
@@ -424,50 +427,46 @@ class _EditPageState extends State<EditPage> {
       );
       final result = await aiService.polishText(_contentController.text);
       if (!mounted) return;
-      Navigator.of(context).pop();
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              title: const Text('润色结果'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(child: SelectableText(result)),
+      navigator.pop();
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('润色结果'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(child: SelectableText(result)),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('应用更改'),
+                onPressed: () {
+                  setState(() {
+                    _contentController.text = result;
+                  });
+                  Navigator.of(dialogContext).pop();
+                },
               ),
-              actions: [
-                TextButton(
-                  child: const Text('应用更改'),
-                  onPressed: () {
-                    setState(() {
-                      _contentController.text = result;
-                    });
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
+              TextButton(
+                child: const Text('取消'),
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
     } catch (e) {
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
 
       // 关闭加载对话框
-      Navigator.of(context).pop();
+      navigator.pop();
 
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('润色失败: $e')));
-      }
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('润色失败: $e')));
     }
   }
 
@@ -650,12 +649,14 @@ class _EditPageState extends State<EditPage> {
               )
               .catchError((error) {
                 // 如果导航失败，显示错误
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('无法打开全屏编辑器: $error'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('无法打开全屏编辑器: $error'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
                 return false;
               });
         }

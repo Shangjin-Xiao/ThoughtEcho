@@ -248,7 +248,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                     TextButton(
                                       onPressed: () => Navigator.pop(context),
                                       child: const Text('取消'),
-                                    ),                                    TextButton(
+                                    ),
+                                    TextButton(
                                       onPressed: () async {
                                         Navigator.pop(context);
                                         // 在可能导致上下文无效的异步操作前保存上下文
@@ -278,6 +279,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           position.latitude,
                           position.longitude,
                         );
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).removeCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('位置服务已启用，位置已更新')),

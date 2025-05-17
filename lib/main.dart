@@ -14,7 +14,7 @@ import 'services/ai_service.dart';
 import 'services/location_service.dart';
 import 'services/weather_service.dart';
 import 'services/mmkv_service.dart';
-import 'services/clipboard_service.dart'; 
+import 'services/clipboard_service.dart';
 import 'services/log_service.dart';
 import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
@@ -66,284 +66,294 @@ bool _isEmergencyMode = false;
 final List<Map<String, dynamic>> _deferredErrors = [];
 
 Future<void> main() async {
-  await runZonedGuarded<Future<void>>(() async {
-    // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
-    WidgetsFlutterBinding.ensureInitialized();
+  await runZonedGuarded<Future<void>>(
+    () async {
+      // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
+      WidgetsFlutterBinding.ensureInitialized();
 
-    // 全局记录未捕获的异步错误
-    PlatformDispatcher.instance.onError = (error, stack) {
-      // 使用debugPrint而不是print
-      debugPrint('捕获到平台分发器错误: $error');
-      debugPrint('堆栈: $stack');
-      
-      // 捕获到错误后再记录到日志系统
-      _deferredErrors.add({
-        'message': '平台分发器错误',
-        'error': error,
-        'stackTrace': stack,
-        'source': 'PlatformDispatcher',
-      });
-      
-      return true; // 返回true表示错误已处理
-    };
+      // 全局记录未捕获的异步错误
+      PlatformDispatcher.instance.onError = (error, stack) {
+        // 使用debugPrint而不是print
+        debugPrint('捕获到平台分发器错误: $error');
+        debugPrint('堆栈: $stack');
 
-    // 保存原始 print 函数
-    const originalPrint = print;
+        // 捕获到错误后再记录到日志系统
+        _deferredErrors.add({
+          'message': '平台分发器错误',
+          'error': error,
+          'stackTrace': stack,
+          'source': 'PlatformDispatcher',
+        });
 
-    // 重新定义 debugPrint
-    debugPrint = (String? message, {int? wrapWidth}) {
-      if (_isLogging) {
-        // 防止递归 - 如果已经在日志过程中，直接使用原始 print
-        originalPrint(message);
-        return;
-      }
-      
-      _isLogging = true;
-      try {
-        // 直接使用原始 print 输出，不触发递归
-        originalPrint(message);
-        
-        // 只有当 LogService 实例可用时才记录日志
-        if (message != null && message.isNotEmpty) {
-          // 尝试获取上下文
-          final context = navigatorKey.currentContext;
-          if (context != null) {
-            try {
-              final logService = Provider.of<LogService>(context, listen: false);
-              logService.info(message, source: 'debugPrint');
-            } catch (_) {
-              // 忽略 Provider 错误
-            }
-          }
+        return true; // 返回true表示错误已处理
+      };
+
+      // 保存原始 print 函数
+      const originalPrint = print;
+
+      // 重新定义 debugPrint
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (_isLogging) {
+          // 防止递归 - 如果已经在日志过程中，直接使用原始 print
+          originalPrint(message);
+          return;
         }
-      } finally {
-        _isLogging = false;
-      }
-    };
 
-    // 捕获Flutter框架异常并写入日志服务
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.dumpErrorToConsole(details);
-      
-      // 尝试获取LogService实例
-      final context = navigatorKey.currentContext;
-      try {
-        if (context != null) {
-          final logService = Provider.of<LogService>(context, listen: false);
-          logService.error(
-            'Flutter异常: ${details.exceptionAsString()}',
-            error: details.exception,
-            stackTrace: details.stack,
-            source: 'FlutterError',
-          );
-        } else {
-          // 无法通过context获取LogService时，先保存到全局缓存
-          _deferredErrors.add({
-            'message': 'Flutter异常: ${details.exceptionAsString()}',
-            'error': details.exception,
-            'stackTrace': details.stack,
-            'source': 'FlutterError',
-          });
-        }
-      } catch (e) {
-        debugPrint('记录Flutter异常时出错: $e');
-      }
-    };
-
-    try {
-      // 先初始化必要的平台特定的数据库配置
-      await initializeDatabasePlatform();
-
-      // 初始化轻量级且必须的服务
-      final mmkvService = MMKVService();
-      await mmkvService.init();
-
-      // 初始化设置服务
-      final settingsService = await SettingsService.create();
-      // 自动获取应用版本号
-      final packageInfo = await PackageInfo.fromPlatform();
-      final String currentVersion = packageInfo.version;
-      final String? lastVersion = settingsService.getAppVersion();
-      final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
-
-      // 判断是否需要完整引导或升级引导
-      bool showFullOnboarding = !hasCompletedOnboarding;
-      bool showUpdateReady = hasCompletedOnboarding && (lastVersion != currentVersion);
-      if (showUpdateReady) {
-        // 只显示引导最后一页，自动迁移数据，升级完成后写入 lastVersion
-        await settingsService.setAppVersion(currentVersion);
-      }
-      if (showFullOnboarding) {
-        // 完整引导完成后写入 lastVersion
-        // 由 OnboardingPage 负责设置 hasCompletedOnboarding 和 lastVersion
-      }
-      
-      // 创建服务实例但暂不初始化重量级服务
-      final databaseService = DatabaseService();
-      final locationService = LocationService();
-      final weatherService = WeatherService();
-      final clipboardService = ClipboardService();
-      
-      // 创建日志服务但从用户设置加载日志级别
-      final logService = LogService();
-      // 不再这里强制设置级别，让LogService从用户配置中加载
-      // await logService.setLogLevel(LogLevel.none);
-      
-      final appTheme = AppTheme();
-      
-      // 初始化主题 - 这是UI显示必须的
-      await appTheme.initialize();
-      
-      // 使用ValueNotifier跟踪服务初始化状态
-      final servicesInitialized = ValueNotifier<bool>(false);
-      
-      // 启动应用UI
-      runApp(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider(create: (_) => settingsService),
-            ChangeNotifierProvider(create: (_) => databaseService),
-            ChangeNotifierProvider(create: (_) => locationService),
-            ChangeNotifierProvider(create: (_) => weatherService),
-            ChangeNotifierProvider(create: (_) => clipboardService),
-            ChangeNotifierProvider(create: (_) => logService),
-            ChangeNotifierProvider(create: (_) => appTheme),
-            Provider.value(value: mmkvService), // 使用 Provider.value 提供 MMKVService
-            // 提供初始化状态
-            ValueListenableProvider<bool>.value(value: servicesInitialized),
-            ChangeNotifierProxyProvider<SettingsService, AIService>(
-              create:
-                  (context) => AIService(
-                    settingsService: context.read<SettingsService>(),
-                    locationService: context.read<LocationService>(),
-                    weatherService: context.read<WeatherService>(),
-                  ),
-              update:
-                  (context, settings, previous) =>
-                      previous ??
-                      AIService(
-                        settingsService: settings,
-                        locationService: context.read<LocationService>(),
-                        weatherService: context.read<WeatherService>(),
-                      ),
-            ),
-          ],
-          child: MyApp(
-            navigatorKey: navigatorKey,
-            isEmergencyMode: _isEmergencyMode,
-            showUpdateReady: showUpdateReady,
-            showFullOnboarding: showFullOnboarding,
-          ),
-        ),
-      );
-      
-      // 首屏UI显示后，异步初始化其他服务
-      // 使用microtask确保在UI渲染后执行
-      Future.microtask(() async {
+        _isLogging = true;
         try {
-          debugPrint('UI已显示，正在后台初始化服务...');
-          
-          // 初始化clipboardService
-          await clipboardService.init().timeout(
-            const Duration(seconds: 3),
-            onTimeout: () => debugPrint('剪贴板服务初始化超时，将继续后续初始化'),
-          );
-          
-          // 检查设置服务中的数据库迁移状态
-          final hasMigrated = settingsService.isDatabaseMigrationComplete();
-          debugPrint('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}');
-          
-          // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
-          if (settingsService.hasCompletedOnboarding() && !hasMigrated) {
-            try {
-              // 初始化数据库，这通常是最耗时的操作
-              await databaseService.init().timeout(
-                const Duration(seconds: 5),
-                onTimeout: () {
-                  throw TimeoutException('数据库初始化超时');
-                },
-              );
-              
-              // 初始化默认一言分类
-              await databaseService.initDefaultHitokotoCategories();
-              
-              // 标记数据库迁移已完成
-              await settingsService.setDatabaseMigrationComplete(true);
-              
-              debugPrint('后台数据库迁移完成');
-            } catch (e, stackTrace) {
-              debugPrint('后台数据库迁移失败: $e');
-              
-              // 在紧急情况下尝试初始化新数据库
+          // 直接使用原始 print 输出，不触发递归
+          originalPrint(message);
+
+          // 只有当 LogService 实例可用时才记录日志
+          if (message != null && message.isNotEmpty) {
+            // 尝试获取上下文
+            final context = navigatorKey.currentContext;
+            if (context != null) {
               try {
-                await databaseService.initializeNewDatabase();
-                await settingsService.setDatabaseMigrationComplete(true);
-                debugPrint('后台初始化新数据库成功');
-              } catch (newDbError) {
-                debugPrint('后台初始化新数据库也失败: $newDbError');
-                _isEmergencyMode = true;
+                final logService = Provider.of<LogService>(
+                  context,
+                  listen: false,
+                );
+                logService.info(message, source: 'debugPrint');
+              } catch (_) {
+                // 忽略 Provider 错误
               }
-              
-              // 记录错误但继续执行
-              logService.error(
-                '后台数据库迁移失败',
-                error: e,
-                stackTrace: stackTrace,
-                source: 'background_init',
-              );
             }
-          } else if (!settingsService.hasCompletedOnboarding()) {
-            // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
-            debugPrint('等待引导流程中的数据库迁移...');
-          } else {
-            // 引导已完成且数据库已迁移，正常初始化
-            debugPrint('数据库已迁移，执行常规初始化');
-            await _initializeDatabaseNormally(databaseService, logService);
           }
-          
-          // 初始化完成，更新状态
-          servicesInitialized.value = true;
-          debugPrint('所有后台服务初始化完成');
-        } catch (e, stackTrace) {
-          debugPrint('后台服务初始化失败: $e');
-          
-          // 记录错误
-          final context = navigatorKey.currentContext;
+        } finally {
+          _isLogging = false;
+        }
+      };
+
+      // 捕获Flutter框架异常并写入日志服务
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.dumpErrorToConsole(details);
+
+        // 尝试获取LogService实例
+        final context = navigatorKey.currentContext;
+        try {
           if (context != null) {
+            final logService = Provider.of<LogService>(context, listen: false);
+            logService.error(
+              'Flutter异常: ${details.exceptionAsString()}',
+              error: details.exception,
+              stackTrace: details.stack,
+              source: 'FlutterError',
+            );
+          } else {
+            // 无法通过context获取LogService时，先保存到全局缓存
+            _deferredErrors.add({
+              'message': 'Flutter异常: ${details.exceptionAsString()}',
+              'error': details.exception,
+              'stackTrace': details.stack,
+              'source': 'FlutterError',
+            });
+          }
+        } catch (e) {
+          debugPrint('记录Flutter异常时出错: $e');
+        }
+      };
+
+      try {
+        // 先初始化必要的平台特定的数据库配置
+        await initializeDatabasePlatform();
+
+        // 初始化轻量级且必须的服务
+        final mmkvService = MMKVService();
+        await mmkvService.init();
+
+        // 初始化设置服务
+        final settingsService = await SettingsService.create();
+        // 自动获取应用版本号
+        final packageInfo = await PackageInfo.fromPlatform();
+        final String currentVersion = packageInfo.version;
+        final String? lastVersion = settingsService.getAppVersion();
+        final bool hasCompletedOnboarding =
+            settingsService.hasCompletedOnboarding();
+
+        // 判断是否需要完整引导或升级引导
+        bool showFullOnboarding = !hasCompletedOnboarding;
+        bool showUpdateReady =
+            hasCompletedOnboarding && (lastVersion != currentVersion);
+        if (showUpdateReady) {
+          // 只显示引导最后一页，自动迁移数据，升级完成后写入 lastVersion
+          await settingsService.setAppVersion(currentVersion);
+        }
+        if (showFullOnboarding) {
+          // 完整引导完成后写入 lastVersion
+          // 由 OnboardingPage 负责设置 hasCompletedOnboarding 和 lastVersion
+        }
+
+        // 创建服务实例但暂不初始化重量级服务
+        final databaseService = DatabaseService();
+        final locationService = LocationService();
+        final weatherService = WeatherService();
+        final clipboardService = ClipboardService();
+
+        // 创建日志服务但从用户设置加载日志级别
+        final logService = LogService();
+        // 不再这里强制设置级别，让LogService从用户配置中加载
+        // await logService.setLogLevel(LogLevel.none);
+
+        final appTheme = AppTheme();
+
+        // 初始化主题 - 这是UI显示必须的
+        await appTheme.initialize();
+
+        // 使用ValueNotifier跟踪服务初始化状态
+        final servicesInitialized = ValueNotifier<bool>(false);
+
+        // 启动应用UI
+        runApp(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => settingsService),
+              ChangeNotifierProvider(create: (_) => databaseService),
+              ChangeNotifierProvider(create: (_) => locationService),
+              ChangeNotifierProvider(create: (_) => weatherService),
+              ChangeNotifierProvider(create: (_) => clipboardService),
+              ChangeNotifierProvider(create: (_) => logService),
+              ChangeNotifierProvider(create: (_) => appTheme),
+              Provider.value(
+                value: mmkvService,
+              ), // 使用 Provider.value 提供 MMKVService
+              // 提供初始化状态
+              ValueListenableProvider<bool>.value(value: servicesInitialized),
+              ChangeNotifierProxyProvider<SettingsService, AIService>(
+                create:
+                    (context) => AIService(
+                      settingsService: context.read<SettingsService>(),
+                      locationService: context.read<LocationService>(),
+                      weatherService: context.read<WeatherService>(),
+                    ),
+                update:
+                    (context, settings, previous) =>
+                        previous ??
+                        AIService(
+                          settingsService: settings,
+                          locationService: context.read<LocationService>(),
+                          weatherService: context.read<WeatherService>(),
+                        ),
+              ),
+            ],
+            child: MyApp(
+              navigatorKey: navigatorKey,
+              isEmergencyMode: _isEmergencyMode,
+              showUpdateReady: showUpdateReady,
+              showFullOnboarding: showFullOnboarding,
+            ),
+          ),
+        );
+
+        // 首屏UI显示后，异步初始化其他服务
+        // 使用microtask确保在UI渲染后执行
+        Future.microtask(() async {
+          try {
+            debugPrint('UI已显示，正在后台初始化服务...');
+
+            // 初始化clipboardService
+            await clipboardService.init().timeout(
+              const Duration(seconds: 3),
+              onTimeout: () => debugPrint('剪贴板服务初始化超时，将继续后续初始化'),
+            );
+
+            // 检查设置服务中的数据库迁移状态
+            final hasMigrated = settingsService.isDatabaseMigrationComplete();
+            debugPrint('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}');
+
+            // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
+            if (settingsService.hasCompletedOnboarding() && !hasMigrated) {
+              try {
+                // 初始化数据库，这通常是最耗时的操作
+                await databaseService.init().timeout(
+                  const Duration(seconds: 5),
+                  onTimeout: () {
+                    throw TimeoutException('数据库初始化超时');
+                  },
+                );
+
+                // 初始化默认一言分类
+                await databaseService.initDefaultHitokotoCategories();
+
+                // 标记数据库迁移已完成
+                await settingsService.setDatabaseMigrationComplete(true);
+
+                debugPrint('后台数据库迁移完成');
+              } catch (e, stackTrace) {
+                debugPrint('后台数据库迁移失败: $e');
+
+                // 在紧急情况下尝试初始化新数据库
+                try {
+                  await databaseService.initializeNewDatabase();
+                  await settingsService.setDatabaseMigrationComplete(true);
+                  debugPrint('后台初始化新数据库成功');
+                } catch (newDbError) {
+                  debugPrint('后台初始化新数据库也失败: $newDbError');
+                  _isEmergencyMode = true;
+                }
+
+                // 记录错误但继续执行
+                logService.error(
+                  '后台数据库迁移失败',
+                  error: e,
+                  stackTrace: stackTrace,
+                  source: 'background_init',
+                );
+              }
+            } else if (!settingsService.hasCompletedOnboarding()) {
+              // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
+              debugPrint('等待引导流程中的数据库迁移...');
+            } else {
+              // 引导已完成且数据库已迁移，正常初始化
+              debugPrint('数据库已迁移，执行常规初始化');
+              await _initializeDatabaseNormally(databaseService, logService);
+            }
+
+            // 初始化完成，更新状态
+            servicesInitialized.value = true;
+            debugPrint('所有后台服务初始化完成');
+          } catch (e, stackTrace) {
+            debugPrint('后台服务初始化失败: $e');
+
+            // 记录错误，不使用 BuildContext
             try {
-              Provider.of<LogService>(context, listen: false).error(
-                '后台服务初始化失败',
-                error: e,
-                stackTrace: stackTrace,
-                source: 'background_init',
-              );
+              // 将错误信息添加到延迟处理队列
+              _deferredErrors.add({
+                'message': '后台服务初始化失败',
+                'error': e,
+                'stackTrace': stackTrace,
+                'source': 'background_init',
+              });
             } catch (_) {}
           }
-        }
-      });
-    } catch (e, stackTrace) {
-      debugPrint('应用初始化失败: $e');
-      debugPrint('堆栈跟踪: $stackTrace');
-      
-      // 如果初始化失败，直接运行一个简单的错误应用
-      _isEmergencyMode = true;
-      runApp(EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()));
-    }
-  }, (error, stackTrace) {
-    debugPrint('未捕获的异常: $error');
-    debugPrint('堆栈跟踪: $stackTrace');
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      try {
-        Provider.of<LogService>(context, listen: false).error(
-          '未捕获异常: $error',
-          error: error,
-          stackTrace: stackTrace,
-          source: 'runZonedGuarded',
+        });
+      } catch (e, stackTrace) {
+        debugPrint('应用初始化失败: $e');
+        debugPrint('堆栈跟踪: $stackTrace');
+
+        // 如果初始化失败，直接运行一个简单的错误应用
+        _isEmergencyMode = true;
+        runApp(
+          EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()),
         );
+      }
+    },
+    (error, stackTrace) {
+      debugPrint('未捕获的异常: $error');
+      debugPrint('堆栈跟踪: $stackTrace');
+
+      // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
+      try {
+        // 将错误信息添加到延迟处理队列
+        _deferredErrors.add({
+          'message': '未捕获异常: $error',
+          'error': error,
+          'stackTrace': stackTrace,
+          'source': 'runZonedGuarded',
+        });
       } catch (_) {}
-    }
-  });
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -351,10 +361,10 @@ class MyApp extends StatelessWidget {
   final bool isEmergencyMode;
   final bool showUpdateReady;
   final bool showFullOnboarding;
-  
+
   const MyApp({
-    super.key, 
-    required this.navigatorKey, 
+    super.key,
+    required this.navigatorKey,
     this.isEmergencyMode = false,
     this.showUpdateReady = false,
     this.showFullOnboarding = false,
@@ -366,7 +376,8 @@ class MyApp extends StatelessWidget {
     final settingsService = Provider.of<SettingsService>(context);
     final appTheme = Provider.of<AppTheme>(context);
     // 检查是否需要显示引导页面
-    final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
+    final bool hasCompletedOnboarding =
+        settingsService.hasCompletedOnboarding();
 
     // 使用 DynamicColorBuilder 以支持动态取色功能
     return DynamicColorBuilder(
@@ -382,21 +393,23 @@ class MyApp extends StatelessWidget {
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,
           debugShowCheckedModeBanner: false,
-          home: showUpdateReady ? const OnboardingPage(showUpdateReady: true) : !hasCompletedOnboarding
-              ? const OnboardingPage() // 如果未完成引导，显示引导页面
-              : isEmergencyMode 
-                ? const EmergencyRecoveryPage() 
-                : HomePage(initialPage: settingsService.appSettings.defaultStartPage),
+          home:
+              showUpdateReady
+                  ? const OnboardingPage(showUpdateReady: true)
+                  : !hasCompletedOnboarding
+                  ? const OnboardingPage() // 如果未完成引导，显示引导页面
+                  : isEmergencyMode
+                  ? const EmergencyRecoveryPage()
+                  : HomePage(
+                    initialPage: settingsService.appSettings.defaultStartPage,
+                  ),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
             FlutterQuillLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-            Locale('en', 'US'),
-          ],
+          supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
         );
       },
     );
@@ -415,7 +428,8 @@ class EmergencyRecoveryPage extends StatelessWidget {
         backgroundColor: Colors.red,
       ),
       body: SafeArea(
-        child: SingleChildScrollView( // 添加SingleChildScrollView使内容可滚动
+        child: SingleChildScrollView(
+          // 添加SingleChildScrollView使内容可滚动
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -423,17 +437,14 @@ class EmergencyRecoveryPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Icon(
-                  Icons.warning_amber_rounded, 
-                  size: 64, 
-                  color: Colors.red
+                  Icons.warning_amber_rounded,
+                  size: 64,
+                  color: Colors.red,
                 ),
                 const SizedBox(height: 24),
                 const Text(
                   '数据库初始化失败',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -445,10 +456,12 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(
-                  onPressed: () async { // 标记为 async
+                  onPressed: () async {
+                    // 标记为 async
                     // 导航前检查 mounted 状态
                     if (!context.mounted) return;
-                    await Navigator.push( // 使用 await
+                    await Navigator.push(
+                      // 使用 await
                       context,
                       MaterialPageRoute(
                         builder: (context) => const BackupRestorePage(),
@@ -464,14 +477,14 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () async { // 标记为 async
+                  onPressed: () async {
+                    // 标记为 async
                     // 导航前检查 mounted 状态
                     if (!context.mounted) return;
-                    await Navigator.pushReplacement( // 使用 await
+                    await Navigator.pushReplacement(
+                      // 使用 await
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomePage(),
-                      ),
+                      MaterialPageRoute(builder: (context) => const HomePage()),
                     );
                   },
                   icon: const Icon(Icons.refresh),
@@ -503,11 +516,11 @@ class EmergencyRecoveryPage extends StatelessWidget {
 class EmergencyApp extends StatelessWidget {
   final String error;
   final String stackTrace;
-  
+
   const EmergencyApp({
-    super.key, 
-    required this.error, 
-    required this.stackTrace
+    super.key,
+    required this.error,
+    required this.stackTrace,
   });
 
   @override
@@ -522,9 +535,7 @@ class EmergencyApp extends StatelessWidget {
         ),
       ),
       home: EmergencyHomePage(error: error, stackTrace: stackTrace),
-      routes: {
-        '/backup_restore': (context) => const BackupRestorePage(),
-      },
+      routes: {'/backup_restore': (context) => const BackupRestorePage()},
     );
   }
 }
@@ -533,38 +544,28 @@ class EmergencyApp extends StatelessWidget {
 class EmergencyHomePage extends StatelessWidget {
   final String error;
   final String stackTrace;
-  
+
   const EmergencyHomePage({
     super.key,
     required this.error,
     required this.stackTrace,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('紧急恢复模式'),
-        backgroundColor: Colors.red,
-      ),
+      appBar: AppBar(title: const Text('紧急恢复模式'), backgroundColor: Colors.red),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.error_outline, 
-                size: 64, 
-                color: Colors.red
-              ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               const Text(
                 '应用启动失败',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -659,7 +660,7 @@ class EmergencyHomePage extends StatelessWidget {
               const Text(
                 '如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。',
                 style: TextStyle(
-                  fontSize: 14, 
+                  fontSize: 14,
                   fontStyle: FontStyle.italic,
                   color: Colors.grey,
                 ),
@@ -691,7 +692,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
   bool _isLoading = false;
   String? _statusMessage;
   bool _hasError = false;
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -705,18 +706,11 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.data_saver_on,
-                size: 64,
-                color: Colors.orange,
-              ),
+              const Icon(Icons.data_saver_on, size: 64, color: Colors.orange),
               const SizedBox(height: 16),
               const Text(
                 '数据紧急恢复工具',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -732,7 +726,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   children: [
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
-                    Text('正在处理...${_statusMessage ?? ""}')
+                    Text('正在处理...${_statusMessage ?? ""}'),
                   ],
                 )
               else
@@ -774,23 +768,24 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   margin: const EdgeInsets.only(top: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _hasError ? Colors.red.shade100 : Colors.green.shade100,
+                    color:
+                        _hasError ? Colors.red.shade100 : Colors.green.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     _statusMessage!,
                     style: TextStyle(
-                      color: _hasError ? Colors.red.shade900 : Colors.green.shade900,
+                      color:
+                          _hasError
+                              ? Colors.red.shade900
+                              : Colors.green.shade900,
                     ),
                   ),
                 ),
               const Spacer(),
               const Text(
                 '提示: 导出的数据库文件可以发送给开发人员进行专业恢复。',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -813,7 +808,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
       final dbPath = join(appDir.path, 'databases');
       final dbFile = File(join(dbPath, 'thoughtecho.db'));
       final oldDbFile = File(join(dbPath, 'mind_trace.db'));
-      
+
       // 确认文件存在
       if (!dbFile.existsSync() && !oldDbFile.existsSync()) {
         setState(() {
@@ -823,33 +818,34 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
         });
         return;
       }
-      
+
       // 使用存在的文件
       final sourceFile = dbFile.existsSync() ? dbFile : oldDbFile;
-      
+
       setState(() {
         _statusMessage = '正在准备导出...';
       });
-      
+
       // 创建一个导出目录
       final downloadsDir = Directory(join(appDir.path, 'Downloads'));
       if (!downloadsDir.existsSync()) {
         await downloadsDir.create(recursive: true);
       }
-      
+
       // 创建导出文件名
       final now = DateTime.now();
-      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final timestamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
       final exportFileName = 'thoughtecho_emergency_$timestamp.db';
       final exportFile = File(join(downloadsDir.path, exportFileName));
-      
+
       // 复制文件
       setState(() {
         _statusMessage = '正在复制文件...';
       });
-      
+
       await sourceFile.copy(exportFile.path);
-      
+
       setState(() {
         _isLoading = false;
         _statusMessage = '数据库文件已导出到: ${exportFile.path}';
@@ -873,7 +869,10 @@ List<Map<String, dynamic>> getAndClearDeferredErrors() {
 }
 
 // 提取常规数据库初始化为独立函数
-Future<void> _initializeDatabaseNormally(DatabaseService databaseService, LogService logService) async {
+Future<void> _initializeDatabaseNormally(
+  DatabaseService databaseService,
+  LogService logService,
+) async {
   try {
     await databaseService.init().timeout(
       const Duration(seconds: 5),
@@ -881,13 +880,13 @@ Future<void> _initializeDatabaseNormally(DatabaseService databaseService, LogSer
         throw TimeoutException('数据库初始化超时');
       },
     );
-    
+
     // 确保初始化默认一言分类，即使数据库已初始化
     await databaseService.initDefaultHitokotoCategories();
     debugPrint('数据库服务及默认标签初始化完成');
   } catch (e, stackTrace) {
     debugPrint('数据库初始化失败: $e');
-    
+
     // 尝试恢复：即使数据库初始化失败，也尝试创建默认标签
     try {
       await databaseService.initDefaultHitokotoCategories();
@@ -896,12 +895,12 @@ Future<void> _initializeDatabaseNormally(DatabaseService databaseService, LogSer
       debugPrint('创建默认标签也失败: $tagError');
       _isEmergencyMode = true;
     }
-    
+
     // 如果还是失败，进入紧急模式
     if (!databaseService.isInitialized) {
       _isEmergencyMode = true;
     }
-    
+
     // 记录错误但继续执行其他服务初始化
     logService.error(
       '数据库初始化失败，但应用将尝试继续运行',
