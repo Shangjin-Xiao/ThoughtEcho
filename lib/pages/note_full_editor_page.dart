@@ -1105,6 +1105,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               ),
                               onTap: () async {
                                 // 使用async/await确保颜色选择完成后刷新UI
+                                if (!context.mounted) return;
                                 await _showCustomColorPicker(context);
                                 // 强制刷新对话框UI以显示新选的颜色
                                 if (mounted) {
@@ -1313,11 +1314,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
+                    padding: const EdgeInsets.all(16.0),                    child: Row(
                       children: [
                         Icon(
-                          Icons.flutter_dash,
+                          Icons.auto_awesome,
                           size: 20,
                           color: theme.colorScheme.primary,
                         ),

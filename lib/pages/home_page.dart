@@ -152,6 +152,7 @@ class _HomePageState extends State<HomePage>
   Future<void> _loadTags() async {
     try {
       debugPrint('加载标签数据...');
+      if (!context.mounted) return; // 添加 mounted 检查
       final categories = await context.read<DatabaseService>().getCategories();
 
       if (mounted) {

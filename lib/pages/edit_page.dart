@@ -427,6 +427,7 @@ class _EditPageState extends State<EditPage> {
       );
       final result = await aiService.polishText(_contentController.text);
       if (!mounted) return;
+      if (!context.mounted) return;
       navigator.pop();
       if (!mounted) return;
 
@@ -501,6 +502,7 @@ class _EditPageState extends State<EditPage> {
       );
       final result = await aiService.continueText(_contentController.text);
       if (!mounted) return;
+      if (!context.mounted) return;
       Navigator.of(context).pop();
       if (mounted) {
         showDialog(
