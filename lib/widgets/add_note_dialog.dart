@@ -53,6 +53,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   bool _includeLocation = false;
   bool _includeWeather = false;
 
+  // 保存原始笔记的位置和天气信息（用于编辑模式）
+  String? _originalLocation;
+  String? _originalWeather;
+  String? _originalTemperature;
+
+  // 控制是否使用最新的位置和天气信息
+  bool _useLatestLocationWeather = false;
+
   // 颜色选择
   String? _selectedColorHex;
 
@@ -96,6 +104,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     if (widget.initialQuote != null) {
       _aiSummary = widget.initialQuote!.aiAnalysis;
       _selectedColorHex = widget.initialQuote!.colorHex;
+
+      // 保存原始的位置和天气信息
+      _originalLocation = widget.initialQuote!.location;
+      _originalWeather = widget.initialQuote!.weather;
+      _originalTemperature = widget.initialQuote!.temperature;
+
+      // 根据现有笔记的位置和天气信息设置复选框状态
+      _includeLocation = widget.initialQuote!.location != null;
+      _includeWeather = widget.initialQuote!.weather != null;
 
       // 添加标签
       if (widget.initialQuote!.tagIds.isNotEmpty) {
@@ -501,7 +518,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                     Navigator.pop(this.context);
                                   }
                                 }
-
                               } catch (e) {
                                 // 使用 context.mounted 检查 Builder 的 context 是否仍然有效
                                 if (context.mounted) {
@@ -631,6 +647,33 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     selectedColor: theme.colorScheme.primaryContainer,
                   ),
                 ),
+                // 如果是编辑模式，添加刷新按钮
+                if (widget.initialQuote != null &&
+                    (_includeLocation || _includeWeather))
+                  Tooltip(
+                    message:
+                        _useLatestLocationWeather
+                            ? '已设置为使用最新位置和天气'
+                            : '更新为当前位置和天气',
+                    child: FilterChip(
+                      avatar: Icon(
+                        Icons.refresh,
+                        color:
+                            _useLatestLocationWeather
+                                ? theme.colorScheme.primary
+                                : Colors.grey,
+                        size: 18,
+                      ),
+                      label: const Text('更新'),
+                      selected: _useLatestLocationWeather,
+                      onSelected: (value) {
+                        setState(() {
+                          _useLatestLocationWeather = value;
+                        });
+                      },
+                      selectedColor: theme.colorScheme.primaryContainer,
+                    ),
+                  ),
                 const SizedBox(width: 8),
                 // 颜色选择按钮
                 Tooltip(
@@ -878,9 +921,27 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             _selectedCategory?.id ??
                             widget.initialQuote?.categoryId,
                         colorHex: _selectedColorHex,
-                        location: _includeLocation ? location : null,
-                        weather: _includeWeather ? weather : null,
-                        temperature: _includeWeather ? temperature : null,
+                        location:
+                            _includeLocation
+                                ? (widget.initialQuote != null &&
+                                        !_useLatestLocationWeather
+                                    ? _originalLocation
+                                    : location)
+                                : null,
+                        weather:
+                            _includeWeather
+                                ? (widget.initialQuote != null &&
+                                        !_useLatestLocationWeather
+                                    ? _originalWeather
+                                    : weather)
+                                : null,
+                        temperature:
+                            _includeWeather
+                                ? (widget.initialQuote != null &&
+                                        !_useLatestLocationWeather
+                                    ? _originalTemperature
+                                    : temperature)
+                                : null,
                         dayPeriod:
                             widget.initialQuote?.dayPeriod ??
                             currentDayPeriodKey, // 保存 Key
