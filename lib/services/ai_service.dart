@@ -28,6 +28,125 @@ class AIService extends ChangeNotifier {
        _locationService = locationService, // 新增
        _weatherService = weatherService; // 新增
 
+  // 根据分析类型选择系统提示词
+  String _getAnalysisTypePrompt(String analysisType) {
+    switch (analysisType) {
+      case 'emotional':
+        return '''你是一位专业的心理分析师和情感咨询师。请分析用户笔记中的情感状态、情绪变化和心理健康。
+          
+任务：
+1. 识别笔记中表达的主要情绪和情感模式
+2. 分析情绪变化的趋势和可能的触发因素
+3. 提供关于情绪管理和心理健康的建议
+4. 以尊重和专业的方式表达你的分析
+
+格式要求：
+- 使用"# 情感洞察分析"作为主标题
+- 包含"## 总体情感状态"部分
+- 包含"## 情绪变化趋势"部分
+- 包含"## 建议与反思"部分
+- 适当使用markdown格式增强可读性''';
+
+      case 'mindmap':
+        return '''你是一位专业的思维导图和知识系统构建专家。请分析用户笔记，构建他们思考的结构和思维习惯。
+          
+任务：
+1. 识别笔记中的主要思考主题和思维模式
+2. 分析这些主题之间的联系和层次结构
+3. 评估思维的深度、广度和连贯性
+4. 提供关于如何拓展和深化思考的建议
+
+格式要求：
+- 使用"# 思维导图分析"作为主标题
+- 包含"## 核心思考主题"部分
+- 包含"## 思维结构图"部分(用文字描述思维图的结构)
+- 包含"## 思维特点分析"部分
+- 包含"## 思维发展建议"部分
+- 适当使用markdown格式增强可读性''';
+
+      case 'growth':
+        return '''你是一位专业的个人成长教练和学习顾问。请基于用户笔记分析他们的成长轨迹并提供发展建议。
+          
+任务：
+1. 识别用户的兴趣、价值观和目标
+2. 分析用户的学习模式和成长轨迹
+3. 发现可能的成长盲点和发展机会
+4. 提供具体、实用的成长和进步建议
+
+格式要求：
+- 使用"# 成长建议分析"作为主标题
+- 包含"## 个人特质与价值观"部分
+- 包含"## 成长轨迹分析"部分
+- 包含"## 发展机会"部分
+- 包含"## 具体行动建议"部分
+- 适当使用markdown格式增强可读性''';
+
+      case 'comprehensive':
+      default:
+        return '''你是一位专业的思想分析师和洞察专家。请全面分析用户的笔记内容，发掘其中的思想价值和模式。
+
+任务：
+1. 分析笔记中的核心思想和主题
+2. 识别重复出现的关键概念和模式
+3. 探究潜在的思维模式和价值观
+4. 提供有深度的洞察和反思建议
+
+格式要求：
+- 使用"# 思想洞察分析"作为主标题
+- 包含"## 核心思想概述"部分
+- 包含"## 主题与模式"部分
+- 包含"## 深度洞察"部分
+- 包含"## 思考与建议"部分
+- 适当使用markdown格式增强可读性''';
+    }
+  }
+
+  // 根据分析风格修改提示词
+  String _appendAnalysisStylePrompt(String systemPrompt, String analysisStyle) {
+    String stylePrompt;
+
+    switch (analysisStyle) {
+      case 'friendly':
+        stylePrompt = '''表达风格：
+- 使用温暖、鼓励和支持性的语言
+- 以友好的"你"称呼读者
+- 像一位知心朋友或支持性的导师给予建议
+- 避免过于学术或技术化的语言
+- 强调积极的方面和成长的可能性''';
+        break;
+
+      case 'humorous':
+        stylePrompt = '''表达风格：
+- 运用适当的幽默和风趣元素
+- 使用生动的比喻和有趣的类比
+- 保持轻松愉快的语调
+- 在严肃洞察中穿插幽默观察
+- 避免过于严肃或教条的表达方式''';
+        break;
+
+      case 'literary':
+        stylePrompt = '''表达风格：
+- 使用优美、富有文学色彩的语言
+- 适当引用诗歌、文学作品或哲学观点
+- 运用丰富的修辞手法和意象
+- 以优雅流畅的叙事风格展开分析
+- 注重文字的节奏感和美感''';
+        break;
+
+      case 'professional':
+      default:
+        stylePrompt = '''表达风格：
+- 使用专业、清晰和客观的语言
+- 保持分析的系统性和结构化
+- 提供基于证据的观察和推理
+- 使用恰当的专业术语（但避免过于晦涩）
+- 以第三人称或中性语气表达''';
+        break;
+    }
+
+    return '$systemPrompt\n\n$stylePrompt';
+  }
+
   Future<void> _validateSettings() async {
     final settings = _settingsService.aiSettings;
 
@@ -556,89 +675,111 @@ class AIService extends ChangeNotifier {
 
   // 新增：流式生成每日提示
   Stream<String> streamGenerateDailyPrompt() async* {
-    // 检查API Key是否有效
-    if (!hasValidApiKey()) {
-      debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
-      // 获取位置和天气信息用于生成上下文相关的提示
-      String? city;
-      String? weather;
-      String? temperature;
-
-      // 使用之前注入但未使用的位置服务
-      if (_locationService.city != null) {
-        city = _locationService.city;
-      }
-
-      // 使用之前注入但未使用的天气服务
-      if (_weatherService.currentWeather != null) {
-        weather = _weatherService.currentWeather;
-        temperature = _weatherService.temperature;
-      }
-
-      // 使用上下文信息生成个性化的提示
-      yield DailyPromptGenerator.generatePromptBasedOnContext(
-        city: city,
-        weather: weather,
-        temperature: temperature,
-      );
-      // 为了模拟流式效果，可以稍作延迟（可选）
-      await Future.delayed(const Duration(milliseconds: 50));
-    } else {
-      // 如果API Key有效，调用AI生成流式提示
-      debugPrint('API Key有效，使用AI生成每日提示');
-      try {
-        await _validateSettings(); // 确保其他设置也有效
-        final settings = _settingsService.aiSettings;
-
-        // 构建给AI的提示
-        final messages = [
-          {
-            'role': 'system',
-            'content':
-                '你是一位富有智慧和启发性的思考引导者，每天为用户提供一个简洁的、引发深度思考的提示或问题，帮助用户进行日记记录。提示词应该简短、有新意、不重复，直接提出一个问题或一个观察点，激发用户写作的灵感。例如："今天让你停下来思考的小事是什么？"或"一个你最近学到的、改变了你对某事的看法是什么？"。只提供一个提示，不需要任何前缀或解释。',
-          },
-          {'role': 'user', 'content': '请给我一个今天的思考提示。'},
-        ];
-
-        // 使用StreamController来桥接_makeStreamRequest的回调和async* stream
-        final controller = StreamController<String>.broadcast();
-
-        _makeStreamRequest(
-          settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 1.0, // 可以调整温度以获得更有创意的提示
-            'max_tokens': 100, // 限制提示的长度
-          },
-          settings,
-          (chunk) {
-            // 当接收到数据块时，添加到StreamController
-            if (!controller.isClosed) {
-              controller.add(chunk);
-            }
-          },
-          (fullText) {
-            // 当流完成时
-            if (!controller.isClosed) {
-              controller.close();
-            }
-          },
-          (error) {
-            // 当发生错误时
-            if (!controller.isClosed) {
-              controller.addError(error);
-              controller.close();
-            }
-          },
+    try {
+      // 检查API Key是否有效
+      if (!hasValidApiKey()) {
+        debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
+        // 获取位置和天气信息用于生成上下文相关的提示
+        String? city;
+        String? weather;
+        String? temperature;
+  
+        // 使用之前注入但未使用的位置服务
+        if (_locationService.city != null) {
+          city = _locationService.city;
+        }
+  
+        // 使用之前注入但未使用的天气服务
+        if (_weatherService.currentWeather != null) {
+          weather = _weatherService.currentWeather;
+          temperature = _weatherService.temperature;
+        }
+  
+        // 使用上下文信息生成个性化的提示
+        yield DailyPromptGenerator.generatePromptBasedOnContext(
+          city: city,
+          weather: weather,
+          temperature: temperature,
         );
+        // 为了模拟流式效果，可以稍作延迟（可选）
+        await Future.delayed(const Duration(milliseconds: 50));
+      } else {
+        // 验证AI设置是否已初始化
+        bool settingsValid = false;
+        try {
+          await _validateSettings(); // 确保其他设置也有效
+          // 检查_settingsService.aiSettings是否可用
+          final _ = _settingsService.aiSettings;
+          settingsValid = true;
+        } catch (e) {
+          debugPrint('AI设置验证失败: $e，将使用默认提示');
+          settingsValid = false;
+        }
+        
+        // 如果设置有效，调用AI生成流式提示
+        if (settingsValid) {
+          debugPrint('API Key有效，使用AI生成每日提示');
+          try {
+            await _validateSettings(); // 确保其他设置也有效
+            final settings = _settingsService.aiSettings;
 
-        // 通过yield* 将StreamController的流内容输出到async* stream
-        yield* controller.stream;
-      } catch (e) {
-        debugPrint('AI生成每日提示错误: $e');
-        // 在流中发送错误信息
-        yield* Stream.error(e);
+            // 构建给AI的提示
+            final messages = [
+              {
+                'role': 'system',
+                'content':
+                    '你是一位富有智慧和启发性的思考引导者，每天为用户提供一个简洁的、引发深度思考的提示或问题，帮助用户进行日记记录。提示词应该简短、有新意、不重复，直接提出一个问题或一个观察点，激发用户写作的灵感。例如："今天让你停下来思考的小事是什么？"或"一个你最近学到的、改变了你对某事的看法是什么？"。只提供一个提示，不需要任何前缀或解释。',
+              },
+              {'role': 'user', 'content': '请给我一个今天的思考提示。'},
+            ];
+
+            // 使用StreamController来桥接_makeStreamRequest的回调和async* stream
+            final controller = StreamController<String>.broadcast();
+
+            _makeStreamRequest(
+              settings.apiUrl,
+              {
+                'messages': messages,
+                'temperature': 1.0, // 可以调整温度以获得更有创意的提示
+                'max_tokens': 100, // 限制提示的长度
+              },
+              settings,
+              (chunk) {
+                // 当接收到数据块时，添加到StreamController
+                if (!controller.isClosed) {
+                  controller.add(chunk);
+                }
+              },
+              (fullText) {
+                // 当流完成时
+                if (!controller.isClosed) {
+                  controller.close();
+                }
+              },
+              (error) {
+                // 当发生错误时
+                if (!controller.isClosed) {
+                  controller.addError(error);
+                  controller.close();
+                }
+              },
+            );
+
+            // 通过yield* 将StreamController的流内容输出到async* stream
+            yield* controller.stream;
+          } catch (e) {
+            debugPrint('AI生成每日提示错误: $e');
+            // 在流中发送错误信息
+            yield* Stream.error(e);
+          }
+        } else {
+          // 如果设置无效，使用默认提示生成器
+          yield DailyPromptGenerator.getDefaultPrompt();
+        }
       }
+    } catch (e) {
+      debugPrint('streamGenerateDailyPrompt主流程错误: $e');
+      yield* Stream.error(e);
     }
   }
 
@@ -1314,124 +1455,5 @@ $question''',
     }();
 
     return controller.stream;
-  }
-
-  // 根据分析类型选择系统提示词
-  String _getAnalysisTypePrompt(String analysisType) {
-    switch (analysisType) {
-      case 'emotional':
-        return '''你是一位专业的心理分析师和情感咨询师。请分析用户笔记中的情感状态、情绪变化和心理健康。
-          
-任务：
-1. 识别笔记中表达的主要情绪和情感模式
-2. 分析情绪变化的趋势和可能的触发因素
-3. 提供关于情绪管理和心理健康的建议
-4. 以尊重和专业的方式表达你的分析
-
-格式要求：
-- 使用"# 情感洞察分析"作为主标题
-- 包含"## 总体情感状态"部分
-- 包含"## 情绪变化趋势"部分
-- 包含"## 建议与反思"部分
-- 适当使用markdown格式增强可读性''';
-
-      case 'mindmap':
-        return '''你是一位专业的思维导图和知识系统构建专家。请分析用户笔记，构建他们思考的结构和思维习惯。
-          
-任务：
-1. 识别笔记中的主要思考主题和思维模式
-2. 分析这些主题之间的联系和层次结构
-3. 评估思维的深度、广度和连贯性
-4. 提供关于如何拓展和深化思考的建议
-
-格式要求：
-- 使用"# 思维导图分析"作为主标题
-- 包含"## 核心思考主题"部分
-- 包含"## 思维结构图"部分(用文字描述思维图的结构)
-- 包含"## 思维特点分析"部分
-- 包含"## 思维发展建议"部分
-- 适当使用markdown格式增强可读性''';
-
-      case 'growth':
-        return '''你是一位专业的个人成长教练和学习顾问。请基于用户笔记分析他们的成长轨迹并提供发展建议。
-          
-任务：
-1. 识别用户的兴趣、价值观和目标
-2. 分析用户的学习模式和成长轨迹
-3. 发现可能的成长盲点和发展机会
-4. 提供具体、实用的成长和进步建议
-
-格式要求：
-- 使用"# 成长建议分析"作为主标题
-- 包含"## 个人特质与价值观"部分
-- 包含"## 成长轨迹分析"部分
-- 包含"## 发展机会"部分
-- 包含"## 具体行动建议"部分
-- 适当使用markdown格式增强可读性''';
-
-      case 'comprehensive':
-      default:
-        return '''你是一位专业的思想分析师和洞察专家。请全面分析用户的笔记内容，发掘其中的思想价值和模式。
-
-任务：
-1. 分析笔记中的核心思想和主题
-2. 识别重复出现的关键概念和模式
-3. 探究潜在的思维模式和价值观
-4. 提供有深度的洞察和反思建议
-
-格式要求：
-- 使用"# 思想洞察分析"作为主标题
-- 包含"## 核心思想概述"部分
-- 包含"## 主题与模式"部分
-- 包含"## 深度洞察"部分
-- 包含"## 思考与建议"部分
-- 适当使用markdown格式增强可读性''';
-    }
-  }
-
-  // 根据分析风格修改提示词
-  String _appendAnalysisStylePrompt(String systemPrompt, String analysisStyle) {
-    String stylePrompt;
-
-    switch (analysisStyle) {
-      case 'friendly':
-        stylePrompt = '''表达风格：
-- 使用温暖、鼓励和支持性的语言
-- 以友好的"你"称呼读者
-- 像一位知心朋友或支持性的导师给予建议
-- 避免过于学术或技术化的语言
-- 强调积极的方面和成长的可能性''';
-        break;
-
-      case 'humorous':
-        stylePrompt = '''表达风格：
-- 运用适当的幽默和风趣元素
-- 使用生动的比喻和有趣的类比
-- 保持轻松愉快的语调
-- 在严肃洞察中穿插幽默观察
-- 避免过于严肃或教条的表达方式''';
-        break;
-
-      case 'literary':
-        stylePrompt = '''表达风格：
-- 使用优美、富有文学色彩的语言
-- 适当引用诗歌、文学作品或哲学观点
-- 运用丰富的修辞手法和意象
-- 以优雅流畅的叙事风格展开分析
-- 注重文字的节奏感和美感''';
-        break;
-
-      case 'professional':
-      default:
-        stylePrompt = '''表达风格：
-- 保持客观、清晰和专业的语调
-- 使用精确的语言和分析性表达
-- 基于事实和观察提供见解
-- 结构化呈现信息和分析
-- 保持适当的专业距离''';
-        break;
-    }
-
-    return '$systemPrompt\n\n$stylePrompt';
   }
 }
