@@ -9,6 +9,7 @@ import '../services/weather_service.dart';
 import '../services/secure_storage_service.dart';
 import 'dart:async'; // 添加异步流支持
 import '../utils/daily_prompt_generator.dart';
+
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
 typedef StreamingCompleteCallback = void Function(String fullText);
@@ -31,7 +32,7 @@ class AIService extends ChangeNotifier {
     final settings = _settingsService.aiSettings;
 
     // 创建安全存储服务实例
-    final secureStorage = SecureStorageService();    // 先检查settings中的API Key
+    final secureStorage = SecureStorageService(); // 先检查settings中的API Key
     bool hasApiKey = settings.apiKey.isNotEmpty;
     // String? effectiveApiKey; // 在这里声明 // -- 已移除
 
@@ -42,10 +43,10 @@ class AIService extends ChangeNotifier {
 
       // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
       // if (hasApiKey) { // -- 已移除
-        // effectiveApiKey = secureApiKey; // 初始化 // -- 已移除
+      // effectiveApiKey = secureApiKey; // 初始化 // -- 已移除
       // } // -- 已移除
     } // else { // -- 已移除，因为不再需要为 effectiveApiKey 赋值
-      // effectiveApiKey = settings.apiKey; // 如果设置中有，则使用设置中的 // -- 已移除
+    // effectiveApiKey = settings.apiKey; // 如果设置中有，则使用设置中的 // -- 已移除
     // } // -- 已移除
 
     // 最终验证API Key
@@ -188,13 +189,13 @@ class AIService extends ChangeNotifier {
       if (e.toString().contains('Failed host lookup')) {
         throw Exception('无法连接到AI服务器，请检查网络连接或服务器状态');
       }
-      
+
       // 特殊处理本地服务器连接错误
-      if (e.toString().contains('Connection refused') && 
+      if (e.toString().contains('Connection refused') &&
           uri.toString().contains('0.0.0.0')) {
         throw Exception('无法连接到本地AI服务器，请确保服务器已启动或更改API URL');
       }
-      
+
       rethrow;
     }
   }
@@ -302,41 +303,48 @@ class AIService extends ChangeNotifier {
       request.headers.addAll(headers);
       request.body = json.encode(requestBody);
 
-      final streamedResponse = await client.send(request).timeout(
-        const Duration(seconds: 300), // 超时时间为300秒
-        onTimeout: () {
-          onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
-          return http.StreamedResponse(
-            Stream.fromIterable([]), // 空流
-            408, // Request Timeout
+      final streamedResponse = await client
+          .send(request)
+          .timeout(
+            const Duration(seconds: 300), // 超时时间为300秒
+            onTimeout: () async {
+              onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
+              // 使用 IOStreamedResponse 匹配正确的返回类型
+              return http.StreamedResponse(
+                Stream<List<int>>.fromIterable(
+                  [],
+                ).asBroadcastStream(), // 空流，使用广播流，明确类型为 Stream<List<int>>
+                408, // Request Timeout
+              );
+            },
           );
-        },
-      );
 
       if (streamedResponse.statusCode != 200) {
         // 读取错误响应
         final errorBody = await streamedResponse.stream.bytesToString();
         debugPrint('API错误响应: $errorBody');
-        
+
         // 增强错误处理，提供更具体的错误信息
-        if (errorBody.contains('rate_limit_exceeded') || 
-            errorBody.contains('rate limit') || 
+        if (errorBody.contains('rate_limit_exceeded') ||
+            errorBody.contains('rate limit') ||
             errorBody.contains('429')) {
           onError(Exception('请求频率超限，请稍后再试 (429 错误)'));
-        } else if (errorBody.contains('authentication') || 
-                 errorBody.contains('invalid_api_key') || 
-                 errorBody.contains('401')) {
+        } else if (errorBody.contains('authentication') ||
+            errorBody.contains('invalid_api_key') ||
+            errorBody.contains('401')) {
           onError(Exception('API密钥无效或已过期，请更新API密钥 (401 错误)'));
-        } else if (errorBody.contains('insufficient_quota') || 
-                 errorBody.contains('billing') || 
-                 errorBody.contains('429')) {
+        } else if (errorBody.contains('insufficient_quota') ||
+            errorBody.contains('billing') ||
+            errorBody.contains('429')) {
           onError(Exception('API额度不足，请检查账户余额 (429 错误)'));
         } else {
-          onError(Exception('AI服务请求失败：${streamedResponse.statusCode}\n$errorBody'));
+          onError(
+            Exception('AI服务请求失败：${streamedResponse.statusCode}\n$errorBody'),
+          );
         }
         return;
       }
-    
+
       // 处理流式响应
       String fullText = '';
       String currentChunk = '';
@@ -344,92 +352,101 @@ class AIService extends ChangeNotifier {
       streamedResponse.stream
           .transform(utf8.decoder)
           .listen(
-        (String chunk) {
-          currentChunk += chunk;
-          
-          // 尝试从数据块中提取有效部分
-          final lines = currentChunk.split('\n');
-          currentChunk = '';
-          
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            
-            // 如果不是最后一行，或者是完整的行
-            if (i < lines.length - 1 || line.endsWith('\n') || line.trim().isEmpty) {
-              if (line.startsWith('data: ') && line != 'data: [DONE]') {
-                try {
-                  final jsonData = line.substring(6).trim();
-                  if (jsonData.isNotEmpty) {
-                    final data = json.decode(jsonData);
-                    if (data['choices'] != null && 
-                        data['choices'].isNotEmpty) {
-                      String content = '';
-                      // 处理不同API的响应格式
-                      if (data['choices'][0]['delta'] != null &&
-                          data['choices'][0]['delta']['content'] != null) {
-                        content = data['choices'][0]['delta']['content'];
-                      } else if (data['choices'][0]['text'] != null) {
-                        content = data['choices'][0]['text'];
-                      } else if (data['choices'][0]['message'] != null &&
-                               data['choices'][0]['message']['content'] != null) {
-                        content = data['choices'][0]['message']['content'];
-                      }
-                      
-                      if (content.isNotEmpty) {
-                        fullText += content;
-                        onResponse(content);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  debugPrint('解析流式响应数据失败: $e, 行内容: $line');
-                  // 尝试更宽松的解析方式，获取可能的内容
-                  try {
-                    if (line.contains('"content"')) {
-                      final contentIndex = line.indexOf('"content"');
-                      final colonIndex = line.indexOf(':', contentIndex);
-                      if (colonIndex != -1) {
-                        final quoteIndex = line.indexOf('"', colonIndex);
-                        if (quoteIndex != -1) {
-                          final endQuoteIndex = line.indexOf('"', quoteIndex + 1);
-                          if (endQuoteIndex != -1) {
-                            final content = line.substring(quoteIndex + 1, endQuoteIndex);
-                            if (content.isNotEmpty) {
-                              fullText += content;
-                              onResponse(content);
-                            }
+            (String chunk) {
+              currentChunk += chunk;
+
+              // 尝试从数据块中提取有效部分
+              final lines = currentChunk.split('\n');
+              currentChunk = '';
+
+              for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+
+                // 如果不是最后一行，或者是完整的行
+                if (i < lines.length - 1 ||
+                    line.endsWith('\n') ||
+                    line.trim().isEmpty) {
+                  if (line.startsWith('data: ') && line != 'data: [DONE]') {
+                    try {
+                      final jsonData = line.substring(6).trim();
+                      if (jsonData.isNotEmpty) {
+                        final data = json.decode(jsonData);
+                        if (data['choices'] != null &&
+                            data['choices'].isNotEmpty) {
+                          String content = '';
+                          // 处理不同API的响应格式
+                          if (data['choices'][0]['delta'] != null &&
+                              data['choices'][0]['delta']['content'] != null) {
+                            content = data['choices'][0]['delta']['content'];
+                          } else if (data['choices'][0]['text'] != null) {
+                            content = data['choices'][0]['text'];
+                          } else if (data['choices'][0]['message'] != null &&
+                              data['choices'][0]['message']['content'] !=
+                                  null) {
+                            content = data['choices'][0]['message']['content'];
+                          }
+
+                          if (content.isNotEmpty) {
+                            fullText += content;
+                            onResponse(content);
                           }
                         }
                       }
+                    } catch (e) {
+                      debugPrint('解析流式响应数据失败: $e, 行内容: $line');
+                      // 尝试更宽松的解析方式，获取可能的内容
+                      try {
+                        if (line.contains('"content"')) {
+                          final contentIndex = line.indexOf('"content"');
+                          final colonIndex = line.indexOf(':', contentIndex);
+                          if (colonIndex != -1) {
+                            final quoteIndex = line.indexOf('"', colonIndex);
+                            if (quoteIndex != -1) {
+                              final endQuoteIndex = line.indexOf(
+                                '"',
+                                quoteIndex + 1,
+                              );
+                              if (endQuoteIndex != -1) {
+                                final content = line.substring(
+                                  quoteIndex + 1,
+                                  endQuoteIndex,
+                                );
+                                if (content.isNotEmpty) {
+                                  fullText += content;
+                                  onResponse(content);
+                                }
+                              }
+                            }
+                          }
+                        }
+                      } catch (e2) {
+                        debugPrint('备选解析方法也失败: $e2');
+                      }
                     }
-                  } catch (e2) {
-                    debugPrint('备选解析方法也失败: $e2');
                   }
+                } else {
+                  // 不完整的行，保留到下一个块处理
+                  currentChunk = line;
                 }
               }
-            } else {
-              // 不完整的行，保留到下一个块处理
-              currentChunk = line;
-            }
-          }
-        },
-        onDone: () {
-          debugPrint('流式响应接收完毕');
-          onComplete(fullText);
-          client.close();
-        },
-        onError: (e) {
-          debugPrint('流式响应错误: $e');
-          onError(e);
-          client.close();
-        }
-      );
+            },
+            onDone: () {
+              debugPrint('流式响应接收完毕');
+              onComplete(fullText);
+              client.close();
+            },
+            onError: (e) {
+              debugPrint('流式响应错误: $e');
+              onError(e);
+              client.close();
+            },
+          );
     } catch (e) {
       debugPrint('API请求错误: $e');
       if (e.toString().contains('Failed host lookup')) {
         onError(Exception('无法连接到AI服务器，请检查网络连接或服务器状态'));
-      } else if (e.toString().contains('Connection refused') && 
-          uri.toString().contains('0.0.0.0') || 
+      } else if (e.toString().contains('Connection refused') &&
+              uri.toString().contains('0.0.0.0') ||
           uri.toString().contains('localhost')) {
         onError(Exception('无法连接到本地AI服务器，请确保服务器已启动或更改API URL'));
       } else if (e.toString().contains('certificate')) {
@@ -475,21 +492,22 @@ class AIService extends ChangeNotifier {
       debugPrint('笔记分析错误: $e');
       rethrow;
     }
-  }  // 流式笔记分析
+  } // 流式笔记分析
+
   Stream<String> streamSummarizeNote(Quote quote) {
-    final controller = StreamController<String>();
-    
+    final controller = StreamController<String>.broadcast();
+
     () async {
       if (!hasValidApiKey()) {
         controller.addError(Exception('请先在设置中配置 API Key'));
         controller.close();
         return;
       }
-      
+
       try {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
-        
+
         final messages = [
           {
             'role': 'system',
@@ -498,13 +516,10 @@ class AIService extends ChangeNotifier {
           },
           {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
         ];
-        
+
         await _makeStreamRequest(
           settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 0.7,
-          },
+          {'messages': messages, 'temperature': 0.7},
           settings,
           // 当收到新内容时
           (String text) {
@@ -525,7 +540,7 @@ class AIService extends ChangeNotifier {
               controller.addError(error);
               controller.close();
             }
-          }
+          },
         );
       } catch (e) {
         debugPrint('流式笔记分析错误: $e');
@@ -535,10 +550,10 @@ class AIService extends ChangeNotifier {
         }
       }
     }();
-    
+
     return controller.stream;
   }
-  
+
   // 新增：流式生成每日提示
   Stream<String> streamGenerateDailyPrompt() async* {
     // 检查API Key是否有效
@@ -548,18 +563,18 @@ class AIService extends ChangeNotifier {
       String? city;
       String? weather;
       String? temperature;
-      
+
       // 使用之前注入但未使用的位置服务
       if (_locationService.city != null) {
         city = _locationService.city;
       }
-      
+
       // 使用之前注入但未使用的天气服务
       if (_weatherService.currentWeather != null) {
         weather = _weatherService.currentWeather;
         temperature = _weatherService.temperature;
       }
-      
+
       // 使用上下文信息生成个性化的提示
       yield DailyPromptGenerator.generatePromptBasedOnContext(
         city: city,
@@ -582,14 +597,11 @@ class AIService extends ChangeNotifier {
             'content':
                 '你是一位富有智慧和启发性的思考引导者，每天为用户提供一个简洁的、引发深度思考的提示或问题，帮助用户进行日记记录。提示词应该简短、有新意、不重复，直接提出一个问题或一个观察点，激发用户写作的灵感。例如："今天让你停下来思考的小事是什么？"或"一个你最近学到的、改变了你对某事的看法是什么？"。只提供一个提示，不需要任何前缀或解释。',
           },
-           {
-            'role': 'user',
-            'content': '请给我一个今天的思考提示。',
-          }
+          {'role': 'user', 'content': '请给我一个今天的思考提示。'},
         ];
 
         // 使用StreamController来桥接_makeStreamRequest的回调和async* stream
-        final controller = StreamController<String>();
+        final controller = StreamController<String>.broadcast();
 
         _makeStreamRequest(
           settings.apiUrl,
@@ -613,16 +625,15 @@ class AIService extends ChangeNotifier {
           },
           (error) {
             // 当发生错误时
-             if (!controller.isClosed) {
-                controller.addError(error);
-                controller.close();
-             }
+            if (!controller.isClosed) {
+              controller.addError(error);
+              controller.close();
+            }
           },
         );
 
         // 通过yield* 将StreamController的流内容输出到async* stream
         yield* controller.stream;
-
       } catch (e) {
         debugPrint('AI生成每日提示错误: $e');
         // 在流中发送错误信息
@@ -634,9 +645,9 @@ class AIService extends ChangeNotifier {
   // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
   // 它将直接返回DailyPromptGenerator的当前提示
   String generateDailyPrompt() {
-     debugPrint('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
-     // 旧方法仍然返回 DailyPromptGenerator 的默认提示
-     return DailyPromptGenerator.getDefaultPrompt();
+    debugPrint('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
+    // 旧方法仍然返回 DailyPromptGenerator 的默认提示
+    return DailyPromptGenerator.getDefaultPrompt();
   }
 
   Future<String> generateInsights(
@@ -668,7 +679,7 @@ class AIService extends ChangeNotifier {
                 'date': quote.date,
                 'source': quote.source,
                 'sourceAuthor': quote.sourceAuthor,
-               
+
                 'tagIds': quote.tagIds,
                 'categoryId': quote.categoryId,
                 'location': quote.location,
@@ -720,7 +731,7 @@ class AIService extends ChangeNotifier {
     String analysisStyle = 'professional',
     String? customPrompt,
   }) {
-    final controller = StreamController<String>();
+    final controller = StreamController<String>.broadcast();
 
     () async {
       if (!hasValidApiKey()) {
@@ -745,19 +756,19 @@ class AIService extends ChangeNotifier {
           },
           'quotes':
               quotes.map((quote) {
-            return {
-              'id': quote.id,
-              'content': quote.content,
-              'date': quote.date,
-              'source': quote.source,
-              'sourceAuthor': quote.sourceAuthor,
-              'tagIds': quote.tagIds,
-              'categoryId': quote.categoryId,
-              'location': quote.location,
-              'weather': quote.weather,
-              'temperature': quote.temperature,
-            };
-          }).toList(),
+                return {
+                  'id': quote.id,
+                  'content': quote.content,
+                  'date': quote.date,
+                  'source': quote.source,
+                  'sourceAuthor': quote.sourceAuthor,
+                  'tagIds': quote.tagIds,
+                  'categoryId': quote.categoryId,
+                  'location': quote.location,
+                  'weather': quote.weather,
+                  'temperature': quote.temperature,
+                };
+              }).toList(),
         };
 
         // 将数据转换为格式化的JSON字符串
@@ -769,7 +780,10 @@ class AIService extends ChangeNotifier {
           systemPrompt = customPrompt;
         } else {
           systemPrompt = _getAnalysisTypePrompt(analysisType);
-          systemPrompt = _appendAnalysisStylePrompt(systemPrompt, analysisStyle);
+          systemPrompt = _appendAnalysisStylePrompt(
+            systemPrompt,
+            analysisStyle,
+          );
         }
 
         final messages = [
@@ -779,11 +793,7 @@ class AIService extends ChangeNotifier {
 
         await _makeStreamRequest(
           settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 0.7,
-            'max_tokens': 2500,
-          },
+          {'messages': messages, 'temperature': 0.7, 'max_tokens': 2500},
           settings,
           // 当收到新内容时
           (String text) {
@@ -872,19 +882,19 @@ class AIService extends ChangeNotifier {
 
   // 流式分析来源
   Stream<String> streamAnalyzeSource(String content) {
-    final controller = StreamController<String>();
-    
+    final controller = StreamController<String>.broadcast();
+
     () async {
       if (!hasValidApiKey()) {
         controller.addError(Exception('请先在设置中配置 API Key'));
         controller.close();
         return;
       }
-      
+
       try {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
-        
+
         final messages = [
           {
             'role': 'system',
@@ -906,7 +916,7 @@ class AIService extends ChangeNotifier {
           },
           {'role': 'user', 'content': '请分析以下文本的可能来源：\n\n$content'},
         ];
-        
+
         await _makeStreamRequest(
           settings.apiUrl,
           {
@@ -933,7 +943,7 @@ class AIService extends ChangeNotifier {
               controller.addError(error);
               controller.close();
             }
-          }
+          },
         );
       } catch (e) {
         debugPrint('流式分析来源错误: $e');
@@ -943,7 +953,7 @@ class AIService extends ChangeNotifier {
         }
       }
     }();
-    
+
     return controller.stream;
   }
 
@@ -995,19 +1005,19 @@ class AIService extends ChangeNotifier {
 
   // 流式润色文本
   Stream<String> streamPolishText(String content) {
-    final controller = StreamController<String>();
-    
+    final controller = StreamController<String>.broadcast();
+
     () async {
       if (!hasValidApiKey()) {
         controller.addError(Exception('请先在设置中配置 API Key'));
         controller.close();
         return;
       }
-      
+
       try {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
-        
+
         final messages = [
           {
             'role': 'system',
@@ -1023,14 +1033,10 @@ class AIService extends ChangeNotifier {
           },
           {'role': 'user', 'content': '请润色以下文本：\n\n$content'},
         ];
-        
+
         await _makeStreamRequest(
           settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 0.7,
-            'max_tokens': 1000,
-          },
+          {'messages': messages, 'temperature': 0.7, 'max_tokens': 1000},
           settings,
           // 当收到新内容时
           (String text) {
@@ -1050,7 +1056,7 @@ class AIService extends ChangeNotifier {
               controller.addError(error);
               controller.close();
             }
-          }
+          },
         );
       } catch (e) {
         debugPrint('流式润色文本错误: $e');
@@ -1060,10 +1066,10 @@ class AIService extends ChangeNotifier {
         }
       }
     }();
-    
+
     return controller.stream;
   }
-  
+
   // 续写文本
   Future<String> continueText(String content) async {
     if (!hasValidApiKey()) {
@@ -1112,19 +1118,19 @@ class AIService extends ChangeNotifier {
 
   // 流式续写文本
   Stream<String> streamContinueText(String content) {
-    final controller = StreamController<String>();
-    
+    final controller = StreamController<String>.broadcast();
+
     () async {
       if (!hasValidApiKey()) {
         controller.addError(Exception('请先在设置中配置 API Key'));
         controller.close();
         return;
       }
-      
+
       try {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
-        
+
         final messages = [
           {
             'role': 'system',
@@ -1140,7 +1146,7 @@ class AIService extends ChangeNotifier {
           },
           {'role': 'user', 'content': '请续写以下文本：\n\n$content'},
         ];
-        
+
         await _makeStreamRequest(
           settings.apiUrl,
           {
@@ -1167,7 +1173,7 @@ class AIService extends ChangeNotifier {
               controller.addError(error);
               controller.close();
             }
-          }
+          },
         );
       } catch (e) {
         debugPrint('流式续写文本错误: $e');
@@ -1177,7 +1183,7 @@ class AIService extends ChangeNotifier {
         }
       }
     }();
-    
+
     return controller.stream;
   }
 
@@ -1203,12 +1209,15 @@ class AIService extends ChangeNotifier {
 4. 回答应该有深度且有洞察力
 5. 回答应该清晰、简洁且有条理''',
         },
-        {'role': 'user', 'content': '''笔记内容：
+        {
+          'role': 'user',
+          'content': '''笔记内容：
 
 ${quote.content}
 
 我的问题：
-$question'''},
+$question''',
+        },
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
@@ -1234,19 +1243,19 @@ $question'''},
 
   // 流式问答
   Stream<String> streamAskQuestion(Quote quote, String question) {
-    final controller = StreamController<String>();
-    
+    final controller = StreamController<String>.broadcast();
+
     () async {
       if (!hasValidApiKey()) {
         controller.addError(Exception('请先在设置中配置 API Key'));
         controller.close();
         return;
       }
-      
+
       try {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
-        
+
         final messages = [
           {
             'role': 'system',
@@ -1260,21 +1269,20 @@ $question'''},
 4. 回答应该有深度且有洞察力
 5. 回答应该清晰、简洁且有条理''',
           },
-          {'role': 'user', 'content': '''笔记内容：
+          {
+            'role': 'user',
+            'content': '''笔记内容：
 
 ${quote.content}
 
 我的问题：
-$question'''},
+$question''',
+          },
         ];
-        
+
         await _makeStreamRequest(
           settings.apiUrl,
-          {
-            'messages': messages,
-            'temperature': 0.5,
-            'max_tokens': 1000,
-          },
+          {'messages': messages, 'temperature': 0.5, 'max_tokens': 1000},
           settings,
           // 当收到新内容时
           (String text) {
@@ -1294,7 +1302,7 @@ $question'''},
               controller.addError(error);
               controller.close();
             }
-          }
+          },
         );
       } catch (e) {
         debugPrint('流式问答错误: $e');
@@ -1304,7 +1312,7 @@ $question'''},
         }
       }
     }();
-    
+
     return controller.stream;
   }
 
@@ -1326,7 +1334,7 @@ $question'''},
 - 包含"## 情绪变化趋势"部分
 - 包含"## 建议与反思"部分
 - 适当使用markdown格式增强可读性''';
-      
+
       case 'mindmap':
         return '''你是一位专业的思维导图和知识系统构建专家。请分析用户笔记，构建他们思考的结构和思维习惯。
           
@@ -1343,7 +1351,7 @@ $question'''},
 - 包含"## 思维特点分析"部分
 - 包含"## 思维发展建议"部分
 - 适当使用markdown格式增强可读性''';
-          
+
       case 'growth':
         return '''你是一位专业的个人成长教练和学习顾问。请基于用户笔记分析他们的成长轨迹并提供发展建议。
           
@@ -1360,7 +1368,7 @@ $question'''},
 - 包含"## 发展机会"部分
 - 包含"## 具体行动建议"部分
 - 适当使用markdown格式增强可读性''';
-      
+
       case 'comprehensive':
       default:
         return '''你是一位专业的思想分析师和洞察专家。请全面分析用户的笔记内容，发掘其中的思想价值和模式。
@@ -1380,10 +1388,11 @@ $question'''},
 - 适当使用markdown格式增强可读性''';
     }
   }
+
   // 根据分析风格修改提示词
   String _appendAnalysisStylePrompt(String systemPrompt, String analysisStyle) {
     String stylePrompt;
-    
+
     switch (analysisStyle) {
       case 'friendly':
         stylePrompt = '''表达风格：
@@ -1393,7 +1402,7 @@ $question'''},
 - 避免过于学术或技术化的语言
 - 强调积极的方面和成长的可能性''';
         break;
-        
+
       case 'humorous':
         stylePrompt = '''表达风格：
 - 运用适当的幽默和风趣元素
@@ -1402,7 +1411,7 @@ $question'''},
 - 在严肃洞察中穿插幽默观察
 - 避免过于严肃或教条的表达方式''';
         break;
-        
+
       case 'literary':
         stylePrompt = '''表达风格：
 - 使用优美、富有文学色彩的语言
@@ -1411,7 +1420,7 @@ $question'''},
 - 以优雅流畅的叙事风格展开分析
 - 注重文字的节奏感和美感''';
         break;
-        
+
       case 'professional':
       default:
         stylePrompt = '''表达风格：
@@ -1422,7 +1431,7 @@ $question'''},
 - 保持适当的专业距离''';
         break;
     }
-    
+
     return '$systemPrompt\n\n$stylePrompt';
   }
 }
