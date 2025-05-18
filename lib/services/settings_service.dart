@@ -34,6 +34,20 @@ class SettingsService extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   
   SettingsService(this._prefs);
+  
+  /// 创建SettingsService实例的静态工厂方法
+  static Future<SettingsService> create() async {
+    // 获取SharedPreferences实例
+    final prefs = await SharedPreferences.getInstance();
+    // 创建SettingsService实例
+    final service = SettingsService(prefs);
+    // 初始化 MMKVService
+    await service._mmkv.init();
+    // 加载设置
+    await service._loadSettings();
+    // 返回初始化完成的实例
+    return service;
+  }
 
   Future<void> _loadSettings() async {
     // 检查是否需要迁移数据
@@ -228,17 +242,6 @@ class SettingsService extends ChangeNotifier {
   // 将API密钥从普通存储迁移到安全存储
   Future<void> _migrateApiKeyToSecureStorage(String apiKey) async {
     await _secureStorage.saveApiKey(apiKey);
-  }
-
-  static Future<SettingsService> create() async {
-    // 保留SharedPreferences实例以便数据迁移
-    final prefs = await SharedPreferences.getInstance();
-    final service = SettingsService(prefs);
-    // 初始化 MMKVService
-    await service._mmkv.init();
-    // 加载设置数据
-    await service._loadSettings();
-    return service;
   }
 
   Future<void> updateAISettings(AISettings settings) async {

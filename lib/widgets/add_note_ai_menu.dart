@@ -5,6 +5,7 @@ import '../services/ai_service.dart';
 import '../models/quote_model.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../widgets/streaming_text_dialog.dart';
 
 class AddNoteAIMenu extends StatefulWidget {
   final TextEditingController contentController;
@@ -140,17 +141,18 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       );
 
       // 调用AI分析来源
-      final result = await aiService.analyzeSource(widget.contentController.text);
+      final result = await aiService.analyzeSource(
+        widget.contentController.text,
+      );
 
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
-      
+
       // 关闭加载对话框
-      Navigator.of(context).pop();      // 解析JSON结果
+      Navigator.of(context).pop(); // 解析JSON结果
       try {
-        final Map<String, dynamic> sourceData = result is Map<String, dynamic> 
-            ? result
-            : jsonDecode(result);
+        final Map<String, dynamic> sourceData =
+            result is Map<String, dynamic> ? result : jsonDecode(result);
 
         String? author = sourceData['author'] as String?;
         String? work = sourceData['work'] as String?;
@@ -172,8 +174,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                     const SizedBox(height: 8),
                     if (author != null && author.isNotEmpty)
                       Text('作者: $author'),
-                    if (work != null && work.isNotEmpty)
-                      Text('作品: $work'),
+                    if (work != null && work.isNotEmpty) Text('作品: $work'),
                   ],
                 ),
                 actions: [
@@ -238,9 +239,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return _StreamingTextDialog(
+          return StreamingTextDialog(
             title: '润色结果',
-            textStream: aiService.streamPolishText(widget.contentController.text),
+            textStream: aiService.streamPolishText(
+              widget.contentController.text,
+            ),
             applyButtonText: '应用更改',
             onApply: (polishedText) {
               widget.contentController.text = polishedText;
@@ -282,9 +285,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return _StreamingTextDialog(
+          return StreamingTextDialog(
             title: '续写结果',
-            textStream: aiService.streamContinueText(widget.contentController.text),
+            textStream: aiService.streamContinueText(
+              widget.contentController.text,
+            ),
             applyButtonText: '追加到笔记',
             onApply: (continuedText) {
               widget.contentController.text += continuedText;
@@ -331,7 +336,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             content: widget.contentController.text,
             date: DateTime.now().toIso8601String(),
           );
-          return _StreamingTextDialog(
+          return StreamingTextDialog(
             title: '笔记分析',
             textStream: aiService.streamSummarizeNote(quote),
             applyButtonText: '应用到笔记', // 或者其他合适的文本
@@ -430,14 +435,15 @@ class _StreamingTextDialogState extends State<_StreamingTextDialog> {
     return AlertDialog(
       title: Text(widget.title),
       content: SingleChildScrollView(
-        child: widget.isMarkdown
-            ? MarkdownBody(
-                data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-                selectable: true,
-              )
-            : SelectableText(
-                _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-              ),
+        child:
+            widget.isMarkdown
+                ? MarkdownBody(
+                  data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                  selectable: true,
+                )
+                : SelectableText(
+                  _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                ),
       ),
       actions: [
         TextButton(
@@ -447,7 +453,9 @@ class _StreamingTextDialogState extends State<_StreamingTextDialog> {
           },
           child: const Text('取消'),
         ),
-        if (_isStreamingComplete && _currentText.isNotEmpty && !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
+        if (_isStreamingComplete &&
+            _currentText.isNotEmpty &&
+            !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
           TextButton(
             onPressed: () {
               widget.onApply(_currentText);

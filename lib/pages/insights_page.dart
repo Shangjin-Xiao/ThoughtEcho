@@ -13,7 +13,6 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'dart:async'; // Import for StreamSubscription
 
-
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
 
@@ -24,15 +23,18 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
-  Stream<String>? _insightsStream; // Used only to provide stream to StreamBuilder for connection state
+  Stream<String>?
+  _insightsStream; // Used only to provide stream to StreamBuilder for connection state
   String _currentInsightsText = ''; // Not used for display anymore
   bool _isGenerating = false; // 新增状态变量表示是否正在生成
   late TabController _tabController;
   final TextEditingController _customPromptController = TextEditingController();
   bool _showCustomPrompt = false;
   late AIAnalysisDatabaseService _aiAnalysisDatabaseService;
-  String _accumulatedInsightsText = ''; // Added state variable for accumulated insights text
-  StreamSubscription<String>? _insightsSubscription; // Stream subscription for manual accumulation
+  String _accumulatedInsightsText =
+      ''; // Added state variable for accumulated insights text
+  StreamSubscription<String>?
+  _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
   final List<Map<String, dynamic>> _analysisTypes = [
@@ -105,11 +107,11 @@ class _InsightsPageState extends State<InsightsPage>
     _insightsSubscription?.cancel(); // Cancel the subscription
     super.dispose();
   }
-  
+
   /// 将当前分析结果保存为AI分析记录
   Future<void> _saveAnalysis(String content) async {
     if (content.isEmpty) return;
-    
+
     try {
       // 创建一个新的AI分析对象
       final analysis = AIAnalysis(
@@ -121,12 +123,12 @@ class _InsightsPageState extends State<InsightsPage>
         createdAt: DateTime.now().toIso8601String(),
         quoteCount: await context.read<DatabaseService>().getUserQuotesCount(),
       );
-      
+
       // 保存到数据库
       await _aiAnalysisDatabaseService.saveAnalysis(analysis);
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('分析结果已保存'),
@@ -135,7 +137,7 @@ class _InsightsPageState extends State<InsightsPage>
             onPressed: () {
               // 导航到分析历史记录页面
               Navigator.push(
-                context, 
+                context,
                 MaterialPageRoute(
                   builder: (context) => const AIAnalysisHistoryPage(),
                 ),
@@ -155,10 +157,10 @@ class _InsightsPageState extends State<InsightsPage>
   /// 将分析结果保存为笔记
   Future<void> _saveAsNote(String content) async {
     if (content.isEmpty) return;
-    
+
     try {
       final databaseService = context.read<DatabaseService>();
-      
+
       // 创建一个Quote对象
       final quote = Quote(
         content: "# ${_getAnalysisTitle()}\n\n$content",
@@ -168,15 +170,15 @@ class _InsightsPageState extends State<InsightsPage>
         sourceWork: _getAnalysisTitle(),
         aiAnalysis: null, // 笔记本身就是分析，不需要再保存分析
       );
-      
+
       // 使用DatabaseService保存为笔记
       await databaseService.addQuote(quote);
-      
+
       if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已保存为新笔记')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已保存为新笔记')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,21 +186,21 @@ class _InsightsPageState extends State<InsightsPage>
       );
     }
   }
-  
+
   /// 分享分析结果
   Future<void> _shareAnalysis(String content) async {
     if (content.isEmpty) return;
-    
+
     try {
       // 复制到剪贴板
       await Clipboard.setData(ClipboardData(text: content));
-      
+
       if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('分析结果已复制到剪贴板，可以粘贴分享')),
-      );
-      
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('分析结果已复制到剪贴板，可以粘贴分享')));
+
       // TODO: 如果需要使用分享插件，可以在这里添加
       // 目前先简化为复制到剪贴板
     } catch (e) {
@@ -212,9 +214,9 @@ class _InsightsPageState extends State<InsightsPage>
   Future<void> _generateInsights() async {
     final aiService = context.read<AIService>();
     if (!aiService.hasValidApiKey()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先在设置中配置 API Key')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先在设置中配置 API Key')));
       return;
     }
     if (!mounted) return;
@@ -247,23 +249,27 @@ class _InsightsPageState extends State<InsightsPage>
 
       // Get the stream
       final Stream<String> insightsStream = aiService.streamGenerateInsights(
-          quotes,
-          analysisType: _selectedAnalysisType,
-          analysisStyle: _selectedAnalysisStyle,
-        customPrompt: _showCustomPrompt && _customPromptController.text.isNotEmpty
-            ? _customPromptController.text
-            : null,
+        quotes,
+        analysisType: _selectedAnalysisType,
+        analysisStyle: _selectedAnalysisStyle,
+        customPrompt:
+            _showCustomPrompt && _customPromptController.text.isNotEmpty
+                ? _customPromptController.text
+                : null,
       );
 
-      if (!mounted) return; // Ensure mounted before setting stream and listening
+      if (!mounted)
+        return; // Ensure mounted before setting stream and listening
 
-      // Set the stream variable so StreamBuilder can react to connection state changes
+      // Set the stream variable so StreamBuilder can track connection state
+      // 由于我们使用了广播流，可以让StreamBuilder和手动监听共同使用
       setState(() {
-        _insightsStream = insightsStream; // Set the new stream
+        _insightsStream =
+            insightsStream; // Set the new stream for StreamBuilder
         _tabController.animateTo(1); // Switch to result tab
       });
 
-      // Listen to the stream and accumulate text
+      // Listen to the stream and accumulate text manually
       _insightsSubscription = insightsStream.listen(
         (String chunk) {
           // Append the new chunk and update state to trigger UI rebuild
@@ -281,8 +287,11 @@ class _InsightsPageState extends State<InsightsPage>
               _accumulatedInsightsText = '生成洞察失败: ${error.toString()}';
               _isGenerating = false; // Stop generating state on error
             });
-             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('生成洞察失败: ${error.toString()}'), backgroundColor: Colors.red),
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('生成洞察失败: ${error.toString()}'),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -294,14 +303,13 @@ class _InsightsPageState extends State<InsightsPage>
               _isLoading = false; // Stop full loading state on done
               _isGenerating = false; // Stop generating state on done
             });
-             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('洞察生成完成')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('洞察生成完成')));
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs
       );
-
     } catch (e) {
       debugPrint('生成洞察失败 (setup): $e');
       if (mounted) {
@@ -310,8 +318,11 @@ class _InsightsPageState extends State<InsightsPage>
           _isLoading = false;
           _isGenerating = false;
         });
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成洞察失败: ${e.toString()}'), backgroundColor: Colors.red),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('生成洞察失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -339,20 +350,23 @@ class _InsightsPageState extends State<InsightsPage>
                   ),
                   const Spacer(),
                   _isGenerating
-                       ? SizedBox(
-                         width: 24,
-                         height: 24,
-                         child: CircularProgressIndicator(
-                           strokeWidth: 2,
-                           color: theme.primaryColor,
-                         ),
-                       )
-                       : IconButton(
+                      ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.primaryColor,
+                        ),
+                      )
+                      : IconButton(
                         icon: const Icon(Icons.refresh),
                         color: theme.primaryColor,
                         tooltip: '重新生成',
-                        onPressed: _isGenerating || _currentInsightsText.isEmpty ? null : _generateInsights, // 生成中或无内容时禁用
-                       ),
+                        onPressed:
+                            _isGenerating || _currentInsightsText.isEmpty
+                                ? null
+                                : _generateInsights, // 生成中或无内容时禁用
+                      ),
                 ],
               ),
             ),
@@ -435,27 +449,32 @@ class _InsightsPageState extends State<InsightsPage>
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _analysisStyles.map((style) {
-                final isSelected = _selectedAnalysisStyle == style['style'];
-                final String key = style['style'];
-                return ChoiceChip(
-                  label: Text(_analysisStyleKeyToLabel[key] ?? key),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedAnalysisStyle = key;
-                      });
-                    }
-                  },
-                  selectedColor: theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  tooltip: style['description'],
-                );
-              }).toList(),
+              children:
+                  _analysisStyles.map((style) {
+                    final isSelected = _selectedAnalysisStyle == style['style'];
+                    final String key = style['style'];
+                    return ChoiceChip(
+                      label: Text(_analysisStyleKeyToLabel[key] ?? key),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _selectedAnalysisStyle = key;
+                          });
+                        }
+                      },
+                      selectedColor: theme.colorScheme.primaryContainer,
+                      labelStyle: TextStyle(
+                        color:
+                            isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      tooltip: style['description'],
+                    );
+                  }).toList(),
             ),
           ),
 
@@ -543,9 +562,9 @@ class _InsightsPageState extends State<InsightsPage>
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // AI 警告提示
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -563,9 +582,7 @@ class _InsightsPageState extends State<InsightsPage>
                     SizedBox(width: 8),
                     Text(
                       'AI 分析使用说明',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -595,7 +612,10 @@ class _InsightsPageState extends State<InsightsPage>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(
-          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline,
+          color:
+              isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outline,
           width: isSelected ? 2 : 0.5,
         ),
       ),
@@ -615,12 +635,18 @@ class _InsightsPageState extends State<InsightsPage>
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.secondaryContainer,
+                  color:
+                      isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.secondaryContainer,
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 ),
                 child: Icon(
                   type['icon'] as IconData,
-                  color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSecondaryContainer,
+                  color:
+                      isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSecondaryContainer,
                   size: 28,
                 ),
               ),
@@ -633,7 +659,10 @@ class _InsightsPageState extends State<InsightsPage>
                       _analysisTypeKeyToLabel[key] ?? key,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? theme.primaryColor : theme.textTheme.titleMedium?.color,
+                        color:
+                            isSelected
+                                ? theme.primaryColor
+                                : theme.textTheme.titleMedium?.color,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -653,7 +682,8 @@ class _InsightsPageState extends State<InsightsPage>
   Widget _buildAnalysisResultTab(ThemeData theme) {
     // 使用 StreamBuilder 监听 _insightsStream 的连接状态变化，并根据 _accumulatedInsightsText 显示内容
     return StreamBuilder<String>(
-      stream: _insightsStream, // Listen to stream for connection state and errors
+      stream:
+          _insightsStream, // Listen to stream for connection state and errors
       builder: (context, snapshot) {
         // 根据生成状态和累积文本显示不同内容
         if (_isGenerating && _accumulatedInsightsText.isEmpty) {
@@ -690,12 +720,17 @@ class _InsightsPageState extends State<InsightsPage>
                             ),
                             const Spacer(),
                             // 复制按钮只在生成完成后显示
-                            if (!_isGenerating && _accumulatedInsightsText.isNotEmpty)
+                            if (!_isGenerating &&
+                                _accumulatedInsightsText.isNotEmpty)
                               IconButton(
                                 icon: const Icon(Icons.copy),
                                 tooltip: '复制到剪贴板',
                                 onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: _accumulatedInsightsText)).then((_) {
+                                  Clipboard.setData(
+                                    ClipboardData(
+                                      text: _accumulatedInsightsText,
+                                    ),
+                                  ).then((_) {
                                     if (!mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('分析结果已复制')),
@@ -705,10 +740,13 @@ class _InsightsPageState extends State<InsightsPage>
                               ),
                             // 加载指示器在生成过程中显示
                             if (_isGenerating)
-                               SizedBox(
+                              SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: theme.primaryColor),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.primaryColor,
+                                ),
                               ),
                           ],
                         ),
@@ -718,9 +756,9 @@ class _InsightsPageState extends State<InsightsPage>
                         MarkdownBody(
                           data: _accumulatedInsightsText, // 使用累积的文本
                           selectable: true,
-                          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                            p: theme.textTheme.bodyMedium,
-                          ),
+                          styleSheet: MarkdownStyleSheet.fromTheme(
+                            theme,
+                          ).copyWith(p: theme.textTheme.bodyMedium),
                         ),
                       ],
                     ),
@@ -765,12 +803,12 @@ class _InsightsPageState extends State<InsightsPage>
             ),
           );
         } else if (snapshot.hasError) {
-           // 处理错误，只在没有累积文本时显示错误信息
-           // Error handling will be managed by the listener now, updating _accumulatedInsightsText directly.
-           // We can just check if _accumulatedInsightsText contains an error message.
-           // However, if the error occurs immediately before any data is received, snapshot.hasError will be true.
-           // Let's keep this error handling for initial errors.
-           return Center(
+          // 处理错误，只在没有累积文本时显示错误信息
+          // Error handling will be managed by the listener now, updating _accumulatedInsightsText directly.
+          // We can just check if _accumulatedInsightsText contains an error message.
+          // However, if the error occurs immediately before any data is received, snapshot.hasError will be true.
+          // Let's keep this error handling for initial errors.
+          return Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -782,10 +820,10 @@ class _InsightsPageState extends State<InsightsPage>
           );
         } else {
           // 初始状态或没有生成且没有累积文本时显示空状态
-           return const AppEmptyView(
-              svgAsset: 'assets/empty/empty_state.svg',
-              text: '选择分析类型并点击"开始分析"\n洞察将帮助你发现笔记中的思维模式和规律',
-            );
+          return const AppEmptyView(
+            svgAsset: 'assets/empty/empty_state.svg',
+            text: '选择分析类型并点击"开始分析"\n洞察将帮助你发现笔记中的思维模式和规律',
+          );
         }
       },
     );
@@ -796,7 +834,7 @@ class _InsightsPageState extends State<InsightsPage>
     if (_showCustomPrompt && _customPromptController.text.isNotEmpty) {
       return Icons.auto_awesome; // 或者其他合适的图标
     }
-    
+
     switch (_selectedAnalysisType) {
       case 'emotional':
         return Icons.mood; // 更新图标
@@ -814,6 +852,7 @@ class _InsightsPageState extends State<InsightsPage>
     if (_showCustomPrompt && _customPromptController.text.isNotEmpty) {
       return "自定义分析";
     }
-    return _analysisTypeKeyToLabel[_selectedAnalysisType] ?? _selectedAnalysisType;
+    return _analysisTypeKeyToLabel[_selectedAnalysisType] ??
+        _selectedAnalysisType;
   }
 }

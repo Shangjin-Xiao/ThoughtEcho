@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../services/ai_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
-import '../theme/app_theme.dart'; // Import AppTheme for defaultShadow
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -65,18 +63,18 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
             'type': 'error',
           };
         });
-        
+
         // 添加重试机制，3秒后自动重试一次
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
             _loadDailyQuote();
           }
         });
-        
+
         debugPrint('获取一言失败: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('获取一言失败: $e'), 
+            content: Text('获取一言失败: $e'),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: '重试',
@@ -141,13 +139,7 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
                         onTap: () {
                           // 单击复制内容
                           final String formattedQuote =
-                              '${dailyQuote['content']}\n${dailyQuote['from_who'] != null &&
-                                      dailyQuote['from_who'].isNotEmpty
-                                  ? '——${dailyQuote['from_who']}'
-                                  : ''}${dailyQuote['from'] != null &&
-                                      dailyQuote['from'].isNotEmpty
-                                  ? '《${dailyQuote['from']}》'
-                                  : ''}';
+                              '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
 
                           // 复制到剪贴板
                           Clipboard.setData(
