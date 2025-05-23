@@ -9,6 +9,7 @@ import '../services/weather_service.dart';
 import '../services/secure_storage_service.dart';
 import 'dart:async'; // 添加异步流支持
 import '../utils/daily_prompt_generator.dart';
+import '../utils/streaming_utils.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -319,7 +320,7 @@ class AIService extends ChangeNotifier {
     }
   }
 
-  // 新增：流式API请求方法
+  // 重构后的流式API请求方法，使用StreamingUtils
   Future<void> _makeStreamRequest(
     String url,
     Map<String, dynamic> body,
@@ -328,252 +329,15 @@ class AIService extends ChangeNotifier {
     StreamingCompleteCallback onComplete,
     StreamingErrorCallback onError,
   ) async {
-    if (body['messages'] is! List) {
-      onError(Exception('messages字段格式错误'));
-      return;
-    }
-
-    // 创建安全存储服务实例
-    final secureStorage = SecureStorageService();
-
-    // 获取API密钥 - 首先尝试从安全存储中获取，如果为空则尝试使用设置中的密钥
-    final secureApiKey = await secureStorage.getApiKey();
-    final effectiveApiKey = secureApiKey ?? settings.apiKey;
-
-    if (effectiveApiKey.isEmpty) {
-      onError(Exception('未找到有效的API密钥，请在设置中配置API密钥'));
-      return;
-    }
-
-    // 根据不同的AI服务提供商调整请求体格式
-    Map<String, dynamic> requestBody;
-    Map<String, String> headers = {'Content-Type': 'application/json'};
-
-    // 判断服务提供商类型并相应调整请求
-    if (url.contains('anthropic.com')) {
-      // Anthropic Claude API格式
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true, // 设置为true以启用流式响应
-      };
-
-      // Anthropic使用x-api-key头而非Bearer认证
-      headers['anthropic-version'] = '2023-06-01'; // 添加必需的API版本头
-      headers['x-api-key'] = effectiveApiKey; // 使用有效的API密钥
-    } else if (url.contains('openrouter.ai')) {
-      // OpenRouter可能需要额外的头信息
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'temperature': body['temperature'] ?? 0.7,
-        'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true, // 设置为true以启用流式响应
-      };
-
-      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-      headers['HTTP-Referer'] = 'https://thoughtecho.app'; // 可能需要指定来源
-      headers['X-Title'] = 'ThoughtEcho App'; // 应用名称
-    } else if (url.contains('deepseek.com')) {
-      // DeepSeek API格式
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'temperature': body['temperature'] ?? 0.7,
-        'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true, // 设置为true以启用流式响应
-      };
-
-      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-    } else {
-      // 默认格式(适用于OpenAI及其兼容API)
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'temperature': body['temperature'] ?? 0.7,
-        'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true, // 设置为true以启用流式响应
-      };
-
-      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-    }
-
-    debugPrint('API请求体: ${json.encode(requestBody)}');
-    // 打印请求头但隐藏敏感信息
-    final safeHeaders = Map<String, String>.from(headers);
-    if (safeHeaders.containsKey('Authorization')) {
-      safeHeaders['Authorization'] = safeHeaders['Authorization']!.replaceFirst(
-        effectiveApiKey,
-        '[API_KEY_HIDDEN]',
-      );
-    }
-    if (safeHeaders.containsKey('x-api-key')) {
-      safeHeaders['x-api-key'] = '[API_KEY_HIDDEN]';
-    }
-    debugPrint('请求头: $safeHeaders');
-
-    final Uri uri = Uri.parse(settings.apiUrl);
-    debugPrint('请求URL: $uri,  完整URL: ${uri.toString()}');
-
-    try {
-      final client = http.Client();
-      final request = http.Request('POST', uri);
-      request.headers.addAll(headers);
-      request.body = json.encode(requestBody);
-
-      final streamedResponse = await client
-          .send(request)
-          .timeout(
-            const Duration(seconds: 300), // 超时时间为300秒
-            onTimeout: () {
-              onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
-              client.close();
-              // 返回一个空的 StreamedResponse 而不是抛出异常
-              return http.StreamedResponse(
-                Stream.fromIterable([]),
-                408, // Request Timeout
-                headers: {},
-              );
-            },
-          );
-
-      if (streamedResponse.statusCode != 200) {
-        // 读取错误响应
-        final errorBody = await streamedResponse.stream.bytesToString();
-        debugPrint('API错误响应: $errorBody');
-
-        // 增强错误处理，提供更具体的错误信息
-        if (errorBody.contains('rate_limit_exceeded') ||
-            errorBody.contains('rate limit') ||
-            errorBody.contains('429')) {
-          onError(Exception('请求频率超限，请稍后再试 (429 错误)'));
-        } else if (errorBody.contains('authentication') ||
-            errorBody.contains('invalid_api_key') ||
-            errorBody.contains('401')) {
-          onError(Exception('API密钥无效或已过期，请更新API密钥 (401 错误)'));
-        } else if (errorBody.contains('insufficient_quota') ||
-            errorBody.contains('billing') ||
-            errorBody.contains('429')) {
-          onError(Exception('API额度不足，请检查账户余额 (429 错误)'));
-        } else {
-          onError(
-            Exception('AI服务请求失败：${streamedResponse.statusCode}\n$errorBody'),
-          );
-        }
-        return;
-      }
-
-      // 处理流式响应
-      String fullText = '';
-      String currentChunk = '';
-
-      streamedResponse.stream
-          .transform(utf8.decoder)
-          .listen(
-            (String chunk) {
-              currentChunk += chunk;
-
-              // 尝试从数据块中提取有效部分
-              final lines = currentChunk.split('\n');
-              currentChunk = '';
-
-              for (var i = 0; i < lines.length; i++) {
-                var line = lines[i];
-
-                // 如果不是最后一行，或者是完整的行
-                if (i < lines.length - 1 ||
-                    line.endsWith('\n') ||
-                    line.trim().isEmpty) {
-                  if (line.startsWith('data: ') && line != 'data: [DONE]') {
-                    try {
-                      final jsonData = line.substring(6).trim();
-                      if (jsonData.isNotEmpty) {
-                        final data = json.decode(jsonData);
-                        if (data['choices'] != null &&
-                            data['choices'].isNotEmpty) {
-                          String content = '';
-                          // 处理不同API的响应格式
-                          if (data['choices'][0]['delta'] != null &&
-                              data['choices'][0]['delta']['content'] != null) {
-                            content = data['choices'][0]['delta']['content'];
-                          } else if (data['choices'][0]['text'] != null) {
-                            content = data['choices'][0]['text'];
-                          } else if (data['choices'][0]['message'] != null &&
-                              data['choices'][0]['message']['content'] !=
-                                  null) {
-                            content = data['choices'][0]['message']['content'];
-                          }
-
-                          if (content.isNotEmpty) {
-                            fullText += content;
-                            onResponse(content);
-                          }
-                        }
-                      }
-                    } catch (e) {
-                      debugPrint('解析流式响应数据失败: $e, 行内容: $line');
-                      // 尝试更宽松的解析方式，获取可能的内容
-                      try {
-                        if (line.contains('"content"')) {
-                          final contentIndex = line.indexOf('"content"');
-                          final colonIndex = line.indexOf(':', contentIndex);
-                          if (colonIndex != -1) {
-                            final quoteIndex = line.indexOf('"', colonIndex);
-                            if (quoteIndex != -1) {
-                              final endQuoteIndex = line.indexOf(
-                                '"',
-                                quoteIndex + 1,
-                              );
-                              if (endQuoteIndex != -1) {
-                                final content = line.substring(
-                                  quoteIndex + 1,
-                                  endQuoteIndex,
-                                );
-                                if (content.isNotEmpty) {
-                                  fullText += content;
-                                  onResponse(content);
-                                }
-                              }
-                            }
-                          }
-                        }
-                      } catch (e2) {
-                        debugPrint('备选解析方法也失败: $e2');
-                      }
-                    }
-                  }
-                } else {
-                  // 不完整的行，保留到下一个块处理
-                  currentChunk = line;
-                }
-              }
-            },
-            onDone: () {
-              debugPrint('流式响应接收完毕');
-              onComplete(fullText);
-              client.close();
-            },
-            onError: (e) {
-              debugPrint('流式响应错误: $e');
-              onError(e);
-              client.close();
-            },
-          );
-    } catch (e) {
-      debugPrint('API请求错误: $e');
-      if (e.toString().contains('Failed host lookup')) {
-        onError(Exception('无法连接到AI服务器，请检查网络连接或服务器状态'));
-      } else if (e.toString().contains('Connection refused') &&
-              uri.toString().contains('0.0.0.0') ||
-          uri.toString().contains('localhost')) {
-        onError(Exception('无法连接到本地AI服务器，请确保服务器已启动或更改API URL'));
-      } else if (e.toString().contains('certificate')) {
-        onError(Exception('证书验证失败，请检查HTTPS配置或使用HTTP连接'));
-      } else {
-        onError(e);
-      }
-    }
+    // 直接使用 StreamingUtils 处理所有流式请求逻辑
+    await StreamingUtils.makeStreamRequest(
+      url,
+      body,
+      settings,
+      onResponse: onResponse,
+      onComplete: onComplete,
+      onError: onError,
+    );
   }
 
   Future<String> summarizeNote(Quote quote) async {
