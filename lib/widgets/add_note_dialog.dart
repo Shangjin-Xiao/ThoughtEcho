@@ -58,9 +58,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   String? _originalWeather;
   String? _originalTemperature;
 
-  // 控制是否使用最新的位置和天气信息
-  bool _useLatestLocationWeather = false;
-
   // 颜色选择
   String? _selectedColorHex;
 
@@ -647,33 +644,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     selectedColor: theme.colorScheme.primaryContainer,
                   ),
                 ),
-                // 如果是编辑模式，添加刷新按钮
-                if (widget.initialQuote != null &&
-                    (_includeLocation || _includeWeather))
-                  Tooltip(
-                    message:
-                        _useLatestLocationWeather
-                            ? '已设置为使用最新位置和天气'
-                            : '更新为当前位置和天气',
-                    child: FilterChip(
-                      avatar: Icon(
-                        Icons.refresh,
-                        color:
-                            _useLatestLocationWeather
-                                ? theme.colorScheme.primary
-                                : Colors.grey,
-                        size: 18,
-                      ),
-                      label: const Text('更新'),
-                      selected: _useLatestLocationWeather,
-                      onSelected: (value) {
-                        setState(() {
-                          _useLatestLocationWeather = value;
-                        });
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
-                    ),
-                  ),
                 const SizedBox(width: 8),
                 // 颜色选择按钮
                 Tooltip(
@@ -923,22 +893,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         colorHex: _selectedColorHex,
                         location:
                             _includeLocation
-                                ? (widget.initialQuote != null &&
-                                        !_useLatestLocationWeather
+                                ? (widget.initialQuote != null
                                     ? _originalLocation
                                     : location)
                                 : null,
                         weather:
                             _includeWeather
-                                ? (widget.initialQuote != null &&
-                                        !_useLatestLocationWeather
+                                ? (widget.initialQuote != null
                                     ? _originalWeather
                                     : weather)
                                 : null,
                         temperature:
                             _includeWeather
-                                ? (widget.initialQuote != null &&
-                                        !_useLatestLocationWeather
+                                ? (widget.initialQuote != null
                                     ? _originalTemperature
                                     : temperature)
                                 : null,
