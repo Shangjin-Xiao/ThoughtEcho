@@ -426,14 +426,14 @@ class AIService extends ChangeNotifier {
           .send(request)
           .timeout(
             const Duration(seconds: 300), // 超时时间为300秒
-            onTimeout: () async {
+            onTimeout: () {
               onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
-              // 使用 IOStreamedResponse 匹配正确的返回类型
+              client.close();
+              // 返回一个空的 StreamedResponse 而不是抛出异常
               return http.StreamedResponse(
-                Stream<List<int>>.fromIterable(
-                  [],
-                ).asBroadcastStream(), // 空流，使用广播流，明确类型为 Stream<List<int>>
+                Stream.fromIterable([]),
                 408, // Request Timeout
+                headers: {},
               );
             },
           );
@@ -683,18 +683,18 @@ class AIService extends ChangeNotifier {
         String? city;
         String? weather;
         String? temperature;
-  
+
         // 使用之前注入但未使用的位置服务
         if (_locationService.city != null) {
           city = _locationService.city;
         }
-  
+
         // 使用之前注入但未使用的天气服务
         if (_weatherService.currentWeather != null) {
           weather = _weatherService.currentWeather;
           temperature = _weatherService.temperature;
         }
-  
+
         // 使用上下文信息生成个性化的提示
         yield DailyPromptGenerator.generatePromptBasedOnContext(
           city: city,
@@ -715,7 +715,7 @@ class AIService extends ChangeNotifier {
           debugPrint('AI设置验证失败: $e，将使用默认提示');
           settingsValid = false;
         }
-        
+
         // 如果设置有效，调用AI生成流式提示
         if (settingsValid) {
           debugPrint('API Key有效，使用AI生成每日提示');
