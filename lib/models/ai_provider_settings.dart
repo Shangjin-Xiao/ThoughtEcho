@@ -137,13 +137,12 @@ class MultiAISettings {
   final int maxRetries;
   final Duration retryDelay;
   final bool enableFailover;
-
   const MultiAISettings({
     this.providers = const [],
     this.currentProviderId = '',
     this.maxRetries = 2,
     this.retryDelay = const Duration(seconds: 3),
-    this.enableFailover = true,
+    this.enableFailover = false, // 默认禁用自动故障转移，让用户手动控制
   });
 
   /// 获取当前活跃的服务商
@@ -181,7 +180,7 @@ class MultiAISettings {
       currentProviderId: map['currentProviderId'] ?? '',
       maxRetries: map['maxRetries'] ?? 2,
       retryDelay: Duration(milliseconds: map['retryDelay'] ?? 3000),
-      enableFailover: map['enableFailover'] ?? true,
+      enableFailover: map['enableFailover'] ?? false, // 默认禁用故障转移
     );
   }
 

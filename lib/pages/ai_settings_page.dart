@@ -95,6 +95,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
       final settings = Provider.of<SettingsService>(context, listen: false);
       final aiSettings = settings.aiSettings;
 
+      debugPrint('=== AI设置页面加载调试 ===');
+      debugPrint('安全存储中的API密钥: ${secureApiKey != null ? "存在 (长度: ${secureApiKey.length})" : "不存在"}');
+      debugPrint('设置中的AI配置:');
+      debugPrint('  API URL: ${aiSettings.apiUrl}');
+      debugPrint('  Model: ${aiSettings.model}');
+      debugPrint('  API Key: ${aiSettings.apiKey.isNotEmpty ? "存在 (长度: ${aiSettings.apiKey.length})" : "不存在"}');
+      debugPrint('  Temperature: ${aiSettings.temperature}');
+      debugPrint('  Max Tokens: ${aiSettings.maxTokens}');
+      debugPrint('  Host Override: ${aiSettings.hostOverride}');
+
       setState(() {
         _modelController.text = aiSettings.model;
         _apiUrlController.text = aiSettings.apiUrl;
@@ -155,8 +165,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
     try {
       final String hostOverride = _hostOverrideController.text.trim();
 
+      debugPrint('=== AI设置页面保存调试 ===');
+      debugPrint('API URL: ${_apiUrlController.text}');
+      debugPrint('Model: ${_modelController.text}');
+      debugPrint('API Key: ${_apiKeyController.text.isNotEmpty ? "存在 (长度: ${_apiKeyController.text.length})" : "不存在"}');
+      debugPrint('Temperature: $temperature');
+      debugPrint('Max Tokens: $maxTokens');
+      debugPrint('Host Override: $hostOverride');
+
       final secureStorage = SecureStorageService();
       await secureStorage.saveApiKey(_apiKeyController.text);
+      debugPrint('API密钥已保存到安全存储');
 
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;
@@ -171,6 +190,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
           hostOverride: hostOverride.isEmpty ? null : hostOverride,
         ),
       );
+      debugPrint('AI设置已更新到SettingsService');
 
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;

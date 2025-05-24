@@ -201,7 +201,29 @@ class AIService extends ChangeNotifier {
     try {
       final secureStorage = SecureStorageService();
       final secureApiKey = await secureStorage.getApiKey();
-      return secureApiKey ?? settings.apiKey;
+      
+      // 添加调试信息
+      debugPrint('=== API密钥调试信息 ===');
+      debugPrint('安全存储中的API密钥: ${secureApiKey != null ? "存在 (长度: ${secureApiKey.length})" : "不存在"}');
+      debugPrint('设置中的API密钥: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}');
+      
+      final effectiveKey = secureApiKey ?? settings.apiKey;
+      debugPrint('最终使用的API密钥: ${effectiveKey.isNotEmpty ? "存在 (长度: ${effectiveKey.length})" : "不存在"}');
+      
+      // 检查密钥格式
+      if (effectiveKey.isNotEmpty) {
+        debugPrint('密钥前缀: ${effectiveKey.substring(0, effectiveKey.length > 10 ? 10 : effectiveKey.length)}...');
+        // 检查是否包含非法字符
+        if (effectiveKey.contains('\n') || effectiveKey.contains('\r')) {
+          debugPrint('警告: API密钥包含换行符！');
+        }
+        if (effectiveKey.startsWith(' ') || effectiveKey.endsWith(' ')) {
+          debugPrint('警告: API密钥包含前后空格！');
+        }
+      }
+      debugPrint('=====================');
+      
+      return effectiveKey;
     } catch (e) {
       debugPrint('获取安全存储API密钥失败: $e，使用设置中的密钥');
       return settings.apiKey;
