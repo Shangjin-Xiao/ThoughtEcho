@@ -43,6 +43,7 @@ dependencies:
   dynamic_color: ^1.6.6
   flutter_quill: ^11.4.0
   package_info_plus: ^8.3.0 # 更新版本解决依赖冲突
+  logging: ^1.2.0 # 添加 logging 包用于日志管理
 
 dev_dependencies:
   flutter_test:

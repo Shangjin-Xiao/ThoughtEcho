@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/ai_provider_settings.dart';
 import '../services/settings_service.dart';
 import '../utils/dio_network_utils.dart';
 

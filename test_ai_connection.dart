@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'lib/services/ai_service.dart';
 import 'lib/services/settings_service.dart';
 import 'lib/services/location_service.dart';
@@ -26,8 +25,7 @@ void main() async {
 
   // 测试 AI 连接超时
   debugPrint('\n开始测试AI连接超时机制...');
-  
-  try {
+    try {
     // 使用一个无效的URL来测试超时
     settingsService.updateAISettings(AISettings(
       apiUrl: 'https://httpbin.org/delay/60', // 这个URL会延迟60秒响应
