@@ -10,6 +10,7 @@ import '../services/secure_storage_service.dart';
 import 'dart:async'; // 添加异步流支持
 import '../utils/daily_prompt_generator.dart';
 import '../utils/streaming_utils.dart';
+import '../utils/dio_network_utils.dart'; // 添加Dio网络工具
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -1219,5 +1220,92 @@ $question''',
     }();
 
     return controller.stream;
+  }
+
+  /// 使用多provider测试连接
+  Future<void> testConnectionWithMultiProvider() async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+
+    try {
+      final multiSettings = _settingsService.multiAISettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '你是一个AI助手。请简单回复"连接测试成功"。',
+        },
+        {
+          'role': 'user',
+          'content': '测试连接',
+        },
+      ];
+
+      final response = await DioNetworkUtils.makeRequestWithFailover(
+        '',
+        {
+          'messages': messages,
+          'temperature': 0.1,
+          'max_tokens': 50,
+        },
+        multiSettings,
+        timeout: const Duration(seconds: 30),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        if (data['choices'] != null &&
+            data['choices'].isNotEmpty &&
+            data['choices'][0]['message'] != null) {
+          debugPrint('多provider连接测试成功: ${data['choices'][0]['message']['content']}');
+          return;
+        }
+      }
+      
+      throw Exception('API响应格式异常');
+    } catch (e) {
+      debugPrint('多provider连接测试失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 使用多provider进行笔记分析（新版本）
+  Future<String> summarizeNoteWithMultiProvider(Quote quote) async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+    
+    try {
+      final multiSettings = _settingsService.multiAISettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content':
+              '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
+        },
+        {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
+      ];
+
+      final response = await DioNetworkUtils.makeRequestWithFailover('', {
+        'messages': messages,
+        'temperature': 0.7,
+      }, multiSettings);
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        if (data['choices'] != null &&
+            data['choices'].isNotEmpty &&
+            data['choices'][0]['message'] != null) {
+          return data['choices'][0]['message']['content'];
+        }
+      }
+      
+      throw Exception('API响应格式错误');
+    } catch (e) {
+      debugPrint('多provider笔记分析错误: $e');
+      rethrow;
+    }
   }
 }

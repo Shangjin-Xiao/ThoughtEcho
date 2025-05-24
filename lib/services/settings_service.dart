@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
 import '../models/app_settings.dart';
+import '../models/ai_provider_settings.dart'; // 新增
 import '../services/secure_storage_service.dart';
 import '../services/mmkv_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static const String _aiSettingsKey = 'ai_settings';
+  static const String _multiAiSettingsKey = 'multi_ai_settings'; // 新增
   static const String _appSettingsKey = 'app_settings';
   static const String _themeModeKey = 'theme_mode';
   // 旧Key，用于迁移检查，迁移完成后可以考虑移除
@@ -16,22 +18,22 @@ class SettingsService extends ChangeNotifier {
   static const String _initialDatabaseSetupCompleteKey = 'initial_database_setup_complete';
   // 使用应用安装标记替代版本号
   static const String _appInstalledKey = 'app_installed_v2';
-  static const String _appUpgradedKey = 'app_upgraded_v2';
-  final SharedPreferences _prefs; // 保留以支持数据迁移
+  static const String _appUpgradedKey = 'app_upgraded_v2';  final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
   late AISettings _aiSettings;
   late AppSettings _appSettings;
   late ThemeMode _themeMode;
+  late MultiAISettings _multiAISettings; // 新增多provider设置
   final SecureStorageService _secureStorage = SecureStorageService();
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
 
   static const String _lastVersionKey = 'lastVersion';
-
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
+  MultiAISettings get multiAISettings => _multiAISettings; // 新增getter
   
   SettingsService(this._prefs);
   
@@ -82,9 +84,9 @@ class SettingsService extends ChangeNotifier {
         await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
       }
     }
-    
-    // 继续加载其他设置
+      // 继续加载其他设置
     _loadAISettings();
+    _loadMultiAISettings(); // 新增
     _loadAppSettings();
     _loadThemeMode();
 
@@ -331,5 +333,43 @@ class SettingsService extends ChangeNotifier {
   /// 设置当前版本号
   Future<void> setAppVersion(String version) async {
     await _mmkv.setString(_lastVersionKey, version);
+  }
+
+  // 加载多provider AI设置
+  Future<void> _loadMultiAISettings() async {
+    final String? multiAiSettingsJson = _mmkv.getString(_multiAiSettingsKey);
+    
+    if (multiAiSettingsJson != null) {
+      try {
+        final Map<String, dynamic> settingsMap = json.decode(multiAiSettingsJson);
+        _multiAISettings = MultiAISettings.fromJson(settingsMap);
+      } catch (e) {
+        debugPrint('加载多provider设置失败: $e');
+        _multiAISettings = MultiAISettings.defaultSettings();
+        await saveMultiAISettings(_multiAISettings);
+      }
+    } else {
+      // 如果没有多provider设置，创建默认设置
+      _multiAISettings = MultiAISettings.defaultSettings();
+      await saveMultiAISettings(_multiAISettings);
+    }
+  }
+
+  /// 保存多provider AI设置
+  Future<void> saveMultiAISettings(MultiAISettings settings) async {
+    _multiAISettings = settings;
+    
+    // 保存到MMKV存储
+    await _mmkv.setString(
+      _multiAiSettingsKey,
+      json.encode(settings.toJson()),
+    );
+    
+    notifyListeners();
+  }
+
+  /// 更新多provider AI设置
+  Future<void> updateMultiAISettings(MultiAISettings settings) async {
+    await saveMultiAISettings(settings);
   }
 }
