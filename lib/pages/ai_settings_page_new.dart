@@ -5,7 +5,7 @@ import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../services/secure_storage_service.dart';
-import '../utils/dio_network_utils.dart';
+import '../utils/ai_network_manager.dart';
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -354,17 +354,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
           'role': 'user',
           'content': '测试连接',
         },
-      ];
-
-      // 使用指定provider测试连接
-      final response = await DioNetworkUtils.makeRequestWithProvider(
-        '',
-        {
+      ];      // 使用指定provider测试连接
+      final response = await AINetworkManager.makeRequest(
+        url: '',
+        data: {
           'messages': testMessages,
           'temperature': 0.1,
           'max_tokens': 50,
         },
-        provider,
+        provider: provider,
         timeout: const Duration(seconds: 30),
       );
 
@@ -467,9 +465,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
         return p;
       }).toList();
       
-      final updatedMultiSettings = _multiSettings.copyWith(providers: updatedProviders);
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final updatedMultiSettings = _multiSettings.copyWith(providers: updatedProviders);      final settingsService = Provider.of<SettingsService>(context, listen: false);
       await settingsService.saveMultiAISettings(updatedMultiSettings);
+      
+      if (!mounted) return;
       
       setState(() {
         _multiSettings = updatedMultiSettings;
@@ -478,7 +477,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       });
       
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('预设已重命名为 "$result"')),
       );
@@ -521,9 +519,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
         providers: updatedProviders,
         currentProviderId: newCurrentProviderId,
       );
-      
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
+        final settingsService = Provider.of<SettingsService>(context, listen: false);
       await settingsService.saveMultiAISettings(updatedMultiSettings);
+      
+      if (!mounted) return;
       
       setState(() {
         _multiSettings = updatedMultiSettings;
@@ -583,7 +582,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: Theme.of(context).colorScheme.primary,
