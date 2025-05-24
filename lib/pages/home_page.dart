@@ -77,8 +77,9 @@ class _HomePageState extends State<HomePage>
       // Call the new stream method
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt();
 
-      if (!mounted)
+      if (!mounted) {
         return; // Ensure mounted before setting stream and listening
+      }
 
       // Set the stream variable so StreamBuilder can react to connection state changes
       setState(() {});
@@ -746,7 +747,7 @@ class _HomePageState extends State<HomePage>
                                         : '正在获取默认提示...',
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: theme.colorScheme.onSurface
-                                          .withOpacity(0.7),
+                                          .withValues(alpha: 0.7),
                                     ),
                                     textAlign: TextAlign.center,
                                   ),

@@ -15,7 +15,6 @@ import '../utils/icon_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
 import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
@@ -1317,7 +1316,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Padding(
-                    padding: const EdgeInsets.all(16.0),                    child: Row(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
                       children: [
                         Icon(
                           Icons.auto_awesome,
@@ -1524,8 +1524,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _polishText() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-      if(mounted) {
-         ScaffoldMessenger.of(
+      if (mounted) {
+        ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
       }
@@ -1546,14 +1546,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           applyButtonText: '应用更改', // 应用按钮文本
           onApply: (fullText) {
             // 用户点击"应用更改"时调用
-             // 返回结果给showDialog的await调用
+            // 返回结果给showDialog的await调用
             Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
           },
           onCancel: () {
-             // 用户点击"取消"时调用
-             Navigator.of(dialogContext).pop(null); // 返回null表示取消
+            // 用户点击"取消"时调用
+            Navigator.of(dialogContext).pop(null); // 返回null表示取消
           },
-           // StreamingTextDialog 内部处理 onError 和 onComplete
+          // StreamingTextDialog 内部处理 onError 和 onComplete
         );
       },
     );
@@ -1572,46 +1572,51 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _continueText() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-       if(mounted) {
-         ScaffoldMessenger.of(
+      if (mounted) {
+        ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
-       }
+      }
       return;
     }
 
     final aiService = Provider.of<AIService>(context, listen: false);
 
     // 显示流式文本对话框
-     String? finalResult = await showDialog<String?>(
+    String? finalResult = await showDialog<String?>(
       context: context,
       barrierDismissible: false, // 不允许点击外部关闭
       builder: (dialogContext) {
         return StreamingTextDialog(
           title: '正在续写内容...',
-          textStream: aiService.streamContinueText(plainText), // 调用流式方法，使用正确的参数名
+          textStream: aiService.streamContinueText(
+            plainText,
+          ), // 调用流式方法，使用正确的参数名
           applyButtonText: '附加到原文', // 应用按钮文本
           onApply: (fullText) {
-             // 用户点击"附加到原文"时调用
-             // 返回结果给showDialog的await调用
-             Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
+            // 用户点击"附加到原文"时调用
+            // 返回结果给showDialog的await调用
+            Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
           },
           onCancel: () {
-             // 用户点击"取消"时调用
-             Navigator.of(dialogContext).pop(null); // 返回null表示取消
+            // 用户点击"取消"时调用
+            Navigator.of(dialogContext).pop(null); // 返回null表示取消
           },
           // StreamingTextDialog 内部处理 onError 和 onComplete
         );
       },
     );
 
-     // 如果showDialog返回了结果 (用户点击了应用)，附加到编辑器内容
+    // 如果showDialog返回了结果 (用户点击了应用)，附加到编辑器内容
     if (finalResult != null && mounted) {
-       final int length = _controller.document.length;
-       // 在文档末尾插入续写内容，确保在最后一行
-       _controller.document.insert(length, '\n\n$finalResult');
-       // 移动光标到文档末尾
-       _controller.updateSelection(TextSelection.collapsed(offset: _controller.document.length), quill.ChangeSource.local);
+      final int length = _controller.document.length;
+      // 在文档末尾插入续写内容，确保在最后一行
+      _controller.document.insert(length, '\n\n$finalResult');
+      // 移动光标到文档末尾
+      _controller.updateSelection(
+        TextSelection.collapsed(offset: _controller.document.length),
+        quill.ChangeSource.local,
+      );
     }
   }
 
@@ -1619,24 +1624,24 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _analyzeContent() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-       if(mounted) {
-         ScaffoldMessenger.of(
+      if (mounted) {
+        ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
-       }
+      }
       return;
     }
 
     final aiService = Provider.of<AIService>(context, listen: false);
 
     // 显示流式文本对话框
-     // 对于分析功能，我们只关心对话框的显示，不需要await返回值来更新编辑器
-     await showDialog<void>(
+    // 对于分析功能，我们只关心对话框的显示，不需要await返回值来更新编辑器
+    await showDialog<void>(
       context: context,
       barrierDismissible: false, // 不允许点击外部关闭
       builder: (dialogContext) {
         // 创建临时Quote对象进行分析
-         final quote = Quote(
+        final quote = Quote(
           id: widget.initialQuote?.id ?? const Uuid().v4(),
           content: plainText,
           date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
@@ -1651,25 +1656,25 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           applyButtonText: '复制结果', // 分析结果的应用按钮可以是复制
           onApply: (fullText) {
             // 用户点击"复制结果"时调用
-             Clipboard.setData(ClipboardData(text: fullText)).then((_) {
-              if(mounted) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(content: Text('分析结果已复制到剪贴板')),
-                 );
+            Clipboard.setData(ClipboardData(text: fullText)).then((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('分析结果已复制到剪贴板')));
               }
             });
-             Navigator.of(dialogContext).pop(); // 关闭对话框
+            Navigator.of(dialogContext).pop(); // 关闭对话框
           },
           onCancel: () {
-             // 用户点击"关闭"时调用
-             Navigator.of(dialogContext).pop();
+            // 用户点击"关闭"时调用
+            Navigator.of(dialogContext).pop();
           },
           isMarkdown: true, // 分析结果通常是Markdown格式
           // StreamingTextDialog 内部处理 onError 和 onComplete
         );
       },
     );
-     // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
-     // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
+    // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
+    // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
   }
 }

@@ -258,8 +258,9 @@ class _InsightsPageState extends State<InsightsPage>
                 : null,
       );
 
-      if (!mounted)
+      if (!mounted) {
         return; // Ensure mounted before setting stream and listening
+      }
 
       // Set the stream variable so StreamBuilder can track connection state
       // 由于我们使用了广播流，可以让StreamBuilder和手动监听共同使用
@@ -732,7 +733,9 @@ class _InsightsPageState extends State<InsightsPage>
                                     ),
                                   ).then((_) {
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    final scaffoldMessenger =
+                                        ScaffoldMessenger.of(context);
+                                    scaffoldMessenger.showSnackBar(
                                       const SnackBar(content: Text('分析结果已复制')),
                                     );
                                   });
