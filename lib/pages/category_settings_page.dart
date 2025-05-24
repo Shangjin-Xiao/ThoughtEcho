@@ -80,24 +80,24 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               );
 
                               if (!mounted) return;
-                              final scaffoldMessenger = ScaffoldMessenger.of(context);
-                              if (mounted) {
-                                scaffoldMessenger.showSnackBar(
-                                  const SnackBar(content: Text('分类添加成功')),
-                                );
-                              }
+                              final scaffoldMessenger = ScaffoldMessenger.of(
+                                context,
+                              );
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(content: Text('分类添加成功')),
+                              );
                               _categoryController.clear();
                               setState(() {
                                 _selectedIconName = null;
                               });
                             } catch (e) {
                               if (!mounted) return;
-                              final scaffoldMessenger = ScaffoldMessenger.of(context);
-                              if (mounted) {
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(content: Text('添加分类失败：$e')),
-                                );
-                              }
+                              final scaffoldMessenger = ScaffoldMessenger.of(
+                                context,
+                              );
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(content: Text('添加分类失败：$e')),
+                              );
                             } finally {
                               if (mounted) {
                                 setState(() => _isLoading = false);
@@ -590,13 +590,13 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           await dbService.deleteCategory(category.id);
 
           if (!mounted) return;
-          scaffoldMessenger.showSnackBar(const SnackBar(content: Text('分类删除成功')));
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(content: Text('分类删除成功')),
+          );
         } catch (e) {
           if (!mounted) return;
           final scaffoldMessenger = ScaffoldMessenger.of(context);
-          if (mounted) {
-            scaffoldMessenger.showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
-          }
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
         }
       }
     });

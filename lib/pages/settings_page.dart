@@ -283,25 +283,29 @@ class _SettingsPageState extends State<SettingsPage> {
                           position.longitude,
                         );
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        scaffoldMessenger.removeCurrentSnackBar();
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(content: Text('位置服务已启用，位置已更新')),
                         );
                         setState(() {
                           _locationController.text =
                               locationService.getFormattedLocation();
                         });
-                      } else if (mounted) {
-                        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
+                      } else {
+                        if (!mounted) return;
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        scaffoldMessenger.removeCurrentSnackBar();
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(content: Text('无法获取当前位置')),
                         );
                       }
                     } else {
                       if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('位置服务已禁用')));
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(content: Text('位置服务已禁用')),
+                      );
                     }
                     if (mounted) {
                       setState(() {});

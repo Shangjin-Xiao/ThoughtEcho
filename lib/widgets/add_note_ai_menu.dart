@@ -4,7 +4,6 @@ import 'dart:convert';
 import '../services/ai_service.dart';
 import '../models/quote_model.dart';
 import '../theme/app_theme.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import '../widgets/streaming_text_dialog.dart';
 
 class AddNoteAIMenu extends StatefulWidget {
@@ -377,93 +376,6 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       icon: const Icon(Icons.auto_awesome),
       tooltip: 'AI助手',
       onPressed: () => _showAIOptions(context),
-    );
-  }
-}
-
-class _StreamingTextDialog extends StatefulWidget {
-  final Stream<String> textStream;
-  final String title;
-  final String applyButtonText;
-  final Function(String) onApply;
-  final VoidCallback onCancel;
-  final bool isMarkdown;
-
-  const _StreamingTextDialog({
-    required this.textStream,
-    required this.title,
-    required this.applyButtonText,
-    required this.onApply,
-    required this.onCancel,
-    this.isMarkdown = false,
-  });
-
-  @override
-  State<_StreamingTextDialog> createState() => _StreamingTextDialogState();
-}
-
-class _StreamingTextDialogState extends State<_StreamingTextDialog> {
-  String _currentText = '';
-  bool _isStreamingComplete = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.textStream.listen(
-      (chunk) {
-        setState(() {
-          _currentText += chunk;
-        });
-      },
-      onDone: () {
-        setState(() {
-          _isStreamingComplete = true;
-        });
-      },
-      onError: (error) {
-        debugPrint('流式传输错误: $error');
-        setState(() {
-          _currentText += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
-          _isStreamingComplete = true; // 标记完成以显示按钮
-        });
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SingleChildScrollView(
-        child:
-            widget.isMarkdown
-                ? MarkdownBody(
-                  data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-                  selectable: true,
-                )
-                : SelectableText(
-                  _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-                ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            widget.onCancel();
-            Navigator.of(context).pop();
-          },
-          child: const Text('取消'),
-        ),
-        if (_isStreamingComplete &&
-            _currentText.isNotEmpty &&
-            !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
-          TextButton(
-            onPressed: () {
-              widget.onApply(_currentText);
-              Navigator.of(context).pop();
-            },
-            child: Text(widget.applyButtonText),
-          ),
-      ],
     );
   }
 }
