@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/http_utils.dart';
+import '../utils/dio_network_utils.dart'; // 导入dio网络工具
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
 
 class CityInfo {
@@ -271,16 +271,16 @@ class LocationService extends ChangeNotifier {
 
   // 使用在线服务获取地址（备用方法）
   Future<void> _getAddressFromLatLngOnline() async {
-    try {
-      final url =
+    try {      final url =
           'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
 
-      final response = await http.get(
-        Uri.parse(url),
+      final response = await HttpUtils.secureGet(
+        url,
         headers: {
           'Accept-Language': 'zh-CN,zh;q=0.9',
           'User-Agent': 'ThoughtEcho App',
         },
+        timeoutSeconds: 15,
       );
 
       if (response.statusCode == 200) {

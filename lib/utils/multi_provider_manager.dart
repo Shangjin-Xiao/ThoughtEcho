@@ -57,7 +57,7 @@ class MultiProviderManager {
       final updatedSettings = currentSettings.copyWith(providers: updatedProviders);
       await settingsService.saveMultiAISettings(updatedSettings);
       
-      debugPrint('Provider ${providerId} 配置成功');
+      debugPrint('Provider $providerId 配置成功');
     } catch (e) {
       debugPrint('配置provider失败: $e');
     }

@@ -24,9 +24,9 @@ class DioNetworkUtils {
   /// 配置Dio实例
   static void _configureDio(Dio dio) {
     dio.options.baseUrl = '';
-    dio.options.connectTimeout = Duration(seconds: 30);
-    dio.options.receiveTimeout = Duration(seconds: 300);
-    dio.options.sendTimeout = Duration(seconds: 60);
+    dio.options.connectTimeout = const Duration(seconds: 30);
+    dio.options.receiveTimeout = const Duration(seconds: 300);
+    dio.options.sendTimeout = const Duration(seconds: 60);
     
     // 添加拦截器用于日志记录
     if (kDebugMode) {
@@ -72,7 +72,7 @@ class DioNetworkUtils {
         options: Options(
           headers: headers,
           responseType: ResponseType.json,
-          receiveTimeout: timeout ?? Duration(seconds: 300),
+          receiveTimeout: timeout ?? const Duration(seconds: 300),
         ),
       );
 
@@ -103,7 +103,7 @@ class DioNetworkUtils {
         options: Options(
           headers: headers,
           responseType: ResponseType.stream,
-          receiveTimeout: timeout ?? Duration(seconds: 300),
+          receiveTimeout: timeout ?? const Duration(seconds: 300),
         ),
       );
 
@@ -346,7 +346,7 @@ class DioNetworkUtils {
         _markProviderFailed(currentProvider.id);
         
         if (!multiSettings.enableFailover) {
-          throw e; // 如果禁用故障转移，直接抛出错误
+          rethrow; // 如果禁用故障转移，直接抛出错误
         }
       }
     }
@@ -389,7 +389,7 @@ class DioNetworkUtils {
         options: Options(
           headers: headers,
           responseType: ResponseType.json,
-          receiveTimeout: timeout ?? Duration(seconds: 300),
+          receiveTimeout: timeout ?? const Duration(seconds: 300),
         ),
       );
 
@@ -490,7 +490,7 @@ class DioNetworkUtils {
         options: Options(
           headers: headers,
           responseType: ResponseType.stream,
-          receiveTimeout: timeout ?? Duration(seconds: 300),
+          receiveTimeout: timeout ?? const Duration(seconds: 300),
         ),
       );
 
@@ -578,11 +578,10 @@ class DioNetworkUtils {
 
   /// 清除服务商失败记录
   static void clearProviderFailures() {
-    _failedProviders.clear();
-  }
+    _failedProviders.clear();  }
 
   /// 发送普通HTTP POST请求（保持向后兼容）
-  static Future<Response> makeRequest(
+  static Future<Response> makeMultiRequest(
     String url,
     Map<String, dynamic> data,
     MultiAISettings multiSettings, {
@@ -590,16 +589,14 @@ class DioNetworkUtils {
   }) async {
     return await makeRequestWithFailover(url, data, multiSettings, timeout: timeout);
   }
-
   /// 发送流式HTTP请求（保持向后兼容）
-  static Future<void> makeStreamRequest(
+  static Future<void> makeMultiStreamRequest(
     String url,
     Map<String, dynamic> data,
     MultiAISettings multiSettings, {
     required Function(String) onData,
     required Function(String) onComplete,
-    required Function(Exception) onError,
-    Duration? timeout,
+    required Function(Exception) onError,    Duration? timeout,
   }) async {
     return await makeStreamRequestWithFailover(
       url, data, multiSettings,

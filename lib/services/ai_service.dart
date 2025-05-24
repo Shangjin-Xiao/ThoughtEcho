@@ -197,22 +197,14 @@ class AIService extends ChangeNotifier {
     return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
   }
 
-  Future<http.Response> _makeRequest(
+  // 使用Dio直接发送请求
+  Future<Response> _makeRequest(
     String url,
     Map<String, dynamic> body,
     AISettings settings,
   ) async {
-    if (body['messages'] is! List) {
-      throw Exception('messages字段格式错误');
-    }
-
-    // 创建安全存储服务实例
-    final secureStorage = SecureStorageService();
-
-    // 获取API密钥 - 首先尝试从安全存储中获取，如果为空则尝试使用设置中的密钥（向后兼容）
-    final secureApiKey = await secureStorage.getApiKey();
-    final effectiveApiKey = secureApiKey ?? settings.apiKey;
-
+    // 获取可用的API密钥
+    final effectiveApiKey = await _getEffectiveApiKey(settings);
     if (effectiveApiKey.isEmpty) {
       throw Exception('未找到有效的API密钥，请在设置中配置API密钥');
     }
@@ -240,11 +232,10 @@ class AIService extends ChangeNotifier {
         'messages': body['messages'],
         'temperature': body['temperature'] ?? 0.7,
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': false,
       };
 
       headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-      headers['HTTP-Referer'] = 'https://thoughtecho.app'; // 可能需要指定来源
+      headers['HTTP-Referer'] = 'https://thoughtecho.app'; // 指定来源
       headers['X-Title'] = 'ThoughtEcho App'; // 应用名称
     } else if (url.contains('deepseek.com')) {
       // DeepSeek API格式
@@ -253,7 +244,6 @@ class AIService extends ChangeNotifier {
         'messages': body['messages'],
         'temperature': body['temperature'] ?? 0.7,
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': false,
       };
 
       headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
@@ -264,7 +254,6 @@ class AIService extends ChangeNotifier {
         'messages': body['messages'],
         'temperature': body['temperature'] ?? 0.7,
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': false,
       };
 
       headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
@@ -286,25 +275,14 @@ class AIService extends ChangeNotifier {
 
     final Uri uri = Uri.parse(settings.apiUrl);
     debugPrint('请求URL: $uri,  完整URL: ${uri.toString()}');
-
     try {
-      final client = http.Client();
-      final response = await client
-          .post(uri, headers: headers, body: json.encode(requestBody))
-          .timeout(
-            const Duration(seconds: 300), // 超时时间改为300秒
-            onTimeout: () {
-              throw Exception('请求超时，AI分析可能需要更长时间，请稍后再试');
-            },
-          );
-
-      if (response.statusCode != 200) {
-        final errorBody = response.body;
-        debugPrint('API错误响应: $errorBody');
-        throw Exception('AI服务请求失败：${response.statusCode}\n$errorBody');
-      }
-
-      return response;
+      // 使用DioNetworkUtils发送请求
+      return await DioNetworkUtils.makeRequest(
+        settings.apiUrl,
+        requestBody,
+        settings,
+        timeout: const Duration(seconds: 300),
+      );
     } catch (e) {
       debugPrint('API请求错误: $e');
       if (e.toString().contains('Failed host lookup')) {
@@ -1220,6 +1198,49 @@ $question''',
     }();
 
     return controller.stream;
+  }
+
+  /// 测试与AI服务的连接
+  Future<void> testConnection() async {
+    if (!hasValidApiKey()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+
+    try {
+      await _validateSettings();
+      final settings = _settingsService.aiSettings;
+
+      final messages = [
+        {
+          'role': 'system',
+          'content': '你是一个AI助手。请简单回复"连接测试成功"。',
+        },
+        {
+          'role': 'user',
+          'content': '测试连接',
+        },
+      ];
+
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
+        'temperature': 0.1,
+        'max_tokens': 50,
+        'model': settings.model,
+      }, settings);
+
+      final data = json.decode(response.body);
+      if (data['choices'] != null &&
+          data['choices'].isNotEmpty &&
+          data['choices'][0]['message'] != null) {
+        debugPrint('AI连接测试成功: ${data['choices'][0]['message']['content']}');
+        return;
+      }
+      
+      throw Exception('API响应格式异常');
+    } catch (e) {
+      debugPrint('AI连接测试失败: $e');
+      rethrow;
+    }
   }
 
   /// 使用多provider测试连接
