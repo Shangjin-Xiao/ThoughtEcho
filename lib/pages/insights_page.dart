@@ -332,8 +332,7 @@ class _InsightsPageState extends State<InsightsPage>
               ),
             );
           }
-        },
-        onDone: () {
+        },        onDone: () {
           debugPrint('生成洞察流完成');
           // Stream finished, update loading state
           if (mounted) {
@@ -341,9 +340,7 @@ class _InsightsPageState extends State<InsightsPage>
               _isLoading = false; // Stop full loading state on done
               _isGenerating = false; // Stop generating state on done
             });
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('洞察生成完成')));
+            // 移除洞察生成完成的弹窗通知
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs

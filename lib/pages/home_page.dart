@@ -107,17 +107,14 @@ class _HomePageState extends State<HomePage>
               ),
             );
           }
-        },
-        onDone: () {
+        },        onDone: () {
           debugPrint('每日提示流完成');
           // Stream finished, update loading state
           if (mounted) {
             setState(() {
               _isGeneratingDailyPrompt = false; // Stop loading on done
             });
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('每日思考生成完成')));
+            // 移除每日思考生成完成的弹窗通知
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs
