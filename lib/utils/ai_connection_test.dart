@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
-import '../utils/dio_network_utils.dart';
+import '../utils/ai_network_manager.dart';
 
 /// 测试多provider AI功能
 class AIConnectionTest {
@@ -24,15 +24,14 @@ class AIConnectionTest {
           'content': '测试连接',
         },
       ];
-      
-      final response = await DioNetworkUtils.makeRequestWithFailover(
-        '',
-        {
+        final response = await AINetworkManager.makeRequest(
+        url: '',
+        data: {
           'messages': testMessages,
           'temperature': 0.1,
           'max_tokens': 50,
         },
-        multiSettings,
+        multiSettings: multiSettings,
         timeout: const Duration(seconds: 30),
       );
       
@@ -69,14 +68,13 @@ class AIConnectionTest {
           'content': '请介绍一下自己',
         },
       ];
-      
-      await DioNetworkUtils.makeStreamRequestWithFailover(
-        '',
-        {
+        await AINetworkManager.makeStreamRequest(
+        url: '',
+        data: {
           'messages': testMessages,
           'temperature': 0.7,
         },
-        multiSettings,
+        multiSettings: multiSettings,
         onData: (String text) {
           debugPrint('流式数据: $text');
         },

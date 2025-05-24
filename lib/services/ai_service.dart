@@ -1,16 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart'; // 添加Dio导入
+import 'package:dio/dio.dart';
 import '../models/quote_model.dart';
 import '../models/ai_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/secure_storage_service.dart';
-import 'dart:async'; // 添加异步流支持
+import 'dart:async';
 import '../utils/daily_prompt_generator.dart';
-import '../utils/streaming_utils.dart';
-import '../utils/dio_network_utils.dart'; // 添加Dio网络工具
+import '../utils/ai_network_manager.dart'; // 使用新的统一网络管理器
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -189,150 +188,27 @@ class AIService extends ChangeNotifier {
     final key = _settingsService.aiSettings.apiKey;
     if (key.isNotEmpty) {
       return true; // 如果设置中有key则直接返回true
-    }
-
-    // 否则，我们无法同步获取安全存储的key
+    }    // 否则，我们无法同步获取安全存储的key
     // 对于UI判断，我们假定如果apiUrl和model已经配置，那么key也很可能已配置
     final settings = _settingsService.aiSettings;
-    return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;  }
-
-  // 获取有效的API密钥
-  Future<String> _getEffectiveApiKey(AISettings settings) async {
-    try {
-      final secureStorage = SecureStorageService();
-      final secureApiKey = await secureStorage.getApiKey();
-      
-      // 添加调试信息
-      debugPrint('=== API密钥调试信息 ===');
-      debugPrint('安全存储中的API密钥: ${secureApiKey != null ? "存在 (长度: ${secureApiKey.length})" : "不存在"}');
-      debugPrint('设置中的API密钥: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}');
-      
-      final effectiveKey = secureApiKey ?? settings.apiKey;
-      debugPrint('最终使用的API密钥: ${effectiveKey.isNotEmpty ? "存在 (长度: ${effectiveKey.length})" : "不存在"}');
-      
-      // 检查密钥格式
-      if (effectiveKey.isNotEmpty) {
-        debugPrint('密钥前缀: ${effectiveKey.substring(0, effectiveKey.length > 10 ? 10 : effectiveKey.length)}...');
-        // 检查是否包含非法字符
-        if (effectiveKey.contains('\n') || effectiveKey.contains('\r')) {
-          debugPrint('警告: API密钥包含换行符！');
-        }
-        if (effectiveKey.startsWith(' ') || effectiveKey.endsWith(' ')) {
-          debugPrint('警告: API密钥包含前后空格！');
-        }
-      }
-      debugPrint('=====================');
-      
-      return effectiveKey;
-    } catch (e) {
-      debugPrint('获取安全存储API密钥失败: $e，使用设置中的密钥');
-      return settings.apiKey;
-    }
+    return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
   }
 
-  // 使用Dio直接发送请求
+  // 简化的网络请求方法
   Future<Response> _makeRequest(
     String url,
     Map<String, dynamic> body,
     AISettings settings,
   ) async {
-    // 获取可用的API密钥
-    final effectiveApiKey = await _getEffectiveApiKey(settings);
-    if (effectiveApiKey.isEmpty) {
-      throw Exception('未找到有效的API密钥，请在设置中配置API密钥');
-    }
-
-    // 根据不同的AI服务提供商调整请求体格式
-    Map<String, dynamic> requestBody;
-    Map<String, String> headers = {'Content-Type': 'application/json'};
-
-    // 判断服务提供商类型并相应调整请求
-    if (url.contains('anthropic.com')) {
-      // Anthropic Claude API格式
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'max_tokens': body['max_tokens'] ?? 2500,
-      };
-
-      // Anthropic使用x-api-key头而非Bearer认证
-      headers['anthropic-version'] = '2023-06-01'; // 添加必需的API版本头
-      headers['x-api-key'] = effectiveApiKey; // 使用有效的API密钥
-    } else if (url.contains('openrouter.ai')) {
-      // OpenRouter可能需要额外的头信息
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'temperature': body['temperature'] ?? 0.7,
-        'max_tokens': body['max_tokens'] ?? 2500,
-      };
-
-      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-      headers['HTTP-Referer'] = 'https://thoughtecho.app'; // 指定来源
-      headers['X-Title'] = 'ThoughtEcho App'; // 应用名称
-    } else if (url.contains('deepseek.com')) {
-      // DeepSeek API格式
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'temperature': body['temperature'] ?? 0.7,
-        'max_tokens': body['max_tokens'] ?? 2500,
-      };
-
-      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-    } else {
-      // 默认格式(适用于OpenAI及其兼容API)
-      requestBody = {
-        'model': settings.model,
-        'messages': body['messages'],
-        'temperature': body['temperature'] ?? 0.7,
-        'max_tokens': body['max_tokens'] ?? 2500,
-      };
-
-      headers['Authorization'] = 'Bearer $effectiveApiKey'; // 使用有效的API密钥
-    }
-
-    debugPrint('API请求体: ${json.encode(requestBody)}');
-    // 打印请求头但隐藏敏感信息
-    final safeHeaders = Map<String, String>.from(headers);
-    if (safeHeaders.containsKey('Authorization')) {
-      safeHeaders['Authorization'] = safeHeaders['Authorization']!.replaceFirst(
-        effectiveApiKey,
-        '[API_KEY_HIDDEN]',
-      );
-    }
-    if (safeHeaders.containsKey('x-api-key')) {
-      safeHeaders['x-api-key'] = '[API_KEY_HIDDEN]';
-    }
-    debugPrint('请求头: $safeHeaders');
-
-    final Uri uri = Uri.parse(settings.apiUrl);
-    debugPrint('请求URL: $uri,  完整URL: ${uri.toString()}');
-    try {
-      // 使用DioNetworkUtils发送请求
-      return await DioNetworkUtils.makeRequest(
-        settings.apiUrl,
-        requestBody,
-        settings,
-        timeout: const Duration(seconds: 300),
-      );
-    } catch (e) {
-      debugPrint('API请求错误: $e');
-      if (e.toString().contains('Failed host lookup')) {
-        throw Exception('无法连接到AI服务器，请检查网络连接或服务器状态');
-      }
-
-      // 特殊处理本地服务器连接错误
-      if (e.toString().contains('Connection refused') &&
-          uri.toString().contains('0.0.0.0')) {
-        throw Exception('无法连接到本地AI服务器，请确保服务器已启动或更改API URL');
-      }
-
-      rethrow;
-    }
+    return await AINetworkManager.makeRequest(
+      url: url,
+      data: body,
+      legacySettings: settings,
+      timeout: const Duration(seconds: 300),
+    );
   }
 
-  // 重构后的流式API请求方法，使用StreamingUtils
+  // 简化的流式请求方法
   Future<void> _makeStreamRequest(
     String url,
     Map<String, dynamic> body,
@@ -341,14 +217,14 @@ class AIService extends ChangeNotifier {
     StreamingCompleteCallback onComplete,
     StreamingErrorCallback onError,
   ) async {
-    // 直接使用 StreamingUtils 处理所有流式请求逻辑
-    await StreamingUtils.makeStreamRequest(
-      url,
-      body,
-      settings,
-      onResponse: onResponse,
+    await AINetworkManager.makeStreamRequest(
+      url: url,
+      data: body,
+      legacySettings: settings,
+      onData: onResponse,
       onComplete: onComplete,
       onError: onError,
+      timeout: const Duration(seconds: 300),
     );
   }
 
@@ -1283,16 +1159,14 @@ $question''',
           'role': 'user',
           'content': '测试连接',
         },
-      ];
-
-      final response = await DioNetworkUtils.makeRequestWithFailover(
-        '',
-        {
+      ];      final response = await AINetworkManager.makeRequest(
+        url: '',
+        data: {
           'messages': messages,
           'temperature': 0.1,
           'max_tokens': 50,
         },
-        multiSettings,
+        multiSettings: multiSettings,
         timeout: const Duration(seconds: 30),
       );
 
@@ -1329,12 +1203,14 @@ $question''',
               '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
         },
         {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
-      ];
-
-      final response = await DioNetworkUtils.makeRequestWithFailover('', {
-        'messages': messages,
-        'temperature': 0.7,
-      }, multiSettings);
+      ];      final response = await AINetworkManager.makeRequest(
+        url: '',
+        data: {
+          'messages': messages,
+          'temperature': 0.7,
+        },
+        multiSettings: multiSettings,
+      );
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
