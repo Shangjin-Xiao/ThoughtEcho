@@ -19,9 +19,9 @@ class HttpUtils {
 
   // 配置Dio实例
   static void _configureDio(Dio dio) {
-    dio.options.connectTimeout = Duration(seconds: 15);
-    dio.options.receiveTimeout = Duration(seconds: 15);
-    dio.options.sendTimeout = Duration(seconds: 15);
+    dio.options.connectTimeout = const Duration(seconds: 15);
+    dio.options.receiveTimeout = const Duration(seconds: 15);
+    dio.options.sendTimeout = const Duration(seconds: 15);
     
     // 添加日志拦截器
     if (const bool.fromEnvironment('dart.vm.product') == false) {
