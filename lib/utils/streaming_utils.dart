@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
 import '../services/secure_storage_service.dart';
 
@@ -102,13 +102,34 @@ class StreamingUtils {  // 添加请求去重机制
       onError(e);
     }
   }
-
   /// 获取有效的API密钥
   static Future<String> _getEffectiveApiKey(AISettings settings) async {
     try {
       final secureStorage = SecureStorageService();
       final secureApiKey = await secureStorage.getApiKey();
-      return secureApiKey ?? settings.apiKey;
+      
+      // 添加调试信息
+      debugPrint('=== 流式请求API密钥调试信息 ===');
+      debugPrint('安全存储中的API密钥: ${secureApiKey != null ? "存在 (长度: ${secureApiKey.length})" : "不存在"}');
+      debugPrint('设置中的API密钥: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}');
+      
+      final effectiveKey = secureApiKey ?? settings.apiKey;
+      debugPrint('最终使用的API密钥: ${effectiveKey.isNotEmpty ? "存在 (长度: ${effectiveKey.length})" : "不存在"}');
+      
+      // 检查密钥格式
+      if (effectiveKey.isNotEmpty) {
+        debugPrint('密钥前缀: ${effectiveKey.substring(0, effectiveKey.length > 10 ? 10 : effectiveKey.length)}...');
+        // 检查是否包含非法字符
+        if (effectiveKey.contains('\n') || effectiveKey.contains('\r')) {
+          debugPrint('警告: API密钥包含换行符！');
+        }
+        if (effectiveKey.startsWith(' ') || effectiveKey.endsWith(' ')) {
+          debugPrint('警告: API密钥包含前后空格！');
+        }
+      }
+      debugPrint('============================');
+      
+      return effectiveKey;
     } catch (e) {
       debugPrint('获取安全存储API密钥失败: $e，使用设置中的密钥');
       return settings.apiKey;
@@ -170,7 +191,6 @@ class StreamingUtils {  // 添加请求去重机制
 
     return _AdjustedRequest(requestBody: requestBody, headers: headers);
   }
-
   /// 发送流式HTTP请求
   static Future<void> _sendStreamRequest(
     String url,
@@ -181,8 +201,7 @@ class StreamingUtils {  // 添加请求去重机制
     StreamingErrorCallback onError,
     Duration timeout,
   ) async {
-    final Uri uri = Uri.parse(url);
-    debugPrint('流式请求URL: $uri');
+    debugPrint('流式请求URL: $url');
 
     // 打印安全的请求信息（隐藏敏感信息）
     final safeHeaders = Map<String, String>.from(headers);
@@ -190,57 +209,101 @@ class StreamingUtils {  // 添加请求去重机制
     debugPrint('请求头: $safeHeaders');
     debugPrint('请求体: ${json.encode(requestBody)}');
 
-    http.Client? client;
+    Dio? dio;
+    CancelToken? cancelToken;
     try {
-      client = http.Client();
-      final request = http.Request('POST', uri);
-      request.headers.addAll(headers);
-      request.body = json.encode(requestBody);
+      dio = Dio();
+      cancelToken = CancelToken();
+      
+      // 配置Dio
+      dio.options.connectTimeout = const Duration(seconds: 30);
+      dio.options.receiveTimeout = timeout;
+      dio.options.sendTimeout = const Duration(seconds: 60);
 
-      final streamedResponse = await client
-          .send(request)
-          .timeout(
-            timeout,
-            onTimeout: () {
-              onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
-              client?.close();
-              // 返回一个空的StreamedResponse
-              return http.StreamedResponse(
-                Stream.fromIterable([]),
-                408, // Request Timeout
-                headers: {},
-              );
-            },
-          );
+      final response = await dio.post(
+        url,
+        data: requestBody,
+        options: Options(
+          headers: headers,
+          responseType: ResponseType.stream,
+        ),
+        cancelToken: cancelToken,
+      );
 
-      if (streamedResponse.statusCode != 200) {
-        final errorBody = await streamedResponse.stream.bytesToString();
-        final errorMessage = _parseErrorMessage(
-          streamedResponse.statusCode,
-          errorBody,
-        );
+      if (response.statusCode != 200) {
+        String errorBody = '';
+        if (response.data is Stream) {
+          final chunks = <int>[];
+          await for (final chunk in response.data) {
+            chunks.addAll(chunk);
+          }
+          errorBody = utf8.decode(chunks);
+        } else {
+          errorBody = response.data?.toString() ?? '';
+        }
+        final errorMessage = _parseErrorMessage(response.statusCode!, errorBody);
         onError(Exception(errorMessage));
         return;
       }
 
       // 处理流式响应
-      await _processStreamResponse(
-        streamedResponse,
+      await _processStreamResponseDio(
+        response.data,
         onResponse,
         onComplete,
         onError,
-      );
+      );    } on DioException catch (e) {
+      debugPrint('Dio流式请求异常: $e');
+      if (e.type == DioExceptionType.receiveTimeout) {
+        onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        onError(Exception('连接超时，请检查网络连接'));
+      } else if (e.type == DioExceptionType.cancel) {
+        onError(Exception('请求被取消'));
+      } else {
+        // 正确处理响应体，特别是对于流式响应
+        String errorBody = '';
+        try {
+          if (e.response?.data != null) {
+            final responseData = e.response!.data;
+            if (responseData is String) {
+              errorBody = responseData;
+            } else if (responseData is Stream) {
+              // 对于流式响应，需要读取流数据
+              final chunks = <int>[];
+              await for (final chunk in responseData) {
+                if (chunk is List<int>) {
+                  chunks.addAll(chunk);
+                }
+              }
+              errorBody = utf8.decode(chunks);
+            } else {
+              errorBody = responseData.toString();
+            }
+          }
+        } catch (readError) {
+          debugPrint('读取错误响应体失败: $readError');
+          errorBody = e.message ?? '未知错误';
+        }
+        
+        final errorMessage = _parseErrorMessage(
+          e.response?.statusCode ?? 0,
+          errorBody.isEmpty ? (e.message ?? '未知错误') : errorBody,
+        );
+        onError(Exception(errorMessage));
+      }
     } catch (e) {
       debugPrint('流式请求异常: $e');
-      onError(e);
+      onError(Exception(e.toString()));
     } finally {
-      client?.close();
+      cancelToken?.cancel();
+      dio?.close();
     }
   }
 
-  /// 处理流式响应数据
-  static Future<void> _processStreamResponse(
-    http.StreamedResponse streamedResponse,
+  /// 处理Dio流式响应数据
+  static Future<void> _processStreamResponseDio(
+    Stream<List<int>> responseStream,
     StreamingResponseCallback onResponse,
     StreamingCompleteCallback onComplete,
     StreamingErrorCallback onError,
@@ -249,10 +312,9 @@ class StreamingUtils {  // 添加请求去重机制
     String currentChunk = '';
 
     try {
-      await for (String chunk in streamedResponse.stream.transform(
-        utf8.decoder,
-      )) {
-        currentChunk += chunk;
+      await for (List<int> chunk in responseStream) {
+        final chunkString = utf8.decode(chunk);
+        currentChunk += chunkString;
 
         // 按行处理数据
         final lines = currentChunk.split('\n');
@@ -280,7 +342,7 @@ class StreamingUtils {  // 添加请求去重机制
       onComplete(fullText);
     } catch (e) {
       debugPrint('处理流式响应时出错: $e');
-      onError(e);
+      onError(Exception(e.toString()));
     }
   }
 

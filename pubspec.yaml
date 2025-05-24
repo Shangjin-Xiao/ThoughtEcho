@@ -18,7 +18,6 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.18
   path: ^1.8.3
   path_provider: ^2.1.2
-  http: ^1.2.0
   dio: ^5.4.0
   uuid: ^4.3.3
   shared_preferences: ^2.5.2

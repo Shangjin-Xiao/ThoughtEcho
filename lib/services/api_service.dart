@@ -54,20 +54,29 @@ class ApiService {
       ).catchError((error) {
         debugPrint('一言API请求错误: $error');
         throw error;
-      });
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return {
-          'content': data['hitokoto'],
-          'source': data['from'],
-          'author': data['from_who'],
-          'type': data['type'],
-          'from_who': data['from_who'],
-          'from': data['from'],
-        };
+      });      if (response.statusCode == 200) {
+        try {
+          final data = json.decode(response.body);
+          // 验证返回的数据结构
+          if (data is Map<String, dynamic> && data.containsKey('hitokoto')) {
+            return {
+              'content': data['hitokoto'],
+              'source': data['from'],
+              'author': data['from_who'],
+              'type': data['type'],
+              'from_who': data['from_who'],
+              'from': data['from'],
+            };
+          } else {
+            debugPrint('一言API返回数据格式错误: $data');
+            return _getDefaultQuote();
+          }
+        } catch (e) {
+          debugPrint('一言API JSON解析失败: $e, 响应体: ${response.body}');
+          return _getDefaultQuote();
+        }
       } else {
-        debugPrint('一言API请求失败: ${response.statusCode}');
+        debugPrint('一言API请求失败: ${response.statusCode}, 响应体: ${response.body}');
         return _getDefaultQuote();
       }
     } catch (e) {

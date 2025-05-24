@@ -1,8 +1,9 @@
-import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'dio_network_utils.dart';
+import 'http_response.dart';
 
 class HttpUtils {
   // 单例Dio实例
@@ -41,10 +42,8 @@ class HttpUtils {
       logPrint: (obj) => debugPrint('[RETRY] $obj'),
       retries: 1,
     ));
-  }
-
-  // 兼容旧的http.Response格式
-  static http.Response _convertDioResponseToHttpResponse(Response dioResponse) {
+  }  // 兼容旧的http.Response格式
+  static HttpResponse _convertDioResponseToHttpResponse(Response dioResponse) {
     Map<String, String> convertedHeaders = {};
     dioResponse.headers.forEach((name, values) {
       if (values.isNotEmpty) {
@@ -52,15 +51,30 @@ class HttpUtils {
       }
     });
     
-    return http.Response(
-      dioResponse.data is String ? dioResponse.data : dioResponse.data.toString(),
+    String responseBody;
+    // 特殊处理一言API的响应
+    if (dioResponse.requestOptions.uri.toString().contains('hitokoto.cn')) {
+      if (dioResponse.data is Map<String, dynamic>) {
+        // 如果Dio已经解析为Map，转换为JSON字符串
+        responseBody = json.encode(dioResponse.data);
+      } else if (dioResponse.data is String) {
+        responseBody = dioResponse.data;
+      } else {
+        responseBody = dioResponse.data.toString();
+      }
+    } else {
+      responseBody = dioResponse.data is String ? dioResponse.data : dioResponse.data.toString();
+    }
+    
+    return HttpResponse(
+      responseBody,
       dioResponse.statusCode ?? 0,
       headers: convertedHeaders,
     );
   }
 
   // 安全的GET请求 (Dio实现)
-  static Future<http.Response> secureGet(
+  static Future<HttpResponse> secureGet(
     String url, {
     Map<String, String>? headers,
     int? timeoutSeconds,
@@ -70,37 +84,56 @@ class HttpUtils {
       if (!url.startsWith('https://') && !url.contains('hitokoto.cn')) {
         debugPrint('警告: 使用非HTTPS URL: $url');
       }
-      
-      final response = await _dio.get(
+        final response = await _dio.get(
         url,
         options: Options(
           headers: headers,
           receiveTimeout: timeoutSeconds != null ? Duration(seconds: timeoutSeconds) : null,
+          // 对一言API使用JSON响应类型，让Dio自动解析
+          responseType: url.contains('hitokoto.cn') ? ResponseType.json : ResponseType.plain,
         ),
       );
       
-      return _convertDioResponseToHttpResponse(response);
-    } on DioException catch (e) {
+      return _convertDioResponseToHttpResponse(response);    } on DioException catch (e) {
+      debugPrint('HTTP请求异常: ${e.type}, 消息: ${e.message}');
+      
       if (e.type == DioExceptionType.connectionTimeout || 
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.sendTimeout) {
-        return http.Response(
+        return HttpResponse(
           '{"error": "Request timeout"}',
           408,
           headers: {'content-type': 'application/json'},
         );
       }
       
-      return http.Response(
-        '{"error": "${e.message}"}',
-        e.response?.statusCode ?? 500,
+      // 对于一言API的错误，尝试获取实际的错误响应体
+      String errorBody = '{"error": "Unknown error"}';
+      int statusCode = e.response?.statusCode ?? 500;
+      
+      try {
+        if (e.response?.data != null) {
+          if (e.response!.data is String) {
+            errorBody = e.response!.data;
+          } else {
+            errorBody = e.response!.data.toString();
+          }
+        }
+      } catch (readError) {
+        debugPrint('读取错误响应体失败: $readError');
+        errorBody = '{"error": "${e.message ?? "Unknown error"}"}';
+      }
+      
+      return HttpResponse(
+        errorBody,
+        statusCode,
         headers: {'content-type': 'application/json'},
       );
     }
   }
 
   // 安全的POST请求 (Dio实现)
-  static Future<http.Response> securePost(
+  static Future<HttpResponse> securePost(
     String url, {
     Map<String, String>? headers,
     Object? body,
@@ -121,7 +154,7 @@ class HttpUtils {
       
       return _convertDioResponseToHttpResponse(response);
     } on DioException catch (e) {
-      return http.Response(
+      return HttpResponse(
         '{"error": "${e.message}"}',
         e.response?.statusCode ?? 500,
         headers: {'content-type': 'application/json'},
