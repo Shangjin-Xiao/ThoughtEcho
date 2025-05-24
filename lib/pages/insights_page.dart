@@ -9,6 +9,7 @@ import '../widgets/app_loading_view.dart';
 import '../models/ai_analysis_model.dart';
 import '../models/quote_model.dart';
 import 'ai_analysis_history_page.dart';
+import 'ai_settings_page.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'dart:async'; // Import for StreamSubscription
@@ -279,19 +280,55 @@ class _InsightsPageState extends State<InsightsPage>
               _accumulatedInsightsText += chunk;
             });
           }
-        },
-        onError: (error) {
+        },        onError: (error) {
           // Handle errors
           debugPrint('生成洞察流出错: $error');
           if (mounted) {
+            String errorMessage = '生成洞察失败: ${error.toString()}';
+            String actionText = '重试';
+            
+            // 处理特定的错误类型
+            if (error.toString().contains('500')) {
+              errorMessage = '服务器内部错误，可能是模型配置问题';
+              actionText = '检查设置';
+            } else if (error.toString().contains('401')) {
+              errorMessage = 'API密钥无效，请检查设置';
+              actionText = '检查API密钥';
+            } else if (error.toString().contains('429')) {
+              errorMessage = '请求频率过高，请稍后重试';
+              actionText = '稍后重试';
+            } else if (error.toString().contains('网络') || error.toString().contains('连接')) {
+              errorMessage = '网络连接问题，请检查网络';
+              actionText = '重试';
+            }
+            
             setState(() {
-              _accumulatedInsightsText = '生成洞察失败: ${error.toString()}';
+              _accumulatedInsightsText = errorMessage;
               _isGenerating = false; // Stop generating state on error
             });
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('生成洞察失败: ${error.toString()}'),
+                content: Text(errorMessage),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: actionText,
+                  textColor: Colors.white,                  onPressed: () {
+                    if (actionText == '检查设置' || actionText == '检查API密钥') {
+                      // 导航到AI设置页面
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AISettingsPage(),
+                        ),
+                      );
+                    } else {
+                      // 重试生成洞察
+                      _generateInsights();
+                    }
+                  },
+                ),
               ),
             );
           }
@@ -310,19 +347,42 @@ class _InsightsPageState extends State<InsightsPage>
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs
-      );
-    } catch (e) {
+      );    } catch (e) {
       debugPrint('生成洞察失败 (setup): $e');
       if (mounted) {
+        String errorMessage = '生成洞察失败: ${e.toString()}';
+        
+        // 处理特定的错误类型
+        if (e.toString().contains('500')) {
+          errorMessage = '服务器内部错误，请检查AI模型配置是否正确';
+        } else if (e.toString().contains('401')) {
+          errorMessage = 'API密钥无效，请在设置中更新API密钥';
+        } else if (e.toString().contains('API Key')) {
+          errorMessage = '请先在设置中配置有效的API密钥';
+        }
+        
         setState(() {
-          _accumulatedInsightsText = '生成洞察失败: ${e.toString()}';
+          _accumulatedInsightsText = errorMessage;
           _isLoading = false;
           _isGenerating = false;
         });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('生成洞察失败: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: '去设置',
+              textColor: Colors.white,              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AISettingsPage(),
+                  ),
+                );
+              },
+            ),
           ),
         );
       }
@@ -726,8 +786,7 @@ class _InsightsPageState extends State<InsightsPage>
                               IconButton(
                                 icon: const Icon(Icons.copy),
                                 tooltip: '复制到剪贴板',
-                                onPressed: () {
-                                  Clipboard.setData(
+                                onPressed: () {                                  Clipboard.setData(
                                     ClipboardData(
                                       text: _accumulatedInsightsText,
                                     ),

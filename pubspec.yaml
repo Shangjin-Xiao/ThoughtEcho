@@ -19,6 +19,7 @@ dependencies:
   path: ^1.8.3
   path_provider: ^2.1.2
   http: ^1.2.0
+  dio: ^5.4.0
   uuid: ^4.3.3
   shared_preferences: ^2.5.2
   flutter_markdown: ^0.7.1

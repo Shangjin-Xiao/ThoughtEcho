@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
+import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
 import '../services/secure_storage_service.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
@@ -184,8 +185,61 @@ class _AISettingsPageState extends State<AISettingsPage> {
         SnackBar(content: Text('保存设置失败: $e')),
       );
     }
-  }
+  }  Future<void> _testConnection() async {
+    // 先保存当前设置
+    await _saveSettings();
+    
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    
+    try {
+      // 显示加载状态
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('正在测试连接...'),
+            ],
+          ),
+        ),
+      );
 
+      // 获取AI服务实例并测试连接
+      final aiService = Provider.of<AIService>(context, listen: false);
+      
+      await aiService.testConnection();
+      
+      if (!mounted) return;
+      navigator.pop(); // 关闭加载对话框
+      
+      // 显示成功消息
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('AI连接测试成功！'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      navigator.pop(); // 关闭加载对话框
+      
+      // 显示错误消息
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('连接测试失败：${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -304,16 +358,30 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     ),
                 textAlign: TextAlign.center,
               ),
-            ),
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _saveSettings,
-                icon: const Icon(Icons.save),
-                label: const Text('保存 AI 设置'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  textStyle: Theme.of(context).textTheme.labelLarge,
-                ),
+            ),            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _saveSettings,
+                    icon: const Icon(Icons.save),
+                    label: const Text('保存 AI 设置'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      textStyle: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _testConnection,
+                    icon: const Icon(Icons.network_check),
+                    label: const Text('测试连接'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      textStyle: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                ],
               ),
             ),
              const SizedBox(height: 20),

@@ -41,9 +41,7 @@ class _HomePageState extends State<HomePage>
   // 搜索控制器
   final _searchController = NoteSearchController();
 
-  late TabController _tabController;
-
-  // 新增：NoteListView的全局Key
+  late TabController _tabController;  // 新增：NoteListView的全局Key
   final GlobalKey<NoteListViewState> _noteListViewKey =
       GlobalKey<NoteListViewState>();
 
@@ -138,8 +136,7 @@ class _HomePageState extends State<HomePage>
           ),
         );
       }
-    }
-  }
+    }  }
   // --- 每日提示相关状态和逻辑结束 ---
 
   @override
@@ -674,14 +671,12 @@ class _HomePageState extends State<HomePage>
                 ),
         body: IndexedStack(
           index: _currentIndex,
-          children: [
-            // 首页 - 每日一言 和 每日提示
+          children: [            // 首页 - 每日一言 和 每日提示
             // 使用SingleChildScrollView包裹Column，让整个首页内容可滚动
             SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
-                children: [
-                  // 每日一言部分
+                children: [                  // 每日一言部分
                   DailyQuoteView(
                     onAddQuote:
                         (content, author, work, hitokotoData) =>
@@ -691,6 +686,10 @@ class _HomePageState extends State<HomePage>
                               prefilledWork: work,
                               hitokotoData: hitokotoData,
                             ),
+                    onRefreshRequested: () async {
+                      // 刷新每日提示
+                      await _fetchDailyPrompt();
+                    },
                   ),
 
                   // 每日提示部分 - 放在底部

@@ -12,7 +12,44 @@ typedef StreamingErrorCallback = void Function(dynamic error);
 
 /// 流式传输工具类
 /// 处理各种AI服务提供商的流式HTTP请求
-class StreamingUtils {
+class StreamingUtils {  // 添加请求去重机制
+  static final Map<String, DateTime> _activeRequests = {};
+  static const Duration _requestCooldown = Duration(seconds: 5);
+  
+  /// 生成请求的唯一标识符
+  static String _generateRequestKey(String url, Map<String, dynamic> requestBody) {
+    // 使用URL和消息内容的哈希作为唯一标识
+    final messagesContent = requestBody['messages']?.toString() ?? '';
+    return '${url}_${messagesContent.hashCode}';
+  }
+  
+  /// 检查是否应该阻止重复请求
+  static bool _shouldBlockDuplicateRequest(String requestKey) {
+    final now = DateTime.now();
+    final lastRequestTime = _activeRequests[requestKey];
+    
+    if (lastRequestTime != null) {
+      final timeSinceLastRequest = now.difference(lastRequestTime);
+      if (timeSinceLastRequest < _requestCooldown) {
+        debugPrint('阻止重复请求，距上次请求仅${timeSinceLastRequest.inSeconds}秒');
+        return true;
+      }
+    }
+    
+    // 记录新的请求时间
+    _activeRequests[requestKey] = now;
+    
+    // 清理过期的请求记录（超过1分钟的）
+    _activeRequests.removeWhere((key, time) => 
+        now.difference(time) > const Duration(minutes: 1));
+    
+    return false;
+  }
+  
+  /// 清除特定请求的记录
+  static void _clearRequestRecord(String requestKey) {
+    _activeRequests.remove(requestKey);
+  }
   /// 创建一个流式请求
   ///
   /// [url] API endpoint URL
@@ -274,9 +311,10 @@ class StreamingUtils {
       return null;
     }
   }
-
   /// 解析错误消息
   static String _parseErrorMessage(int statusCode, String errorBody) {
+    debugPrint('解析错误 - 状态码: $statusCode, 响应体: $errorBody');
+    
     if (errorBody.contains('rate_limit_exceeded') ||
         errorBody.contains('rate limit') ||
         statusCode == 429) {
@@ -288,6 +326,47 @@ class StreamingUtils {
     } else if (errorBody.contains('insufficient_quota') ||
         errorBody.contains('billing')) {
       return 'API额度不足，请检查账户余额';
+    } else if (statusCode == 500) {
+      // 专门处理500错误
+      String errorMessage = 'AI服务器内部错误 (500)';
+      
+      // 尝试解析具体错误信息
+      try {
+        final errorData = json.decode(errorBody);
+        if (errorData['error'] != null) {
+          final error = errorData['error'];
+          if (error['message'] != null) {
+            errorMessage += '：${error['message']}';
+          } else if (error['code'] != null) {
+            errorMessage += '：错误代码 ${error['code']}';
+          }
+        }
+      } catch (e) {
+        // 如果无法解析JSON，检查常见错误模式
+        if (errorBody.contains('model')) {
+          errorMessage += '：可能是模型不存在或不可用';
+        } else if (errorBody.contains('timeout')) {
+          errorMessage += '：服务器处理超时';
+        } else if (errorBody.contains('overload')) {
+          errorMessage += '：服务器过载，请稍后重试';
+        } else if (errorBody.isNotEmpty) {
+          // 截取错误信息的前100个字符
+          final truncatedError = errorBody.length > 100 
+              ? '${errorBody.substring(0, 100)}...' 
+              : errorBody;
+          errorMessage += '：$truncatedError';
+        }
+      }
+      
+      return '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态';
+    } else if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return 'AI服务暂时不可用 ($statusCode 错误)，请稍后重试';
+    } else if (statusCode == 400) {
+      return '请求格式错误 (400)，请检查API设置和模型配置';
+    } else if (statusCode == 403) {
+      return '无权限访问该API服务 (403)，请检查API密钥权限';
+    } else if (statusCode == 404) {
+      return 'API端点不存在 (404)，请检查API URL配置';
     } else {
       return 'AI服务请求失败：$statusCode\n$errorBody';
     }
@@ -301,6 +380,169 @@ class StreamingUtils {
     if (headers.containsKey('x-api-key')) {
       headers['x-api-key'] = '[API_KEY_HIDDEN]';
     }
+  }  /// 创建一个带重试机制的流式请求
+  ///
+  /// [maxRetries] 最大重试次数
+  /// [retryDelay] 重试间隔时间
+  static Future<void> makeStreamRequestWithRetry(
+    String url,
+    Map<String, dynamic> requestBody,
+    AISettings settings, {
+    required StreamingResponseCallback onResponse,
+    required StreamingCompleteCallback onComplete,
+    required StreamingErrorCallback onError,
+    Duration timeout = const Duration(seconds: 300),
+    int maxRetries = 1, // 降低默认重试次数，减少500错误时的重复请求
+    Duration retryDelay = const Duration(seconds: 5), // 增加重试延迟
+  }) async {
+    // 生成请求唯一标识符
+    final requestKey = _generateRequestKey(url, requestBody);
+    
+    // 检查是否应该阻止重复请求
+    if (_shouldBlockDuplicateRequest(requestKey)) {
+      onError(Exception('请求过于频繁，请稍后再试'));
+      return;
+    }
+    
+    int retryCount = 0;
+    Exception? lastError;
+    
+    try {
+      while (retryCount <= maxRetries) {
+        try {
+          bool hasCompleted = false;
+          bool hasError = false;
+          
+          await makeStreamRequest(
+            url,
+            requestBody,
+            settings,
+            onResponse: onResponse,
+            onComplete: (fullText) {
+              hasCompleted = true;
+              // 请求成功完成，清除请求记录以允许新的相同请求
+              _clearRequestRecord(requestKey);
+              onComplete(fullText);
+            },
+            onError: (error) {
+              if (hasCompleted) return; // 如果已经完成，不处理错误
+              hasError = true;
+              lastError = error is Exception ? error : Exception(error.toString());
+            },
+            timeout: timeout,
+          );
+        
+        // 如果成功完成，直接返回
+        if (hasCompleted) {
+          return;
+        }
+            // 如果有错误，检查是否需要重试
+          if (hasError && lastError != null) {
+            if (retryCount < maxRetries && _isRetryableError(lastError!)) {
+              debugPrint('请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError');
+              retryCount++;
+              
+              // 使用指数退避策略
+              await Future.delayed(_calculateRetryDelay(retryCount - 1, retryDelay));
+              continue; // 继续重试
+            } else {
+              // 达到最大重试次数或不可重试的错误，调用原始错误回调
+              onError(lastError!);
+              return;
+            }
+          }
+          
+        } catch (e) {
+          lastError = e is Exception ? e : Exception(e.toString());
+          
+          if (retryCount >= maxRetries || !_isRetryableError(lastError!)) {
+            onError(lastError!);
+            return;
+          }
+          
+          debugPrint('请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError');
+          retryCount++;
+          
+          if (retryCount <= maxRetries) {
+            await Future.delayed(_calculateRetryDelay(retryCount - 1, retryDelay));
+          }
+        }
+      }
+    } finally {
+      // 确保在所有情况下都清除请求记录
+      _clearRequestRecord(requestKey);
+    }
+  }
+  /// 计算重试延迟时间（指数退避）
+  static Duration _calculateRetryDelay(int retryCount, Duration baseDelay) {
+    // 指数退避：第一次重试3秒，第二次重试6秒，第三次重试12秒...
+    const multiplier = 1; // 基础倍数
+    final actualMultiplier = (retryCount == 0) ? multiplier : (1 << retryCount); // 2^retryCount
+    final delayMs = baseDelay.inMilliseconds * actualMultiplier;
+    
+    // 最大延迟不超过30秒
+    final maxDelayMs = 30000;
+    return Duration(milliseconds: delayMs > maxDelayMs ? maxDelayMs : delayMs);
+  }
+  /// 判断错误是否可重试
+  static bool _isRetryableError(dynamic error) {
+    final errorString = error.toString();
+    
+    // 500错误需要更精细的判断
+    if (errorString.contains('500')) {
+      // 这些500错误通常是持久性问题，不应该重试
+      if (errorString.contains('model') && 
+          (errorString.contains('not found') || 
+           errorString.contains('does not exist') || 
+           errorString.contains('invalid model') ||
+           errorString.contains('不存在') ||
+           errorString.contains('不可用'))) {
+        debugPrint('检测到模型相关的500错误，停止重试: $errorString');
+        return false;
+      }
+      
+      // API格式错误通常也是持久性问题
+      if (errorString.contains('invalid request') ||
+          errorString.contains('bad request') ||
+          errorString.contains('malformed') ||
+          errorString.contains('格式错误')) {
+        debugPrint('检测到请求格式相关的500错误，停止重试: $errorString');
+        return false;
+      }
+      
+      // 其他500错误可能是临时的服务器问题，可以重试
+      debugPrint('检测到可重试的500错误: $errorString');
+      return true;
+    }
+    
+    // 502, 503, 504 网关错误，通常是临时问题，可以重试
+    if (errorString.contains('502') || 
+        errorString.contains('503') || 
+        errorString.contains('504')) {
+      return true;
+    }
+    
+    // 网络连接问题，可以重试
+    if (errorString.contains('Failed host lookup') || 
+        errorString.contains('Connection refused') ||
+        errorString.contains('timeout') ||
+        errorString.contains('网络')) {
+      return true;
+    }
+    
+    // 401（认证失败）、400（请求格式错误）等不应该重试
+    if (errorString.contains('401') || 
+        errorString.contains('400') || 
+        errorString.contains('403') || 
+        errorString.contains('404')) {
+      return false;
+    }
+    
+    // 429（频率限制）暂时不重试，让用户手动重试
+    if (errorString.contains('429')) return false;
+    
+    // 默认不重试
+    return false;
   }
 }
 

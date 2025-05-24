@@ -9,8 +9,14 @@ import 'dart:async'; // Import async for StreamController and StreamSubscription
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
   final Function(String, String?, String?, Map<String, dynamic>) onAddQuote;
+  // 新增：外部刷新回调，用于通知首页刷新每日提示
+  final Future<void> Function()? onRefreshRequested;
 
-  const DailyQuoteView({super.key, required this.onAddQuote});
+  const DailyQuoteView({
+    super.key, 
+    required this.onAddQuote,
+    this.onRefreshRequested,
+  });
 
   @override
   State<DailyQuoteView> createState() => _DailyQuoteViewState();
@@ -113,12 +119,14 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return RefreshIndicator(
+    final theme = Theme.of(context);    return RefreshIndicator(
       onRefresh: () async {
-        // When refreshing, we want to fetch both the daily quote and the daily prompt.
-        // _fetchDailyPrompt will handle whether to use AI or default based on config.
+        // 刷新一言
         await _loadDailyQuote();
+        // 如果提供了外部刷新回调，同时刷新每日提示
+        if (widget.onRefreshRequested != null) {
+          await widget.onRefreshRequested!();
+        }
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
