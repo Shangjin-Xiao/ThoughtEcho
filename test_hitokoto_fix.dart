@@ -1,4 +1,3 @@
-import 'dart:developer' as developer;
 
 void main() {
   // 测试一言API数据处理
@@ -26,8 +25,7 @@ void testHitokotoDataParsing() {
   print('原始数据: $mockHitokotoData');
   
   // 验证数据格式
-  if (mockHitokotoData is Map<String, dynamic> && 
-      mockHitokotoData.containsKey('hitokoto')) {
+  if (mockHitokotoData.containsKey('hitokoto')) {
     final quote = {
       'content': mockHitokotoData['hitokoto'],
       'source': mockHitokotoData['from'],

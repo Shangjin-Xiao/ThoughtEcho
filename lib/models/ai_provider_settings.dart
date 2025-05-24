@@ -183,12 +183,11 @@ class MultiAISettings {
       enableFailover: map['enableFailover'] ?? false, // 默认禁用故障转移
     );
   }
-
   factory MultiAISettings.defaultSettings() {
-    final presetProviders = AIProviderSettings.getPresetProviders();
-    return MultiAISettings(
-      providers: presetProviders,
-      currentProviderId: presetProviders.first.id,
+    // 初始化时不创建任何预设，让用户自己创建
+    return const MultiAISettings(
+      providers: [],
+      currentProviderId: '',
     );
   }
 
