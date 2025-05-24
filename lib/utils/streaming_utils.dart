@@ -481,7 +481,7 @@ class StreamingUtils {  // 添加请求去重机制
     final delayMs = baseDelay.inMilliseconds * actualMultiplier;
     
     // 最大延迟不超过30秒
-    final maxDelayMs = 30000;
+    const maxDelayMs = 30000;
     return Duration(milliseconds: delayMs > maxDelayMs ? maxDelayMs : delayMs);
   }
   /// 判断错误是否可重试

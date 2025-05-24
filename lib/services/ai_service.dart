@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart'; // 添加Dio导入
 import '../models/quote_model.dart';
 import '../models/ai_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
@@ -194,7 +194,18 @@ class AIService extends ChangeNotifier {
     // 否则，我们无法同步获取安全存储的key
     // 对于UI判断，我们假定如果apiUrl和model已经配置，那么key也很可能已配置
     final settings = _settingsService.aiSettings;
-    return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
+    return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;  }
+
+  // 获取有效的API密钥
+  Future<String> _getEffectiveApiKey(AISettings settings) async {
+    try {
+      final secureStorage = SecureStorageService();
+      final secureApiKey = await secureStorage.getApiKey();
+      return secureApiKey ?? settings.apiKey;
+    } catch (e) {
+      debugPrint('获取安全存储API密钥失败: $e，使用设置中的密钥');
+      return settings.apiKey;
+    }
   }
 
   // 使用Dio直接发送请求
@@ -334,20 +345,18 @@ class AIService extends ChangeNotifier {
               '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
         },
         {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
-      ];
-
-      final response = await _makeRequest(settings.apiUrl, {
+      ];      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.7,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
-        debugPrint('API响应格式错误: ${response.body}');
+        debugPrint('API响应格式错误: $data');
         throw Exception('API响应格式错误');
       }
     } catch (e) {
@@ -585,21 +594,19 @@ class AIService extends ChangeNotifier {
       final messages = [
         {'role': 'system', 'content': systemPrompt},
         {'role': 'user', 'content': '请分析以下结构化的笔记数据：\n\n$quotesText'},
-      ];
-
-      final response = await _makeRequest(settings.apiUrl, {
+      ];      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.7,
         'max_tokens': 2500,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
-        debugPrint('API响应格式错误: ${response.body}');
+        debugPrint('API响应格式错误: ${response.data}');
         throw Exception('API响应格式错误');
       }
     } catch (e) {
@@ -741,21 +748,19 @@ class AIService extends ChangeNotifier {
 5. 对于作品名，请去掉引号《》等标记符号''',
         },
         {'role': 'user', 'content': '请分析以下文本的可能来源：\n\n$content'},
-      ];
-
-      final response = await _makeRequest(settings.apiUrl, {
+      ];      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.4, // 使用较低的温度确保格式一致性
         'max_tokens': 500,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
-        debugPrint('API响应格式错误: ${response.body}');
+        debugPrint('API响应格式错误: ${response.data}');
         throw Exception('API响应格式错误');
       }
     } catch (e) {
@@ -867,18 +872,17 @@ class AIService extends ChangeNotifier {
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,
-        'temperature': 0.7,
+        'messages': messages,        'temperature': 0.7,
         'max_tokens': 1000,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
-        debugPrint('API响应格式错误: ${response.body}');
+        debugPrint('API响应格式错误: ${response.data}');
         throw Exception('API响应格式错误');
       }
     } catch (e) {
@@ -977,21 +981,19 @@ class AIService extends ChangeNotifier {
 5. 返回完整的续写部分，不要重复原文''',
         },
         {'role': 'user', 'content': '请续写以下文本：\n\n$content'},
-      ];
-
-      final response = await _makeRequest(settings.apiUrl, {
+      ];      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.8, // 使用较高的温度以增加创意性
         'max_tokens': 1000,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
-        debugPrint('API响应格式错误: ${response.body}');
+        debugPrint('API响应格式错误: ${response.data}');
         throw Exception('API响应格式错误');
       }
     } catch (e) {
@@ -1105,18 +1107,17 @@ $question''',
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,
-        'temperature': 0.5,
+        'messages': messages,        'temperature': 0.5,
         'max_tokens': 1000,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         return data['choices'][0]['message']['content'];
       } else {
-        debugPrint('API响应格式错误: ${response.body}');
+        debugPrint('API响应格式错误: ${response.data}');
         throw Exception('API响应格式错误');
       }
     } catch (e) {
@@ -1221,14 +1222,13 @@ $question''',
         },
       ];
 
-      final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,
+      final response = await _makeRequest(settings.apiUrl, {        'messages': messages,
         'temperature': 0.1,
         'max_tokens': 50,
         'model': settings.model,
       }, settings);
 
-      final data = json.decode(response.body);
+      final data = response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {

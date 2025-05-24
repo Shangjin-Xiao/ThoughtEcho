@@ -39,21 +39,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
         return;
       }
       loadingOverlay.remove(); // 移动到 mounted 检查之后      if (!mounted) return; 
-      if (!canExport) {
-        if (mounted) { // 在调用 _showErrorDialog 前添加 mounted 检查
-          final currentContext = context;
-          if (mounted) {
-            _showErrorDialog(currentContext, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
-          }
+      if (!canExport) {        if (mounted) { // 在调用 _showErrorDialog 前添加 mounted 检查
+          _showErrorDialog(context, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
         }
         return;
       }
       if (!mounted) return;
-      
-      String? choice;
+        String? choice;
       if (mounted) {
+        final dialogContext = context; // 保存 context 以避免跨 async gap 使用
         choice = await showDialog<String>(
-          context: context,
+          context: dialogContext,
           builder:
               (dialogContext) => AlertDialog(
                 title: const Text('选择备份方式'),
@@ -194,20 +190,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
           if (!mounted) return;
           await Share.shareXFiles([XFile(path)], text: '心迹应用数据备份');
         }      } catch (e) {
-        progressOverlay.remove();        if (!mounted) return;
-        if (mounted) {
-          final currentContext = context;
-          if (mounted) {
-            _showErrorDialog(currentContext, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
-          }
+        progressOverlay.remove();        if (!mounted) return;        if (mounted) {
+          _showErrorDialog(context, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
         }
       }
-    } catch (e) {      if (!mounted) return;
-      if (mounted) {
-        final currentContext = context;
-        if (mounted) {
-          _showErrorDialog(currentContext, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
-        }
+    } catch (e) {      if (!mounted) return;      if (mounted) {
+        _showErrorDialog(context, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
       }
     }
   }
@@ -256,10 +244,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
           }
         }
         return;
-      }
-      if (!mounted) return;
+      }      if (!mounted) return;
+      final dialogContext = context; // 保存 context 以避免跨 async gap 使用
       final importOption = await showDialog<String>(
-        context: context,
+        context: dialogContext,
         builder:
             (dialogContext) => AlertDialog(
               title: const Text('导入选项'),
@@ -281,10 +269,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
             ),
       );
       if (!mounted) return;
-      if (importOption == 'cancel' || importOption == null) return;
-      if (importOption == 'clear') {
+      if (importOption == 'cancel' || importOption == null) return;      if (importOption == 'clear') {
+        final confirmDialogContext = context; // 保存 context 以避免跨 async gap 使用
         final confirmed = await showDialog<bool>(
-          context: context,
+          context: confirmDialogContext,
           builder:
               (dialogContext) => AlertDialog(
                 title: const Text('确认清空数据'),

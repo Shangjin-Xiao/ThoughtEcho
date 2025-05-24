@@ -3,7 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import '../utils/http_utils.dart';
-import '../utils/dio_network_utils.dart'; // 导入dio网络工具
+// import '../utils/dio_network_utils.dart'; // 导入dio网络工具
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
 
 class CityInfo {
