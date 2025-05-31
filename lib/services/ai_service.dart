@@ -152,10 +152,10 @@ class AIService extends ChangeNotifier {
   Future<void> _validateSettings() async {
     try {
       final settings = _settingsService.aiSettings;
-      
+
       // 检查API Key是否存在（使用统一的API密钥管理器）
       final hasApiKey = await _apiKeyManager.hasValidApiKey(settings);
-      
+
       if (!hasApiKey) {
         throw Exception('请先在设置中配置 API Key');
       }
