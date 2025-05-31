@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/secure_storage_service.dart';
+import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 
 /// API密钥诊断工具
@@ -39,13 +39,14 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _runDiagnostics,
-              child: _isLoading 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('运行诊断'),
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Text('运行诊断'),
             ),
             const SizedBox(height: 24),
             if (_diagnosticResult.isNotEmpty) ...[
@@ -92,102 +93,130 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
     buffer.writeln('时间: ${DateTime.now()}');
     buffer.writeln();
 
-    try {      // 1. 检查设置服务
-      buffer.writeln('1. 检查设置服务...');
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
+    try {
+      // 获取设置服务
+      final settingsService = Provider.of<SettingsService>(
+        context,
+        listen: false,
+      );
       final aiSettings = settingsService.aiSettings;
-      
-      buffer.writeln('   - API URL: ${aiSettings.apiUrl.isNotEmpty ? "已配置" : "未配置"}');
-      buffer.writeln('   - 模型: ${aiSettings.model.isNotEmpty ? "已配置 (${aiSettings.model})" : "未配置"}');
-      buffer.writeln('   - 设置中的API密钥: ${aiSettings.apiKey.isNotEmpty ? "存在 (长度: ${aiSettings.apiKey.length})" : "不存在"}');
-      
-      if (aiSettings.apiKey.isNotEmpty) {
-        buffer.writeln('   - 密钥前缀: ${aiSettings.apiKey.substring(0, aiSettings.apiKey.length > 15 ? 15 : aiSettings.apiKey.length)}...');
-        buffer.writeln('   - 包含换行符: ${aiSettings.apiKey.contains('\n') || aiSettings.apiKey.contains('\r')}');
-        buffer.writeln('   - 包含前后空格: ${aiSettings.apiKey.startsWith(' ') || aiSettings.apiKey.endsWith(' ')}');
+
+      // 使用新的API密钥管理器获取诊断信息
+      final apiKeyManager = APIKeyManager();
+      final diagnosticInfo = await apiKeyManager.getDiagnosticInfo(aiSettings);
+
+      // 1. 基本配置检查
+      buffer.writeln('1. 基本配置...');
+      buffer.writeln(
+        '   - API URL: ${aiSettings.apiUrl.isNotEmpty ? "已配置 (${aiSettings.apiUrl})" : "未配置"}',
+      );
+      buffer.writeln(
+        '   - 模型: ${aiSettings.model.isNotEmpty ? "已配置 (${aiSettings.model})" : "未配置"}',
+      );
+      buffer.writeln();
+
+      // 2. 设置中的密钥信息
+      buffer.writeln('2. 设置中的API密钥...');
+      final settings = diagnosticInfo['settings'];
+      buffer.writeln('   - 存在: ${settings['hasKey'] ? "是" : "否"}');
+      if (settings['hasKey']) {
+        buffer.writeln('   - 长度: ${settings['keyLength']}');
+        buffer.writeln('   - 前缀: ${settings['keyPrefix']}');
+        buffer.writeln('   - 包含换行符: ${settings['hasNewlines'] ? "是" : "否"}');
+        buffer.writeln('   - 包含前后空格: ${settings['hasSpaces'] ? "是" : "否"}');
       }
       buffer.writeln();
 
-      // 2. 检查安全存储
-      buffer.writeln('2. 检查安全存储...');
-      final secureStorage = SecureStorageService();
-      await secureStorage.ensureInitialized();
-      
-      final secureApiKey = await secureStorage.getApiKey();
-      buffer.writeln('   - 安全存储中的API密钥: ${secureApiKey != null ? "存在 (长度: ${secureApiKey.length})" : "不存在"}');
-      
-      if (secureApiKey != null) {
-        buffer.writeln('   - 密钥前缀: ${secureApiKey.substring(0, secureApiKey.length > 15 ? 15 : secureApiKey.length)}...');
-        buffer.writeln('   - 包含换行符: ${secureApiKey.contains('\n') || secureApiKey.contains('\r')}');
-        buffer.writeln('   - 包含前后空格: ${secureApiKey.startsWith(' ') || secureApiKey.endsWith(' ')}');
+      // 3. 安全存储中的密钥信息
+      buffer.writeln('3. 安全存储中的API密钥...');
+      final secureStorage = diagnosticInfo['secureStorage'];
+      buffer.writeln('   - 存在: ${secureStorage['hasKey'] ? "是" : "否"}');
+      if (secureStorage['hasKey']) {
+        buffer.writeln('   - 长度: ${secureStorage['keyLength']}');
+        buffer.writeln('   - 前缀: ${secureStorage['keyPrefix']}');
+        buffer.writeln(
+          '   - 包含换行符: ${secureStorage['hasNewlines'] ? "是" : "否"}',
+        );
+        buffer.writeln(
+          '   - 包含前后空格: ${secureStorage['hasSpaces'] ? "是" : "否"}',
+        );
       }
       buffer.writeln();
 
-      // 3. 比较两个密钥
-      buffer.writeln('3. 密钥一致性检查...');
-      if (aiSettings.apiKey.isNotEmpty && secureApiKey != null) {
-        final isEqual = aiSettings.apiKey == secureApiKey;
-        buffer.writeln('   - 设置密钥与安全存储密钥一致: $isEqual');
-        if (!isEqual) {
-          buffer.writeln('   - 设置密钥长度: ${aiSettings.apiKey.length}');
-          buffer.writeln('   - 安全存储密钥长度: ${secureApiKey.length}');
+      // 4. 最终有效密钥
+      buffer.writeln('4. 最终有效密钥...');
+      final effective = diagnosticInfo['effective'];
+      buffer.writeln('   - 存在: ${effective['hasKey'] ? "是" : "否"}');
+      if (effective['hasKey']) {
+        buffer.writeln('   - 长度: ${effective['keyLength']}');
+        buffer.writeln(
+          '   - 来源: ${effective['source'] == 'secureStorage' ? "安全存储" : "设置"}',
+        );
+        buffer.writeln('   - 格式: ${effective['format']}');
+        buffer.writeln('   - 格式有效: ${effective['isValid'] ? "是" : "否"}');
+
+        // 根据格式提供建议
+        final format = effective['format'] as String;
+        if (format.contains('Bearer')) {
+          buffer.writeln('   - ⚠️ 警告: 密钥包含"Bearer "前缀，这可能导致重复Authorization头');
+        } else if (format == 'Custom/Unknown' && effective['keyLength'] < 20) {
+          buffer.writeln('   - ⚠️ 警告: 密钥长度过短，可能无效');
+        } else if (format == 'Custom/Unknown' && effective['keyLength'] > 200) {
+          buffer.writeln('   - ⚠️ 警告: 密钥长度过长，可能包含多余内容');
+        } else if (format.startsWith('OpenAI') ||
+            format.startsWith('OpenRouter')) {
+          buffer.writeln('   - ✓ 密钥格式正常');
         }
-      } else if (aiSettings.apiKey.isNotEmpty) {
-        buffer.writeln('   - 仅设置中有密钥，安全存储为空');
-      } else if (secureApiKey != null) {
-        buffer.writeln('   - 仅安全存储中有密钥，设置为空');
       } else {
-        buffer.writeln('   - 两处都没有密钥');
+        buffer.writeln('   - ❌ 没有可用的API密钥');
       }
       buffer.writeln();
 
-      // 4. 确定最终使用的密钥
-      buffer.writeln('4. 最终使用的密钥...');
-      final effectiveKey = secureApiKey ?? aiSettings.apiKey;
-      buffer.writeln('   - 有效密钥: ${effectiveKey.isNotEmpty ? "存在 (长度: ${effectiveKey.length})" : "不存在"}');
-      
-      if (effectiveKey.isNotEmpty) {
-        buffer.writeln('   - 来源: ${secureApiKey != null ? "安全存储" : "设置"}');
-        buffer.writeln('   - 密钥前缀: ${effectiveKey.substring(0, effectiveKey.length > 15 ? 15 : effectiveKey.length)}...');
-        
-        // 5. 密钥格式验证
-        buffer.writeln();
-        buffer.writeln('5. 密钥格式验证...');
-        
-        // 检查常见的API密钥格式
-        if (effectiveKey.startsWith('sk-')) {
-          buffer.writeln('   - OpenAI格式: ✓');
-        } else if (effectiveKey.startsWith('sk_') || effectiveKey.startsWith('or_')) {
-          buffer.writeln('   - OpenRouter格式: ✓');
-        } else if (effectiveKey.startsWith('Bearer ')) {
-          buffer.writeln('   - 警告: 密钥包含"Bearer "前缀，这可能导致重复Authorization头');
-        } else {
-          buffer.writeln('   - 其他格式 (可能正常)');
-        }
-        
-        // 检查长度
-        if (effectiveKey.length < 20) {
-          buffer.writeln('   - 警告: 密钥长度过短 (${effectiveKey.length})，可能无效');
-        } else if (effectiveKey.length > 200) {
-          buffer.writeln('   - 警告: 密钥长度过长 (${effectiveKey.length})，可能包含多余内容');
-        } else {
-          buffer.writeln('   - 密钥长度正常: ${effectiveKey.length}');
-        }
-        
-        // 检查特殊字符
-        final hasSpecialChars = effectiveKey.contains('\n') || 
-                               effectiveKey.contains('\r') || 
-                               effectiveKey.contains('\t');
-        buffer.writeln('   - 包含特殊字符: ${hasSpecialChars ? "是 (可能导致问题)" : "否"}');
-        
-        // 检查空格
-        final hasSpaces = effectiveKey.startsWith(' ') || effectiveKey.endsWith(' ');
-        buffer.writeln('   - 前后空格: ${hasSpaces ? "是 (可能导致问题)" : "否"}');
+      // 5. 缓存状态
+      buffer.writeln('5. 缓存状态...');
+      final cache = diagnosticInfo['cache'];
+      buffer.writeln('   - 有缓存密钥: ${cache['hasCachedKey'] ? "是" : "否"}');
+      buffer.writeln('   - 缓存有效: ${cache['isValid'] ? "是" : "否"}');
+      if (cache['cacheTime'] != null) {
+        buffer.writeln('   - 缓存时间: ${cache['cacheTime']}');
       }
-      
+      buffer.writeln();
+
+      // 6. 一致性检查
+      buffer.writeln('6. 密钥一致性检查...');
+      if (settings['hasKey'] && secureStorage['hasKey']) {
+        final settingsLength = settings['keyLength'] as int;
+        final secureLength = secureStorage['keyLength'] as int;
+        if (settingsLength == secureLength) {
+          buffer.writeln('   - ✓ 设置与安全存储中的密钥长度一致');
+        } else {
+          buffer.writeln('   - ⚠️ 设置与安全存储中的密钥长度不一致');
+          buffer.writeln('     - 设置中长度: $settingsLength');
+          buffer.writeln('     - 安全存储长度: $secureLength');
+        }
+      } else if (settings['hasKey'] && !secureStorage['hasKey']) {
+        buffer.writeln('   - ℹ️ 仅设置中有密钥，安全存储为空（将自动迁移）');
+      } else if (!settings['hasKey'] && secureStorage['hasKey']) {
+        buffer.writeln('   - ✓ 仅安全存储中有密钥，设置为空（推荐状态）');
+      } else {
+        buffer.writeln('   - ❌ 两处都没有密钥');
+      }
+      buffer.writeln();
+
+      // 7. 建议
+      buffer.writeln('7. 建议...');
+      if (!effective['hasKey']) {
+        buffer.writeln('   - 请在设置中配置有效的API密钥');
+      } else if (effective['source'] == 'settings') {
+        buffer.writeln('   - 密钥将自动迁移到安全存储以提高安全性');
+      } else if (!effective['isValid']) {
+        buffer.writeln('   - 请检查API密钥格式是否正确');
+      } else {
+        buffer.writeln('   - ✓ API密钥配置正常');
+      }
+
       buffer.writeln();
       buffer.writeln('=== 诊断完成 ===');
-
     } catch (e) {
       buffer.writeln('诊断过程中发生错误: $e');
     }

@@ -251,42 +251,23 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateAISettings(AISettings settings) async {
-    debugPrint('=== SettingsService.updateAISettings 调试 ===');
-    debugPrint('传入的settings - API URL: ${settings.apiUrl}');
-    debugPrint('传入的settings - Model: ${settings.model}');
-    debugPrint(
-      '传入的settings - API Key: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}',
-    );
-    debugPrint('传入的settings - Temperature: ${settings.temperature}');
-    debugPrint('传入的settings - Max Tokens: ${settings.maxTokens}');
-    debugPrint('传入的settings - Host Override: ${settings.hostOverride}');
-
     // 保存API密钥到安全存储
     if (settings.apiKey.isNotEmpty) {
-      debugPrint('正在保存API密钥到安全存储...');
       await _secureStorage.saveApiKey(settings.apiKey);
-      debugPrint('API密钥已保存到安全存储');
-    } else {
-      debugPrint('API密钥为空，跳过安全存储');
     }
 
     // 创建不包含API密钥的设置副本
     final settingsWithoutApiKey = settings.copyWith(apiKey: '');
-    debugPrint('创建不含API密钥的设置副本完成');
 
     // 保存不含API密钥的设置到MMKV存储
     final jsonString = json.encode(settingsWithoutApiKey.toJson());
-    debugPrint('准备保存到MMKV的JSON: $jsonString');
 
     await _mmkv.setString(_aiSettingsKey, jsonString);
-    debugPrint('设置已保存到MMKV');
 
     // 更新内存中的设置（保留完整API密钥）
     _aiSettings = settings;
-    debugPrint('内存中的设置已更新');
 
     notifyListeners();
-    debugPrint('已通知监听器');
   }
 
   Future<void> updateAppSettings(AppSettings settings) async {

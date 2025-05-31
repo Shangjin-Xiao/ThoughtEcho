@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
-import '../services/secure_storage_service.dart';
+import '../services/api_key_manager.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -12,22 +12,26 @@ typedef StreamingErrorCallback = void Function(dynamic error);
 
 /// 流式传输工具类
 /// 处理各种AI服务提供商的流式HTTP请求
-class StreamingUtils {  // 添加请求去重机制
+class StreamingUtils {
+  // 添加请求去重机制
   static final Map<String, DateTime> _activeRequests = {};
   static const Duration _requestCooldown = Duration(seconds: 5);
-  
+
   /// 生成请求的唯一标识符
-  static String _generateRequestKey(String url, Map<String, dynamic> requestBody) {
+  static String _generateRequestKey(
+    String url,
+    Map<String, dynamic> requestBody,
+  ) {
     // 使用URL和消息内容的哈希作为唯一标识
     final messagesContent = requestBody['messages']?.toString() ?? '';
     return '${url}_${messagesContent.hashCode}';
   }
-  
+
   /// 检查是否应该阻止重复请求
   static bool _shouldBlockDuplicateRequest(String requestKey) {
     final now = DateTime.now();
     final lastRequestTime = _activeRequests[requestKey];
-    
+
     if (lastRequestTime != null) {
       final timeSinceLastRequest = now.difference(lastRequestTime);
       if (timeSinceLastRequest < _requestCooldown) {
@@ -35,21 +39,23 @@ class StreamingUtils {  // 添加请求去重机制
         return true;
       }
     }
-    
+
     // 记录新的请求时间
     _activeRequests[requestKey] = now;
-    
+
     // 清理过期的请求记录（超过1分钟的）
-    _activeRequests.removeWhere((key, time) => 
-        now.difference(time) > const Duration(minutes: 1));
-    
+    _activeRequests.removeWhere(
+      (key, time) => now.difference(time) > const Duration(minutes: 1),
+    );
+
     return false;
   }
-  
+
   /// 清除特定请求的记录
   static void _clearRequestRecord(String requestKey) {
     _activeRequests.remove(requestKey);
   }
+
   /// 创建一个流式请求
   ///
   /// [url] API endpoint URL
@@ -102,38 +108,11 @@ class StreamingUtils {  // 添加请求去重机制
       onError(e);
     }
   }
-  /// 获取有效的API密钥
+
+  /// 获取有效的API密钥（使用统一的API密钥管理器）
   static Future<String> _getEffectiveApiKey(AISettings settings) async {
-    try {
-      final secureStorage = SecureStorageService();
-      final secureApiKey = await secureStorage.getApiKey();
-      
-      // 添加调试信息
-      debugPrint('=== 流式请求API密钥调试信息 ===');
-      debugPrint('安全存储中的API密钥: ${secureApiKey != null ? "存在 (长度: ${secureApiKey.length})" : "不存在"}');
-      debugPrint('设置中的API密钥: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}');
-      
-      final effectiveKey = secureApiKey ?? settings.apiKey;
-      debugPrint('最终使用的API密钥: ${effectiveKey.isNotEmpty ? "存在 (长度: ${effectiveKey.length})" : "不存在"}');
-      
-      // 检查密钥格式
-      if (effectiveKey.isNotEmpty) {
-        debugPrint('密钥前缀: ${effectiveKey.substring(0, effectiveKey.length > 10 ? 10 : effectiveKey.length)}...');
-        // 检查是否包含非法字符
-        if (effectiveKey.contains('\n') || effectiveKey.contains('\r')) {
-          debugPrint('警告: API密钥包含换行符！');
-        }
-        if (effectiveKey.startsWith(' ') || effectiveKey.endsWith(' ')) {
-          debugPrint('警告: API密钥包含前后空格！');
-        }
-      }
-      debugPrint('============================');
-      
-      return effectiveKey;
-    } catch (e) {
-      debugPrint('获取安全存储API密钥失败: $e，使用设置中的密钥');
-      return settings.apiKey;
-    }
+    final apiKeyManager = APIKeyManager();
+    return await apiKeyManager.getEffectiveApiKey(settings);
   }
 
   /// 根据不同的AI服务提供商调整请求格式
@@ -191,6 +170,7 @@ class StreamingUtils {  // 添加请求去重机制
 
     return _AdjustedRequest(requestBody: requestBody, headers: headers);
   }
+
   /// 发送流式HTTP请求
   static Future<void> _sendStreamRequest(
     String url,
@@ -214,7 +194,7 @@ class StreamingUtils {  // 添加请求去重机制
     try {
       dio = Dio();
       cancelToken = CancelToken();
-      
+
       // 配置Dio
       dio.options.connectTimeout = const Duration(seconds: 30);
       dio.options.receiveTimeout = timeout;
@@ -223,10 +203,7 @@ class StreamingUtils {  // 添加请求去重机制
       final response = await dio.post(
         url,
         data: requestBody,
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.stream,
-        ),
+        options: Options(headers: headers, responseType: ResponseType.stream),
         cancelToken: cancelToken,
       );
 
@@ -241,7 +218,10 @@ class StreamingUtils {  // 添加请求去重机制
         } else {
           errorBody = response.data?.toString() ?? '';
         }
-        final errorMessage = _parseErrorMessage(response.statusCode!, errorBody);
+        final errorMessage = _parseErrorMessage(
+          response.statusCode!,
+          errorBody,
+        );
         onError(Exception(errorMessage));
         return;
       }
@@ -252,7 +232,8 @@ class StreamingUtils {  // 添加请求去重机制
         onResponse,
         onComplete,
         onError,
-      );    } on DioException catch (e) {
+      );
+    } on DioException catch (e) {
       debugPrint('Dio流式请求异常: $e');
       if (e.type == DioExceptionType.receiveTimeout) {
         onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
@@ -285,7 +266,7 @@ class StreamingUtils {  // 添加请求去重机制
           debugPrint('读取错误响应体失败: $readError');
           errorBody = e.message ?? '未知错误';
         }
-        
+
         final errorMessage = _parseErrorMessage(
           e.response?.statusCode ?? 0,
           errorBody.isEmpty ? (e.message ?? '未知错误') : errorBody,
@@ -373,10 +354,11 @@ class StreamingUtils {  // 添加请求去重机制
       return null;
     }
   }
+
   /// 解析错误消息
   static String _parseErrorMessage(int statusCode, String errorBody) {
     debugPrint('解析错误 - 状态码: $statusCode, 响应体: $errorBody');
-    
+
     if (errorBody.contains('rate_limit_exceeded') ||
         errorBody.contains('rate limit') ||
         statusCode == 429) {
@@ -391,7 +373,7 @@ class StreamingUtils {  // 添加请求去重机制
     } else if (statusCode == 500) {
       // 专门处理500错误
       String errorMessage = 'AI服务器内部错误 (500)';
-      
+
       // 尝试解析具体错误信息
       try {
         final errorData = json.decode(errorBody);
@@ -413,13 +395,14 @@ class StreamingUtils {  // 添加请求去重机制
           errorMessage += '：服务器过载，请稍后重试';
         } else if (errorBody.isNotEmpty) {
           // 截取错误信息的前100个字符
-          final truncatedError = errorBody.length > 100 
-              ? '${errorBody.substring(0, 100)}...' 
-              : errorBody;
+          final truncatedError =
+              errorBody.length > 100
+                  ? '${errorBody.substring(0, 100)}...'
+                  : errorBody;
           errorMessage += '：$truncatedError';
         }
       }
-      
+
       return '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态';
     } else if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
       return 'AI服务暂时不可用 ($statusCode 错误)，请稍后重试';
@@ -442,7 +425,9 @@ class StreamingUtils {  // 添加请求去重机制
     if (headers.containsKey('x-api-key')) {
       headers['x-api-key'] = '[API_KEY_HIDDEN]';
     }
-  }  /// 创建一个带重试机制的流式请求
+  }
+
+  /// 创建一个带重试机制的流式请求
   ///
   /// [maxRetries] 最大重试次数
   /// [retryDelay] 重试间隔时间
@@ -459,22 +444,22 @@ class StreamingUtils {  // 添加请求去重机制
   }) async {
     // 生成请求唯一标识符
     final requestKey = _generateRequestKey(url, requestBody);
-    
+
     // 检查是否应该阻止重复请求
     if (_shouldBlockDuplicateRequest(requestKey)) {
       onError(Exception('请求过于频繁，请稍后再试'));
       return;
     }
-    
+
     int retryCount = 0;
     Exception? lastError;
-    
+
     try {
       while (retryCount <= maxRetries) {
         try {
           bool hasCompleted = false;
           bool hasError = false;
-          
+
           await makeStreamRequest(
             url,
             requestBody,
@@ -489,23 +474,28 @@ class StreamingUtils {  // 添加请求去重机制
             onError: (error) {
               if (hasCompleted) return; // 如果已经完成，不处理错误
               hasError = true;
-              lastError = error is Exception ? error : Exception(error.toString());
+              lastError =
+                  error is Exception ? error : Exception(error.toString());
             },
             timeout: timeout,
           );
-        
-        // 如果成功完成，直接返回
-        if (hasCompleted) {
-          return;
-        }
-            // 如果有错误，检查是否需要重试
+
+          // 如果成功完成，直接返回
+          if (hasCompleted) {
+            return;
+          }
+          // 如果有错误，检查是否需要重试
           if (hasError && lastError != null) {
             if (retryCount < maxRetries && _isRetryableError(lastError!)) {
-              debugPrint('请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError');
+              debugPrint(
+                '请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError',
+              );
               retryCount++;
-              
+
               // 使用指数退避策略
-              await Future.delayed(_calculateRetryDelay(retryCount - 1, retryDelay));
+              await Future.delayed(
+                _calculateRetryDelay(retryCount - 1, retryDelay),
+              );
               continue; // 继续重试
             } else {
               // 达到最大重试次数或不可重试的错误，调用原始错误回调
@@ -513,20 +503,23 @@ class StreamingUtils {  // 添加请求去重机制
               return;
             }
           }
-          
         } catch (e) {
           lastError = e is Exception ? e : Exception(e.toString());
-          
+
           if (retryCount >= maxRetries || !_isRetryableError(lastError!)) {
             onError(lastError!);
             return;
           }
-          
-          debugPrint('请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError');
+
+          debugPrint(
+            '请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError',
+          );
           retryCount++;
-          
+
           if (retryCount <= maxRetries) {
-            await Future.delayed(_calculateRetryDelay(retryCount - 1, retryDelay));
+            await Future.delayed(
+              _calculateRetryDelay(retryCount - 1, retryDelay),
+            );
           }
         }
       }
@@ -535,34 +528,37 @@ class StreamingUtils {  // 添加请求去重机制
       _clearRequestRecord(requestKey);
     }
   }
+
   /// 计算重试延迟时间（指数退避）
   static Duration _calculateRetryDelay(int retryCount, Duration baseDelay) {
     // 指数退避：第一次重试3秒，第二次重试6秒，第三次重试12秒...
     const multiplier = 1; // 基础倍数
-    final actualMultiplier = (retryCount == 0) ? multiplier : (1 << retryCount); // 2^retryCount
+    final actualMultiplier =
+        (retryCount == 0) ? multiplier : (1 << retryCount); // 2^retryCount
     final delayMs = baseDelay.inMilliseconds * actualMultiplier;
-    
+
     // 最大延迟不超过30秒
     const maxDelayMs = 30000;
     return Duration(milliseconds: delayMs > maxDelayMs ? maxDelayMs : delayMs);
   }
+
   /// 判断错误是否可重试
   static bool _isRetryableError(dynamic error) {
     final errorString = error.toString();
-    
+
     // 500错误需要更精细的判断
     if (errorString.contains('500')) {
       // 这些500错误通常是持久性问题，不应该重试
-      if (errorString.contains('model') && 
-          (errorString.contains('not found') || 
-           errorString.contains('does not exist') || 
-           errorString.contains('invalid model') ||
-           errorString.contains('不存在') ||
-           errorString.contains('不可用'))) {
+      if (errorString.contains('model') &&
+          (errorString.contains('not found') ||
+              errorString.contains('does not exist') ||
+              errorString.contains('invalid model') ||
+              errorString.contains('不存在') ||
+              errorString.contains('不可用'))) {
         debugPrint('检测到模型相关的500错误，停止重试: $errorString');
         return false;
       }
-      
+
       // API格式错误通常也是持久性问题
       if (errorString.contains('invalid request') ||
           errorString.contains('bad request') ||
@@ -571,38 +567,38 @@ class StreamingUtils {  // 添加请求去重机制
         debugPrint('检测到请求格式相关的500错误，停止重试: $errorString');
         return false;
       }
-      
+
       // 其他500错误可能是临时的服务器问题，可以重试
       debugPrint('检测到可重试的500错误: $errorString');
       return true;
     }
-    
+
     // 502, 503, 504 网关错误，通常是临时问题，可以重试
-    if (errorString.contains('502') || 
-        errorString.contains('503') || 
+    if (errorString.contains('502') ||
+        errorString.contains('503') ||
         errorString.contains('504')) {
       return true;
     }
-    
+
     // 网络连接问题，可以重试
-    if (errorString.contains('Failed host lookup') || 
+    if (errorString.contains('Failed host lookup') ||
         errorString.contains('Connection refused') ||
         errorString.contains('timeout') ||
         errorString.contains('网络')) {
       return true;
     }
-    
+
     // 401（认证失败）、400（请求格式错误）等不应该重试
-    if (errorString.contains('401') || 
-        errorString.contains('400') || 
-        errorString.contains('403') || 
+    if (errorString.contains('401') ||
+        errorString.contains('400') ||
+        errorString.contains('403') ||
         errorString.contains('404')) {
       return false;
     }
-    
+
     // 429（频率限制）暂时不重试，让用户手动重试
     if (errorString.contains('429')) return false;
-    
+
     // 默认不重试
     return false;
   }

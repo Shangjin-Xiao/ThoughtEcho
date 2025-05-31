@@ -6,7 +6,7 @@ import '../models/ai_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
-import '../services/secure_storage_service.dart';
+import '../services/api_key_manager.dart';
 import 'dart:async';
 import '../utils/daily_prompt_generator.dart';
 import '../utils/ai_network_manager.dart'; // 使用新的统一网络管理器
@@ -20,6 +20,7 @@ class AIService extends ChangeNotifier {
   final SettingsService _settingsService;
   final LocationService _locationService; // 新增
   final WeatherService _weatherService; // 新增
+  final APIKeyManager _apiKeyManager = APIKeyManager(); // 新增
 
   AIService({
     required SettingsService settingsService,
@@ -151,26 +152,10 @@ class AIService extends ChangeNotifier {
   Future<void> _validateSettings() async {
     try {
       final settings = _settingsService.aiSettings;
-
-      // 创建安全存储服务实例
-      final secureStorage = SecureStorageService(); // 先检查settings中的API Key
-      bool hasApiKey = settings.apiKey.isNotEmpty;
-      // String? effectiveApiKey; // 在这里声明 // -- 已移除
-
-      // 如果settings中没有API Key，则尝试从安全存储中获取
-      if (!hasApiKey) {
-        final secureApiKey = await secureStorage.getApiKey();
-        hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
-
-        // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
-        // if (hasApiKey) { // -- 已移除
-        // effectiveApiKey = secureApiKey; // 初始化 // -- 已移除
-        // } // -- 已移除
-      } // else { // -- 已移除，因为不再需要为 effectiveApiKey 赋值
-      // effectiveApiKey = settings.apiKey; // 如果设置中有，则使用设置中的 // -- 已移除
-      // } // -- 已移除
-
-      // 最终验证API Key
+      
+      // 检查API Key是否存在（使用统一的API密钥管理器）
+      final hasApiKey = await _apiKeyManager.hasValidApiKey(settings);
+      
       if (!hasApiKey) {
         throw Exception('请先在设置中配置 API Key');
       }
@@ -183,25 +168,20 @@ class AIService extends ChangeNotifier {
         throw Exception('请先在设置中配置 AI 模型');
       }
     } catch (e) {
-      // 如果访问aiSettings时出现错误（如LateInitializationError），重新抛出更友好的错误信息
+      if (e.toString().contains('请先在设置中配置')) {
+        rethrow;
+      }
       throw Exception('AI设置尚未初始化，请稍后再试: $e');
     }
   }
 
-  // 判断API Key是否有效 (同步检查，用于UI显示判断)
+  /// 同步检查API Key是否有效 (用于UI快速判断)
+  /// 使用API密钥管理器的缓存机制
   bool hasValidApiKey() {
     try {
-      final key = _settingsService.aiSettings.apiKey;
-      if (key.isNotEmpty) {
-        return true; // 如果设置中有key则直接返回true
-      }
-      // 否则，我们无法同步获取安全存储的key
-      // 对于UI判断，我们假定如果apiUrl和model已经配置，那么key也很可能已配置
       final settings = _settingsService.aiSettings;
-      return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
+      return _apiKeyManager.hasValidApiKeySync(settings);
     } catch (e) {
-      // 如果访问aiSettings时出现错误（如LateInitializationError），返回false
-      debugPrint('hasValidApiKey: 访问AI设置时出错: $e');
       return false;
     }
   }

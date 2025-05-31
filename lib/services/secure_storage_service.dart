@@ -3,7 +3,8 @@ import '../utils/mmkv_adapter.dart';
 
 /// 安全存储服务，用于存储敏感信息如API密钥
 class SecureStorageService {
-  static final SecureStorageService _instance = SecureStorageService._internal();
+  static final SecureStorageService _instance =
+      SecureStorageService._internal();
   static const String _apiKeyKey = 'secure_api_key';
   static const String _apiUrlKey = 'secure_api_url';
   late MMKVAdapter _storage;
@@ -32,39 +33,27 @@ class SecureStorageService {
       await _initStorage();
     }
   }
+
   /// 保存API密钥
   Future<void> saveApiKey(String key) async {
     await ensureInitialized();
-    
-    // 添加调试信息
-    debugPrint('=== 保存API密钥调试信息 ===');
-    debugPrint('原始密钥长度: ${key.length}');
-    debugPrint('密钥前缀: ${key.length > 10 ? key.substring(0, 10) : key}...');
-    
+
     // 清理密钥（移除可能的空格和换行符）
     final cleanedKey = key.trim();
-    debugPrint('清理后密钥长度: ${cleanedKey.length}');
-    
+
     if (cleanedKey != key) {
       debugPrint('警告: 密钥已被清理，移除了前后空格或换行符');
     }
-    
+
     await _storage.setString(_apiKeyKey, cleanedKey);
-    debugPrint('API密钥已安全保存');
-    debugPrint('========================');
   }
+
   /// 获取API密钥
   Future<String?> getApiKey() async {
     await ensureInitialized();
     final key = _storage.getString(_apiKeyKey);
-    
-    // 添加调试信息
-    debugPrint('=== 获取API密钥调试信息 ===');
-    debugPrint('存储中的密钥: ${key != null ? "存在 (长度: ${key.length})" : "不存在"}');
-    
+
     if (key != null) {
-      debugPrint('密钥前缀: ${key.length > 10 ? key.substring(0, 10) : key}...');
-      
       // 检查密钥完整性
       if (key.contains('\n') || key.contains('\r')) {
         debugPrint('警告: 存储的API密钥包含换行符！');
@@ -74,7 +63,7 @@ class SecureStorageService {
       }
     }
     debugPrint('========================');
-    
+
     return key;
   }
 
@@ -96,4 +85,4 @@ class SecureStorageService {
     await _storage.clear();
     debugPrint('所有安全存储的数据已清除');
   }
-} 
+}
