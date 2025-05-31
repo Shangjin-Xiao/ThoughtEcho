@@ -13,12 +13,15 @@ class SettingsService extends ChangeNotifier {
   static const String _appSettingsKey = 'app_settings';
   static const String _themeModeKey = 'theme_mode';
   // 旧Key，用于迁移检查，迁移完成后可以考虑移除
-  static const String _databaseMigrationCompleteKey = 'database_migration_complete'; 
+  static const String _databaseMigrationCompleteKey =
+      'database_migration_complete';
   // 新Key，表示初始数据库设置（包括首次创建或升级）是否已在引导流程中完成
-  static const String _initialDatabaseSetupCompleteKey = 'initial_database_setup_complete';
+  static const String _initialDatabaseSetupCompleteKey =
+      'initial_database_setup_complete';
   // 使用应用安装标记替代版本号
   static const String _appInstalledKey = 'app_installed_v2';
-  static const String _appUpgradedKey = 'app_upgraded_v2';  final SharedPreferences _prefs; // 保留以支持数据迁移
+  static const String _appUpgradedKey = 'app_upgraded_v2';
+  final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
   late AISettings _aiSettings;
   late AppSettings _appSettings;
@@ -34,9 +37,9 @@ class SettingsService extends ChangeNotifier {
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
   MultiAISettings get multiAISettings => _multiAISettings; // 新增getter
-  
+
   SettingsService(this._prefs);
-  
+
   /// 创建SettingsService实例的静态工厂方法
   static Future<SettingsService> create() async {
     // 获取SharedPreferences实例
@@ -54,39 +57,45 @@ class SettingsService extends ChangeNotifier {
   Future<void> _loadSettings() async {
     // 检查是否需要迁移数据
     await _migrateDataIfNeeded();
-    
+
     // 检查应用是否是首次安装或升级
     final bool wasInstalledBefore = _mmkv.getBool(_appInstalledKey) ?? false;
-    
+
     // 如果是首次安装，标记为已安装
     if (!wasInstalledBefore) {
       debugPrint('检测到首次安装，将重置引导页面状态');
       await _mmkv.setBool(_appInstalledKey, true);
-      
+
       // 首次安装时，载入应用默认设置
       _loadAppSettings();
       _appSettings = _appSettings.copyWith(hasCompletedOnboarding: false);
-      await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+      await _mmkv.setString(
+        _appSettingsKey,
+        json.encode(_appSettings.toJson()),
+      );
     } else {
       // 检查是否有升级标记
       final hasUpgradeTag = _mmkv.getBool(_appUpgradedKey) ?? false;
-      
+
       // 如果设置了升级标记，刷新引导状态
       if (hasUpgradeTag) {
         debugPrint('检测到应用升级标记，将重置引导页面状态');
-        
+
         // 重置升级标记
         await _mmkv.setBool(_appUpgradedKey, false);
-        
+
         // 重置引导状态，但保留其他设置
         _loadAppSettings();
         _appSettings = _appSettings.copyWith(hasCompletedOnboarding: false);
-        await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+        await _mmkv.setString(
+          _appSettingsKey,
+          json.encode(_appSettings.toJson()),
+        );
       }
     }
-      // 继续加载其他设置
-    _loadAISettings();
-    _loadMultiAISettings(); // 新增
+    // 继续加载其他设置
+    await _loadAISettings();
+    await _loadMultiAISettings(); // 新增
     _loadAppSettings();
     _loadThemeMode();
 
@@ -129,7 +138,7 @@ class SettingsService extends ChangeNotifier {
       );
     }
   }
-  
+
   // 加载应用设置
   void _loadAppSettings() {
     final String? appSettingsJson =
@@ -141,23 +150,17 @@ class SettingsService extends ChangeNotifier {
       // 确保一言类型不为空，如果为空则设置为默认全选
       if (_appSettings.hitokotoType.isEmpty) {
         _appSettings = AppSettings.defaultSettings();
-        _mmkv.setString(
-          _appSettingsKey,
-          json.encode(_appSettings.toJson()),
-        );
+        _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
         debugPrint('检测到一言类型为空，已重置为默认全选值');
       }
     } else {
       _appSettings = AppSettings.defaultSettings();
       // 首次启动时保存默认设置到存储
-      _mmkv.setString(
-        _appSettingsKey,
-        json.encode(_appSettings.toJson()),
-      );
+      _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
       debugPrint('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
     }
   }
-  
+
   // 加载主题模式
   void _loadThemeMode() {
     // 加载主题模式 - 优先从MMKV读取
@@ -211,7 +214,7 @@ class SettingsService extends ChangeNotifier {
         await _mmkv.setString(_themeModeKey, themeMode);
         debugPrint('主题设置已迁移到MMKV');
       }
-      
+
       // 迁移API密钥到安全存储
       final apiKey = _prefs.getString('api_key');
       if (apiKey != null && apiKey.isNotEmpty) {
@@ -223,7 +226,8 @@ class SettingsService extends ChangeNotifier {
 
       // 检查旧的数据库迁移Key，如果存在且为true，则设置新的Key并移除旧Key
       if (_mmkv.containsKey(_databaseMigrationCompleteKey)) {
-        final oldMigrationComplete = _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
+        final oldMigrationComplete =
+            _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
         if (oldMigrationComplete) {
           await _mmkv.setBool(_initialDatabaseSetupCompleteKey, true);
         }
@@ -245,15 +249,18 @@ class SettingsService extends ChangeNotifier {
   Future<void> _migrateApiKeyToSecureStorage(String apiKey) async {
     await _secureStorage.saveApiKey(apiKey);
   }
+
   Future<void> updateAISettings(AISettings settings) async {
     debugPrint('=== SettingsService.updateAISettings 调试 ===');
     debugPrint('传入的settings - API URL: ${settings.apiUrl}');
     debugPrint('传入的settings - Model: ${settings.model}');
-    debugPrint('传入的settings - API Key: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}');
+    debugPrint(
+      '传入的settings - API Key: ${settings.apiKey.isNotEmpty ? "存在 (长度: ${settings.apiKey.length})" : "不存在"}',
+    );
     debugPrint('传入的settings - Temperature: ${settings.temperature}');
     debugPrint('传入的settings - Max Tokens: ${settings.maxTokens}');
     debugPrint('传入的settings - Host Override: ${settings.hostOverride}');
-    
+
     // 保存API密钥到安全存储
     if (settings.apiKey.isNotEmpty) {
       debugPrint('正在保存API密钥到安全存储...');
@@ -270,11 +277,8 @@ class SettingsService extends ChangeNotifier {
     // 保存不含API密钥的设置到MMKV存储
     final jsonString = json.encode(settingsWithoutApiKey.toJson());
     debugPrint('准备保存到MMKV的JSON: $jsonString');
-    
-    await _mmkv.setString(
-      _aiSettingsKey,
-      jsonString,
-    );
+
+    await _mmkv.setString(_aiSettingsKey, jsonString);
     debugPrint('设置已保存到MMKV');
 
     // 更新内存中的设置（保留完整API密钥）
@@ -325,7 +329,7 @@ class SettingsService extends ChangeNotifier {
   Future<void> setDatabaseMigrationComplete(bool isComplete) async {
     await _mmkv.setBool(_databaseMigrationCompleteKey, isComplete);
   }
-  
+
   // 检查数据库迁移是否已完成
   bool isDatabaseMigrationComplete() {
     return _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
@@ -356,10 +360,12 @@ class SettingsService extends ChangeNotifier {
   // 加载多provider AI设置
   Future<void> _loadMultiAISettings() async {
     final String? multiAiSettingsJson = _mmkv.getString(_multiAiSettingsKey);
-    
+
     if (multiAiSettingsJson != null) {
       try {
-        final Map<String, dynamic> settingsMap = json.decode(multiAiSettingsJson);
+        final Map<String, dynamic> settingsMap = json.decode(
+          multiAiSettingsJson,
+        );
         _multiAISettings = MultiAISettings.fromJson(settingsMap);
       } catch (e) {
         debugPrint('加载多provider设置失败: $e');
@@ -376,13 +382,10 @@ class SettingsService extends ChangeNotifier {
   /// 保存多provider AI设置
   Future<void> saveMultiAISettings(MultiAISettings settings) async {
     _multiAISettings = settings;
-    
+
     // 保存到MMKV存储
-    await _mmkv.setString(
-      _multiAiSettingsKey,
-      json.encode(settings.toJson()),
-    );
-    
+    await _mmkv.setString(_multiAiSettingsKey, json.encode(settings.toJson()));
+
     notifyListeners();
   }
 
