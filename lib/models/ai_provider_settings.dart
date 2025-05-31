@@ -1,13 +1,35 @@
-/// AI服务商配置
-class AIProviderSettings {
+/// AI服务商配置的抽象接口
+abstract class AIProviderConfig {
+  String get id;
+  String get name;
+  String get apiKey;
+  String get apiUrl;
+  String get model;
+  bool get isEnabled;
+
+  /// 构建请求头
+  Map<String, String> buildHeaders();
+
+  /// 调整请求数据体
+  Map<String, dynamic> adjustData(Map<String, dynamic> data);
+}
+
+/// AI服务商的具体配置实现
+class AIProviderSettings implements AIProviderConfig {
+  @override
   final String id;
+  @override
   final String name;
+  @override
   final String apiKey;
+  @override
   final String apiUrl;
+  @override
   final String model;
   final double temperature;
   final int maxTokens;
   final String? hostOverride;
+  @override
   final bool isEnabled;
 
   const AIProviderSettings({
@@ -22,6 +44,7 @@ class AIProviderSettings {
     this.isEnabled = true,
   });
 
+  @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -127,6 +150,50 @@ class AIProviderSettings {
   @override
   String toString() {
     return 'AIProviderSettings{id: $id, name: $name, model: $model}';
+  }
+
+  @override
+  Map<String, String> buildHeaders() {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+
+    if (apiUrl.contains('openai.com') ||
+        apiUrl.contains('openrouter.ai') ||
+        id == 'openai' || id == 'openrouter') {
+      headers['Authorization'] = 'Bearer $apiKey';
+      if (id == 'openrouter') {
+        headers['HTTP-Referer'] = 'https://thoughtecho.app';
+        headers['X-Title'] = 'ThoughtEcho App';
+      }
+    } else if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+    } else if (apiUrl.contains('deepseek.com') || id == 'deepseek') {
+      headers['Authorization'] = 'Bearer $apiKey';
+    } else {
+      headers['Authorization'] = 'Bearer $apiKey';
+    }
+
+    return headers;
+  }
+
+  @override
+  Map<String, dynamic> adjustData(Map<String, dynamic> data) {
+    final adjustedData = Map<String, dynamic>.from(data);
+    
+    // 确保包含必要的字段
+    adjustedData['model'] = adjustedData['model'] ?? model;
+    adjustedData['temperature'] = adjustedData['temperature'] ?? temperature;
+    adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? maxTokens;
+    
+    // Anthropic特殊处理
+    if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
+      // Anthropic API不在请求体中包含model，而是在URL中
+      adjustedData.remove('model');
+    }
+    
+    return adjustedData;
   }
 }
 
