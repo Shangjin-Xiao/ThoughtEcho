@@ -149,49 +149,61 @@ class AIService extends ChangeNotifier {
   }
 
   Future<void> _validateSettings() async {
-    final settings = _settingsService.aiSettings;
+    try {
+      final settings = _settingsService.aiSettings;
 
-    // 创建安全存储服务实例
-    final secureStorage = SecureStorageService(); // 先检查settings中的API Key
-    bool hasApiKey = settings.apiKey.isNotEmpty;
-    // String? effectiveApiKey; // 在这里声明 // -- 已移除
+      // 创建安全存储服务实例
+      final secureStorage = SecureStorageService(); // 先检查settings中的API Key
+      bool hasApiKey = settings.apiKey.isNotEmpty;
+      // String? effectiveApiKey; // 在这里声明 // -- 已移除
 
-    // 如果settings中没有API Key，则尝试从安全存储中获取
-    if (!hasApiKey) {
-      final secureApiKey = await secureStorage.getApiKey();
-      hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
+      // 如果settings中没有API Key，则尝试从安全存储中获取
+      if (!hasApiKey) {
+        final secureApiKey = await secureStorage.getApiKey();
+        hasApiKey = secureApiKey != null && secureApiKey.isNotEmpty;
 
-      // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
-      // if (hasApiKey) { // -- 已移除
-      // effectiveApiKey = secureApiKey; // 初始化 // -- 已移除
+        // 如果找到了安全存储的API Key，保存到临时变量中以供本次请求使用
+        // if (hasApiKey) { // -- 已移除
+        // effectiveApiKey = secureApiKey; // 初始化 // -- 已移除
+        // } // -- 已移除
+      } // else { // -- 已移除，因为不再需要为 effectiveApiKey 赋值
+      // effectiveApiKey = settings.apiKey; // 如果设置中有，则使用设置中的 // -- 已移除
       // } // -- 已移除
-    } // else { // -- 已移除，因为不再需要为 effectiveApiKey 赋值
-    // effectiveApiKey = settings.apiKey; // 如果设置中有，则使用设置中的 // -- 已移除
-    // } // -- 已移除
 
-    // 最终验证API Key
-    if (!hasApiKey) {
-      throw Exception('请先在设置中配置 API Key');
-    }
+      // 最终验证API Key
+      if (!hasApiKey) {
+        throw Exception('请先在设置中配置 API Key');
+      }
 
-    if (settings.apiUrl.isEmpty) {
-      throw Exception('请先在设置中配置 API URL');
-    }
+      if (settings.apiUrl.isEmpty) {
+        throw Exception('请先在设置中配置 API URL');
+      }
 
-    if (settings.model.isEmpty) {
-      throw Exception('请先在设置中配置 AI 模型');
+      if (settings.model.isEmpty) {
+        throw Exception('请先在设置中配置 AI 模型');
+      }
+    } catch (e) {
+      // 如果访问aiSettings时出现错误（如LateInitializationError），重新抛出更友好的错误信息
+      throw Exception('AI设置尚未初始化，请稍后再试: $e');
     }
   }
 
   // 判断API Key是否有效 (同步检查，用于UI显示判断)
   bool hasValidApiKey() {
-    final key = _settingsService.aiSettings.apiKey;
-    if (key.isNotEmpty) {
-      return true; // 如果设置中有key则直接返回true
-    }    // 否则，我们无法同步获取安全存储的key
-    // 对于UI判断，我们假定如果apiUrl和model已经配置，那么key也很可能已配置
-    final settings = _settingsService.aiSettings;
-    return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
+    try {
+      final key = _settingsService.aiSettings.apiKey;
+      if (key.isNotEmpty) {
+        return true; // 如果设置中有key则直接返回true
+      }
+      // 否则，我们无法同步获取安全存储的key
+      // 对于UI判断，我们假定如果apiUrl和model已经配置，那么key也很可能已配置
+      final settings = _settingsService.aiSettings;
+      return settings.apiUrl.isNotEmpty && settings.model.isNotEmpty;
+    } catch (e) {
+      // 如果访问aiSettings时出现错误（如LateInitializationError），返回false
+      debugPrint('hasValidApiKey: 访问AI设置时出错: $e');
+      return false;
+    }
   }
 
   // 简化的网络请求方法
@@ -243,7 +255,8 @@ class AIService extends ChangeNotifier {
               '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
         },
         {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
-      ];      final response = await _makeRequest(settings.apiUrl, {
+      ];
+      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.7,
       }, settings);
@@ -492,13 +505,15 @@ class AIService extends ChangeNotifier {
       final messages = [
         {'role': 'system', 'content': systemPrompt},
         {'role': 'user', 'content': '请分析以下结构化的笔记数据：\n\n$quotesText'},
-      ];      final response = await _makeRequest(settings.apiUrl, {
+      ];
+      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.7,
         'max_tokens': 2500,
       }, settings);
 
-      final data = response.data is String ? json.decode(response.data) : response.data;
+      final data =
+          response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
@@ -646,13 +661,15 @@ class AIService extends ChangeNotifier {
 5. 对于作品名，请去掉引号《》等标记符号''',
         },
         {'role': 'user', 'content': '请分析以下文本的可能来源：\n\n$content'},
-      ];      final response = await _makeRequest(settings.apiUrl, {
+      ];
+      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.4, // 使用较低的温度确保格式一致性
         'max_tokens': 500,
       }, settings);
 
-      final data = response.data is String ? json.decode(response.data) : response.data;
+      final data =
+          response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
@@ -770,11 +787,13 @@ class AIService extends ChangeNotifier {
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,        'temperature': 0.7,
+        'messages': messages,
+        'temperature': 0.7,
         'max_tokens': 1000,
       }, settings);
 
-      final data = response.data is String ? json.decode(response.data) : response.data;
+      final data =
+          response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
@@ -879,13 +898,15 @@ class AIService extends ChangeNotifier {
 5. 返回完整的续写部分，不要重复原文''',
         },
         {'role': 'user', 'content': '请续写以下文本：\n\n$content'},
-      ];      final response = await _makeRequest(settings.apiUrl, {
+      ];
+      final response = await _makeRequest(settings.apiUrl, {
         'messages': messages,
         'temperature': 0.8, // 使用较高的温度以增加创意性
         'max_tokens': 1000,
       }, settings);
 
-      final data = response.data is String ? json.decode(response.data) : response.data;
+      final data =
+          response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
@@ -1005,11 +1026,13 @@ $question''',
       ];
 
       final response = await _makeRequest(settings.apiUrl, {
-        'messages': messages,        'temperature': 0.5,
+        'messages': messages,
+        'temperature': 0.5,
         'max_tokens': 1000,
       }, settings);
 
-      final data = response.data is String ? json.decode(response.data) : response.data;
+      final data =
+          response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
@@ -1110,30 +1133,26 @@ $question''',
       final settings = _settingsService.aiSettings;
 
       final messages = [
-        {
-          'role': 'system',
-          'content': '你是一个AI助手。请简单回复"连接测试成功"。',
-        },
-        {
-          'role': 'user',
-          'content': '测试连接',
-        },
+        {'role': 'system', 'content': '你是一个AI助手。请简单回复"连接测试成功"。'},
+        {'role': 'user', 'content': '测试连接'},
       ];
 
-      final response = await _makeRequest(settings.apiUrl, {        'messages': messages,
+      final response = await _makeRequest(settings.apiUrl, {
+        'messages': messages,
         'temperature': 0.1,
         'max_tokens': 50,
         'model': settings.model,
       }, settings);
 
-      final data = response.data is String ? json.decode(response.data) : response.data;
+      final data =
+          response.data is String ? json.decode(response.data) : response.data;
       if (data['choices'] != null &&
           data['choices'].isNotEmpty &&
           data['choices'][0]['message'] != null) {
         debugPrint('AI连接测试成功: ${data['choices'][0]['message']['content']}');
         return;
       }
-      
+
       throw Exception('API响应格式异常');
     } catch (e) {
       debugPrint('AI连接测试失败: $e');
@@ -1151,21 +1170,12 @@ $question''',
       final multiSettings = _settingsService.multiAISettings;
 
       final messages = [
-        {
-          'role': 'system',
-          'content': '你是一个AI助手。请简单回复"连接测试成功"。',
-        },
-        {
-          'role': 'user',
-          'content': '测试连接',
-        },
-      ];      final response = await AINetworkManager.makeRequest(
+        {'role': 'system', 'content': '你是一个AI助手。请简单回复"连接测试成功"。'},
+        {'role': 'user', 'content': '测试连接'},
+      ];
+      final response = await AINetworkManager.makeRequest(
         url: '',
-        data: {
-          'messages': messages,
-          'temperature': 0.1,
-          'max_tokens': 50,
-        },
+        data: {'messages': messages, 'temperature': 0.1, 'max_tokens': 50},
         multiSettings: multiSettings,
         timeout: const Duration(seconds: 30),
       );
@@ -1175,11 +1185,13 @@ $question''',
         if (data['choices'] != null &&
             data['choices'].isNotEmpty &&
             data['choices'][0]['message'] != null) {
-          debugPrint('多provider连接测试成功: ${data['choices'][0]['message']['content']}');
+          debugPrint(
+            '多provider连接测试成功: ${data['choices'][0]['message']['content']}',
+          );
           return;
         }
       }
-      
+
       throw Exception('API响应格式异常');
     } catch (e) {
       debugPrint('多provider连接测试失败: $e');
@@ -1192,7 +1204,7 @@ $question''',
     if (!hasValidApiKey()) {
       throw Exception('请先在设置中配置 API Key');
     }
-    
+
     try {
       final multiSettings = _settingsService.multiAISettings;
 
@@ -1203,12 +1215,10 @@ $question''',
               '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
         },
         {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
-      ];      final response = await AINetworkManager.makeRequest(
+      ];
+      final response = await AINetworkManager.makeRequest(
         url: '',
-        data: {
-          'messages': messages,
-          'temperature': 0.7,
-        },
+        data: {'messages': messages, 'temperature': 0.7},
         multiSettings: multiSettings,
       );
 
@@ -1220,7 +1230,7 @@ $question''',
           return data['choices'][0]['message']['content'];
         }
       }
-      
+
       throw Exception('API响应格式错误');
     } catch (e) {
       debugPrint('多provider笔记分析错误: $e');
