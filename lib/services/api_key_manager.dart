@@ -94,10 +94,31 @@ class APIKeyManager {
     _updateCache(cleanedKey);
   }
 
+  /// 从AISettings保存API密钥
+  ///
+  /// 如果settings中包含API密钥，将其保存到安全存储
+  /// 这是一个便利方法，专门用于处理AISettings的API密钥更新
+  Future<void> saveApiKeyFromSettings(AISettings settings) async {
+    if (settings.apiKey.trim().isNotEmpty) {
+      await saveApiKey(settings.apiKey);
+      debugPrint('API密钥已从设置保存到安全存储');
+    }
+  }
+
   /// 清除API密钥缓存
   void clearCache() {
     _cachedApiKey = null;
     _cacheTime = null;
+  }
+
+  /// 清除所有API密钥数据
+  ///
+  /// 清除安全存储中的API密钥和缓存
+  Future<void> clearApiKey() async {
+    await _secureStorage.ensureInitialized();
+    await _secureStorage.clearAll();
+    clearCache();
+    debugPrint('API密钥已从安全存储和缓存中清除');
   }
 
   /// 验证API密钥格式

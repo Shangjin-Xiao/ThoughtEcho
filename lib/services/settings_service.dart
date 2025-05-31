@@ -6,6 +6,7 @@ import '../models/app_settings.dart';
 import '../models/ai_provider_settings.dart'; // 新增
 import '../services/secure_storage_service.dart';
 import '../services/mmkv_service.dart';
+import '../services/api_key_manager.dart';
 
 class SettingsService extends ChangeNotifier {
   static const String _aiSettingsKey = 'ai_settings';
@@ -109,29 +110,23 @@ class SettingsService extends ChangeNotifier {
         _mmkv.getString(_aiSettingsKey) ?? _prefs.getString(_aiSettingsKey);
 
     if (aiSettingsJson != null) {
-      // 从JSON加载设置，但API密钥将从安全存储中加载
+      // 从JSON加载设置（不包含API密钥）
       final Map<String, dynamic> settingsMap = json.decode(aiSettingsJson);
 
-      // 尝试从安全存储加载API密钥
-      final secureApiKey = await _secureStorage.getApiKey();
+      // 创建基础设置对象
+      final baseSettings = AISettings.fromJson(settingsMap);
 
-      // 如果安全存储中有密钥，使用它，否则使用常规设置中的密钥（兼容旧版本）
-      if (secureApiKey != null && secureApiKey.isNotEmpty) {
-        settingsMap['apiKey'] = secureApiKey;
+      // 使用API密钥管理器获取完整的API密钥
+      final apiKeyManager = APIKeyManager();
+      final effectiveApiKey = await apiKeyManager.getEffectiveApiKey(
+        baseSettings,
+      );
 
-        // 清除普通存储中的API密钥（迁移到安全存储）
-        if (settingsMap.containsKey('apiKey') &&
-            settingsMap['apiKey'].isNotEmpty) {
-          _migrateApiKeyToSecureStorage(settingsMap['apiKey']);
-          settingsMap['apiKey'] = '';
-          await _mmkv.setString(_aiSettingsKey, json.encode(settingsMap));
-        }
-      }
-
-      _aiSettings = AISettings.fromJson(settingsMap);
+      // 创建包含完整API密钥的设置对象
+      _aiSettings = baseSettings.copyWith(apiKey: effectiveApiKey);
     } else {
       _aiSettings = AISettings.defaultSettings();
-      // 保存默认设置
+      // 保存默认设置（不含API密钥）
       await _mmkv.setString(
         _aiSettingsKey,
         json.encode(_aiSettings.copyWith(apiKey: '').toJson()),
@@ -245,23 +240,16 @@ class SettingsService extends ChangeNotifier {
     }
   }
 
-  // 将API密钥从普通存储迁移到安全存储
-  Future<void> _migrateApiKeyToSecureStorage(String apiKey) async {
-    await _secureStorage.saveApiKey(apiKey);
-  }
-
   Future<void> updateAISettings(AISettings settings) async {
-    // 保存API密钥到安全存储
-    if (settings.apiKey.isNotEmpty) {
-      await _secureStorage.saveApiKey(settings.apiKey);
-    }
+    // 使用统一的API密钥管理器保存API密钥
+    final apiKeyManager = APIKeyManager();
+    await apiKeyManager.saveApiKeyFromSettings(settings);
 
     // 创建不包含API密钥的设置副本
     final settingsWithoutApiKey = settings.copyWith(apiKey: '');
 
     // 保存不含API密钥的设置到MMKV存储
     final jsonString = json.encode(settingsWithoutApiKey.toJson());
-
     await _mmkv.setString(_aiSettingsKey, jsonString);
 
     // 更新内存中的设置（保留完整API密钥）
