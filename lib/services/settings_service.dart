@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
 import '../models/app_settings.dart';
-import '../models/ai_provider_settings.dart'; // 新增
+import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../services/secure_storage_service.dart';
 import '../services/mmkv_service.dart';
 import '../services/api_key_manager.dart';

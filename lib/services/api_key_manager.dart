@@ -204,7 +204,7 @@ class APIKeyManager {
         'keyLength': secureApiKey?.length ?? 0,
         'keyPrefix':
             secureApiKey != null && secureApiKey.length > 15
-                ? secureApiKey.substring(0, 15) + '...'
+                ? '${secureApiKey.substring(0, 15)}...'
                 : secureApiKey ?? '',
         'hasNewlines':
             secureApiKey?.contains('\n') == true ||
@@ -218,7 +218,7 @@ class APIKeyManager {
         'keyLength': settingsApiKey.length,
         'keyPrefix':
             settingsApiKey.length > 15
-                ? settingsApiKey.substring(0, 15) + '...'
+                ? '${settingsApiKey.substring(0, 15)}...'
                 : settingsApiKey,
         'hasNewlines':
             settingsApiKey.contains('\n') || settingsApiKey.contains('\r'),

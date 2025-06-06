@@ -4,6 +4,7 @@ import '../services/settings_service.dart';
 import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/multi_ai_settings.dart';
 import '../services/secure_storage_service.dart';
 import '../utils/ai_network_manager.dart';
 
@@ -516,13 +517,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     if (confirmed == true) {
       final updatedProviders =
-          _multiSettings.providers.where((p) => p.id != provider.id).toList();
-
-      // 如果删除的是当前provider，切换到第一个可用的provider或清空
-      String newCurrentProviderId = _multiSettings.currentProviderId;
+          _multiSettings.providers.where((p) => p.id != provider.id).toList();      // 如果删除的是当前provider，切换到第一个可用的provider或清空
+      String? newCurrentProviderId = _multiSettings.currentProviderId;
       if (_currentProvider?.id == provider.id) {
         newCurrentProviderId =
-            updatedProviders.isNotEmpty ? updatedProviders.first.id : '';
+            updatedProviders.isNotEmpty ? updatedProviders.first.id : null;
       }
 
       final updatedMultiSettings = _multiSettings.copyWith(

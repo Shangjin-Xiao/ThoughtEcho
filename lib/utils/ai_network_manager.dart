@@ -4,7 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
-import '../services/api_key_manager.dart';
+import '../models/multi_ai_settings.dart' as multi_ai;
+import '../models/ai_config.dart';
 
 /// 统一的AI网络请求管理器
 /// 负责处理所有AI相关的网络请求，包括普通请求和流式请求
@@ -56,22 +57,62 @@ class AINetworkManager {
     _dioInstance = null;
   }
 
+  /// 通用AI请求方法
+  static Future<Response> _makeBaseRequest({
+    required AIConfig config,
+    required Map<String, dynamic> data,
+    required ResponseType responseType,
+    String? urlOverride,
+    Duration? timeout,
+  }) async {
+    try {
+      final headers = config.buildHeaders();
+      final adjustedData = config.adjustData(data);
+      final finalUrl = urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
+
+      final response = await _dio.post(
+        finalUrl,
+        data: adjustedData,
+        options: Options(
+          headers: headers,
+          responseType: responseType,
+          receiveTimeout: timeout ?? const Duration(seconds: 300),
+        ),
+      );
+      return response;
+    } catch (e) {
+      debugPrint('AI请求失败 for ${config.name} (${config.id}): $e');
+      throw _handleError(e);
+    }
+  }
+
   /// 发送普通AI请求
   static Future<Response> makeRequest({
     required String url,
     required Map<String, dynamic> data,
     AISettings? legacySettings,
     AIProviderSettings? provider,
-    MultiAISettings? multiSettings,
+    multi_ai.MultiAISettings? multiSettings,
     Duration? timeout,
   }) async {
-    // 优先级：provider > multiSettings > legacySettings
     if (provider != null) {
-      return await _makeRequestWithProvider(url, data, provider, timeout);
+      return await _makeBaseRequest(
+        config: provider,
+        data: data,
+        responseType: ResponseType.json,
+        urlOverride: url.isNotEmpty ? url : null,
+        timeout: timeout,
+      );
     } else if (multiSettings != null) {
       return await _makeRequestWithFailover(url, data, multiSettings, timeout);
     } else if (legacySettings != null) {
-      return await _makeRequestWithLegacySettings(url, data, legacySettings, timeout);
+      return await _makeBaseRequest(
+        config: LegacyAIConfigWrapper(legacySettings),
+        data: data,
+        responseType: ResponseType.json,
+        urlOverride: url.isNotEmpty ? url : null,
+        timeout: timeout,
+      );
     } else {
       throw Exception('未提供有效的AI设置');
     }
@@ -86,50 +127,42 @@ class AINetworkManager {
     required Function(Exception) onError,
     AISettings? legacySettings,
     AIProviderSettings? provider,
-    MultiAISettings? multiSettings,
+    multi_ai.MultiAISettings? multiSettings,
     Duration? timeout,
   }) async {
-    // 优先级：provider > multiSettings > legacySettings
     if (provider != null) {
-      return await _makeStreamRequestWithProvider(
-        url, data, provider, onData, onComplete, onError, timeout);
+      final response = await _makeBaseRequest(
+        config: provider,
+        data: {...data, 'stream': true},
+        responseType: ResponseType.stream,
+        urlOverride: url.isNotEmpty ? url : null,
+        timeout: timeout,
+      );
+      await _processStreamResponse(
+        response.data as Stream<List<int>>,
+        onData,
+        onComplete,
+        onError,
+      );
     } else if (multiSettings != null) {
       return await _makeStreamRequestWithFailover(
         url, data, multiSettings, onData, onComplete, onError, timeout);
     } else if (legacySettings != null) {
-      return await _makeStreamRequestWithLegacySettings(
-        url, data, legacySettings, onData, onComplete, onError, timeout);
+      final response = await _makeBaseRequest(
+        config: LegacyAIConfigWrapper(legacySettings),
+        data: {...data, 'stream': true},
+        responseType: ResponseType.stream,
+        urlOverride: url.isNotEmpty ? url : null,
+        timeout: timeout,
+      );
+      await _processStreamResponse(
+        response.data as Stream<List<int>>,
+        onData,
+        onComplete,
+        onError,
+      );
     } else {
       throw Exception('未提供有效的AI设置');
-    }
-  }
-
-  /// 使用特定Provider发送请求
-  static Future<Response> _makeRequestWithProvider(
-    String url,
-    Map<String, dynamic> data,
-    AIProviderSettings provider,
-    Duration? timeout,
-  ) async {
-    try {
-      final headers = _buildHeadersForProvider(provider);
-      final adjustedData = _adjustDataForProvider(data, provider);
-      final finalUrl = url.isNotEmpty ? url : provider.apiUrl;
-      
-      final response = await _dio.post(
-        finalUrl,
-        data: adjustedData,
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.json,
-          receiveTimeout: timeout ?? const Duration(seconds: 300),
-        ),
-      );
-
-      return response;
-    } catch (e) {
-      debugPrint('Provider ${provider.name} 请求失败: $e');
-      throw _handleError(e);
     }
   }
 
@@ -137,7 +170,7 @@ class AINetworkManager {
   static Future<Response> _makeRequestWithFailover(
     String url,
     Map<String, dynamic> data,
-    MultiAISettings multiSettings,
+    multi_ai.MultiAISettings multiSettings,
     Duration? timeout,
   ) async {
     final availableProviders = multiSettings.availableProviders;
@@ -154,7 +187,13 @@ class AINetworkManager {
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
-        return await _makeRequestWithProvider(url, data, currentProvider, timeout);
+        return await _makeBaseRequest(
+          config: currentProvider,
+          data: data,
+          responseType: ResponseType.json,
+          urlOverride: url.isNotEmpty ? url : null,
+          timeout: timeout,
+        );
       } catch (e) {
         debugPrint('当前服务商 ${currentProvider.name} 请求失败: $e');
         _markProviderFailed(currentProvider.id);
@@ -174,7 +213,13 @@ class AINetworkManager {
         
         try {
           debugPrint('尝试切换到服务商: ${provider.name}');
-          return await _makeRequestWithProvider(url, data, provider, timeout);
+          return await _makeBaseRequest(
+            config: provider,
+            data: data,
+            responseType: ResponseType.json,
+            urlOverride: url.isNotEmpty ? url : null,
+            timeout: timeout,
+          );
         } catch (e) {
           debugPrint('服务商 ${provider.name} 请求失败: $e');
           _markProviderFailed(provider.id);
@@ -187,85 +232,11 @@ class AINetworkManager {
     throw lastError ?? Exception('所有AI服务商都不可用，请稍后重试或检查网络连接');
   }
 
-  /// 使用传统AI设置发送请求
-  static Future<Response> _makeRequestWithLegacySettings(
-    String url,
-    Map<String, dynamic> data,
-    AISettings settings,
-    Duration? timeout,
-  ) async {
-    try {
-      final apiKey = await _getEffectiveApiKey(settings);
-      final headers = _buildHeadersForLegacySettings(settings, apiKey);
-      final adjustedData = _adjustDataForLegacySettings(data, settings);
-      
-      final response = await _dio.post(
-        settings.apiUrl,
-        data: adjustedData,
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.json,
-          receiveTimeout: timeout ?? const Duration(seconds: 300),
-        ),
-      );
-
-      return response;
-    } catch (e) {
-      debugPrint('传统AI设置请求失败: $e');
-      throw _handleError(e);
-    }
-  }
-
-  /// 使用特定Provider发送流式请求
-  static Future<void> _makeStreamRequestWithProvider(
-    String url,
-    Map<String, dynamic> data,
-    AIProviderSettings provider,
-    Function(String) onData,
-    Function(String) onComplete,
-    Function(Exception) onError,
-    Duration? timeout,
-  ) async {
-    try {
-      final headers = _buildHeadersForProvider(provider);
-      final adjustedData = _adjustDataForProvider({...data, 'stream': true}, provider);
-      final finalUrl = url.isNotEmpty ? url : provider.apiUrl;
-      
-      final response = await _dio.post(
-        finalUrl,
-        data: adjustedData,
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.stream,
-          receiveTimeout: timeout ?? const Duration(seconds: 300),
-        ),
-      );
-
-      if (response.statusCode == 200) {
-        await _processStreamResponse(
-          response.data as Stream<List<int>>,
-          onData,
-          onComplete,
-          onError,
-        );
-      } else {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          response: response,
-          message: 'HTTP ${response.statusCode}: ${response.statusMessage}',
-        );
-      }
-    } catch (e) {
-      debugPrint('Provider ${provider.name} 流式请求失败: $e');
-      onError(_handleError(e));
-    }
-  }
-
   /// 使用多Provider配置发送流式请求（带故障转移）
   static Future<void> _makeStreamRequestWithFailover(
     String url,
     Map<String, dynamic> data,
-    MultiAISettings multiSettings,
+    multi_ai.MultiAISettings multiSettings,
     Function(String) onData,
     Function(String) onComplete,
     Function(Exception) onError,
@@ -274,9 +245,10 @@ class AINetworkManager {
     final availableProviders = multiSettings.availableProviders;
     
     if (availableProviders.isEmpty) {
-      onError(Exception('没有可用的AI服务商，请在设置中配置API密钥'));
-      return;
+      throw Exception('没有可用的AI服务商，请在设置中配置API密钥');
     }
+    
+    Exception? lastError;
     
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
@@ -284,16 +256,27 @@ class AINetworkManager {
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
-        await _makeStreamRequestWithProvider(
-          url, data, currentProvider, onData, onComplete, onError, timeout);
+        final response = await _makeBaseRequest(
+          config: currentProvider,
+          data: {...data, 'stream': true},
+          responseType: ResponseType.stream,
+          urlOverride: url.isNotEmpty ? url : null,
+          timeout: timeout,
+        );
+        await _processStreamResponse(
+          response.data as Stream<List<int>>,
+          onData,
+          onComplete,
+          onError,
+        );
         return;
       } catch (e) {
         debugPrint('当前服务商 ${currentProvider.name} 流式请求失败: $e');
         _markProviderFailed(currentProvider.id);
+        lastError = _handleError(e);
         
         if (!multiSettings.enableFailover) {
-          onError(_handleError(e));
-          return;
+          throw lastError;
         }
       }
     }
@@ -306,167 +289,39 @@ class AINetworkManager {
         
         try {
           debugPrint('尝试切换到服务商: ${provider.name}');
-          await _makeStreamRequestWithProvider(
-            url, data, provider, onData, onComplete, onError, timeout);
+          final response = await _makeBaseRequest(
+            config: provider,
+            data: {...data, 'stream': true},
+            responseType: ResponseType.stream,
+            urlOverride: url.isNotEmpty ? url : null,
+            timeout: timeout,
+          );
+          await _processStreamResponse(
+            response.data as Stream<List<int>>,
+            onData,
+            onComplete,
+            onError,
+          );
           return;
         } catch (e) {
           debugPrint('服务商 ${provider.name} 流式请求失败: $e');
           _markProviderFailed(provider.id);
+          lastError = _handleError(e);
           continue;
         }
       }
     }
     
-    onError(Exception('所有AI服务商都不可用，请稍后重试或检查网络连接'));
+    throw lastError ?? Exception('所有AI服务商都不可用，请稍后重试或检查网络连接');
   }
-
-  /// 使用传统AI设置发送流式请求
-  static Future<void> _makeStreamRequestWithLegacySettings(
-    String url,
-    Map<String, dynamic> data,
-    AISettings settings,
-    Function(String) onData,
-    Function(String) onComplete,
-    Function(Exception) onError,
-    Duration? timeout,
-  ) async {
-    try {
-      final apiKey = await _getEffectiveApiKey(settings);
-      final headers = _buildHeadersForLegacySettings(settings, apiKey);
-      final adjustedData = _adjustDataForLegacySettings({...data, 'stream': true}, settings);
-      
-      final response = await _dio.post(
-        settings.apiUrl,
-        data: adjustedData,
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.stream,
-          receiveTimeout: timeout ?? const Duration(seconds: 300),
-        ),
-      );
-
-      if (response.statusCode == 200) {
-        await _processStreamResponse(
-          response.data as Stream<List<int>>,
-          onData,
-          onComplete,
-          onError,
-        );
-      } else {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          response: response,
-          message: 'HTTP ${response.statusCode}: ${response.statusMessage}',
-        );
-      }
-    } catch (e) {
-      debugPrint('传统AI设置流式请求失败: $e');
-      onError(_handleError(e));
+  /// 隐藏敏感信息
+  static void _hideSensitiveInfo(Map<String, dynamic> headers) {
+    if (headers.containsKey('Authorization')) {
+      headers['Authorization'] = '[HIDDEN]';
     }
-  }
-
-  /// 为Provider构建请求头
-  static Map<String, String> _buildHeadersForProvider(AIProviderSettings provider) {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
-
-    if (provider.apiUrl.contains('openai.com') || 
-        provider.apiUrl.contains('openrouter.ai') ||
-        provider.id == 'openai' || provider.id == 'openrouter') {
-      headers['Authorization'] = 'Bearer ${provider.apiKey}';
-      if (provider.id == 'openrouter') {
-        headers['HTTP-Referer'] = 'https://thoughtecho.app';
-        headers['X-Title'] = 'ThoughtEcho App';
-      }
-    } else if (provider.apiUrl.contains('anthropic.com') || provider.id == 'anthropic') {
-      headers['x-api-key'] = provider.apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-    } else if (provider.apiUrl.contains('deepseek.com') || provider.id == 'deepseek') {
-      headers['Authorization'] = 'Bearer ${provider.apiKey}';
-    } else {
-      headers['Authorization'] = 'Bearer ${provider.apiKey}';
+    if (headers.containsKey('x-api-key')) {
+      headers['x-api-key'] = '[HIDDEN]';
     }
-
-    return headers;
-  }
-
-  /// 为传统AI设置构建请求头
-  static Map<String, String> _buildHeadersForLegacySettings(AISettings settings, String apiKey) {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
-
-    if (settings.apiUrl.contains('openai.com') || 
-        settings.apiUrl.contains('api.openai.com')) {
-      headers['Authorization'] = 'Bearer $apiKey';
-    } else if (settings.apiUrl.contains('anthropic.com')) {
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-    } else if (settings.apiUrl.contains('openrouter.ai')) {
-      headers['Authorization'] = 'Bearer $apiKey';
-      headers['HTTP-Referer'] = 'https://thoughtecho.app';
-      headers['X-Title'] = 'ThoughtEcho App';
-    } else if (settings.apiUrl.contains('deepseek.com')) {
-      headers['Authorization'] = 'Bearer $apiKey';
-    } else {
-      headers['Authorization'] = 'Bearer $apiKey';
-    }
-
-    return headers;
-  }
-
-  /// 为Provider调整请求数据
-  static Map<String, dynamic> _adjustDataForProvider(
-    Map<String, dynamic> data, 
-    AIProviderSettings provider
-  ) {
-    final adjustedData = Map<String, dynamic>.from(data);
-    
-    // 确保包含必要的字段
-    adjustedData['model'] = adjustedData['model'] ?? provider.model;
-    adjustedData['temperature'] = adjustedData['temperature'] ?? provider.temperature;
-    adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? provider.maxTokens;
-    
-    // Anthropic特殊处理
-    if (provider.apiUrl.contains('anthropic.com') || provider.id == 'anthropic') {
-      // Anthropic API不在请求体中包含model，而是在URL中
-      adjustedData.remove('model');
-    }
-    
-    return adjustedData;
-  }
-
-  /// 为传统AI设置调整请求数据
-  static Map<String, dynamic> _adjustDataForLegacySettings(
-    Map<String, dynamic> data, 
-    AISettings settings
-  ) {
-    final adjustedData = Map<String, dynamic>.from(data);
-    
-    // 确保包含必要的字段
-    adjustedData['model'] = adjustedData['model'] ?? settings.model;
-    adjustedData['temperature'] = adjustedData['temperature'] ?? settings.temperature;
-    adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? settings.maxTokens;
-    
-    // Anthropic特殊处理
-    if (settings.apiUrl.contains('anthropic.com')) {
-      adjustedData.remove('model');
-    }
-    
-    return adjustedData;
-  }
-
-  /// 获取有效的API密钥（使用统一的API密钥管理器）
-  static Future<String> _getEffectiveApiKey(AISettings settings) async {
-    final apiKeyManager = APIKeyManager();
-    final apiKey = await apiKeyManager.getEffectiveApiKey(settings);
-    
-    if (apiKey.isEmpty) {
-      throw Exception('未找到有效的API密钥，请在设置中配置API密钥');
-    }
-    
-    return apiKey;
   }
 
   /// 处理流式响应
@@ -478,50 +333,48 @@ class AINetworkManager {
   ) async {
     final completer = Completer<void>();
     final buffer = StringBuffer();
-    
-    try {
-      await for (final chunk in stream) {
-        final chunkString = utf8.decode(chunk);
-        final lines = chunkString.split('\n');
-        
+    String partialLine = '';
+
+    stream.listen(
+      (data) {
+        final chunk = utf8.decode(data, allowMalformed: true);
+        final lines = (partialLine + chunk).split('\n');
+        partialLine = lines.removeLast();
+
         for (final line in lines) {
-          if (line.trim().isEmpty) continue;
-          if (!line.startsWith('data: ')) continue;
-          
-          final data = line.substring(6).trim();
-          if (data == '[DONE]') {
-            onComplete(buffer.toString());
-            completer.complete();
-            return;
-          }
-          
-          try {
-            final json = jsonDecode(data);
-            if (json['choices'] != null && json['choices'].isNotEmpty) {
-              final delta = json['choices'][0]['delta'];
-              if (delta != null && delta['content'] != null) {
-                final content = delta['content'] as String;
+          if (line.startsWith('data:')) {
+            final jsonStr = line.substring(5).trim();
+            if (jsonStr == '[DONE]') {
+              onComplete(buffer.toString());
+              completer.complete();
+              return;
+            }
+            try {
+              final json = jsonDecode(jsonStr);
+              final content = json['choices']?[0]?['delta']?['content'];
+              if (content != null && content.isNotEmpty) {
                 buffer.write(content);
                 onData(content);
               }
+            } catch (e) {
+              debugPrint('解析流式响应JSON错误: $e');
             }
-          } catch (e) {
-            debugPrint('解析流式响应失败: $e, 数据: $data');
+          } else if (line.isNotEmpty && line.trim() != '') {
+            debugPrint('未知流式响应格式: $line');
           }
         }
-      }
-      
-      if (!completer.isCompleted) {
-        onComplete(buffer.toString());
-        completer.complete();
-      }
-    } catch (e) {
-      if (!completer.isCompleted) {
-        onError(Exception('流式响应处理失败: $e'));
-        completer.complete();
-      }
-    }
-    
+      },
+      onError: (error) {
+        onError(_handleError(error));
+        completer.completeError(_handleError(error));
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          onComplete(buffer.toString());
+          completer.complete();
+        }
+      },
+    );
     return completer.future;
   }
 
@@ -577,28 +430,18 @@ class AINetworkManager {
           }
         }
         
-        return Exception('$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态');
-      } else if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
-        return Exception('AI服务暂时不可用 ($statusCode 错误)，请稍后重试');
+        return Exception(
+            '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态');
+      } else if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return Exception('网络连接超时，请检查网络设置或稍后重试');
       } else {
-        return Exception('AI服务请求失败：$statusCode\n$errorBody');
+        return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
       }
-    } else if (error.toString().contains('Failed host lookup')) {
-      return Exception('无法连接到AI服务器，请检查网络连接或服务器状态');
-    } else if (error.toString().contains('Connection refused')) {
-      return Exception('连接被拒绝，请检查API URL和服务器状态');
     } else {
-      return Exception('网络请求失败: ${error.toString()}');
-    }
-  }
-
-  /// 隐藏敏感信息
-  static void _hideSensitiveInfo(Map<String, dynamic> headers) {
-    if (headers.containsKey('Authorization')) {
-      headers['Authorization'] = '[API_KEY_HIDDEN]';
-    }
-    if (headers.containsKey('x-api-key')) {
-      headers['x-api-key'] = '[API_KEY_HIDDEN]';
+      return Exception('未知错误: ${error.toString()}');
     }
   }
 }
