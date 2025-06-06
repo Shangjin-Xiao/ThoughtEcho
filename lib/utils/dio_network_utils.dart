@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/multi_ai_settings.dart';
 
 /// 基于Dio的改进网络请求工具类
 /// 提供更好的连接管理、错误处理、流式支持和多服务商切换

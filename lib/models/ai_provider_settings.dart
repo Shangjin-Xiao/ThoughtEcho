@@ -1,32 +1,19 @@
-/// AI服务商配置的抽象接口
-abstract class AIProviderConfig {
-  String get id;
-  String get name;
-  String get apiKey;
-  String get apiUrl;
-  String get model;
-  bool get isEnabled;
-
-  /// 构建请求头
-  Map<String, String> buildHeaders();
-
-  /// 调整请求数据体
-  Map<String, dynamic> adjustData(Map<String, dynamic> data);
-}
+import 'ai_config.dart';
 
 /// AI服务商的具体配置实现
-class AIProviderSettings implements AIProviderConfig {
+class AIProviderSettings implements AIConfig {
   @override
   final String id;
   @override
   final String name;
   @override
-  final String apiKey;
-  @override
+  final String apiKey;  @override
   final String apiUrl;
   @override
   final String model;
+  @override
   final double temperature;
+  @override
   final int maxTokens;
   final String? hostOverride;
   @override
@@ -43,8 +30,6 @@ class AIProviderSettings implements AIProviderConfig {
     this.hostOverride,
     this.isEnabled = true,
   });
-
-  @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -138,6 +123,20 @@ class AIProviderSettings implements AIProviderConfig {
     ];
   }
 
+  /// 创建默认设置
+  static AIProviderSettings defaultSettings() {
+    return const AIProviderSettings(
+      id: 'default',
+      name: '默认配置',
+      apiKey: '',
+      apiUrl: '',
+      model: '',
+      temperature: 0.7,
+      maxTokens: 1000,
+      isEnabled: false,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -194,83 +193,5 @@ class AIProviderSettings implements AIProviderConfig {
     }
     
     return adjustedData;
-  }
-}
-
-/// 多AI服务商管理器
-class MultiAISettings {
-  final List<AIProviderSettings> providers;
-  final String currentProviderId;
-  final int maxRetries;
-  final Duration retryDelay;
-  final bool enableFailover;
-  const MultiAISettings({
-    this.providers = const [],
-    this.currentProviderId = '',
-    this.maxRetries = 2,
-    this.retryDelay = const Duration(seconds: 3),
-    this.enableFailover = false, // 默认禁用自动故障转移，让用户手动控制
-  });
-
-  /// 获取当前活跃的服务商
-  AIProviderSettings? get currentProvider {
-    try {
-      return providers.firstWhere((p) => p.id == currentProviderId);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// 获取所有可用的服务商（有API Key且启用的）
-  List<AIProviderSettings> get availableProviders {
-    return providers
-        .where((p) => p.isEnabled && p.apiKey.isNotEmpty)
-        .toList();
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'providers': providers.map((p) => p.toJson()).toList(),
-      'currentProviderId': currentProviderId,
-      'maxRetries': maxRetries,
-      'retryDelay': retryDelay.inMilliseconds,
-      'enableFailover': enableFailover,
-    };
-  }
-
-  factory MultiAISettings.fromJson(Map<String, dynamic> map) {
-    return MultiAISettings(
-      providers: (map['providers'] as List<dynamic>?)
-              ?.map((p) => AIProviderSettings.fromJson(p as Map<String, dynamic>))
-              .toList() ??
-          [],
-      currentProviderId: map['currentProviderId'] ?? '',
-      maxRetries: map['maxRetries'] ?? 2,
-      retryDelay: Duration(milliseconds: map['retryDelay'] ?? 3000),
-      enableFailover: map['enableFailover'] ?? false, // 默认禁用故障转移
-    );
-  }
-  factory MultiAISettings.defaultSettings() {
-    // 初始化时不创建任何预设，让用户自己创建
-    return const MultiAISettings(
-      providers: [],
-      currentProviderId: '',
-    );
-  }
-
-  MultiAISettings copyWith({
-    List<AIProviderSettings>? providers,
-    String? currentProviderId,
-    int? maxRetries,
-    Duration? retryDelay,
-    bool? enableFailover,
-  }) {
-    return MultiAISettings(
-      providers: providers ?? this.providers,
-      currentProviderId: currentProviderId ?? this.currentProviderId,
-      maxRetries: maxRetries ?? this.maxRetries,
-      retryDelay: retryDelay ?? this.retryDelay,
-      enableFailover: enableFailover ?? this.enableFailover,
-    );
   }
 }

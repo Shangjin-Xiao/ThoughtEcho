@@ -3,7 +3,6 @@
 
 import 'package:flutter/foundation.dart';
 import '../services/api_key_manager.dart';
-import '../services/settings_service.dart';
 import '../models/ai_settings.dart';
 
 class ApiKeySaveLogicTest {

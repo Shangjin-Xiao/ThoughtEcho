@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/multi_ai_settings.dart';
 import '../services/settings_service.dart';
 
 /// 多provider设置管理器

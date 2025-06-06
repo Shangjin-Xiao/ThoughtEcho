@@ -213,7 +213,8 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
               ChangeNotifierProvider(create: (_) => clipboardService),
-              ChangeNotifierProvider(create: (_) => logService),              ChangeNotifierProvider(create: (_) => appTheme),
+              ChangeNotifierProvider(create: (_) => logService),
+              ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => AIAnalysisDatabaseService()),
               Provider.value(
                 value: mmkvService,
@@ -224,16 +225,12 @@ Future<void> main() async {
                 create:
                     (context) => AIService(
                       settingsService: context.read<SettingsService>(),
-                      locationService: context.read<LocationService>(),
-                      weatherService: context.read<WeatherService>(),
                     ),
                 update:
                     (context, settings, previous) =>
                         previous ??
                         AIService(
                           settingsService: settings,
-                          locationService: context.read<LocationService>(),
-                          weatherService: context.read<WeatherService>(),
                         ),
               ),
             ],
