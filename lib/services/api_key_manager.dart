@@ -16,10 +16,10 @@ class APIKeyManager {
 
   final SecureStorageService _secureStorage = SecureStorageService();
 
-  // 缓存机制
-  String? _cachedApiKey;
+  // 简化的缓存机制（仅用于安全存储的API Key）
+  String? _cachedSecureApiKey;
   DateTime? _cacheTime;
-  static const Duration _cacheTimeout = Duration(minutes: 5);
+  static const Duration _cacheTimeout = Duration(minutes: 10);
 
   /// 获取有效的API密钥
   ///
@@ -32,7 +32,7 @@ class APIKeyManager {
     try {
       // 检查缓存
       if (_isValidCache()) {
-        return _cachedApiKey!;
+        return _cachedSecureApiKey!;
       }
 
       await _secureStorage.ensureInitialized();
@@ -71,19 +71,35 @@ class APIKeyManager {
     return apiKey.isNotEmpty && _isValidApiKeyFormat(apiKey);
   }
 
+  /// 公共方法：验证API密钥格式
+  bool isValidApiKeyFormat(String apiKey) {
+    return _isValidApiKeyFormat(apiKey);
+  }
+
   /// 同步检查API密钥（仅用于UI快速判断）
   ///
-  /// 注意：此方法使用缓存，如果缓存无效会返回false
+  /// 注意：此方法使用缓存，如果缓存无效会尝试异步获取
   /// 对于准确的验证，请使用异步方法 hasValidApiKey()
   bool hasValidApiKeySync(AISettings settings) {
     // 检查缓存
     if (_isValidCache()) {
-      return _cachedApiKey!.isNotEmpty && _isValidApiKeyFormat(_cachedApiKey!);
+      return _cachedSecureApiKey!.isNotEmpty && _isValidApiKeyFormat(_cachedSecureApiKey!);
     }
 
-    // 如果没有缓存，检查设置中的密钥作为快速判断
-    return settings.apiKey.trim().isNotEmpty &&
-        _isValidApiKeyFormat(settings.apiKey);
+    // 如果没有缓存，尝试从安全存储同步获取（可能阻塞）
+    try {
+      // 检查设置中的密钥作为快速判断
+      if (settings.apiKey.trim().isNotEmpty && _isValidApiKeyFormat(settings.apiKey)) {
+        return true;
+      }
+
+      // 如果缓存失效且设置中没有密钥，返回false
+      // 避免在同步方法中进行异步操作
+      return false;
+    } catch (e) {
+      debugPrint('同步检查API密钥失败: $e');
+      return false;
+    }
   }
 
   /// 保存API密钥到安全存储
@@ -107,7 +123,7 @@ class APIKeyManager {
 
   /// 清除API密钥缓存
   void clearCache() {
-    _cachedApiKey = null;
+    _cachedSecureApiKey = null;
     _cacheTime = null;
   }
 
@@ -179,7 +195,7 @@ class APIKeyManager {
 
   /// 检查缓存是否有效
   bool _isValidCache() {
-    if (_cachedApiKey == null || _cacheTime == null) return false;
+    if (_cachedSecureApiKey == null || _cacheTime == null) return false;
 
     final now = DateTime.now();
     return now.difference(_cacheTime!) < _cacheTimeout;
@@ -187,7 +203,7 @@ class APIKeyManager {
 
   /// 更新缓存
   void _updateCache(String apiKey) {
-    _cachedApiKey = apiKey;
+    _cachedSecureApiKey = apiKey;
     _cacheTime = DateTime.now();
   }
 
@@ -236,7 +252,7 @@ class APIKeyManager {
         'format': _detectApiKeyFormat(effectiveKey),
       },
       'cache': {
-        'hasCachedKey': _cachedApiKey != null,
+        'hasCachedKey': _cachedSecureApiKey != null,
         'isValid': _isValidCache(),
         'cacheTime': _cacheTime?.toIso8601String(),
       },

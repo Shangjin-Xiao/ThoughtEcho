@@ -52,12 +52,35 @@ class AIService extends ChangeNotifier {
   }
 
   /// 同步检查API Key是否有效 (用于UI快速判断)
-  /// 使用API密钥管理器的缓存机制
+  /// 检查当前选中的AI服务商是否配置了有效的API Key
   bool hasValidApiKey() {
     try {
-      final settings = _settingsService.aiSettings;
-      return _apiKeyManager.hasValidApiKeySync(settings);
+      final multiSettings = _settingsService.multiAISettings;
+
+      // 检查当前provider的API Key
+      if (multiSettings.currentProvider != null) {
+        final currentProvider = multiSettings.currentProvider!;
+        final hasApiKey = currentProvider.apiKey.trim().isNotEmpty;
+        final isEnabled = currentProvider.isEnabled;
+        final isValidFormat = _apiKeyManager.isValidApiKeyFormat(currentProvider.apiKey);
+
+        debugPrint('API Key检查 - Provider: ${currentProvider.name}, '
+            'HasKey: $hasApiKey, Enabled: $isEnabled, ValidFormat: $isValidFormat');
+
+        return hasApiKey && isEnabled && isValidFormat;
+      }
+
+      // 如果没有当前provider，检查是否有任何可用的provider
+      final availableProviders = multiSettings.providers.where((p) =>
+          p.isEnabled &&
+          p.apiKey.trim().isNotEmpty &&
+          _apiKeyManager.isValidApiKeyFormat(p.apiKey)
+      ).toList();
+
+      debugPrint('API Key检查 - 无当前provider，可用providers: ${availableProviders.length}');
+      return availableProviders.isNotEmpty;
     } catch (e) {
+      debugPrint('检查API Key有效性失败: $e');
       return false;
     }
   }
@@ -124,16 +147,16 @@ class AIService extends ChangeNotifier {
   }
 
   // 新增：流式生成每日提示
-  Stream<String> streamGenerateDailyPrompt() async* {
-    try {
-      // 检查API Key是否有效
-      if (!hasValidApiKey()) {
-        debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
-        // 使用默认提示生成器
-        yield DailyPromptGenerator.getDefaultPrompt();
-        // 为了模拟流式效果，可以稍作延迟（可选）
-        await Future.delayed(const Duration(milliseconds: 50));
-      } else {
+  Stream<String> streamGenerateDailyPrompt() {
+    // 检查API Key是否有效
+    if (!hasValidApiKey()) {
+      debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
+      // 使用默认提示生成器
+      return Stream.value(DailyPromptGenerator.getDefaultPrompt());
+    }
+
+    return _requestHelper.executeStreamOperation(
+      operation: (controller) async {
         // 验证AI设置是否已初始化
         bool settingsValid = false;
         try {
@@ -149,57 +172,37 @@ class AIService extends ChangeNotifier {
         // 如果设置有效，调用AI生成流式提示
         if (settingsValid) {
           debugPrint('API Key有效，使用AI生成每日提示');
-          try {
-            await _validateSettings(); // 确保其他设置也有效
-            final settings = _settingsService.aiSettings;
+          final settings = _settingsService.aiSettings;
 
-            // 使用StreamController来桥接_makeStreamRequest的回调和async* stream
-            final controller = StreamController<String>.broadcast();
-
-            await _requestHelper.makeStreamRequest(
-              url: settings.apiUrl,
-              systemPrompt: AIPromptManager.dailyPromptGeneratorPrompt,
-              userMessage: '请给我一个今天的思考提示。',
-              settings: settings,
-              temperature: 1.0, // 可以调整温度以获得更有创意的提示
-              maxTokens: 100, // 限制提示的长度
-              onData: (chunk) {
-                // 当接收到数据块时，添加到StreamController
-                if (!controller.isClosed) {
-                  controller.add(chunk);
-                }
-              },
-              onComplete: (fullText) {
-                // 当流完成时
-                if (!controller.isClosed) {
-                  controller.close();
-                }
-              },
-              onError: (error) {
-                // 当发生错误时
-                if (!controller.isClosed) {
-                  controller.addError(error);
-                  controller.close();
-                }
-              },
-            );
-
-            // 通过yield* 将StreamController的流内容输出到async* stream
-            yield* controller.stream;
-          } catch (e) {
-            debugPrint('AI生成每日提示错误: $e');
-            // 在流中发送错误信息
-            yield* Stream.error(e);
-          }
+          await _requestHelper.makeStreamRequest(
+            url: settings.apiUrl,
+            systemPrompt: AIPromptManager.dailyPromptGeneratorPrompt,
+            userMessage: '请给我一个今天的思考提示。',
+            settings: settings,
+            onData: (text) => _requestHelper.handleStreamResponse(
+              controller: controller,
+              chunk: text,
+            ),
+            onComplete: (fullText) => _requestHelper.handleStreamComplete(
+              controller: controller,
+              fullText: fullText,
+            ),
+            onError: (error) => _requestHelper.handleStreamError(
+              controller: controller,
+              error: error,
+              context: 'AI生成每日提示',
+            ),
+            temperature: 1.0, // 可以调整温度以获得更有创意的提示
+            maxTokens: 100, // 限制提示的长度
+          );
         } else {
           // 如果设置无效，使用默认提示生成器
-          yield DailyPromptGenerator.getDefaultPrompt();
+          controller.add(DailyPromptGenerator.getDefaultPrompt());
+          controller.close();
         }
-      }
-    } catch (e) {
-      debugPrint('streamGenerateDailyPrompt主流程错误: $e');
-      yield* Stream.error(e);
-    }
+      },
+      context: '流式生成每日提示',
+    );
   }
 
   // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
@@ -295,7 +298,6 @@ class AIService extends ChangeNotifier {
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           settings: settings,
-          maxTokens: 2500,
           onData: (text) => _requestHelper.handleStreamResponse(
             controller: controller,
             chunk: text,
@@ -309,6 +311,7 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式生成洞察',
           ),
+          maxTokens: 2500,
         );
       },
       context: '流式生成洞察',
@@ -359,8 +362,6 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
           userMessage: userMessage,
           settings: settings,
-          temperature: 0.4, // 使用较低的温度确保格式一致性
-          maxTokens: 500,
           onData: (text) => _requestHelper.handleStreamResponse(
             controller: controller,
             chunk: text,
@@ -374,6 +375,8 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式分析来源',
           ),
+          temperature: 0.4, // 使用较低的温度确保格式一致性
+          maxTokens: 500,
         );
       },
       context: '流式分析来源',
@@ -423,7 +426,6 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.textPolishPrompt,
           userMessage: userMessage,
           settings: settings,
-          maxTokens: 1000,
           onData: (text) => _requestHelper.handleStreamResponse(
             controller: controller,
             chunk: text,
@@ -437,6 +439,7 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式润色文本',
           ),
+          maxTokens: 1000,
         );
       },
       context: '流式润色文本',
@@ -487,8 +490,6 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.textContinuationPrompt,
           userMessage: userMessage,
           settings: settings,
-          temperature: 0.8, // 使用较高的温度以增加创意性
-          maxTokens: 1000,
           onData: (text) => _requestHelper.handleStreamResponse(
             controller: controller,
             chunk: text,
@@ -502,6 +503,8 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式续写文本',
           ),
+          temperature: 0.8, // 使用较高的温度以增加创意性
+          maxTokens: 1000,
         );
       },
       context: '流式续写文本',
@@ -552,8 +555,6 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
           settings: settings,
-          temperature: 0.5,
-          maxTokens: 1000,
           onData: (text) => _requestHelper.handleStreamResponse(
             controller: controller,
             chunk: text,
@@ -567,6 +568,8 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式问答',
           ),
+          temperature: 0.5,
+          maxTokens: 1000,
         );
       },
       context: '流式问答',

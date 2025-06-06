@@ -1677,4 +1677,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
     // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
   }
+
+  @override
+  void dispose() {
+    // 释放QuillController
+    _controller.dispose();
+
+    // 释放TextEditingController
+    _authorController.dispose();
+    _workController.dispose();
+
+    super.dispose();
+  }
 }

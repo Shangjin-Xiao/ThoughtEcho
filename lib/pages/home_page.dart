@@ -83,8 +83,7 @@ class _HomePageState extends State<HomePage>
       setState(() {});
 
       // Listen to the stream and accumulate text
-      _promptSubscription = promptStream.listen(
-        (String chunk) {
+      _promptSubscription = promptStream.listen(        (String chunk) {
           // Append the new chunk and update state to trigger UI rebuild
           if (mounted) {
             setState(() {
@@ -109,9 +108,10 @@ class _HomePageState extends State<HomePage>
           }
         },        onDone: () {
           debugPrint('每日提示流完成');
-          // Stream finished, update loading state
+          // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
             setState(() {
+              _accumulatedPromptText = _accumulatedPromptText.trim(); // 去除前后空白字符
               _isGeneratingDailyPrompt = false; // Stop loading on done
             });
             // 移除每日思考生成完成的弹窗通知
@@ -357,17 +357,19 @@ class _HomePageState extends State<HomePage>
         });
       } catch (e) {
         // 显示错误信息
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('无法打开全屏编辑器: $e'),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: '重试',
-              onPressed: () => _showEditQuoteDialog(quote),
-              textColor: Colors.white,
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('无法打开全屏编辑器: $e'),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: '重试',
+                onPressed: () => _showEditQuoteDialog(quote),
+                textColor: Colors.white,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } else {
       // 否则，打开常规编辑对话框
@@ -748,20 +750,18 @@ class _HomePageState extends State<HomePage>
                                     textAlign: TextAlign.center,
                                   ),
                                 ],
-                              )
-                              : _accumulatedPromptText.isNotEmpty
+                              )                              : _accumulatedPromptText.isNotEmpty
                               ? Text(
-                                _accumulatedPromptText, // 直接显示累积的文本
+                                _accumulatedPromptText.trim(), // 去除前后空白字符和换行符
                                 style: theme.textTheme.bodyLarge, // 应用旧版文本样式
                                 textAlign: TextAlign.center,
                               )
                               : // 初始或错误状态且无文本时显示占位或错误信息
-                              Text(
-                                isAiConfigured && _accumulatedPromptText.isEmpty
+                              Text(                                isAiConfigured && _accumulatedPromptText.isEmpty
                                     ? '等待今日思考...'
                                     : _accumulatedPromptText.isEmpty
                                     ? '未获取到今日思考'
-                                    : _accumulatedPromptText, // 根据状态显示不同文本
+                                    : _accumulatedPromptText.trim(), // 根据状态显示不同文本，去除空白字符
                                 style: theme.textTheme.bodyLarge?.copyWith(
                                   color:
                                       _accumulatedPromptText.contains('失败')

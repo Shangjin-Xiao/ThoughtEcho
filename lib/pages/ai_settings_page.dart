@@ -6,6 +6,7 @@ import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
 import '../services/secure_storage_service.dart';
+import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
 
 class AISettingsPage extends StatefulWidget {
@@ -28,6 +29,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
   AIProviderSettings? _currentProvider;
   final Map<String, bool> _testingStatus = {};
   final Map<String, String?> _testResults = {};
+
+  // API Key状态显示
+  String _apiKeyStatus = '';
+  bool _isCheckingApiKey = false;
 
   // Updated presets list based on verification
   final List<Map<String, String>> aiPresets = [
@@ -98,6 +103,82 @@ class _AISettingsPageState extends State<AISettingsPage> {
     _multiSettings = settingsService.multiAISettings;
     _currentProvider = _multiSettings.currentProvider;
     debugPrint('当前provider: ${_currentProvider?.name ?? "无"}');
+    _updateApiKeyStatus();
+  }
+
+  void _updateApiKeyStatus() {
+    if (_currentProvider != null) {
+      final apiKey = _currentProvider!.apiKey.trim();
+      if (apiKey.isEmpty) {
+        _apiKeyStatus = '未配置API Key';
+      } else {
+        final apiKeyManager = APIKeyManager();
+        if (apiKeyManager.isValidApiKeyFormat(apiKey)) {
+          _apiKeyStatus = 'API Key格式有效 (${apiKey.length}字符)';
+        } else {
+          _apiKeyStatus = 'API Key格式无效';
+        }
+      }
+    } else {
+      _apiKeyStatus = '未选择服务商';
+    }
+  }
+
+  /// 检查当前API Key状态
+  Future<void> _checkApiKeyStatus() async {
+    setState(() {
+      _isCheckingApiKey = true;
+    });
+
+    try {
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final aiService = Provider.of<AIService>(context, listen: false);
+
+      // 获取当前设置
+      final multiSettings = settingsService.multiAISettings;
+      final hasValidKey = aiService.hasValidApiKey();
+
+      String statusMessage;
+      if (multiSettings.currentProvider == null) {
+        statusMessage = '❌ 未选择AI服务商';
+      } else {
+        final provider = multiSettings.currentProvider!;
+        final hasKey = provider.apiKey.trim().isNotEmpty;
+        final isEnabled = provider.isEnabled;
+
+        if (!isEnabled) {
+          statusMessage = '⚠️ 服务商已禁用';
+        } else if (!hasKey) {
+          statusMessage = '❌ 未配置API Key';
+        } else if (hasValidKey) {
+          statusMessage = '✅ API Key配置正确';
+        } else {
+          statusMessage = '❌ API Key格式无效';
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('API Key状态检查: $statusMessage'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('检查失败: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingApiKey = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -105,17 +186,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
       // 首先加载多provider设置
       _loadMultiSettings();
 
-      final secureStorage = SecureStorageService();
-      final secureApiKey = await secureStorage.getApiKey();
-
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;
 
-      final settings = Provider.of<SettingsService>(context, listen: false);
-      final aiSettings = settings.aiSettings;
-
       setState(() {
-        // 如果有当前provider，使用provider的设置
+        // 优先使用当前provider的设置
         if (_currentProvider != null) {
           _modelController.text = _currentProvider!.model;
           _apiUrlController.text = _currentProvider!.apiUrl;
@@ -123,27 +198,24 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _maxTokensController.text = _currentProvider!.maxTokens.toString();
           _hostOverride = _currentProvider!.hostOverride;
           _hostOverrideController.text = _hostOverride ?? '';
-        } else {
-          // 使用旧的AI设置作为后备
-          _modelController.text = aiSettings.model;
-          _apiUrlController.text = aiSettings.apiUrl;
-          _apiKeyController.text = secureApiKey ?? aiSettings.apiKey;
-          _maxTokensController.text = aiSettings.maxTokens.toString();
-          _hostOverride = aiSettings.hostOverride;
-          _hostOverrideController.text = _hostOverride ?? '';
-        }
 
-        try {
-          // Try to match preset based on API URL and potentially model if not empty
-          _selectedPreset =
-              aiPresets.firstWhere(
-                (p) =>
-                    p['apiUrl'] == _apiUrlController.text &&
-                    (p['model'] == _modelController.text ||
-                        (p['model'] == '' && _modelController.text.isNotEmpty)),
-              )['name'];
-        } catch (_) {
-          _selectedPreset = null; // No matching preset found (custom config)
+          // 尝试匹配预设
+          try {
+            _selectedPreset = aiPresets.firstWhere(
+              (p) => p['apiUrl'] == _apiUrlController.text,
+            )['name'];
+          } catch (_) {
+            _selectedPreset = null;
+          }
+        } else {
+          // 如果没有当前provider，使用默认值
+          _modelController.text = '';
+          _apiUrlController.text = '';
+          _apiKeyController.text = '';
+          _maxTokensController.text = '1000';
+          _hostOverride = null;
+          _hostOverrideController.text = '';
+          _selectedPreset = null;
         }
       });
     } catch (e) {
@@ -157,56 +229,57 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   Future<void> _saveSettings() async {
-    // 异步操作开始前，如果 context 可能在操作过程中变得无效，则先获取需要的服务实例
-    final settingsService = Provider.of<SettingsService>(
-      context,
-      listen: false,
-    );
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    // Validate numeric fields before parsing
-    final maxTokensText = _maxTokensController.text;
-    int? maxTokens = int.tryParse(maxTokensText);
-
-    // Basic validation feedback
-    if (maxTokensText.isNotEmpty && maxTokens == null) {
-      // 检查 mounted 状态
-      if (!mounted) return;
+    // 验证输入
+    if (_apiUrlController.text.trim().isEmpty) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('最大令牌数无效，请输入整数。')),
+        const SnackBar(content: Text('请输入API URL')),
       );
-      return; // Stop saving
+      return;
     }
 
-    // Use defaults if fields are empty or parsing failed
-    const double temperature = 0.7; // 固定温度值
-    maxTokens ??= 1000;
+    if (_apiKeyController.text.trim().isEmpty) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('请输入API Key')),
+      );
+      return;
+    }
+
+    // 验证最大令牌数
+    final maxTokensText = _maxTokensController.text.trim();
+    int maxTokens = 1000;
+    if (maxTokensText.isNotEmpty) {
+      final parsed = int.tryParse(maxTokensText);
+      if (parsed == null) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('最大令牌数必须是有效的整数')),
+        );
+        return;
+      }
+      maxTokens = parsed;
+    }
 
     try {
-      final String hostOverride = _hostOverrideController.text.trim();
-
-      // 始终保存API Key到安全存储（无论是否使用多provider）
-      if (_apiKeyController.text.isNotEmpty) {
-        final secureStorage = SecureStorageService();
-        await secureStorage.saveApiKey(_apiKeyController.text);
-      }
-
-      // 创建或更新provider到可用服务商列表
+      // 创建新的provider
       await _createOrUpdateProvider(
-        temperature,
+        0.7, // 固定温度值
         maxTokens,
-        hostOverride,
+        _hostOverrideController.text.trim(),
         settingsService,
-      ); // 在异步操作后检查 mounted 状态
+      );
+
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         const SnackBar(content: Text('新预设已创建并保存')),
       );
-      FocusScope.of(context).unfocus(); // Hide keyboard after saving
+      FocusScope.of(context).unfocus();
     } catch (e) {
-      // 在异步操作后检查 mounted 状态
       if (!mounted) return;
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('保存设置失败: $e')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('保存设置失败: $e')),
+      );
     }
   }
 
@@ -416,6 +489,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       _modelController.text = provider.model;
       _maxTokensController.text = provider.maxTokens.toString();
       _hostOverrideController.text = provider.hostOverride ?? '';
+      _updateApiKeyStatus();
     });
 
     if (!mounted) return;
@@ -426,6 +500,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 重命名provider
   Future<void> _renameProvider(AIProviderSettings provider) async {
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final TextEditingController nameController = TextEditingController(
       text: provider.name,
     );
@@ -470,10 +546,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       final updatedMultiSettings = _multiSettings.copyWith(
         providers: updatedProviders,
       );
-      final settingsService = Provider.of<SettingsService>(
-        context,
-        listen: false,
-      );
+
       await settingsService.saveMultiAISettings(updatedMultiSettings);
 
       if (!mounted) return;
@@ -485,9 +558,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('预设已重命名为 "$result"')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('预设已重命名为 "$result"')),
+      );
     }
 
     nameController.dispose();
@@ -495,6 +568,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 删除provider
   Future<void> _deleteProvider(AIProviderSettings provider) async {
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -517,7 +593,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     if (confirmed == true) {
       final updatedProviders =
-          _multiSettings.providers.where((p) => p.id != provider.id).toList();      // 如果删除的是当前provider，切换到第一个可用的provider或清空
+          _multiSettings.providers.where((p) => p.id != provider.id).toList();
+
+      // 如果删除的是当前provider，切换到第一个可用的provider或清空
       String? newCurrentProviderId = _multiSettings.currentProviderId;
       if (_currentProvider?.id == provider.id) {
         newCurrentProviderId =
@@ -528,10 +606,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
         providers: updatedProviders,
         currentProviderId: newCurrentProviderId,
       );
-      final settingsService = Provider.of<SettingsService>(
-        context,
-        listen: false,
-      );
+
       await settingsService.saveMultiAISettings(updatedMultiSettings);
 
       if (!mounted) return;
@@ -559,9 +634,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('预设 "${provider.name}" 已删除')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('预设 "${provider.name}" 已删除')),
+      );
     }
   }
 
@@ -628,8 +703,30 @@ class _AISettingsPageState extends State<AISettingsPage> {
                             '模型: ${_currentProvider!.model.isEmpty ? "未配置" : _currentProvider!.model}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
+                          Text(
+                            'API Key: $_apiKeyStatus',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _apiKeyStatus.contains('有效')
+                                  ? Colors.green
+                                  : _apiKeyStatus.contains('无效')
+                                      ? Colors.red
+                                      : Colors.orange,
+                            ),
+                          ),
                         ],
                       ),
+                    ),
+                    // API Key检查按钮
+                    IconButton(
+                      onPressed: _isCheckingApiKey ? null : _checkApiKeyStatus,
+                      icon: _isCheckingApiKey
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
+                      tooltip: '检查API Key状态',
                     ),
                   ],
                 ),

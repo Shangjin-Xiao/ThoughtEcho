@@ -86,9 +86,18 @@ class LegacyAIConfigWrapper implements AIConfig {
     adjustedData['temperature'] = adjustedData['temperature'] ?? temperature;
     adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? maxTokens;
 
+    // 确保stream参数是boolean类型
+    if (adjustedData.containsKey('stream')) {
+      adjustedData['stream'] = adjustedData['stream'] == true || adjustedData['stream'] == 'true';
+    }
+
     // Anthropic特殊处理
     if (apiUrl.contains('anthropic.com')) {
       adjustedData.remove('model');
+      // Anthropic API需要确保stream参数正确
+      if (adjustedData.containsKey('stream') && adjustedData['stream'] == true) {
+        adjustedData['stream'] = true; // 确保是boolean类型
+      }
     }
 
     return adjustedData;

@@ -70,6 +70,30 @@ class AINetworkManager {
       final adjustedData = config.adjustData(data);
       final finalUrl = urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
 
+      // 调试信息：检查stream参数类型
+      if (adjustedData.containsKey('stream')) {
+        debugPrint('Stream parameter type: ${adjustedData['stream'].runtimeType}, value: ${adjustedData['stream']}');
+        // 确保stream参数是boolean类型
+        final streamValue = adjustedData['stream'];
+        if (streamValue is String) {
+          debugPrint('Warning: stream parameter is String, converting to boolean');
+          adjustedData['stream'] = streamValue.toLowerCase() == 'true';
+        } else if (streamValue is! bool) {
+          debugPrint('Warning: stream parameter is not boolean (${streamValue.runtimeType}), setting to true');
+          adjustedData['stream'] = true;
+        }
+      }
+
+      // 验证其他关键参数的类型
+      if (adjustedData.containsKey('temperature') && adjustedData['temperature'] is! num) {
+        debugPrint('Warning: temperature parameter type issue, fixing');
+        adjustedData['temperature'] = 0.7;
+      }
+      if (adjustedData.containsKey('max_tokens') && adjustedData['max_tokens'] is! int) {
+        debugPrint('Warning: max_tokens parameter type issue, fixing');
+        adjustedData['max_tokens'] = 1000;
+      }
+
       final response = await _dio.post(
         finalUrl,
         data: adjustedData,
@@ -139,7 +163,7 @@ class AINetworkManager {
         timeout: timeout,
       );
       await _processStreamResponse(
-        response.data as Stream<List<int>>,
+        _getStreamFromResponse(response),
         onData,
         onComplete,
         onError,
@@ -156,7 +180,7 @@ class AINetworkManager {
         timeout: timeout,
       );
       await _processStreamResponse(
-        response.data as Stream<List<int>>,
+        _getStreamFromResponse(response),
         onData,
         onComplete,
         onError,
@@ -264,7 +288,7 @@ class AINetworkManager {
           timeout: timeout,
         );
         await _processStreamResponse(
-          response.data as Stream<List<int>>,
+          _getStreamFromResponse(response),
           onData,
           onComplete,
           onError,
@@ -297,7 +321,7 @@ class AINetworkManager {
             timeout: timeout,
           );
           await _processStreamResponse(
-            response.data as Stream<List<int>>,
+            _getStreamFromResponse(response),
             onData,
             onComplete,
             onError,
@@ -314,6 +338,18 @@ class AINetworkManager {
     
     throw lastError ?? Exception('所有AI服务商都不可用，请稍后重试或检查网络连接');
   }
+  /// 从响应中获取流数据
+  static Stream<List<int>> _getStreamFromResponse(Response response) {
+    final data = response.data;
+    if (data is Stream<List<int>>) {
+      return data;
+    } else if (data is ResponseBody) {
+      return data.stream;
+    } else {
+      throw Exception('无法从响应中获取流数据，响应类型: ${data.runtimeType}');
+    }
+  }
+
   /// 隐藏敏感信息
   static void _hideSensitiveInfo(Map<String, dynamic> headers) {
     if (headers.containsKey('Authorization')) {
@@ -337,36 +373,82 @@ class AINetworkManager {
 
     stream.listen(
       (data) {
-        final chunk = utf8.decode(data, allowMalformed: true);
-        final lines = (partialLine + chunk).split('\n');
-        partialLine = lines.removeLast();
+        try {
+          final chunk = utf8.decode(data, allowMalformed: true);
+          final lines = (partialLine + chunk).split('\n');
+          partialLine = lines.removeLast();
 
-        for (final line in lines) {
-          if (line.startsWith('data:')) {
-            final jsonStr = line.substring(5).trim();
-            if (jsonStr == '[DONE]') {
-              onComplete(buffer.toString());
-              completer.complete();
-              return;
-            }
-            try {
-              final json = jsonDecode(jsonStr);
-              final content = json['choices']?[0]?['delta']?['content'];
-              if (content != null && content.isNotEmpty) {
-                buffer.write(content);
-                onData(content);
+          for (final line in lines) {
+            if (line.startsWith('data:')) {
+              final jsonStr = line.substring(5).trim();
+              if (jsonStr == '[DONE]') {
+                onComplete(buffer.toString());
+                completer.complete();
+                return;
               }
-            } catch (e) {
-              debugPrint('解析流式响应JSON错误: $e');
+              try {
+                final json = jsonDecode(jsonStr);
+
+                // 处理OpenAI格式
+                final content = json['choices']?[0]?['delta']?['content'];
+                if (content != null) {
+                  if (content is String && content.isNotEmpty) {
+                    buffer.write(content);
+                    onData(content);
+                    continue;
+                  } else if (content is bool) {
+                    debugPrint('Warning: content字段是boolean类型: $content，跳过');
+                    continue;
+                  } else if (content is! String) {
+                    debugPrint('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
+                    final contentStr = content.toString();
+                    if (contentStr.isNotEmpty) {
+                      buffer.write(contentStr);
+                      onData(contentStr);
+                      continue;
+                    }
+                  }
+                }
+
+                // 处理Anthropic格式
+                final anthropicContent = json['delta']?['text'];
+                if (anthropicContent != null) {
+                  if (anthropicContent is String && anthropicContent.isNotEmpty) {
+                    buffer.write(anthropicContent);
+                    onData(anthropicContent);
+                    continue;
+                  } else if (anthropicContent is bool) {
+                    debugPrint('Warning: Anthropic text字段是boolean类型: $anthropicContent，跳过');
+                    continue;
+                  } else if (anthropicContent is! String) {
+                    debugPrint('Warning: Anthropic text字段类型异常: ${anthropicContent.runtimeType}，转换为字符串');
+                    final textStr = anthropicContent.toString();
+                    if (textStr.isNotEmpty) {
+                      buffer.write(textStr);
+                      onData(textStr);
+                      continue;
+                    }
+                  }
+                }
+
+              } catch (e) {
+                debugPrint('解析流式响应JSON错误: $e, JSON: $jsonStr');
+              }
+            } else if (line.isNotEmpty && line.trim() != '') {
+              debugPrint('未知流式响应格式: $line');
             }
-          } else if (line.isNotEmpty && line.trim() != '') {
-            debugPrint('未知流式响应格式: $line');
           }
+        } catch (e) {
+          debugPrint('处理流式数据块错误: $e');
+          onError(Exception('流式数据处理错误: $e'));
         }
       },
       onError: (error) {
+        debugPrint('流式响应错误: $error');
         onError(_handleError(error));
-        completer.completeError(_handleError(error));
+        if (!completer.isCompleted) {
+          completer.completeError(_handleError(error));
+        }
       },
       onDone: () {
         if (!completer.isCompleted) {
