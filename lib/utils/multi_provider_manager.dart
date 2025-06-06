@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
 import '../services/settings_service.dart';
+import '../services/api_key_manager.dart';
 
 /// 多provider设置管理器
 class MultiProviderManager {
@@ -39,15 +40,25 @@ class MultiProviderManager {
   ) async {
     try {
       final currentSettings = settingsService.multiAISettings;
-      
+
       // 查找对应的provider
       final providerIndex = currentSettings.providers.indexWhere((p) => p.id == providerId);
       if (providerIndex == -1) {
         debugPrint('未找到provider: $providerId');
         return;
       }
-      
-      // 更新API密钥
+
+      // 保存API密钥到安全存储
+      final apiKeyManager = APIKeyManager();
+      if (apiKey.trim().isNotEmpty) {
+        await apiKeyManager.saveProviderApiKey(providerId, apiKey);
+        debugPrint('已保存 $providerId 的API密钥到安全存储');
+      } else {
+        await apiKeyManager.removeProviderApiKey(providerId);
+        debugPrint('已删除 $providerId 的API密钥');
+      }
+
+      // 更新provider设置
       final updatedProviders = List<AIProviderSettings>.from(currentSettings.providers);
       updatedProviders[providerIndex] = updatedProviders[providerIndex].copyWith(
         apiKey: apiKey,
@@ -93,5 +104,21 @@ class MultiProviderManager {
   
   static AIProviderSettings? getCurrentProvider(SettingsService settingsService) {
     return settingsService.multiAISettings.currentProvider;
+  }
+
+  /// 获取当前供应商的有效API密钥（从安全存储获取）
+  static Future<String> getCurrentProviderApiKey(SettingsService settingsService) async {
+    try {
+      final currentProvider = settingsService.multiAISettings.currentProvider;
+      if (currentProvider == null) {
+        return '';
+      }
+
+      final apiKeyManager = APIKeyManager();
+      return await apiKeyManager.getProviderApiKey(currentProvider.id);
+    } catch (e) {
+      debugPrint('获取当前供应商API密钥失败: $e');
+      return '';
+    }
   }
 }

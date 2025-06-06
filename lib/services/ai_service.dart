@@ -27,24 +27,29 @@ class AIService extends ChangeNotifier {
 
   Future<void> _validateSettings() async {
     try {
-      final settings = _settingsService.aiSettings;
+      final multiSettings = _settingsService.multiAISettings;
 
-      // 检查API Key是否存在（使用统一的API密钥管理器）
-      final hasApiKey = await _apiKeyManager.hasValidApiKey(settings);
+      if (multiSettings.currentProvider == null) {
+        throw Exception('请先选择AI服务商');
+      }
 
+      final currentProvider = multiSettings.currentProvider!;
+
+      // 检查API Key是否存在
+      final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(currentProvider.id);
       if (!hasApiKey) {
-        throw Exception('请先在设置中配置 API Key');
+        throw Exception('请先为 ${currentProvider.name} 配置 API Key');
       }
 
-      if (settings.apiUrl.isEmpty) {
-        throw Exception('请先在设置中配置 API URL');
+      if (currentProvider.apiUrl.isEmpty) {
+        throw Exception('请先配置 API URL');
       }
 
-      if (settings.model.isEmpty) {
-        throw Exception('请先在设置中配置 AI 模型');
+      if (currentProvider.model.isEmpty) {
+        throw Exception('请先配置 AI 模型');
       }
     } catch (e) {
-      if (e.toString().contains('请先在设置中配置')) {
+      if (e.toString().contains('请先')) {
         rethrow;
       }
       throw Exception('AI设置尚未初始化，请稍后再试: $e');
@@ -53,6 +58,7 @@ class AIService extends ChangeNotifier {
 
   /// 同步检查API Key是否有效 (用于UI快速判断)
   /// 检查当前选中的AI服务商是否配置了有效的API Key
+  /// 注意：这个方法现在会异步检查MMKV存储，但为了保持接口兼容性仍返回bool
   bool hasValidApiKey() {
     try {
       final multiSettings = _settingsService.multiAISettings;
@@ -60,21 +66,25 @@ class AIService extends ChangeNotifier {
       // 检查当前provider的API Key
       if (multiSettings.currentProvider != null) {
         final currentProvider = multiSettings.currentProvider!;
-        final hasApiKey = currentProvider.apiKey.trim().isNotEmpty;
-        final isEnabled = currentProvider.isEnabled;
-        final isValidFormat = _apiKeyManager.isValidApiKeyFormat(currentProvider.apiKey);
 
-        debugPrint('API Key检查 - Provider: ${currentProvider.name}, '
-            'HasKey: $hasApiKey, Enabled: $isEnabled, ValidFormat: $isValidFormat');
+        // 首先检查provider是否启用
+        if (!currentProvider.isEnabled) {
+          debugPrint('API Key检查 - 当前provider已禁用: ${currentProvider.name}');
+          return false;
+        }
 
-        return hasApiKey && isEnabled && isValidFormat;
+        // 检查provider配置中的API Key格式（作为快速预检）
+        final hasValidKeyFormat = _apiKeyManager.hasValidProviderApiKeySync(currentProvider);
+
+        // debugPrint('API Key检查 - Provider: ${currentProvider.name}, '
+        //     'HasValidKeyFormat: $hasValidKeyFormat, Enabled: ${currentProvider.isEnabled}');
+
+        return hasValidKeyFormat;
       }
 
       // 如果没有当前provider，检查是否有任何可用的provider
       final availableProviders = multiSettings.providers.where((p) =>
-          p.isEnabled &&
-          p.apiKey.trim().isNotEmpty &&
-          _apiKeyManager.isValidApiKeyFormat(p.apiKey)
+          p.isEnabled && _apiKeyManager.hasValidProviderApiKeySync(p)
       ).toList();
 
       debugPrint('API Key检查 - 无当前provider，可用providers: ${availableProviders.length}');
@@ -85,10 +95,36 @@ class AIService extends ChangeNotifier {
     }
   }
 
+  /// 异步检查当前供应商的API Key是否有效（从安全存储验证）
+  Future<bool> hasValidApiKeyAsync() async {
+    try {
+      final multiSettings = _settingsService.multiAISettings;
+
+      if (multiSettings.currentProvider != null) {
+        final currentProvider = multiSettings.currentProvider!;
+
+        // 从安全存储验证API密钥
+        final hasValidKey = await _apiKeyManager.hasValidProviderApiKey(currentProvider.id);
+        final isEnabled = currentProvider.isEnabled;
+
+        // debugPrint('异步API Key检查 - Provider: ${currentProvider.name}, '
+        //     'HasValidKey: $hasValidKey, Enabled: $isEnabled');
+
+        return hasValidKey && isEnabled;
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('异步检查API Key有效性失败: $e');
+      return false;
+    }
+  }
+
 
 
   Future<String> summarizeNote(Quote quote) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -112,12 +148,14 @@ class AIService extends ChangeNotifier {
   } // 流式笔记分析
 
   Stream<String> streamSummarizeNote(Quote quote) {
-    if (!hasValidApiKey()) {
-      return Stream.error(Exception('请先在设置中配置 API Key'));
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 在异步操作中验证API Key
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
@@ -152,15 +190,17 @@ class AIService extends ChangeNotifier {
     String? weather,
     String? temperature,
   }) {
-    // 检查API Key是否有效
-    if (!hasValidApiKey()) {
-      debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
-      // 使用默认提示生成器
-      return Stream.value(DailyPromptGenerator.getDefaultPrompt());
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 异步检查API Key是否有效
+        if (!await hasValidApiKeyAsync()) {
+          debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
+          // 使用默认提示生成器
+          controller.add(DailyPromptGenerator.getDefaultPrompt());
+          controller.close();
+          return;
+        }
+
         // 验证AI设置是否已初始化
         bool settingsValid = false;
         try {
@@ -235,7 +275,8 @@ class AIService extends ChangeNotifier {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
   }) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -278,12 +319,14 @@ class AIService extends ChangeNotifier {
     String analysisStyle = 'professional',
     String? customPrompt,
   }) {
-    if (!hasValidApiKey()) {
-      return Stream.error(Exception('请先在设置中配置 API Key'));
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 在异步操作中验证API Key
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
@@ -337,7 +380,8 @@ class AIService extends ChangeNotifier {
 
   // 分析文本来源
   Future<String> analyzeSource(String content) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -364,12 +408,14 @@ class AIService extends ChangeNotifier {
 
   // 流式分析来源
   Stream<String> streamAnalyzeSource(String content) {
-    if (!hasValidApiKey()) {
-      return Stream.error(Exception('请先在设置中配置 API Key'));
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 在异步操作中验证API Key
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
@@ -402,7 +448,8 @@ class AIService extends ChangeNotifier {
 
   // 润色文本
   Future<String> polishText(String content) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -428,12 +475,14 @@ class AIService extends ChangeNotifier {
 
   // 流式润色文本
   Stream<String> streamPolishText(String content) {
-    if (!hasValidApiKey()) {
-      return Stream.error(Exception('请先在设置中配置 API Key'));
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 在异步操作中验证API Key
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
@@ -465,7 +514,8 @@ class AIService extends ChangeNotifier {
 
   // 续写文本
   Future<String> continueText(String content) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -492,12 +542,14 @@ class AIService extends ChangeNotifier {
 
   // 流式续写文本
   Stream<String> streamContinueText(String content) {
-    if (!hasValidApiKey()) {
-      return Stream.error(Exception('请先在设置中配置 API Key'));
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 在异步操作中验证API Key
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
@@ -530,7 +582,8 @@ class AIService extends ChangeNotifier {
 
   // 向笔记提问
   Future<String> askQuestion(Quote quote, String question) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -557,12 +610,14 @@ class AIService extends ChangeNotifier {
 
   // 流式问答
   Stream<String> streamAskQuestion(Quote quote, String question) {
-    if (!hasValidApiKey()) {
-      return Stream.error(Exception('请先在设置中配置 API Key'));
-    }
-
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
+        // 在异步操作中验证API Key
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
@@ -595,7 +650,8 @@ class AIService extends ChangeNotifier {
 
   /// 测试与AI服务的连接
   Future<void> testConnection() async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -623,7 +679,8 @@ class AIService extends ChangeNotifier {
 
   /// 使用多provider测试连接
   Future<void> testConnectionWithMultiProvider() async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -662,7 +719,8 @@ class AIService extends ChangeNotifier {
 
   /// 使用多provider进行笔记分析（新版本）
   Future<String> summarizeNoteWithMultiProvider(Quote quote) async {
-    if (!hasValidApiKey()) {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
     }
 

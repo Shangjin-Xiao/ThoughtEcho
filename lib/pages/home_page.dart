@@ -681,112 +681,131 @@ class _HomePageState extends State<HomePage>
                 ),
         body: IndexedStack(
           index: _currentIndex,
-          children: [            // 首页 - 每日一言 和 每日提示
-            // 使用SingleChildScrollView包裹Column，让整个首页内容可滚动
-            SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                children: [                  // 每日一言部分
-                  DailyQuoteView(
-                    onAddQuote:
-                        (content, author, work, hitokotoData) =>
-                            _showAddQuoteDialog(
-                              prefilledContent: content,
-                              prefilledAuthor: author,
-                              prefilledWork: work,
-                              hitokotoData: hitokotoData,
-                            ),
-                    onRefreshRequested: () async {
-                      // 刷新每日提示
-                      await _fetchDailyPrompt();
-                    },
-                  ),
-
-                  // 每日提示部分 - 放在底部
-                  // 使用一个Padding包裹Container来提供外部边距
-                  Padding(
-                    padding: const EdgeInsets.all(
-                      16.0,
-                    ), // 提供与DailyQuoteView卡片相似的外部边距
-                    child: Container(
-                      padding: const EdgeInsets.all(16), // 应用旧版内边距
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface, // 应用旧版背景色
-                        borderRadius: BorderRadius.circular(16), // 应用旧版圆角
-                        boxShadow: AppTheme.defaultShadow, // 应用旧版阴影
+          children: [            // 首页 - 每日一言和每日提示
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final screenHeight = constraints.maxHeight;
+                final screenWidth = constraints.maxWidth;
+                final isSmallScreen = screenHeight < 600;
+                
+                return Column(
+                  children: [
+                    // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
+                    Expanded(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          minHeight: screenHeight * 0.45, // 最小45%高度
+                        ),
+                        child: DailyQuoteView(
+                          onAddQuote: (content, author, work, hitokotoData) =>
+                              _showAddQuoteDialog(
+                            prefilledContent: content,
+                            prefilledAuthor: author,
+                            prefilledWork: work,
+                            hitokotoData: hitokotoData,
+                          ),
+                          onRefreshRequested: () async {
+                            // 刷新每日提示
+                            await _fetchDailyPrompt();
+                          },
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center, // 内容居中
+                    ),
+                    
+                    // 每日提示部分 - 固定在底部，紧凑布局
+                    Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.fromLTRB(
+                        screenWidth > 600 ? 24.0 : 16.0,
+                        4.0, // 减少上边距
+                        screenWidth > 600 ? 24.0 : 16.0,
+                        12.0, // 减少下边距
+                      ),
+                      padding: EdgeInsets.all(
+                        screenWidth > 600 ? 18.0 : 14.0, // 减少内边距
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: AppTheme.defaultShadow,
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withAlpha(30),
+                          width: 1,
+                        ),
+                      ),                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.center, // 标题居中
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 Icons.lightbulb_outline,
                                 color: theme.colorScheme.primary,
+                                size: screenWidth > 600 ? 22 : 18,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
                                 '今日思考',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   color: theme.colorScheme.primary,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: screenWidth > 600 ? 16 : 15,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8), // 标题和提示内容之间的间距
-                          // 显示累积的每日提示文本或加载/错误状态
-                          _isGeneratingDailyPrompt &&
-                                  _accumulatedPromptText.isEmpty
+                          SizedBox(height: isSmallScreen ? 6 : 8),
+                          
+                          // 提示内容区域 - 更紧凑
+                          _isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty
                               ? Column(
-                                children: [
-                                  SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: theme.colorScheme.primary,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    isAiConfigured
-                                        ? '正在加载今日思考...'
-                                        : '正在获取默认提示...',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.7),
+                                    SizedBox(height: isSmallScreen ? 4 : 6),
+                                    Text(
+                                      isAiConfigured
+                                          ? '正在加载今日思考...'
+                                          : '正在获取默认提示...',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurface.withAlpha(160),
+                                        fontSize: screenWidth > 600 ? 13 : 12,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                    textAlign: TextAlign.center,
+                                  ],
+                                )
+                              : Text(
+                                  _accumulatedPromptText.isNotEmpty
+                                      ? _accumulatedPromptText.trim()
+                                      : (isAiConfigured 
+                                          ? '等待今日思考...' 
+                                          : '暂无今日思考'),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    height: 1.4,
+                                    fontSize: screenWidth > 600 ? 15 : 14,
+                                    color: _accumulatedPromptText.isNotEmpty
+                                        ? theme.textTheme.bodyMedium?.color
+                                        : theme.colorScheme.onSurface.withAlpha(120),
                                   ),
-                                ],
-                              )                              : _accumulatedPromptText.isNotEmpty
-                              ? Text(
-                                _accumulatedPromptText.trim(), // 去除前后空白字符和换行符
-                                style: theme.textTheme.bodyLarge, // 应用旧版文本样式
-                                textAlign: TextAlign.center,
-                              )
-                              : // 初始或错误状态且无文本时显示占位或错误信息
-                              Text(                                isAiConfigured && _accumulatedPromptText.isEmpty
-                                    ? '等待今日思考...'
-                                    : _accumulatedPromptText.isEmpty
-                                    ? '未获取到今日思考'
-                                    : _accumulatedPromptText.trim(), // 根据状态显示不同文本，去除空白字符
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color:
-                                      _accumulatedPromptText.contains('失败')
-                                          ? Colors.red
-                                          : theme.textTheme.bodyLarge?.color,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 3, // 限制最大行数
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
             // 笔记列表页
             Consumer<NoteSearchController>(

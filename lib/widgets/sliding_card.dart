@@ -36,27 +36,29 @@ class SlidingCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               boxShadow: AppTheme.defaultShadow,
               color: theme.cardColor,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.format_quote, size: 40),
-                const SizedBox(height: 16),
-                child,
-                const SizedBox(height: 16),
-                if (onSlideComplete != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      '← 左滑添加到笔记',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.applyOpacity(0.5),
-                        fontStyle: FontStyle.italic,
+            ),            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.format_quote, size: 40),
+                  const SizedBox(height: 16),
+                  child,
+                  const SizedBox(height: 16),
+                  if (onSlideComplete != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '← 左滑添加到笔记',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.applyOpacity(0.5),
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
