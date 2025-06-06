@@ -37,6 +37,12 @@ class _InsightsPageState extends State<InsightsPage>
   StreamSubscription<String>?
   _insightsSubscription; // Stream subscription for manual accumulation
 
+  // 用于逐字显示的变量
+  String _fullText = ''; // 完整的文本内容
+  String _displayedText = ''; // 当前显示的文本
+  Timer? _typewriterTimer; // 打字机效果定时器
+  int _currentCharIndex = 0; // 当前显示到的字符索引
+
   // 分析类型
   final List<Map<String, dynamic>> _analysisTypes = [
     {
@@ -340,7 +346,11 @@ class _InsightsPageState extends State<InsightsPage>
               _isLoading = false; // Stop full loading state on done
               _isGenerating = false; // Stop generating state on done
             });
-            // 移除洞察生成完成的弹窗通知
+
+            // 自动保存分析结果
+            if (_accumulatedInsightsText.isNotEmpty) {
+              _saveAnalysis(_accumulatedInsightsText);
+            }
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs
@@ -744,10 +754,7 @@ class _InsightsPageState extends State<InsightsPage>
           _insightsStream, // Listen to stream for connection state and errors
       builder: (context, snapshot) {
         // 根据生成状态和累积文本显示不同内容
-        if (_isGenerating && _accumulatedInsightsText.isEmpty) {
-          // 正在生成且还没有收到任何文本时，显示加载动画
-          return const AppLoadingView();
-        } else if (_accumulatedInsightsText.isNotEmpty) {
+        if (_accumulatedInsightsText.isNotEmpty) {
           // 已经有累积文本时，显示结果卡片
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -783,18 +790,15 @@ class _InsightsPageState extends State<InsightsPage>
                               IconButton(
                                 icon: const Icon(Icons.copy),
                                 tooltip: '复制到剪贴板',
-                                onPressed: () {                                  Clipboard.setData(
+                                onPressed: () {
+                                  Clipboard.setData(
                                     ClipboardData(
                                       text: _accumulatedInsightsText,
                                     ),
-                                  ).then((_) {
-                                    if (!mounted) return;
-                                    final scaffoldMessenger =
-                                        ScaffoldMessenger.of(context);
-                                    scaffoldMessenger.showSnackBar(
-                                      const SnackBar(content: Text('分析结果已复制')),
-                                    );
-                                  });
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('分析结果已复制')),
+                                  );
                                 },
                               ),
                             // 加载指示器在生成过程中显示
@@ -811,7 +815,7 @@ class _InsightsPageState extends State<InsightsPage>
                         ),
                         const Divider(),
                         const SizedBox(height: 8),
-                        // 这里使用 MarkdownBody 渲染累积的文本
+                        // 使用 MarkdownBody 渲染累积的文本
                         MarkdownBody(
                           data: _accumulatedInsightsText, // 使用累积的文本
                           selectable: true,
@@ -877,6 +881,9 @@ class _InsightsPageState extends State<InsightsPage>
               ),
             ),
           );
+        } else if (_isGenerating) {
+          // 正在生成但还没有收到任何文本时，显示加载动画
+          return const AppLoadingView();
         } else {
           // 初始状态或没有生成且没有累积文本时显示空状态
           return const AppEmptyView(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 /// 时间工具类，用于处理时间相关的功能
 class TimeUtils {
@@ -98,4 +99,26 @@ class TimeUtils {
         return Icons.access_time;
     }
   } */
+
+  // TODO: 优化：_formatTime 函数同时处理日期和时间格式化，职责可能过于混淆。考虑拆分为更具体的函数，例如 formatQuoteDate 和 formatQuoteTime。
+  static String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final aWeekAgo = now.subtract(const Duration(days: 7));
+
+    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    if (date.isAtSameMomentAs(today)) {
+      return DateFormat('HH:mm').format(dateTime); // 今天，显示时间
+    } else if (date.isAtSameMomentAs(yesterday)) {
+      return '昨天 ${DateFormat('HH:mm').format(dateTime)}'; // 昨天
+    } else if (dateTime.isAfter(aWeekAgo)) {
+      return DateFormat('EEEE HH:mm', 'zh_CN').format(dateTime); // 一周内，显示星期和时间
+    } else if (dateTime.year == now.year) {
+      return DateFormat('MM-dd HH:mm').format(dateTime); // 今年，显示月日和时间
+    } else {
+      return DateFormat('yyyy-MM-dd HH:mm').format(dateTime); // 往年，显示年月日和时间
+    }
+  }
 }

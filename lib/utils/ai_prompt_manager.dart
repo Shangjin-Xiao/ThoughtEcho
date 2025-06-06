@@ -18,7 +18,27 @@ class AIPromptManager {
 请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。''';
 
   /// 每日提示生成器提示词
-  static const String dailyPromptGeneratorPrompt = '''你是一位富有智慧和启发性的思考引导者，每天为用户提供一个简洁的、引发深度思考的提示或问题，帮助用户进行日记记录。提示词应该简短、有新意、不重复，直接提出一个问题或一个观察点，激发用户写作的灵感。例如："今天让你停下来思考的小事是什么？"或"一个你最近学到的、改变了你对某事的看法是什么？"。只提供一个提示，不需要任何前缀或解释。''';
+  static const String dailyPromptGeneratorPrompt = '''你是一位富有智慧和洞察力的思考引导者，擅长根据当下的环境和时间为用户提供深度启发的思考提示。你的任务是生成一个简洁而富有启发性的问题或观察点，帮助用户进行有意义的日记记录和自我反思。
+
+请根据以下信息生成一个个性化的思考提示：
+- 当前时间：{时间信息}
+- 天气状况：{天气信息}  
+- 用户位置：{位置信息}
+
+生成要求：
+1. 提示应该简洁有力，通常在15-30字之间
+2. 结合时间、天气、位置等环境因素，让提示更有针对性和情境感
+3. 避免陈词滥调，要有新意和深度
+4. 能够激发用户的情感共鸣和深度思考
+5. 语言要温暖、启发性强，带有一定的诗意
+6. 直接返回一个提示问题，不要任何前缀、解释或多余的文字
+
+示例风格：
+- 早晨晴天：此刻的阳光正好，什么想法也在你心中发芽？
+- 雨夜：听着雨声的夜晚，有什么心事想要诉说？
+- 午后：这个慵懒的午后，你最想感谢什么？
+
+请只返回一个精心设计的思考提示，不要包含任何其他内容。''';
 
   /// 连接测试提示词
   static const String connectionTestPrompt = '''你是一个AI助手。请简单回复"连接测试成功"。''';
@@ -226,5 +246,52 @@ $question''';
   /// 构建润色用户消息
   String buildPolishUserMessage(String content) {
     return '请润色以下文本：\n\n$content';
+  }
+
+  /// 构建每日提示用户消息，包含环境信息
+  String buildDailyPromptUserMessage({
+    String? city,
+    String? weather,
+    String? temperature,
+  }) {
+    return '请根据当前环境信息生成一个个性化的思考提示。';
+  }
+
+  /// 获取包含环境信息的每日提示系统提示词
+  String getDailyPromptSystemPromptWithContext({
+    String? city,
+    String? weather,
+    String? temperature,
+  }) {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final minute = now.minute;
+    
+    // 格式化时间信息
+    String timeInfo;
+    if (hour >= 5 && hour < 12) {
+      timeInfo = '早晨 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    } else if (hour >= 12 && hour < 18) {
+      timeInfo = '下午 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    } else if (hour >= 18 && hour < 23) {
+      timeInfo = '晚上 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    } else {
+      timeInfo = '深夜 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    }
+    
+    // 格式化天气信息
+    String weatherInfo = weather ?? '未知';
+    if (temperature != null) {
+      weatherInfo += '，温度$temperature';
+    }
+    
+    // 格式化位置信息
+    String locationInfo = city ?? '未知地点';
+    
+    // 替换模板中的占位符
+    return dailyPromptGeneratorPrompt
+        .replaceAll('{时间信息}', timeInfo)
+        .replaceAll('{天气信息}', weatherInfo)
+        .replaceAll('{位置信息}', locationInfo);
   }
 }

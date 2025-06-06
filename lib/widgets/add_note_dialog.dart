@@ -198,12 +198,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             });
           }
         }
-      }
-
-      // 重要：添加标签后，刷新标签数据，确保UI能获取到最新的标签
-      setState(() {
-        _tagFuture = db.getCategories();
-      });
+      }      // 优化：移除重新创建Future的代码，DatabaseService会通过notifyListeners()自动更新UI
+      // DatabaseService已经继承ChangeNotifier，当标签添加后会自动通知所有监听者更新UI
     } catch (e) {
       debugPrint('添加默认标签失败: $e');
     }

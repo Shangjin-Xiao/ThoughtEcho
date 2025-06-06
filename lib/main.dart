@@ -17,6 +17,7 @@ import 'services/mmkv_service.dart';
 import 'services/clipboard_service.dart';
 import 'services/log_service.dart';
 import 'services/ai_analysis_database_service.dart';
+import 'services/network_service.dart';
 import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
@@ -162,6 +163,9 @@ Future<void> main() async {
         // 初始化轻量级且必须的服务
         final mmkvService = MMKVService();
         await mmkvService.init();
+
+        // 初始化网络服务
+        await NetworkService.instance.init();
 
         // 初始化设置服务
         final settingsService = await SettingsService.create();
