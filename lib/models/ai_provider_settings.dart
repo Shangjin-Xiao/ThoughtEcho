@@ -180,18 +180,27 @@ class AIProviderSettings implements AIConfig {
   @override
   Map<String, dynamic> adjustData(Map<String, dynamic> data) {
     final adjustedData = Map<String, dynamic>.from(data);
-    
+
     // 确保包含必要的字段
     adjustedData['model'] = adjustedData['model'] ?? model;
     adjustedData['temperature'] = adjustedData['temperature'] ?? temperature;
     adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? maxTokens;
-    
+
+    // 确保stream参数是boolean类型
+    if (adjustedData.containsKey('stream')) {
+      adjustedData['stream'] = adjustedData['stream'] == true || adjustedData['stream'] == 'true';
+    }
+
     // Anthropic特殊处理
     if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
       // Anthropic API不在请求体中包含model，而是在URL中
       adjustedData.remove('model');
+      // Anthropic API需要确保stream参数正确
+      if (adjustedData.containsKey('stream') && adjustedData['stream'] == true) {
+        adjustedData['stream'] = true; // 确保是boolean类型
+      }
     }
-    
+
     return adjustedData;
   }
 }

@@ -27,29 +27,43 @@ class StreamingTextDialog extends StatefulWidget {
 class _StreamingTextDialogState extends State<StreamingTextDialog> {
   String _currentText = '';
   bool _isStreamingComplete = false;
+  StreamSubscription<String>? _streamSubscription;
 
   @override
   void initState() {
     super.initState();
-    widget.textStream.listen(
+    _streamSubscription = widget.textStream.listen(
       (chunk) {
-        setState(() {
-          _currentText += chunk;
-        });
+        if (mounted) {
+          setState(() {
+            _currentText += chunk;
+          });
+        }
       },
       onDone: () {
-        setState(() {
-          _isStreamingComplete = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isStreamingComplete = true;
+          });
+        }
       },
       onError: (error) {
         debugPrint('流式传输错误: $error');
-        setState(() {
-          _currentText += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
-          _isStreamingComplete = true; // 标记完成以显示按钮
-        });
+        if (mounted) {
+          setState(() {
+            _currentText += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
+            _isStreamingComplete = true; // 标记完成以显示按钮
+          });
+        }
       },
     );
+  }
+
+  @override
+  void dispose() {
+    // 取消流订阅
+    _streamSubscription?.cancel();
+    super.dispose();
   }
 
   @override

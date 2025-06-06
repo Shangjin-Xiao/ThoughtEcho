@@ -130,7 +130,7 @@ class StreamingUtils {
         'model': body['model'],
         'messages': body['messages'],
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true,
+        'stream': true, // 确保是boolean类型
       };
       headers['anthropic-version'] = '2023-06-01';
       headers['x-api-key'] = apiKey;
@@ -141,7 +141,7 @@ class StreamingUtils {
         'messages': body['messages'],
         'temperature': body['temperature'] ?? 0.7,
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true,
+        'stream': true, // 确保是boolean类型
       };
       headers['Authorization'] = 'Bearer $apiKey';
       headers['HTTP-Referer'] = 'https://thoughtecho.app';
@@ -153,7 +153,17 @@ class StreamingUtils {
         'messages': body['messages'],
         'temperature': body['temperature'] ?? 0.7,
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true,
+        'stream': true, // 确保是boolean类型
+      };
+      headers['Authorization'] = 'Bearer $apiKey';
+    } else if (url.contains('siliconflow.cn')) {
+      // 硅基流动 API格式
+      requestBody = {
+        'model': body['model'],
+        'messages': body['messages'],
+        'temperature': body['temperature'] ?? 0.7,
+        'max_tokens': body['max_tokens'] ?? 2500,
+        'stream': true, // 确保是boolean类型
       };
       headers['Authorization'] = 'Bearer $apiKey';
     } else {
@@ -163,7 +173,7 @@ class StreamingUtils {
         'messages': body['messages'],
         'temperature': body['temperature'] ?? 0.7,
         'max_tokens': body['max_tokens'] ?? 2500,
-        'stream': true,
+        'stream': true, // 确保是boolean类型
       };
       headers['Authorization'] = 'Bearer $apiKey';
     }
@@ -183,11 +193,26 @@ class StreamingUtils {
   ) async {
     debugPrint('流式请求URL: $url');
 
+    // 验证和修复请求体中的数据类型
+    final validatedRequestBody = Map<String, dynamic>.from(requestBody);
+
+    // 确保stream参数是boolean类型
+    if (validatedRequestBody.containsKey('stream')) {
+      final streamValue = validatedRequestBody['stream'];
+      if (streamValue is String) {
+        validatedRequestBody['stream'] = streamValue.toLowerCase() == 'true';
+        debugPrint('Warning: 修复stream参数类型从String到boolean');
+      } else if (streamValue is! bool) {
+        validatedRequestBody['stream'] = true;
+        debugPrint('Warning: 修复stream参数类型到boolean');
+      }
+    }
+
     // 打印安全的请求信息（隐藏敏感信息）
     final safeHeaders = Map<String, String>.from(headers);
     _hideSensitiveInfo(safeHeaders);
     debugPrint('请求头: $safeHeaders');
-    debugPrint('请求体: ${json.encode(requestBody)}');
+    debugPrint('请求体: ${json.encode(validatedRequestBody)}');
 
     Dio? dio;
     CancelToken? cancelToken;
@@ -202,7 +227,7 @@ class StreamingUtils {
 
       final response = await dio.post(
         url,
-        data: requestBody,
+        data: validatedRequestBody,
         options: Options(headers: headers, responseType: ResponseType.stream),
         cancelToken: cancelToken,
       );
@@ -339,18 +364,41 @@ class StreamingUtils {
 
         // 新格式 (delta.content)
         if (choice['delta'] != null && choice['delta']['content'] != null) {
-          return choice['delta']['content'];
+          final content = choice['delta']['content'];
+          // 确保content是字符串类型
+          if (content is String) {
+            return content;
+          } else if (content is bool) {
+            debugPrint('Warning: content字段是boolean类型: $content，跳过');
+            return null;
+          } else {
+            debugPrint('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
+            return content.toString();
+          }
         }
 
         // 旧格式 (text)
         if (choice['text'] != null) {
-          return choice['text'];
+          final text = choice['text'];
+          if (text is String) {
+            return text;
+          } else if (text is bool) {
+            debugPrint('Warning: text字段是boolean类型: $text，跳过');
+            return null;
+          } else {
+            debugPrint('Warning: text字段类型异常: ${text.runtimeType}，转换为字符串');
+            return text.toString();
+          }
         }
       }
 
       return null;
     } catch (e) {
       debugPrint('解析流式数据失败: $e, 原始数据: $line');
+      // 检查是否是类型转换错误
+      if (e.toString().contains('type') && e.toString().contains('subtype')) {
+        debugPrint('检测到类型转换错误，可能是API响应格式问题');
+      }
       return null;
     }
   }

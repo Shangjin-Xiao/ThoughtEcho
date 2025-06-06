@@ -344,4 +344,11 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       return '[]';
     }
   }
+
+  @override
+  void dispose() {
+    // 关闭StreamController
+    _analysesController.close();
+    super.dispose();
+  }
 }

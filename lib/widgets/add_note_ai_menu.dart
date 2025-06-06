@@ -210,6 +210,9 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         }
       }
     } catch (e) {
+      // 确保组件仍然挂载在widget树上
+      if (!mounted) return;
+
       // 关闭加载对话框
       Navigator.of(context).pop();
 

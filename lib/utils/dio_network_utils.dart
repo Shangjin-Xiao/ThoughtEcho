@@ -96,8 +96,9 @@ class DioNetworkUtils {
   }) async {
     try {
       final headers = _buildHeaders(settings);
-      final streamData = {...data, 'stream': true};
-      
+      final streamData = Map<String, dynamic>.from(data);
+      streamData['stream'] = true; // 确保stream参数是boolean类型
+
       final response = await _dio.post(
         url,
         data: streamData,
@@ -231,25 +232,52 @@ class DioNetworkUtils {
   /// 从响应JSON中提取内容
   static String _extractContentFromResponse(Map<String, dynamic> jsonData) {
     // OpenAI格式
-    if (jsonData['choices'] != null && 
-        jsonData['choices'] is List && 
+    if (jsonData['choices'] != null &&
+        jsonData['choices'] is List &&
         jsonData['choices'].isNotEmpty) {
       final choice = jsonData['choices'][0];
       if (choice['delta'] != null && choice['delta']['content'] != null) {
-        return choice['delta']['content'].toString();
+        final content = choice['delta']['content'];
+        if (content is String) {
+          return content;
+        } else if (content is bool) {
+          debugPrint('Warning: OpenAI content字段是boolean类型: $content，跳过');
+          return '';
+        } else {
+          debugPrint('Warning: OpenAI content字段类型异常: ${content.runtimeType}，转换为字符串');
+          return content.toString();
+        }
       }
     }
-    
+
     // Anthropic格式
     if (jsonData['delta'] != null && jsonData['delta']['text'] != null) {
-      return jsonData['delta']['text'].toString();
+      final text = jsonData['delta']['text'];
+      if (text is String) {
+        return text;
+      } else if (text is bool) {
+        debugPrint('Warning: Anthropic text字段是boolean类型: $text，跳过');
+        return '';
+      } else {
+        debugPrint('Warning: Anthropic text字段类型异常: ${text.runtimeType}，转换为字符串');
+        return text.toString();
+      }
     }
-    
+
     // 其他格式
     if (jsonData['content'] != null) {
-      return jsonData['content'].toString();
+      final content = jsonData['content'];
+      if (content is String) {
+        return content;
+      } else if (content is bool) {
+        debugPrint('Warning: content字段是boolean类型: $content，跳过');
+        return '';
+      } else {
+        debugPrint('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
+        return content.toString();
+      }
     }
-    
+
     return '';
   }
 
@@ -482,7 +510,9 @@ class DioNetworkUtils {
   }) async {
     try {
       final headers = _buildHeadersForProvider(provider);
-      final adjustedData = _adjustDataForProvider({...data, 'stream': true}, provider);
+      final streamData = Map<String, dynamic>.from(data);
+      streamData['stream'] = true; // 确保stream参数是boolean类型
+      final adjustedData = _adjustDataForProvider(streamData, provider);
       final finalUrl = url.isNotEmpty ? url : provider.apiUrl;
       
       final response = await _dio.post(
@@ -544,16 +574,39 @@ class DioNetworkUtils {
 
   /// 为指定服务商调整请求数据
   static Map<String, dynamic> _adjustDataForProvider(
-    Map<String, dynamic> data, 
+    Map<String, dynamic> data,
     AIProviderSettings provider
   ) {
     final adjustedData = Map<String, dynamic>.from(data);
-    
+
     // 确保包含必要的字段
     adjustedData['model'] = adjustedData['model'] ?? provider.model;
     adjustedData['temperature'] = adjustedData['temperature'] ?? provider.temperature;
     adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? provider.maxTokens;
-    
+
+    // 确保stream参数是boolean类型
+    if (adjustedData.containsKey('stream')) {
+      adjustedData['stream'] = adjustedData['stream'] == true || adjustedData['stream'] == 'true';
+    }
+
+    // Anthropic特殊处理
+    if (provider.apiUrl.contains('anthropic.com') || provider.id == 'anthropic') {
+      adjustedData.remove('model');
+      // Anthropic API需要确保stream参数正确
+      if (adjustedData.containsKey('stream') && adjustedData['stream'] == true) {
+        adjustedData['stream'] = true; // 确保是boolean类型
+      }
+    }
+
+    // 硅基流动特殊处理
+    if (provider.apiUrl.contains('siliconflow.cn') || provider.name.contains('硅基流动')) {
+      // 硅基流动API需要确保stream参数正确
+      if (adjustedData.containsKey('stream')) {
+        adjustedData['stream'] = true; // 确保是boolean类型
+      }
+      debugPrint('硅基流动API请求数据: ${adjustedData.keys.join(', ')}');
+    }
+
     return adjustedData;
   }
 

@@ -101,28 +101,39 @@ class AIRequestHelper {
     int? maxTokens,
     String? model,
   }) async {
-    final messages = createMessages(
-      systemPrompt: systemPrompt,
-      userMessage: userMessage,
-    );
+    try {
+      final messages = createMessages(
+        systemPrompt: systemPrompt,
+        userMessage: userMessage,
+      );
 
-    final body = createRequestBody(
-      messages: messages,
-      temperature: temperature,
-      maxTokens: maxTokens,
-      model: model ?? settings.model,
-      stream: true,
-    );
+      final body = createRequestBody(
+        messages: messages,
+        temperature: temperature,
+        maxTokens: maxTokens,
+        model: model ?? settings.model,
+        stream: true,
+      );
 
-    await AINetworkManager.makeStreamRequest(
-      url: url,
-      data: body,
-      legacySettings: settings,
-      onData: onData,
-      onComplete: onComplete,
-      onError: onError,
-      timeout: defaultTimeout,
-    );
+      // 确保stream参数是boolean类型
+      if (body.containsKey('stream') && body['stream'] is! bool) {
+        debugPrint('Warning: stream parameter is not boolean, converting: ${body['stream']}');
+        body['stream'] = body['stream'] == true || body['stream'] == 'true';
+      }
+
+      await AINetworkManager.makeStreamRequest(
+        url: url,
+        data: body,
+        legacySettings: settings,
+        onData: onData,
+        onComplete: onComplete,
+        onError: onError,
+        timeout: defaultTimeout,
+      );
+    } catch (e) {
+      debugPrint('流式请求设置错误: $e');
+      onError(e);
+    }
   }
 
   /// 解析API响应
@@ -172,6 +183,11 @@ class AIRequestHelper {
   }) {
     if (context != null) {
       debugPrint('$context错误: $error');
+      // 添加更详细的错误信息
+      if (error.toString().contains('type') && error.toString().contains('subtype')) {
+        debugPrint('检测到类型转换错误，可能是stream参数类型问题');
+        debugPrint('错误详情: ${error.runtimeType} - $error');
+      }
     }
     if (!controller.isClosed) {
       controller.addError(error);
