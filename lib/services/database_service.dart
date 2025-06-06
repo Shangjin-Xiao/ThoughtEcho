@@ -2018,113 +2018,173 @@ class DatabaseService extends ChangeNotifier {
 
   /// 批量为旧笔记补全 dayPeriod 字段（根据 date 字段推算并写入）
   Future<void> patchQuotesDayPeriod() async {
-    final db = database;
-    final List<Map<String, dynamic>> maps = await db.query('quotes');
-    for (final map in maps) {
-      if (map['day_period'] == null || (map['day_period'] as String).isEmpty) {
-        // 解析时间
-        String? dateStr = map['date'];
-        if (dateStr == null || dateStr.isEmpty) continue;
-        DateTime? dt;
-        try {
-          dt = DateTime.parse(dateStr);
-        } catch (_) {
-          continue;
-        }
-        // 推算时间段key
-        final hour = dt.hour;
-        String dayPeriodKey;
-        if (hour >= 5 && hour < 8) {
-          dayPeriodKey = 'dawn';
-        } else if (hour >= 8 && hour < 12) {
-          dayPeriodKey = 'morning';
-        } else if (hour >= 12 && hour < 17) {
-          dayPeriodKey = 'afternoon';
-        } else if (hour >= 17 && hour < 20) {
-          dayPeriodKey = 'dusk';
-        } else if (hour >= 20 && hour < 23) {
-          dayPeriodKey = 'evening';
-        } else {
-          dayPeriodKey = 'midnight';
-        }
-        // 更新数据库
-        await db.update(
-          'quotes',
-          {'day_period': dayPeriodKey},
-          where: 'id = ?',
-          whereArgs: [map['id']],
-        );
+    try {
+      // 检查数据库是否已初始化
+      if (!_isInitialized || _database == null) {
+        throw Exception('数据库未初始化，无法执行 day_period 字段补全');
       }
+
+      final db = database;
+      final List<Map<String, dynamic>> maps = await db.query('quotes');
+
+      if (maps.isEmpty) {
+        debugPrint('没有需要补全 day_period 字段的记录');
+        return;
+      }
+
+      int patchedCount = 0;
+      for (final map in maps) {
+        if (map['day_period'] == null || (map['day_period'] as String).isEmpty) {
+          // 解析时间
+          String? dateStr = map['date'];
+          if (dateStr == null || dateStr.isEmpty) continue;
+          DateTime? dt;
+          try {
+            dt = DateTime.parse(dateStr);
+          } catch (_) {
+            continue;
+          }
+          // 推算时间段key
+          final hour = dt.hour;
+          String dayPeriodKey;
+          if (hour >= 5 && hour < 8) {
+            dayPeriodKey = 'dawn';
+          } else if (hour >= 8 && hour < 12) {
+            dayPeriodKey = 'morning';
+          } else if (hour >= 12 && hour < 17) {
+            dayPeriodKey = 'afternoon';
+          } else if (hour >= 17 && hour < 20) {
+            dayPeriodKey = 'dusk';
+          } else if (hour >= 20 && hour < 23) {
+            dayPeriodKey = 'evening';
+          } else {
+            dayPeriodKey = 'midnight';
+          }
+          // 更新数据库
+          await db.update(
+            'quotes',
+            {'day_period': dayPeriodKey},
+            where: 'id = ?',
+            whereArgs: [map['id']],
+          );
+          patchedCount++;
+        }
+      }
+
+      debugPrint('已补全 $patchedCount 条记录的 day_period 字段');
+    } catch (e) {
+      debugPrint('补全 day_period 字段失败: $e');
+      rethrow;
     }
   }
 
   /// 迁移旧数据dayPeriod字段为英文key
   Future<void> migrateDayPeriodToKey() async {
-    final db = database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'quotes',
-      columns: ['id', 'day_period'],
-    );
-    final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
-      (k, v) => MapEntry(v, k),
-    );
-    for (final map in maps) {
-      final id = map['id'] as String?;
-      final dayPeriod = map['day_period'] as String?;
-      if (id != null &&
-          dayPeriod != null &&
-          labelToKey.containsKey(dayPeriod)) {
-        final key = labelToKey[dayPeriod]!;
-        await db.update(
-          'quotes',
-          {'day_period': key},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
+    try {
+      // 检查数据库是否已初始化
+      if (!_isInitialized || _database == null) {
+        throw Exception('数据库未初始化，无法执行 dayPeriod 字段迁移');
       }
+
+      final db = database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'quotes',
+        columns: ['id', 'day_period'],
+      );
+
+      if (maps.isEmpty) {
+        debugPrint('没有需要迁移 dayPeriod 字段的记录');
+        return;
+      }
+
+      final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
+        (k, v) => MapEntry(v, k),
+      );
+
+      int migratedCount = 0;
+      for (final map in maps) {
+        final id = map['id'] as String?;
+        final dayPeriod = map['day_period'] as String?;
+        if (id != null &&
+            dayPeriod != null &&
+            labelToKey.containsKey(dayPeriod)) {
+          final key = labelToKey[dayPeriod]!;
+          await db.update(
+            'quotes',
+            {'day_period': key},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+          migratedCount++;
+        }
+      }
+      debugPrint('已完成 $migratedCount 条记录的 dayPeriod 字段 key 迁移');
+    } catch (e) {
+      debugPrint('迁移 dayPeriod 字段失败: $e');
+      rethrow;
     }
-    debugPrint('已完成旧数据dayPeriod字段的key迁移');
   }
 
   /// 迁移旧数据weather字段为英文key
   Future<void> migrateWeatherToKey() async {
-    if (kIsWeb) {
-      for (var i = 0; i < _memoryStore.length; i++) {
-        final q = _memoryStore[i];
-        if (q.weather != null &&
-            WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
+    try {
+      if (kIsWeb) {
+        int migratedCount = 0;
+        for (var i = 0; i < _memoryStore.length; i++) {
+          final q = _memoryStore[i];
+          if (q.weather != null &&
+              WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
+            final key =
+                WeatherService.weatherKeyToLabel.entries
+                    .firstWhere((e) => e.value == q.weather)
+                    .key;
+            _memoryStore[i] = q.copyWith(weather: key);
+            migratedCount++;
+          }
+        }
+        notifyListeners();
+        debugPrint('Web平台已完成 $migratedCount 条记录的 weather 字段 key 迁移');
+        return;
+      }
+
+      // 检查数据库是否已初始化
+      if (!_isInitialized || _database == null) {
+        throw Exception('数据库未初始化，无法执行 weather 字段迁移');
+      }
+
+      final db = database;
+      final maps = await db.query('quotes', columns: ['id', 'weather']);
+
+      if (maps.isEmpty) {
+        debugPrint('没有需要迁移 weather 字段的记录');
+        return;
+      }
+
+      int migratedCount = 0;
+      for (final m in maps) {
+        final id = m['id'] as String?;
+        final weather = m['weather'] as String?;
+        if (id != null &&
+            weather != null &&
+            WeatherService.weatherKeyToLabel.values.contains(weather)) {
           final key =
               WeatherService.weatherKeyToLabel.entries
-                  .firstWhere((e) => e.value == q.weather)
+                  .firstWhere((e) => e.value == weather)
                   .key;
-          _memoryStore[i] = q.copyWith(weather: key);
+          await db.update(
+            'quotes',
+            {'weather': key},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+          migratedCount++;
         }
       }
-      notifyListeners();
-      return;
+      debugPrint('已完成 $migratedCount 条记录的 weather 字段 key 迁移');
+    } catch (e) {
+      debugPrint('迁移 weather 字段失败: $e');
+      rethrow;
     }
-
-    final db = database;
-    final maps = await db.query('quotes', columns: ['id', 'weather']);
-    for (final m in maps) {
-      final id = m['id'] as String?;
-      final weather = m['weather'] as String?;
-      if (id != null &&
-          weather != null &&
-          WeatherService.weatherKeyToLabel.values.contains(weather)) {
-        final key =
-            WeatherService.weatherKeyToLabel.entries
-                .firstWhere((e) => e.value == weather)
-                .key;
-        await db.update(
-          'quotes',
-          {'weather': key},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-      }
-    }
-    debugPrint('已完成旧数据weather字段的key迁移');
   }
 
   /// 根据 ID 获取分类

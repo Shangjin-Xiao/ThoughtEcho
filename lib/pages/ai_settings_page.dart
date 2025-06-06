@@ -5,7 +5,7 @@ import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
-import '../services/secure_storage_service.dart';
+
 import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
 
@@ -104,6 +104,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     _currentProvider = _multiSettings.currentProvider;
     debugPrint('当前provider: ${_currentProvider?.name ?? "无"}');
     _updateApiKeyStatus();
+
+    // 异步更新API Key状态
+    _updateApiKeyStatusAsync();
   }
 
   void _updateApiKeyStatus() {
@@ -124,6 +127,32 @@ class _AISettingsPageState extends State<AISettingsPage> {
     }
   }
 
+  /// 异步更新API Key状态（从安全存储验证）
+  Future<void> _updateApiKeyStatusAsync() async {
+    if (_currentProvider != null) {
+      final apiKeyManager = APIKeyManager();
+      final hasValidKey = await apiKeyManager.hasValidProviderApiKey(_currentProvider!.id);
+
+      if (hasValidKey) {
+        final secureApiKey = await apiKeyManager.getProviderApiKey(_currentProvider!.id);
+        _apiKeyStatus = 'API Key有效 (${secureApiKey.length}字符)';
+      } else {
+        final configApiKey = _currentProvider!.apiKey.trim();
+        if (configApiKey.isEmpty) {
+          _apiKeyStatus = '未配置API Key';
+        } else {
+          _apiKeyStatus = 'API Key格式无效';
+        }
+      }
+    } else {
+      _apiKeyStatus = '未选择服务商';
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   /// 检查当前API Key状态
   Future<void> _checkApiKeyStatus() async {
     setState(() {
@@ -136,24 +165,32 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       // 获取当前设置
       final multiSettings = settingsService.multiAISettings;
-      final hasValidKey = aiService.hasValidApiKey();
 
       String statusMessage;
       if (multiSettings.currentProvider == null) {
         statusMessage = '❌ 未选择AI服务商';
       } else {
         final provider = multiSettings.currentProvider!;
-        final hasKey = provider.apiKey.trim().isNotEmpty;
-        final isEnabled = provider.isEnabled;
 
-        if (!isEnabled) {
+        if (!provider.isEnabled) {
           statusMessage = '⚠️ 服务商已禁用';
-        } else if (!hasKey) {
-          statusMessage = '❌ 未配置API Key';
-        } else if (hasValidKey) {
-          statusMessage = '✅ API Key配置正确';
         } else {
-          statusMessage = '❌ API Key格式无效';
+          // 使用异步方法从安全存储验证API密钥
+          final hasValidKey = await aiService.hasValidApiKeyAsync();
+
+          if (hasValidKey) {
+            statusMessage = '✅ API Key有效 (已验证)';
+          } else {
+            // 检查是否有API密钥配置
+            final apiKeyManager = APIKeyManager();
+            final secureApiKey = await apiKeyManager.getProviderApiKey(provider.id);
+
+            if (secureApiKey.isEmpty && provider.apiKey.trim().isEmpty) {
+              statusMessage = '❌ 未配置API Key';
+            } else {
+              statusMessage = '❌ API Key格式无效';
+            }
+          }
         }
       }
 
@@ -329,9 +366,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     await settingsService.saveMultiAISettings(updatedMultiSettings);
 
+    // 保存API密钥到安全存储
+    final apiKeyManager = APIKeyManager();
+    await apiKeyManager.saveProviderApiKey(newProvider.id, newProvider.apiKey);
+    debugPrint('已保存新provider的API密钥到安全存储');
+
     // 更新本地状态
     _multiSettings = updatedMultiSettings;
     _currentProvider = newProvider;
+
+    // 立即更新API Key状态显示（异步验证）
+    await _updateApiKeyStatusAsync();
 
     debugPrint('新provider已创建并设置为当前provider');
 
@@ -476,10 +521,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
     await settingsService.saveMultiAISettings(_multiSettings);
 
-    // 同步保存API Key到安全存储
+    // 使用APIKeyManager保存API Key到安全存储
     if (provider.apiKey.isNotEmpty) {
-      final secureStorage = SecureStorageService();
-      await secureStorage.saveApiKey(provider.apiKey);
+      final apiKeyManager = APIKeyManager();
+      await apiKeyManager.saveProviderApiKey(provider.id, provider.apiKey);
+      debugPrint('已保存 ${provider.name} 的API密钥到安全存储');
     }
 
     // 更新表单字段为新provider的设置
@@ -489,8 +535,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
       _modelController.text = provider.model;
       _maxTokensController.text = provider.maxTokens.toString();
       _hostOverrideController.text = provider.hostOverride ?? '';
-      _updateApiKeyStatus();
     });
+
+    // 异步更新API Key状态
+    await _updateApiKeyStatusAsync();
 
     if (!mounted) return;
     ScaffoldMessenger.of(

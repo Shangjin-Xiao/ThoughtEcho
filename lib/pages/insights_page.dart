@@ -37,11 +37,7 @@ class _InsightsPageState extends State<InsightsPage>
   StreamSubscription<String>?
   _insightsSubscription; // Stream subscription for manual accumulation
 
-  // 用于逐字显示的变量
-  String _fullText = ''; // 完整的文本内容
-  String _displayedText = ''; // 当前显示的文本
-  Timer? _typewriterTimer; // 打字机效果定时器
-  int _currentCharIndex = 0; // 当前显示到的字符索引
+
 
   // 分析类型
   final List<Map<String, dynamic>> _analysisTypes = [
@@ -139,6 +135,7 @@ class _InsightsPageState extends State<InsightsPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('分析结果已保存'),
+          duration: const Duration(seconds: 2), // 缩短显示时间
           action: SnackBarAction(
             label: '查看历史',
             onPressed: () {
@@ -417,6 +414,20 @@ class _InsightsPageState extends State<InsightsPage>
                     ),
                   ),
                   const Spacer(),
+                  // 历史分析入口
+                  IconButton(
+                    icon: const Icon(Icons.history),
+                    color: theme.primaryColor,
+                    tooltip: '分析历史',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AIAnalysisHistoryPage(),
+                        ),
+                      );
+                    },
+                  ),
                   _isGenerating
                       ? SizedBox(
                         width: 24,

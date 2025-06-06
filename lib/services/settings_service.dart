@@ -4,9 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
-import '../services/secure_storage_service.dart';
+
 import '../services/mmkv_service.dart';
-import '../services/api_key_manager.dart';
 
 class SettingsService extends ChangeNotifier {
   static const String _aiSettingsKey = 'ai_settings';
@@ -28,7 +27,7 @@ class SettingsService extends ChangeNotifier {
   late AppSettings _appSettings;
   late ThemeMode _themeMode;
   late MultiAISettings _multiAISettings; // 新增多provider设置
-  final SecureStorageService _secureStorage = SecureStorageService();
+
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
@@ -100,36 +99,24 @@ class SettingsService extends ChangeNotifier {
     _loadAppSettings();
     _loadThemeMode();
 
+
+
     notifyListeners();
   }
 
-  // 加载AI设置
+  // 加载AI设置（简化版，主要用于向后兼容）
   Future<void> _loadAISettings() async {
-    // 优先从MMKV加载数据
     final String? aiSettingsJson =
         _mmkv.getString(_aiSettingsKey) ?? _prefs.getString(_aiSettingsKey);
 
     if (aiSettingsJson != null) {
-      // 从JSON加载设置（不包含API密钥）
       final Map<String, dynamic> settingsMap = json.decode(aiSettingsJson);
-
-      // 创建基础设置对象
-      final baseSettings = AISettings.fromJson(settingsMap);
-
-      // 使用API密钥管理器获取完整的API密钥
-      final apiKeyManager = APIKeyManager();
-      final effectiveApiKey = await apiKeyManager.getEffectiveApiKey(
-        baseSettings,
-      );
-
-      // 创建包含完整API密钥的设置对象
-      _aiSettings = baseSettings.copyWith(apiKey: effectiveApiKey);
+      _aiSettings = AISettings.fromJson(settingsMap);
     } else {
       _aiSettings = AISettings.defaultSettings();
-      // 保存默认设置（不含API密钥）
       await _mmkv.setString(
         _aiSettingsKey,
-        json.encode(_aiSettings.copyWith(apiKey: '').toJson()),
+        json.encode(_aiSettings.toJson()),
       );
     }
   }
@@ -210,25 +197,17 @@ class SettingsService extends ChangeNotifier {
         debugPrint('主题设置已迁移到MMKV');
       }
 
-      // 迁移API密钥到安全存储
-      final apiKey = _prefs.getString('api_key');
-      if (apiKey != null && apiKey.isNotEmpty) {
-        await _secureStorage.saveApiKey(apiKey);
-        // 从普通存储中删除API密钥
-        await _prefs.remove('api_key');
-        debugPrint('API密钥已安全迁移到加密存储');
-      }
 
-      // 检查旧的数据库迁移Key，如果存在且为true，则设置新的Key并移除旧Key
+
+      // 检查旧的数据库迁移Key，如果存在且为true，则设置新的Key，但保留旧Key以保持兼容性
       if (_mmkv.containsKey(_databaseMigrationCompleteKey)) {
         final oldMigrationComplete =
             _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
         if (oldMigrationComplete) {
           await _mmkv.setBool(_initialDatabaseSetupCompleteKey, true);
+          debugPrint('已将旧的数据库迁移完成标记同步到新的初始设置完成标记');
         }
-        // 移除旧Key - 使用正确的 remove 方法
-        await _mmkv.remove(_databaseMigrationCompleteKey);
-        debugPrint('迁移旧的数据库迁移完成标记到新的初始设置完成标记');
+        // 注意：保留旧Key以保持兼容性，不移除
       }
 
       // 标记迁移完成
@@ -241,20 +220,8 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateAISettings(AISettings settings) async {
-    // 使用统一的API密钥管理器保存API密钥
-    final apiKeyManager = APIKeyManager();
-    await apiKeyManager.saveApiKeyFromSettings(settings);
-
-    // 创建不包含API密钥的设置副本
-    final settingsWithoutApiKey = settings.copyWith(apiKey: '');
-
-    // 保存不含API密钥的设置到MMKV存储
-    final jsonString = json.encode(settingsWithoutApiKey.toJson());
-    await _mmkv.setString(_aiSettingsKey, jsonString);
-
-    // 更新内存中的设置（保留完整API密钥）
     _aiSettings = settings;
-
+    await _mmkv.setString(_aiSettingsKey, json.encode(settings.toJson()));
     notifyListeners();
   }
 
@@ -332,9 +299,7 @@ class SettingsService extends ChangeNotifier {
 
     if (multiAiSettingsJson != null) {
       try {
-        final Map<String, dynamic> settingsMap = json.decode(
-          multiAiSettingsJson,
-        );
+        final Map<String, dynamic> settingsMap = json.decode(multiAiSettingsJson);
         _multiAISettings = MultiAISettings.fromJson(settingsMap);
       } catch (e) {
         debugPrint('加载多provider设置失败: $e');
@@ -342,7 +307,6 @@ class SettingsService extends ChangeNotifier {
         await saveMultiAISettings(_multiAISettings);
       }
     } else {
-      // 如果没有多provider设置，创建默认设置
       _multiAISettings = MultiAISettings.defaultSettings();
       await saveMultiAISettings(_multiAISettings);
     }
@@ -362,4 +326,5 @@ class SettingsService extends ChangeNotifier {
   Future<void> updateMultiAISettings(MultiAISettings settings) async {
     await saveMultiAISettings(settings);
   }
+
 }

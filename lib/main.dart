@@ -261,14 +261,17 @@ Future<void> main() async {
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
+            final hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
             debugPrint('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}');
+            debugPrint('引导流程状态: ${hasCompletedOnboarding ? "已完成" : "未完成"}');
 
             // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
-            if (settingsService.hasCompletedOnboarding() && !hasMigrated) {
+            if (hasCompletedOnboarding && !hasMigrated) {
+              debugPrint('引导已完成但数据库迁移未完成，开始后台数据库迁移...');
               try {
                 // 初始化数据库，这通常是最耗时的操作
                 await databaseService.init().timeout(
-                  const Duration(seconds: 5),
+                  const Duration(seconds: 10),
                   onTimeout: () {
                     throw TimeoutException('数据库初始化超时');
                   },
@@ -302,7 +305,7 @@ Future<void> main() async {
                   source: 'background_init',
                 );
               }
-            } else if (!settingsService.hasCompletedOnboarding()) {
+            } else if (!hasCompletedOnboarding) {
               // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
               debugPrint('等待引导流程中的数据库迁移...');
             } else {

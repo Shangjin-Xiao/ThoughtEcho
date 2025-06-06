@@ -1,18 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../utils/mmkv_adapter.dart';
 
-/// 安全存储服务，用于存储敏感信息如API密钥
+/// 安全存储服务，专门用于存储多供应商API密钥
 class SecureStorageService {
-  static final SecureStorageService _instance =
-      SecureStorageService._internal();
-  static const String _apiKeyKey = 'secure_api_key';
-  static const String _apiUrlKey = 'secure_api_url';
+  static final SecureStorageService _instance = SecureStorageService._internal();
+  static const String _providerApiKeysKey = 'provider_api_keys';
   late MMKVAdapter _storage;
   bool _initialized = false;
 
-  factory SecureStorageService() {
-    return _instance;
-  }
+  factory SecureStorageService() => _instance;
 
   SecureStorageService._internal() {
     _initStorage();
@@ -34,55 +31,79 @@ class SecureStorageService {
     }
   }
 
-  /// 保存API密钥
-  Future<void> saveApiKey(String key) async {
+  /// 保存指定供应商的API密钥
+  Future<void> saveProviderApiKey(String providerId, String apiKey) async {
     await ensureInitialized();
 
-    // 清理密钥（移除可能的空格和换行符）
-    final cleanedKey = key.trim();
-
-    if (cleanedKey != key) {
-      debugPrint('警告: 密钥已被清理，移除了前后空格或换行符');
+    final cleanedKey = apiKey.trim();
+    if (cleanedKey.isEmpty) {
+      await removeProviderApiKey(providerId);
+      return;
     }
 
-    await _storage.setString(_apiKeyKey, cleanedKey);
+    final existingKeys = await _getAllApiKeys();
+    existingKeys[providerId] = cleanedKey;
+
+    await _storage.setString(_providerApiKeysKey, _encodeApiKeysMap(existingKeys));
+    debugPrint('已保存 Provider $providerId 的API密钥');
   }
 
-  /// 获取API密钥
-  Future<String?> getApiKey() async {
+  /// 获取指定供应商的API密钥
+  Future<String?> getProviderApiKey(String providerId) async {
     await ensureInitialized();
-    final key = _storage.getString(_apiKeyKey);
+    final allKeys = await _getAllApiKeys();
+    return allKeys[providerId];
+  }
 
-    if (key != null) {
-      // 检查密钥完整性
-      if (key.contains('\n') || key.contains('\r')) {
-        debugPrint('警告: 存储的API密钥包含换行符！');
-      }
-      if (key.startsWith(' ') || key.endsWith(' ')) {
-        debugPrint('警告: 存储的API密钥包含前后空格！');
-      }
+  /// 删除指定供应商的API密钥
+  Future<void> removeProviderApiKey(String providerId) async {
+    await ensureInitialized();
+
+    final existingKeys = await _getAllApiKeys();
+    existingKeys.remove(providerId);
+
+    await _storage.setString(_providerApiKeysKey, _encodeApiKeysMap(existingKeys));
+    debugPrint('已删除 Provider $providerId 的API密钥');
+  }
+
+  /// 获取所有供应商的API密钥映射
+  Future<Map<String, String>> _getAllApiKeys() async {
+    await ensureInitialized();
+    final keysJson = _storage.getString(_providerApiKeysKey);
+
+    if (keysJson == null || keysJson.isEmpty) {
+      return <String, String>{};
     }
-    debugPrint('========================');
 
-    return key;
+    try {
+      return _decodeApiKeysMap(keysJson);
+    } catch (e) {
+      debugPrint('解析API密钥失败: $e');
+      return <String, String>{};
+    }
   }
 
-  /// 保存API URL
-  Future<void> saveApiUrl(String url) async {
-    await ensureInitialized();
-    await _storage.setString(_apiUrlKey, url);
+  /// 编码API密钥映射为JSON字符串
+  String _encodeApiKeysMap(Map<String, String> apiKeysMap) {
+    try {
+      return json.encode(apiKeysMap);
+    } catch (e) {
+      debugPrint('编码API密钥映射失败: $e');
+      return '{}';
+    }
   }
 
-  /// 获取API URL
-  Future<String?> getApiUrl() async {
-    await ensureInitialized();
-    return _storage.getString(_apiUrlKey);
-  }
-
-  /// 清除所有安全存储的数据
-  Future<void> clearAll() async {
-    await ensureInitialized();
-    await _storage.clear();
-    debugPrint('所有安全存储的数据已清除');
+  /// 解码JSON字符串为API密钥映射
+  Map<String, String> _decodeApiKeysMap(String jsonString) {
+    try {
+      final decoded = json.decode(jsonString);
+      if (decoded is Map<String, dynamic>) {
+        return decoded.map((key, value) => MapEntry(key, value.toString()));
+      }
+      return <String, String>{};
+    } catch (e) {
+      debugPrint('解码API密钥映射失败: $e');
+      return <String, String>{};
+    }
   }
 }

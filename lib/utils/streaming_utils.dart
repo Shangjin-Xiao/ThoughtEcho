@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
-import '../services/api_key_manager.dart';
+
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -109,10 +109,11 @@ class StreamingUtils {
     }
   }
 
-  /// 获取有效的API密钥（使用统一的API密钥管理器）
+  /// 获取有效的API密钥（使用多供应商API密钥管理器）
   static Future<String> _getEffectiveApiKey(AISettings settings) async {
-    final apiKeyManager = APIKeyManager();
-    return await apiKeyManager.getEffectiveApiKey(settings);
+    // 注意：这个方法现在已过时，应该使用多供应商API
+    // 为了向后兼容，返回空字符串
+    return '';
   }
 
   /// 根据不同的AI服务提供商调整请求格式

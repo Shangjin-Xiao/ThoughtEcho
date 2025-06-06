@@ -153,6 +153,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         if (needsMigration) {
           debugPrint('开始执行引导流程中的数据迁移...');
           try {
+            // 确保数据库已完全初始化后再执行迁移
+            if (!databaseService.isInitialized) {
+              throw Exception('数据库未完全初始化，无法执行迁移');
+            }
+
             // 补全旧数据字段
             await databaseService.patchQuotesDayPeriod();
             debugPrint('旧数据 dayPeriod 字段补全完成');
@@ -170,15 +175,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
               await settingsService.setInitialDatabaseSetupComplete(true);
               debugPrint('数据库初始设置标记完成');
             }
-            debugPrint('数据迁移成功完成');
+
+            // 重要：标记数据库迁移已完成，避免重复迁移
+            await settingsService.setDatabaseMigrationComplete(true);
+            debugPrint('数据迁移成功完成，已标记迁移状态');
 
           } catch (e, stackTrace) {
             debugPrint('引导流程中数据迁移失败: $e');
             logService.error('引导流程数据迁移失败', error: e, stackTrace: stackTrace);
+
             // 即使迁移失败，如果是首次设置，也标记完成，避免阻塞
             if (isFirstSetup) {
               await settingsService.setInitialDatabaseSetupComplete(true);
+              // 对于新用户，即使迁移失败也标记迁移完成，因为没有旧数据需要迁移
+              await settingsService.setDatabaseMigrationComplete(true);
+              debugPrint('首次设置：即使迁移失败也标记完成，避免阻塞新用户');
             }
+
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('数据格式更新时遇到问题'), backgroundColor: Colors.orange),
@@ -187,6 +200,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
           }
         } else {
           debugPrint('无需执行数据迁移');
+          // 即使无需迁移，也要确保标记迁移完成状态
+          if (!settingsService.isDatabaseMigrationComplete()) {
+            await settingsService.setDatabaseMigrationComplete(true);
+            debugPrint('无需迁移，已标记迁移完成状态');
+          }
         }
 
         // 迁移检查/执行完成后，如果版本号增加了，更新记录
