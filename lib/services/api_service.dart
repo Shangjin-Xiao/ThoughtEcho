@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../utils/http_utils.dart';
+import '../services/network_service.dart';
 
 class Request {
   const Request();
@@ -48,7 +48,7 @@ class ApiService {
       debugPrint('一言API请求URL: $apiUrl');
       
       // 使用带超时的HTTP请求
-      final response = await HttpUtils.secureGet(
+      final response = await NetworkService.instance.get(
         apiUrl,
         timeoutSeconds: _timeoutSeconds,
       ).catchError((error) {

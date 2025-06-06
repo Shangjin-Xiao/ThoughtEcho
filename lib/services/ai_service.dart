@@ -147,7 +147,11 @@ class AIService extends ChangeNotifier {
   }
 
   // 新增：流式生成每日提示
-  Stream<String> streamGenerateDailyPrompt() {
+  Stream<String> streamGenerateDailyPrompt({
+    String? city,
+    String? weather,
+    String? temperature,
+  }) {
     // 检查API Key是否有效
     if (!hasValidApiKey()) {
       debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
@@ -174,10 +178,23 @@ class AIService extends ChangeNotifier {
           debugPrint('API Key有效，使用AI生成每日提示');
           final settings = _settingsService.aiSettings;
 
+          // 获取包含环境信息的系统提示词
+          final systemPromptWithContext = _promptManager.getDailyPromptSystemPromptWithContext(
+            city: city,
+            weather: weather,
+            temperature: temperature,
+          );
+
+          final userMessage = _promptManager.buildDailyPromptUserMessage(
+            city: city,
+            weather: weather,
+            temperature: temperature,
+          );
+
           await _requestHelper.makeStreamRequest(
             url: settings.apiUrl,
-            systemPrompt: AIPromptManager.dailyPromptGeneratorPrompt,
-            userMessage: '请给我一个今天的思考提示。',
+            systemPrompt: systemPromptWithContext,
+            userMessage: userMessage,
             settings: settings,
             onData: (text) => _requestHelper.handleStreamResponse(
               controller: controller,
@@ -276,8 +293,8 @@ class AIService extends ChangeNotifier {
           analysisType: analysisType,
           analysisStyle: analysisStyle,
         );
-        // 添加自定义提示词使用标记
-        jsonData['metadata']['customPromptUsed'] = customPrompt != null && customPrompt.isNotEmpty;
+        // 添加自定义提示词使用标记（转换为字符串以避免类型错误）
+        jsonData['metadata']['customPromptUsed'] = (customPrompt != null && customPrompt.isNotEmpty).toString();
         final quotesText = _requestHelper.formatJsonData(jsonData);
 
         // 根据分析类型选择系统提示词 或 使用自定义提示词

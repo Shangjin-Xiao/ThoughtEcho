@@ -94,6 +94,19 @@ class AINetworkManager {
         adjustedData['max_tokens'] = 1000;
       }
 
+      // 验证JSON编码是否会出错
+      try {
+        final testJson = jsonEncode(adjustedData);
+        debugPrint('JSON编码测试成功，数据长度: ${testJson.length}');
+      } catch (e) {
+        debugPrint('JSON编码测试失败: $e');
+        debugPrint('数据类型检查:');
+        adjustedData.forEach((key, value) {
+          debugPrint('  $key: ${value.runtimeType} = $value');
+        });
+        throw Exception('请求数据JSON编码失败: $e');
+      }
+
       final response = await _dio.post(
         finalUrl,
         data: adjustedData,
@@ -391,44 +404,18 @@ class AINetworkManager {
 
                 // 处理OpenAI格式
                 final content = json['choices']?[0]?['delta']?['content'];
-                if (content != null) {
-                  if (content is String && content.isNotEmpty) {
-                    buffer.write(content);
-                    onData(content);
-                    continue;
-                  } else if (content is bool) {
-                    debugPrint('Warning: content字段是boolean类型: $content，跳过');
-                    continue;
-                  } else if (content is! String) {
-                    debugPrint('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
-                    final contentStr = content.toString();
-                    if (contentStr.isNotEmpty) {
-                      buffer.write(contentStr);
-                      onData(contentStr);
-                      continue;
-                    }
-                  }
+                if (content != null && content is String && content.isNotEmpty) {
+                  buffer.write(content);
+                  onData(content);
+                  continue;
                 }
 
                 // 处理Anthropic格式
                 final anthropicContent = json['delta']?['text'];
-                if (anthropicContent != null) {
-                  if (anthropicContent is String && anthropicContent.isNotEmpty) {
-                    buffer.write(anthropicContent);
-                    onData(anthropicContent);
-                    continue;
-                  } else if (anthropicContent is bool) {
-                    debugPrint('Warning: Anthropic text字段是boolean类型: $anthropicContent，跳过');
-                    continue;
-                  } else if (anthropicContent is! String) {
-                    debugPrint('Warning: Anthropic text字段类型异常: ${anthropicContent.runtimeType}，转换为字符串');
-                    final textStr = anthropicContent.toString();
-                    if (textStr.isNotEmpty) {
-                      buffer.write(textStr);
-                      onData(textStr);
-                      continue;
-                    }
-                  }
+                if (anthropicContent != null && anthropicContent is String && anthropicContent.isNotEmpty) {
+                  buffer.write(anthropicContent);
+                  onData(anthropicContent);
+                  continue;
                 }
 
               } catch (e) {

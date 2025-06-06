@@ -191,7 +191,7 @@ class DatabaseService extends ChangeNotifier {
             source TEXT,
             source_author TEXT,
             source_work TEXT,
-            tag_ids TEXT DEFAULT '',
+            tag_ids TEXT DEFAULT '', -- TODO: 优化：将tag_ids从逗号分隔字符串改为独立的quote_tags关联表，以提高查询效率和数据一致性。
             ai_analysis TEXT,
             sentiment TEXT,
             keywords TEXT,
@@ -213,6 +213,7 @@ class DatabaseService extends ChangeNotifier {
         await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
         // 虽然tag_ids是一个文本字段，但我们也可以为它创建索引，以加速LIKE查询
         await db.execute('CREATE INDEX idx_quotes_tag_ids ON quotes(tag_ids)');
+        // TODO: 优化：添加quote_tags表以实现笔记和标签的多对多关系，并为新表创建索引。
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
@@ -331,6 +332,7 @@ class DatabaseService extends ChangeNotifier {
           await db.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
           debugPrint('数据库升级：delta_content 字段添加完成');
         }
+        // TODO: 优化：在数据库升级时，如果版本低于某个值，创建quote_tags表并迁移现有tag_ids数据。
       },
     );
   }
@@ -1470,6 +1472,22 @@ class DatabaseService extends ChangeNotifier {
     String? categoryId,
     String? searchQuery,
   }) async {
+    if (kIsWeb) {
+      // TODO: 优化：Web平台目前通过加载所有笔记进行计数，效率低下。考虑优化Web端的计数逻辑，例如使用IndexedDB或其他Web存储来维护更高效的计数。
+      // 在Web平台，我们无法直接查询SQL，所以需要加载所有数据来计数
+      List<Quote> allQuotes = [];
+      await for (final quotes in watchQuotes(
+        tagIds: tagIds,
+        categoryId: categoryId,
+        searchQuery: searchQuery,
+        limit: 99999999, // 尝试获取所有
+      )) {
+        allQuotes.addAll(quotes);
+      }
+      // 确保返回的列表不包含重复项
+      final uniqueQuotes = allQuotes.toSet().toList();
+      return uniqueQuotes.length;
+    }
     try {
       if (kIsWeb) {
         return (await getUserQuotes(
@@ -1774,9 +1792,9 @@ class DatabaseService extends ChangeNotifier {
         try {
           if (!kIsWeb) {
             // 检查并迁移天气数据
-            await _checkAndMigrateWeatherData();
+            await _checkAndMigrateWeatherData(); // 待移除
             // 检查并迁移时间段数据
-            await _checkAndMigrateDayPeriodData();
+            await _checkAndMigrateDayPeriodData(); // 待移除
             // 补全缺失的时间段数据
             await patchQuotesDayPeriod();
           }

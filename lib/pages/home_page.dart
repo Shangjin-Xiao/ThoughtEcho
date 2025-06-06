@@ -50,7 +50,6 @@ class _HomePageState extends State<HomePage>
   StreamSubscription<String>?
   _promptSubscription; // Stream subscription for daily prompt
   bool _isGeneratingDailyPrompt = false; // Loading state for daily prompt
-
   // 获取每日提示的方法
   Future<void> _fetchDailyPrompt({bool initialLoad = false}) async {
     // 如果是初始加载，并且已经有订阅或累积文本，则不重复加载
@@ -72,8 +71,20 @@ class _HomePageState extends State<HomePage>
 
     try {
       final aiService = context.read<AIService>();
-      // Call the new stream method
-      final Stream<String> promptStream = aiService.streamGenerateDailyPrompt();
+      final locationService = context.read<LocationService>();
+      final weatherService = context.read<WeatherService>();
+      
+      // 获取环境信息
+      String? city = locationService.city;
+      String? weather = weatherService.currentWeather;
+      String? temperature = weatherService.temperature;
+      
+      // Call the new stream method with environment context
+      final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
+        city: city,
+        weather: weather,
+        temperature: temperature,
+      );
 
       if (!mounted) {
         return; // Ensure mounted before setting stream and listening

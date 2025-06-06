@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
-import '../utils/http_utils.dart';
+import '../services/network_service.dart';
 // import '../utils/dio_network_utils.dart'; // 导入dio网络工具
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
 
@@ -274,7 +274,7 @@ class LocationService extends ChangeNotifier {
     try {      final url =
           'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
 
-      final response = await HttpUtils.secureGet(
+      final response = await NetworkService.instance.get(
         url,
         headers: {
           'Accept-Language': 'zh-CN,zh;q=0.9',
@@ -353,7 +353,7 @@ class LocationService extends ChangeNotifier {
       final url =
           'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=10&language=zh&format=json';
 
-      final response = await HttpUtils.secureGet(url, timeoutSeconds: 10);
+      final response = await NetworkService.instance.get(url, timeoutSeconds: 10);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -417,7 +417,7 @@ class LocationService extends ChangeNotifier {
       final url =
           'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10';
 
-      final response = await HttpUtils.secureGet(
+      final response = await NetworkService.instance.get(
         url,
         headers: {
           'Accept-Language': 'zh-CN,zh;q=0.9',

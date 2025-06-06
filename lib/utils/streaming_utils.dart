@@ -212,7 +212,30 @@ class StreamingUtils {
     final safeHeaders = Map<String, String>.from(headers);
     _hideSensitiveInfo(safeHeaders);
     debugPrint('请求头: $safeHeaders');
-    debugPrint('请求体: ${json.encode(validatedRequestBody)}');
+
+    // 安全的JSON编码，避免类型转换错误
+    try {
+      final jsonString = json.encode(validatedRequestBody);
+      debugPrint('请求体: $jsonString');
+    } catch (e) {
+      debugPrint('JSON编码错误: $e');
+      debugPrint('请求体数据类型检查:');
+      validatedRequestBody.forEach((key, value) {
+        debugPrint('  $key: ${value.runtimeType} = $value');
+      });
+      // 尝试修复数据类型问题
+      final fixedRequestBody = _fixDataTypes(validatedRequestBody);
+      try {
+        final jsonString = json.encode(fixedRequestBody);
+        debugPrint('修复后的请求体: $jsonString');
+        // 使用修复后的数据
+        validatedRequestBody.clear();
+        validatedRequestBody.addAll(fixedRequestBody);
+      } catch (e2) {
+        debugPrint('修复后仍然无法编码JSON: $e2');
+        throw Exception('请求数据格式错误: $e2');
+      }
+    }
 
     Dio? dio;
     CancelToken? cancelToken;
@@ -365,15 +388,8 @@ class StreamingUtils {
         // 新格式 (delta.content)
         if (choice['delta'] != null && choice['delta']['content'] != null) {
           final content = choice['delta']['content'];
-          // 确保content是字符串类型
           if (content is String) {
             return content;
-          } else if (content is bool) {
-            debugPrint('Warning: content字段是boolean类型: $content，跳过');
-            return null;
-          } else {
-            debugPrint('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
-            return content.toString();
           }
         }
 
@@ -382,12 +398,6 @@ class StreamingUtils {
           final text = choice['text'];
           if (text is String) {
             return text;
-          } else if (text is bool) {
-            debugPrint('Warning: text字段是boolean类型: $text，跳过');
-            return null;
-          } else {
-            debugPrint('Warning: text字段类型异常: ${text.runtimeType}，转换为字符串');
-            return text.toString();
           }
         }
       }
@@ -463,6 +473,40 @@ class StreamingUtils {
     } else {
       return 'AI服务请求失败：$statusCode\n$errorBody';
     }
+  }
+
+  /// 修复数据类型问题
+  static Map<String, dynamic> _fixDataTypes(Map<String, dynamic> data) {
+    final fixedData = <String, dynamic>{};
+
+    data.forEach((key, value) {
+      if (value == null) {
+        fixedData[key] = null;
+      } else if (value is bool) {
+        fixedData[key] = value; // 布尔值保持不变
+      } else if (value is num) {
+        fixedData[key] = value; // 数字保持不变
+      } else if (value is String) {
+        fixedData[key] = value; // 字符串保持不变
+      } else if (value is List) {
+        // 递归处理列表
+        fixedData[key] = value.map((item) {
+          if (item is Map<String, dynamic>) {
+            return _fixDataTypes(item);
+          }
+          return item;
+        }).toList();
+      } else if (value is Map<String, dynamic>) {
+        // 递归处理嵌套Map
+        fixedData[key] = _fixDataTypes(value);
+      } else {
+        // 其他类型转换为字符串
+        debugPrint('Warning: 将 $key 的值从 ${value.runtimeType} 转换为字符串: $value');
+        fixedData[key] = value.toString();
+      }
+    });
+
+    return fixedData;
   }
 
   /// 隐藏敏感信息

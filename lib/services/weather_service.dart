@@ -1,7 +1,7 @@
 // ignore_for_file: unused_element, non_constant_identifier_names
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import '../utils/http_utils.dart';
+import '../services/network_service.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 
 class WeatherService extends ChangeNotifier {
@@ -163,7 +163,7 @@ class WeatherService extends ChangeNotifier {
       // OpenMeteo是完全免费的API，不需要API key
       final url = 'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto&language=zh_cn';
       
-      final response = await HttpUtils.secureGet(
+      final response = await NetworkService.instance.get(
         url,
         timeoutSeconds: 10, // 降低超时时间，避免长时间等待
       );
@@ -330,7 +330,7 @@ class WeatherService extends ChangeNotifier {
   Future<bool> shouldUseLocalWeather() async {
     try {
       // 尝试访问一个可靠的网站来检查网络连接
-      final result = await HttpUtils.secureGet(
+      final result = await NetworkService.instance.get(
         'https://www.baidu.com',
         timeoutSeconds: 3 // 设置极短的超时时间
       );

@@ -23,11 +23,11 @@ class Quote {
     this.id,
     required this.content,
     required this.date,
-    this.aiAnalysis,
-    this.source,
+    this.source, // TODO: 优化：考虑source字段是否冗余。如果sourceAuthor和sourceWork总是用于重建source，则可以移除source字段以减少数据冗余。
     this.sourceAuthor,
     this.sourceWork,
     this.tagIds = const [],
+    this.aiAnalysis,
     this.sentiment,
     this.keywords,
     this.summary,
