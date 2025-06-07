@@ -15,7 +15,7 @@ import 'services/location_service.dart';
 import 'services/weather_service.dart';
 import 'services/mmkv_service.dart';
 import 'services/clipboard_service.dart';
-import 'services/log_service.dart';
+import 'services/unified_log_service.dart';
 import 'services/ai_analysis_database_service.dart';
 import 'services/network_service.dart';
 import 'utils/app_logger.dart';
@@ -113,10 +113,9 @@ Future<void> main() async {
           // 只有当 LogService 实例可用时才记录日志
           if (message != null && message.isNotEmpty) {
             // 尝试获取上下文
-            final context = navigatorKey.currentContext;
-            if (context != null) {
+            final context = navigatorKey.currentContext;            if (context != null) {
               try {
-                final logService = Provider.of<LogService>(
+                final logService = Provider.of<UnifiedLogService>(
                   context,
                   listen: false,
                 );
@@ -137,9 +136,8 @@ Future<void> main() async {
 
         // 尝试获取LogService实例
         final context = navigatorKey.currentContext;
-        try {
-          if (context != null) {
-            final logService = Provider.of<LogService>(context, listen: false);
+        try {        if (context != null) {
+            final logService = Provider.of<UnifiedLogService>(context, listen: false);
             logService.error(
               'Flutter异常: ${details.exceptionAsString()}',
               error: details.exception,
@@ -197,12 +195,9 @@ Future<void> main() async {
         final databaseService = DatabaseService();
         final locationService = LocationService();
         final weatherService = WeatherService();
-        final clipboardService = ClipboardService();
-
-        // 创建日志服务但从用户设置加载日志级别
-        final logService = LogService();
-        // 不再这里强制设置级别，让LogService从用户配置中加载
-        // await logService.setLogLevel(LogLevel.none);
+        final clipboardService = ClipboardService();        // 创建统一日志服务
+        final unifiedLogService = UnifiedLogService.instance;
+        // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
 
@@ -217,11 +212,10 @@ Future<void> main() async {
           MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => settingsService),
-              ChangeNotifierProvider(create: (_) => databaseService),
-              ChangeNotifierProvider(create: (_) => locationService),
+              ChangeNotifierProvider(create: (_) => databaseService),              ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
               ChangeNotifierProvider(create: (_) => clipboardService),
-              ChangeNotifierProvider(create: (_) => logService),
+              ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => AIAnalysisDatabaseService()),
               Provider.value(
@@ -299,10 +293,8 @@ Future<void> main() async {
                 } catch (newDbError) {
                   logError('后台初始化新数据库也失败: $newDbError', error: newDbError, source: 'BackgroundInit');
                   _isEmergencyMode = true;
-                }
-
-                // 记录错误但继续执行
-                logService.error(
+                }                // 记录错误但继续执行
+                logError(
                   '后台数据库迁移失败',
                   error: e,
                   stackTrace: stackTrace,
@@ -312,10 +304,9 @@ Future<void> main() async {
             } else if (!hasCompletedOnboarding) {
               // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
               logInfo('等待引导流程中的数据库迁移...', source: 'BackgroundInit');
-            } else {
-              // 引导已完成且数据库已迁移，正常初始化
+            } else {              // 引导已完成且数据库已迁移，正常初始化
               logInfo('数据库已迁移，执行常规初始化', source: 'BackgroundInit');
-              await _initializeDatabaseNormally(databaseService, logService);
+              await _initializeDatabaseNormally(databaseService, unifiedLogService);
             }
 
             // 初始化完成，更新状态
@@ -880,7 +871,7 @@ List<Map<String, dynamic>> getAndClearDeferredErrors() {
 // 提取常规数据库初始化为独立函数
 Future<void> _initializeDatabaseNormally(
   DatabaseService databaseService,
-  LogService logService,
+  UnifiedLogService logService,
 ) async {
   try {
     await databaseService.init().timeout(

@@ -10,7 +10,7 @@ import '../services/mmkv_service.dart'; // 导入 MMKV 服务
 import '../services/clipboard_service.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
-import '../services/log_service.dart'; // 添加 LogService 导入
+import '../utils/app_logger.dart'; // 使用新的统一日志服务
 import '../theme/app_theme.dart';
 import 'home_page.dart';
 import '../models/app_settings.dart'; // 导入 AppSettings
@@ -121,7 +121,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     try {
       final settingsService = Provider.of<SettingsService>(context, listen: false);
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
-      final logService = Provider.of<LogService>(context, listen: false);
       final mmkvService = Provider.of<MMKVService>(context, listen: false); // 获取 MMKV 服务
 
       // --- 版本检查与迁移逻辑 ---
@@ -178,11 +177,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
             // 重要：标记数据库迁移已完成，避免重复迁移
             await settingsService.setDatabaseMigrationComplete(true);
-            debugPrint('数据迁移成功完成，已标记迁移状态');
-
-          } catch (e, stackTrace) {
+            debugPrint('数据迁移成功完成，已标记迁移状态');          } catch (e, stackTrace) {
             debugPrint('引导流程中数据迁移失败: $e');
-            logService.error('引导流程数据迁移失败', error: e, stackTrace: stackTrace);
+            logError('引导流程数据迁移失败', error: e, stackTrace: stackTrace, source: 'OnboardingPage');
 
             // 即使迁移失败，如果是首次设置，也标记完成，避免阻塞
             if (isFirstSetup) {
@@ -211,11 +208,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
         if (currentBuildNumber > lastRunBuildNumber) {
            await mmkvService.setString(mmkvKeyLastRunVersion, currentBuildNumberString);
            debugPrint('已更新上次运行版本号记录为: $currentBuildNumberString');
-        }
-
-      } catch (e, stackTrace) {
+        }      } catch (e, stackTrace) {
          debugPrint('引导流程中数据库初始化失败: $e');
-         logService.error('引导流程数据库初始化失败', error: e, stackTrace: stackTrace);
+         logError('引导流程数据库初始化失败', error: e, stackTrace: stackTrace, source: 'OnboardingPage');
          // 即使初始化失败，也标记完成首次设置，避免卡住引导
          if (isFirstSetup) {
             await settingsService.setInitialDatabaseSetupComplete(true);
@@ -248,13 +243,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomePage()),
         );
-      }
-
-    } catch (e, stackTrace) {
+      }    } catch (e, stackTrace) {
       debugPrint('完成引导流程时出错: $e');
       if (mounted) {
-        final logService = Provider.of<LogService>(context, listen: false);
-        logService.error('完成引导流程失败', error: e, stackTrace: stackTrace);
+        logError('完成引导流程失败', error: e, stackTrace: stackTrace, source: 'OnboardingPage');
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('完成引导时出错，请稍后重试'), backgroundColor: Colors.red),
@@ -287,14 +279,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
         currentAppSettings.copyWith(defaultStartPage: _selectedStartPage)
       );
 
-      debugPrint('引导页设置已保存');
-    } catch (e) {
+      debugPrint('引导页设置已保存');    } catch (e) {
       debugPrint('保存引导页设置时出错: $e');
       // 记录错误，但不阻塞流程
       // 使用 mounted 检查
       if (mounted) { // 添加 mounted 检查
-        final logService = Provider.of<LogService>(context, listen: false);
-        logService.info('保存引导页设置失败', error: e); // 将 warn 改为 info
+        logInfo('保存引导页设置失败', source: 'OnboardingPage'); // 将 warn 改为 info
       }
     }
   }

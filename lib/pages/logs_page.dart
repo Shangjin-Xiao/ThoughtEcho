@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/log_service.dart';
+import '../services/unified_log_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
@@ -17,7 +17,7 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   // 过滤设置
-  LogLevel? _filterLevel;
+  UnifiedLogLevel? _filterLevel;
   String? _filterSource;
   String? _searchQuery;
   final TextEditingController _searchController = TextEditingController();
@@ -59,10 +59,9 @@ class _LogsPageState extends State<LogsPage> {
       _loadMoreLogs();
     }
   }
-
   // 加载更多历史日志
   Future<void> _loadMoreLogs() async {
-    final logService = Provider.of<LogService>(context, listen: false);
+    final logService = Provider.of<UnifiedLogService>(context, listen: false);
 
     // 如果没有更多日志可加载，或已在加载中，则返回
     if (!_hasMoreLogs || _isLoadingMore) return;
@@ -333,39 +332,37 @@ class _LogsPageState extends State<LogsPage> {
       context,
     ).showSnackBar(const SnackBar(content: Text('日志详情已复制到剪贴板')));
   }
-
   // 获取日志级别对应的图标
-  IconData _getLogLevelIcon(LogLevel level) {
+  IconData _getLogLevelIcon(UnifiedLogLevel level) {
     switch (level) {
-      case LogLevel.verbose:
+      case UnifiedLogLevel.verbose:
         return Icons.text_snippet_outlined;
-      case LogLevel.debug:
+      case UnifiedLogLevel.debug:
         return Icons.code;
-      case LogLevel.info:
+      case UnifiedLogLevel.info:
         return Icons.info_outline;
-      case LogLevel.warning:
+      case UnifiedLogLevel.warning:
         return Icons.warning_amber;
-      case LogLevel.error:
+      case UnifiedLogLevel.error:
         return Icons.error_outline;
-      case LogLevel.none:
+      case UnifiedLogLevel.none:
         return Icons.block;
     }
   }
-
   // 获取日志级别对应的颜色
-  Color _getLogLevelColor(LogLevel level, ThemeData theme) {
+  Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
     switch (level) {
-      case LogLevel.verbose:
+      case UnifiedLogLevel.verbose:
         return Colors.grey;
-      case LogLevel.debug:
+      case UnifiedLogLevel.debug:
         return Colors.teal;
-      case LogLevel.info:
+      case UnifiedLogLevel.info:
         return Colors.blue;
-      case LogLevel.warning:
+      case UnifiedLogLevel.warning:
         return Colors.orange;
-      case LogLevel.error:
+      case UnifiedLogLevel.error:
         return Colors.red;
-      case LogLevel.none:
+      case UnifiedLogLevel.none:
         return theme.colorScheme.onSurface;
     }
   }
@@ -477,10 +474,9 @@ class _LogsPageState extends State<LogsPage> {
   @override
   Widget build(BuildContext context) {
     try {
-      final theme = Theme.of(context);
-      LogService? logService;
+      final theme = Theme.of(context);      UnifiedLogService? logService;
       try {
-        logService = Provider.of<LogService>(context);
+        logService = Provider.of<UnifiedLogService>(context);
       } catch (e) {
         return Scaffold(
           appBar: AppBar(title: const Text('日志查看')),
@@ -820,10 +816,8 @@ class _LogsPageState extends State<LogsPage> {
 
   // 构建过滤底部表
   Widget _buildFilterBottomSheet() {
-    final theme = Theme.of(context);
-
-    // 过滤状态
-    late LogLevel? tempFilterLevel = _filterLevel;
+    final theme = Theme.of(context);    // 过滤状态
+    late UnifiedLogLevel? tempFilterLevel = _filterLevel;
     String? tempFilterSource = _filterSource;
 
     // 创建用于源过滤的文本控制器，并设置初始值
@@ -884,11 +878,10 @@ class _LogsPageState extends State<LogsPage> {
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8.0,
-                      runSpacing: 8.0,
-                      children:
-                          LogLevel.values
+                      runSpacing: 8.0,                      children:
+                          UnifiedLogLevel.values
                               .where(
-                                (level) => level != LogLevel.none,
+                                (level) => level != UnifiedLogLevel.none,
                               ) // 排除"不记录"选项
                               .map(
                                 (level) => FilterChip(
@@ -989,10 +982,9 @@ class _LogsPageState extends State<LogsPage> {
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('取消'),
-              ),
-              TextButton(
+              ),              TextButton(
                 onPressed: () {
-                  final logService = Provider.of<LogService>(
+                  final logService = Provider.of<UnifiedLogService>(
                     context,
                     listen: false,
                   );
@@ -1006,11 +998,10 @@ class _LogsPageState extends State<LogsPage> {
                 child: const Text('仅清除内存日志'),
               ),
               FilledButton(
-                onPressed: () async {
-                  // 在异步操作前获取所需的 context 相关服务和对象
+                onPressed: () async {                  // 在异步操作前获取所需的 context 相关服务和对象
                   final navigator = Navigator.of(context);
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  final logService = Provider.of<LogService>(
+                  final logService = Provider.of<UnifiedLogService>(
                     context,
                     listen: false,
                   );
