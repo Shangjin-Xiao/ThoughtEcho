@@ -167,7 +167,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         });
       }
     } catch (e) {
-      debugPrint('获取AI分析列表失败: $e');
+      AppLogger.e('获取AI分析列表失败: $e', error: e, source: 'AIAnalysisDB');
       return [];
     }
   }
@@ -192,7 +192,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         return AIAnalysis.fromJson(maps.first);
       }
     } catch (e) {
-      debugPrint('获取AI分析失败: $e');
+      AppLogger.e('获取AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return null;
     }
   }
@@ -219,7 +219,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      debugPrint('删除AI分析失败: $e');
+      AppLogger.e('删除AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return false;
     }
   }
@@ -242,7 +242,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      debugPrint('删除所有AI分析失败: $e');
+      AppLogger.e('删除所有AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return false;
     }
   }
@@ -268,7 +268,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         });
       }
     } catch (e) {
-      debugPrint('按分析类型搜索AI分析失败: $e');
+      AppLogger.e('按分析类型搜索AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return [];
     }
   }
@@ -297,7 +297,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         });
       }
     } catch (e) {
-      debugPrint('搜索AI分析失败: $e');
+      AppLogger.e('搜索AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return [];
     }
   }
@@ -329,7 +329,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       
       return count;
     } catch (e) {
-      debugPrint('从JSON恢复AI分析失败: $e');
+      AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return 0;
     }
   }
@@ -341,7 +341,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       final jsonList = analyses.map((analysis) => analysis.toJson()).toList();
       return json.encode(jsonList);
     } catch (e) {
-      debugPrint('导出AI分析到JSON失败: $e');
+      AppLogger.e('导出AI分析到JSON失败: $e', error: e, source: 'AIAnalysisDB');
       return '[]';
     }
   }

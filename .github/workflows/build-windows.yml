@@ -1,0 +1,92 @@
+name: Build Windows App
+
+on:
+  workflow_dispatch:
+    inputs:
+      flutter_version:
+        description: 'Flutter版本'
+        required: false
+        default: '3.27.0'
+        type: choice
+        options:
+          - '3.27.0'
+          - '3.24.0'
+          - 'latest'
+      build_type:
+        description: '构建类型'
+        required: false
+        default: 'release'
+        type: choice
+        options:
+          - 'release'
+          - 'profile'
+          - 'debug'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ github.event.inputs.flutter_version || '3.27.0' }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Enable Windows desktop
+      run: flutter config --enable-windows-desktop
+      
+    - name: Flutter doctor
+      run: flutter doctor -v
+      
+    - name: Get dependencies
+      run: flutter pub get
+      
+    - name: Analyze code
+      run: flutter analyze
+      continue-on-error: true
+      
+    - name: Run tests
+      run: flutter test
+      continue-on-error: true
+      
+    - name: Build Windows app
+      run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
+      
+    - name: Get app version
+      id: version
+      run: |
+        $version = (Get-Content pubspec.yaml | Select-String 'version:').ToString().Split(':')[1].Trim()
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "App version: $version"
+      
+    - name: Create release archive
+      run: |
+        $buildPath = "build/windows/x64/runner/Release"
+        $buildType = "${{ github.event.inputs.build_type || 'release' }}"
+        $version = "${{ steps.version.outputs.version }}"
+        $archiveName = "thoughtecho-windows-x64-v$version-$buildType.zip"
+        
+        New-Item -ItemType Directory -Path "release_temp" -Force
+        Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
+        
+        $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.27.0' }}`n提交: ${{ github.sha }}"
+        $versionText | Out-File -FilePath "release_temp/VERSION.txt" -Encoding UTF8
+        
+        "@echo off`necho 启动 ThoughtEcho...`nstart thoughtecho.exe" | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
+        
+        Compress-Archive -Path "release_temp/*" -DestinationPath $archiveName -Force
+        
+        echo "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
+      id: archive
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: thoughtecho-windows-release
+        path: ${{ steps.archive.outputs.archive_name }}
+        retention-days: 90

@@ -129,7 +129,7 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
 
         if (hasApiKeyInSettings) {
           buffer.writeln('   - 设置中密钥长度: ${currentProvider.apiKey.length}');
-          buffer.writeln('   - 设置中密钥前缀: ${currentProvider.apiKey.length > 15 ? currentProvider.apiKey.substring(0, 15) + "..." : currentProvider.apiKey}');
+          buffer.writeln('   - 设置中密钥前缀: ${currentProvider.apiKey.length > 15 ? "${currentProvider.apiKey.substring(0, 15)}..." : currentProvider.apiKey}');
         }
 
         // 检查安全存储中的密钥
@@ -139,7 +139,7 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
 
         if (hasSecureApiKey) {
           buffer.writeln('   - 安全存储密钥长度: ${secureApiKey.length}');
-          buffer.writeln('   - 安全存储密钥前缀: ${secureApiKey.length > 15 ? secureApiKey.substring(0, 15) + "..." : secureApiKey}');
+          buffer.writeln('   - 安全存储密钥前缀: ${secureApiKey.length > 15 ? "${secureApiKey.substring(0, 15)}..." : secureApiKey}');
         }
         buffer.writeln();
 

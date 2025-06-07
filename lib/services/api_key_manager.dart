@@ -68,27 +68,36 @@ class APIKeyManager {
     if (apiKey.trim().isEmpty) return false;
 
     final trimmedKey = apiKey.trim();
+    debugPrint('API Key Length: ${trimmedKey.length}');
 
     // OpenAI格式: sk-...
     if (trimmedKey.startsWith('sk-') && trimmedKey.length > 20) {
+      debugPrint('API Key Format Check: OpenAI (sk- prefix) - Valid');
       return true;
     }
+    debugPrint('API Key Format Check: OpenAI (sk- prefix) - Invalid');
 
     // OpenRouter格式: sk_... 或 or_...
     if ((trimmedKey.startsWith('sk_') || trimmedKey.startsWith('or_')) &&
         trimmedKey.length > 20) {
+      debugPrint('API Key Format Check: OpenRouter (sk_ or or_ prefix) - Valid');
       return true;
     }
+    debugPrint('API Key Format Check: OpenRouter (sk_ or or_ prefix) - Invalid');
 
     // Bearer token格式
     if (trimmedKey.startsWith('Bearer ') && trimmedKey.length > 20) {
+      debugPrint('API Key Format Check: Bearer Token - Valid');
       return true;
     }
+    debugPrint('API Key Format Check: Bearer Token - Invalid');
 
     // 其他格式，基本长度检查
     if (trimmedKey.length >= 20) {
+      debugPrint('API Key Format Check: General Length (>=20) - Valid');
       return true;
     }
+    debugPrint('API Key Format Check: General Length (>=20) - Invalid');
 
     return false;
   }

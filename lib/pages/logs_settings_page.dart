@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/log_service.dart'; // 导入日志服务
+import '../services/unified_log_service.dart'; // 使用统一日志服务
 import 'logs_page.dart'; // 导入日志查看页面
 import '../utils/color_utils.dart'; // 导入颜色工具
 
 class LogsSettingsPage extends StatelessWidget {
   const LogsSettingsPage({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final logService = Provider.of<LogService>(context);
+    final logService = Provider.of<UnifiedLogService>(context);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -40,40 +39,36 @@ class LogsSettingsPage extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(),
-          // 遍历所有日志级别，创建 RadioListTile
-          ...LogLevel.values.map((level) {
+          const Divider(),          // 遍历所有日志级别，创建 RadioListTile
+          ...UnifiedLogLevel.values.map((level) {
             // 为 none 添加特殊说明
             String subtitle = '';
             switch (level) {
-              case LogLevel.verbose:
-                subtitle = '记录所有详细信息，用于深入调试。';
+              case UnifiedLogLevel.verbose:                subtitle = '记录所有详细信息，用于深入调试。';
                 break;
-              case LogLevel.debug:
+              case UnifiedLogLevel.debug:
                 subtitle = '记录调试相关信息。';
                 break;
-              case LogLevel.info:
+              case UnifiedLogLevel.info:
                 subtitle = '记录常规操作信息。 (推荐)';
                 break;
-              case LogLevel.warning:
+              case UnifiedLogLevel.warning:
                 subtitle = '记录潜在问题或警告。';
                 break;
-              case LogLevel.error:
+              case UnifiedLogLevel.error:
                 subtitle = '仅记录错误信息。';
                 break;
-              case LogLevel.none:
+              case UnifiedLogLevel.none:
                 subtitle = '不记录任何日志。';
                 break;
-            }
-
-            return RadioListTile<LogLevel>(
+            }            return RadioListTile<UnifiedLogLevel>(
               title: Text(
                 level.name[0].toUpperCase() + level.name.substring(1),
               ), // 首字母大写
               subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
               value: level,
               groupValue: logService.currentLevel,
-              onChanged: (LogLevel? value) {
+              onChanged: (UnifiedLogLevel? value) {
                 if (value != null) {
                   logService.setLogLevel(value);
                 }

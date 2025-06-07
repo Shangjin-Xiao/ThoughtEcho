@@ -29,7 +29,7 @@ class ApiKeySaveLogicTest {
       debugPrint('3. API密钥有效性: $isValid');
 
       // 4. 测试同步检查
-      final testProvider = AIProviderSettings(
+      const testProvider = AIProviderSettings(
         id: testProviderId,
         name: 'Test Provider',
         apiKey: testApiKey,
