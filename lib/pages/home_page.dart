@@ -44,6 +44,8 @@ class _HomePageState extends State<HomePage>
   late TabController _tabController;  // 新增：NoteListView的全局Key
   final GlobalKey<NoteListViewState> _noteListViewKey =
       GlobalKey<NoteListViewState>();
+  final GlobalKey<DailyQuoteViewState> _dailyQuoteViewKey =
+      GlobalKey<DailyQuoteViewState>();
 
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
@@ -144,8 +146,31 @@ class _HomePageState extends State<HomePage>
           ),
         );
       }
-    }  }
-  // --- 每日提示相关状态和逻辑结束 ---
+    }  }  // --- 每日提示相关状态和逻辑结束 ---
+
+  // 统一刷新方法 - 同时刷新每日一言和每日提示
+  Future<void> _handleRefresh() async {
+    try {
+      // 并行刷新每日一言和每日提示
+      await Future.wait([
+        // 刷新每日一言
+        if (_dailyQuoteViewKey.currentState != null)
+          _dailyQuoteViewKey.currentState!.refreshQuote(),
+        // 刷新每日提示
+        _fetchDailyPrompt(),
+      ]);
+    } catch (e) {
+      debugPrint('刷新失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('刷新失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -682,21 +707,27 @@ class _HomePageState extends State<HomePage>
         body: IndexedStack(
           index: _currentIndex,
           children: [            // 首页 - 每日一言和每日提示
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final screenHeight = constraints.maxHeight;
-                final screenWidth = constraints.maxWidth;
-                final isSmallScreen = screenHeight < 600;
-                
-                return Column(
-                  children: [
+            RefreshIndicator(
+              onRefresh: _handleRefresh,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenHeight = constraints.maxHeight;
+                  final screenWidth = constraints.maxWidth;
+                  final isSmallScreen = screenHeight < 600;
+                  
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: screenHeight, // 确保占满整个屏幕高度
+                      child: Column(
+                        children: [
                     // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
                     Expanded(
                       child: Container(
                         constraints: BoxConstraints(
                           minHeight: screenHeight * 0.45, // 最小45%高度
-                        ),
-                        child: DailyQuoteView(
+                        ),                        child: DailyQuoteView(
+                          key: _dailyQuoteViewKey,
                           onAddQuote: (content, author, work, hitokotoData) =>
                               _showAddQuoteDialog(
                             prefilledContent: content,
@@ -704,10 +735,6 @@ class _HomePageState extends State<HomePage>
                             prefilledWork: work,
                             hitokotoData: hitokotoData,
                           ),
-                          onRefreshRequested: () async {
-                            // 刷新每日提示
-                            await _fetchDailyPrompt();
-                          },
                         ),
                       ),
                     ),
@@ -799,13 +826,15 @@ class _HomePageState extends State<HomePage>
                                   textAlign: TextAlign.center,
                                   maxLines: 3, // 限制最大行数
                                   overflow: TextOverflow.ellipsis,
-                                ),
-                        ],
+                                ),                        ],
                       ),
                     ),
-                  ],
+                      ],
+                    ),
+                  ),
                 );
-              },
+                },
+              ),
             ),
             // 笔记列表页
             Consumer<NoteSearchController>(

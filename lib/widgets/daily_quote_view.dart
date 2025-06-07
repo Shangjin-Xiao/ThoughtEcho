@@ -9,20 +9,17 @@ import 'dart:async'; // Import async for StreamController and StreamSubscription
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
   final Function(String, String?, String?, Map<String, dynamic>) onAddQuote;
-  // 新增：外部刷新回调，用于通知首页刷新每日提示
-  final Future<void> Function()? onRefreshRequested;
 
   const DailyQuoteView({
     super.key, 
     required this.onAddQuote,
-    this.onRefreshRequested,
   });
 
   @override
-  State<DailyQuoteView> createState() => _DailyQuoteViewState();
+  DailyQuoteViewState createState() => DailyQuoteViewState();
 }
 
-class _DailyQuoteViewState extends State<DailyQuoteView> {
+class DailyQuoteViewState extends State<DailyQuoteView> {
   Map<String, dynamic> dailyQuote = {
     'content': '加载中...',
     'source': '',
@@ -110,108 +107,100 @@ class _DailyQuoteViewState extends State<DailyQuoteView> {
         result += ' ';
       } else {
         result += '——';
-      }
-      result += '《$source》';
+      }      result += '《$source》';
     }
 
     return result;
-  }  @override
+  }
+
+  // 公开刷新方法，供父组件调用
+  Future<void> refreshQuote() async {
+    await _loadDailyQuote();
+  }
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     
-    return RefreshIndicator(
-      onRefresh: () async {
-        // 刷新一言
-        await _loadDailyQuote();
-        // 如果提供了外部刷新回调，同时刷新每日提示
-        if (widget.onRefreshRequested != null) {
-          await widget.onRefreshRequested!();
-        }
-      },
-      child: Container(
-        // 去掉固定高度，让容器适应父组件的尺寸
-        width: double.infinity,
-        margin: EdgeInsets.symmetric(
-          horizontal: screenWidth > 600 ? 24.0 : 16.0,
-          vertical: 16.0,
-        ),
-        child: SlidingCard(
-          child: Padding(
-            padding: EdgeInsets.all(screenWidth > 600 ? 24.0 : 16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [GestureDetector(
-                  onTap: () {
-                    // 单击复制内容
-                    final String formattedQuote =
-                        '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
+    return Container(
+      // 去掉固定高度，让容器适应父组件的尺寸
+      width: double.infinity,
+      margin: EdgeInsets.symmetric(
+        horizontal: screenWidth > 600 ? 24.0 : 16.0,
+        vertical: 16.0,
+      ),
+      child: SlidingCard(
+        child: Padding(
+          padding: EdgeInsets.all(screenWidth > 600 ? 24.0 : 16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  // 单击复制内容
+                  final String formattedQuote =
+                      '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
 
-                    // 复制到剪贴板
-                    Clipboard.setData(
-                      ClipboardData(text: formattedQuote),
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制到剪贴板')),
-                    );
-                  },
-                  onDoubleTap: () {
-                    // 双击添加到笔记，同时传递完整的一言数据以便根据类型添加标签
-                    widget.onAddQuote(
-                      dailyQuote['content'],
-                      dailyQuote['from_who'],
-                      dailyQuote['from'],
-                      dailyQuote,
-                    );
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [                      Flexible(
+                  // 复制到剪贴板
+                  Clipboard.setData(
+                    ClipboardData(text: formattedQuote),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已复制到剪贴板')),
+                  );
+                },
+                onDoubleTap: () {
+                  // 双击添加到笔记，同时传递完整的一言数据以便根据类型添加标签
+                  widget.onAddQuote(
+                    dailyQuote['content'],
+                    dailyQuote['from_who'],
+                    dailyQuote['from'],
+                    dailyQuote,
+                  );
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        dailyQuote['content'],
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontSize: screenWidth > 600 ? 24 : 20, // 增大字体
+                          height: 1.5, // 增加行高，提升可读性
+                          fontWeight: FontWeight.w500, // 稍微加粗
+                        ),
+                        textAlign: TextAlign.center,
+                        // 去掉行数限制，让文字完全展示
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                    if (dailyQuote['from_who'] != null &&
+                            dailyQuote['from_who'].isNotEmpty ||
+                        dailyQuote['from'] != null &&
+                            dailyQuote['from'].isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12.0),
                         child: Text(
-                          dailyQuote['content'],
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontSize: screenWidth > 600 ? 24 : 20, // 增大字体
-                            height: 1.5, // 增加行高，提升可读性
-                            fontWeight: FontWeight.w500, // 稍微加粗
+                          formatHitokotoSource(
+                            dailyQuote['from_who'],
+                            dailyQuote['from'],
+                          ),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontStyle: FontStyle.italic,
+                            fontSize: screenWidth > 600 ? 14 : 12,
                           ),
                           textAlign: TextAlign.center,
-                          // 去掉行数限制，让文字完全展示
-                          overflow: TextOverflow.visible,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (dailyQuote['from_who'] != null &&
-                              dailyQuote['from_who'].isNotEmpty ||
-                          dailyQuote['from'] != null &&
-                              dailyQuote['from'].isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12.0),
-                          child: Text(
-                            formatHitokotoSource(
-                              dailyQuote['from_who'],
-                              dailyQuote['from'],
-                            ),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              fontSize: screenWidth > 600 ? 14 : 12,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }

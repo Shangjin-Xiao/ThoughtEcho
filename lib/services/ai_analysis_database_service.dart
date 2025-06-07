@@ -9,6 +9,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/ai_analysis_model.dart';
 import 'package:uuid/uuid.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// AI分析数据库服务
 /// 
@@ -142,7 +143,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       
       return newAnalysis;
     } catch (e) {
-      debugPrint('保存AI分析失败: $e');
+      AppLogger.e('保存AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       rethrow;
     }
   }

@@ -18,6 +18,7 @@ import 'services/clipboard_service.dart';
 import 'services/log_service.dart';
 import 'services/ai_analysis_database_service.dart';
 import 'services/network_service.dart';
+import 'utils/app_logger.dart';
 import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
@@ -46,11 +47,11 @@ Future<void> initializeDatabasePlatform() async {
 
       await databaseFactory.setDatabasesPath(dbPath);
     } catch (e) {
-      debugPrint('创建数据库目录失败: $e');
+      logError('创建数据库目录失败: $e', error: e, source: 'DatabaseInit');
       rethrow;
     }
   } else {
-    debugPrint('Web平台：使用内存数据库');
+    logInfo('Web平台：使用内存数据库', source: 'DatabaseInit');
     // Web平台无需特殊初始化，SQLite会自动使用内存数据库
   }
 }
@@ -73,11 +74,14 @@ Future<void> main() async {
       // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
       WidgetsFlutterBinding.ensureInitialized();
 
+      // 初始化日志系统
+      AppLogger.initialize();
+
       // 全局记录未捕获的异步错误
       PlatformDispatcher.instance.onError = (error, stack) {
-        // 使用debugPrint而不是print
-        debugPrint('捕获到平台分发器错误: $error');
-        debugPrint('堆栈: $stack');
+        // 使用新的日志系统而不是debugPrint
+        logError('捕获到平台分发器错误: $error', error: error, stackTrace: stack, source: 'PlatformDispatcher');
+        logError('堆栈: $stack', source: 'PlatformDispatcher');
 
         // 捕获到错误后再记录到日志系统
         _deferredErrors.add({
@@ -152,7 +156,7 @@ Future<void> main() async {
             });
           }
         } catch (e) {
-          debugPrint('记录Flutter异常时出错: $e');
+          logError('记录Flutter异常时出错: $e', error: e, source: 'FlutterError');
         }
       };
 
@@ -251,23 +255,23 @@ Future<void> main() async {
         // 使用microtask确保在UI渲染后执行
         Future.microtask(() async {
           try {
-            debugPrint('UI已显示，正在后台初始化服务...');
+            logInfo('UI已显示，正在后台初始化服务...', source: 'BackgroundInit');
 
             // 初始化clipboardService
             await clipboardService.init().timeout(
               const Duration(seconds: 3),
-              onTimeout: () => debugPrint('剪贴板服务初始化超时，将继续后续初始化'),
+              onTimeout: () => logWarning('剪贴板服务初始化超时，将继续后续初始化', source: 'BackgroundInit'),
             );
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
             final hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
-            debugPrint('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}');
-            debugPrint('引导流程状态: ${hasCompletedOnboarding ? "已完成" : "未完成"}');
+            logInfo('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}', source: 'BackgroundInit');
+            logInfo('引导流程状态: ${hasCompletedOnboarding ? "已完成" : "未完成"}', source: 'BackgroundInit');
 
             // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
             if (hasCompletedOnboarding && !hasMigrated) {
-              debugPrint('引导已完成但数据库迁移未完成，开始后台数据库迁移...');
+              logInfo('引导已完成但数据库迁移未完成，开始后台数据库迁移...', source: 'BackgroundInit');
               try {
                 // 初始化数据库，这通常是最耗时的操作
                 await databaseService.init().timeout(
@@ -283,17 +287,17 @@ Future<void> main() async {
                 // 标记数据库迁移已完成
                 await settingsService.setDatabaseMigrationComplete(true);
 
-                debugPrint('后台数据库迁移完成');
+                logInfo('后台数据库迁移完成', source: 'BackgroundInit');
               } catch (e, stackTrace) {
-                debugPrint('后台数据库迁移失败: $e');
+                logError('后台数据库迁移失败: $e', error: e, stackTrace: stackTrace, source: 'BackgroundInit');
 
                 // 在紧急情况下尝试初始化新数据库
                 try {
                   await databaseService.initializeNewDatabase();
                   await settingsService.setDatabaseMigrationComplete(true);
-                  debugPrint('后台初始化新数据库成功');
+                  logInfo('后台初始化新数据库成功', source: 'BackgroundInit');
                 } catch (newDbError) {
-                  debugPrint('后台初始化新数据库也失败: $newDbError');
+                  logError('后台初始化新数据库也失败: $newDbError', error: newDbError, source: 'BackgroundInit');
                   _isEmergencyMode = true;
                 }
 
@@ -307,18 +311,18 @@ Future<void> main() async {
               }
             } else if (!hasCompletedOnboarding) {
               // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
-              debugPrint('等待引导流程中的数据库迁移...');
+              logInfo('等待引导流程中的数据库迁移...', source: 'BackgroundInit');
             } else {
               // 引导已完成且数据库已迁移，正常初始化
-              debugPrint('数据库已迁移，执行常规初始化');
+              logInfo('数据库已迁移，执行常规初始化', source: 'BackgroundInit');
               await _initializeDatabaseNormally(databaseService, logService);
             }
 
             // 初始化完成，更新状态
             servicesInitialized.value = true;
-            debugPrint('所有后台服务初始化完成');
+            logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
           } catch (e, stackTrace) {
-            debugPrint('后台服务初始化失败: $e');
+            logError('后台服务初始化失败: $e', error: e, stackTrace: stackTrace, source: 'BackgroundInit');
 
             // 记录错误，不使用 BuildContext
             try {
@@ -333,8 +337,8 @@ Future<void> main() async {
           }
         });
       } catch (e, stackTrace) {
-        debugPrint('应用初始化失败: $e');
-        debugPrint('堆栈跟踪: $stackTrace');
+        logError('应用初始化失败: $e', error: e, stackTrace: stackTrace, source: 'AppInit');
+        logError('堆栈跟踪: $stackTrace', source: 'AppInit');
 
         // 如果初始化失败，直接运行一个简单的错误应用
         _isEmergencyMode = true;
@@ -344,8 +348,8 @@ Future<void> main() async {
       }
     },
     (error, stackTrace) {
-      debugPrint('未捕获的异常: $error');
-      debugPrint('堆栈跟踪: $stackTrace');
+      logError('未捕获的异常: $error', error: error, stackTrace: stackTrace, source: 'runZonedGuarded');
+      logError('堆栈跟踪: $stackTrace', source: 'runZonedGuarded');
 
       // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
       try {
