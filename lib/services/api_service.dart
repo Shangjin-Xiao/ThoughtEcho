@@ -46,15 +46,16 @@ class ApiService {
       }
       
       debugPrint('一言API请求URL: $apiUrl');
-      
-      // 使用带超时的HTTP请求
+        // 使用带超时的HTTP请求
       final response = await NetworkService.instance.get(
         apiUrl,
         timeoutSeconds: _timeoutSeconds,
       ).catchError((error) {
         debugPrint('一言API请求错误: $error');
         throw error;
-      });      if (response.statusCode == 200) {
+      });
+      
+      if (response.statusCode == 200) {
         try {
           final data = json.decode(response.body);
           // 验证返回的数据结构

@@ -709,6 +709,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.3.0"
+  logging_flutter:
+    dependency: "direct main"
+    description:
+      name: logging_flutter
+      sha256: "8b418504617a55de0d3e0582b25365894fe8a8936b934953caeddb13db4a190b"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.0.0"
   lottie:
     dependency: "direct main"
     description:
