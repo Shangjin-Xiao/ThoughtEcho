@@ -10,10 +10,7 @@ class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
   final Function(String, String?, String?, Map<String, dynamic>) onAddQuote;
 
-  const DailyQuoteView({
-    super.key, 
-    required this.onAddQuote,
-  });
+  const DailyQuoteView({super.key, required this.onAddQuote});
 
   @override
   DailyQuoteViewState createState() => DailyQuoteViewState();
@@ -107,7 +104,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         result += ' ';
       } else {
         result += '——';
-      }      result += '《$source》';
+      }
+      result += '《$source》';
     }
 
     return result;
@@ -117,18 +115,16 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
   Future<void> refreshQuote() async {
     await _loadDailyQuote();
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Container(
       // 去掉固定高度，让容器适应父组件的尺寸
       width: double.infinity,
-      margin: EdgeInsets.symmetric(
-        horizontal: screenWidth > 600 ? 24.0 : 16.0,
-        vertical: 16.0,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 16.0),
       child: SlidingCard(
         child: Padding(
           padding: EdgeInsets.all(screenWidth > 600 ? 24.0 : 16.0),
@@ -142,12 +138,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                       '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
 
                   // 复制到剪贴板
-                  Clipboard.setData(
-                    ClipboardData(text: formattedQuote),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已复制到剪贴板')),
-                  );
+                  Clipboard.setData(ClipboardData(text: formattedQuote));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
                 },
                 onDoubleTap: () {
                   // 双击添加到笔记，同时传递完整的一言数据以便根据类型添加标签

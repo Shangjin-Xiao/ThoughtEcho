@@ -6,6 +6,7 @@ import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart' as multi_ai;
 import '../models/ai_config.dart';
+import '../services/api_key_manager.dart';
 
 /// 统一的AI网络请求管理器
 /// 负责处理所有AI相关的网络请求，包括普通请求和流式请求
@@ -133,8 +134,10 @@ class AINetworkManager {
     Duration? timeout,
   }) async {
     if (provider != null) {
+      // 在发送请求前先从加密存储加载API Key
+      final providerWithApiKey = await _loadApiKeyForProvider(provider);
       return await _makeBaseRequest(
-        config: provider,
+        config: providerWithApiKey,
         data: data,
         responseType: ResponseType.json,
         urlOverride: url.isNotEmpty ? url : null,
@@ -168,8 +171,10 @@ class AINetworkManager {
     Duration? timeout,
   }) async {
     if (provider != null) {
+      // 在发送流式请求前先从加密存储加载API Key
+      final providerWithApiKey = await _loadApiKeyForProvider(provider);
       final response = await _makeBaseRequest(
-        config: provider,
+        config: providerWithApiKey,
         data: {...data, 'stream': true},
         responseType: ResponseType.stream,
         urlOverride: url.isNotEmpty ? url : null,
@@ -224,8 +229,10 @@ class AINetworkManager {
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
+        // 为当前provider加载API Key
+        final providerWithApiKey = await _loadApiKeyForProvider(currentProvider);
         return await _makeBaseRequest(
-          config: currentProvider,
+          config: providerWithApiKey,
           data: data,
           responseType: ResponseType.json,
           urlOverride: url.isNotEmpty ? url : null,
@@ -250,8 +257,10 @@ class AINetworkManager {
         
         try {
           debugPrint('尝试切换到服务商: ${provider.name}');
+          // 为故障转移的provider加载API Key
+          final providerWithApiKey = await _loadApiKeyForProvider(provider);
           return await _makeBaseRequest(
-            config: provider,
+            config: providerWithApiKey,
             data: data,
             responseType: ResponseType.json,
             urlOverride: url.isNotEmpty ? url : null,
@@ -293,8 +302,10 @@ class AINetworkManager {
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
+        // 为当前provider加载API Key
+        final providerWithApiKey = await _loadApiKeyForProvider(currentProvider);
         final response = await _makeBaseRequest(
-          config: currentProvider,
+          config: providerWithApiKey,
           data: {...data, 'stream': true},
           responseType: ResponseType.stream,
           urlOverride: url.isNotEmpty ? url : null,
@@ -326,8 +337,10 @@ class AINetworkManager {
         
         try {
           debugPrint('尝试切换到服务商: ${provider.name}');
+          // 为故障转移的provider加载API Key
+          final providerWithApiKey = await _loadApiKeyForProvider(provider);
           final response = await _makeBaseRequest(
-            config: provider,
+            config: providerWithApiKey,
             data: {...data, 'stream': true},
             responseType: ResponseType.stream,
             urlOverride: url.isNotEmpty ? url : null,
@@ -511,6 +524,22 @@ class AINetworkManager {
       }
     } else {
       return Exception('未知错误: ${error.toString()}');
+    }
+  }
+
+  /// 为provider加载API Key（从加密存储）
+  static Future<AIProviderSettings> _loadApiKeyForProvider(AIProviderSettings provider) async {
+    try {
+      final apiKeyManager = APIKeyManager();
+      final apiKey = await apiKeyManager.getProviderApiKey(provider.id);
+      
+      debugPrint('为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "${apiKey.length}字符"}');
+      
+      // 返回带有API Key的新provider实例
+      return provider.copyWith(apiKey: apiKey);
+    } catch (e) {
+      debugPrint('为Provider ${provider.name} 加载API Key失败: $e');
+      return provider; // 返回原provider
     }
   }
 }
