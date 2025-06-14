@@ -124,7 +124,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     return Container(
       // 去掉固定高度，让容器适应父组件的尺寸
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 16.0),
+      margin: EdgeInsets.symmetric(
+        horizontal: screenWidth > 600 ? 24.0 : 16.0,
+        vertical: 16.0,
+      ),
       child: SlidingCard(
         child: Padding(
           padding: EdgeInsets.all(screenWidth > 600 ? 24.0 : 16.0),

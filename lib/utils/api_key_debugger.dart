@@ -117,4 +117,52 @@ class ApiKeyDebugger {
     
     debugPrint('=== 💾 API Key 保存过程调试完成 ===');
   }
+  
+  /// 调试API Key在请求时的状态
+  static Future<void> debugApiKeyInRequest(String providerId, String providerName, String apiKey) async {
+    if (!kDebugMode) return;
+    
+    debugPrint('=== 🌐 API Key 请求时状态调试 ===');
+    debugPrint('Provider ID: $providerId');
+    debugPrint('Provider Name: $providerName');
+    debugPrint('传入API Key长度: ${apiKey.length}');
+    debugPrint('传入API Key是否为空: ${apiKey.isEmpty}');
+    debugPrint('传入API Key前缀: ${apiKey.length > 0 ? apiKey.substring(0, math.min(20, apiKey.length)) : "无"}');
+    
+    try {
+      final apiKeyManager = APIKeyManager();
+      
+      // 从加密存储读取API Key进行对比
+      final storedApiKey = await apiKeyManager.getProviderApiKey(providerId);
+      debugPrint('存储中的API Key长度: ${storedApiKey.length}');
+      debugPrint('存储中的API Key是否为空: ${storedApiKey.isEmpty}');
+      debugPrint('存储中的API Key前缀: ${storedApiKey.length > 0 ? storedApiKey.substring(0, math.min(20, storedApiKey.length)) : "无"}');
+      
+      // 比较传入的API Key和存储的API Key
+      debugPrint('传入API Key与存储API Key是否一致: ${apiKey == storedApiKey}');
+      
+      // 检查格式有效性
+      final isFormatValid = apiKeyManager.isValidApiKeyFormat(apiKey);
+      debugPrint('传入API Key格式是否有效: $isFormatValid');
+      
+      // 检查整体有效性
+      final isValid = await apiKeyManager.hasValidProviderApiKey(providerId);
+      debugPrint('存储API Key整体有效性: $isValid');
+      
+      if (apiKey.isEmpty) {
+        debugPrint('❌ 传入API Key为空！这是导致请求失败的原因');
+      } else if (storedApiKey.isEmpty) {
+        debugPrint('❌ 存储中的API Key为空！用户可能未正确保存');
+      } else if (apiKey != storedApiKey) {
+        debugPrint('❌ 传入API Key与存储API Key不一致！可能是加载失败');
+      } else {
+        debugPrint('✅ API Key状态正常');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ 请求时API Key状态调试出错: $e');
+    }
+    
+    debugPrint('=== 🌐 API Key 请求时状态调试完成 ===');
+  }
 }
