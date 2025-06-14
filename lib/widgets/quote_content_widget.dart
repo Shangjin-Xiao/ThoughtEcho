@@ -37,22 +37,37 @@ class QuoteContent extends StatelessWidget {
         // 使用与项目中其他部分相同的 API 方式
         return ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: showFullContent 
-                ? double.infinity 
-                : (maxLines ?? 3) * 24.0, // 每行大约24像素高度
+            maxHeight:
+                showFullContent
+                    ? double.infinity
+                    : (maxLines ?? 3) * 36.0, // 调整为36像素高度以匹配1.5行距
           ),
           child: ClipRect(
             // 使用ClipRect确保内容不会溢出
-            child: quill.QuillEditor.basic(
-              controller: controller,
-              config: const quill.QuillEditorConfig(
-                // 禁用编辑功能
-                autoFocus: false,
-                expands: false,
-                padding: EdgeInsets.zero,
-                scrollable: false,
-                enableInteractiveSelection: false,
-                placeholder: '',
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                textTheme: Theme.of(context).textTheme.copyWith(
+                  bodyMedium: (style ?? Theme.of(context).textTheme.bodyLarge)
+                      ?.copyWith(
+                        height: 1.5, // 设置和普通文本一样的行距
+                      ),
+                  bodyLarge: (style ?? Theme.of(context).textTheme.bodyLarge)
+                      ?.copyWith(
+                        height: 1.5, // 设置和普通文本一样的行距
+                      ),
+                ),
+              ),
+              child: quill.QuillEditor.basic(
+                controller: controller,
+                config: const quill.QuillEditorConfig(
+                  // 禁用编辑功能
+                  autoFocus: false,
+                  expands: false,
+                  padding: EdgeInsets.zero,
+                  scrollable: false,
+                  enableInteractiveSelection: false,
+                  placeholder: '',
+                ),
               ),
             ),
           ),

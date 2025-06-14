@@ -913,17 +913,31 @@ class _HomePageState extends State<HomePage>
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), // 添加模糊效果
+            filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // 增强模糊效果
             child: Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface.withValues(
-                  alpha: 0.8,
-                ), // 半透明背景
+                // 使用渐变背景增强毛玻璃效果
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.colorScheme.surface.withValues(alpha: 0.7),
+                    theme.colorScheme.surface.withValues(alpha: 0.9),
+                  ],
+                ),
+                // 添加细微的边框
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    width: 0.5,
+                  ),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+                    color: theme.shadowColor.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                    spreadRadius: 0,
                   ),
                 ],
               ),
@@ -936,7 +950,7 @@ class _HomePageState extends State<HomePage>
                 backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
                 surfaceTintColor: Colors.transparent, // 移除表面着色
                 indicatorColor: theme.colorScheme.primaryContainer.withValues(
-                  alpha: 0.8,
+                  alpha: 0.7,
                 ),
                 destinations: [
                   NavigationDestination(
