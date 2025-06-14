@@ -136,14 +136,15 @@ class AIService extends ChangeNotifier {
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final multiSettings = _settingsService.multiAISettings;
+        final currentProvider = multiSettings.currentProvider!;
 
         final userMessage = _promptManager.buildUserMessage(quote.content);
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
         );
 
         return _requestHelper.parseResponse(response);
@@ -162,14 +163,15 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final multiSettings = _settingsService.multiAISettings;
+        final currentProvider = multiSettings.currentProvider!;
 
         final userMessage = _promptManager.buildUserMessage(quote.content);
-        await _requestHelper.makeStreamRequest(
-          url: settings.apiUrl,
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           onData:
               (text) => _requestHelper.handleStreamResponse(
                 controller: controller,

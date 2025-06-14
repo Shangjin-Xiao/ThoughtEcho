@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
+import '../models/ai_provider_settings.dart';
 import '../models/quote_model.dart';
 import '../utils/ai_network_manager.dart';
 
@@ -88,6 +89,36 @@ class AIRequestHelper {
     );
   }
 
+  /// 使用Provider发送普通AI请求
+  Future<Response> makeRequestWithProvider({
+    required String url,
+    required String systemPrompt,
+    required String userMessage,
+    required AIProviderSettings provider,
+    double? temperature,
+    int? maxTokens,
+    String? model,
+  }) async {
+    final messages = createMessages(
+      systemPrompt: systemPrompt,
+      userMessage: userMessage,
+    );
+
+    final body = createRequestBody(
+      messages: messages,
+      temperature: temperature ?? provider.temperature,
+      maxTokens: maxTokens ?? provider.maxTokens,
+      model: model ?? provider.model,
+    );
+
+    return await AINetworkManager.makeRequest(
+      url: url,
+      data: body,
+      provider: provider,
+      timeout: defaultTimeout,
+    );
+  }
+
   /// 发送流式AI请求
   Future<void> makeStreamRequest({
     required String url,
@@ -135,6 +166,42 @@ class AIRequestHelper {
       debugPrint('流式请求设置错误: $e');
       onError(e);
     }
+  }
+
+  /// 使用Provider发送流式AI请求
+  Future<void> makeStreamRequestWithProvider({
+    required String url,
+    required String systemPrompt,
+    required String userMessage,
+    required AIProviderSettings provider,
+    required Function(String) onData,
+    required Function(String) onComplete,
+    required Function(dynamic) onError,
+    double? temperature,
+    int? maxTokens,
+    String? model,
+  }) async {
+    final messages = createMessages(
+      systemPrompt: systemPrompt,
+      userMessage: userMessage,
+    );
+
+    final body = createRequestBody(
+      messages: messages,
+      temperature: temperature ?? provider.temperature,
+      maxTokens: maxTokens ?? provider.maxTokens,
+      model: model ?? provider.model,
+    );
+
+    await AINetworkManager.makeStreamRequest(
+      url: url,
+      data: body,
+      provider: provider,
+      onData: onData,
+      onComplete: onComplete,
+      onError: onError,
+      timeout: defaultTimeout,
+    );
   }
 
   /// 解析API响应

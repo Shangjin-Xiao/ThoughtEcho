@@ -7,6 +7,7 @@ import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart' as multi_ai;
 import '../models/ai_config.dart';
 import '../services/api_key_manager.dart';
+import 'api_key_debugger.dart';
 
 /// 统一的AI网络请求管理器
 /// 负责处理所有AI相关的网络请求，包括普通请求和流式请求
@@ -535,8 +536,20 @@ class AINetworkManager {
       
       debugPrint('为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "${apiKey.length}字符"}');
       
+      // 调试API Key请求时的状态
+      if (kDebugMode) {
+        await ApiKeyDebugger.debugApiKeyInRequest(provider.id, provider.name, apiKey);
+      }
+      
       // 返回带有API Key的新provider实例
-      return provider.copyWith(apiKey: apiKey);
+      final providerWithApiKey = provider.copyWith(apiKey: apiKey);
+      
+      // 验证构建的headers
+      final headers = providerWithApiKey.buildHeaders();
+      final authHeader = headers['Authorization'] ?? headers['x-api-key'] ?? '';
+      debugPrint('构建的请求头中的API Key: ${authHeader.isEmpty ? "空" : "${authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '').length}字符"}');
+      
+      return providerWithApiKey;
     } catch (e) {
       debugPrint('为Provider ${provider.name} 加载API Key失败: $e');
       return provider; // 返回原provider

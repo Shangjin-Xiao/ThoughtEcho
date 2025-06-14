@@ -59,7 +59,7 @@ class QuoteContent extends StatelessWidget {
               ),
               child: quill.QuillEditor.basic(
                 controller: controller,
-                config: const quill.QuillEditorConfig(
+                config: quill.QuillEditorConfig(
                   // 禁用编辑功能
                   autoFocus: false,
                   expands: false,
@@ -67,6 +67,21 @@ class QuoteContent extends StatelessWidget {
                   scrollable: false,
                   enableInteractiveSelection: false,
                   placeholder: '',
+                  // 设置自定义样式来匹配普通文本的行距
+                  customStyles: quill.DefaultStyles(
+                    paragraph: quill.DefaultTextBlockStyle(
+                      (style ??
+                              Theme.of(context).textTheme.bodyLarge ??
+                              const TextStyle())
+                          .copyWith(
+                            height: 1.5, // 设置和普通文本一样的行距
+                          ),
+                      const quill.HorizontalSpacing(0, 0),
+                      const quill.VerticalSpacing(0, 0),
+                      const quill.VerticalSpacing(0, 0),
+                      null,
+                    ),
+                  ),
                 ),
               ),
             ),
