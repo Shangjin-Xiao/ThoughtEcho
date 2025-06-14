@@ -39,22 +39,30 @@ class QuoteItemWidget extends StatelessWidget {
       try {
         final decoded = jsonDecode(quote.deltaContent!);
         if (decoded is List) {
-          int paragraphCount = 0;
+          int lineCount = 0;
           int totalLength = 0;
           for (var op in decoded) {
             if (op is Map && op['insert'] != null) {
               final String insert = op['insert'].toString();
+              // 每个\n算一行，且最后一段如果不是\n结尾也算一行
+              final lines = insert.split('\n');
+              lineCount += lines.length - 1;
+              if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
               totalLength += insert.length;
-              paragraphCount += '\n'.allMatches(insert).length;
             }
           }
-          return paragraphCount > 3 || totalLength > 100;
+          // 超过3行或内容长度超过150字符时显示折叠按钮
+          return lineCount > 3 || totalLength > 150;
         }
-      } catch (_) {}
+      } catch (_) {
+        // 富文本解析失败，回退到纯文本判断
+        final int lineCount = 1 + '\n'.allMatches(quote.content).length;
+        return lineCount > 3 || quote.content.length > 150;
+      }
     }
     // 旧笔记（纯文本）
-    final int paragraphCount = '\n'.allMatches(quote.content).length;
-    return paragraphCount > 3 || quote.content.length > 100;
+    final int lineCount = 1 + '\n'.allMatches(quote.content).length;
+    return lineCount > 3 || quote.content.length > 150;
   }
 
   String _formatSource(String author, String work) {
@@ -106,7 +114,7 @@ class QuoteItemWidget extends StatelessWidget {
          '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // 减少水平边距从16到12，垂直从8到6
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: AppTheme.defaultShadow,
@@ -127,13 +135,13 @@ class QuoteItemWidget extends StatelessWidget {
                 : null,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 减少内边距从16到12
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
                 // 头部日期显示
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -199,7 +207,7 @@ class QuoteItemWidget extends StatelessWidget {
 
                 // 笔记内容 - 使用QuoteContent组件替换
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
                   child: QuoteContent(
                     quote: quote,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -217,7 +225,7 @@ class QuoteItemWidget extends StatelessWidget {
                     (quote.sourceWork != null &&
                         quote.sourceWork!.isNotEmpty)) ...[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
                     child: Text(
                       _formatSource(
                         quote.sourceAuthor ?? '',
@@ -234,7 +242,7 @@ class QuoteItemWidget extends StatelessWidget {
                 ] else if (quote.source != null &&
                     quote.source!.isNotEmpty) ...[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
                     child: Text(
                       quote.source!,
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -277,7 +285,7 @@ class QuoteItemWidget extends StatelessWidget {
 
                 // 底部工具栏
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 4), // 减少左边距从16到4，右边距从0到4，底部从8到4
                   child: Row(
                     children: [
                       // 标签信息

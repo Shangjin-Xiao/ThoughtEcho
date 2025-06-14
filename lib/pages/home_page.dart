@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
@@ -750,9 +751,9 @@ class _HomePageState extends State<HomePage>
                           Container(
                             width: double.infinity,
                             margin: EdgeInsets.fromLTRB(
-                              screenWidth > 600 ? 24.0 : 16.0,
+                              48.0, // 与每日一言左右边距对齐 (24+24=48)
                               4.0, // 减少上边距
-                              screenWidth > 600 ? 24.0 : 16.0,
+                              48.0, // 与每日一言左右边距对齐 (24+24=48)
                               12.0, // 减少下边距
                             ),
                             padding: EdgeInsets.all(
@@ -910,59 +911,69 @@ class _HomePageState extends State<HomePage>
           ),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: theme.shadowColor.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
+        bottomNavigationBar: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), // 添加模糊效果
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(
+                  alpha: 0.8,
+                ), // 半透明背景
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.shadowColor.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
-              _onTabChanged(index);
-            },
-            elevation: 0,
-            backgroundColor: theme.colorScheme.surface,
-            surfaceTintColor: theme.colorScheme.surfaceTint,
-            indicatorColor: theme.colorScheme.primaryContainer,
-            destinations: [
-              NavigationDestination(
-                icon: const Icon(Icons.home_outlined),
-                selectedIcon: Icon(
-                  Icons.home,
-                  color: theme.colorScheme.primary,
+              child: NavigationBar(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) {
+                  _onTabChanged(index);
+                },
+                elevation: 0,
+                backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
+                surfaceTintColor: Colors.transparent, // 移除表面着色
+                indicatorColor: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.8,
                 ),
-                label: '首页',
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: Icon(
+                      Icons.home,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: '首页',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.book_outlined),
+                    selectedIcon: Icon(
+                      Icons.book,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: '记录',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.auto_awesome_outlined),
+                    selectedIcon: Icon(
+                      Icons.auto_awesome,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: 'AI',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(
+                      Icons.settings,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: '设置',
+                  ),
+                ],
               ),
-              NavigationDestination(
-                icon: const Icon(Icons.book_outlined),
-                selectedIcon: Icon(
-                  Icons.book,
-                  color: theme.colorScheme.primary,
-                ),
-                label: '记录',
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.auto_awesome_outlined),
-                selectedIcon: Icon(
-                  Icons.auto_awesome,
-                  color: theme.colorScheme.primary,
-                ),
-                label: 'AI',
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.settings_outlined),
-                selectedIcon: Icon(
-                  Icons.settings,
-                  color: theme.colorScheme.primary,
-                ),
-                label: '设置',
-              ),
-            ],
+            ),
           ),
         ),
       ),

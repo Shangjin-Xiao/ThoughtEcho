@@ -37,7 +37,9 @@ class QuoteContent extends StatelessWidget {
         // 使用与项目中其他部分相同的 API 方式
         return ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: showFullContent ? double.infinity : 200,
+            maxHeight: showFullContent 
+                ? double.infinity 
+                : (maxLines ?? 3) * 24.0, // 每行大约24像素高度
           ),
           child: ClipRect(
             // 使用ClipRect确保内容不会溢出
