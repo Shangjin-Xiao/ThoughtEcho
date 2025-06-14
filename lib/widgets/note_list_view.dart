@@ -246,7 +246,10 @@ class NoteListViewState extends State<NoteListView> {
               opacity: animation,
               child: SlideTransition(
                 position: animation.drive(
-                  Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero),
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.1), // 从下方微妙滑入
+                    end: Offset.zero,
+                  ).chain(CurveTween(curve: Curves.easeOutCubic)), // 更平滑的缓动
                 ),
                 child: QuoteItemWidget(
                   quote: quote,

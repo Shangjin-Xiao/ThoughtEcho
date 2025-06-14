@@ -102,33 +102,35 @@ class QuoteItemWidget extends StatelessWidget {
       dayPeriodLabel = TimeUtils.getDayPeriodLabel(quote.dayPeriod!);
     }
     final String formattedDate =
-        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
+        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2,
+         '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      child: Material(
-        elevation: 2,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        color: cardColor,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.shadowColor.applyOpacity(
-                    0.08,
-                  ), // 使用 applyOpacity 替代 withOpacity
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              color: Colors.transparent,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        boxShadow: AppTheme.defaultShadow,
+        gradient:
+            quote.colorHex != null && quote.colorHex!.isNotEmpty
+                ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    cardColor,
+                    cardColor.withValues(alpha: 0.95),
+                  ],
+                )
+                : null,
+        color:
+            quote.colorHex == null || quote.colorHex!.isEmpty
+                ? cardColor
+                : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                 // 头部日期显示
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -406,8 +408,6 @@ class QuoteItemWidget extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
         ),
       ),
     );

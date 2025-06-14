@@ -41,7 +41,7 @@ class _HomePageState extends State<HomePage>
   // 搜索控制器
   final _searchController = NoteSearchController();
 
-  late TabController _tabController;  // 新增：NoteListView的全局Key
+  late TabController _tabController; // 新增：NoteListView的全局Key
   final GlobalKey<NoteListViewState> _noteListViewKey =
       GlobalKey<NoteListViewState>();
   final GlobalKey<DailyQuoteViewState> _dailyQuoteViewKey =
@@ -75,12 +75,12 @@ class _HomePageState extends State<HomePage>
       final aiService = context.read<AIService>();
       final locationService = context.read<LocationService>();
       final weatherService = context.read<WeatherService>();
-      
+
       // 获取环境信息
       String? city = locationService.city;
       String? weather = weatherService.currentWeather;
       String? temperature = weatherService.temperature;
-      
+
       // Call the new stream method with environment context
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
         city: city,
@@ -96,7 +96,8 @@ class _HomePageState extends State<HomePage>
       setState(() {});
 
       // Listen to the stream and accumulate text
-      _promptSubscription = promptStream.listen(        (String chunk) {
+      _promptSubscription = promptStream.listen(
+        (String chunk) {
           // Append the new chunk and update state to trigger UI rebuild
           if (mounted) {
             setState(() {
@@ -119,12 +120,14 @@ class _HomePageState extends State<HomePage>
               ),
             );
           }
-        },        onDone: () {
+        },
+        onDone: () {
           debugPrint('每日提示流完成');
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
             setState(() {
-              _accumulatedPromptText = _accumulatedPromptText.trim(); // 去除前后空白字符
+              _accumulatedPromptText =
+                  _accumulatedPromptText.trim(); // 去除前后空白字符
               _isGeneratingDailyPrompt = false; // Stop loading on done
             });
             // 移除每日思考生成完成的弹窗通知
@@ -146,7 +149,8 @@ class _HomePageState extends State<HomePage>
           ),
         );
       }
-    }  }  // --- 每日提示相关状态和逻辑结束 ---
+    }
+  } // --- 每日提示相关状态和逻辑结束 ---
 
   // 统一刷新方法 - 同时刷新每日一言和每日提示
   Future<void> _handleRefresh() async {
@@ -706,7 +710,8 @@ class _HomePageState extends State<HomePage>
                 ),
         body: IndexedStack(
           index: _currentIndex,
-          children: [            // 首页 - 每日一言和每日提示
+          children: [
+            // 首页 - 每日一言和每日提示
             RefreshIndicator(
               onRefresh: _handleRefresh,
               child: LayoutBuilder(
@@ -714,125 +719,147 @@ class _HomePageState extends State<HomePage>
                   final screenHeight = constraints.maxHeight;
                   final screenWidth = constraints.maxWidth;
                   final isSmallScreen = screenHeight < 600;
-                  
+
                   return SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: SizedBox(
                       height: screenHeight, // 确保占满整个屏幕高度
                       child: Column(
                         children: [
-                    // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
-                    Expanded(
-                      child: Container(
-                        constraints: BoxConstraints(
-                          minHeight: screenHeight * 0.45, // 最小45%高度
-                        ),                        child: DailyQuoteView(
-                          key: _dailyQuoteViewKey,
-                          onAddQuote: (content, author, work, hitokotoData) =>
-                              _showAddQuoteDialog(
-                            prefilledContent: content,
-                            prefilledAuthor: author,
-                            prefilledWork: work,
-                            hitokotoData: hitokotoData,
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    // 每日提示部分 - 固定在底部，紧凑布局
-                    Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.fromLTRB(
-                        screenWidth > 600 ? 24.0 : 16.0,
-                        4.0, // 减少上边距
-                        screenWidth > 600 ? 24.0 : 16.0,
-                        12.0, // 减少下边距
-                      ),
-                      padding: EdgeInsets.all(
-                        screenWidth > 600 ? 18.0 : 14.0, // 减少内边距
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: AppTheme.defaultShadow,
-                        border: Border.all(
-                          color: theme.colorScheme.outline.withAlpha(30),
-                          width: 1,
-                        ),
-                      ),                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.lightbulb_outline,
-                                color: theme.colorScheme.primary,
-                                size: screenWidth > 600 ? 22 : 18,
+                          // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
+                          Expanded(
+                            child: Container(
+                              constraints: BoxConstraints(
+                                minHeight: screenHeight * 0.45, // 最小45%高度
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '今日思考',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: screenWidth > 600 ? 16 : 15,
-                                ),
+                              child: DailyQuoteView(
+                                key: _dailyQuoteViewKey,
+                                onAddQuote:
+                                    (content, author, work, hitokotoData) =>
+                                        _showAddQuoteDialog(
+                                          prefilledContent: content,
+                                          prefilledAuthor: author,
+                                          prefilledWork: work,
+                                          hitokotoData: hitokotoData,
+                                        ),
                               ),
-                            ],
+                            ),
                           ),
-                          SizedBox(height: isSmallScreen ? 6 : 8),
-                          
-                          // 提示内容区域 - 更紧凑
-                          _isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty
-                              ? Column(
-                                  mainAxisSize: MainAxisSize.min,
+
+                          // 每日提示部分 - 固定在底部，紧凑布局
+                          Container(
+                            width: double.infinity,
+                            margin: EdgeInsets.fromLTRB(
+                              screenWidth > 600 ? 24.0 : 16.0,
+                              4.0, // 减少上边距
+                              screenWidth > 600 ? 24.0 : 16.0,
+                              12.0, // 减少下边距
+                            ),
+                            padding: EdgeInsets.all(
+                              screenWidth > 600 ? 18.0 : 14.0, // 减少内边距
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: AppTheme.defaultShadow,
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withAlpha(30),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                    Icon(
+                                      Icons.lightbulb_outline,
+                                      color: theme.colorScheme.primary,
+                                      size: screenWidth > 600 ? 22 : 18,
                                     ),
-                                    SizedBox(height: isSmallScreen ? 4 : 6),
+                                    const SizedBox(width: 6),
                                     Text(
-                                      isAiConfigured
-                                          ? '正在加载今日思考...'
-                                          : '正在获取默认提示...',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurface.withAlpha(160),
-                                        fontSize: screenWidth > 600 ? 13 : 12,
-                                      ),
-                                      textAlign: TextAlign.center,
+                                      '今日思考',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize:
+                                                screenWidth > 600 ? 16 : 15,
+                                          ),
                                     ),
                                   ],
-                                )
-                              : Text(
-                                  _accumulatedPromptText.isNotEmpty
-                                      ? _accumulatedPromptText.trim()
-                                      : (isAiConfigured 
-                                          ? '等待今日思考...' 
-                                          : '暂无今日思考'),
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    height: 1.4,
-                                    fontSize: screenWidth > 600 ? 15 : 14,
-                                    color: _accumulatedPromptText.isNotEmpty
-                                        ? theme.textTheme.bodyMedium?.color
-                                        : theme.colorScheme.onSurface.withAlpha(120),
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 3, // 限制最大行数
-                                  overflow: TextOverflow.ellipsis,
-                                ),                        ],
+                                ),
+                                SizedBox(height: isSmallScreen ? 6 : 8),
+
+                                // 提示内容区域 - 更紧凑
+                                _isGeneratingDailyPrompt &&
+                                        _accumulatedPromptText.isEmpty
+                                    ? Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        SizedBox(height: isSmallScreen ? 4 : 6),
+                                        Text(
+                                          isAiConfigured
+                                              ? '正在加载今日思考...'
+                                              : '正在获取默认提示...',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withAlpha(160),
+                                                fontSize:
+                                                    screenWidth > 600 ? 13 : 12,
+                                              ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    )
+                                    : Text(
+                                      _accumulatedPromptText.isNotEmpty
+                                          ? _accumulatedPromptText.trim()
+                                          : (isAiConfigured
+                                              ? '等待今日思考...'
+                                              : '暂无今日思考'),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            height: 1.4,
+                                            fontSize:
+                                                screenWidth > 600 ? 15 : 14,
+                                            color:
+                                                _accumulatedPromptText
+                                                        .isNotEmpty
+                                                    ? theme
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color
+                                                    : theme
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withAlpha(120),
+                                          ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 3, // 限制最大行数
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                      ],
-                    ),
-                  ),
-                );
+                  );
                 },
               ),
             ),
@@ -865,39 +892,78 @@ class _HomePageState extends State<HomePage>
             const SettingsPage(),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          heroTag: 'homePageFAB', // 添加唯一的hero标签
-          onPressed: () => _showAddQuoteDialog(),
-          child: const Icon(Icons.add),
+        floatingActionButton: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppTheme.accentShadow,
+          ),
+          child: FloatingActionButton(
+            heroTag: 'homePageFAB',
+            onPressed: () => _showAddQuoteDialog(),
+            elevation: 0,
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: theme.colorScheme.onPrimary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.add, size: 28),
+          ),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            _onTabChanged(index); // 使用新的方法处理标签切换
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: '首页',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.book_outlined),
-              selectedIcon: Icon(Icons.book),
-              label: '记录',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.auto_awesome_outlined),
-              selectedIcon: Icon(Icons.auto_awesome),
-              label: 'AI',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: '设置',
-            ),
-          ],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: theme.shadowColor.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) {
+              _onTabChanged(index);
+            },
+            elevation: 0,
+            backgroundColor: theme.colorScheme.surface,
+            surfaceTintColor: theme.colorScheme.surfaceTint,
+            indicatorColor: theme.colorScheme.primaryContainer,
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: Icon(
+                  Icons.home,
+                  color: theme.colorScheme.primary,
+                ),
+                label: '首页',
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.book_outlined),
+                selectedIcon: Icon(
+                  Icons.book,
+                  color: theme.colorScheme.primary,
+                ),
+                label: '记录',
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.auto_awesome_outlined),
+                selectedIcon: Icon(
+                  Icons.auto_awesome,
+                  color: theme.colorScheme.primary,
+                ),
+                label: 'AI',
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.settings_outlined),
+                selectedIcon: Icon(
+                  Icons.settings,
+                  color: theme.colorScheme.primary,
+                ),
+                label: '设置',
+              ),
+            ],
+          ),
         ),
       ),
     );
