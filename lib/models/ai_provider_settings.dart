@@ -7,7 +7,8 @@ class AIProviderSettings implements AIConfig {
   @override
   final String name;
   @override
-  final String apiKey;  @override
+  final String apiKey; // 仅用于临时传递，实际API Key存储在加密存储中
+  @override
   final String apiUrl;
   @override
   final String model;
@@ -22,7 +23,7 @@ class AIProviderSettings implements AIConfig {
   const AIProviderSettings({
     required this.id,
     required this.name,
-    required this.apiKey,
+    this.apiKey = '', // 默认为空，实际API Key通过APIKeyManager管理
     required this.apiUrl,
     required this.model,
     this.temperature = 0.7,
@@ -34,7 +35,7 @@ class AIProviderSettings implements AIConfig {
     return {
       'id': id,
       'name': name,
-      'apiKey': apiKey,
+      // 'apiKey': apiKey, // API Key不存储在配置文件中，而是在加密存储中
       'apiUrl': apiUrl,
       'model': model,
       'temperature': temperature,
@@ -48,11 +49,15 @@ class AIProviderSettings implements AIConfig {
     return AIProviderSettings(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
-      apiKey: map['apiKey'] ?? '',
+      // apiKey: map['apiKey'] ?? '', // 不从配置文件读取，而是从加密存储读取
       apiUrl: map['apiUrl'] ?? '',
       model: map['model'] ?? '',
-      temperature: map['temperature'] != null ? (map['temperature'] as num).toDouble() : 0.7,
-      maxTokens: map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
+      temperature:
+          map['temperature'] != null
+              ? (map['temperature'] as num).toDouble()
+              : 0.7,
+      maxTokens:
+          map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
       hostOverride: map['hostOverride'],
       isEnabled: map['isEnabled'] ?? true,
     );
@@ -72,7 +77,7 @@ class AIProviderSettings implements AIConfig {
     return AIProviderSettings(
       id: id ?? this.id,
       name: name ?? this.name,
-      apiKey: apiKey ?? this.apiKey,
+      apiKey: apiKey ?? this.apiKey, // 仅用于临时传递
       apiUrl: apiUrl ?? this.apiUrl,
       model: model ?? this.model,
       temperature: temperature ?? this.temperature,
@@ -153,13 +158,12 @@ class AIProviderSettings implements AIConfig {
 
   @override
   Map<String, String> buildHeaders() {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     if (apiUrl.contains('openai.com') ||
         apiUrl.contains('openrouter.ai') ||
-        id == 'openai' || id == 'openrouter') {
+        id == 'openai' ||
+        id == 'openrouter') {
       headers['Authorization'] = 'Bearer $apiKey';
       if (id == 'openrouter') {
         headers['HTTP-Referer'] = 'https://thoughtecho.app';
@@ -188,7 +192,8 @@ class AIProviderSettings implements AIConfig {
 
     // 确保stream参数是boolean类型
     if (adjustedData.containsKey('stream')) {
-      adjustedData['stream'] = adjustedData['stream'] == true || adjustedData['stream'] == 'true';
+      adjustedData['stream'] =
+          adjustedData['stream'] == true || adjustedData['stream'] == 'true';
     }
 
     // Anthropic特殊处理
@@ -196,7 +201,8 @@ class AIProviderSettings implements AIConfig {
       // Anthropic API不在请求体中包含model，而是在URL中
       adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确
-      if (adjustedData.containsKey('stream') && adjustedData['stream'] == true) {
+      if (adjustedData.containsKey('stream') &&
+          adjustedData['stream'] == true) {
         adjustedData['stream'] = true; // 确保是boolean类型
       }
     }

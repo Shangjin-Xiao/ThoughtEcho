@@ -95,6 +95,22 @@ class _AISettingsPageState extends State<AISettingsPage> {
     super.dispose();
   }
 
+  /// 异步加载当前provider的API Key
+  Future<void> _loadApiKeyAsync() async {
+    if (_currentProvider != null) {
+      final apiKeyManager = APIKeyManager();
+      final apiKey = await apiKeyManager.getProviderApiKey(
+        _currentProvider!.id,
+      );
+
+      if (mounted && apiKey.isNotEmpty) {
+        setState(() {
+          _apiKeyController.text = apiKey;
+        });
+      }
+    }
+  }
+
   void _loadMultiSettings() {
     final settingsService = Provider.of<SettingsService>(
       context,
@@ -111,17 +127,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   void _updateApiKeyStatus() {
     if (_currentProvider != null) {
-      final apiKey = _currentProvider!.apiKey.trim();
-      if (apiKey.isEmpty) {
-        _apiKeyStatus = '未配置API Key';
-      } else {
-        final apiKeyManager = APIKeyManager();
-        if (apiKeyManager.isValidApiKeyFormat(apiKey)) {
-          _apiKeyStatus = 'API Key格式有效 (${apiKey.length}字符)';
-        } else {
-          _apiKeyStatus = 'API Key格式无效';
-        }
-      }
+      // 显示临时状态，等待异步验证
+      _apiKeyStatus = '正在验证API Key...';
     } else {
       _apiKeyStatus = '未选择服务商';
     }
@@ -131,18 +138,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
   Future<void> _updateApiKeyStatusAsync() async {
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
-      final hasValidKey = await apiKeyManager.hasValidProviderApiKey(_currentProvider!.id);
+      final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
+        _currentProvider!.id,
+      );
 
       if (hasValidKey) {
-        final secureApiKey = await apiKeyManager.getProviderApiKey(_currentProvider!.id);
+        final secureApiKey = await apiKeyManager.getProviderApiKey(
+          _currentProvider!.id,
+        );
         _apiKeyStatus = 'API Key有效 (${secureApiKey.length}字符)';
       } else {
-        final configApiKey = _currentProvider!.apiKey.trim();
-        if (configApiKey.isEmpty) {
-          _apiKeyStatus = '未配置API Key';
-        } else {
-          _apiKeyStatus = 'API Key格式无效';
-        }
+        _apiKeyStatus = '未配置有效的API Key';
       }
     } else {
       _apiKeyStatus = '未选择服务商';
@@ -160,8 +166,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
     });
 
     try {
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
-      final aiService = Provider.of<AIService>(context, listen: false);
+      final settingsService = Provider.of<SettingsService>(
+        context,
+        listen: false,
+      );
 
       // 获取当前设置
       final multiSettings = settingsService.multiAISettings;
@@ -175,21 +183,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
         if (!provider.isEnabled) {
           statusMessage = '⚠️ 服务商已禁用';
         } else {
-          // 使用异步方法从安全存储验证API密钥
-          final hasValidKey = await aiService.hasValidApiKeyAsync();
+          // 使用简化的API Key检测方法
+          final apiKeyManager = APIKeyManager();
+          final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
+            provider.id,
+          );
 
           if (hasValidKey) {
             statusMessage = '✅ API Key有效 (已验证)';
           } else {
-            // 检查是否有API密钥配置
-            final apiKeyManager = APIKeyManager();
-            final secureApiKey = await apiKeyManager.getProviderApiKey(provider.id);
-
-            if (secureApiKey.isEmpty && provider.apiKey.trim().isEmpty) {
-              statusMessage = '❌ 未配置API Key';
-            } else {
-              statusMessage = '❌ API Key格式无效';
-            }
+            statusMessage = '❌ 未配置有效的API Key';
           }
         }
       }
@@ -204,10 +207,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('检查失败: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('检查失败: $e'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -231,16 +231,20 @@ class _AISettingsPageState extends State<AISettingsPage> {
         if (_currentProvider != null) {
           _modelController.text = _currentProvider!.model;
           _apiUrlController.text = _currentProvider!.apiUrl;
-          _apiKeyController.text = _currentProvider!.apiKey;
+          _apiKeyController.text = ''; // 不从配置读取API Key
           _maxTokensController.text = _currentProvider!.maxTokens.toString();
           _hostOverride = _currentProvider!.hostOverride;
           _hostOverrideController.text = _hostOverride ?? '';
 
+          // 异步加载API Key
+          _loadApiKeyAsync();
+
           // 尝试匹配预设
           try {
-            _selectedPreset = aiPresets.firstWhere(
-              (p) => p['apiUrl'] == _apiUrlController.text,
-            )['name'];
+            _selectedPreset =
+                aiPresets.firstWhere(
+                  (p) => p['apiUrl'] == _apiUrlController.text,
+                )['name'];
           } catch (_) {
             _selectedPreset = null;
           }
@@ -266,7 +270,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   Future<void> _saveSettings() async {
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // 验证输入
@@ -314,9 +321,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       FocusScope.of(context).unfocus();
     } catch (e) {
       if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('保存设置失败: $e')),
-      );
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('保存设置失败: $e')));
     }
   }
 
@@ -346,7 +351,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final newProvider = AIProviderSettings(
       id: 'provider_${DateTime.now().millisecondsSinceEpoch}',
       name: providerName,
-      apiKey: _apiKeyController.text,
+      apiKey: '', // 不再在配置中保存API Key
       apiUrl: _apiUrlController.text,
       model: _modelController.text,
       temperature: temperature,
@@ -355,7 +360,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
       isEnabled: _apiKeyController.text.isNotEmpty,
     );
 
-    // 添加到provider列表
+    // 先保存API密钥到安全存储（确保成功）
+    final apiKeyManager = APIKeyManager();
+    await apiKeyManager.saveProviderApiKey(newProvider.id, newProvider.apiKey);
+    debugPrint('已保存新provider的API密钥到安全存储');
+
+    // 再添加到provider列表
     final updatedProviders = [..._multiSettings.providers, newProvider];
 
     // 设置为当前provider
@@ -364,12 +374,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
       currentProviderId: newProvider.id,
     );
 
+    // 保存设置
     await settingsService.saveMultiAISettings(updatedMultiSettings);
-
-    // 保存API密钥到安全存储
-    final apiKeyManager = APIKeyManager();
-    await apiKeyManager.saveProviderApiKey(newProvider.id, newProvider.apiKey);
-    debugPrint('已保存新provider的API密钥到安全存储');
 
     // 更新本地状态
     _multiSettings = updatedMultiSettings;
@@ -548,7 +554,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 重命名provider
   Future<void> _renameProvider(AIProviderSettings provider) async {
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final TextEditingController nameController = TextEditingController(
       text: provider.name,
@@ -616,7 +625,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 删除provider
   Future<void> _deleteProvider(AIProviderSettings provider) async {
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     final confirmed = await showDialog<bool>(
@@ -753,10 +765,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           ),
                           Text(
                             'API Key: $_apiKeyStatus',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _apiKeyStatus.contains('有效')
-                                  ? Colors.green
-                                  : _apiKeyStatus.contains('无效')
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color:
+                                  _apiKeyStatus.contains('有效')
+                                      ? Colors.green
+                                      : _apiKeyStatus.contains('无效')
                                       ? Colors.red
                                       : Colors.orange,
                             ),
@@ -767,13 +782,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     // API Key检查按钮
                     IconButton(
                       onPressed: _isCheckingApiKey ? null : _checkApiKeyStatus,
-                      icon: _isCheckingApiKey
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.refresh),
+                      icon:
+                          _isCheckingApiKey
+                              ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Icon(Icons.refresh),
                       tooltip: '检查API Key状态',
                     ),
                   ],

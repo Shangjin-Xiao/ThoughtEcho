@@ -19,11 +19,8 @@ class AIService extends ChangeNotifier {
   final AIPromptManager _promptManager = AIPromptManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
 
-  AIService({
-    required SettingsService settingsService,
-  }) : _settingsService = settingsService;
-
-
+  AIService({required SettingsService settingsService})
+    : _settingsService = settingsService;
 
   Future<void> _validateSettings() async {
     try {
@@ -36,7 +33,9 @@ class AIService extends ChangeNotifier {
       final currentProvider = multiSettings.currentProvider!;
 
       // 检查API Key是否存在
-      final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(currentProvider.id);
+      final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
+        currentProvider.id,
+      );
       if (!hasApiKey) {
         throw Exception('请先为 ${currentProvider.name} 配置 API Key');
       }
@@ -57,8 +56,7 @@ class AIService extends ChangeNotifier {
   }
 
   /// 同步检查API Key是否有效 (用于UI快速判断)
-  /// 检查当前选中的AI服务商是否配置了有效的API Key
-  /// 注意：这个方法现在会异步检查MMKV存储，但为了保持接口兼容性仍返回bool
+  /// 注意：这个方法只做基本检查，实际验证需要使用异步方法
   bool hasValidApiKey() {
     try {
       final multiSettings = _settingsService.multiAISettings;
@@ -73,21 +71,21 @@ class AIService extends ChangeNotifier {
           return false;
         }
 
-        // 检查provider配置中的API Key格式（作为快速预检）
-        final hasValidKeyFormat = _apiKeyManager.hasValidProviderApiKeySync(currentProvider);
-
-        // debugPrint('API Key检查 - Provider: ${currentProvider.name}, '
-        //     'HasValidKeyFormat: $hasValidKeyFormat, Enabled: ${currentProvider.isEnabled}');
-
-        return hasValidKeyFormat;
+        // 基本检查：provider存在且启用
+        // 实际的API Key验证通过异步方法进行
+        debugPrint(
+          'API Key检查 - Provider: ${currentProvider.name}, Enabled: ${currentProvider.isEnabled}',
+        );
+        return true;
       }
 
       // 如果没有当前provider，检查是否有任何可用的provider
-      final availableProviders = multiSettings.providers.where((p) =>
-          p.isEnabled && _apiKeyManager.hasValidProviderApiKeySync(p)
-      ).toList();
+      final availableProviders =
+          multiSettings.providers.where((p) => p.isEnabled).toList();
 
-      debugPrint('API Key检查 - 无当前provider，可用providers: ${availableProviders.length}');
+      debugPrint(
+        'API Key检查 - 无当前provider，可用providers: ${availableProviders.length}',
+      );
       return availableProviders.isNotEmpty;
     } catch (e) {
       debugPrint('检查API Key有效性失败: $e');
@@ -103,14 +101,23 @@ class AIService extends ChangeNotifier {
       if (multiSettings.currentProvider != null) {
         final currentProvider = multiSettings.currentProvider!;
 
+        // 检查provider是否启用
+        if (!currentProvider.isEnabled) {
+          debugPrint('异步API Key检查 - 当前provider已禁用: ${currentProvider.name}');
+          return false;
+        }
+
         // 从安全存储验证API密钥
-        final hasValidKey = await _apiKeyManager.hasValidProviderApiKey(currentProvider.id);
-        final isEnabled = currentProvider.isEnabled;
+        final hasValidKey = await _apiKeyManager.hasValidProviderApiKey(
+          currentProvider.id,
+        );
 
-        // debugPrint('异步API Key检查 - Provider: ${currentProvider.name}, '
-        //     'HasValidKey: $hasValidKey, Enabled: $isEnabled');
+        debugPrint(
+          '异步API Key检查 - Provider: ${currentProvider.name}, '
+          'HasValidKey: $hasValidKey, Enabled: ${currentProvider.isEnabled}',
+        );
 
-        return hasValidKey && isEnabled;
+        return hasValidKey;
       }
 
       return false;
@@ -119,8 +126,6 @@ class AIService extends ChangeNotifier {
       return false;
     }
   }
-
-
 
   Future<String> summarizeNote(Quote quote) async {
     // 使用异步验证确保API Key有效性
@@ -165,19 +170,22 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
           userMessage: userMessage,
           settings: settings,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式笔记分析',
-          ),
+          onData:
+              (text) => _requestHelper.handleStreamResponse(
+                controller: controller,
+                chunk: text,
+              ),
+          onComplete:
+              (fullText) => _requestHelper.handleStreamComplete(
+                controller: controller,
+                fullText: fullText,
+              ),
+          onError:
+              (error) => _requestHelper.handleStreamError(
+                controller: controller,
+                error: error,
+                context: '流式笔记分析',
+              ),
         );
       },
       context: '流式笔记分析',
@@ -219,11 +227,12 @@ class AIService extends ChangeNotifier {
           final settings = _settingsService.aiSettings;
 
           // 获取包含环境信息的系统提示词
-          final systemPromptWithContext = _promptManager.getDailyPromptSystemPromptWithContext(
-            city: city,
-            weather: weather,
-            temperature: temperature,
-          );
+          final systemPromptWithContext = _promptManager
+              .getDailyPromptSystemPromptWithContext(
+                city: city,
+                weather: weather,
+                temperature: temperature,
+              );
 
           final userMessage = _promptManager.buildDailyPromptUserMessage(
             city: city,
@@ -236,19 +245,22 @@ class AIService extends ChangeNotifier {
             systemPrompt: systemPromptWithContext,
             userMessage: userMessage,
             settings: settings,
-            onData: (text) => _requestHelper.handleStreamResponse(
-              controller: controller,
-              chunk: text,
-            ),
-            onComplete: (fullText) => _requestHelper.handleStreamComplete(
-              controller: controller,
-              fullText: fullText,
-            ),
-            onError: (error) => _requestHelper.handleStreamError(
-              controller: controller,
-              error: error,
-              context: 'AI生成每日提示',
-            ),
+            onData:
+                (text) => _requestHelper.handleStreamResponse(
+                  controller: controller,
+                  chunk: text,
+                ),
+            onComplete:
+                (fullText) => _requestHelper.handleStreamComplete(
+                  controller: controller,
+                  fullText: fullText,
+                ),
+            onError:
+                (error) => _requestHelper.handleStreamError(
+                  controller: controller,
+                  error: error,
+                  context: 'AI生成每日提示',
+                ),
             temperature: 1.0, // 可以调整温度以获得更有创意的提示
             maxTokens: 100, // 限制提示的长度
           );
@@ -294,8 +306,13 @@ class AIService extends ChangeNotifier {
         final quotesText = _requestHelper.formatJsonData(jsonData);
 
         // 根据分析类型选择系统提示词
-        String systemPrompt = _promptManager.getAnalysisTypePrompt(analysisType);
-        systemPrompt = _promptManager.appendAnalysisStylePrompt(systemPrompt, analysisStyle);
+        String systemPrompt = _promptManager.getAnalysisTypePrompt(
+          analysisType,
+        );
+        systemPrompt = _promptManager.appendAnalysisStylePrompt(
+          systemPrompt,
+          analysisStyle,
+        );
 
         final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
         final response = await _requestHelper.makeRequest(
@@ -337,7 +354,8 @@ class AIService extends ChangeNotifier {
           analysisStyle: analysisStyle,
         );
         // 添加自定义提示词使用标记（转换为字符串以避免类型错误）
-        jsonData['metadata']['customPromptUsed'] = (customPrompt != null && customPrompt.isNotEmpty).toString();
+        jsonData['metadata']['customPromptUsed'] =
+            (customPrompt != null && customPrompt.isNotEmpty).toString();
         final quotesText = _requestHelper.formatJsonData(jsonData);
 
         // 根据分析类型选择系统提示词 或 使用自定义提示词
@@ -358,19 +376,22 @@ class AIService extends ChangeNotifier {
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           settings: settings,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式生成洞察',
-          ),
+          onData:
+              (text) => _requestHelper.handleStreamResponse(
+                controller: controller,
+                chunk: text,
+              ),
+          onComplete:
+              (fullText) => _requestHelper.handleStreamComplete(
+                controller: controller,
+                fullText: fullText,
+              ),
+          onError:
+              (error) => _requestHelper.handleStreamError(
+                controller: controller,
+                error: error,
+                context: '流式生成洞察',
+              ),
           maxTokens: 2500,
         );
       },
@@ -390,7 +411,9 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
-        final userMessage = _promptManager.buildSourceAnalysisUserMessage(content);
+        final userMessage = _promptManager.buildSourceAnalysisUserMessage(
+          content,
+        );
         final response = await _requestHelper.makeRequest(
           url: settings.apiUrl,
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
@@ -419,25 +442,30 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
-        final userMessage = _promptManager.buildSourceAnalysisUserMessage(content);
+        final userMessage = _promptManager.buildSourceAnalysisUserMessage(
+          content,
+        );
         await _requestHelper.makeStreamRequest(
           url: settings.apiUrl,
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
           userMessage: userMessage,
           settings: settings,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式分析来源',
-          ),
+          onData:
+              (text) => _requestHelper.handleStreamResponse(
+                controller: controller,
+                chunk: text,
+              ),
+          onComplete:
+              (fullText) => _requestHelper.handleStreamComplete(
+                controller: controller,
+                fullText: fullText,
+              ),
+          onError:
+              (error) => _requestHelper.handleStreamError(
+                controller: controller,
+                error: error,
+                context: '流式分析来源',
+              ),
           temperature: 0.4, // 使用较低的温度确保格式一致性
           maxTokens: 500,
         );
@@ -492,19 +520,22 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.textPolishPrompt,
           userMessage: userMessage,
           settings: settings,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式润色文本',
-          ),
+          onData:
+              (text) => _requestHelper.handleStreamResponse(
+                controller: controller,
+                chunk: text,
+              ),
+          onComplete:
+              (fullText) => _requestHelper.handleStreamComplete(
+                controller: controller,
+                fullText: fullText,
+              ),
+          onError:
+              (error) => _requestHelper.handleStreamError(
+                controller: controller,
+                error: error,
+                context: '流式润色文本',
+              ),
           maxTokens: 1000,
         );
       },
@@ -524,7 +555,9 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
-        final userMessage = _promptManager.buildContinuationUserMessage(content);
+        final userMessage = _promptManager.buildContinuationUserMessage(
+          content,
+        );
         final response = await _requestHelper.makeRequest(
           url: settings.apiUrl,
           systemPrompt: AIPromptManager.textContinuationPrompt,
@@ -553,25 +586,30 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
-        final userMessage = _promptManager.buildContinuationUserMessage(content);
+        final userMessage = _promptManager.buildContinuationUserMessage(
+          content,
+        );
         await _requestHelper.makeStreamRequest(
           url: settings.apiUrl,
           systemPrompt: AIPromptManager.textContinuationPrompt,
           userMessage: userMessage,
           settings: settings,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式续写文本',
-          ),
+          onData:
+              (text) => _requestHelper.handleStreamResponse(
+                controller: controller,
+                chunk: text,
+              ),
+          onComplete:
+              (fullText) => _requestHelper.handleStreamComplete(
+                controller: controller,
+                fullText: fullText,
+              ),
+          onError:
+              (error) => _requestHelper.handleStreamError(
+                controller: controller,
+                error: error,
+                context: '流式续写文本',
+              ),
           temperature: 0.8, // 使用较高的温度以增加创意性
           maxTokens: 1000,
         );
@@ -592,7 +630,10 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
-        final userMessage = _promptManager.buildQAUserMessage(quote.content, question);
+        final userMessage = _promptManager.buildQAUserMessage(
+          quote.content,
+          question,
+        );
         final response = await _requestHelper.makeRequest(
           url: settings.apiUrl,
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
@@ -621,25 +662,31 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final settings = _settingsService.aiSettings;
 
-        final userMessage = _promptManager.buildQAUserMessage(quote.content, question);
+        final userMessage = _promptManager.buildQAUserMessage(
+          quote.content,
+          question,
+        );
         await _requestHelper.makeStreamRequest(
           url: settings.apiUrl,
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
           settings: settings,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式问答',
-          ),
+          onData:
+              (text) => _requestHelper.handleStreamResponse(
+                controller: controller,
+                chunk: text,
+              ),
+          onComplete:
+              (fullText) => _requestHelper.handleStreamComplete(
+                controller: controller,
+                fullText: fullText,
+              ),
+          onError:
+              (error) => _requestHelper.handleStreamError(
+                controller: controller,
+                error: error,
+                context: '流式问答',
+              ),
           temperature: 0.5,
           maxTokens: 1000,
         );

@@ -4,7 +4,8 @@ import '../utils/mmkv_adapter.dart';
 
 /// 安全存储服务，专门用于存储多供应商API密钥
 class SecureStorageService {
-  static final SecureStorageService _instance = SecureStorageService._internal();
+  static final SecureStorageService _instance =
+      SecureStorageService._internal();
   static const String _providerApiKeysKey = 'provider_api_keys';
   late MMKVAdapter _storage;
   bool _initialized = false;
@@ -44,15 +45,27 @@ class SecureStorageService {
     final existingKeys = await _getAllApiKeys();
     existingKeys[providerId] = cleanedKey;
 
-    await _storage.setString(_providerApiKeysKey, _encodeApiKeysMap(existingKeys));
+    await _storage.setString(
+      _providerApiKeysKey,
+      _encodeApiKeysMap(existingKeys),
+    );
     debugPrint('已保存 Provider $providerId 的API密钥');
   }
 
   /// 获取指定供应商的API密钥
   Future<String?> getProviderApiKey(String providerId) async {
     await ensureInitialized();
-    final allKeys = await _getAllApiKeys();
-    return allKeys[providerId];
+    try {
+      final allKeys = await _getAllApiKeys();
+      final apiKey = allKeys[providerId];
+      debugPrint(
+        '获取API Key - Provider: $providerId, Found: ${apiKey?.isNotEmpty ?? false}',
+      );
+      return apiKey;
+    } catch (e) {
+      debugPrint('获取API Key失败 - Provider: $providerId, Error: $e');
+      return null;
+    }
   }
 
   /// 删除指定供应商的API密钥
@@ -62,7 +75,10 @@ class SecureStorageService {
     final existingKeys = await _getAllApiKeys();
     existingKeys.remove(providerId);
 
-    await _storage.setString(_providerApiKeysKey, _encodeApiKeysMap(existingKeys));
+    await _storage.setString(
+      _providerApiKeysKey,
+      _encodeApiKeysMap(existingKeys),
+    );
     debugPrint('已删除 Provider $providerId 的API密钥');
   }
 

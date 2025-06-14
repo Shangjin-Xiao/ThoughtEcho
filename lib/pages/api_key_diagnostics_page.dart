@@ -109,7 +109,9 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
       buffer.writeln('1. 多供应商配置...');
       buffer.writeln('   - 当前供应商: ${currentProvider?.name ?? "未选择"}');
       buffer.writeln('   - 可用供应商数量: ${multiSettings.providers.length}');
-      buffer.writeln('   - 已启用供应商: ${multiSettings.providers.where((p) => p.isEnabled).length}');
+      buffer.writeln(
+        '   - 已启用供应商: ${multiSettings.providers.where((p) => p.isEnabled).length}',
+      );
       buffer.writeln();
 
       if (currentProvider != null) {
@@ -129,25 +131,31 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
 
         if (hasApiKeyInSettings) {
           buffer.writeln('   - 设置中密钥长度: ${currentProvider.apiKey.length}');
-          buffer.writeln('   - 设置中密钥前缀: ${currentProvider.apiKey.length > 15 ? "${currentProvider.apiKey.substring(0, 15)}..." : currentProvider.apiKey}');
+          buffer.writeln(
+            '   - 设置中密钥前缀: ${currentProvider.apiKey.length > 15 ? "${currentProvider.apiKey.substring(0, 15)}..." : currentProvider.apiKey}',
+          );
         }
 
         // 检查安全存储中的密钥
-        final secureApiKey = await apiKeyManager.getProviderApiKey(currentProvider.id);
+        final secureApiKey = await apiKeyManager.getProviderApiKey(
+          currentProvider.id,
+        );
         final hasSecureApiKey = secureApiKey.isNotEmpty;
         buffer.writeln('   - 安全存储中有密钥: ${hasSecureApiKey ? "是" : "否"}');
 
         if (hasSecureApiKey) {
           buffer.writeln('   - 安全存储密钥长度: ${secureApiKey.length}');
-          buffer.writeln('   - 安全存储密钥前缀: ${secureApiKey.length > 15 ? "${secureApiKey.substring(0, 15)}..." : secureApiKey}');
+          buffer.writeln(
+            '   - 安全存储密钥前缀: ${secureApiKey.length > 15 ? "${secureApiKey.substring(0, 15)}..." : secureApiKey}',
+          );
         }
         buffer.writeln();
 
         // 4. 密钥验证
         buffer.writeln('4. 密钥验证...');
-        final isValidSync = apiKeyManager.hasValidProviderApiKeySync(currentProvider);
-        final isValidAsync = await apiKeyManager.hasValidProviderApiKey(currentProvider.id);
-        buffer.writeln('   - 同步验证: ${isValidSync ? "通过" : "失败"}');
+        final isValidAsync = await apiKeyManager.hasValidProviderApiKey(
+          currentProvider.id,
+        );
         buffer.writeln('   - 异步验证: ${isValidAsync ? "通过" : "失败"}');
 
         if (hasSecureApiKey) {
@@ -164,7 +172,9 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
       buffer.writeln('5. 所有供应商状态...');
       for (final provider in multiSettings.providers) {
         final hasKey = await apiKeyManager.hasValidProviderApiKey(provider.id);
-        buffer.writeln('   - ${provider.name}: ${hasKey ? "✓" : "✗"} ${provider.isEnabled ? "(已启用)" : "(已禁用)"}');
+        buffer.writeln(
+          '   - ${provider.name}: ${hasKey ? "✓" : "✗"} ${provider.isEnabled ? "(已启用)" : "(已禁用)"}',
+        );
       }
       buffer.writeln();
 
@@ -175,7 +185,9 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
       } else if (!currentProvider.isEnabled) {
         buffer.writeln('   - 请启用当前选择的AI服务商');
       } else {
-        final hasValidKey = await apiKeyManager.hasValidProviderApiKey(currentProvider.id);
+        final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
+          currentProvider.id,
+        );
         if (!hasValidKey) {
           buffer.writeln('   - 请为 ${currentProvider.name} 配置有效的API密钥');
         } else {
