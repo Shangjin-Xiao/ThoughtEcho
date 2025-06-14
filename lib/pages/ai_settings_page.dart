@@ -99,15 +99,24 @@ class _AISettingsPageState extends State<AISettingsPage> {
   Future<void> _loadApiKeyAsync() async {
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
+      debugPrint('开始加载API Key - Provider ID: ${_currentProvider!.id}');
+
       final apiKey = await apiKeyManager.getProviderApiKey(
         _currentProvider!.id,
       );
 
-      if (mounted && apiKey.isNotEmpty) {
+      debugPrint(
+        '从加密存储读取的API Key: ${apiKey.isNotEmpty ? "${apiKey.length}字符" : "空"}',
+      );
+
+      if (mounted) {
         setState(() {
           _apiKeyController.text = apiKey;
         });
+        debugPrint('已更新API Key输入框: ${_apiKeyController.text.length}字符');
       }
+    } else {
+      debugPrint('加载API Key失败: 当前provider为空');
     }
   }
 
@@ -362,8 +371,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     // 先保存API密钥到安全存储（确保成功）
     final apiKeyManager = APIKeyManager();
-    await apiKeyManager.saveProviderApiKey(newProvider.id, newProvider.apiKey);
-    debugPrint('已保存新provider的API密钥到安全存储');
+    await apiKeyManager.saveProviderApiKey(
+      newProvider.id,
+      _apiKeyController.text,
+    );
+    debugPrint('已保存新provider的API密钥到安全存储: ${_apiKeyController.text.length}字符');
 
     // 再添加到provider列表
     final updatedProviders = [..._multiSettings.providers, newProvider];
