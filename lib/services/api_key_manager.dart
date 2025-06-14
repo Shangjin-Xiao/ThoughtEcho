@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import '../models/ai_provider_settings.dart';
 import 'secure_storage_service.dart';
 
 /// 多供应商API密钥管理器
@@ -28,23 +27,20 @@ class APIKeyManager {
     }
   }
 
-  /// 检查指定供应商是否有有效的API密钥（从安全存储验证）
+  /// 检查指定供应商是否有有效的API密钥（仅从安全存储验证）
   Future<bool> hasValidProviderApiKey(String providerId) async {
     try {
       final apiKey = await getProviderApiKey(providerId);
       final isValid = apiKey.isNotEmpty && _isValidApiKeyFormat(apiKey);
-      debugPrint('异步验证API Key - Provider: $providerId, '
-          'HasKey: ${apiKey.isNotEmpty}, IsValidFormat: $isValid');
+      debugPrint(
+        '验证API Key - Provider: $providerId, '
+        'HasKey: ${apiKey.isNotEmpty}, IsValidFormat: $isValid',
+      );
       return isValid;
     } catch (e) {
-      debugPrint('异步验证API Key失败 - Provider: $providerId, Error: $e');
+      debugPrint('验证API Key失败 - Provider: $providerId, Error: $e');
       return false;
     }
-  }
-
-  /// 同步检查指定供应商的API密钥（用于UI快速判断）
-  bool hasValidProviderApiKeySync(AIProviderSettings provider) {
-    return provider.apiKey.trim().isNotEmpty && _isValidApiKeyFormat(provider.apiKey);
   }
 
   /// 删除指定供应商的API密钥
@@ -80,10 +76,14 @@ class APIKeyManager {
     // OpenRouter格式: sk_... 或 or_...
     if ((trimmedKey.startsWith('sk_') || trimmedKey.startsWith('or_')) &&
         trimmedKey.length > 20) {
-      debugPrint('API Key Format Check: OpenRouter (sk_ or or_ prefix) - Valid');
+      debugPrint(
+        'API Key Format Check: OpenRouter (sk_ or or_ prefix) - Valid',
+      );
       return true;
     }
-    debugPrint('API Key Format Check: OpenRouter (sk_ or or_ prefix) - Invalid');
+    debugPrint(
+      'API Key Format Check: OpenRouter (sk_ or or_ prefix) - Invalid',
+    );
 
     // Bearer token格式
     if (trimmedKey.startsWith('Bearer ') && trimmedKey.length > 20) {
