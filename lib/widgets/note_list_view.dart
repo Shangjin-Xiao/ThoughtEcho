@@ -266,7 +266,6 @@ class NoteListViewState extends State<NoteListView> {
                   onAskAI: () => widget.onAskAI(quote),
                   tagBuilder: (tag) {
                     return Container(
-                      margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 2,

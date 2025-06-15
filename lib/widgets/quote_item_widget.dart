@@ -110,11 +110,13 @@ class QuoteItemWidget extends StatelessWidget {
       dayPeriodLabel = TimeUtils.getDayPeriodLabel(quote.dayPeriod!);
     }
     final String formattedDate =
-        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2,
-         '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
+        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // 减少水平边距从16到12，垂直从8到6
+      margin: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ), // 减少水平边距从16到12，垂直从8到6
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: AppTheme.defaultShadow,
@@ -123,10 +125,7 @@ class QuoteItemWidget extends StatelessWidget {
                 ? LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    cardColor,
-                    cardColor.withValues(alpha: 0.95),
-                  ],
+                  colors: [cardColor, cardColor.withValues(alpha: 0.95)],
                 )
                 : null,
         color:
@@ -139,283 +138,284 @@ class QuoteItemWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                // 头部日期显示
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        formattedDate,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.applyOpacity(
-                            0.7,
-                          ), // MODIFIED
-                        ),
-                      ),
-                      if (quote.location != null || quote.weather != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (quote.location != null) ...[
-                              Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: theme.colorScheme.secondary.applyOpacity(
-                                  // MODIFIED
-                                  0.7,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                quote.location!.split(',').length >= 3
-                                    ? (quote.location!.split(',').length >= 4
-                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
-                                        : quote.location!.split(',')[2]) // 只有城市
-                                    : quote.location!,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.secondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                            if (quote.location != null && quote.weather != null)
-                              const SizedBox(width: 8),
-                            if (quote.weather != null) ...[
-                              Icon(
-                                _getWeatherIcon(quote.weather!),
-                                size: 14,
-                                color: theme.colorScheme.secondary.applyOpacity(
-                                  // MODIFIED
-                                  0.7,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${WeatherService.getWeatherDescription(quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.secondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-
-                // 笔记内容 - 使用QuoteContent组件替换
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
-                  child: QuoteContent(
-                    quote: quote,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      height: 1.5,
-                    ),
-                    maxLines: isExpanded ? null : 3,
-                    showFullContent: isExpanded,
-                  ),
-                ),
-
-                // 来源信息（如果有）
-                if ((quote.sourceAuthor != null &&
-                        quote.sourceAuthor!.isNotEmpty) ||
-                    (quote.sourceWork != null &&
-                        quote.sourceWork!.isNotEmpty)) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-                    child: Text(
-                      _formatSource(
-                        quote.sourceAuthor ?? '',
-                        quote.sourceWork ?? '',
-                      ),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.applyOpacity(
-                          0.75,
-                        ), // MODIFIED
-                        fontStyle: FontStyle.italic,
-                      ),
+            // 头部日期显示
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.applyOpacity(
+                        0.7,
+                      ), // MODIFIED
                     ),
                   ),
-                ] else if (quote.source != null &&
-                    quote.source!.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-                    child: Text(
-                      quote.source!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.applyOpacity(
-                          0.75,
-                        ), // MODIFIED
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-
-                // 展开/折叠按钮（如果内容较长）
-                if (_needsExpansion(quote)) ...[
-                  Center(
-                    child: TextButton(
-                      onPressed: () => onToggleExpanded(!isExpanded),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                  if (quote.location != null || quote.weather != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (quote.location != null) ...[
+                          Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: theme.colorScheme.secondary.applyOpacity(
+                              // MODIFIED
+                              0.7,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
                           Text(
-                            isExpanded ? '收起' : '展开全部',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
+                            quote.location!.split(',').length >= 3
+                                ? (quote.location!.split(',').length >= 4
+                                    ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
+                                    : quote.location!.split(',')[2]) // 只有城市
+                                : quote.location!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.secondary,
                               fontSize: 12,
                             ),
                           ),
-                          Icon(
-                            isExpanded
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            size: 16,
-                            color: theme.colorScheme.primary,
-                          ),
                         ],
-                      ),
-                    ),
-                  ),
-                ],
-
-                // 底部工具栏
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 4), // 减少左边距从16到4，右边距从0到4，底部从8到4
-                  child: Row(
-                    children: [
-                      // 标签信息
-                      if (quote.tagIds.isNotEmpty) ...[
-                        Icon(
-                          Icons.label_outline,
-                          size: 16,
-                          color: theme.colorScheme.onSurface.applyOpacity(
-                            0.6,
-                          ), // MODIFIED
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children:
-                                  quote.tagIds.map((tagId) {
-                                    final tag = tags.firstWhere(
-                                      (t) => t.id == tagId,
-                                      orElse:
-                                          () => NoteCategory(
-                                            id: tagId,
-                                            name: '未知标签',
-                                          ),
-                                    );
-                                    return tagBuilder != null
-                                        ? tagBuilder!(tag)
-                                        : Container(
-                                          margin: const EdgeInsets.only(
-                                            right: 8,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.primary
-                                                .applyOpacity(0.1), // MODIFIED
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            tag.name,
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                ),
-                                          ),
-                                        );
-                                  }).toList(),
+                        if (quote.location != null && quote.weather != null)
+                          const SizedBox(width: 8),
+                        if (quote.weather != null) ...[
+                          Icon(
+                            _getWeatherIcon(quote.weather!),
+                            size: 14,
+                            color: theme.colorScheme.secondary.applyOpacity(
+                              // MODIFIED
+                              0.7,
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${WeatherService.getWeatherDescription(quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.secondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ],
+                    ),
+                ],
+              ),
+            ),
 
-                      // 添加Spacer确保更多按钮始终在右侧
-                      const Spacer(),
+            // 笔记内容 - 使用QuoteContent组件替换
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
+              child: QuoteContent(
+                quote: quote,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  height: 1.5,
+                ),
+                maxLines: isExpanded ? null : 3,
+                showFullContent: isExpanded,
+              ),
+            ),
 
-                      // 操作按钮
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: theme.colorScheme.onSurface.applyOpacity(
-                            0.7,
-                          ), // MODIFIED
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        onSelected: (value) {
-                          if (value == 'ask') {
-                            onAskAI();
-                          } else if (value == 'edit') {
-                            onEdit();
-                          } else if (value == 'delete') {
-                            onDelete();
-                          }
-                        },
-                        itemBuilder:
-                            (context) => [
-                              PopupMenuItem<String>(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.edit,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text('编辑笔记'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'ask',
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.question_answer,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text('向AI提问'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.delete, color: Colors.red),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '删除笔记',
-                                      style: TextStyle(
-                                        color: theme.colorScheme.error,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                      ),
-                    ],
+            // 来源信息（如果有）
+            if ((quote.sourceAuthor != null &&
+                    quote.sourceAuthor!.isNotEmpty) ||
+                (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
+                child: Text(
+                  _formatSource(
+                    quote.sourceAuthor ?? '',
+                    quote.sourceWork ?? '',
+                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.applyOpacity(
+                      0.75,
+                    ), // MODIFIED
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
-              ],
+              ),
+            ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
+                child: Text(
+                  quote.source!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.applyOpacity(
+                      0.75,
+                    ), // MODIFIED
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+
+            // 底部工具栏
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                4,
+                0,
+                4,
+                4,
+              ), // 减少左边距从16到4，右边距从0到4，底部从8到4
+              child: Row(
+                children: [
+                  // 标签信息
+                  if (quote.tagIds.isNotEmpty) ...[
+                    Icon(
+                      Icons.label_outline,
+                      size: 16,
+                      color: theme.colorScheme.onSurface.applyOpacity(
+                        0.6,
+                      ), // MODIFIED
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6.0, // 标签之间的水平间距
+                        runSpacing: 4.0, // 行与行之间的垂直间距
+                        children:
+                            quote.tagIds.map((tagId) {
+                              final tag = tags.firstWhere(
+                                (t) => t.id == tagId,
+                                orElse:
+                                    () => NoteCategory(id: tagId, name: '未知标签'),
+                              );
+                              return tagBuilder != null
+                                  ? tagBuilder!(tag)
+                                  : Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .applyOpacity(0.1), // MODIFIED
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      tag.name,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                    ),
+                                  );
+                            }).toList(),
+                      ),
+                    ),
+                  ],
+
+                  // 展开/折叠按钮（如果内容较长）
+                  if (_needsExpansion(quote)) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => onToggleExpanded(!isExpanded),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isExpanded ? '收起' : '展开',
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              isExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // 添加Spacer确保更多按钮始终在右侧
+                  const Spacer(),
+
+                  // 操作按钮
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: theme.colorScheme.onSurface.applyOpacity(
+                        0.7,
+                      ), // MODIFIED
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'ask') {
+                        onAskAI();
+                      } else if (value == 'edit') {
+                        onEdit();
+                      } else if (value == 'delete') {
+                        onDelete();
+                      }
+                    },
+                    itemBuilder:
+                        (context) => [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('编辑笔记'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'ask',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.question_answer,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('向AI提问'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.delete, color: Colors.red),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '删除笔记',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
