@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/quote_model.dart';
+import '../models/ai_provider_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
 import 'dart:async';
@@ -31,6 +32,12 @@ class AIService extends ChangeNotifier {
       }
 
       final currentProvider = multiSettings.currentProvider!;
+
+      // 从加密存储获取真实的API Key
+      final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
+      debugPrint(
+        '验证设置 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
+      );
 
       // 检查API Key是否存在
       final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
@@ -127,6 +134,38 @@ class AIService extends ChangeNotifier {
     }
   }
 
+  /// 获取带有API Key的当前provider副本
+  /// 这个方法确保返回的provider包含从加密存储读取的真实API Key
+  Future<AIProviderSettings> _getCurrentProviderWithApiKey() async {
+    final multiSettings = _settingsService.multiAISettings;
+
+    if (multiSettings.currentProvider == null) {
+      throw Exception('请先选择AI服务商');
+    }
+
+    final currentProvider = multiSettings.currentProvider!;
+
+    // 从加密存储获取真实的API Key
+    final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
+    debugPrint(
+      '获取当前Provider - ${currentProvider.name}, API Key长度: ${apiKey.length}',
+    );
+
+    // 创建provider副本并注入API Key
+    final providerWithApiKey = AIProviderSettings(
+      id: currentProvider.id,
+      name: currentProvider.name,
+      apiUrl: currentProvider.apiUrl,
+      model: currentProvider.model,
+      apiKey: apiKey, // 注入真实的API Key
+      isEnabled: currentProvider.isEnabled,
+      maxTokens: currentProvider.maxTokens,
+      temperature: currentProvider.temperature,
+    );
+
+    return providerWithApiKey;
+  }
+
   Future<String> summarizeNote(Quote quote) async {
     // 使用异步验证确保API Key有效性
     if (!await hasValidApiKeyAsync()) {
@@ -213,10 +252,11 @@ class AIService extends ChangeNotifier {
 
         // 验证AI设置是否已初始化
         bool settingsValid = false;
+        AIProviderSettings? currentProvider;
         try {
           await _validateSettings(); // 确保其他设置也有效
-          // 检查_settingsService.aiSettings是否可用
-          final _ = _settingsService.aiSettings;
+          // 获取带有API Key的当前provider
+          currentProvider = await _getCurrentProviderWithApiKey();
           settingsValid = true;
         } catch (e) {
           debugPrint('AI设置验证失败: $e，将使用默认提示');
@@ -224,9 +264,8 @@ class AIService extends ChangeNotifier {
         }
 
         // 如果设置有效，调用AI生成流式提示
-        if (settingsValid) {
+        if (settingsValid && currentProvider != null) {
           debugPrint('API Key有效，使用AI生成每日提示');
-          final settings = _settingsService.aiSettings;
 
           // 获取包含环境信息的系统提示词
           final systemPromptWithContext = _promptManager
@@ -242,11 +281,11 @@ class AIService extends ChangeNotifier {
             temperature: temperature,
           );
 
-          await _requestHelper.makeStreamRequest(
-            url: settings.apiUrl,
+          await _requestHelper.makeStreamRequestWithProvider(
+            url: currentProvider.apiUrl,
             systemPrompt: systemPromptWithContext,
             userMessage: userMessage,
-            settings: settings,
+            provider: currentProvider,
             onData:
                 (text) => _requestHelper.handleStreamResponse(
                   controller: controller,
@@ -297,7 +336,7 @@ class AIService extends ChangeNotifier {
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 将笔记数据转换为JSON格式
         final jsonData = _requestHelper.convertQuotesToJson(
@@ -317,11 +356,11 @@ class AIService extends ChangeNotifier {
         );
 
         final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: systemPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           maxTokens: 2500,
         );
 
@@ -347,7 +386,7 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 将笔记数据转换为JSON格式
         final jsonData = _requestHelper.convertQuotesToJson(
@@ -373,11 +412,11 @@ class AIService extends ChangeNotifier {
         }
 
         final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
-        await _requestHelper.makeStreamRequest(
-          url: settings.apiUrl,
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: systemPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           onData:
               (text) => _requestHelper.handleStreamResponse(
                 controller: controller,
@@ -411,16 +450,16 @@ class AIService extends ChangeNotifier {
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildSourceAnalysisUserMessage(
           content,
         );
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           temperature: 0.4, // 使用较低的温度确保格式一致性
           maxTokens: 500,
         );
@@ -442,16 +481,16 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildSourceAnalysisUserMessage(
           content,
         );
-        await _requestHelper.makeStreamRequest(
-          url: settings.apiUrl,
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           onData:
               (text) => _requestHelper.handleStreamResponse(
                 controller: controller,
@@ -486,14 +525,14 @@ class AIService extends ChangeNotifier {
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildPolishUserMessage(content);
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.textPolishPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           maxTokens: 1000,
         );
 
@@ -514,14 +553,14 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildPolishUserMessage(content);
-        await _requestHelper.makeStreamRequest(
-          url: settings.apiUrl,
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.textPolishPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           onData:
               (text) => _requestHelper.handleStreamResponse(
                 controller: controller,
@@ -555,16 +594,16 @@ class AIService extends ChangeNotifier {
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildContinuationUserMessage(
           content,
         );
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.textContinuationPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           temperature: 0.8, // 使用较高的温度以增加创意性
           maxTokens: 1000,
         );
@@ -586,16 +625,16 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildContinuationUserMessage(
           content,
         );
-        await _requestHelper.makeStreamRequest(
-          url: settings.apiUrl,
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.textContinuationPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           onData:
               (text) => _requestHelper.handleStreamResponse(
                 controller: controller,
@@ -630,17 +669,17 @@ class AIService extends ChangeNotifier {
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildQAUserMessage(
           quote.content,
           question,
         );
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           temperature: 0.5,
           maxTokens: 1000,
         );
@@ -662,17 +701,17 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
         final userMessage = _promptManager.buildQAUserMessage(
           quote.content,
           question,
         );
-        await _requestHelper.makeStreamRequest(
-          url: settings.apiUrl,
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
-          settings: settings,
+          provider: currentProvider,
           onData:
               (text) => _requestHelper.handleStreamResponse(
                 controller: controller,
@@ -707,16 +746,15 @@ class AIService extends ChangeNotifier {
     await _requestHelper.executeWithErrorHandling(
       operation: () async {
         await _validateSettings();
-        final settings = _settingsService.aiSettings;
+        final currentProvider = await _getCurrentProviderWithApiKey();
 
-        final response = await _requestHelper.makeRequest(
-          url: settings.apiUrl,
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.connectionTestPrompt,
           userMessage: '测试连接',
-          settings: settings,
+          provider: currentProvider,
           temperature: 0.1,
           maxTokens: 50,
-          model: settings.model,
         );
 
         final content = _requestHelper.parseResponse(response);
