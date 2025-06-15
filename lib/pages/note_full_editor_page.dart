@@ -16,6 +16,7 @@ import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
 import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
 import 'package:flutter/services.dart';
+import '../utils/app_logger.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -61,18 +62,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
-          debugPrint('成功初始化富文本编辑器');
+          logDebug('成功初始化富文本编辑器');
         } catch (e) {
-          debugPrint('富文本解析失败: $e，将使用纯文本初始化');
+          logDebug('富文本解析失败: $e，将使用纯文本初始化');
           _initializeAsPlainText();
         }
       } else {
-        debugPrint('使用纯文本初始化编辑器');
+        logDebug('使用纯文本初始化编辑器');
         _initializeAsPlainText();
       }
     } catch (e) {
       // 如果所有初始化方法都失败，使用空文档
-      debugPrint('编辑器初始化失败: $e，使用空文档');
+      logDebug('编辑器初始化失败: $e，使用空文档');
       _controller = quill.QuillController.basic();
     }
 
@@ -105,7 +106,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       );
     } catch (e) {
       // 如果即使初始化纯文本也失败，使用空文档
-      debugPrint('初始化编辑器为纯文本失败: $e');
+      logDebug('初始化编辑器为纯文本失败: $e');
       _controller = quill.QuillController.basic();
 
       // 尝试安全地添加内容
@@ -166,7 +167,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _saveContent() async {
     final db = Provider.of<DatabaseService>(context, listen: false);
 
-    debugPrint('开始保存笔记内容...');
+    logDebug('开始保存笔记内容...');
 
     // 获取纯文本内容
     String plainTextContent = '';
@@ -174,18 +175,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     try {
       plainTextContent = _controller.document.toPlainText().trim();
-      debugPrint('获取到纯文本内容: ${plainTextContent.length} 字符');
+      logDebug('获取到纯文本内容: ${plainTextContent.length} 字符');
 
       final delta = _controller.document.toDelta();
-      debugPrint('Delta内容长度: ${delta.length}');
+      logDebug('Delta内容长度: ${delta.length}');
 
       deltaJson = jsonEncode(delta.toJson());
-      debugPrint('富文本JSON长度: ${deltaJson.length}');
-      debugPrint(
+      logDebug('富文本JSON长度: ${deltaJson.length}');
+      logDebug(
         '富文本JSON内容示例: ${deltaJson.substring(0, min(100, deltaJson.length))}...',
       );
     } catch (e) {
-      debugPrint('获取文档内容失败: $e');
+      logDebug('获取文档内容失败: $e');
       // 显示错误但继续尝试保存
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -237,16 +238,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
 
     try {
-      debugPrint(
-        '保存笔记: ID=${quote.id}, 是否为更新模式=${widget.initialQuote != null}',
-      );
-      debugPrint(
+      logDebug('保存笔记: ID=${quote.id}, 是否为更新模式=${widget.initialQuote != null}');
+      logDebug(
         '笔记内容长度: ${quote.content.length}, 富文本长度: ${quote.deltaContent?.length ?? 0}',
       );
 
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
-        debugPrint('更新现有笔记，ID: ${quote.id}');
+        logDebug('更新现有笔记，ID: ${quote.id}');
         await db.updateQuote(quote);
         if (mounted) {
           ScaffoldMessenger.of(
@@ -257,7 +256,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       } else {
         // 添加新笔记（初始Quote为null或无ID时）
-        debugPrint('添加新笔记');
+        logDebug('添加新笔记');
         await db.addQuote(quote);
         if (mounted) {
           ScaffoldMessenger.of(

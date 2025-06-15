@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -71,7 +72,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
           }
         });
 
-        debugPrint('获取一言失败: $e');
+        logDebug('获取一言失败: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('获取一言失败: $e'),

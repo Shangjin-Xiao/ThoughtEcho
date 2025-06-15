@@ -6,6 +6,7 @@ import '../utils/http_response.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
+import '../utils/app_logger.dart';
 
 /// 统一的网络服务管理器
 /// 整合所有网络请求功能，提供统一的接口
@@ -15,8 +16,8 @@ class NetworkService {
   NetworkService._();
 
   // 不同用途的Dio实例
-  late final Dio _generalDio;  // 通用HTTP请求
-  late final Dio _aiDio;       // AI服务请求
+  late final Dio _generalDio; // 通用HTTP请求
+  late final Dio _aiDio; // AI服务请求
 
   bool _initialized = false;
 
@@ -31,7 +32,7 @@ class NetworkService {
     _configureAIDio();
 
     _initialized = true;
-    debugPrint('NetworkService 初始化完成');
+    logDebug('NetworkService 初始化完成');
   }
 
   /// 配置通用Dio实例
@@ -42,22 +43,26 @@ class NetworkService {
 
     // 添加日志拦截器
     if (kDebugMode) {
-      _generalDio.interceptors.add(LogInterceptor(
-        requestBody: false,
-        responseBody: false,
-        requestHeader: false,
-        responseHeader: false,
-        error: true,
-        logPrint: (obj) => debugPrint('[HTTP] $obj'),
-      ));
+      _generalDio.interceptors.add(
+        LogInterceptor(
+          requestBody: false,
+          responseBody: false,
+          requestHeader: false,
+          responseHeader: false,
+          error: true,
+          logPrint: (obj) => logDebug('[HTTP] $obj'),
+        ),
+      );
     }
 
     // 添加重试拦截器
-    _generalDio.interceptors.add(RetryInterceptor(
-      dio: _generalDio,
-      logPrint: (obj) => debugPrint('[RETRY] $obj'),
-      retries: 1,
-    ));
+    _generalDio.interceptors.add(
+      RetryInterceptor(
+        dio: _generalDio,
+        logPrint: (obj) => logDebug('[RETRY] $obj'),
+        retries: 1,
+      ),
+    );
   }
 
   /// 配置AI专用Dio实例
@@ -68,14 +73,16 @@ class NetworkService {
 
     // AI请求的日志拦截器
     if (kDebugMode) {
-      _aiDio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: false, // AI响应可能很长，不打印
-        requestHeader: false, // 避免泄露API密钥
-        responseHeader: false,
-        error: true,
-        logPrint: (obj) => debugPrint('[AI] $obj'),
-      ));
+      _aiDio.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: false, // AI响应可能很长，不打印
+          requestHeader: false, // 避免泄露API密钥
+          responseHeader: false,
+          error: true,
+          logPrint: (obj) => logDebug('[AI] $obj'),
+        ),
+      );
     }
   }
 
@@ -90,19 +97,19 @@ class NetworkService {
     try {
       // 安全检查
       if (!url.startsWith('https://') && !url.contains('hitokoto.cn')) {
-        debugPrint('警告: 使用非HTTPS URL: $url');
+        logDebug('警告: 使用非HTTPS URL: $url');
       }
 
       final response = await _generalDio.get(
         url,
         options: Options(
           headers: headers,
-          receiveTimeout: timeoutSeconds != null 
-              ? Duration(seconds: timeoutSeconds) 
-              : null,
-          responseType: url.contains('hitokoto.cn') 
-              ? ResponseType.json 
-              : ResponseType.plain,
+          receiveTimeout:
+              timeoutSeconds != null ? Duration(seconds: timeoutSeconds) : null,
+          responseType:
+              url.contains('hitokoto.cn')
+                  ? ResponseType.json
+                  : ResponseType.plain,
         ),
       );
 
@@ -173,7 +180,7 @@ class NetworkService {
 
       return response;
     } catch (e) {
-      debugPrint('AI请求失败: $e');
+      logDebug('AI请求失败: $e');
       rethrow;
     }
   }
@@ -214,7 +221,7 @@ class NetworkService {
         onError,
       );
     } catch (e) {
-      debugPrint('AI流式请求失败: $e');
+      logDebug('AI流式请求失败: $e');
       onError(Exception('AI流式请求失败: $e'));
     }
   }
@@ -246,9 +253,10 @@ class NetworkService {
         responseBody = dioResponse.data.toString();
       }
     } else {
-      responseBody = dioResponse.data is String 
-          ? dioResponse.data 
-          : dioResponse.data.toString();
+      responseBody =
+          dioResponse.data is String
+              ? dioResponse.data
+              : dioResponse.data.toString();
     }
 
     return HttpResponse(
@@ -263,9 +271,7 @@ class NetworkService {
     AIProviderSettings? provider,
     AISettings? legacySettings,
   ) {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     if (provider != null) {
       // 使用新版服务商配置
@@ -308,8 +314,10 @@ class NetworkService {
     // 根据服务商调整数据
     if (provider != null) {
       adjustedData['model'] = adjustedData['model'] ?? provider.model;
-      adjustedData['temperature'] = adjustedData['temperature'] ?? provider.temperature;
-      adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? provider.maxTokens;
+      adjustedData['temperature'] =
+          adjustedData['temperature'] ?? provider.temperature;
+      adjustedData['max_tokens'] =
+          adjustedData['max_tokens'] ?? provider.maxTokens;
 
       // Anthropic特殊处理
       if (provider.apiUrl.contains('anthropic.com')) {
@@ -317,8 +325,10 @@ class NetworkService {
       }
     } else if (legacySettings != null) {
       adjustedData['model'] = adjustedData['model'] ?? legacySettings.model;
-      adjustedData['temperature'] = adjustedData['temperature'] ?? legacySettings.temperature;
-      adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? legacySettings.maxTokens;
+      adjustedData['temperature'] =
+          adjustedData['temperature'] ?? legacySettings.temperature;
+      adjustedData['max_tokens'] =
+          adjustedData['max_tokens'] ?? legacySettings.maxTokens;
     }
 
     return adjustedData;
@@ -361,13 +371,15 @@ class NetworkService {
 
               // 处理Anthropic格式
               final anthropicContent = json['delta']?['text'];
-              if (anthropicContent != null && anthropicContent is String && anthropicContent.isNotEmpty) {
+              if (anthropicContent != null &&
+                  anthropicContent is String &&
+                  anthropicContent.isNotEmpty) {
                 buffer.write(anthropicContent);
                 onData(anthropicContent);
                 continue;
               }
             } catch (e) {
-              debugPrint('解析流式响应JSON错误: $e');
+              logDebug('解析流式响应JSON错误: $e');
             }
           }
         }
@@ -384,7 +396,7 @@ class NetworkService {
     _generalDio.close();
     _aiDio.close();
     _initialized = false;
-    debugPrint('NetworkService 已清理');
+    logDebug('NetworkService 已清理');
   }
 }
 
@@ -394,11 +406,7 @@ class RetryInterceptor extends Interceptor {
   final int retries;
   final Function(Object)? logPrint;
 
-  RetryInterceptor({
-    required this.dio,
-    this.retries = 1,
-    this.logPrint,
-  });
+  RetryInterceptor({required this.dio, this.retries = 1, this.logPrint});
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
@@ -410,7 +418,9 @@ class RetryInterceptor extends Interceptor {
 
     if (retryCount < retries && _shouldRetry(err)) {
       err.requestOptions.extra['retryCount'] = retryCount + 1;
-      logPrint?.call('重试请求 ${retryCount + 1}/$retries: ${err.requestOptions.uri}');
+      logPrint?.call(
+        '重试请求 ${retryCount + 1}/$retries: ${err.requestOptions.uri}',
+      );
 
       try {
         await Future.delayed(Duration(seconds: retryCount + 1));
@@ -427,9 +437,8 @@ class RetryInterceptor extends Interceptor {
 
   bool _shouldRetry(DioException err) {
     return err.type == DioExceptionType.connectionTimeout ||
-           err.type == DioExceptionType.receiveTimeout ||
-           err.type == DioExceptionType.connectionError ||
-           (err.response?.statusCode != null && 
-            err.response!.statusCode! >= 500);
+        err.type == DioExceptionType.receiveTimeout ||
+        err.type == DioExceptionType.connectionError ||
+        (err.response?.statusCode != null && err.response!.statusCode! >= 500);
   }
 }

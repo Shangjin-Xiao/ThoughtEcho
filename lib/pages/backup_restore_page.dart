@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../services/database_service.dart';
 import 'home_page.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
+import '../utils/app_logger.dart';
 
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
@@ -15,37 +16,45 @@ class BackupRestorePage extends StatefulWidget {
   State<BackupRestorePage> createState() => _BackupRestorePageState();
 }
 
-class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _handleExport(BuildContext context) async {
+class _BackupRestorePageState extends State<BackupRestorePage> {
+  Future<void> _handleExport(BuildContext context) async {
     // 检查组件已挂载
     if (!mounted) return;
-    
+
     // 创建上下文快照 - 在异步操作前获取所有需要的context相关对象，以便在异步操作后可以安全使用
     final scaffoldMessengerState = ScaffoldMessenger.of(context);
     final dbService = Provider.of<DatabaseService>(context, listen: false);
-    final overlayState = Overlay.of(context); // 在调用 _showLoadingOverlay 前获取 OverlayState
+    final overlayState = Overlay.of(
+      context,
+    ); // 在调用 _showLoadingOverlay 前获取 OverlayState
 
     try {
       if (!mounted) return;
-      final loadingOverlay = _showLoadingOverlay(overlayState, '准备导出数据...'); // 传递 overlayState
+      final loadingOverlay = _showLoadingOverlay(
+        overlayState,
+        '准备导出数据...',
+      ); // 传递 overlayState
       bool canExport = false;
       try {
         canExport = await dbService.checkCanExport();
       } catch (e) {
-        debugPrint('数据库访问验证失败: $e');
+        logDebug('数据库访问验证失败: $e');
       }
-      
+
       if (!mounted) {
         loadingOverlay.remove();
         return;
       }
-      loadingOverlay.remove(); // 移动到 mounted 检查之后      if (!mounted) return; 
-      if (!canExport) {        if (mounted) { // 在调用 _showErrorDialog 前添加 mounted 检查
+      loadingOverlay.remove(); // 移动到 mounted 检查之后      if (!mounted) return;
+      if (!canExport) {
+        if (mounted) {
+          // 在调用 _showErrorDialog 前添加 mounted 检查
           _showErrorDialog(context, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
         }
         return;
       }
       if (!mounted) return;
-        String? choice;
+      String? choice;
       if (mounted) {
         final dialogContext = context; // 保存 context 以避免跨 async gap 使用
         choice = await showDialog<String>(
@@ -103,11 +112,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
                 File(tempFile).deleteSync();
               } catch (_) {}
               return;
-            }            if (!mounted) return;
+            }
+            if (!mounted) return;
             final saveOverlay = _showLoadingOverlay(overlayState, '正在保存文件...');
             try {
               await File(tempFile).copy(saveLocation.path);
-              await File(tempFile).delete();                path = saveLocation.path;
+              await File(tempFile).delete();
+              path = saveLocation.path;
               saveOverlay.remove();
               if (!mounted) return;
               if (mounted) {
@@ -127,7 +138,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
             final localPath = '${docsDir.path}/$fileName';
             path = await dbService.exportAllData(customPath: localPath);
             progressOverlay.remove();
-            if (!mounted) return;            if (mounted) {
+            if (!mounted) return;
+            if (mounted) {
               scaffoldMessengerState.showSnackBar(
                 const SnackBar(
                   content: Text('备份文件已生成，即将打开分享选项...'),
@@ -135,7 +147,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
                 ),
               );
             }
-            
+
             await Future.delayed(const Duration(seconds: 1));
             if (!mounted) return;
             await Share.shareXFiles(
@@ -143,8 +155,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
               text: '心迹备份文件',
               subject: '保存心迹备份文件',
             );
-            
-            if (!mounted) return;            if (mounted) {
+
+            if (!mounted) return;
+            if (mounted) {
               scaffoldMessengerState.showSnackBar(
                 const SnackBar(
                   content: Text('提示: 选择"保存到设备"可将备份文件保存到本地存储'),
@@ -162,14 +175,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
                 ],
               );
               progressOverlay.remove();
-              if (saveLocation == null) return;              if (!mounted) return;
-              final exportOverlay = _showLoadingOverlay(overlayState, '正在保存数据...');
+              if (saveLocation == null) return;
+              if (!mounted) return;
+              final exportOverlay = _showLoadingOverlay(
+                overlayState,
+                '正在保存数据...',
+              );
               try {
                 path = await dbService.exportAllData(
                   customPath: saveLocation.path,
                 );
                 exportOverlay.remove();
-                if (!mounted) return;                scaffoldMessengerState.showSnackBar(
+                if (!mounted) return;
+                scaffoldMessengerState.showSnackBar(
                   SnackBar(
                     content: Text('备份已保存到: $path'),
                     duration: const Duration(seconds: 5),
@@ -189,12 +207,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
           progressOverlay.remove();
           if (!mounted) return;
           await Share.shareXFiles([XFile(path)], text: '心迹应用数据备份');
-        }      } catch (e) {
-        progressOverlay.remove();        if (!mounted) return;        if (mounted) {
+        }
+      } catch (e) {
+        progressOverlay.remove();
+        if (!mounted) return;
+        if (mounted) {
           _showErrorDialog(context, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
         }
       }
-    } catch (e) {      if (!mounted) return;      if (mounted) {
+    } catch (e) {
+      if (!mounted) return;
+      if (mounted) {
         _showErrorDialog(context, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
       }
     }
@@ -231,7 +254,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
       } finally {
         validateOverlay.remove();
       }
-        if (!mounted) return;
+      if (!mounted) return;
       if (!isValidBackup) {
         if (mounted) {
           final currentContext = context;
@@ -244,7 +267,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
           }
         }
         return;
-      }      if (!mounted) return;
+      }
+      if (!mounted) return;
       final dialogContext = context; // 保存 context 以避免跨 async gap 使用
       final importOption = await showDialog<String>(
         context: dialogContext,
@@ -269,7 +293,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
             ),
       );
       if (!mounted) return;
-      if (importOption == 'cancel' || importOption == null) return;      if (importOption == 'clear') {
+      if (importOption == 'cancel' || importOption == null) return;
+      if (importOption == 'clear') {
         final confirmDialogContext = context; // 保存 context 以避免跨 async gap 使用
         final confirmed = await showDialog<bool>(
           context: confirmDialogContext,
@@ -327,7 +352,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
                 ),
           );
         }
-      } catch (e) {        importOverlay.remove();
+      } catch (e) {
+        importOverlay.remove();
         if (!mounted) return;
         if (mounted) {
           final currentContext = context;
@@ -336,7 +362,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {  Future<void> _
           }
         }
       }
-    } catch (e) {      if (!mounted) return;
+    } catch (e) {
+      if (!mounted) return;
       if (mounted) {
         final currentContext = context;
         if (mounted) {

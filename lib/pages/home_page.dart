@@ -18,6 +18,7 @@ import 'settings_page.dart';
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
+import '../utils/app_logger.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -58,7 +59,7 @@ class _HomePageState extends State<HomePage>
     // 如果是初始加载，并且已经有订阅或累积文本，则不重复加载
     if (initialLoad &&
         (_promptSubscription != null || _accumulatedPromptText.isNotEmpty)) {
-      debugPrint(
+      logDebug(
         'Daily prompt already loaded or loading, skipping initial fetch.',
       );
       return;
@@ -108,7 +109,7 @@ class _HomePageState extends State<HomePage>
         },
         onError: (error) {
           // Handle errors
-          debugPrint('获取每日提示流出错: $error');
+          logDebug('获取每日提示流出错: $error');
           if (mounted) {
             setState(() {
               _accumulatedPromptText = '获取每日思考失败: ${error.toString()}';
@@ -123,7 +124,7 @@ class _HomePageState extends State<HomePage>
           }
         },
         onDone: () {
-          debugPrint('每日提示流完成');
+          logDebug('每日提示流完成');
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
             setState(() {
@@ -137,7 +138,7 @@ class _HomePageState extends State<HomePage>
         cancelOnError: true, // Cancel subscription if an error occurs
       );
     } catch (e) {
-      debugPrint('获取每日提示失败 (setup): $e');
+      logDebug('获取每日提示失败 (setup): $e');
       if (mounted) {
         setState(() {
           _accumulatedPromptText = '获取每日提示失败: ${e.toString()}';
@@ -165,7 +166,7 @@ class _HomePageState extends State<HomePage>
         _fetchDailyPrompt(),
       ]);
     } catch (e) {
-      debugPrint('刷新失败: $e');
+      logDebug('刷新失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -249,11 +250,11 @@ class _HomePageState extends State<HomePage>
 
     // 如果剪贴板监控功能未启用，则不进行检查
     if (!clipboardService.enableClipboardMonitoring) {
-      debugPrint('剪贴板监控已禁用，跳过检查');
+      logDebug('剪贴板监控已禁用，跳过检查');
       return;
     }
 
-    debugPrint('执行剪贴板检查');
+    logDebug('执行剪贴板检查');
     // 检查剪贴板内容
     final clipboardData = await clipboardService.checkClipboard();
     if (clipboardData != null && mounted) {
@@ -276,7 +277,7 @@ class _HomePageState extends State<HomePage>
 
   // 刷新标签列表
   Future<void> _refreshTags() async {
-    debugPrint('刷新标签列表');
+    logDebug('刷新标签列表');
     setState(() {
       _isLoadingTags = true;
     });
@@ -286,7 +287,7 @@ class _HomePageState extends State<HomePage>
   // 改进标签加载逻辑
   Future<void> _loadTags() async {
     try {
-      debugPrint('加载标签数据...');
+      logDebug('加载标签数据...');
       if (!context.mounted) return; // 添加 mounted 检查
       final categories = await context.read<DatabaseService>().getCategories();
 
@@ -295,10 +296,10 @@ class _HomePageState extends State<HomePage>
           _tags = categories;
           _isLoadingTags = false;
         });
-        debugPrint('标签加载完成，共 ${categories.length} 个标签');
+        logDebug('标签加载完成，共 ${categories.length} 个标签');
       }
     } catch (e) {
-      debugPrint('加载标签时出错: $e');
+      logDebug('加载标签时出错: $e');
       if (mounted) {
         setState(() {
           _isLoadingTags = false;
@@ -535,7 +536,7 @@ class _HomePageState extends State<HomePage>
                                   });
                                 },
                                 onError: (error) {
-                                  debugPrint('流式问答错误: $error');
+                                  logDebug('流式问答错误: $error');
                                   setDialogState(() {
                                     isLoading = false;
                                     currentAnswer +=
@@ -544,7 +545,7 @@ class _HomePageState extends State<HomePage>
                                 },
                               );
                             } catch (e) {
-                              debugPrint('提问失败: $e');
+                              logDebug('提问失败: $e');
                               setDialogState(() {
                                 isLoading = false;
                                 currentAnswer =

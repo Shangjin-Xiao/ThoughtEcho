@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart' as logging;
-import 'package:logging_flutter/logging_flutter.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/log_service.dart' as old_log;
@@ -133,7 +132,9 @@ class LogEntry {
   @override
   String toString() {
     final buffer = StringBuffer();
-    buffer.write('${timestamp.toIso8601String()} [${level.name.toUpperCase()}]');
+    buffer.write(
+      '${timestamp.toIso8601String()} [${level.name.toUpperCase()}]',
+    );
 
     if (source != null && source!.isNotEmpty) {
       buffer.write(' [$source]');
@@ -162,29 +163,36 @@ class UnifiedLogService with ChangeNotifier {
 
   // 单例实例
   static UnifiedLogService? _instance;
-  
+
   // logging_flutter 的 logger
   late logging.Logger _logger;
-  
+
   // 日志数据库服务
   final LogDatabaseService _logDb = LogDatabaseService();
-  
+
   UnifiedLogLevel _currentLevel = UnifiedLogLevel.info;
   bool _initialized = false;
-  
+
   // 内存中的日志缓存
   List<LogEntry> _memoryLogs = [];
   // 待写入数据库的日志
   final List<LogEntry> _pendingLogs = [];
   // 批量写入计时器
   Timer? _batchSaveTimer;
-  
+
+  // 日志统计信息
+  final Map<UnifiedLogLevel, int> _logStats = {};
+  DateTime? _lastLogTime;
+
   // 提供只读访问
   List<LogEntry> get logs => List.unmodifiable(_memoryLogs);
   UnifiedLogLevel get currentLevel => _currentLevel;
+  Map<UnifiedLogLevel, int> get logStats => Map.unmodifiable(_logStats);
+  DateTime? get lastLogTime => _lastLogTime;
 
   // 兼容性：提供旧接口
-  List<old_log.LogEntry> get oldLogs => _memoryLogs.map((e) => e.toOldLogEntry()).toList();
+  List<old_log.LogEntry> get oldLogs =>
+      _memoryLogs.map((e) => e.toOldLogEntry()).toList();
   old_log.LogLevel get oldCurrentLevel => _currentLevel.toOldLogLevel;
 
   // 标志位，防止重复调度 postFrameCallback
@@ -192,7 +200,12 @@ class UnifiedLogService with ChangeNotifier {
 
   // 标志位，防止日志记录的无限递归
   bool _isLogging = false;
-  
+
+  // 日志性能监控
+  int _logOperationCount = 0;
+  DateTime? _lastPerformanceReset;
+  final Map<String, int> _sourceStats = {};
+
   /// 单例模式访问
   static UnifiedLogService get instance {
     _instance ??= UnifiedLogService();
@@ -203,65 +216,70 @@ class UnifiedLogService with ChangeNotifier {
   UnifiedLogService() {
     _initialize();
   }
-  
+
   /// 初始化统一日志服务
   Future<void> _initialize() async {
     if (_initialized) return;
-    
+
     try {
       // 初始化 logging_flutter
       await _initializeLoggingFlutter();
-      
+
       // 初始化 SafeMMKV 并加载日志级别设置
       final mmkv = SafeMMKV();
       await mmkv.initialize();
-      
+
       // 从 MMKV 加载日志级别
       final levelIndex = mmkv.getInt(_logLevelKey);
-      if (levelIndex != null && levelIndex >= 0 && levelIndex < UnifiedLogLevel.values.length) {
+      if (levelIndex != null &&
+          levelIndex >= 0 &&
+          levelIndex < UnifiedLogLevel.values.length) {
         _currentLevel = UnifiedLogLevel.values[levelIndex];
       } else {
         _currentLevel = UnifiedLogLevel.info;
         await mmkv.setInt(_logLevelKey, _currentLevel.index);
       }
-      
+
       // 设置 logging_flutter 的日志级别
       _updateLoggingFlutterLevel();
-      
+
       // 启动批量保存定时器
       _startBatchSaveTimer();
-      
+
       // 从数据库加载最近的日志
       await _loadRecentLogs();
-      
+
       _initialized = true;
-      
+
       // 记录服务已启动的信息
-      _addLogEntry(LogEntry(
-        timestamp: DateTime.now(),
-        level: _currentLevel,
-        message: '统一日志服务已启动，当前日志级别: ${_currentLevel.name}',
-        source: 'UnifiedLogService',
-      ));
+      _addLogEntry(
+        LogEntry(
+          timestamp: DateTime.now(),
+          level: _currentLevel,
+          message: '统一日志服务已启动，当前日志级别: ${_currentLevel.name}',
+          source: 'UnifiedLogService',
+        ),
+      );
 
       // 处理缓存的早期错误
       _processDeferredErrors();
-      
     } catch (e, stack) {
       // 使用 logging_flutter 记录初始化错误
       _logger.severe('统一日志服务初始化失败: $e', e, stack);
-      
+
       _initialized = true;
       _currentLevel = UnifiedLogLevel.info;
-      
-      _addLogEntry(LogEntry(
-        timestamp: DateTime.now(),
-        level: UnifiedLogLevel.error,
-        message: '统一日志服务初始化失败: $e',
-        error: e.toString(),
-        stackTrace: stack.toString(),
-        source: 'UnifiedLogService',
-      ));
+
+      _addLogEntry(
+        LogEntry(
+          timestamp: DateTime.now(),
+          level: UnifiedLogLevel.error,
+          message: '统一日志服务初始化失败: $e',
+          error: e.toString(),
+          stackTrace: stack.toString(),
+          source: 'UnifiedLogService',
+        ),
+      );
     }
   }
 
@@ -269,13 +287,13 @@ class UnifiedLogService with ChangeNotifier {
   Future<void> _initializeLoggingFlutter() async {
     // 关键修复：启用分层日志记录
     logging.hierarchicalLoggingEnabled = true;
-    
+
     // 设置全局日志级别
     logging.Logger.root.level = logging.Level.ALL;
-    
+
     // 创建应用专用的 logger
     _logger = logging.Logger('ThoughtEcho');
-    
+
     // 添加控制台输出处理器
     logging.Logger.root.onRecord.listen((record) {
       // 防止递归：如果正在记录日志，跳过
@@ -298,8 +316,12 @@ class UnifiedLogService with ChangeNotifier {
           logOutput += '\nStackTrace: ${record.stackTrace}';
         }
 
-        // 使用原始 print 输出，避免递归
-        print(logOutput);
+        // 使用 debugPrint 输出到控制台，避免递归
+        if (kDebugMode) {
+          // 在调试模式下输出到控制台
+          // ignore: avoid_print
+          print(logOutput);
+        }
       }
 
       // 将 logging_flutter 的日志也添加到我们的日志系统中
@@ -310,15 +332,17 @@ class UnifiedLogService with ChangeNotifier {
   /// 将 logging.LogRecord 转换为我们的 LogEntry
   void _addLogEntryFromLoggingRecord(logging.LogRecord record) {
     final level = _mapLoggingLevelToUnified(record.level);
-    
-    _addLogEntry(LogEntry(
-      timestamp: record.time,
-      level: level,
-      message: record.message,
-      source: record.loggerName,
-      error: record.error?.toString(),
-      stackTrace: record.stackTrace?.toString(),
-    ));
+
+    _addLogEntry(
+      LogEntry(
+        timestamp: record.time,
+        level: level,
+        message: record.message,
+        source: record.loggerName,
+        error: record.error?.toString(),
+        stackTrace: record.stackTrace?.toString(),
+      ),
+    );
   }
 
   /// 映射 logging.Level 到 UnifiedLogLevel
@@ -409,12 +433,21 @@ class UnifiedLogService with ChangeNotifier {
     // 添加到待处理队列，准备写入数据库
     _pendingLogs.add(entry);
 
+    // 更新日志统计信息
+    _logStats[entry.level] = (_logStats[entry.level] ?? 0) + 1;
+    _lastLogTime = DateTime.now();
+
+    // 日志性能监控
+    _logOperationCount++;
+    _sourceStats[entry.source ?? 'unknown'] =
+        (_sourceStats[entry.source ?? 'unknown'] ?? 0) + 1;
+
     // 延迟通知监听器，避免在 build 方法中直接调用
     if (!_notifyScheduled) {
       _notifyScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (hasListeners) {
-           notifyListeners();
+          notifyListeners();
         }
         _notifyScheduled = false;
       });
@@ -425,18 +458,18 @@ class UnifiedLogService with ChangeNotifier {
   Future<void> _savePendingLogsToDatabase() async {
     if (_pendingLogs.isEmpty) return;
 
-    try {
-      final logsToSave = List<LogEntry>.from(_pendingLogs);
-      _pendingLogs.clear();
+    final logsToSave = List<LogEntry>.from(_pendingLogs);
+    _pendingLogs.clear();
 
+    try {
       await _logDb.insertLogs(logsToSave.map((log) => log.toMap()).toList());
       await _logDb.deleteOldLogs(_maxStoredLogs);
-
     } catch (e) {
       _logger.warning('保存日志到数据库失败: $e');
 
+      // 如果保存失败，重新添加到待处理队列（但避免重复添加）
       if (_pendingLogs.length < 100) {
-        _pendingLogs.addAll(_pendingLogs);
+        _pendingLogs.addAll(logsToSave);
       }
     }
   }
@@ -457,7 +490,7 @@ class UnifiedLogService with ChangeNotifier {
         log(
           UnifiedLogLevel.info,
           '日志级别已从 ${oldLevel.name} 更改为 ${newLevel.name}',
-          source: 'UnifiedLogService'
+          source: 'UnifiedLogService',
         );
       } catch (e) {
         _logger.warning('设置日志级别失败: $e');
@@ -465,7 +498,7 @@ class UnifiedLogService with ChangeNotifier {
           UnifiedLogLevel.error,
           '设置日志级别失败',
           error: e.toString(),
-          source: 'UnifiedLogService'
+          source: 'UnifiedLogService',
         );
       }
 
@@ -473,7 +506,7 @@ class UnifiedLogService with ChangeNotifier {
         _notifyScheduled = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (hasListeners) {
-             notifyListeners();
+            notifyListeners();
           }
           _notifyScheduled = false;
         });
@@ -488,7 +521,7 @@ class UnifiedLogService with ChangeNotifier {
       _notifyScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (hasListeners) {
-           notifyListeners();
+          notifyListeners();
         }
         _notifyScheduled = false;
       });
@@ -507,7 +540,7 @@ class UnifiedLogService with ChangeNotifier {
       _notifyScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (hasListeners) {
-           notifyListeners();
+          notifyListeners();
         }
         _notifyScheduled = false;
       });
@@ -579,12 +612,18 @@ class UnifiedLogService with ChangeNotifier {
     String message, {
     String? source,
     Object? error,
-    StackTrace? stackTrace
+    StackTrace? stackTrace,
   }) {
     // 确保已初始化
     if (!_initialized) {
       _initialize().then((_) {
-        log(level, message, source: source, error: error, stackTrace: stackTrace);
+        log(
+          level,
+          message,
+          source: source,
+          error: error,
+          stackTrace: stackTrace,
+        );
       });
       return;
     }
@@ -593,18 +632,21 @@ class UnifiedLogService with ChangeNotifier {
     if (_isLogging) return;
 
     // 只有当消息的级别大于或等于当前设置的级别时才记录
-    if (level.index >= _currentLevel.index && _currentLevel != UnifiedLogLevel.none) {
+    if (level.index >= _currentLevel.index &&
+        _currentLevel != UnifiedLogLevel.none) {
       _isLogging = true;
       try {
         // 直接添加到我们的日志系统，不通过 logging_flutter 避免递归
-        _addLogEntry(LogEntry(
-          timestamp: DateTime.now(),
-          level: level,
-          message: message,
-          source: source,
-          error: error?.toString(),
-          stackTrace: stackTrace?.toString(),
-        ));
+        _addLogEntry(
+          LogEntry(
+            timestamp: DateTime.now(),
+            level: level,
+            message: message,
+            source: source,
+            error: error?.toString(),
+            stackTrace: stackTrace?.toString(),
+          ),
+        );
 
         // 同时使用 logging_flutter 记录日志（仅用于控制台输出）
         if (kDebugMode) {
@@ -629,20 +671,116 @@ class UnifiedLogService with ChangeNotifier {
   }
 
   // 提供便捷的日志记录方法
-  void verbose(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
-      log(UnifiedLogLevel.verbose, message, source: source, error: error, stackTrace: stackTrace);
+  void verbose(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) => log(
+    UnifiedLogLevel.verbose,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
-  void debug(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
-      log(UnifiedLogLevel.debug, message, source: source, error: error, stackTrace: stackTrace);
+  void debug(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) => log(
+    UnifiedLogLevel.debug,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
-  void info(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
-      log(UnifiedLogLevel.info, message, source: source, error: error, stackTrace: stackTrace);
+  void info(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) => log(
+    UnifiedLogLevel.info,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
-  void warning(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
-      log(UnifiedLogLevel.warning, message, source: source, error: error, stackTrace: stackTrace);
+  void warning(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) => log(
+    UnifiedLogLevel.warning,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
-  void error(String message, {String? source, Object? error, StackTrace? stackTrace}) =>
-      log(UnifiedLogLevel.error, message, source: source, error: error, stackTrace: stackTrace);
+  void error(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) => log(
+    UnifiedLogLevel.error,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
+
+  /// 获取日志统计摘要
+  Map<String, dynamic> getLogSummary() {
+    return {
+      'totalLogs': _memoryLogs.length,
+      'pendingLogs': _pendingLogs.length,
+      'currentLevel': _currentLevel.name,
+      'lastLogTime': _lastLogTime?.toIso8601String(),
+      'logStats': _logStats.map((k, v) => MapEntry(k.name, v)),
+      'initialized': _initialized,
+    };
+  }
+
+  /// 重置日志统计信息
+  void resetLogStats() {
+    _logStats.clear();
+    _lastLogTime = null;
+    log(UnifiedLogLevel.info, '日志统计信息已重置', source: 'UnifiedLogService');
+  }
+
+  /// 导出日志为文本格式
+  String exportLogsAsText({
+    UnifiedLogLevel? minLevel,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('# ThoughtEcho 日志导出');
+    buffer.writeln('导出时间: ${DateTime.now().toIso8601String()}');
+    buffer.writeln('日志级别: ${minLevel?.name ?? '所有级别'}');
+    buffer.writeln('');
+
+    final filteredLogs = _memoryLogs.where((log) {
+      if (minLevel != null && log.level.index < minLevel.index) return false;
+      if (startDate != null && log.timestamp.isBefore(startDate)) return false;
+      if (endDate != null && log.timestamp.isAfter(endDate)) return false;
+      return true;
+    });
+
+    for (final log in filteredLogs) {
+      buffer.writeln(log.toString());
+      buffer.writeln('---');
+    }
+
+    return buffer.toString();
+  }
 
   /// 处理在日志服务初始化之前缓存的错误
   Future<void> _processDeferredErrors() async {
@@ -656,9 +794,10 @@ class UnifiedLogService with ChangeNotifier {
             UnifiedLogLevel.error,
             errorMap['message'] as String? ?? '未知错误',
             error: errorMap['error'],
-            stackTrace: errorMap['stackTrace'] != null
-                ? StackTrace.fromString(errorMap['stackTrace'].toString())
-                : null,
+            stackTrace:
+                errorMap['stackTrace'] != null
+                    ? StackTrace.fromString(errorMap['stackTrace'].toString())
+                    : null,
             source: errorMap['source'] as String? ?? 'unknown',
           );
         }
@@ -674,5 +813,49 @@ class UnifiedLogService with ChangeNotifier {
     if (!kIsWeb && !Platform.isIOS && !Platform.isAndroid) {
       _logger.info('已为桌面平台注册全局异常处理');
     }
+  }
+
+  /// 获取日志性能统计
+  Map<String, dynamic> getPerformanceStats() {
+    return {
+      'logOperationCount': _logOperationCount,
+      'averageLogsPerMinute': _calculateLogsPerMinute(),
+      'topSources': _getTopLogSources(),
+      'lastPerformanceReset': _lastPerformanceReset?.toIso8601String(),
+      'memoryUsage': '${_memoryLogs.length}/$_maxInMemoryLogs',
+      'pendingLogs': _pendingLogs.length,
+    };
+  }
+
+  /// 计算每分钟日志数
+  double _calculateLogsPerMinute() {
+    if (_lastPerformanceReset == null || _logOperationCount == 0) return 0.0;
+
+    final duration = DateTime.now().difference(_lastPerformanceReset!);
+    final minutes = duration.inMinutes;
+
+    return minutes > 0
+        ? _logOperationCount / minutes
+        : _logOperationCount.toDouble();
+  }
+
+  /// 获取排名前5的日志来源
+  List<Map<String, dynamic>> _getTopLogSources() {
+    final entries =
+        _sourceStats.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    return entries
+        .take(5)
+        .map((e) => {'source': e.key, 'count': e.value})
+        .toList();
+  }
+
+  /// 重置性能统计
+  void resetPerformanceStats() {
+    _logOperationCount = 0;
+    _lastPerformanceReset = DateTime.now();
+    _sourceStats.clear();
+    log(UnifiedLogLevel.info, '日志性能统计已重置', source: 'UnifiedLogService');
   }
 }

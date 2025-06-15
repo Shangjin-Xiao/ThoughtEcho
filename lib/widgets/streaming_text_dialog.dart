@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'dart:async';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class StreamingTextDialog extends StatefulWidget {
   final Stream<String> textStream;
@@ -48,7 +49,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
         }
       },
       onError: (error) {
-        debugPrint('流式传输错误: $error');
+        logDebug('流式传输错误: $error');
         if (mounted) {
           setState(() {
             _currentText += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
@@ -71,14 +72,15 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
     return AlertDialog(
       title: Text(widget.title),
       content: SingleChildScrollView(
-        child: widget.isMarkdown
-            ? MarkdownBody(
-                data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-                selectable: true,
-              )
-            : SelectableText(
-                _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-              ),
+        child:
+            widget.isMarkdown
+                ? MarkdownBody(
+                  data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                  selectable: true,
+                )
+                : SelectableText(
+                  _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                ),
       ),
       actions: [
         TextButton(
@@ -88,7 +90,9 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
           },
           child: const Text('取消'),
         ),
-        if (_isStreamingComplete && _currentText.isNotEmpty && !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
+        if (_isStreamingComplete &&
+            _currentText.isNotEmpty &&
+            !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
           TextButton(
             onPressed: () {
               widget.onApply(_currentText);
@@ -99,4 +103,4 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
       ],
     );
   }
-} 
+}

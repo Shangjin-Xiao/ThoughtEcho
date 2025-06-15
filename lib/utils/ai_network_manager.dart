@@ -8,6 +8,7 @@ import '../models/multi_ai_settings.dart' as multi_ai;
 import '../models/ai_config.dart';
 import '../services/api_key_manager.dart';
 import 'api_key_debugger.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 统一的AI网络请求管理器
 /// 负责处理所有AI相关的网络请求，包括普通请求和流式请求
@@ -36,19 +37,19 @@ class AINetworkManager {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          debugPrint('AI请求: ${options.method} ${options.uri}');
+          logDebug('AI请求: ${options.method} ${options.uri}');
           // 隐藏敏感信息后打印请求头
           final safeHeaders = Map<String, dynamic>.from(options.headers);
           _hideSensitiveInfo(safeHeaders);
-          debugPrint('请求头: $safeHeaders');
+          logDebug('请求头: $safeHeaders');
           handler.next(options);
         },
         onResponse: (response, handler) {
-          debugPrint('AI响应: ${response.statusCode}');
+          logDebug('AI响应: ${response.statusCode}');
           handler.next(response);
         },
         onError: (error, handler) {
-          debugPrint('AI请求错误: ${error.message}');
+          logDebug('AI请求错误: ${error.message}');
           handler.next(error);
         },
       ),
@@ -77,18 +78,18 @@ class AINetworkManager {
 
       // 调试信息：检查stream参数类型
       if (adjustedData.containsKey('stream')) {
-        debugPrint(
+        logDebug(
           'Stream parameter type: ${adjustedData['stream'].runtimeType}, value: ${adjustedData['stream']}',
         );
         // 确保stream参数是boolean类型
         final streamValue = adjustedData['stream'];
         if (streamValue is String) {
-          debugPrint(
+          logDebug(
             'Warning: stream parameter is String, converting to boolean',
           );
           adjustedData['stream'] = streamValue.toLowerCase() == 'true';
         } else if (streamValue is! bool) {
-          debugPrint(
+          logDebug(
             'Warning: stream parameter is not boolean (${streamValue.runtimeType}), setting to true',
           );
           adjustedData['stream'] = true;
@@ -98,24 +99,24 @@ class AINetworkManager {
       // 验证其他关键参数的类型
       if (adjustedData.containsKey('temperature') &&
           adjustedData['temperature'] is! num) {
-        debugPrint('Warning: temperature parameter type issue, fixing');
+        logDebug('Warning: temperature parameter type issue, fixing');
         adjustedData['temperature'] = 0.7;
       }
       if (adjustedData.containsKey('max_tokens') &&
           adjustedData['max_tokens'] is! int) {
-        debugPrint('Warning: max_tokens parameter type issue, fixing');
+        logDebug('Warning: max_tokens parameter type issue, fixing');
         adjustedData['max_tokens'] = 1000;
       }
 
       // 验证JSON编码是否会出错
       try {
         final testJson = jsonEncode(adjustedData);
-        debugPrint('JSON编码测试成功，数据长度: ${testJson.length}');
+        logDebug('JSON编码测试成功，数据长度: ${testJson.length}');
       } catch (e) {
-        debugPrint('JSON编码测试失败: $e');
-        debugPrint('数据类型检查:');
+        logDebug('JSON编码测试失败: $e');
+        logDebug('数据类型检查:');
         adjustedData.forEach((key, value) {
-          debugPrint('  $key: ${value.runtimeType} = $value');
+          logDebug('  $key: ${value.runtimeType} = $value');
         });
         throw Exception('请求数据JSON编码失败: $e');
       }
@@ -131,7 +132,7 @@ class AINetworkManager {
       );
       return response;
     } catch (e) {
-      debugPrint('AI请求失败 for ${config.name} (${config.id}): $e');
+      logDebug('AI请求失败 for ${config.name} (${config.id}): $e');
       throw _handleError(e);
     }
   }
@@ -260,7 +261,7 @@ class AINetworkManager {
           timeout: timeout,
         );
       } catch (e) {
-        debugPrint('当前服务商 ${currentProvider.name} 请求失败: $e');
+        logDebug('当前服务商 ${currentProvider.name} 请求失败: $e');
         _markProviderFailed(currentProvider.id);
         lastError = _handleError(e);
 
@@ -277,7 +278,7 @@ class AINetworkManager {
         if (_isProviderInCooldown(provider.id)) continue;
 
         try {
-          debugPrint('尝试切换到服务商: ${provider.name}');
+          logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
           final providerWithApiKey = await _loadApiKeyForProvider(provider);
           return await _makeBaseRequest(
@@ -288,7 +289,7 @@ class AINetworkManager {
             timeout: timeout,
           );
         } catch (e) {
-          debugPrint('服务商 ${provider.name} 请求失败: $e');
+          logDebug('服务商 ${provider.name} 请求失败: $e');
           _markProviderFailed(provider.id);
           lastError = _handleError(e);
           continue;
@@ -342,7 +343,7 @@ class AINetworkManager {
         );
         return;
       } catch (e) {
-        debugPrint('当前服务商 ${currentProvider.name} 流式请求失败: $e');
+        logDebug('当前服务商 ${currentProvider.name} 流式请求失败: $e');
         _markProviderFailed(currentProvider.id);
         lastError = _handleError(e);
 
@@ -359,7 +360,7 @@ class AINetworkManager {
         if (_isProviderInCooldown(provider.id)) continue;
 
         try {
-          debugPrint('尝试切换到服务商: ${provider.name}');
+          logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
           final providerWithApiKey = await _loadApiKeyForProvider(provider);
           final response = await _makeBaseRequest(
@@ -377,7 +378,7 @@ class AINetworkManager {
           );
           return;
         } catch (e) {
-          debugPrint('服务商 ${provider.name} 流式请求失败: $e');
+          logDebug('服务商 ${provider.name} 流式请求失败: $e');
           _markProviderFailed(provider.id);
           lastError = _handleError(e);
           continue;
@@ -459,19 +460,19 @@ class AINetworkManager {
                   continue;
                 }
               } catch (e) {
-                debugPrint('解析流式响应JSON错误: $e, JSON: $jsonStr');
+                logDebug('解析流式响应JSON错误: $e, JSON: $jsonStr');
               }
             } else if (line.isNotEmpty && line.trim() != '') {
-              debugPrint('未知流式响应格式: $line');
+              logDebug('未知流式响应格式: $line');
             }
           }
         } catch (e) {
-          debugPrint('处理流式数据块错误: $e');
+          logDebug('处理流式数据块错误: $e');
           onError(Exception('流式数据处理错误: $e'));
         }
       },
       onError: (error) {
-        debugPrint('流式响应错误: $error');
+        logDebug('流式响应错误: $error');
         onError(_handleError(error));
         if (!completer.isCompleted) {
           completer.completeError(_handleError(error));
@@ -563,7 +564,7 @@ class AINetworkManager {
       final apiKeyManager = APIKeyManager();
       final apiKey = await apiKeyManager.getProviderApiKey(provider.id);
 
-      debugPrint(
+      logDebug(
         '为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "${apiKey.length}字符"}',
       );
 
@@ -582,13 +583,13 @@ class AINetworkManager {
       // 验证构建的headers
       final headers = providerWithApiKey.buildHeaders();
       final authHeader = headers['Authorization'] ?? headers['x-api-key'] ?? '';
-      debugPrint(
+      logDebug(
         '构建的请求头中的API Key: ${authHeader.isEmpty ? "空" : "${authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '').length}字符"}',
       );
 
       return providerWithApiKey;
     } catch (e) {
-      debugPrint('为Provider ${provider.name} 加载API Key失败: $e');
+      logDebug('为Provider ${provider.name} 加载API Key失败: $e');
       return provider; // 返回原provider
     }
   }

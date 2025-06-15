@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../utils/mmkv_adapter.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 安全存储服务，专门用于存储多供应商API密钥
 class SecureStorageService {
@@ -21,7 +22,7 @@ class SecureStorageService {
       _storage = MMKVAdapter();
       await _storage.initialize();
       _initialized = true;
-      debugPrint('安全存储服务初始化完成');
+      logDebug('安全存储服务初始化完成');
     }
   }
 
@@ -49,7 +50,7 @@ class SecureStorageService {
       _providerApiKeysKey,
       _encodeApiKeysMap(existingKeys),
     );
-    debugPrint('已保存 Provider $providerId 的API密钥');
+    logDebug('已保存 Provider $providerId 的API密钥');
   }
 
   /// 获取指定供应商的API密钥
@@ -58,12 +59,12 @@ class SecureStorageService {
     try {
       final allKeys = await _getAllApiKeys();
       final apiKey = allKeys[providerId];
-      debugPrint(
+      logDebug(
         '获取API Key - Provider: $providerId, Found: ${apiKey?.isNotEmpty ?? false}',
       );
       return apiKey;
     } catch (e) {
-      debugPrint('获取API Key失败 - Provider: $providerId, Error: $e');
+      logDebug('获取API Key失败 - Provider: $providerId, Error: $e');
       return null;
     }
   }
@@ -79,7 +80,7 @@ class SecureStorageService {
       _providerApiKeysKey,
       _encodeApiKeysMap(existingKeys),
     );
-    debugPrint('已删除 Provider $providerId 的API密钥');
+    logDebug('已删除 Provider $providerId 的API密钥');
   }
 
   /// 获取所有供应商的API密钥映射
@@ -94,7 +95,7 @@ class SecureStorageService {
     try {
       return _decodeApiKeysMap(keysJson);
     } catch (e) {
-      debugPrint('解析API密钥失败: $e');
+      logDebug('解析API密钥失败: $e');
       return <String, String>{};
     }
   }
@@ -104,7 +105,7 @@ class SecureStorageService {
     try {
       return json.encode(apiKeysMap);
     } catch (e) {
-      debugPrint('编码API密钥映射失败: $e');
+      logDebug('编码API密钥映射失败: $e');
       return '{}';
     }
   }
@@ -118,7 +119,7 @@ class SecureStorageService {
       }
       return <String, String>{};
     } catch (e) {
-      debugPrint('解码API密钥映射失败: $e');
+      logDebug('解码API密钥映射失败: $e');
       return <String, String>{};
     }
   }

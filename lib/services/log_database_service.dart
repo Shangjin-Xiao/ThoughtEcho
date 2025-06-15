@@ -86,7 +86,7 @@ class WebLogStorage implements LogStorage {
   @override
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
-    debugPrint('Web平台：初始化日志存储 (SharedPreferences)');
+    logDebug('Web平台：初始化日志存储 (SharedPreferences)');
   }
 
   // 从 SharedPreferences 获取所有日志
@@ -259,7 +259,7 @@ class NativeLogStorage implements LogStorage {
       try {
         // 在 Windows 平台上初始化 FFI
         if (Platform.isWindows) {
-          debugPrint('Windows平台：初始化 sqflite_ffi');
+          logDebug('Windows平台：初始化 sqflite_ffi');
           sqfliteFfiInit();
           databaseFactory = databaseFactoryFfi;
         }
@@ -271,7 +271,7 @@ class NativeLogStorage implements LogStorage {
         await Directory(dbPath).create(recursive: true);
 
         final path = join(dbPath, _logDbName);
-        debugPrint('Native平台：打开日志数据库 $path');
+        logDebug('Native平台：打开日志数据库 $path');
 
         _database = await openDatabase(
           path,
@@ -279,8 +279,8 @@ class NativeLogStorage implements LogStorage {
           onCreate: _createDb,
         );
       } catch (e, stack) {
-        debugPrint('初始化日志数据库失败: $e');
-        debugPrint('$stack');
+        logDebug('初始化日志数据库失败: $e');
+        logDebug('$stack');
         rethrow;
       }
     }
@@ -306,10 +306,10 @@ class NativeLogStorage implements LogStorage {
       );
       await db.execute('CREATE INDEX log_level_idx ON $_logTableName (level)');
 
-      debugPrint('日志表创建完成');
+      logDebug('日志表创建完成');
     } catch (e, stack) {
-      debugPrint('创建日志表失败: $e');
-      debugPrint('$stack');
+      logDebug('创建日志表失败: $e');
+      logDebug('$stack');
       rethrow;
     }
   }
@@ -330,7 +330,7 @@ class NativeLogStorage implements LogStorage {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
-      debugPrint('插入日志失败: $e');
+      logDebug('插入日志失败: $e');
       return -1;
     }
   }
@@ -353,7 +353,7 @@ class NativeLogStorage implements LogStorage {
 
       await batch.commit(noResult: true);
     } catch (e) {
-      debugPrint('批量插入日志失败: $e');
+      logDebug('批量插入日志失败: $e');
     }
   }
 
@@ -413,7 +413,7 @@ class NativeLogStorage implements LogStorage {
         offset: offset,
       );
     } catch (e) {
-      debugPrint('查询日志失败: $e');
+      logDebug('查询日志失败: $e');
       return [];
     }
   }
@@ -427,7 +427,7 @@ class NativeLogStorage implements LogStorage {
       );
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
-      debugPrint('获取日志数量失败: $e');
+      logDebug('获取日志数量失败: $e');
       return 0;
     }
   }
@@ -457,7 +457,7 @@ class NativeLogStorage implements LogStorage {
 
       return 0;
     } catch (e) {
-      debugPrint('清理旧日志失败: $e');
+      logDebug('清理旧日志失败: $e');
       return 0;
     }
   }
@@ -468,7 +468,7 @@ class NativeLogStorage implements LogStorage {
       final db = await _getDatabase();
       return await db.delete(_logTableName);
     } catch (e) {
-      debugPrint('清除所有日志失败: $e');
+      logDebug('清除所有日志失败: $e');
       return 0;
     }
   }
@@ -483,7 +483,7 @@ class NativeLogStorage implements LogStorage {
         limit: limit,
       );
     } catch (e) {
-      debugPrint('获取最近日志失败: $e');
+      logDebug('获取最近日志失败: $e');
       return [];
     }
   }
@@ -538,7 +538,7 @@ class LogDatabaseService {
       // 清理旧日志
       _cleanupOldLogs();
     } catch (e) {
-      debugPrint('初始化日志存储失败: $e');
+      logDebug('初始化日志存储失败: $e');
       rethrow; // 重新抛出异常以便上层处理
     }
   }
@@ -630,7 +630,7 @@ class LogDatabaseService {
         await _storage.deleteOldLogs(maxLogsToKeep); // 只执行清理，无需记录条数
       }
     } catch (e) {
-      debugPrint('清理旧日志失败: $e');
+      logDebug('清理旧日志失败: $e');
       // 失败不抛出异常，因为这是非关键操作
     }
   }

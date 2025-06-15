@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../utils/app_logger.dart';
 
 class NoteSearchController extends ChangeNotifier {
   String _searchQuery = '';
@@ -28,7 +29,7 @@ class NoteSearchController extends ChangeNotifier {
       _isSearching = false;
       _searchError = null;
       notifyListeners();
-      debugPrint('搜索控制器: 清空搜索内容');
+      logDebug('搜索控制器: 清空搜索内容', source: 'SearchController');
       return;
     }
 
@@ -55,7 +56,7 @@ class NoteSearchController extends ChangeNotifier {
         _searchError = '搜索处理出错: $e';
         _isSearching = false;
         notifyListeners();
-        debugPrint('搜索控制器错误: $_searchError');
+        logDebug('搜索控制器错误: $_searchError');
       }
     });
   }
