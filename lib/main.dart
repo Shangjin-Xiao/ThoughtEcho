@@ -59,9 +59,6 @@ Future<void> initializeDatabasePlatform() async {
 // 全局导航key，用于日志服务在无context时获取context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// 日志写入递归保护
-bool _isLogging = false;
-
 // 添加一个全局标志，表示是否处于紧急模式（数据库损坏等情况）
 bool _isEmergencyMode = false;
 
@@ -79,8 +76,13 @@ Future<void> main() async {
 
       // 全局记录未捕获的异步错误
       PlatformDispatcher.instance.onError = (error, stack) {
-        // 使用新的日志系统而不是debugPrint
-        logError('捕获到平台分发器错误: $error', error: error, stackTrace: stack, source: 'PlatformDispatcher');
+        // 使用新的日志系统而不是logDebug
+        logError(
+          '捕获到平台分发器错误: $error',
+          error: error,
+          stackTrace: stack,
+          source: 'PlatformDispatcher',
+        );
         logError('堆栈: $stack', source: 'PlatformDispatcher');
 
         // 捕获到错误后再记录到日志系统
@@ -94,41 +96,8 @@ Future<void> main() async {
         return true; // 返回true表示错误已处理
       };
 
-      // 保存原始 print 函数
-      const originalPrint = print;
-
-      // 重新定义 debugPrint
-      debugPrint = (String? message, {int? wrapWidth}) {
-        if (_isLogging) {
-          // 防止递归 - 如果已经在日志过程中，直接使用原始 print
-          originalPrint(message);
-          return;
-        }
-
-        _isLogging = true;
-        try {
-          // 直接使用原始 print 输出，不触发递归
-          originalPrint(message);
-
-          // 只有当 LogService 实例可用时才记录日志
-          if (message != null && message.isNotEmpty) {
-            // 尝试获取上下文
-            final context = navigatorKey.currentContext;            if (context != null) {
-              try {
-                final logService = Provider.of<UnifiedLogService>(
-                  context,
-                  listen: false,
-                );
-                logService.info(message, source: 'debugPrint');
-              } catch (_) {
-                // 忽略 Provider 错误
-              }
-            }
-          }
-        } finally {
-          _isLogging = false;
-        }
-      };
+      // 初始化日志系统
+      AppLogger.initialize();
 
       // 捕获Flutter框架异常并写入日志服务
       FlutterError.onError = (FlutterErrorDetails details) {
@@ -136,8 +105,12 @@ Future<void> main() async {
 
         // 尝试获取LogService实例
         final context = navigatorKey.currentContext;
-        try {        if (context != null) {
-            final logService = Provider.of<UnifiedLogService>(context, listen: false);
+        try {
+          if (context != null) {
+            final logService = Provider.of<UnifiedLogService>(
+              context,
+              listen: false,
+            );
             logService.error(
               'Flutter异常: ${details.exceptionAsString()}',
               error: details.exception,
@@ -195,7 +168,7 @@ Future<void> main() async {
         final databaseService = DatabaseService();
         final locationService = LocationService();
         final weatherService = WeatherService();
-        final clipboardService = ClipboardService();        // 创建统一日志服务
+        final clipboardService = ClipboardService(); // 创建统一日志服务
         final unifiedLogService = UnifiedLogService.instance;
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
@@ -212,12 +185,15 @@ Future<void> main() async {
           MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => settingsService),
-              ChangeNotifierProvider(create: (_) => databaseService),              ChangeNotifierProvider(create: (_) => locationService),
+              ChangeNotifierProvider(create: (_) => databaseService),
+              ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
               ChangeNotifierProvider(create: (_) => clipboardService),
               ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
-              ChangeNotifierProvider(create: (_) => AIAnalysisDatabaseService()),
+              ChangeNotifierProvider(
+                create: (_) => AIAnalysisDatabaseService(),
+              ),
               Provider.value(
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService
@@ -230,10 +206,7 @@ Future<void> main() async {
                     ),
                 update:
                     (context, settings, previous) =>
-                        previous ??
-                        AIService(
-                          settingsService: settings,
-                        ),
+                        previous ?? AIService(settingsService: settings),
               ),
             ],
             child: MyApp(
@@ -254,14 +227,25 @@ Future<void> main() async {
             // 初始化clipboardService
             await clipboardService.init().timeout(
               const Duration(seconds: 3),
-              onTimeout: () => logWarning('剪贴板服务初始化超时，将继续后续初始化', source: 'BackgroundInit'),
+              onTimeout:
+                  () => logWarning(
+                    '剪贴板服务初始化超时，将继续后续初始化',
+                    source: 'BackgroundInit',
+                  ),
             );
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
-            final hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
-            logInfo('数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}', source: 'BackgroundInit');
-            logInfo('引导流程状态: ${hasCompletedOnboarding ? "已完成" : "未完成"}', source: 'BackgroundInit');
+            final hasCompletedOnboarding =
+                settingsService.hasCompletedOnboarding();
+            logInfo(
+              '数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}',
+              source: 'BackgroundInit',
+            );
+            logInfo(
+              '引导流程状态: ${hasCompletedOnboarding ? "已完成" : "未完成"}',
+              source: 'BackgroundInit',
+            );
 
             // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
             if (hasCompletedOnboarding && !hasMigrated) {
@@ -283,7 +267,12 @@ Future<void> main() async {
 
                 logInfo('后台数据库迁移完成', source: 'BackgroundInit');
               } catch (e, stackTrace) {
-                logError('后台数据库迁移失败: $e', error: e, stackTrace: stackTrace, source: 'BackgroundInit');
+                logError(
+                  '后台数据库迁移失败: $e',
+                  error: e,
+                  stackTrace: stackTrace,
+                  source: 'BackgroundInit',
+                );
 
                 // 在紧急情况下尝试初始化新数据库
                 try {
@@ -291,9 +280,13 @@ Future<void> main() async {
                   await settingsService.setDatabaseMigrationComplete(true);
                   logInfo('后台初始化新数据库成功', source: 'BackgroundInit');
                 } catch (newDbError) {
-                  logError('后台初始化新数据库也失败: $newDbError', error: newDbError, source: 'BackgroundInit');
+                  logError(
+                    '后台初始化新数据库也失败: $newDbError',
+                    error: newDbError,
+                    source: 'BackgroundInit',
+                  );
                   _isEmergencyMode = true;
-                }                // 记录错误但继续执行
+                } // 记录错误但继续执行
                 logError(
                   '后台数据库迁移失败',
                   error: e,
@@ -304,16 +297,25 @@ Future<void> main() async {
             } else if (!hasCompletedOnboarding) {
               // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
               logInfo('等待引导流程中的数据库迁移...', source: 'BackgroundInit');
-            } else {              // 引导已完成且数据库已迁移，正常初始化
+            } else {
+              // 引导已完成且数据库已迁移，正常初始化
               logInfo('数据库已迁移，执行常规初始化', source: 'BackgroundInit');
-              await _initializeDatabaseNormally(databaseService, unifiedLogService);
+              await _initializeDatabaseNormally(
+                databaseService,
+                unifiedLogService,
+              );
             }
 
             // 初始化完成，更新状态
             servicesInitialized.value = true;
             logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
           } catch (e, stackTrace) {
-            logError('后台服务初始化失败: $e', error: e, stackTrace: stackTrace, source: 'BackgroundInit');
+            logError(
+              '后台服务初始化失败: $e',
+              error: e,
+              stackTrace: stackTrace,
+              source: 'BackgroundInit',
+            );
 
             // 记录错误，不使用 BuildContext
             try {
@@ -328,7 +330,12 @@ Future<void> main() async {
           }
         });
       } catch (e, stackTrace) {
-        logError('应用初始化失败: $e', error: e, stackTrace: stackTrace, source: 'AppInit');
+        logError(
+          '应用初始化失败: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'AppInit',
+        );
         logError('堆栈跟踪: $stackTrace', source: 'AppInit');
 
         // 如果初始化失败，直接运行一个简单的错误应用
@@ -339,7 +346,12 @@ Future<void> main() async {
       }
     },
     (error, stackTrace) {
-      logError('未捕获的异常: $error', error: error, stackTrace: stackTrace, source: 'runZonedGuarded');
+      logError(
+        '未捕获的异常: $error',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'runZonedGuarded',
+      );
       logError('堆栈跟踪: $stackTrace', source: 'runZonedGuarded');
 
       // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
@@ -883,16 +895,16 @@ Future<void> _initializeDatabaseNormally(
 
     // 确保初始化默认一言分类，即使数据库已初始化
     await databaseService.initDefaultHitokotoCategories();
-    debugPrint('数据库服务及默认标签初始化完成');
+    logDebug('数据库服务及默认标签初始化完成');
   } catch (e, stackTrace) {
-    debugPrint('数据库初始化失败: $e');
+    logDebug('数据库初始化失败: $e');
 
     // 尝试恢复：即使数据库初始化失败，也尝试创建默认标签
     try {
       await databaseService.initDefaultHitokotoCategories();
-      debugPrint('尝试恢复：虽然数据库初始化可能有问题，但已尝试创建默认标签');
+      logDebug('尝试恢复：虽然数据库初始化可能有问题，但已尝试创建默认标签');
     } catch (tagError) {
-      debugPrint('创建默认标签也失败: $tagError');
+      logDebug('创建默认标签也失败: $tagError');
       _isEmergencyMode = true;
     }
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
+import 'package:thoughtecho/utils/app_logger.dart';
 
 import '../services/mmkv_service.dart';
 
@@ -27,7 +28,6 @@ class SettingsService extends ChangeNotifier {
   late AppSettings _appSettings;
   late ThemeMode _themeMode;
   late MultiAISettings _multiAISettings; // 新增多provider设置
-
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
@@ -63,7 +63,7 @@ class SettingsService extends ChangeNotifier {
 
     // 如果是首次安装，标记为已安装
     if (!wasInstalledBefore) {
-      debugPrint('检测到首次安装，将重置引导页面状态');
+      logDebug('检测到首次安装，将重置引导页面状态');
       await _mmkv.setBool(_appInstalledKey, true);
 
       // 首次安装时，载入应用默认设置
@@ -79,7 +79,7 @@ class SettingsService extends ChangeNotifier {
 
       // 如果设置了升级标记，刷新引导状态
       if (hasUpgradeTag) {
-        debugPrint('检测到应用升级标记，将重置引导页面状态');
+        logDebug('检测到应用升级标记，将重置引导页面状态');
 
         // 重置升级标记
         await _mmkv.setBool(_appUpgradedKey, false);
@@ -99,8 +99,6 @@ class SettingsService extends ChangeNotifier {
     _loadAppSettings();
     _loadThemeMode();
 
-
-
     notifyListeners();
   }
 
@@ -114,10 +112,7 @@ class SettingsService extends ChangeNotifier {
       _aiSettings = AISettings.fromJson(settingsMap);
     } else {
       _aiSettings = AISettings.defaultSettings();
-      await _mmkv.setString(
-        _aiSettingsKey,
-        json.encode(_aiSettings.toJson()),
-      );
+      await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
     }
   }
 
@@ -133,13 +128,13 @@ class SettingsService extends ChangeNotifier {
       if (_appSettings.hitokotoType.isEmpty) {
         _appSettings = AppSettings.defaultSettings();
         _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-        debugPrint('检测到一言类型为空，已重置为默认全选值');
+        logDebug('检测到一言类型为空，已重置为默认全选值');
       }
     } else {
       _appSettings = AppSettings.defaultSettings();
       // 首次启动时保存默认设置到存储
       _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-      debugPrint('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
+      logDebug('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
     }
   }
 
@@ -169,35 +164,33 @@ class SettingsService extends ChangeNotifier {
   Future<void> _migrateDataIfNeeded() async {
     // 检查是否已经完成迁移
     if (_mmkv.getBool(_migrationCompleteKey) == true) {
-      debugPrint('数据迁移已完成，不再重复执行');
+      logDebug('数据迁移已完成，不再重复执行');
       return;
     }
 
-    debugPrint('开始从SharedPreferences迁移数据到MMKV...');
+    logDebug('开始从SharedPreferences迁移数据到MMKV...');
 
     try {
       // 迁移AI设置
       final aiSettings = _prefs.getString(_aiSettingsKey);
       if (aiSettings != null) {
         await _mmkv.setString(_aiSettingsKey, aiSettings);
-        debugPrint('AI设置已迁移到MMKV');
+        logDebug('AI设置已迁移到MMKV');
       }
 
       // 迁移应用设置
       final appSettings = _prefs.getString(_appSettingsKey);
       if (appSettings != null) {
         await _mmkv.setString(_appSettingsKey, appSettings);
-        debugPrint('应用设置已迁移到MMKV');
+        logDebug('应用设置已迁移到MMKV');
       }
 
       // 迁移主题设置
       final themeMode = _prefs.getString(_themeModeKey);
       if (themeMode != null) {
         await _mmkv.setString(_themeModeKey, themeMode);
-        debugPrint('主题设置已迁移到MMKV');
+        logDebug('主题设置已迁移到MMKV');
       }
-
-
 
       // 检查旧的数据库迁移Key，如果存在且为true，则设置新的Key，但保留旧Key以保持兼容性
       if (_mmkv.containsKey(_databaseMigrationCompleteKey)) {
@@ -205,16 +198,16 @@ class SettingsService extends ChangeNotifier {
             _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
         if (oldMigrationComplete) {
           await _mmkv.setBool(_initialDatabaseSetupCompleteKey, true);
-          debugPrint('已将旧的数据库迁移完成标记同步到新的初始设置完成标记');
+          logDebug('已将旧的数据库迁移完成标记同步到新的初始设置完成标记');
         }
         // 注意：保留旧Key以保持兼容性，不移除
       }
 
       // 标记迁移完成
       await _mmkv.setBool(_migrationCompleteKey, true);
-      debugPrint('所有设置数据已成功迁移到MMKV');
+      logDebug('所有设置数据已成功迁移到MMKV');
     } catch (e) {
-      debugPrint('迁移数据失败: $e');
+      logDebug('迁移数据失败: $e');
       // 失败不阻塞应用运行，下次启动会重试
     }
   }
@@ -251,7 +244,7 @@ class SettingsService extends ChangeNotifier {
   /// 设置初始数据库设置（创建/升级）已完成
   Future<void> setInitialDatabaseSetupComplete(bool isComplete) async {
     await _mmkv.setBool(_initialDatabaseSetupCompleteKey, isComplete);
-    debugPrint('初始数据库设置完成状态设置为: $isComplete');
+    logDebug('初始数据库设置完成状态设置为: $isComplete');
     // notifyListeners(); // 根据需要决定是否通知监听器
   }
 
@@ -299,10 +292,12 @@ class SettingsService extends ChangeNotifier {
 
     if (multiAiSettingsJson != null) {
       try {
-        final Map<String, dynamic> settingsMap = json.decode(multiAiSettingsJson);
+        final Map<String, dynamic> settingsMap = json.decode(
+          multiAiSettingsJson,
+        );
         _multiAISettings = MultiAISettings.fromJson(settingsMap);
       } catch (e) {
-        debugPrint('加载多provider设置失败: $e');
+        logDebug('加载多provider设置失败: $e');
         _multiAISettings = MultiAISettings.defaultSettings();
         await saveMultiAISettings(_multiAISettings);
       }
@@ -326,5 +321,4 @@ class SettingsService extends ChangeNotifier {
   Future<void> updateMultiAISettings(MultiAISettings settings) async {
     await saveMultiAISettings(settings);
   }
-
 }

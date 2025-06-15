@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
-
+import 'package:thoughtecho/utils/app_logger.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -35,7 +35,7 @@ class StreamingUtils {
     if (lastRequestTime != null) {
       final timeSinceLastRequest = now.difference(lastRequestTime);
       if (timeSinceLastRequest < _requestCooldown) {
-        debugPrint('阻止重复请求，距上次请求仅${timeSinceLastRequest.inSeconds}秒');
+        logDebug('阻止重复请求，距上次请求仅${timeSinceLastRequest.inSeconds}秒');
         return true;
       }
     }
@@ -192,7 +192,7 @@ class StreamingUtils {
     StreamingErrorCallback onError,
     Duration timeout,
   ) async {
-    debugPrint('流式请求URL: $url');
+    logDebug('流式请求URL: $url');
 
     // 验证和修复请求体中的数据类型
     final validatedRequestBody = Map<String, dynamic>.from(requestBody);
@@ -202,38 +202,38 @@ class StreamingUtils {
       final streamValue = validatedRequestBody['stream'];
       if (streamValue is String) {
         validatedRequestBody['stream'] = streamValue.toLowerCase() == 'true';
-        debugPrint('Warning: 修复stream参数类型从String到boolean');
+        logDebug('Warning: 修复stream参数类型从String到boolean');
       } else if (streamValue is! bool) {
         validatedRequestBody['stream'] = true;
-        debugPrint('Warning: 修复stream参数类型到boolean');
+        logDebug('Warning: 修复stream参数类型到boolean');
       }
     }
 
     // 打印安全的请求信息（隐藏敏感信息）
     final safeHeaders = Map<String, String>.from(headers);
     _hideSensitiveInfo(safeHeaders);
-    debugPrint('请求头: $safeHeaders');
+    logDebug('请求头: $safeHeaders');
 
     // 安全的JSON编码，避免类型转换错误
     try {
       final jsonString = json.encode(validatedRequestBody);
-      debugPrint('请求体: $jsonString');
+      logDebug('请求体: $jsonString');
     } catch (e) {
-      debugPrint('JSON编码错误: $e');
-      debugPrint('请求体数据类型检查:');
+      logDebug('JSON编码错误: $e');
+      logDebug('请求体数据类型检查:');
       validatedRequestBody.forEach((key, value) {
-        debugPrint('  $key: ${value.runtimeType} = $value');
+        logDebug('  $key: ${value.runtimeType} = $value');
       });
       // 尝试修复数据类型问题
       final fixedRequestBody = _fixDataTypes(validatedRequestBody);
       try {
         final jsonString = json.encode(fixedRequestBody);
-        debugPrint('修复后的请求体: $jsonString');
+        logDebug('修复后的请求体: $jsonString');
         // 使用修复后的数据
         validatedRequestBody.clear();
         validatedRequestBody.addAll(fixedRequestBody);
       } catch (e2) {
-        debugPrint('修复后仍然无法编码JSON: $e2');
+        logDebug('修复后仍然无法编码JSON: $e2');
         throw Exception('请求数据格式错误: $e2');
       }
     }
@@ -283,7 +283,7 @@ class StreamingUtils {
         onError,
       );
     } on DioException catch (e) {
-      debugPrint('Dio流式请求异常: $e');
+      logDebug('Dio流式请求异常: $e');
       if (e.type == DioExceptionType.receiveTimeout) {
         onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
       } else if (e.type == DioExceptionType.connectionTimeout) {
@@ -312,7 +312,7 @@ class StreamingUtils {
             }
           }
         } catch (readError) {
-          debugPrint('读取错误响应体失败: $readError');
+          logDebug('读取错误响应体失败: $readError');
           errorBody = e.message ?? '未知错误';
         }
 
@@ -323,7 +323,7 @@ class StreamingUtils {
         onError(Exception(errorMessage));
       }
     } catch (e) {
-      debugPrint('流式请求异常: $e');
+      logDebug('流式请求异常: $e');
       onError(Exception(e.toString()));
     } finally {
       cancelToken?.cancel();
@@ -355,7 +355,7 @@ class StreamingUtils {
           if (line.isEmpty || !line.startsWith('data: ')) continue;
 
           if (line == 'data: [DONE]') {
-            debugPrint('流式响应完成');
+            logDebug('流式响应完成');
             onComplete(fullText);
             return;
           }
@@ -368,10 +368,10 @@ class StreamingUtils {
         }
       }
 
-      debugPrint('流式响应接收完毕');
+      logDebug('流式响应接收完毕');
       onComplete(fullText);
     } catch (e) {
-      debugPrint('处理流式响应时出错: $e');
+      logDebug('处理流式响应时出错: $e');
       onError(Exception(e.toString()));
     }
   }
@@ -405,10 +405,10 @@ class StreamingUtils {
 
       return null;
     } catch (e) {
-      debugPrint('解析流式数据失败: $e, 原始数据: $line');
+      logDebug('解析流式数据失败: $e, 原始数据: $line');
       // 检查是否是类型转换错误
       if (e.toString().contains('type') && e.toString().contains('subtype')) {
-        debugPrint('检测到类型转换错误，可能是API响应格式问题');
+        logDebug('检测到类型转换错误，可能是API响应格式问题');
       }
       return null;
     }
@@ -416,7 +416,7 @@ class StreamingUtils {
 
   /// 解析错误消息
   static String _parseErrorMessage(int statusCode, String errorBody) {
-    debugPrint('解析错误 - 状态码: $statusCode, 响应体: $errorBody');
+    logDebug('解析错误 - 状态码: $statusCode, 响应体: $errorBody');
 
     if (errorBody.contains('rate_limit_exceeded') ||
         errorBody.contains('rate limit') ||
@@ -491,18 +491,19 @@ class StreamingUtils {
         fixedData[key] = value; // 字符串保持不变
       } else if (value is List) {
         // 递归处理列表
-        fixedData[key] = value.map((item) {
-          if (item is Map<String, dynamic>) {
-            return _fixDataTypes(item);
-          }
-          return item;
-        }).toList();
+        fixedData[key] =
+            value.map((item) {
+              if (item is Map<String, dynamic>) {
+                return _fixDataTypes(item);
+              }
+              return item;
+            }).toList();
       } else if (value is Map<String, dynamic>) {
         // 递归处理嵌套Map
         fixedData[key] = _fixDataTypes(value);
       } else {
         // 其他类型转换为字符串
-        debugPrint('Warning: 将 $key 的值从 ${value.runtimeType} 转换为字符串: $value');
+        logDebug('Warning: 将 $key 的值从 ${value.runtimeType} 转换为字符串: $value');
         fixedData[key] = value.toString();
       }
     });
@@ -580,7 +581,7 @@ class StreamingUtils {
           // 如果有错误，检查是否需要重试
           if (hasError && lastError != null) {
             if (retryCount < maxRetries && _isRetryableError(lastError!)) {
-              debugPrint(
+              logDebug(
                 '请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError',
               );
               retryCount++;
@@ -604,7 +605,7 @@ class StreamingUtils {
             return;
           }
 
-          debugPrint(
+          logDebug(
             '请求失败，将在${_calculateRetryDelay(retryCount, retryDelay).inSeconds}秒后重试 ${retryCount + 1}/$maxRetries: $lastError',
           );
           retryCount++;
@@ -648,7 +649,7 @@ class StreamingUtils {
               errorString.contains('invalid model') ||
               errorString.contains('不存在') ||
               errorString.contains('不可用'))) {
-        debugPrint('检测到模型相关的500错误，停止重试: $errorString');
+        logDebug('检测到模型相关的500错误，停止重试: $errorString');
         return false;
       }
 
@@ -657,12 +658,12 @@ class StreamingUtils {
           errorString.contains('bad request') ||
           errorString.contains('malformed') ||
           errorString.contains('格式错误')) {
-        debugPrint('检测到请求格式相关的500错误，停止重试: $errorString');
+        logDebug('检测到请求格式相关的500错误，停止重试: $errorString');
         return false;
       }
 
       // 其他500错误可能是临时的服务器问题，可以重试
-      debugPrint('检测到可重试的500错误: $errorString');
+      logDebug('检测到可重试的500错误: $errorString');
       return true;
     }
 

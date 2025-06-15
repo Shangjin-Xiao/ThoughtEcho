@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // 添加debugPrint支持
+import 'package:flutter/foundation.dart'; // 添加logDebug支持
 import 'package:provider/provider.dart';
 import 'dart:async'; // 导入 Timer
 import '../services/location_service.dart';
 import '../utils/color_utils.dart'; // Import color_utils
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class CitySearchWidget extends StatefulWidget {
   final Function(CityInfo) onCitySelected;
@@ -175,7 +176,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                     );
                   }
                 } catch (e) {
-                  debugPrint('获取位置错误: $e');
+                  logDebug('获取位置错误: $e');
                   if (context.mounted) {
                     setState(() {
                       _isSearchActive = false;

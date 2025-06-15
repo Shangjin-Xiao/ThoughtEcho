@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/quote_model.dart';
 import '../utils/ai_network_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// AI请求辅助工具
 ///
@@ -148,7 +148,7 @@ class AIRequestHelper {
 
       // 确保stream参数是boolean类型
       if (body.containsKey('stream') && body['stream'] is! bool) {
-        debugPrint(
+        logDebug(
           'Warning: stream parameter is not boolean, converting: ${body['stream']}',
         );
         body['stream'] = body['stream'] == true || body['stream'] == 'true';
@@ -165,7 +165,7 @@ class AIRequestHelper {
         timeout: defaultTimeout,
       );
     } catch (e) {
-      debugPrint('流式请求设置错误: $e');
+      logDebug('流式请求设置错误: $e');
       onError(e);
     }
   }
@@ -216,7 +216,7 @@ class AIRequestHelper {
         data['choices'][0]['message'] != null) {
       return data['choices'][0]['message']['content'];
     } else {
-      debugPrint('API响应格式错误: $data');
+      logDebug('API响应格式错误: $data');
       throw Exception('API响应格式错误');
     }
   }
@@ -236,13 +236,13 @@ class AIRequestHelper {
       if (chunk is String) {
         controller.add(chunk);
       } else {
-        debugPrint('Warning: chunk不是字符串类型: ${chunk.runtimeType} = $chunk');
+        logDebug('Warning: chunk不是字符串类型: ${chunk.runtimeType} = $chunk');
         // 尝试转换为字符串
         try {
           final stringChunk = chunk.toString();
           controller.add(stringChunk);
         } catch (e) {
-          debugPrint('无法将chunk转换为字符串: $e');
+          logDebug('无法将chunk转换为字符串: $e');
           handleStreamError(
             controller: controller,
             error: Exception('流式响应数据类型错误: ${chunk.runtimeType}'),
@@ -270,27 +270,27 @@ class AIRequestHelper {
     String? context,
   }) {
     if (context != null) {
-      debugPrint('$context错误: $error');
+      logDebug('$context错误: $error');
       // 添加更详细的错误信息
       if (error.toString().contains('type') &&
           error.toString().contains('subtype')) {
-        debugPrint('检测到类型转换错误，可能是stream参数类型问题');
-        debugPrint('错误详情: ${error.runtimeType} - $error');
+        logDebug('检测到类型转换错误，可能是stream参数类型问题');
+        logDebug('错误详情: ${error.runtimeType} - $error');
 
         // 检查是否是布尔值到字符串的转换错误
         if (error.toString().contains('bool') &&
             error.toString().contains('String')) {
-          debugPrint('这是一个布尔值到字符串的类型转换错误');
-          debugPrint('可能的原因：');
-          debugPrint('1. API响应中的content字段是boolean而不是string');
-          debugPrint('2. 某个地方期望字符串但收到了boolean值');
-          debugPrint('3. JSON解析过程中的类型不匹配');
+          logDebug('这是一个布尔值到字符串的类型转换错误');
+          logDebug('可能的原因：');
+          logDebug('1. API响应中的content字段是boolean而不是string');
+          logDebug('2. 某个地方期望字符串但收到了boolean值');
+          logDebug('3. JSON解析过程中的类型不匹配');
         }
       }
 
       // 打印完整的错误堆栈
       if (error is Exception) {
-        debugPrint('异常类型: ${error.runtimeType}');
+        logDebug('异常类型: ${error.runtimeType}');
       }
     }
     if (!controller.isClosed) {
@@ -344,7 +344,7 @@ class AIRequestHelper {
     try {
       return await operation();
     } catch (e) {
-      debugPrint('$context错误: $e');
+      logDebug('$context错误: $e');
       rethrow;
     }
   }

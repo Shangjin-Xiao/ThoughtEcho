@@ -14,6 +14,7 @@ import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -198,10 +199,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             });
           }
         }
-      }      // 优化：移除重新创建Future的代码，DatabaseService会通过notifyListeners()自动更新UI
+      } // 优化：移除重新创建Future的代码，DatabaseService会通过notifyListeners()自动更新UI
       // DatabaseService已经继承ChangeNotifier，当标签添加后会自动通知所有监听者更新UI
     } catch (e) {
-      debugPrint('添加默认标签失败: $e');
+      logDebug('添加默认标签失败: $e');
     }
   }
 
@@ -282,7 +283,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       if (fixedId != null) {
         final category = await db.getCategoryById(fixedId);
         if (category != null) {
-          debugPrint('通过固定ID找到标签: ${category.name}(ID=${category.id})');
+          logDebug('通过固定ID找到标签: ${category.name}(ID=${category.id})');
           return category.id; // 返回已存在的固定ID标签，即使它已被重命名
         }
       }
@@ -306,7 +307,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           await db.addCategoryWithId(fixedId, name, iconName: iconName);
           return fixedId;
         } catch (e) {
-          debugPrint('使用固定ID创建标签失败: $e');
+          logDebug('使用固定ID创建标签失败: $e');
           // 如果固定ID创建失败，尝试常规创建
           await db.addCategory(name, iconName: iconName);
         }
@@ -324,7 +325,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       return newTag.id.isNotEmpty ? newTag.id : null;
     } catch (e) {
-      debugPrint('确保标签"$name"存在时出错: $e');
+      logDebug('确保标签"$name"存在时出错: $e');
       // 尝试获取现有标签作为回退方案
       try {
         final allCategories = await db.getCategories();
@@ -334,7 +335,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           orElse: () => NoteCategory(id: '', name: ''),
         );
         if (matchingTag.id.isNotEmpty) {
-          debugPrint('虽然发生错误，但找到了匹配的标签: ${matchingTag.id}');
+          logDebug('虽然发生错误，但找到了匹配的标签: ${matchingTag.id}');
           return matchingTag.id;
         }
         // 如果没有匹配标签，返回任何可用标签的ID或null

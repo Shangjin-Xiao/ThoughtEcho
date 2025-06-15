@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
+import 'package:thoughtecho/utils/app_logger.dart';
 // Import color_utils
 
 class AppTheme with ChangeNotifier {
@@ -151,11 +152,11 @@ class AppTheme with ChangeNotifier {
       }
 
       _hasInitialized = true;
-      debugPrint(
+      logDebug(
         '主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 使用动态取色=$_useDynamicColor, 主题模式=$_themeMode',
       );
     } catch (e) {
-      debugPrint('初始化主题服务失败: $e');
+      logDebug('初始化主题服务失败: $e');
       // 初始化失败时使用默认值
       _customColor = Colors.blue;
       _useCustomColor = false;
@@ -192,7 +193,7 @@ class AppTheme with ChangeNotifier {
     // 当设备后续能够获取动态颜色时，应用将自动采用。
     if (!systemSupportsDynamicColor && _useDynamicColor) {
       // 仅在调试时打印信息，不再修改 _useDynamicColor 或持久化状态
-      debugPrint('系统不支持动态取色，但用户已启用动态取色。将使用回退颜色方案。');
+      logDebug('系统不支持动态取色，但用户已启用动态取色。将使用回退颜色方案。');
       // changed 标志不需要在这里设置，因为 _useDynamicColor 的状态没有改变
       // 颜色方案的实际变化由 lightColorScheme/darkColorScheme getter 处理
     }
@@ -252,7 +253,7 @@ class AppTheme with ChangeNotifier {
       }
       _useCustomColor = _storage.getBool(_useCustomColorKey) ?? false;
     } catch (e) {
-      debugPrint('加载自定义颜色失败: $e');
+      logDebug('加载自定义颜色失败: $e');
       _customColor = Colors.blue;
       _useCustomColor = false;
     }
@@ -266,7 +267,7 @@ class AppTheme with ChangeNotifier {
         _themeMode = ThemeMode.values.byName(modeString);
       }
     } catch (e) {
-      debugPrint('加载主题模式失败: $e');
+      logDebug('加载主题模式失败: $e');
       _themeMode = ThemeMode.system;
     }
   }
@@ -279,7 +280,7 @@ class AppTheme with ChangeNotifier {
         _useDynamicColor = useDynamic;
       }
     } catch (e) {
-      debugPrint('加载动态取色设置失败: $e');
+      logDebug('加载动态取色设置失败: $e');
       _useDynamicColor = true; // 默认启用
     }
   }

@@ -8,6 +8,7 @@ import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
 import 'package:provider/provider.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 import '../theme/app_theme.dart';
+import '../utils/app_logger.dart';
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring =
@@ -49,9 +50,9 @@ class ClipboardService extends ChangeNotifier {
       _storage = SafeMMKV();
       await _storage.initialize();
       _loadPreferences();
-      debugPrint('剪贴板服务初始化完成，监控状态: $_enableClipboardMonitoring');
+      logDebug('剪贴板服务初始化完成，监控状态: $_enableClipboardMonitoring');
     } catch (e) {
-      debugPrint('初始化剪贴板服务首选项时出错: $e');
+      logDebug('初始化剪贴板服务首选项时出错: $e');
     }
   }
 
@@ -59,7 +60,7 @@ class ClipboardService extends ChangeNotifier {
   void _loadPreferences() {
     _enableClipboardMonitoring =
         _storage.getBool(_keyEnableClipboardMonitoring) ?? false;
-    debugPrint('加载剪贴板监控设置: $_enableClipboardMonitoring');
+    logDebug('加载剪贴板监控设置: $_enableClipboardMonitoring');
     notifyListeners();
   }
 
@@ -67,14 +68,14 @@ class ClipboardService extends ChangeNotifier {
   void setEnableClipboardMonitoring(bool value) {
     _enableClipboardMonitoring = value;
     _storage.setBool(_keyEnableClipboardMonitoring, value);
-    debugPrint('剪贴板监控设置已更新: $value');
+    logDebug('剪贴板监控设置已更新: $value');
     notifyListeners();
   }
 
   // 检查剪贴板内容（应用启动或从后台恢复时调用）
   Future<Map<String, dynamic>?> checkClipboard() async {
     if (!_enableClipboardMonitoring) {
-      debugPrint('剪贴板监控已禁用，跳过检查');
+      logDebug('剪贴板监控已禁用，跳过检查');
       return null;
     }
 
@@ -87,18 +88,18 @@ class ClipboardService extends ChangeNotifier {
           data.text == null ||
           data.text!.isEmpty ||
           data.text == _lastProcessedContent) {
-        debugPrint('剪贴板为空或内容未变化');
+        logDebug('剪贴板为空或内容未变化');
         return null;
       }
 
       final content = data.text!;
-      debugPrint(
+      logDebug(
         '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content}',
       );
 
       // 内容过长或过短不处理
       if (content.length > 5000 || content.length < 5) {
-        debugPrint('剪贴板内容长度不适合处理: ${content.length}字符');
+        logDebug('剪贴板内容长度不适合处理: ${content.length}字符');
         return null;
       }
 
@@ -111,9 +112,7 @@ class ClipboardService extends ChangeNotifier {
       String? source = extractedInfo['source'];
       String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
 
-      debugPrint(
-        '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串: $matchedSubstring',
-      );
+      logDebug('从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串: $matchedSubstring');
 
       // 如果提取到了元数据，从原始内容中移除匹配的子串
       final displayContent =
@@ -128,7 +127,7 @@ class ClipboardService extends ChangeNotifier {
         'source': source,
       };
     } catch (e) {
-      debugPrint('检查剪贴板时出错: $e');
+      logDebug('检查剪贴板时出错: $e');
       return null;
     }
   }
@@ -332,7 +331,7 @@ class ClipboardService extends ChangeNotifier {
     );
 
     // 添加到Overlay
-    debugPrint('显示剪贴板通知弹窗');
+    logDebug('显示剪贴板通知弹窗');
     Overlay.of(context).insert(overlayEntry);
 
     // 10秒后自动移除通知
@@ -382,7 +381,7 @@ class ClipboardService extends ChangeNotifier {
             ),
       );
     } catch (e) {
-      debugPrint('打开编辑页面失败: $e');
+      logDebug('打开编辑页面失败: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,

@@ -8,6 +8,7 @@ import '../utils/daily_prompt_generator.dart';
 import '../utils/ai_network_manager.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
+import '../utils/app_logger.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -35,7 +36,7 @@ class AIService extends ChangeNotifier {
 
       // 从加密存储获取真实的API Key
       final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-      debugPrint(
+      logDebug(
         '验证设置 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
       );
 
@@ -74,13 +75,13 @@ class AIService extends ChangeNotifier {
 
         // 首先检查provider是否启用
         if (!currentProvider.isEnabled) {
-          debugPrint('API Key检查 - 当前provider已禁用: ${currentProvider.name}');
+          logDebug('API Key检查 - 当前provider已禁用: ${currentProvider.name}');
           return false;
         }
 
         // 基本检查：provider存在且启用
         // 实际的API Key验证通过异步方法进行
-        debugPrint(
+        logDebug(
           'API Key检查 - Provider: ${currentProvider.name}, Enabled: ${currentProvider.isEnabled}',
         );
         return true;
@@ -90,12 +91,12 @@ class AIService extends ChangeNotifier {
       final availableProviders =
           multiSettings.providers.where((p) => p.isEnabled).toList();
 
-      debugPrint(
+      logDebug(
         'API Key检查 - 无当前provider，可用providers: ${availableProviders.length}',
       );
       return availableProviders.isNotEmpty;
     } catch (e) {
-      debugPrint('检查API Key有效性失败: $e');
+      logDebug('检查API Key有效性失败: $e');
       return false;
     }
   }
@@ -110,7 +111,7 @@ class AIService extends ChangeNotifier {
 
         // 检查provider是否启用
         if (!currentProvider.isEnabled) {
-          debugPrint('异步API Key检查 - 当前provider已禁用: ${currentProvider.name}');
+          logDebug('异步API Key检查 - 当前provider已禁用: ${currentProvider.name}');
           return false;
         }
 
@@ -119,7 +120,7 @@ class AIService extends ChangeNotifier {
           currentProvider.id,
         );
 
-        debugPrint(
+        logDebug(
           '异步API Key检查 - Provider: ${currentProvider.name}, '
           'HasValidKey: $hasValidKey, Enabled: ${currentProvider.isEnabled}',
         );
@@ -129,7 +130,7 @@ class AIService extends ChangeNotifier {
 
       return false;
     } catch (e) {
-      debugPrint('异步检查API Key有效性失败: $e');
+      logDebug('异步检查API Key有效性失败: $e');
       return false;
     }
   }
@@ -147,7 +148,7 @@ class AIService extends ChangeNotifier {
 
     // 从加密存储获取真实的API Key
     final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-    debugPrint(
+    logDebug(
       '获取当前Provider - ${currentProvider.name}, API Key长度: ${apiKey.length}',
     );
 
@@ -243,7 +244,7 @@ class AIService extends ChangeNotifier {
       operation: (controller) async {
         // 异步检查API Key是否有效
         if (!await hasValidApiKeyAsync()) {
-          debugPrint('API Key无效，使用DailyPromptGenerator生成每日提示');
+          logDebug('API Key无效，使用DailyPromptGenerator生成每日提示');
           // 使用默认提示生成器
           controller.add(DailyPromptGenerator.getDefaultPrompt());
           controller.close();
@@ -259,13 +260,13 @@ class AIService extends ChangeNotifier {
           currentProvider = await _getCurrentProviderWithApiKey();
           settingsValid = true;
         } catch (e) {
-          debugPrint('AI设置验证失败: $e，将使用默认提示');
+          logDebug('AI设置验证失败: $e，将使用默认提示');
           settingsValid = false;
         }
 
         // 如果设置有效，调用AI生成流式提示
         if (settingsValid && currentProvider != null) {
-          debugPrint('API Key有效，使用AI生成每日提示');
+          logDebug('API Key有效，使用AI生成每日提示');
 
           // 获取包含环境信息的系统提示词
           final systemPromptWithContext = _promptManager
@@ -318,7 +319,7 @@ class AIService extends ChangeNotifier {
   // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
   // 它将直接返回DailyPromptGenerator的当前提示
   String generateDailyPrompt() {
-    debugPrint('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
+    logDebug('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
     // 旧方法仍然返回 DailyPromptGenerator 的默认提示
     return DailyPromptGenerator.getDefaultPrompt();
   }
@@ -758,7 +759,7 @@ class AIService extends ChangeNotifier {
         );
 
         final content = _requestHelper.parseResponse(response);
-        debugPrint('AI连接测试成功: $content');
+        logDebug('AI连接测试成功: $content');
       },
       context: 'AI连接测试',
     );
@@ -790,7 +791,7 @@ class AIService extends ChangeNotifier {
         if (data['choices'] != null &&
             data['choices'].isNotEmpty &&
             data['choices'][0]['message'] != null) {
-          debugPrint(
+          logDebug(
             '多provider连接测试成功: ${data['choices'][0]['message']['content']}',
           );
           return;
@@ -799,7 +800,7 @@ class AIService extends ChangeNotifier {
 
       throw Exception('API响应格式异常');
     } catch (e) {
-      debugPrint('多provider连接测试失败: $e');
+      logDebug('多provider连接测试失败: $e');
       rethrow;
     }
   }
@@ -839,7 +840,7 @@ class AIService extends ChangeNotifier {
 
       throw Exception('API响应格式错误');
     } catch (e) {
-      debugPrint('多provider笔记分析错误: $e');
+      logDebug('多provider笔记分析错误: $e');
       rethrow;
     }
   }

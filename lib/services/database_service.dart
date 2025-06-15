@@ -14,6 +14,7 @@ import '../models/quote_model.dart';
 import 'package:uuid/uuid.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
+import '../utils/app_logger.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
@@ -75,7 +76,7 @@ class DatabaseService extends ChangeNotifier {
   Future<void> init() async {
     if (kIsWeb) {
       // Web平台特定的初始化
-      debugPrint('在Web平台初始化内存存储');
+      logDebug('在Web平台初始化内存存储');
       // 添加一些示例数据以便Web平台测试
       if (_memoryStore.isEmpty) {
         _memoryStore.add(
@@ -112,7 +113,7 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    debugPrint('初始化数据库...');
+    logDebug('初始化数据库...');
 
     try {
       // 仅在 Windows 平台下使用 FFI，其它平台（如 Android）直接使用 sqflite 默认实现
@@ -131,9 +132,9 @@ class DatabaseService extends ChangeNotifier {
       if (!await newFile.exists() && await oldFile.exists()) {
         try {
           await oldFile.copy(path); // 用copy更安全，保留原文件
-          debugPrint('已自动迁移旧数据库文件到新文件名');
+          logDebug('已自动迁移旧数据库文件到新文件名');
         } catch (e) {
-          debugPrint('自动迁移旧数据库文件失败: $e');
+          logDebug('自动迁移旧数据库文件失败: $e');
         }
       }
 
@@ -145,12 +146,12 @@ class DatabaseService extends ChangeNotifier {
 
       // 初始化默认分类/标签
       await initDefaultHitokotoCategories();
-      debugPrint('默认分类初始化检查完成');
+      logDebug('默认分类初始化检查完成');
 
       // 更新分类流数据
       await _updateCategoriesStream();
       // 初始化完成后，预加载笔记数据
-      debugPrint('数据库初始化完成，开始预加载笔记数据...');
+      logDebug('数据库初始化完成，开始预加载笔记数据...');
       // 重置流相关状态
       _watchOffset = 0;
       _quotesCache = [];
@@ -162,7 +163,7 @@ class DatabaseService extends ChangeNotifier {
       _isInitialized = true; // 数据库初始化完成
       notifyListeners();
     } catch (e) {
-      debugPrint('数据库初始化失败: $e');
+      logDebug('数据库初始化失败: $e');
       rethrow;
     }
   }
@@ -292,18 +293,18 @@ class DatabaseService extends ChangeNotifier {
 
         // 如果数据库版本低于 8，添加位置和天气相关字段
         if (oldVersion < 8) {
-          debugPrint(
+          logDebug(
             '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段',
           );
           await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
           await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
           await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
-          debugPrint('数据库升级：location, weather, temperature 字段添加完成');
+          logDebug('数据库升级：location, weather, temperature 字段添加完成');
         }
 
         // 如果数据库版本低于 9，添加索引以提高查询性能
         if (oldVersion < 9) {
-          debugPrint('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
+          logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
           await db.execute(
             'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
           );
@@ -313,24 +314,22 @@ class DatabaseService extends ChangeNotifier {
           await db.execute(
             'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
           );
-          debugPrint('数据库升级：索引添加完成');
+          logDebug('数据库升级：索引添加完成');
         }
 
         // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
         if (oldVersion < 10) {
-          debugPrint(
-            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段',
-          );
+          logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段');
           await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
-          debugPrint('数据库升级：edit_source 字段添加完成');
+          logDebug('数据库升级：edit_source 字段添加完成');
         }
         // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
         if (oldVersion < 11) {
-          debugPrint(
+          logDebug(
             '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
           );
           await db.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
-          debugPrint('数据库升级：delta_content 字段添加完成');
+          logDebug('数据库升级：delta_content 字段添加完成');
         }
         // TODO: 优化：在数据库升级时，如果版本低于某个值，创建quote_tags表并迁移现有tag_ids数据。
       },
@@ -360,11 +359,11 @@ class DatabaseService extends ChangeNotifier {
             'thoughtecho_backup_${DateTime.now().millisecondsSinceEpoch}.db',
           );
           await file.copy(backupPath);
-          debugPrint('已将可能损坏的数据库备份到 $backupPath');
+          logDebug('已将可能损坏的数据库备份到 $backupPath');
           await file.delete();
-          debugPrint('已删除可能损坏的数据库文件');
+          logDebug('已删除可能损坏的数据库文件');
         } catch (e) {
-          debugPrint('备份或删除损坏数据库失败: $e');
+          logDebug('备份或删除损坏数据库失败: $e');
         }
       }
 
@@ -376,9 +375,9 @@ class DatabaseService extends ChangeNotifier {
 
       _isInitialized = true;
       notifyListeners();
-      debugPrint('成功初始化新数据库');
+      logDebug('成功初始化新数据库');
     } catch (e) {
-      debugPrint('初始化新数据库失败: $e');
+      logDebug('初始化新数据库失败: $e');
       rethrow;
     }
   }
@@ -396,14 +395,14 @@ class DatabaseService extends ChangeNotifier {
 
       // 通知初始化完成
       if (_currentQuotes.isEmpty) {
-        debugPrint('数据库中没有笔记数据');
+        logDebug('数据库中没有笔记数据');
         // 确保流控制器发出空列表而不是等待数据
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add([]);
         }
       }
     } catch (e) {
-      debugPrint('预加载笔记时出错: $e');
+      logDebug('预加载笔记时出错: $e');
       // 即使出错也要发出空列表，避免UI一直等待
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.add([]);
@@ -420,7 +419,7 @@ class DatabaseService extends ChangeNotifier {
       final tableInfo = await db.rawQuery("PRAGMA table_info(quotes)");
       final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
 
-      debugPrint('当前quotes表列: $columnNames');
+      logDebug('当前quotes表列: $columnNames');
 
       // 检查是否缺少必要的字段
       final requiredColumns = {
@@ -434,22 +433,22 @@ class DatabaseService extends ChangeNotifier {
       final missingColumns = requiredColumns.difference(columnNames);
 
       if (missingColumns.isNotEmpty) {
-        debugPrint('检测到缺少列: $missingColumns，正在添加...');
+        logDebug('检测到缺少列: $missingColumns，正在添加...');
 
         // 添加缺少的列
         for (final column in missingColumns) {
           try {
             await db.execute('ALTER TABLE quotes ADD COLUMN $column TEXT');
-            debugPrint('成功添加列: $column');
+            logDebug('成功添加列: $column');
           } catch (e) {
-            debugPrint('添加列 $column 时出错: $e');
+            logDebug('添加列 $column 时出错: $e');
           }
         }
       } else {
-        debugPrint('数据库结构完整，无需修复');
+        logDebug('数据库结构完整，无需修复');
       }
     } catch (e) {
-      debugPrint('检查数据库结构时出错: $e');
+      logDebug('检查数据库结构时出错: $e');
     }
   }
 
@@ -475,17 +474,17 @@ class DatabaseService extends ChangeNotifier {
     try {
       // 首先确保数据库已初始化
       if (_database == null) {
-        debugPrint('数据库尚未初始化，尝试先进行初始化');
+        logDebug('数据库尚未初始化，尝试先进行初始化');
         try {
           await init();
         } catch (e) {
-          debugPrint('数据库初始化失败，但仍将尝试创建默认标签: $e');
+          logDebug('数据库初始化失败，但仍将尝试创建默认标签: $e');
         }
       }
 
       // 即使init()失败，也尝试获取数据库，如果還是null則提前返回
       if (_database == null) {
-        debugPrint('数据库仍为null，无法创建默认标签');
+        logDebug('数据库仍为null，无法创建默认标签');
         return;
       }
 
@@ -540,7 +539,7 @@ class DatabaseService extends ChangeNotifier {
           where: 'id = ?',
           whereArgs: [entry.key],
         );
-        debugPrint('更新ID为${entry.key}的分类名称为: ${entry.value}');
+        logDebug('更新ID为${entry.key}的分类名称为: ${entry.value}');
       }
 
       // 再处理新增
@@ -555,23 +554,23 @@ class DatabaseService extends ChangeNotifier {
           'is_default': category.isDefault ? 1 : 0,
           'icon_name': category.iconName,
         }, conflictAlgorithm: ConflictAlgorithm.ignore);
-        debugPrint('添加默认一言分类: ${category.name}');
+        logDebug('添加默认一言分类: ${category.name}');
       }
 
       // 提交批处理
       if (categoriesToAdd.isNotEmpty || idsToUpdate.isNotEmpty) {
         await batch.commit(noResult: true);
-        debugPrint(
+        logDebug(
           '批量处理了 ${categoriesToAdd.length} 个新分类和 ${idsToUpdate.length} 个更新',
         );
       } else {
-        debugPrint('所有默认分类已存在，无需添加');
+        logDebug('所有默认分类已存在，无需添加');
       }
 
       // 更新分类流
       await _updateCategoriesStream();
     } catch (e) {
-      debugPrint('初始化默认一言分类出错: $e');
+      logDebug('初始化默认一言分类出错: $e');
     }
   }
 
@@ -725,7 +724,7 @@ class DatabaseService extends ChangeNotifier {
       await file.writeAsString(jsonStr);
       return file.path;
     } catch (e) {
-      debugPrint('数据导出失败: $e');
+      logDebug('数据导出失败: $e');
       rethrow;
     }
   }
@@ -752,7 +751,7 @@ class DatabaseService extends ChangeNotifier {
       await db.transaction((txn) async {
         // 如果选择清空现有数据
         if (clearExisting) {
-          debugPrint('清空现有数据并导入新数据');
+          logDebug('清空现有数据并导入新数据');
           await txn.delete('categories');
           await txn.delete('quotes');
 
@@ -781,7 +780,8 @@ class DatabaseService extends ChangeNotifier {
               'ai_analysis': q['aiAnalysis'],
               'sentiment': q['sentiment'],
               'keywords': q['keywords'],
-              'summary': q['summary'],              'category_id': q['categoryId'],
+              'summary': q['summary'],
+              'category_id': q['categoryId'],
               'color_hex': q['colorHex'],
               'location': q['location'],
               'weather': q['weather'],
@@ -789,7 +789,7 @@ class DatabaseService extends ChangeNotifier {
             });
           }
         } else {
-          debugPrint('合并数据');
+          logDebug('合并数据');
 
           // 获取现有分类和笔记的ID列表，用于检查是否存在
           final existingCategories = await txn.query('categories');
@@ -816,7 +816,7 @@ class DatabaseService extends ChangeNotifier {
             if (existingCategoryNames.containsKey(categoryName)) {
               // 如果存在同名分类，使用现有的ID
               final existingId = existingCategoryNames[categoryName];
-              debugPrint('发现同名分类: $categoryName，使用现有ID: $existingId');
+              logDebug('发现同名分类: $categoryName，使用现有ID: $existingId');
 
               // 更新引用新导入分类的笔记，让它们引用现有的同名分类
               final quotes = data['quotes'] as List;
@@ -901,7 +901,7 @@ class DatabaseService extends ChangeNotifier {
       await migrateWeatherToKey();
       await migrateDayPeriodToKey();
     } catch (e) {
-      debugPrint('数据导入失败: $e');
+      logDebug('数据导入失败: $e');
       rethrow;
     }
   }
@@ -911,7 +911,7 @@ class DatabaseService extends ChangeNotifier {
     try {
       // 尝试执行简单查询以验证数据库可访问
       if (_database == null) {
-        debugPrint('数据库未初始化');
+        logDebug('数据库未初始化');
         return false;
       }
 
@@ -919,7 +919,7 @@ class DatabaseService extends ChangeNotifier {
       await _database!.query('quotes', limit: 1);
       return true;
     } catch (e) {
-      debugPrint('数据库访问检查失败: $e');
+      logDebug('数据库访问检查失败: $e');
       return false;
     }
   }
@@ -955,7 +955,7 @@ class DatabaseService extends ChangeNotifier {
       // 可选：进一步验证内部结构，例如 metadata 是否包含 version
       if (data['metadata'] is! Map ||
           !(data['metadata'] as Map).containsKey('version')) {
-        debugPrint('警告：备份文件元数据 (metadata) 格式不正确或缺少版本信息');
+        logDebug('警告：备份文件元数据 (metadata) 格式不正确或缺少版本信息');
         // 可以选择是否在这里抛出异常，取决于是否强制要求版本信息
       }
 
@@ -973,14 +973,14 @@ class DatabaseService extends ChangeNotifier {
 
       if ((quotes == null || quotes.isEmpty) &&
           (categories == null || categories.isEmpty)) {
-        debugPrint('警告：备份文件不包含任何分类或笔记数据');
+        logDebug('警告：备份文件不包含任何分类或笔记数据');
         // 空备份也是有效的，但可以记录警告
       }
 
-      debugPrint('备份文件验证通过: $filePath');
+      logDebug('备份文件验证通过: $filePath');
       return true; // 如果所有检查都通过，返回 true
     } catch (e) {
-      debugPrint('验证备份文件失败: $e');
+      logDebug('验证备份文件失败: $e');
       // 重新抛出更具体的错误信息给上层调用者
       // 保留原始异常类型，以便上层可以根据需要区分处理
       // 例如: throw FormatException('备份文件JSON格式错误');
@@ -1000,7 +1000,7 @@ class DatabaseService extends ChangeNotifier {
       final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
       return categories;
     } catch (e) {
-      debugPrint('获取分类错误: $e');
+      logDebug('获取分类错误: $e');
       return [];
     }
   }
@@ -1082,7 +1082,7 @@ class DatabaseService extends ChangeNotifier {
         (c) => c.name.toLowerCase() == name.toLowerCase(),
       );
       if (exists) {
-        debugPrint('Web平台: 已存在相同名称的分类 "$name"，但将继续使用');
+        logDebug('Web平台: 已存在相同名称的分类 "$name"，但将继续使用');
       }
 
       // 检查ID是否已被占用
@@ -1119,7 +1119,7 @@ class DatabaseService extends ChangeNotifier {
       try {
         await init();
       } catch (e) {
-        debugPrint('添加分类前初始化数据库失败: $e');
+        logDebug('添加分类前初始化数据库失败: $e');
         throw Exception('数据库未初始化，无法添加分类');
       }
     }
@@ -1140,7 +1140,7 @@ class DatabaseService extends ChangeNotifier {
           // 如果存在同名分类但ID不同，记录警告但继续
           final existingId = existing.first['id'] as String;
           if (existingId != id) {
-            debugPrint('警告: 已存在相同名称的分类 "$name"，但将继续使用指定ID创建');
+            logDebug('警告: 已存在相同名称的分类 "$name"，但将继续使用指定ID创建');
           }
         }
 
@@ -1160,7 +1160,7 @@ class DatabaseService extends ChangeNotifier {
             where: 'id = ?',
             whereArgs: [id],
           );
-          debugPrint('更新ID为 $id 的现有分类为 "$name"');
+          logDebug('更新ID为 $id 的现有分类为 "$name"');
         } else {
           // 创建新分类，使用指定的ID
           final categoryMap = {
@@ -1174,7 +1174,7 @@ class DatabaseService extends ChangeNotifier {
             categoryMap,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
-          debugPrint('使用ID $id 创建新分类 "$name"');
+          logDebug('使用ID $id 创建新分类 "$name"');
         }
       });
 
@@ -1182,7 +1182,7 @@ class DatabaseService extends ChangeNotifier {
       await _updateCategoriesStream();
       notifyListeners();
     } catch (e) {
-      debugPrint('添加指定ID分类失败: $e');
+      logDebug('添加指定ID分类失败: $e');
       // 重试一次作为回退方案
       try {
         final categoryMap = {
@@ -1198,9 +1198,9 @@ class DatabaseService extends ChangeNotifier {
         );
         await _updateCategoriesStream();
         notifyListeners();
-        debugPrint('通过回退方式成功添加分类');
+        logDebug('通过回退方式成功添加分类');
       } catch (retryError) {
-        debugPrint('重试添加分类也失败: $retryError');
+        logDebug('重试添加分类也失败: $retryError');
         throw Exception('无法添加分类: $e');
       }
     }
@@ -1293,14 +1293,14 @@ class DatabaseService extends ChangeNotifier {
         quoteMap.remove('delta_content');
       }
 
-      debugPrint('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
+      logDebug('保存笔记，使用列: ${quoteMap.keys.join(', ')}');
 
       await db.insert(
         'quotes',
         quoteMap,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      debugPrint('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
+      logDebug('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
 
       // 清除缓存，确保数据刷新
       _quotesCache.clear();
@@ -1317,7 +1317,7 @@ class DatabaseService extends ChangeNotifier {
         notifyListeners();
       });
     } catch (e) {
-      debugPrint('保存笔记到数据库时出错: $e');
+      logDebug('保存笔记到数据库时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
     }
   }
@@ -1325,7 +1325,7 @@ class DatabaseService extends ChangeNotifier {
   // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
-      debugPrint('刷新笔记流数据');
+      logDebug('刷新笔记流数据');
       // 清除缓存，确保获取最新数据
 
       // 重置状态并加载新数据
@@ -1337,7 +1337,7 @@ class DatabaseService extends ChangeNotifier {
       // 触发重新加载
       loadMoreQuotes();
     } else {
-      debugPrint('笔记流无监听器或已关闭，跳过刷新');
+      logDebug('笔记流无监听器或已关闭，跳过刷新');
     }
   }
 
@@ -1456,7 +1456,7 @@ class DatabaseService extends ChangeNotifier {
       );
       return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
-      debugPrint('获取引用错误: $e');
+      logDebug('获取引用错误: $e');
       return [];
     }
   }
@@ -1521,7 +1521,7 @@ class DatabaseService extends ChangeNotifier {
       );
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
-      debugPrint('获取笔记总数错误: $e');
+      logDebug('获取笔记总数错误: $e');
       return 0;
     }
   }
@@ -1603,7 +1603,7 @@ class DatabaseService extends ChangeNotifier {
         quoteMap.remove('delta_content');
       }
 
-      debugPrint('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
+      logDebug('更新笔记，使用列: ${quoteMap.keys.join(', ')}');
 
       await db.update(
         'quotes',
@@ -1612,11 +1612,11 @@ class DatabaseService extends ChangeNotifier {
         whereArgs: [quote.id],
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      debugPrint('笔记已成功更新，ID: ${quote.id}');
+      logDebug('笔记已成功更新，ID: ${quote.id}');
       notifyListeners();
       _refreshQuotesStream(); // 更新流
     } catch (e) {
-      debugPrint('更新笔记时出错: $e');
+      logDebug('更新笔记时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
     }
   }
@@ -1636,12 +1636,12 @@ class DatabaseService extends ChangeNotifier {
         final weather = weatherCheck.first['weather'] as String?;
         if (weather != null &&
             WeatherService.weatherKeyToLabel.values.contains(weather)) {
-          debugPrint('检测到未迁移的weather数据，开始迁移...');
+          logDebug('检测到未迁移的weather数据，开始迁移...');
           await migrateWeatherToKey();
         }
       }
     } catch (e) {
-      debugPrint('天气数据迁移检查失败: $e');
+      logDebug('天气数据迁移检查失败: $e');
     }
   }
 
@@ -1661,12 +1661,12 @@ class DatabaseService extends ChangeNotifier {
           (k, v) => MapEntry(v, k),
         );
         if (dayPeriod != null && labelToKey.containsKey(dayPeriod)) {
-          debugPrint('检测到未迁移的day_period数据，开始迁移...');
+          logDebug('检测到未迁移的day_period数据，开始迁移...');
           await migrateDayPeriodToKey();
         }
       }
     } catch (e) {
-      debugPrint('时间段数据迁移检查失败: $e');
+      logDebug('时间段数据迁移检查失败: $e');
     }
   }
 
@@ -1687,20 +1687,20 @@ class DatabaseService extends ChangeNotifier {
     if (_watchTagIds != null && tagIds != null) {
       if (_watchTagIds!.length != tagIds.length) {
         hasFilterChanged = true;
-        debugPrint('标签数量变更: ${_watchTagIds!.length} -> ${tagIds.length}');
+        logDebug('标签数量变更: ${_watchTagIds!.length} -> ${tagIds.length}');
       } else {
         // 比较标签内容是否一致
         for (int i = 0; i < _watchTagIds!.length; i++) {
           if (!tagIds.contains(_watchTagIds![i])) {
             hasFilterChanged = true;
-            debugPrint('标签内容变更');
+            logDebug('标签内容变更');
             break;
           }
         }
       }
     } else if ((_watchTagIds == null) != (tagIds == null)) {
       hasFilterChanged = true;
-      debugPrint(
+      logDebug(
         '标签筛选条件状态变更: ${_watchTagIds == null ? "无" : "有"} -> ${tagIds == null ? "无" : "有"}',
       );
     }
@@ -1708,13 +1708,13 @@ class DatabaseService extends ChangeNotifier {
     // 检查分类是否变更
     if (_watchCategoryId != categoryId) {
       hasFilterChanged = true;
-      debugPrint('分类变更: $_watchCategoryId -> $categoryId');
+      logDebug('分类变更: $_watchCategoryId -> $categoryId');
     }
 
     // 检查排序是否变更
     if (_watchOrderBy != orderBy) {
       hasFilterChanged = true;
-      debugPrint('排序变更: $_watchOrderBy -> $orderBy');
+      logDebug('排序变更: $_watchOrderBy -> $orderBy');
     }
 
     // 检查搜索条件是否变更
@@ -1722,14 +1722,14 @@ class DatabaseService extends ChangeNotifier {
         (searchQuery != null && searchQuery.isNotEmpty) ? searchQuery : null;
     if (_watchSearchQuery != normalizedSearchQuery) {
       hasFilterChanged = true;
-      debugPrint('搜索条件变更: $_watchSearchQuery -> $normalizedSearchQuery');
+      logDebug('搜索条件变更: $_watchSearchQuery -> $normalizedSearchQuery');
     }
 
     // 检查天气筛选条件是否变更
     if (_watchSelectedWeathers != null && selectedWeathers != null) {
       if (_watchSelectedWeathers!.length != selectedWeathers.length) {
         hasFilterChanged = true;
-        debugPrint(
+        logDebug(
           '天气筛选数量变更: ${_watchSelectedWeathers!.length} -> ${selectedWeathers.length}',
         );
       } else {
@@ -1737,21 +1737,21 @@ class DatabaseService extends ChangeNotifier {
         for (int i = 0; i < _watchSelectedWeathers!.length; i++) {
           if (!selectedWeathers.contains(_watchSelectedWeathers![i])) {
             hasFilterChanged = true;
-            debugPrint('天气筛选内容变更');
+            logDebug('天气筛选内容变更');
             break;
           }
         }
       }
     } else if ((_watchSelectedWeathers == null) != (selectedWeathers == null)) {
       hasFilterChanged = true;
-      debugPrint('天气筛选条件状态变更');
+      logDebug('天气筛选条件状态变更');
     }
 
     // 检查时间段筛选条件是否变更
     if (_watchSelectedDayPeriods != null && selectedDayPeriods != null) {
       if (_watchSelectedDayPeriods!.length != selectedDayPeriods.length) {
         hasFilterChanged = true;
-        debugPrint(
+        logDebug(
           '时间段筛选数量变更: ${_watchSelectedDayPeriods!.length} -> ${selectedDayPeriods.length}',
         );
       } else {
@@ -1759,7 +1759,7 @@ class DatabaseService extends ChangeNotifier {
         for (int i = 0; i < _watchSelectedDayPeriods!.length; i++) {
           if (!selectedDayPeriods.contains(_watchSelectedDayPeriods![i])) {
             hasFilterChanged = true;
-            debugPrint('时间段筛选内容变更');
+            logDebug('时间段筛选内容变更');
             break;
           }
         }
@@ -1767,7 +1767,7 @@ class DatabaseService extends ChangeNotifier {
     } else if ((_watchSelectedDayPeriods == null) !=
         (selectedDayPeriods == null)) {
       hasFilterChanged = true;
-      debugPrint('时间段筛选条件状态变更');
+      logDebug('时间段筛选条件状态变更');
     }
 
     // 更新当前的筛选参数
@@ -1808,7 +1808,7 @@ class DatabaseService extends ChangeNotifier {
             selectedDayPeriods: selectedDayPeriods,
           );
         } catch (e) {
-          debugPrint('数据初始化或加载失败: $e');
+          logDebug('数据初始化或加载失败: $e');
           // 即使失败也发送空列表，避免UI挂起
           _quotesController?.add([]);
         }
@@ -1862,7 +1862,7 @@ class DatabaseService extends ChangeNotifier {
         _quotesController!.add(List.from(_currentQuotes));
       }
     } catch (e) {
-      debugPrint('加载更多笔记失败: $e');
+      logDebug('加载更多笔记失败: $e');
     } finally {
       _isLoading = false;
     }
@@ -1933,10 +1933,10 @@ class DatabaseService extends ChangeNotifier {
     // 检查参数
     if (name.trim().isEmpty) {
       throw Exception('分类名称不能为空');
-    }    
+    }
     // 查找是否是默认分类 - 注释掉未使用的变量
     // final List<NoteCategory> defaultCats = _getDefaultHitokotoCategories();
-    
+
     // // 如果是默认分类，不允许修改名称？(或者只允许修改图标) - 根据产品决定
     // if (_defaultCats.any((cat) => cat.id == id)) {
     //   // 暂时允许修改默认分类的名称和图标，但ID不变
@@ -2028,13 +2028,14 @@ class DatabaseService extends ChangeNotifier {
       final List<Map<String, dynamic>> maps = await db.query('quotes');
 
       if (maps.isEmpty) {
-        debugPrint('没有需要补全 day_period 字段的记录');
+        logDebug('没有需要补全 day_period 字段的记录');
         return;
       }
 
       int patchedCount = 0;
       for (final map in maps) {
-        if (map['day_period'] == null || (map['day_period'] as String).isEmpty) {
+        if (map['day_period'] == null ||
+            (map['day_period'] as String).isEmpty) {
           // 解析时间
           String? dateStr = map['date'];
           if (dateStr == null || dateStr.isEmpty) continue;
@@ -2071,9 +2072,9 @@ class DatabaseService extends ChangeNotifier {
         }
       }
 
-      debugPrint('已补全 $patchedCount 条记录的 day_period 字段');
+      logDebug('已补全 $patchedCount 条记录的 day_period 字段');
     } catch (e) {
-      debugPrint('补全 day_period 字段失败: $e');
+      logDebug('补全 day_period 字段失败: $e');
       rethrow;
     }
   }
@@ -2093,7 +2094,7 @@ class DatabaseService extends ChangeNotifier {
       );
 
       if (maps.isEmpty) {
-        debugPrint('没有需要迁移 dayPeriod 字段的记录');
+        logDebug('没有需要迁移 dayPeriod 字段的记录');
         return;
       }
 
@@ -2118,9 +2119,9 @@ class DatabaseService extends ChangeNotifier {
           migratedCount++;
         }
       }
-      debugPrint('已完成 $migratedCount 条记录的 dayPeriod 字段 key 迁移');
+      logDebug('已完成 $migratedCount 条记录的 dayPeriod 字段 key 迁移');
     } catch (e) {
-      debugPrint('迁移 dayPeriod 字段失败: $e');
+      logDebug('迁移 dayPeriod 字段失败: $e');
       rethrow;
     }
   }
@@ -2143,7 +2144,7 @@ class DatabaseService extends ChangeNotifier {
           }
         }
         notifyListeners();
-        debugPrint('Web平台已完成 $migratedCount 条记录的 weather 字段 key 迁移');
+        logDebug('Web平台已完成 $migratedCount 条记录的 weather 字段 key 迁移');
         return;
       }
 
@@ -2156,7 +2157,7 @@ class DatabaseService extends ChangeNotifier {
       final maps = await db.query('quotes', columns: ['id', 'weather']);
 
       if (maps.isEmpty) {
-        debugPrint('没有需要迁移 weather 字段的记录');
+        logDebug('没有需要迁移 weather 字段的记录');
         return;
       }
 
@@ -2180,9 +2181,9 @@ class DatabaseService extends ChangeNotifier {
           migratedCount++;
         }
       }
-      debugPrint('已完成 $migratedCount 条记录的 weather 字段 key 迁移');
+      logDebug('已完成 $migratedCount 条记录的 weather 字段 key 迁移');
     } catch (e) {
-      debugPrint('迁移 weather 字段失败: $e');
+      logDebug('迁移 weather 字段失败: $e');
       rethrow;
     }
   }
@@ -2193,7 +2194,7 @@ class DatabaseService extends ChangeNotifier {
       try {
         return _categoryStore.firstWhere((cat) => cat.id == id);
       } catch (e) {
-        debugPrint('在内存中找不到 ID 为 $id 的分类: $e');
+        logDebug('在内存中找不到 ID 为 $id 的分类: $e');
         return null;
       }
     }
@@ -2212,7 +2213,7 @@ class DatabaseService extends ChangeNotifier {
 
       return NoteCategory.fromMap(maps.first);
     } catch (e) {
-      debugPrint('根据 ID 获取分类失败: $e');
+      logDebug('根据 ID 获取分类失败: $e');
       return null;
     }
   }

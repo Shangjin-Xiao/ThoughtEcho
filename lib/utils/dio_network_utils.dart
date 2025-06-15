@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 基于Dio的改进网络请求工具类
 /// 提供更好的连接管理、错误处理、流式支持和多服务商切换
@@ -28,27 +29,28 @@ class DioNetworkUtils {
     dio.options.connectTimeout = const Duration(seconds: 30);
     dio.options.receiveTimeout = const Duration(seconds: 300);
     dio.options.sendTimeout = const Duration(seconds: 60);
-    
+
     // 添加拦截器用于日志记录
     if (kDebugMode) {
-      dio.interceptors.add(LogInterceptor(
-        requestBody: false, // 避免记录敏感数据
-        responseBody: false,
-        requestHeader: false, // 避免记录API密钥
-        responseHeader: false,
-        error: true,
-        logPrint: (obj) => debugPrint('[DIO] $obj'),
-      ));
-    }    // 添加重试拦截器，限制最大重试次数
-    dio.interceptors.add(RetryInterceptor(
-      dio: dio,
-      logPrint: (obj) => debugPrint('[RETRY] $obj'),
-      retries: 2, // 最多重试2次
-      retryDelays: const [
-        Duration(seconds: 2),
-        Duration(seconds: 5),
-      ],
-    ));
+      dio.interceptors.add(
+        LogInterceptor(
+          requestBody: false, // 避免记录敏感数据
+          responseBody: false,
+          requestHeader: false, // 避免记录API密钥
+          responseHeader: false,
+          error: true,
+          logPrint: (obj) => logDebug('[DIO] $obj'),
+        ),
+      );
+    } // 添加重试拦截器，限制最大重试次数
+    dio.interceptors.add(
+      RetryInterceptor(
+        dio: dio,
+        logPrint: (obj) => logDebug('[RETRY] $obj'),
+        retries: 2, // 最多重试2次
+        retryDelays: const [Duration(seconds: 2), Duration(seconds: 5)],
+      ),
+    );
   }
 
   /// 重置Dio实例（用于测试或配置更改）
@@ -66,7 +68,7 @@ class DioNetworkUtils {
   }) async {
     try {
       final headers = _buildHeaders(settings);
-      
+
       final response = await _dio.post(
         url,
         data: data,
@@ -79,7 +81,7 @@ class DioNetworkUtils {
 
       return response;
     } catch (e) {
-      debugPrint('HTTP请求失败: $e');
+      logDebug('HTTP请求失败: $e');
       throw _handleError(e);
     }
   }
@@ -124,19 +126,17 @@ class DioNetworkUtils {
         );
       }
     } catch (e) {
-      debugPrint('流式请求失败: $e');
+      logDebug('流式请求失败: $e');
       onError(_handleError(e));
     }
   }
 
   /// 构建请求头
   static Map<String, String> _buildHeaders(AISettings settings) {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     // 根据不同的AI服务提供商设置认证头
-    if (settings.apiUrl.contains('openai.com') || 
+    if (settings.apiUrl.contains('openai.com') ||
         settings.apiUrl.contains('api.openai.com')) {
       headers['Authorization'] = 'Bearer ${settings.apiKey}';
     } else if (settings.apiUrl.contains('anthropic.com')) {
@@ -167,37 +167,37 @@ class DioNetworkUtils {
       await for (final chunk in stream) {
         final text = utf8.decode(chunk);
         final lines = (partialLine + text).split('\n');
-        
+
         partialLine = lines.removeLast(); // 保存最后一个可能不完整的行
-        
+
         for (final line in lines) {
           if (line.trim().isEmpty) continue;
-          
+
           if (line.startsWith('data: ')) {
             final data = line.substring(6).trim();
-            
+
             if (data == '[DONE]') {
               onComplete(buffer.toString());
               completer.complete();
               return;
             }
-            
+
             try {
               final jsonData = json.decode(data);
               final content = _extractContentFromResponse(jsonData);
-              
+
               if (content.isNotEmpty) {
                 buffer.write(content);
                 onData(content);
               }
             } catch (e) {
-              debugPrint('解析流式响应JSON失败: $e, data: $data');
+              logDebug('解析流式响应JSON失败: $e, data: $data');
               // 继续处理其他数据块，不中断整个流
             }
           }
         }
       }
-      
+
       // 处理剩余的部分行
       if (partialLine.trim().isNotEmpty && partialLine.startsWith('data: ')) {
         final data = partialLine.substring(6).trim();
@@ -210,11 +210,11 @@ class DioNetworkUtils {
               onData(content);
             }
           } catch (e) {
-            debugPrint('解析最后流式响应JSON失败: $e');
+            logDebug('解析最后流式响应JSON失败: $e');
           }
         }
       }
-      
+
       if (!completer.isCompleted) {
         onComplete(buffer.toString());
         completer.complete();
@@ -241,10 +241,12 @@ class DioNetworkUtils {
         if (content is String) {
           return content;
         } else if (content is bool) {
-          debugPrint('Warning: OpenAI content字段是boolean类型: $content，跳过');
+          logDebug('Warning: OpenAI content字段是boolean类型: $content，跳过');
           return '';
         } else {
-          debugPrint('Warning: OpenAI content字段类型异常: ${content.runtimeType}，转换为字符串');
+          logDebug(
+            'Warning: OpenAI content字段类型异常: ${content.runtimeType}，转换为字符串',
+          );
           return content.toString();
         }
       }
@@ -256,10 +258,10 @@ class DioNetworkUtils {
       if (text is String) {
         return text;
       } else if (text is bool) {
-        debugPrint('Warning: Anthropic text字段是boolean类型: $text，跳过');
+        logDebug('Warning: Anthropic text字段是boolean类型: $text，跳过');
         return '';
       } else {
-        debugPrint('Warning: Anthropic text字段类型异常: ${text.runtimeType}，转换为字符串');
+        logDebug('Warning: Anthropic text字段类型异常: ${text.runtimeType}，转换为字符串');
         return text.toString();
       }
     }
@@ -270,10 +272,10 @@ class DioNetworkUtils {
       if (content is String) {
         return content;
       } else if (content is bool) {
-        debugPrint('Warning: content字段是boolean类型: $content，跳过');
+        logDebug('Warning: content字段是boolean类型: $content，跳过');
         return '';
       } else {
-        debugPrint('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
+        logDebug('Warning: content字段类型异常: ${content.runtimeType}，转换为字符串');
         return content.toString();
       }
     }
@@ -305,14 +307,14 @@ class DioNetworkUtils {
           return Exception('网络请求失败: ${error.message}');
       }
     }
-    
+
     return error is Exception ? error : Exception(error.toString());
   }
 
   /// 解析错误消息
   static String _parseErrorMessage(int statusCode, dynamic responseData) {
     String errorBody = '';
-    
+
     if (responseData != null) {
       if (responseData is Map) {
         errorBody = json.encode(responseData);
@@ -320,14 +322,14 @@ class DioNetworkUtils {
         errorBody = responseData.toString();
       }
     }
-    
+
     if (statusCode == 401) {
       return 'API密钥无效或已过期 (401)，请检查API密钥设置';
     } else if (statusCode == 429) {
       return 'API调用频率超限 (429)，请稍后重试';
     } else if (statusCode == 500) {
       String errorMessage = 'AI服务器内部错误 (500)';
-      
+
       try {
         final errorData = json.decode(errorBody);
         if (errorData['error'] != null) {
@@ -341,7 +343,7 @@ class DioNetworkUtils {
           errorMessage += '：可能是模型不存在或不可用';
         }
       }
-      
+
       return '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态';
     } else if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
       return 'AI服务暂时不可用 ($statusCode 错误)，请稍后重试';
@@ -358,45 +360,55 @@ class DioNetworkUtils {
     Duration? timeout,
   }) async {
     final availableProviders = multiSettings.availableProviders;
-    
+
     if (availableProviders.isEmpty) {
       throw Exception('没有可用的AI服务商，请在设置中配置API密钥');
     }
-    
+
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
-    if (currentProvider != null && 
+    if (currentProvider != null &&
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
-        return await makeRequestWithProvider(url, data, currentProvider, timeout: timeout);
+        return await makeRequestWithProvider(
+          url,
+          data,
+          currentProvider,
+          timeout: timeout,
+        );
       } catch (e) {
-        debugPrint('当前服务商 ${currentProvider.name} 请求失败: $e');
+        logDebug('当前服务商 ${currentProvider.name} 请求失败: $e');
         _markProviderFailed(currentProvider.id);
-        
+
         if (!multiSettings.enableFailover) {
           rethrow; // 如果禁用故障转移，直接抛出错误
         }
       }
     }
-    
+
     // 如果当前服务商失败或不可用，尝试其他服务商
     if (multiSettings.enableFailover) {
       for (final provider in availableProviders) {
         if (provider.id == currentProvider?.id) continue; // 跳过已经尝试过的
         if (_isProviderInCooldown(provider.id)) continue; // 跳过冷却期的服务商
-        
+
         try {
-          debugPrint('尝试切换到服务商: ${provider.name}');
-          return await makeRequestWithProvider(url, data, provider, timeout: timeout);
+          logDebug('尝试切换到服务商: ${provider.name}');
+          return await makeRequestWithProvider(
+            url,
+            data,
+            provider,
+            timeout: timeout,
+          );
         } catch (e) {
-          debugPrint('服务商 ${provider.name} 请求失败: $e');
+          logDebug('服务商 ${provider.name} 请求失败: $e');
           _markProviderFailed(provider.id);
           continue; // 尝试下一个服务商
         }
       }
     }
-    
+
     throw Exception('所有AI服务商都不可用，请稍后重试或检查网络连接');
   }
 
@@ -411,7 +423,7 @@ class DioNetworkUtils {
       final headers = _buildHeadersForProvider(provider);
       final adjustedData = _adjustDataForProvider(data, provider);
       final finalUrl = url.isNotEmpty ? url : provider.apiUrl;
-      
+
       final response = await _dio.post(
         finalUrl,
         data: adjustedData,
@@ -424,7 +436,7 @@ class DioNetworkUtils {
 
       return response;
     } catch (e) {
-      debugPrint('服务商 ${provider.name} HTTP请求失败: $e');
+      logDebug('服务商 ${provider.name} HTTP请求失败: $e');
       throw _handleError(e);
     }
   }
@@ -440,23 +452,26 @@ class DioNetworkUtils {
     Duration? timeout,
   }) async {
     final availableProviders = multiSettings.availableProviders;
-    
+
     if (availableProviders.isEmpty) {
       onError(Exception('没有可用的AI服务商，请在设置中配置API密钥'));
       return;
     }
-    
+
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
-    if (currentProvider != null && 
+    if (currentProvider != null &&
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
         await makeStreamRequestWithProvider(
-          url, data, currentProvider,
+          url,
+          data,
+          currentProvider,
           onData: onData,
-          onComplete: onComplete,          onError: (e) {
-            debugPrint('当前服务商 ${currentProvider.name} 流式请求失败: $e');
+          onComplete: onComplete,
+          onError: (e) {
+            logDebug('当前服务商 ${currentProvider.name} 流式请求失败: $e');
             _markProviderFailed(currentProvider.id);
             throw e; // 抛出错误以便外层捕获并尝试其他服务商
           },
@@ -470,17 +485,19 @@ class DioNetworkUtils {
         }
       }
     }
-    
+
     // 如果当前服务商失败，尝试其他服务商
     if (multiSettings.enableFailover) {
       for (final provider in availableProviders) {
         if (provider.id == currentProvider?.id) continue;
         if (_isProviderInCooldown(provider.id)) continue;
-        
+
         try {
-          debugPrint('尝试切换到服务商: ${provider.name}');
+          logDebug('尝试切换到服务商: ${provider.name}');
           await makeStreamRequestWithProvider(
-            url, data, provider,
+            url,
+            data,
+            provider,
             onData: onData,
             onComplete: onComplete,
             onError: (e) => throw e,
@@ -488,13 +505,13 @@ class DioNetworkUtils {
           );
           return; // 成功完成
         } catch (e) {
-          debugPrint('服务商 ${provider.name} 流式请求失败: $e');
+          logDebug('服务商 ${provider.name} 流式请求失败: $e');
           _markProviderFailed(provider.id);
           continue;
         }
       }
     }
-    
+
     onError(Exception('所有AI服务商都不可用，请稍后重试或检查网络连接'));
   }
 
@@ -514,7 +531,7 @@ class DioNetworkUtils {
       streamData['stream'] = true; // 确保stream参数是boolean类型
       final adjustedData = _adjustDataForProvider(streamData, provider);
       final finalUrl = url.isNotEmpty ? url : provider.apiUrl;
-      
+
       final response = await _dio.post(
         finalUrl,
         data: adjustedData,
@@ -540,29 +557,32 @@ class DioNetworkUtils {
         );
       }
     } catch (e) {
-      debugPrint('服务商 ${provider.name} 流式请求失败: $e');
+      logDebug('服务商 ${provider.name} 流式请求失败: $e');
       onError(_handleError(e));
     }
   }
 
   /// 为指定服务商构建请求头
-  static Map<String, String> _buildHeadersForProvider(AIProviderSettings provider) {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+  static Map<String, String> _buildHeadersForProvider(
+    AIProviderSettings provider,
+  ) {
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
-    if (provider.apiUrl.contains('openai.com') || 
+    if (provider.apiUrl.contains('openai.com') ||
         provider.apiUrl.contains('openrouter.ai') ||
-        provider.id == 'openai' || provider.id == 'openrouter') {
+        provider.id == 'openai' ||
+        provider.id == 'openrouter') {
       headers['Authorization'] = 'Bearer ${provider.apiKey}';
       if (provider.id == 'openrouter') {
         headers['HTTP-Referer'] = 'https://thoughtecho.app';
         headers['X-Title'] = 'ThoughtEcho App';
       }
-    } else if (provider.apiUrl.contains('anthropic.com') || provider.id == 'anthropic') {
+    } else if (provider.apiUrl.contains('anthropic.com') ||
+        provider.id == 'anthropic') {
       headers['x-api-key'] = provider.apiKey;
       headers['anthropic-version'] = '2023-06-01';
-    } else if (provider.apiUrl.contains('deepseek.com') || provider.id == 'deepseek') {
+    } else if (provider.apiUrl.contains('deepseek.com') ||
+        provider.id == 'deepseek') {
       headers['Authorization'] = 'Bearer ${provider.apiKey}';
     } else {
       // 默认使用Bearer token
@@ -575,36 +595,42 @@ class DioNetworkUtils {
   /// 为指定服务商调整请求数据
   static Map<String, dynamic> _adjustDataForProvider(
     Map<String, dynamic> data,
-    AIProviderSettings provider
+    AIProviderSettings provider,
   ) {
     final adjustedData = Map<String, dynamic>.from(data);
 
     // 确保包含必要的字段
     adjustedData['model'] = adjustedData['model'] ?? provider.model;
-    adjustedData['temperature'] = adjustedData['temperature'] ?? provider.temperature;
-    adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? provider.maxTokens;
+    adjustedData['temperature'] =
+        adjustedData['temperature'] ?? provider.temperature;
+    adjustedData['max_tokens'] =
+        adjustedData['max_tokens'] ?? provider.maxTokens;
 
     // 确保stream参数是boolean类型
     if (adjustedData.containsKey('stream')) {
-      adjustedData['stream'] = adjustedData['stream'] == true || adjustedData['stream'] == 'true';
+      adjustedData['stream'] =
+          adjustedData['stream'] == true || adjustedData['stream'] == 'true';
     }
 
     // Anthropic特殊处理
-    if (provider.apiUrl.contains('anthropic.com') || provider.id == 'anthropic') {
+    if (provider.apiUrl.contains('anthropic.com') ||
+        provider.id == 'anthropic') {
       adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确
-      if (adjustedData.containsKey('stream') && adjustedData['stream'] == true) {
+      if (adjustedData.containsKey('stream') &&
+          adjustedData['stream'] == true) {
         adjustedData['stream'] = true; // 确保是boolean类型
       }
     }
 
     // 硅基流动特殊处理
-    if (provider.apiUrl.contains('siliconflow.cn') || provider.name.contains('硅基流动')) {
+    if (provider.apiUrl.contains('siliconflow.cn') ||
+        provider.name.contains('硅基流动')) {
       // 硅基流动API需要确保stream参数正确
       if (adjustedData.containsKey('stream')) {
         adjustedData['stream'] = true; // 确保是boolean类型
       }
-      debugPrint('硅基流动API请求数据: ${adjustedData.keys.join(', ')}');
+      logDebug('硅基流动API请求数据: ${adjustedData.keys.join(', ')}');
     }
 
     return adjustedData;
@@ -614,14 +640,14 @@ class DioNetworkUtils {
   static bool _isProviderInCooldown(String providerId) {
     final failTime = _failedProviders[providerId];
     if (failTime == null) return false;
-    
+
     final now = DateTime.now();
     final isInCooldown = now.difference(failTime) < _providerCooldown;
-    
+
     if (!isInCooldown) {
       _failedProviders.remove(providerId); // 清除过期的记录
     }
-    
+
     return isInCooldown;
   }
 
@@ -632,7 +658,8 @@ class DioNetworkUtils {
 
   /// 清除服务商失败记录
   static void clearProviderFailures() {
-    _failedProviders.clear();  }
+    _failedProviders.clear();
+  }
 
   /// 发送普通HTTP POST请求（保持向后兼容）
   static Future<Response> makeMultiRequest(
@@ -641,8 +668,14 @@ class DioNetworkUtils {
     MultiAISettings multiSettings, {
     Duration? timeout,
   }) async {
-    return await makeRequestWithFailover(url, data, multiSettings, timeout: timeout);
+    return await makeRequestWithFailover(
+      url,
+      data,
+      multiSettings,
+      timeout: timeout,
+    );
   }
+
   /// 发送流式HTTP请求（保持向后兼容）
   static Future<void> makeMultiStreamRequest(
     String url,
@@ -650,10 +683,13 @@ class DioNetworkUtils {
     MultiAISettings multiSettings, {
     required Function(String) onData,
     required Function(String) onComplete,
-    required Function(Exception) onError,    Duration? timeout,
+    required Function(Exception) onError,
+    Duration? timeout,
   }) async {
     return await makeStreamRequestWithFailover(
-      url, data, multiSettings,
+      url,
+      data,
+      multiSettings,
       onData: onData,
       onComplete: onComplete,
       onError: onError,
@@ -672,10 +708,7 @@ class RetryInterceptor extends Interceptor {
   RetryInterceptor({
     required this.dio,
     this.retries = 2,
-    this.retryDelays = const [
-      Duration(seconds: 3),
-      Duration(seconds: 6),
-    ],
+    this.retryDelays = const [Duration(seconds: 3), Duration(seconds: 6)],
     this.logPrint,
   });
 
@@ -685,16 +718,19 @@ class RetryInterceptor extends Interceptor {
     final retryCount = extra['retryCount'] ?? 0;
 
     if (retryCount < retries && _shouldRetry(err)) {
-      final delay = retryDelays.length > retryCount 
-          ? retryDelays[retryCount] 
-          : retryDelays.last;
-      
-      logPrint?.call('重试请求 ${retryCount + 1}/$retries，延迟${delay.inSeconds}秒: ${err.message}');
-      
+      final delay =
+          retryDelays.length > retryCount
+              ? retryDelays[retryCount]
+              : retryDelays.last;
+
+      logPrint?.call(
+        '重试请求 ${retryCount + 1}/$retries，延迟${delay.inSeconds}秒: ${err.message}',
+      );
+
       await Future.delayed(delay);
-      
+
       err.requestOptions.extra['retryCount'] = retryCount + 1;
-      
+
       try {
         final response = await dio.fetch(err.requestOptions);
         handler.resolve(response);
@@ -707,7 +743,7 @@ class RetryInterceptor extends Interceptor {
         return;
       }
     }
-    
+
     handler.next(err);
   }
 
@@ -719,24 +755,24 @@ class RetryInterceptor extends Interceptor {
         // 检查是否是持久性500错误
         if (statusCode == 500) {
           final responseData = error.response?.data?.toString() ?? '';
-          if (responseData.contains('model') && 
-              (responseData.contains('not found') || 
-               responseData.contains('does not exist') ||
-               responseData.contains('invalid model'))) {
+          if (responseData.contains('model') &&
+              (responseData.contains('not found') ||
+                  responseData.contains('does not exist') ||
+                  responseData.contains('invalid model'))) {
             return false; // 模型不存在错误不重试
           }
         }
         return true;
       }
     }
-    
+
     // 网络连接错误可以重试
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
       return true;
     }
-    
+
     return false;
   }
 }

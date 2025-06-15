@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'mmkv_adapter.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 安全的 MMKV 包装类，当 MMKV 出现问题时会回退到 shared_preferences
 class SafeMMKV {
@@ -47,9 +48,9 @@ class SafeMMKV {
         try {
           final is64bit = await _checkIs64BitDevice();
           _isArm32Device = !is64bit;
-          debugPrint('SafeMMKV: 检测到${is64bit ? '64位' : '32位'}设备');
+          logDebug('SafeMMKV: 检测到${is64bit ? '64位' : '32位'}设备');
         } catch (e) {
-          debugPrint('SafeMMKV: 检测设备架构失败: $e');
+          logDebug('SafeMMKV: 检测设备架构失败: $e');
           _isArm32Device = false; // 默认假设不是32位设备
         }
       }
@@ -57,20 +58,20 @@ class SafeMMKV {
       if (kIsWeb) {
         _storage = SharedPrefsAdapter();
         await _storage!.initialize();
-        debugPrint('SafeMMKV: Web 平台，使用 SharedPreferences');
+        logDebug('SafeMMKV: Web 平台，使用 SharedPreferences');
       } else {
         // 32位ARM设备优先使用SharedPreferences，避免MMKV可能存在的兼容性问题
         if (_isArm32Device) {
-          debugPrint('SafeMMKV: 检测到32位ARM设备，优先使用SharedPreferences');
+          logDebug('SafeMMKV: 检测到32位ARM设备，优先使用SharedPreferences');
           _storage = SharedPrefsAdapter();
           await _storage!.initialize();
         } else {
           try {
             _storage = MMKVAdapter();
             await _storage!.initialize();
-            debugPrint('SafeMMKV: 使用 MMKVAdapter 作为存储');
+            logDebug('SafeMMKV: 使用 MMKVAdapter 作为存储');
           } catch (e) {
-            debugPrint('SafeMMKV: MMKVAdapter 初始化失败: $e，回退到 SharedPreferences');
+            logDebug('SafeMMKV: MMKVAdapter 初始化失败: $e，回退到 SharedPreferences');
             _storage = SharedPrefsAdapter();
             await _storage!.initialize();
           }
@@ -78,15 +79,15 @@ class SafeMMKV {
       }
       _initialized = true;
     } catch (e) {
-      debugPrint('SafeMMKV 初始化失败: $e');
+      logDebug('SafeMMKV 初始化失败: $e');
       // 最终回退：如果所有存储机制都失败，尝试使用内存存储
       try {
         _storage = _InMemoryStorageAdapter();
         await _storage!.initialize();
-        debugPrint('SafeMMKV: 所有存储机制失败，回退到内存存储');
+        logDebug('SafeMMKV: 所有存储机制失败，回退到内存存储');
         _initialized = true;
       } catch (e2) {
-        debugPrint('SafeMMKV: 内存存储也初始化失败: $e2');
+        logDebug('SafeMMKV: 内存存储也初始化失败: $e2');
         rethrow;
       }
     } finally {
@@ -111,7 +112,7 @@ class SafeMMKV {
       // 其他平台假定为64位
       return true;
     } catch (e) {
-      debugPrint('检测设备架构失败: $e');
+      logDebug('检测设备架构失败: $e');
       // 安全起见，如果检测失败，假定为32位设备避免使用MMKV 2.x
       return false;
     }
@@ -125,7 +126,7 @@ class SafeMMKV {
         final archInfo = await Process.run('getprop', ['ro.product.cpu.abi']);
         if (archInfo.exitCode == 0 && archInfo.stdout != null) {
           final arch = (archInfo.stdout as String).trim().toLowerCase();
-          debugPrint('检测到CPU架构: $arch');
+          logDebug('检测到CPU架构: $arch');
           return arch;
         }
       }
@@ -136,7 +137,7 @@ class SafeMMKV {
       // 最后使用dart:io的内置属性
       return Platform.version.toLowerCase();
     } catch (e) {
-      debugPrint('获取平台架构失败: $e');
+      logDebug('获取平台架构失败: $e');
       return ''; // 返回空字符串，让调用者判断为32位设备
     }
   }

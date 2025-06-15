@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../services/network_service.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class WeatherService extends ChangeNotifier {
   String? _currentWeather;
@@ -39,9 +40,9 @@ class WeatherService extends ChangeNotifier {
       _storage = SafeMMKV();
       await _storage.initialize();
       _isInitialized = true;
-      debugPrint('天气服务MMKV存储初始化完成');
+      logDebug('天气服务MMKV存储初始化完成');
     } catch (e) {
-      debugPrint('天气服务MMKV存储初始化失败: $e');
+      logDebug('天气服务MMKV存储初始化失败: $e');
     }
   }
 
@@ -66,14 +67,14 @@ class WeatherService extends ChangeNotifier {
           await _getOpenMeteoWeather(latitude, longitude).timeout(
             const Duration(seconds: 15), // 总体超时15秒
             onTimeout: () {
-              debugPrint('天气数据获取超时');
+              logDebug('天气数据获取超时');
               throw Exception('天气数据获取超时，请稍后重试');
             },
           );
           // 成功获取数据后保存到缓存
           await _saveToCache(latitude, longitude);
         } catch (e) {
-          debugPrint('OpenMeteo API调用失败: $e');
+          logDebug('OpenMeteo API调用失败: $e');
           // API调用失败，直接抛出异常
           rethrow;
         }
@@ -83,7 +84,7 @@ class WeatherService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      debugPrint('获取天气数据异常: $e');
+      logDebug('获取天气数据异常: $e');
       // 所有方法都失败，设置模拟数据
       setMockWeatherData();
       notifyListeners();
@@ -116,7 +117,7 @@ class WeatherService extends ChangeNotifier {
               _temperatureValue = cacheData['temperature_value'];
               _weatherIcon = cacheData['weather_icon'];
 
-              debugPrint('使用缓存的天气数据: $_weatherDescription, $_temperature');
+              logDebug('使用缓存的天气数据: $_weatherDescription, $_temperature');
               return true;
             }
           }
@@ -125,7 +126,7 @@ class WeatherService extends ChangeNotifier {
 
       return false; // 缓存不可用或已过期
     } catch (e) {
-      debugPrint('从缓存加载天气数据失败: $e');
+      logDebug('从缓存加载天气数据失败: $e');
       return false;
     }
   }
@@ -155,9 +156,9 @@ class WeatherService extends ChangeNotifier {
         DateTime.now().add(_cacheDuration).toIso8601String(),
       );
 
-      debugPrint('天气数据已保存到MMKV缓存');
+      logDebug('天气数据已保存到MMKV缓存');
     } catch (e) {
-      debugPrint('保存天气数据到MMKV缓存失败: $e');
+      logDebug('保存天气数据到MMKV缓存失败: $e');
     }
   }
 
@@ -208,22 +209,22 @@ class WeatherService extends ChangeNotifier {
             }
             _currentWeather = _weatherDescription;
 
-            debugPrint('天气数据获取成功：$_weatherDescription, $_temperature');
+            logDebug('天气数据获取成功：$_weatherDescription, $_temperature');
           } else {
-            debugPrint('OpenMeteo响应格式错误: 缺少 "current" 数据');
+            logDebug('OpenMeteo响应格式错误: 缺少 "current" 数据');
             throw Exception('OpenMeteo响应格式错误: 缺少 "current" 数据');
           }
         } catch (e) {
           // Catch JSON parsing or data access errors specifically
-          debugPrint('解析OpenMeteo天气数据失败: $e. Raw response: $rawResponseBody');
+          logDebug('解析OpenMeteo天气数据失败: $e. Raw response: $rawResponseBody');
           throw Exception('解析天气数据失败: $e'); // Rethrow specific error
         }
       } else {
-        debugPrint('OpenMeteo请求失败: ${response.statusCode}，${response.body}');
+        logDebug('OpenMeteo请求失败: ${response.statusCode}，${response.body}');
         throw Exception('OpenMeteo请求失败: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('获取OpenMeteo天气失败: $e. Raw response: $rawResponseBody');
+      logDebug('获取OpenMeteo天气失败: $e. Raw response: $rawResponseBody');
       rethrow; // 重新抛出异常以便外部处理
     }
   }
@@ -235,7 +236,7 @@ class WeatherService extends ChangeNotifier {
     _temperatureValue = null;
     _currentWeather = '天气数据获取失败';
     _weatherIcon = 'error'; // 使用错误图标
-    debugPrint('天气数据获取失败，显示错误状态');
+    logDebug('天气数据获取失败，显示错误状态');
     notifyListeners();
   }
 
@@ -248,7 +249,7 @@ class WeatherService extends ChangeNotifier {
     _temperatureValue = null;
     _isLoading = false;
     notifyListeners();
-    debugPrint('天气状态已重置');
+    logDebug('天气状态已重置');
   }
 
   // 检查是否有有效的天气数据

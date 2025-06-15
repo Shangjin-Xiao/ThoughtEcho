@@ -13,6 +13,7 @@ import 'ai_settings_page.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'dart:async'; // Import for StreamSubscription
+import '../utils/app_logger.dart';
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
@@ -36,8 +37,6 @@ class _InsightsPageState extends State<InsightsPage>
       ''; // Added state variable for accumulated insights text
   StreamSubscription<String>?
   _insightsSubscription; // Stream subscription for manual accumulation
-
-
 
   // 分析类型
   final List<Map<String, dynamic>> _analysisTypes = [
@@ -283,13 +282,14 @@ class _InsightsPageState extends State<InsightsPage>
               _accumulatedInsightsText += chunk;
             });
           }
-        },        onError: (error) {
+        },
+        onError: (error) {
           // Handle errors
-          debugPrint('生成洞察流出错: $error');
+          logDebug('生成洞察流出错: $error');
           if (mounted) {
             String errorMessage = '生成洞察失败: ${error.toString()}';
             String actionText = '重试';
-            
+
             // 处理特定的错误类型
             if (error.toString().contains('500')) {
               errorMessage = '服务器内部错误，可能是模型配置问题';
@@ -300,16 +300,17 @@ class _InsightsPageState extends State<InsightsPage>
             } else if (error.toString().contains('429')) {
               errorMessage = '请求频率过高，请稍后重试';
               actionText = '稍后重试';
-            } else if (error.toString().contains('网络') || error.toString().contains('连接')) {
+            } else if (error.toString().contains('网络') ||
+                error.toString().contains('连接')) {
               errorMessage = '网络连接问题，请检查网络';
               actionText = '重试';
             }
-            
+
             setState(() {
               _accumulatedInsightsText = errorMessage;
               _isGenerating = false; // Stop generating state on error
             });
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(errorMessage),
@@ -317,7 +318,8 @@ class _InsightsPageState extends State<InsightsPage>
                 duration: const Duration(seconds: 5),
                 action: SnackBarAction(
                   label: actionText,
-                  textColor: Colors.white,                  onPressed: () {
+                  textColor: Colors.white,
+                  onPressed: () {
                     if (actionText == '检查设置' || actionText == '检查API密钥') {
                       // 导航到AI设置页面
                       Navigator.push(
@@ -335,8 +337,9 @@ class _InsightsPageState extends State<InsightsPage>
               ),
             );
           }
-        },        onDone: () {
-          debugPrint('生成洞察流完成');
+        },
+        onDone: () {
+          logDebug('生成洞察流完成');
           // Stream finished, update loading state
           if (mounted) {
             setState(() {
@@ -351,11 +354,12 @@ class _InsightsPageState extends State<InsightsPage>
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs
-      );    } catch (e) {
-      debugPrint('生成洞察失败 (setup): $e');
+      );
+    } catch (e) {
+      logDebug('生成洞察失败 (setup): $e');
       if (mounted) {
         String errorMessage = '生成洞察失败: ${e.toString()}';
-        
+
         // 处理特定的错误类型
         if (e.toString().contains('500')) {
           errorMessage = '服务器内部错误，请检查AI模型配置是否正确';
@@ -364,13 +368,13 @@ class _InsightsPageState extends State<InsightsPage>
         } else if (e.toString().contains('API Key')) {
           errorMessage = '请先在设置中配置有效的API密钥';
         }
-        
+
         setState(() {
           _accumulatedInsightsText = errorMessage;
           _isLoading = false;
           _isGenerating = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -378,7 +382,8 @@ class _InsightsPageState extends State<InsightsPage>
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
               label: '去设置',
-              textColor: Colors.white,              onPressed: () {
+              textColor: Colors.white,
+              onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(

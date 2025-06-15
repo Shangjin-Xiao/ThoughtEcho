@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
+import '../utils/app_logger.dart';
 
 /// MMKV存储服务，替代SharedPreferences以提高性能和可靠性
 class MMKVService {
@@ -21,10 +22,10 @@ class MMKVService {
     try {
       _storage = SafeMMKV(); // 使用安全包装类
       await _storage.initialize(); // 初始化存储
-      debugPrint('MMKV已初始化，使用安全包装');
+      logDebug('MMKV已初始化，使用安全包装');
       _isInitialized = true;
     } catch (e) {
-      debugPrint('初始化MMKV失败: $e');
+      logDebug('初始化MMKV失败: $e');
       rethrow;
     }
   }
@@ -42,7 +43,7 @@ class MMKVService {
     try {
       return await _storage.setString(key, value);
     } catch (e) {
-      debugPrint('MMKV保存字符串失败: $e');
+      logDebug('MMKV保存字符串失败: $e');
       return false;
     }
   }
@@ -53,7 +54,7 @@ class MMKVService {
     try {
       return _storage.getString(key);
     } catch (e) {
-      debugPrint('MMKV获取字符串失败: $e');
+      logDebug('MMKV获取字符串失败: $e');
       return null;
     }
   }
@@ -64,7 +65,7 @@ class MMKVService {
     try {
       return await _storage.setBool(key, value);
     } catch (e) {
-      debugPrint('MMKV保存布尔值失败: $e');
+      logDebug('MMKV保存布尔值失败: $e');
       return false;
     }
   }
@@ -75,7 +76,7 @@ class MMKVService {
     try {
       return _storage.getBool(key);
     } catch (e) {
-      debugPrint('MMKV获取布尔值失败: $e');
+      logDebug('MMKV获取布尔值失败: $e');
       return null;
     }
   }
@@ -86,7 +87,7 @@ class MMKVService {
     try {
       return await _storage.setInt(key, value);
     } catch (e) {
-      debugPrint('MMKV保存整数值失败: $e');
+      logDebug('MMKV保存整数值失败: $e');
       return false;
     }
   }
@@ -97,7 +98,7 @@ class MMKVService {
     try {
       return _storage.getInt(key);
     } catch (e) {
-      debugPrint('MMKV获取整数值失败: $e');
+      logDebug('MMKV获取整数值失败: $e');
       return null;
     }
   }
@@ -108,7 +109,7 @@ class MMKVService {
     try {
       return await _storage.setDouble(key, value);
     } catch (e) {
-      debugPrint('MMKV保存浮点值失败: $e');
+      logDebug('MMKV保存浮点值失败: $e');
       return false;
     }
   }
@@ -119,7 +120,7 @@ class MMKVService {
     try {
       return _storage.getDouble(key);
     } catch (e) {
-      debugPrint('MMKV获取浮点值失败: $e');
+      logDebug('MMKV获取浮点值失败: $e');
       return null;
     }
   }
@@ -130,7 +131,7 @@ class MMKVService {
     try {
       return await _storage.setStringList(key, value);
     } catch (e) {
-      debugPrint('MMKV保存字符串列表失败: $e');
+      logDebug('MMKV保存字符串列表失败: $e');
       return false;
     }
   }
@@ -141,7 +142,7 @@ class MMKVService {
     try {
       return _storage.getStringList(key);
     } catch (e) {
-      debugPrint('MMKV获取字符串列表失败: $e');
+      logDebug('MMKV获取字符串列表失败: $e');
       return null;
     }
   }
@@ -153,7 +154,7 @@ class MMKVService {
       final jsonStr = json.encode(value);
       return await setString(key, jsonStr);
     } catch (e) {
-      debugPrint('MMKV保存JSON对象失败: $e');
+      logDebug('MMKV保存JSON对象失败: $e');
       return false;
     }
   }
@@ -166,7 +167,7 @@ class MMKVService {
       if (jsonStr == null) return null;
       return json.decode(jsonStr);
     } catch (e) {
-      debugPrint('MMKV获取JSON对象失败: $e');
+      logDebug('MMKV获取JSON对象失败: $e');
       return null;
     }
   }
@@ -177,7 +178,7 @@ class MMKVService {
     try {
       return _storage.containsKey(key);
     } catch (e) {
-      debugPrint('MMKV检查键失败: $e');
+      logDebug('MMKV检查键失败: $e');
       return false;
     }
   }
@@ -188,7 +189,7 @@ class MMKVService {
     try {
       return await _storage.remove(key);
     } catch (e) {
-      debugPrint('MMKV删除键失败: $e');
+      logDebug('MMKV删除键失败: $e');
       return false;
     }
   }
@@ -199,7 +200,7 @@ class MMKVService {
     try {
       return await _storage.clear();
     } catch (e) {
-      debugPrint('MMKV清除所有数据失败: $e');
+      logDebug('MMKV清除所有数据失败: $e');
       return false;
     }
   }
@@ -210,7 +211,7 @@ class MMKVService {
     try {
       return _storage.getKeys().toList();
     } catch (e) {
-      debugPrint('MMKV获取所有键失败: $e');
+      logDebug('MMKV获取所有键失败: $e');
       return [];
     }
   }

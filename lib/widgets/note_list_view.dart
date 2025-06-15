@@ -11,6 +11,7 @@ import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
 import '../utils/color_utils.dart'; // Import color_utils
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -271,7 +272,9 @@ class NoteListViewState extends State<NoteListView> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.applyOpacity(0.1), // MODIFIED
+                        color: theme.colorScheme.primary.applyOpacity(
+                          0.1,
+                        ), // MODIFIED
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -325,7 +328,7 @@ class NoteListViewState extends State<NoteListView> {
       // 如果搜索框被清空，立即重置加载状态
       if (value.isEmpty && widget.searchQuery.isNotEmpty) {
         _isLoading = true;
-        debugPrint('搜索内容被清空，重置加载状态');
+        logDebug('搜索内容被清空，重置加载状态');
       } else if (value.isNotEmpty) {
         _isLoading = true;
       }
@@ -339,7 +342,7 @@ class NoteListViewState extends State<NoteListView> {
             setState(() {
               _isLoading = false;
             });
-            debugPrint('搜索超时，已重置加载状态');
+            logDebug('搜索超时，已重置加载状态');
           }
         });
 

@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../services/network_service.dart';
 // import '../utils/dio_network_utils.dart'; // 导入dio网络工具
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
+import '../utils/app_logger.dart';
 
 class CityInfo {
   final String name; // 城市名称
@@ -59,37 +60,35 @@ class LocationService extends ChangeNotifier {
 
   // 初始化位置服务
   Future<void> init() async {
-    debugPrint('开始初始化位置服务');
+    logDebug('开始初始化位置服务');
     try {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
 
       // 只在位置服务启用时检查权限
       if (_isLocationServiceEnabled) {
-        debugPrint('位置服务已启用');
+        logDebug('位置服务已启用');
         final permission = await Geolocator.checkPermission();
         _hasLocationPermission =
             (permission == LocationPermission.whileInUse ||
                 permission == LocationPermission.always);
-        debugPrint('位置权限状态: $_hasLocationPermission');
+        logDebug('位置权限状态: $_hasLocationPermission');
 
         // 只在首次获取到权限时尝试获取位置
         if (_hasLocationPermission) {
           getCurrentLocation(highAccuracy: false).then((position) {
             if (position != null) {
-              debugPrint(
-                '初始化时获取位置: ${position.latitude}, ${position.longitude}',
-              );
+              logDebug('初始化时获取位置: ${position.latitude}, ${position.longitude}');
             }
           });
         }
       } else {
         _hasLocationPermission = false;
-        debugPrint('位置服务未启用');
+        logDebug('位置服务未启用');
       }
 
       notifyListeners();
     } catch (e) {
-      debugPrint('初始化位置服务错误: $e');
+      logDebug('初始化位置服务错误: $e');
       _hasLocationPermission = false;
       notifyListeners();
     }
@@ -131,7 +130,7 @@ class LocationService extends ChangeNotifier {
       notifyListeners();
       return _hasLocationPermission;
     } catch (e) {
-      debugPrint('检查位置权限失败: $e');
+      logDebug('检查位置权限失败: $e');
       _hasLocationPermission = false;
       notifyListeners();
       return false;
@@ -146,7 +145,7 @@ class LocationService extends ChangeNotifier {
       notifyListeners();
       return _hasLocationPermission;
     } catch (e) {
-      debugPrint('请求位置权限失败: $e');
+      logDebug('请求位置权限失败: $e');
       return false;
     }
   }
@@ -160,7 +159,7 @@ class LocationService extends ChangeNotifier {
     if (!_isLocationServiceEnabled) {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!_isLocationServiceEnabled) {
-        debugPrint('位置服务未启用');
+        logDebug('位置服务未启用');
         return null;
       }
     }
@@ -174,12 +173,12 @@ class LocationService extends ChangeNotifier {
               permission == LocationPermission.always);
 
       if (!_hasLocationPermission) {
-        debugPrint('位置权限不足，无法获取位置');
+        logDebug('位置权限不足，无法获取位置');
         return null; // 直接返回 null，表示无法获取位置
       }
     } else if (!_hasLocationPermission && skipPermissionRequest) {
       // 如果没有权限但选择跳过权限请求
-      debugPrint('跳过权限请求，由于权限不足无法获取位置');
+      logDebug('跳过权限请求，由于权限不足无法获取位置');
       return null;
     }
 
@@ -187,7 +186,7 @@ class LocationService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      debugPrint('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
+      logDebug('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
 
       // 使用LocalGeocodingService获取位置，并添加超时控制
       _currentPosition = await LocalGeocodingService.getCurrentPosition(
@@ -195,13 +194,13 @@ class LocationService extends ChangeNotifier {
       ).timeout(
         const Duration(seconds: 15), // 15秒超时
         onTimeout: () {
-          debugPrint('位置获取超时');
+          logDebug('位置获取超时');
           throw Exception('位置获取超时，请重试');
         },
       );
 
       if (_currentPosition != null) {
-        debugPrint(
+        logDebug(
           '位置获取成功: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
         );
         // 使用本地解析方法获取地址，也添加超时控制
@@ -209,15 +208,15 @@ class LocationService extends ChangeNotifier {
           await getAddressFromLatLng().timeout(
             const Duration(seconds: 10), // 地址解析10秒超时
             onTimeout: () {
-              debugPrint('地址解析超时，但位置信息仍然可用');
+              logDebug('地址解析超时，但位置信息仍然可用');
               // 不抛出异常，允许继续使用位置信息
             },
           );
         } catch (e) {
-          debugPrint('地址解析失败: $e，但位置信息仍然可用');
+          logDebug('地址解析失败: $e，但位置信息仍然可用');
         }
       } else {
-        debugPrint('无法获取当前位置');
+        logDebug('无法获取当前位置');
       }
 
       _isLoading = false;
@@ -225,7 +224,7 @@ class LocationService extends ChangeNotifier {
       return _currentPosition;
     } catch (e) {
       _isLoading = false;
-      debugPrint('获取位置失败: $e');
+      logDebug('获取位置失败: $e');
       notifyListeners();
       return null; // 失败时返回null而不是之前的位置
     }
@@ -234,12 +233,12 @@ class LocationService extends ChangeNotifier {
   // 根据经纬度获取地址信息
   Future<void> getAddressFromLatLng() async {
     if (_currentPosition == null) {
-      debugPrint('没有位置信息，无法获取地址');
+      logDebug('没有位置信息，无法获取地址');
       return;
     }
 
     try {
-      debugPrint('开始通过经纬度获取地址信息...');
+      logDebug('开始通过经纬度获取地址信息...');
 
       // 使用系统SDK获取地址信息
       final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
@@ -255,7 +254,7 @@ class LocationService extends ChangeNotifier {
         _district = addressInfo['district'];
         _currentAddress = addressInfo['formatted_address'];
 
-        debugPrint(
+        logDebug(
           '本地地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
         );
         notifyListeners();
@@ -266,7 +265,7 @@ class LocationService extends ChangeNotifier {
       try {
         await _getAddressFromLatLngOnline();
       } catch (e) {
-        debugPrint('在线地址解析失败: $e');
+        logDebug('在线地址解析失败: $e');
         _country = null;
         _province = null;
         _city = null;
@@ -275,7 +274,7 @@ class LocationService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('获取地址信息失败: $e');
+      logDebug('获取地址信息失败: $e');
       _country = null;
       _province = null;
       _city = null;
@@ -321,7 +320,7 @@ class LocationService extends ChangeNotifier {
             _currentAddress = '$_currentAddress, $_district';
           }
 
-          debugPrint('在线地址解析成功: $_currentAddress');
+          logDebug('在线地址解析成功: $_currentAddress');
         }
       }
     } catch (e) {
@@ -353,7 +352,7 @@ class LocationService extends ChangeNotifier {
       _searchResults = results;
       return _searchResults;
     } catch (e) {
-      debugPrint('城市搜索失败: $e');
+      logDebug('城市搜索失败: $e');
       _searchResults = [];
       return _searchResults;
     } finally {
@@ -379,7 +378,7 @@ class LocationService extends ChangeNotifier {
         query,
       ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
     } catch (e) {
-      debugPrint('城市搜索异常: $e');
+      logDebug('城市搜索异常: $e');
       return <CityInfo>[];
     }
   }
@@ -433,7 +432,7 @@ class LocationService extends ChangeNotifier {
       // 如果没有结果或请求失败，返回空列表
       return [];
     } catch (e) {
-      debugPrint('OpenMeteo地理编码API调用失败: $e');
+      logDebug('OpenMeteo地理编码API调用失败: $e');
       return [];
     }
   }
@@ -454,7 +453,7 @@ class LocationService extends ChangeNotifier {
       }
 
       // 如果OpenMeteo没有返回结果，回退到OpenStreetMap的Nominatim API
-      debugPrint('OpenMeteo没有返回结果，尝试使用OpenStreetMap API');
+      logDebug('OpenMeteo没有返回结果，尝试使用OpenStreetMap API');
       final url =
           'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10';
 
@@ -501,7 +500,7 @@ class LocationService extends ChangeNotifier {
                 cityName,
               ].where((part) => part.isNotEmpty).join(', ');
 
-              debugPrint(
+              logDebug(
                 '搜索结果: $placeName, $cityName, $country, $state, 完整: $fullName',
               );
 
@@ -516,11 +515,11 @@ class LocationService extends ChangeNotifier {
             }).toList();
       } else {
         _searchResults = [];
-        debugPrint('搜索城市失败: ${response.statusCode}, ${response.body}');
+        logDebug('搜索城市失败: ${response.statusCode}, ${response.body}');
       }
     } catch (e) {
       _searchResults = [];
-      debugPrint('搜索城市发生错误: $e');
+      logDebug('搜索城市发生错误: $e');
       // 重新抛出异常以便外部处理
       rethrow;
     } finally {
@@ -583,9 +582,9 @@ class LocationService extends ChangeNotifier {
       );
 
       notifyListeners();
-      debugPrint('成功设置城市: $_currentAddress');
+      logDebug('成功设置城市: $_currentAddress');
     } catch (e) {
-      debugPrint('设置城市失败: $e');
+      logDebug('设置城市失败: $e');
       // 重置所有状态
       _country = null;
       _province = null;

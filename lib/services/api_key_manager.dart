@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'secure_storage_service.dart';
+import '../utils/app_logger.dart';
 
 /// 多供应商API密钥管理器
 class APIKeyManager {
@@ -13,7 +14,7 @@ class APIKeyManager {
   Future<void> saveProviderApiKey(String providerId, String apiKey) async {
     final cleanedKey = _cleanApiKey(apiKey);
     await _secureStorage.saveProviderApiKey(providerId, cleanedKey);
-    debugPrint('已保存供应商 $providerId 的API密钥');
+    logDebug('已保存供应商 $providerId 的API密钥');
   }
 
   /// 获取指定供应商的API密钥
@@ -22,7 +23,7 @@ class APIKeyManager {
       final apiKey = await _secureStorage.getProviderApiKey(providerId);
       return apiKey?.trim() ?? '';
     } catch (e) {
-      debugPrint('获取供应商 $providerId 的API密钥失败: $e');
+      logDebug('获取供应商 $providerId 的API密钥失败: $e');
       return '';
     }
   }
@@ -32,13 +33,13 @@ class APIKeyManager {
     try {
       final apiKey = await getProviderApiKey(providerId);
       final isValid = apiKey.isNotEmpty && _isValidApiKeyFormat(apiKey);
-      debugPrint(
+      logDebug(
         '验证API Key - Provider: $providerId, '
         'HasKey: ${apiKey.isNotEmpty}, IsValidFormat: $isValid',
       );
       return isValid;
     } catch (e) {
-      debugPrint('验证API Key失败 - Provider: $providerId, Error: $e');
+      logDebug('验证API Key失败 - Provider: $providerId, Error: $e');
       return false;
     }
   }
@@ -46,7 +47,7 @@ class APIKeyManager {
   /// 删除指定供应商的API密钥
   Future<void> removeProviderApiKey(String providerId) async {
     await _secureStorage.removeProviderApiKey(providerId);
-    debugPrint('已删除供应商 $providerId 的API密钥');
+    logDebug('已删除供应商 $providerId 的API密钥');
   }
 
   /// 验证API密钥格式（公共方法）
@@ -64,40 +65,36 @@ class APIKeyManager {
     if (apiKey.trim().isEmpty) return false;
 
     final trimmedKey = apiKey.trim();
-    debugPrint('API Key Length: ${trimmedKey.length}');
+    logDebug('API Key Length: ${trimmedKey.length}');
 
     // OpenAI格式: sk-...
     if (trimmedKey.startsWith('sk-') && trimmedKey.length > 20) {
-      debugPrint('API Key Format Check: OpenAI (sk- prefix) - Valid');
+      logDebug('API Key Format Check: OpenAI (sk- prefix) - Valid');
       return true;
     }
-    debugPrint('API Key Format Check: OpenAI (sk- prefix) - Invalid');
+    logDebug('API Key Format Check: OpenAI (sk- prefix) - Invalid');
 
     // OpenRouter格式: sk_... 或 or_...
     if ((trimmedKey.startsWith('sk_') || trimmedKey.startsWith('or_')) &&
         trimmedKey.length > 20) {
-      debugPrint(
-        'API Key Format Check: OpenRouter (sk_ or or_ prefix) - Valid',
-      );
+      logDebug('API Key Format Check: OpenRouter (sk_ or or_ prefix) - Valid');
       return true;
     }
-    debugPrint(
-      'API Key Format Check: OpenRouter (sk_ or or_ prefix) - Invalid',
-    );
+    logDebug('API Key Format Check: OpenRouter (sk_ or or_ prefix) - Invalid');
 
     // Bearer token格式
     if (trimmedKey.startsWith('Bearer ') && trimmedKey.length > 20) {
-      debugPrint('API Key Format Check: Bearer Token - Valid');
+      logDebug('API Key Format Check: Bearer Token - Valid');
       return true;
     }
-    debugPrint('API Key Format Check: Bearer Token - Invalid');
+    logDebug('API Key Format Check: Bearer Token - Invalid');
 
     // 其他格式，基本长度检查
     if (trimmedKey.length >= 20) {
-      debugPrint('API Key Format Check: General Length (>=20) - Valid');
+      logDebug('API Key Format Check: General Length (>=20) - Valid');
       return true;
     }
-    debugPrint('API Key Format Check: General Length (>=20) - Invalid');
+    logDebug('API Key Format Check: General Length (>=20) - Invalid');
 
     return false;
   }
