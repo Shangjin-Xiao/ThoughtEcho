@@ -125,7 +125,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       // 去掉固定高度，让容器适应父组件的尺寸
       width: double.infinity,
       margin: EdgeInsets.symmetric(
-        horizontal: screenWidth > 600 ? 24.0 : 16.0,
+        horizontal: screenWidth > 600 ? 16.0 : 12.0,
         vertical: 16.0,
       ),
       child: SlidingCard(

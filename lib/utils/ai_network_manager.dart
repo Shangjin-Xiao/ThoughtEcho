@@ -31,26 +31,28 @@ class AINetworkManager {
     dio.options.connectTimeout = const Duration(seconds: 30);
     dio.options.receiveTimeout = const Duration(seconds: 300);
     dio.options.sendTimeout = const Duration(seconds: 30);
-    
+
     // 添加请求拦截器
-    dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        debugPrint('AI请求: ${options.method} ${options.uri}');
-        // 隐藏敏感信息后打印请求头
-        final safeHeaders = Map<String, dynamic>.from(options.headers);
-        _hideSensitiveInfo(safeHeaders);
-        debugPrint('请求头: $safeHeaders');
-        handler.next(options);
-      },
-      onResponse: (response, handler) {
-        debugPrint('AI响应: ${response.statusCode}');
-        handler.next(response);
-      },
-      onError: (error, handler) {
-        debugPrint('AI请求错误: ${error.message}');
-        handler.next(error);
-      },
-    ));
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint('AI请求: ${options.method} ${options.uri}');
+          // 隐藏敏感信息后打印请求头
+          final safeHeaders = Map<String, dynamic>.from(options.headers);
+          _hideSensitiveInfo(safeHeaders);
+          debugPrint('请求头: $safeHeaders');
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint('AI响应: ${response.statusCode}');
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          debugPrint('AI请求错误: ${error.message}');
+          handler.next(error);
+        },
+      ),
+    );
   }
 
   /// 重置Dio实例
@@ -70,28 +72,37 @@ class AINetworkManager {
     try {
       final headers = config.buildHeaders();
       final adjustedData = config.adjustData(data);
-      final finalUrl = urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
+      final finalUrl =
+          urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
 
       // 调试信息：检查stream参数类型
       if (adjustedData.containsKey('stream')) {
-        debugPrint('Stream parameter type: ${adjustedData['stream'].runtimeType}, value: ${adjustedData['stream']}');
+        debugPrint(
+          'Stream parameter type: ${adjustedData['stream'].runtimeType}, value: ${adjustedData['stream']}',
+        );
         // 确保stream参数是boolean类型
         final streamValue = adjustedData['stream'];
         if (streamValue is String) {
-          debugPrint('Warning: stream parameter is String, converting to boolean');
+          debugPrint(
+            'Warning: stream parameter is String, converting to boolean',
+          );
           adjustedData['stream'] = streamValue.toLowerCase() == 'true';
         } else if (streamValue is! bool) {
-          debugPrint('Warning: stream parameter is not boolean (${streamValue.runtimeType}), setting to true');
+          debugPrint(
+            'Warning: stream parameter is not boolean (${streamValue.runtimeType}), setting to true',
+          );
           adjustedData['stream'] = true;
         }
       }
 
       // 验证其他关键参数的类型
-      if (adjustedData.containsKey('temperature') && adjustedData['temperature'] is! num) {
+      if (adjustedData.containsKey('temperature') &&
+          adjustedData['temperature'] is! num) {
         debugPrint('Warning: temperature parameter type issue, fixing');
         adjustedData['temperature'] = 0.7;
       }
-      if (adjustedData.containsKey('max_tokens') && adjustedData['max_tokens'] is! int) {
+      if (adjustedData.containsKey('max_tokens') &&
+          adjustedData['max_tokens'] is! int) {
         debugPrint('Warning: max_tokens parameter type issue, fixing');
         adjustedData['max_tokens'] = 1000;
       }
@@ -189,7 +200,14 @@ class AINetworkManager {
       );
     } else if (multiSettings != null) {
       return await _makeStreamRequestWithFailover(
-        url, data, multiSettings, onData, onComplete, onError, timeout);
+        url,
+        data,
+        multiSettings,
+        onData,
+        onComplete,
+        onError,
+        timeout,
+      );
     } else if (legacySettings != null) {
       final response = await _makeBaseRequest(
         config: LegacyAIConfigWrapper(legacySettings),
@@ -217,21 +235,23 @@ class AINetworkManager {
     Duration? timeout,
   ) async {
     final availableProviders = multiSettings.availableProviders;
-    
+
     if (availableProviders.isEmpty) {
       throw Exception('没有可用的AI服务商，请在设置中配置API密钥');
     }
-    
+
     Exception? lastError;
-    
+
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
-    if (currentProvider != null && 
+    if (currentProvider != null &&
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
         // 为当前provider加载API Key
-        final providerWithApiKey = await _loadApiKeyForProvider(currentProvider);
+        final providerWithApiKey = await _loadApiKeyForProvider(
+          currentProvider,
+        );
         return await _makeBaseRequest(
           config: providerWithApiKey,
           data: data,
@@ -243,19 +263,19 @@ class AINetworkManager {
         debugPrint('当前服务商 ${currentProvider.name} 请求失败: $e');
         _markProviderFailed(currentProvider.id);
         lastError = _handleError(e);
-        
+
         if (!multiSettings.enableFailover) {
           throw lastError;
         }
       }
     }
-    
+
     // 如果当前服务商失败或故障转移启用，尝试其他服务商
     if (multiSettings.enableFailover) {
       for (final provider in availableProviders) {
         if (provider.id == currentProvider?.id) continue;
         if (_isProviderInCooldown(provider.id)) continue;
-        
+
         try {
           debugPrint('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
@@ -275,7 +295,7 @@ class AINetworkManager {
         }
       }
     }
-    
+
     throw lastError ?? Exception('所有AI服务商都不可用，请稍后重试或检查网络连接');
   }
 
@@ -290,21 +310,23 @@ class AINetworkManager {
     Duration? timeout,
   ) async {
     final availableProviders = multiSettings.availableProviders;
-    
+
     if (availableProviders.isEmpty) {
       throw Exception('没有可用的AI服务商，请在设置中配置API密钥');
     }
-    
+
     Exception? lastError;
-    
+
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
-    if (currentProvider != null && 
+    if (currentProvider != null &&
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
       try {
         // 为当前provider加载API Key
-        final providerWithApiKey = await _loadApiKeyForProvider(currentProvider);
+        final providerWithApiKey = await _loadApiKeyForProvider(
+          currentProvider,
+        );
         final response = await _makeBaseRequest(
           config: providerWithApiKey,
           data: {...data, 'stream': true},
@@ -323,19 +345,19 @@ class AINetworkManager {
         debugPrint('当前服务商 ${currentProvider.name} 流式请求失败: $e');
         _markProviderFailed(currentProvider.id);
         lastError = _handleError(e);
-        
+
         if (!multiSettings.enableFailover) {
           throw lastError;
         }
       }
     }
-    
+
     // 如果当前服务商失败或故障转移启用，尝试其他服务商
     if (multiSettings.enableFailover) {
       for (final provider in availableProviders) {
         if (provider.id == currentProvider?.id) continue;
         if (_isProviderInCooldown(provider.id)) continue;
-        
+
         try {
           debugPrint('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
@@ -362,9 +384,10 @@ class AINetworkManager {
         }
       }
     }
-    
+
     throw lastError ?? Exception('所有AI服务商都不可用，请稍后重试或检查网络连接');
   }
+
   /// 从响应中获取流数据
   static Stream<List<int>> _getStreamFromResponse(Response response) {
     final data = response.data;
@@ -418,7 +441,9 @@ class AINetworkManager {
 
                 // 处理OpenAI格式
                 final content = json['choices']?[0]?['delta']?['content'];
-                if (content != null && content is String && content.isNotEmpty) {
+                if (content != null &&
+                    content is String &&
+                    content.isNotEmpty) {
                   buffer.write(content);
                   onData(content);
                   continue;
@@ -426,12 +451,13 @@ class AINetworkManager {
 
                 // 处理Anthropic格式
                 final anthropicContent = json['delta']?['text'];
-                if (anthropicContent != null && anthropicContent is String && anthropicContent.isNotEmpty) {
+                if (anthropicContent != null &&
+                    anthropicContent is String &&
+                    anthropicContent.isNotEmpty) {
                   buffer.write(anthropicContent);
                   onData(anthropicContent);
                   continue;
                 }
-
               } catch (e) {
                 debugPrint('解析流式响应JSON错误: $e, JSON: $jsonStr');
               }
@@ -465,14 +491,14 @@ class AINetworkManager {
   static bool _isProviderInCooldown(String providerId) {
     final failTime = _failedProviders[providerId];
     if (failTime == null) return false;
-    
+
     final now = DateTime.now();
     final isInCooldown = now.difference(failTime) < _providerCooldown;
-    
+
     if (!isInCooldown) {
       _failedProviders.remove(providerId);
     }
-    
+
     return isInCooldown;
   }
 
@@ -491,14 +517,14 @@ class AINetworkManager {
     if (error is DioException) {
       final statusCode = error.response?.statusCode;
       final errorBody = error.response?.data?.toString() ?? error.message ?? '';
-      
+
       if (statusCode == 401) {
         return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
       } else if (statusCode == 429) {
         return Exception('API调用频率超限 (429)，请稍后重试');
       } else if (statusCode == 500) {
         String errorMessage = 'AI服务器内部错误 (500)';
-        
+
         try {
           final errorData = json.decode(errorBody);
           if (errorData['error'] != null) {
@@ -512,9 +538,10 @@ class AINetworkManager {
             errorMessage += '：可能是模型不存在或不可用';
           }
         }
-        
+
         return Exception(
-            '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态');
+          '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
+        );
       } else if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout ||
@@ -529,26 +556,36 @@ class AINetworkManager {
   }
 
   /// 为provider加载API Key（从加密存储）
-  static Future<AIProviderSettings> _loadApiKeyForProvider(AIProviderSettings provider) async {
+  static Future<AIProviderSettings> _loadApiKeyForProvider(
+    AIProviderSettings provider,
+  ) async {
     try {
       final apiKeyManager = APIKeyManager();
       final apiKey = await apiKeyManager.getProviderApiKey(provider.id);
-      
-      debugPrint('为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "${apiKey.length}字符"}');
-      
+
+      debugPrint(
+        '为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "${apiKey.length}字符"}',
+      );
+
       // 调试API Key请求时的状态
       if (kDebugMode) {
-        await ApiKeyDebugger.debugApiKeyInRequest(provider.id, provider.name, apiKey);
+        await ApiKeyDebugger.debugApiKeyInRequest(
+          provider.id,
+          provider.name,
+          apiKey,
+        );
       }
-      
+
       // 返回带有API Key的新provider实例
       final providerWithApiKey = provider.copyWith(apiKey: apiKey);
-      
+
       // 验证构建的headers
       final headers = providerWithApiKey.buildHeaders();
       final authHeader = headers['Authorization'] ?? headers['x-api-key'] ?? '';
-      debugPrint('构建的请求头中的API Key: ${authHeader.isEmpty ? "空" : "${authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '').length}字符"}');
-      
+      debugPrint(
+        '构建的请求头中的API Key: ${authHeader.isEmpty ? "空" : "${authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '').length}字符"}',
+      );
+
       return providerWithApiKey;
     } catch (e) {
       debugPrint('为Provider ${provider.name} 加载API Key失败: $e');

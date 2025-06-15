@@ -162,14 +162,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _currentProvider!.id,
         );
         _apiKeyStatus = 'API Key有效 (${secureApiKey.length}字符)';
-        debugPrint('API Key状态更新: ${_apiKeyStatus}');
+        debugPrint('API Key状态更新: $_apiKeyStatus');
       } else {
         _apiKeyStatus = '未配置有效的API Key';
-        debugPrint('API Key状态更新: ${_apiKeyStatus}');
+        debugPrint('API Key状态更新: $_apiKeyStatus');
       }
     } else {
       _apiKeyStatus = '未选择服务商';
-      debugPrint('API Key状态更新: ${_apiKeyStatus}');
+      debugPrint('API Key状态更新: $_apiKeyStatus');
     }
 
     if (mounted) {
