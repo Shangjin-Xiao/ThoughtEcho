@@ -173,9 +173,13 @@ class NoteListViewState extends State<NoteListView> {
                 _isLoading = false; // 出错时停止加载
               });
               // 可以添加错误处理逻辑，例如显示 SnackBar
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('加载笔记失败: $error')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('加载笔记失败: $error'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             }
           },
         );

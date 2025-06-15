@@ -152,7 +152,11 @@ class _InsightsPageState extends State<InsightsPage>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存分析失败: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('保存分析失败: $e'), 
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }

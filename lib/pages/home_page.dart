@@ -119,12 +119,13 @@ class _HomePageState extends State<HomePage>
               SnackBar(
                 content: Text('获取每日提示失败: ${error.toString()}'),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
         },
         onDone: () {
-          logDebug('每日提示流完成');
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
             setState(() {
@@ -148,6 +149,8 @@ class _HomePageState extends State<HomePage>
           SnackBar(
             content: Text('获取每日提示失败: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -166,12 +169,13 @@ class _HomePageState extends State<HomePage>
         _fetchDailyPrompt(),
       ]);
     } catch (e) {
-      logDebug('刷新失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('刷新失败: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -404,6 +408,8 @@ class _HomePageState extends State<HomePage>
             SnackBar(
               content: Text('无法打开全屏编辑器: $e'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
                 label: '重试',
                 onPressed: () => _showEditQuoteDialog(quote),
@@ -453,9 +459,13 @@ class _HomePageState extends State<HomePage>
                   );
                   db.deleteQuote(quote.id!);
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('笔记已删除')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('笔记已删除'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 },
                 child: const Text('删除'),
               ),
