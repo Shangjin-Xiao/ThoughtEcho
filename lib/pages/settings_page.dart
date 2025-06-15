@@ -112,10 +112,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
                     // 3. 如果位置有效，获取天气
                     if (position != null) {
-                      await weatherService.getWeatherData(
-                        position.latitude,
-                        position.longitude,
-                      );
+                      await weatherService
+                          .getWeatherData(position.latitude, position.longitude)
+                          .timeout(
+                            const Duration(seconds: 20), // 天气获取总超时20秒
+                            onTimeout: () {
+                              throw Exception('天气获取超时，请稍后重试');
+                            },
+                          );
+
                       // 检查 settings page 是否仍然 mounted
                       if (!settingsContext.mounted) return;
                       // 根据 weatherService 的状态显示成功或失败提示
@@ -159,10 +164,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     // 检查 settings page 是否仍然 mounted
                     if (!settingsContext.mounted) return;
                     // 关闭加载指示器（如果它仍然存在）
-                    Navigator.pop(settingsContext);
-                    ScaffoldMessenger.of(
-                      settingsContext,
-                    ).showSnackBar(SnackBar(content: Text('处理城市选择时出错: $e')));
+                    try {
+                      Navigator.pop(settingsContext);
+                    } catch (_) {
+                      // 忽略导航栈问题
+                    }
+                    ScaffoldMessenger.of(settingsContext).showSnackBar(
+                      SnackBar(content: Text('处理城市选择时出错: ${e.toString()}')),
+                    );
                     // 不需要关闭 dialogContext，因为错误发生在 dialog 内部的操作中
                   }
                 },
@@ -485,7 +494,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     );
                   },
-                ),                ListTile(
+                ),
+                ListTile(
                   title: const Text('API设置'),
                   subtitle: const Text('配置AI分析所需的API信息和多服务商管理'),
                   leading: const Icon(Icons.api_outlined),

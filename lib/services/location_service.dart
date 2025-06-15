@@ -62,7 +62,7 @@ class LocationService extends ChangeNotifier {
     debugPrint('开始初始化位置服务');
     try {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
-      
+
       // 只在位置服务启用时检查权限
       if (_isLocationServiceEnabled) {
         debugPrint('位置服务已启用');
@@ -112,9 +112,9 @@ class LocationService extends ChangeNotifier {
       if (permission == LocationPermission.denied) {
         // permission = await Geolocator.requestPermission(); // 移除自动请求
         // if (permission == LocationPermission.denied) {
-          _hasLocationPermission = false;
-          notifyListeners();
-          return false; // 直接返回 false，表示权限不足
+        _hasLocationPermission = false;
+        notifyListeners();
+        return false; // 直接返回 false，表示权限不足
         // }
       }
 
@@ -153,8 +153,8 @@ class LocationService extends ChangeNotifier {
 
   // 获取当前位置
   Future<Position?> getCurrentLocation({
-    bool highAccuracy = false, 
-    bool skipPermissionRequest = false // 添加跳过权限请求的参数
+    bool highAccuracy = false,
+    bool skipPermissionRequest = false, // 添加跳过权限请求的参数
   }) async {
     // 检查位置服务是否启用
     if (!_isLocationServiceEnabled) {
@@ -169,9 +169,10 @@ class LocationService extends ChangeNotifier {
     if (!_hasLocationPermission && !skipPermissionRequest) {
       // 检查权限，但不自动请求
       final permission = await Geolocator.checkPermission();
-      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always);
-      
+      _hasLocationPermission =
+          (permission == LocationPermission.whileInUse ||
+              permission == LocationPermission.always);
+
       if (!_hasLocationPermission) {
         debugPrint('位置权限不足，无法获取位置');
         return null; // 直接返回 null，表示无法获取位置
@@ -188,17 +189,33 @@ class LocationService extends ChangeNotifier {
 
       debugPrint('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
 
-      // 使用LocalGeocodingService获取位置
+      // 使用LocalGeocodingService获取位置，并添加超时控制
       _currentPosition = await LocalGeocodingService.getCurrentPosition(
         highAccuracy: highAccuracy,
+      ).timeout(
+        const Duration(seconds: 15), // 15秒超时
+        onTimeout: () {
+          debugPrint('位置获取超时');
+          throw Exception('位置获取超时，请重试');
+        },
       );
 
       if (_currentPosition != null) {
         debugPrint(
           '位置获取成功: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
         );
-        // 使用本地解析方法获取地址
-        await getAddressFromLatLng();
+        // 使用本地解析方法获取地址，也添加超时控制
+        try {
+          await getAddressFromLatLng().timeout(
+            const Duration(seconds: 10), // 地址解析10秒超时
+            onTimeout: () {
+              debugPrint('地址解析超时，但位置信息仍然可用');
+              // 不抛出异常，允许继续使用位置信息
+            },
+          );
+        } catch (e) {
+          debugPrint('地址解析失败: $e，但位置信息仍然可用');
+        }
       } else {
         debugPrint('无法获取当前位置');
       }
@@ -210,7 +227,7 @@ class LocationService extends ChangeNotifier {
       _isLoading = false;
       debugPrint('获取位置失败: $e');
       notifyListeners();
-      return _currentPosition;
+      return null; // 失败时返回null而不是之前的位置
     }
   }
 
@@ -257,21 +274,21 @@ class LocationService extends ChangeNotifier {
         _currentAddress = '地址解析失败';
         notifyListeners();
       }
-
     } catch (e) {
       debugPrint('获取地址信息失败: $e');
-       _country = null;
-       _province = null;
-       _city = null;
-       _district = null;
-       _currentAddress = '地址解析失败';
-       notifyListeners();
+      _country = null;
+      _province = null;
+      _city = null;
+      _district = null;
+      _currentAddress = '地址解析失败';
+      notifyListeners();
     }
   }
 
   // 使用在线服务获取地址（备用方法）
   Future<void> _getAddressFromLatLngOnline() async {
-    try {      final url =
+    try {
+      final url =
           'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
 
       final response = await NetworkService.instance.get(
@@ -324,17 +341,16 @@ class LocationService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 首先尝试使用OpenMeteo API
-      final results = await _searchCityWithOpenMeteo(query);
-      if (results.isNotEmpty) {
-        _searchResults = results;
-        _isSearching = false;
-        notifyListeners();
-        return _searchResults;
-      }
+      // 添加总体超时控制
+      final results = await Future.any([
+        _searchCityWithTimeout(query),
+        Future.delayed(
+          const Duration(seconds: 12),
+          () => <CityInfo>[],
+        ), // 12秒超时返回空列表
+      ]);
 
-      // 如果OpenMeteo没有结果，尝试使用OpenStreetMap API
-      _searchResults = await _searchCityOnline(query);
+      _searchResults = results;
       return _searchResults;
     } catch (e) {
       debugPrint('城市搜索失败: $e');
@@ -346,6 +362,28 @@ class LocationService extends ChangeNotifier {
     }
   }
 
+  // 带超时的城市搜索
+  Future<List<CityInfo>> _searchCityWithTimeout(String query) async {
+    try {
+      // 首先尝试使用OpenMeteo API
+      final results = await _searchCityWithOpenMeteo(
+        query,
+      ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+
+      if (results.isNotEmpty) {
+        return results;
+      }
+
+      // 如果OpenMeteo没有结果，尝试使用OpenStreetMap API
+      return await _searchCityOnline(
+        query,
+      ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+    } catch (e) {
+      debugPrint('城市搜索异常: $e');
+      return <CityInfo>[];
+    }
+  }
+
   // 使用OpenMeteo的地理编码API搜索城市
   Future<List<CityInfo>> _searchCityWithOpenMeteo(String query) async {
     try {
@@ -353,7 +391,10 @@ class LocationService extends ChangeNotifier {
       final url =
           'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=10&language=zh&format=json';
 
-      final response = await NetworkService.instance.get(url, timeoutSeconds: 10);
+      final response = await NetworkService.instance.get(
+        url,
+        timeoutSeconds: 10,
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -489,7 +530,7 @@ class LocationService extends ChangeNotifier {
 
     return _searchResults;
   }
-  
+
   // 清空搜索结果
   void clearSearchResults() {
     _searchResults = [];
@@ -511,13 +552,19 @@ class LocationService extends ChangeNotifier {
       _district = null;
 
       // 更新地址字符串
-      List<String> addressParts = [city.country, city.province, city.name]
-          .where((part) => part.isNotEmpty)
-          .toList();
+      List<String> addressParts =
+          [
+            city.country,
+            city.province,
+            city.name,
+          ].where((part) => part.isNotEmpty).toList();
       _currentAddress = addressParts.join(', ');
 
       // 验证经纬度的有效性
-      if (city.lat < -90 || city.lat > 90 || city.lon < -180 || city.lon > 180) {
+      if (city.lat < -90 ||
+          city.lat > 90 ||
+          city.lon < -180 ||
+          city.lon > 180) {
         throw Exception('无效的经纬度');
       }
 
