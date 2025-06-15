@@ -8,7 +8,7 @@ import '../models/quote_model.dart';
 import '../utils/ai_network_manager.dart';
 
 /// AI请求辅助工具
-/// 
+///
 /// 统一处理AI请求的通用逻辑，减少重复代码
 class AIRequestHelper {
   static final AIRequestHelper _instance = AIRequestHelper._internal();
@@ -148,7 +148,9 @@ class AIRequestHelper {
 
       // 确保stream参数是boolean类型
       if (body.containsKey('stream') && body['stream'] is! bool) {
-        debugPrint('Warning: stream parameter is not boolean, converting: ${body['stream']}');
+        debugPrint(
+          'Warning: stream parameter is not boolean, converting: ${body['stream']}',
+        );
         body['stream'] = body['stream'] == true || body['stream'] == 'true';
       }
 
@@ -206,8 +208,9 @@ class AIRequestHelper {
 
   /// 解析API响应
   String parseResponse(Response response) {
-    final data = response.data is String ? json.decode(response.data) : response.data;
-    
+    final data =
+        response.data is String ? json.decode(response.data) : response.data;
+
     if (data['choices'] != null &&
         data['choices'].isNotEmpty &&
         data['choices'][0]['message'] != null) {
@@ -269,12 +272,14 @@ class AIRequestHelper {
     if (context != null) {
       debugPrint('$context错误: $error');
       // 添加更详细的错误信息
-      if (error.toString().contains('type') && error.toString().contains('subtype')) {
+      if (error.toString().contains('type') &&
+          error.toString().contains('subtype')) {
         debugPrint('检测到类型转换错误，可能是stream参数类型问题');
         debugPrint('错误详情: ${error.runtimeType} - $error');
 
         // 检查是否是布尔值到字符串的转换错误
-        if (error.toString().contains('bool') && error.toString().contains('String')) {
+        if (error.toString().contains('bool') &&
+            error.toString().contains('String')) {
           debugPrint('这是一个布尔值到字符串的类型转换错误');
           debugPrint('可能的原因：');
           debugPrint('1. API响应中的content字段是boolean而不是string');
@@ -308,20 +313,21 @@ class AIRequestHelper {
         'analysisType': analysisType,
         'analysisStyle': analysisStyle,
       },
-      'quotes': quotes.map((quote) {
-        return {
-          'id': quote.id,
-          'content': quote.content,
-          'date': quote.date,
-          'source': quote.source,
-          'sourceAuthor': quote.sourceAuthor,
-          'tagIds': quote.tagIds,
-          'categoryId': quote.categoryId,
-          'location': quote.location,
-          'weather': quote.weather,
-          'temperature': quote.temperature,
-        };
-      }).toList(),
+      'quotes':
+          quotes.map((quote) {
+            return {
+              'id': quote.id,
+              'content': quote.content,
+              'date': quote.date,
+              'source': quote.source,
+              'sourceAuthor': quote.sourceAuthor,
+              'tagIds': quote.tagIds,
+              'categoryId': quote.categoryId,
+              'location': quote.location,
+              'weather': quote.weather,
+              'temperature': quote.temperature,
+            };
+          }).toList(),
     };
   }
 
@@ -354,11 +360,7 @@ class AIRequestHelper {
       try {
         await operation(controller);
       } catch (e) {
-        handleStreamError(
-          controller: controller,
-          error: e,
-          context: context,
-        );
+        handleStreamError(controller: controller, error: e, context: context);
       }
     }();
 

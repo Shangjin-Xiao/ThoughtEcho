@@ -751,9 +751,9 @@ class _HomePageState extends State<HomePage>
                           Container(
                             width: double.infinity,
                             margin: EdgeInsets.fromLTRB(
-                              screenWidth > 600 ? 24.0 : 16.0,
+                              screenWidth > 600 ? 16.0 : 12.0, // 与每日一言左右边距对齐
                               4.0, // 减少上边距
-                              screenWidth > 600 ? 24.0 : 16.0,
+                              screenWidth > 600 ? 16.0 : 12.0, // 与每日一言左右边距对齐
                               12.0, // 减少下边距
                             ),
                             padding: EdgeInsets.all(

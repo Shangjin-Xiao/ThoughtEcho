@@ -26,7 +26,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(context, listen: false);
+    _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
+      context,
+      listen: false,
+    );
     _loadAnalyses();
   }
 
@@ -54,7 +57,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载分析历史记录失败: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('加载分析历史记录失败: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -72,7 +78,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     });
 
     try {
-      final analyses = await _aiAnalysisDatabaseService.searchAnalyses(_searchQuery);
+      final analyses = await _aiAnalysisDatabaseService.searchAnalyses(
+        _searchQuery,
+      );
       setState(() {
         _analyses = analyses;
         _isLoading = false;
@@ -94,31 +102,34 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     // 确认删除对话框
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除此分析记录吗？此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('确认删除'),
+            content: const Text('确定要删除此分析记录吗？此操作不可撤销。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('删除', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
 
     try {
-      final success = await _aiAnalysisDatabaseService.deleteAnalysis(analysis.id!);
-      
+      final success = await _aiAnalysisDatabaseService.deleteAnalysis(
+        analysis.id!,
+      );
+
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('分析记录已删除')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('分析记录已删除')));
         _loadAnalyses(); // 重新加载列表
       }
     } catch (e) {
@@ -135,31 +146,32 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     // 确认删除对话框
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除全部'),
-        content: const Text('确定要删除所有AI分析记录吗？此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('确认删除全部'),
+            content: const Text('确定要删除所有AI分析记录吗？此操作不可撤销。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('全部删除', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('全部删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
 
     try {
       final success = await _aiAnalysisDatabaseService.deleteAllAnalyses();
-      
+
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('所有分析记录已删除')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('所有分析记录已删除')));
         _loadAnalyses(); // 重新加载列表
       }
     } catch (e) {
@@ -177,7 +189,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       context: context,
       isScrollControlled: true, // 这使得底部表可以占据更多的屏幕空间
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.dialogRadius)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.dialogRadius),
+        ),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -209,9 +223,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                           children: [
                             Text(
                               analysis.title,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -225,7 +238,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         icon: const Icon(Icons.copy),
                         tooltip: '复制内容',
                         onPressed: () {
-                          Clipboard.setData(ClipboardData(text: analysis.content));
+                          Clipboard.setData(
+                            ClipboardData(text: analysis.content),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('内容已复制到剪贴板')),
                           );
@@ -255,16 +270,19 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         MarkdownBody(
                           data: analysis.content,
                           selectable: true,
-                          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                            p: Theme.of(context).textTheme.bodyMedium,
-                          ),
+                          styleSheet: MarkdownStyleSheet.fromTheme(
+                            Theme.of(context),
+                          ).copyWith(p: Theme.of(context).textTheme.bodyMedium),
                         ),
                         const SizedBox(height: 16),
                         // 元数据
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondaryContainer,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.secondaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -274,33 +292,48 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                                 '分析信息',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 '类型: ${_getAnalysisTypeName(analysis.analysisType)}',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
                                 ),
                               ),
                               Text(
                                 '风格: ${_getAnalysisStyleName(analysis.analysisStyle)}',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
                                 ),
                               ),
                               if (analysis.quoteCount != null)
                                 Text(
                                   '分析笔记数量: ${analysis.quoteCount}',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onSecondaryContainer,
                                   ),
                                 ),
                               Text(
                                 '创建时间: ${_formatDateTime(analysis.createdAt)}',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
                                 ),
                               ),
                             ],
@@ -393,7 +426,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI分析历史'),
@@ -415,18 +448,19 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
               decoration: InputDecoration(
                 hintText: '搜索分析内容',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                          _loadAnalyses();
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                            _loadAnalyses();
+                          },
+                        )
+                        : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: theme.colorScheme.outline),
@@ -445,31 +479,35 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
               onSubmitted: (_) => _searchAnalyses(),
             ),
           ),
-          
+
           // 内容列表
           Expanded(
-            child: _isLoading 
-              ? const AppLoadingView() 
-              : _analyses.isEmpty 
-                ? const AppEmptyView(
-                    svgAsset: 'assets/empty/empty_state.svg',
-                    text: '没有找到AI分析历史记录\n可以在"AI洞察"页面生成并保存分析',
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    itemCount: _analyses.length,
-                    separatorBuilder: (context, index) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final analysis = _analyses[index];
-                      return _buildAnalysisCard(analysis, theme);
-                    },
-                  ),
+            child:
+                _isLoading
+                    ? const AppLoadingView()
+                    : _analyses.isEmpty
+                    ? const AppEmptyView(
+                      svgAsset: 'assets/empty/empty_state.svg',
+                      text: '没有找到AI分析历史记录\n可以在"AI洞察"页面生成并保存分析',
+                    )
+                    : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      itemCount: _analyses.length,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final analysis = _analyses[index];
+                        return _buildAnalysisCard(analysis, theme);
+                      },
+                    ),
           ),
         ],
       ),
     );
   }
-  
+
   /// 构建分析记录卡片
   Widget _buildAnalysisCard(AIAnalysis analysis, ThemeData theme) {
     return Card(
@@ -542,9 +580,13 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                                   title: const Text('复制内容'),
                                   onTap: () {
                                     Navigator.pop(context);
-                                    Clipboard.setData(ClipboardData(text: analysis.content));
+                                    Clipboard.setData(
+                                      ClipboardData(text: analysis.content),
+                                    );
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('内容已复制到剪贴板')),
+                                      const SnackBar(
+                                        content: Text('内容已复制到剪贴板'),
+                                      ),
                                     );
                                   },
                                 ),
@@ -565,25 +607,31 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                   ),
                 ],
               ),
-              
+
               // 内容预览
               Padding(
                 padding: const EdgeInsets.only(top: 12.0),
                 child: Text(
-                  analysis.content.replaceAll(RegExp(r'#+ |==+|--+|\*\*|__'), ''),
+                  analysis.content.replaceAll(
+                    RegExp(r'#+ |==+|--+|\*\*|__'),
+                    '',
+                  ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
-              
+
               // 底部标签
               Padding(
                 padding: const EdgeInsets.only(top: 12.0),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.secondaryContainer,
                         borderRadius: BorderRadius.circular(4),
