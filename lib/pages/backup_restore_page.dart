@@ -125,7 +125,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 scaffoldMessengerState.showSnackBar(
                   SnackBar(
                     content: Text('备份已保存到: $path'),
-                    duration: const Duration(seconds: 5),
+                    duration: const Duration(seconds: 3),
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
