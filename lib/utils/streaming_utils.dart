@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
 import 'package:thoughtecho/utils/app_logger.dart';

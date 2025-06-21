@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import 'home_page.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
 import '../utils/app_logger.dart';
+import '../utils/time_utils.dart';
 
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
@@ -49,7 +50,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (!canExport) {
         if (mounted) {
           // 在调用 _showErrorDialog 前添加 mounted 检查
-          _showErrorDialog(context, '数据访问错误', '无法访问数据库，请确保应用有足够的存储权限，然后重试。');
+          final currentContext = context; // 保存context
+          _showErrorDialog(
+            currentContext,
+            '数据访问错误',
+            '无法访问数据库，请确保应用有足够的存储权限，然后重试。',
+          );
         }
         return;
       }
@@ -90,8 +96,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       try {
         if (choice == 'save') {
           final now = DateTime.now();
-          final formattedDate =
-              '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+          final formattedDate = TimeUtils.formatFileTimestamp(now);
           final fileName = '心迹_备份_$formattedDate.json';
           if (Platform.isWindows) {
             final tempDir = await getTemporaryDirectory();
@@ -213,13 +218,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         progressOverlay.remove();
         if (!mounted) return;
         if (mounted) {
-          _showErrorDialog(context, '备份失败', '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。');
+          final currentContext = context;
+          _showErrorDialog(
+            currentContext,
+            '备份失败',
+            '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。',
+          );
         }
       }
     } catch (e) {
       if (!mounted) return;
       if (mounted) {
-        _showErrorDialog(context, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
+        final currentContext = context;
+        _showErrorDialog(currentContext, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
       }
     }
   }
@@ -259,13 +270,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (!isValidBackup) {
         if (mounted) {
           final currentContext = context;
-          if (mounted) {
-            _showErrorDialog(
-              currentContext,
-              '无效的备份文件',
-              '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。',
-            );
-          }
+          _showErrorDialog(
+            currentContext,
+            '无效的备份文件',
+            '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。',
+          );
         }
         return;
       }
@@ -329,8 +338,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         importOverlay.remove();
         if (!mounted) return;
         if (mounted) {
+          final currentContext = context;
           await showDialog(
-            context: context,
+            context: currentContext,
             barrierDismissible: false,
             builder:
                 (dialogContext) => AlertDialog(

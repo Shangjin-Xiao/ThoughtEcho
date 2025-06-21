@@ -165,7 +165,7 @@ class ApiKeyDebugger {
     logDebug('传入API Key长度: ${apiKey.length}');
     logDebug('传入API Key是否为空: ${apiKey.isEmpty}');
     logDebug(
-      '传入API Key前缀: ${apiKey.length > 0 ? apiKey.substring(0, math.min(20, apiKey.length)) : "无"}',
+      '传入API Key前缀: ${apiKey.isNotEmpty ? apiKey.substring(0, math.min(20, apiKey.length)) : "无"}',
     );
 
     try {
@@ -176,7 +176,7 @@ class ApiKeyDebugger {
       logDebug('存储中的API Key长度: ${storedApiKey.length}');
       logDebug('存储中的API Key是否为空: ${storedApiKey.isEmpty}');
       logDebug(
-        '存储中的API Key前缀: ${storedApiKey.length > 0 ? storedApiKey.substring(0, math.min(20, storedApiKey.length)) : "无"}',
+        '存储中的API Key前缀: ${storedApiKey.isNotEmpty ? storedApiKey.substring(0, math.min(20, storedApiKey.length)) : "无"}',
       );
 
       // 比较传入的API Key和存储的API Key

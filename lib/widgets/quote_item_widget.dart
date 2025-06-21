@@ -105,12 +105,10 @@ class QuoteItemWidget extends StatelessWidget {
 
     // 格式化日期和时间段
     final DateTime quoteDate = DateTime.parse(quote.date);
-    String dayPeriodLabel = '';
-    if (quote.dayPeriod != null && quote.dayPeriod!.isNotEmpty) {
-      dayPeriodLabel = TimeUtils.getDayPeriodLabel(quote.dayPeriod!);
-    }
-    final String formattedDate =
-        '${quoteDate.year}-${quoteDate.month.toString().padLeft(2, '0')}-${quoteDate.day.toString().padLeft(2, '0')} $dayPeriodLabel';
+    final String formattedDate = TimeUtils.formatQuoteDate(
+      quoteDate,
+      dayPeriod: quote.dayPeriod,
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(

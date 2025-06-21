@@ -1,5 +1,4 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/mmkv_service.dart
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 import '../utils/app_logger.dart';
