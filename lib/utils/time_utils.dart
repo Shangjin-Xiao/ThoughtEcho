@@ -32,17 +32,17 @@ class TimeUtils {
   /// 根据时间段 Key 获取图标
   static IconData getDayPeriodIcon(String? dayPeriod) {
     switch (dayPeriod) {
-      case '晨曦': 
+      case '晨曦':
         return Icons.wb_twilight;
-      case '上午': 
+      case '上午':
         return Icons.wb_sunny_outlined;
-      case '午后': 
+      case '午后':
         return Icons.wb_sunny;
-      case '黄昏': 
+      case '黄昏':
         return Icons.nights_stay_outlined;
-      case '夜晚': 
+      case '夜晚':
         return Icons.nightlight_round;
-      case '深夜': 
+      case '深夜':
         return Icons.bedtime;
       default:
         return Icons.access_time;
@@ -100,8 +100,14 @@ class TimeUtils {
     }
   } */
 
-  // TODO: 优化：_formatTime 函数同时处理日期和时间格式化，职责可能过于混淆。考虑拆分为更具体的函数，例如 formatQuoteDate 和 formatQuoteTime。
-  static String _formatTime(DateTime dateTime) {
+  // TODO: 优化：formatTime 函数同时处理日期和时间格式化，职责可能过于混淆。考虑拆分为更具体的函数，例如 formatQuoteDate 和 formatQuoteTime。
+  /// 智能格式化时间，根据时间距离现在的远近显示不同格式
+  /// - 今天：显示时间 (HH:mm)
+  /// - 昨天：显示"昨天 HH:mm"
+  /// - 一周内：显示星期和时间 (EEEE HH:mm)
+  /// - 今年：显示月日和时间 (MM-dd HH:mm)
+  /// - 往年：显示完整日期时间 (yyyy-MM-dd HH:mm)
+  static String formatTime(DateTime dateTime) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = DateTime(now.year, now.month, now.day - 1);
@@ -119,6 +125,103 @@ class TimeUtils {
       return DateFormat('MM-dd HH:mm').format(dateTime); // 今年，显示月日和时间
     } else {
       return DateFormat('yyyy-MM-dd HH:mm').format(dateTime); // 往年，显示年月日和时间
+    }
+  }
+
+  /// 格式化日期（仅日期部分）
+  /// 格式：2025年6月21日
+  static String formatDate(DateTime dateTime) {
+    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日';
+  }
+
+  /// 格式化日期时间（完整日期和时间）
+  /// 格式：2025年6月21日 14:30
+  static String formatDateTime(DateTime dateTime) {
+    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日 ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// 格式化笔记日期（日期 + 时间段）
+  /// 格式：2025-06-21 上午
+  static String formatQuoteDate(DateTime dateTime, {String? dayPeriod}) {
+    final formattedDate =
+        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+
+    if (dayPeriod != null) {
+      final dayPeriodLabel = getDayPeriodLabel(dayPeriod);
+      return '$formattedDate $dayPeriodLabel';
+    }
+
+    // 如果没有提供 dayPeriod，根据时间推算
+    final hour = dateTime.hour;
+    String dayPeriodKey;
+    if (hour >= 5 && hour < 8) {
+      dayPeriodKey = 'dawn';
+    } else if (hour >= 8 && hour < 12) {
+      dayPeriodKey = 'morning';
+    } else if (hour >= 12 && hour < 17) {
+      dayPeriodKey = 'afternoon';
+    } else if (hour >= 17 && hour < 20) {
+      dayPeriodKey = 'dusk';
+    } else if (hour >= 20 && hour < 23) {
+      dayPeriodKey = 'evening';
+    } else {
+      dayPeriodKey = 'midnight';
+    }
+
+    final dayPeriodLabel = getDayPeriodLabel(dayPeriodKey);
+    return '$formattedDate $dayPeriodLabel';
+  }
+
+  /// 格式化文件名时间戳
+  /// 格式：20250621_1430
+  static String formatFileTimestamp(DateTime dateTime) {
+    return '${dateTime.year}${dateTime.month.toString().padLeft(2, '0')}${dateTime.day.toString().padLeft(2, '0')}_${dateTime.hour.toString().padLeft(2, '0')}${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// 格式化日志时间戳（智能显示）
+  /// - 今天：显示时分秒 (HH:mm:ss)
+  /// - 一周内：显示星期和时分 (周一 14:30)
+  /// - 更久：显示月日和时分 (6-21 14:30)
+  static String formatLogTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final local = timestamp.toLocal();
+    final difference = now.difference(local);
+
+    // 今天的日志只显示时间
+    if (local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day) {
+      return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
+    }
+    // 一周内的日志显示星期几和时间
+    else if (difference.inDays < 7) {
+      final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      final weekday = weekdays[(local.weekday - 1) % 7];
+      return '$weekday ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    }
+    // 更久的日志显示日期和时间
+    else {
+      return '${local.month}-${local.day} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
+  /// 从ISO格式字符串安全解析DateTime并格式化日期
+  static String formatDateFromIso(String isoDate) {
+    try {
+      final date = DateTime.parse(isoDate);
+      return formatDate(date);
+    } catch (e) {
+      return isoDate;
+    }
+  }
+
+  /// 从ISO格式字符串安全解析DateTime并格式化日期时间
+  static String formatDateTimeFromIso(String isoDate) {
+    try {
+      final date = DateTime.parse(isoDate);
+      return formatDateTime(date);
+    } catch (e) {
+      return isoDate;
     }
   }
 }

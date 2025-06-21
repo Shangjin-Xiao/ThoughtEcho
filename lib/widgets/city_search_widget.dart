@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // 添加logDebug支持
 import 'package:provider/provider.dart';
 import 'dart:async'; // 导入 Timer
 import '../services/location_service.dart';

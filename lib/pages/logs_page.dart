@@ -7,6 +7,7 @@ import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_error_view.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
+import '../utils/time_utils.dart';
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -59,6 +60,7 @@ class _LogsPageState extends State<LogsPage> {
       _loadMoreLogs();
     }
   }
+
   // 加载更多历史日志
   Future<void> _loadMoreLogs() async {
     final logService = Provider.of<UnifiedLogService>(context, listen: false);
@@ -332,6 +334,7 @@ class _LogsPageState extends State<LogsPage> {
       context,
     ).showSnackBar(const SnackBar(content: Text('日志详情已复制到剪贴板')));
   }
+
   // 获取日志级别对应的图标
   IconData _getLogLevelIcon(UnifiedLogLevel level) {
     switch (level) {
@@ -349,6 +352,7 @@ class _LogsPageState extends State<LogsPage> {
         return Icons.block;
     }
   }
+
   // 获取日志级别对应的颜色
   Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
     switch (level) {
@@ -474,7 +478,8 @@ class _LogsPageState extends State<LogsPage> {
   @override
   Widget build(BuildContext context) {
     try {
-      final theme = Theme.of(context);      UnifiedLogService? logService;
+      final theme = Theme.of(context);
+      UnifiedLogService? logService;
       try {
         logService = Provider.of<UnifiedLogService>(context);
       } catch (e) {
@@ -679,7 +684,9 @@ class _LogsPageState extends State<LogsPage> {
                                             ),
                                           ),
                                         Text(
-                                          _formatTimestamp(log.timestamp),
+                                          TimeUtils.formatLogTimestamp(
+                                            log.timestamp,
+                                          ),
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(
                                                 color: theme
@@ -780,30 +787,6 @@ class _LogsPageState extends State<LogsPage> {
     }
   }
 
-  // 格式化时间戳为友好格式
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final local = timestamp.toLocal();
-    final difference = now.difference(local);
-
-    // 今天的日志只显示时间
-    if (local.year == now.year &&
-        local.month == now.month &&
-        local.day == now.day) {
-      return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
-    }
-    // 一周内的日志显示星期几和时间
-    else if (difference.inDays < 7) {
-      final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-      final weekday = weekdays[(local.weekday - 1) % 7];
-      return '$weekday ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    }
-    // 更久的日志显示日期和时间
-    else {
-      return '${local.month}-${local.day} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    }
-  }
-
   // 显示过滤对话框
   void _showFilterDialog() {
     showModalBottomSheet(
@@ -816,7 +799,7 @@ class _LogsPageState extends State<LogsPage> {
 
   // 构建过滤底部表
   Widget _buildFilterBottomSheet() {
-    final theme = Theme.of(context);    // 过滤状态
+    final theme = Theme.of(context); // 过滤状态
     late UnifiedLogLevel? tempFilterLevel = _filterLevel;
     String? tempFilterSource = _filterSource;
 
@@ -878,7 +861,8 @@ class _LogsPageState extends State<LogsPage> {
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8.0,
-                      runSpacing: 8.0,                      children:
+                      runSpacing: 8.0,
+                      children:
                           UnifiedLogLevel.values
                               .where(
                                 (level) => level != UnifiedLogLevel.none,
@@ -982,7 +966,8 @@ class _LogsPageState extends State<LogsPage> {
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('取消'),
-              ),              TextButton(
+              ),
+              TextButton(
                 onPressed: () {
                   final logService = Provider.of<UnifiedLogService>(
                     context,
@@ -998,7 +983,8 @@ class _LogsPageState extends State<LogsPage> {
                 child: const Text('仅清除内存日志'),
               ),
               FilledButton(
-                onPressed: () async {                  // 在异步操作前获取所需的 context 相关服务和对象
+                onPressed: () async {
+                  // 在异步操作前获取所需的 context 相关服务和对象
                   final navigator = Navigator.of(context);
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
                   final logService = Provider.of<UnifiedLogService>(

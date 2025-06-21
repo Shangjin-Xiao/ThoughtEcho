@@ -7,6 +7,7 @@ import '../services/ai_analysis_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
+import '../utils/time_utils.dart';
 
 /// AI 分析历史记录页面
 class AIAnalysisHistoryPage extends StatefulWidget {
@@ -228,7 +229,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'AI分析记录 · ${_formatDate(analysis.createdAt)}',
+                              'AI分析记录 · ${TimeUtils.formatDateFromIso(analysis.createdAt)}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -328,7 +329,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                                   ),
                                 ),
                               Text(
-                                '创建时间: ${_formatDateTime(analysis.createdAt)}',
+                                '创建时间: ${TimeUtils.formatDateTimeFromIso(analysis.createdAt)}',
                                 style: TextStyle(
                                   color:
                                       Theme.of(
@@ -349,26 +350,6 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         );
       },
     );
-  }
-
-  /// 格式化日期（只显示日期部分）
-  String _formatDate(String isoDate) {
-    try {
-      final date = DateTime.parse(isoDate);
-      return '${date.year}年${date.month}月${date.day}日';
-    } catch (e) {
-      return isoDate;
-    }
-  }
-
-  /// 格式化日期时间（显示完整的日期和时间）
-  String _formatDateTime(String isoDate) {
-    try {
-      final date = DateTime.parse(isoDate);
-      return '${date.year}年${date.month}月${date.day}日 ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return isoDate;
-    }
   }
 
   /// 获取分析类型的中文名称
@@ -554,7 +535,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          _formatDate(analysis.createdAt),
+                          TimeUtils.formatDateFromIso(analysis.createdAt),
                           style: theme.textTheme.bodySmall,
                         ),
                       ],

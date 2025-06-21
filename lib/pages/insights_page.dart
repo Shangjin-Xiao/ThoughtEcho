@@ -153,7 +153,7 @@ class _InsightsPageState extends State<InsightsPage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('保存分析失败: $e'), 
+          content: Text('保存分析失败: $e'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 2),
         ),
@@ -221,9 +221,13 @@ class _InsightsPageState extends State<InsightsPage>
   Future<void> _generateInsights() async {
     final aiService = context.read<AIService>();
     if (!aiService.hasValidApiKey()) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先在设置中配置 API Key')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('请先在设置中配置 API Key'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
     if (!mounted) return;

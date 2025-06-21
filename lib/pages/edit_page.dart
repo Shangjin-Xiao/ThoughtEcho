@@ -927,7 +927,11 @@ class EditPageState extends State<EditPage> {
                                   } catch (e) {
                                     if (!context.mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('AI分析失败: $e')),
+                                      SnackBar(
+                                        content: Text('AI分析失败: $e'),
+                                        duration: const Duration(seconds: 2),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
                                     );
                                   }
                                 },

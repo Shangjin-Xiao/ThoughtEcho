@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:geocode/geocode.dart';
 import 'package:geolocator/geolocator.dart';

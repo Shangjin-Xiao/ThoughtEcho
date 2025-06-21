@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 void main() async {
@@ -34,7 +35,7 @@ void main() async {
 
         // 检查是否已经有导入
         if (content.contains(importStatement)) {
-          print('$filePath already has the import');
+          developer.log('$filePath already has the import');
           continue;
         }
 
@@ -59,14 +60,14 @@ void main() async {
 
         // 写回文件
         await file.writeAsString(lines.join('\n'));
-        print('Fixed imports for: $filePath');
+        developer.log('Fixed imports for: $filePath');
       } else {
-        print('File not found: $filePath');
+        developer.log('File not found: $filePath');
       }
     } catch (e) {
-      print('Error processing $filePath: $e');
+      developer.log('Error processing $filePath: $e');
     }
   }
 
-  print('Import fixing completed!');
+  developer.log('Import fixing completed!');
 }

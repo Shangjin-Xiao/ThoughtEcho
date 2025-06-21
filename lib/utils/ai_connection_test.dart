@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../utils/ai_network_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';

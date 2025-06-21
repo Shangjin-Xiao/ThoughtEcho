@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'dio_network_utils.dart';
 import 'http_response.dart';
