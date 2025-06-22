@@ -924,42 +924,12 @@ class _HomePageState extends State<HomePage>
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30.0, sigmaY: 30.0), // 大幅增强模糊效果
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // 毛玻璃模糊效果
             child: Container(
               decoration: BoxDecoration(
-                // 多层次毛玻璃效果
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    theme.colorScheme.surface.withValues(alpha: 0.4), // 更透明
-                    theme.colorScheme.surface.withValues(alpha: 0.6), // 渐变更自然
-                    theme.colorScheme.surface.withValues(alpha: 0.8), // 底部稍微不透明
-                  ],
-                  stops: const [0.0, 0.5, 1.0], // 渐变控制点
-                ),
-                // 添加亮色边框增强玻璃效果
-                border: Border(
-                  top: BorderSide(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                    width: 1.0,
-                  ),
-                ),
-                boxShadow: [
-                  // 多层阴影增强立体感
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.25),
-                    blurRadius: 30,
-                    offset: const Offset(0, -8),
-                    spreadRadius: -2,
-                  ),
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 50,
-                    offset: const Offset(0, -15),
-                    spreadRadius: -5,
-                  ),
-                ],
+                color: theme.colorScheme.surface.withValues(
+                  alpha: 0.8,
+                ), // 半透明背景
               ),
               child: NavigationBar(
                 selectedIndex: _currentIndex,
@@ -969,98 +939,36 @@ class _HomePageState extends State<HomePage>
                 elevation: 0,
                 backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
                 surfaceTintColor: Colors.transparent, // 移除表面着色
-                // 增强选中指示器效果
-                indicatorColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.15,
-                ),
-                indicatorShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 destinations: [
                   NavigationDestination(
-                    icon: Icon(
-                      Icons.home_outlined,
-                      color:
-                          _currentIndex == 0
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                    ),
-                    selectedIcon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.home, color: theme.colorScheme.primary),
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: Icon(
+                      Icons.home,
+                      color: theme.colorScheme.primary,
                     ),
                     label: '首页',
                   ),
                   NavigationDestination(
-                    icon: Icon(
-                      Icons.book_outlined,
-                      color:
-                          _currentIndex == 1
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                    ),
-                    selectedIcon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.book, color: theme.colorScheme.primary),
+                    icon: const Icon(Icons.book_outlined),
+                    selectedIcon: Icon(
+                      Icons.book,
+                      color: theme.colorScheme.primary,
                     ),
                     label: '记录',
                   ),
                   NavigationDestination(
-                    icon: Icon(
-                      Icons.auto_awesome_outlined,
-                      color:
-                          _currentIndex == 2
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                    ),
-                    selectedIcon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.auto_awesome,
-                        color: theme.colorScheme.primary,
-                      ),
+                    icon: const Icon(Icons.auto_awesome_outlined),
+                    selectedIcon: Icon(
+                      Icons.auto_awesome,
+                      color: theme.colorScheme.primary,
                     ),
                     label: 'AI',
                   ),
                   NavigationDestination(
-                    icon: Icon(
-                      Icons.settings_outlined,
-                      color:
-                          _currentIndex == 3
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                    ),
-                    selectedIcon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.settings,
-                        color: theme.colorScheme.primary,
-                      ),
+                    icon: const Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(
+                      Icons.settings,
+                      color: theme.colorScheme.primary,
                     ),
                     label: '设置',
                   ),

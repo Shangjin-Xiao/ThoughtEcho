@@ -119,6 +119,8 @@ class LogService with ChangeNotifier {
 
   // 标志位，防止重复调度 postFrameCallback
   bool _notifyScheduled = false;
+  Timer? _notificationTimer;
+  static const Duration _notifyDebounceDuration = Duration(milliseconds: 100);
 
   /// 单例模式访问
   static LogService get instance {
@@ -207,16 +209,7 @@ class LogService with ChangeNotifier {
         loadedLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _memoryLogs = loadedLogs;
 
-        if (!_notifyScheduled) {
-          _notifyScheduled = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (hasListeners) {
-              // 检查是否仍有监听器
-              notifyListeners();
-            }
-            _notifyScheduled = false; // 重置标志位
-          });
-        }
+        _scheduleNotification();
         logDebug('从数据库加载了 ${_memoryLogs.length} 条日志');
       }
     } catch (e) {
@@ -249,16 +242,21 @@ class LogService with ChangeNotifier {
     // 不再使用 logDebug 或 print，避免递归问题
 
     // 延迟通知监听器，避免在 build 方法中直接调用
-    if (!_notifyScheduled) {
-      _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (hasListeners) {
-          // 检查是否仍有监听器
-          notifyListeners();
-        }
-        _notifyScheduled = false; // 重置标志位
-      });
+    _scheduleNotification();
+  }
+
+  /// 调度通知监听器，实现防抖
+  void _scheduleNotification() {
+    if (_notificationTimer?.isActive ?? false) {
+      _notificationTimer!.cancel();
     }
+    _notificationTimer = Timer(_notifyDebounceDuration, () {
+      if (hasListeners) {
+        notifyListeners();
+      }
+      _notifyScheduled = false; // 重置标志位
+    });
+    _notifyScheduled = true;
   }
 
   /// 将待处理的日志保存到数据库
@@ -311,15 +309,7 @@ class LogService with ChangeNotifier {
       }
 
       // 级别更改也需要通知，同样延迟处理
-      if (!_notifyScheduled) {
-        _notifyScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (hasListeners) {
-            notifyListeners();
-          }
-          _notifyScheduled = false;
-        });
-      }
+      _scheduleNotification();
     }
   }
 
