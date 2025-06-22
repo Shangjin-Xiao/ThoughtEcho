@@ -100,9 +100,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   final currentDialogContext = dialogContext;
 
                   // 在异步操作前获取 ScaffoldMessengerState 和 NavigatorState 实例
-                  final settingsScaffoldMessenger = ScaffoldMessenger.of(settingsContext);
+                  final settingsScaffoldMessenger = ScaffoldMessenger.of(
+                    settingsContext,
+                  );
                   final settingsNavigator = Navigator.of(settingsContext);
-                  final currentDialogNavigator = Navigator.of(currentDialogContext);
+                  final currentDialogNavigator = Navigator.of(
+                    currentDialogContext,
+                  );
 
                   // 显示加载指示器（使用 settings page 的 context）
                   showDialog(
@@ -135,7 +139,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (!settingsContext.mounted) return;
                       // 根据 weatherService 的状态显示成功或失败提示
                       if (weatherService.currentWeather != '天气数据获取失败') {
-                        settingsScaffoldMessenger.showSnackBar(const SnackBar(content: Text('天气已更新')));
+                        settingsScaffoldMessenger.showSnackBar(
+                          const SnackBar(content: Text('天气已更新')),
+                        );
                       } else {
                         settingsScaffoldMessenger.showSnackBar(
                           const SnackBar(content: Text('天气更新失败，请稍后重试')),
@@ -213,28 +219,29 @@ class _SettingsPageState extends State<SettingsPage> {
                 _showAIAnnualReport();
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'native',
-                child: Row(
-                  children: [
-                    Icon(Icons.bar_chart),
-                    SizedBox(width: 8),
-                    Text('原生数据报告'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'ai',
-                child: Row(
-                  children: [
-                    Icon(Icons.psychology),
-                    SizedBox(width: 8),
-                    Text('AI 年度总结'),
-                  ],
-                ),
-              ),
-            ],
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'native',
+                    child: Row(
+                      children: [
+                        Icon(Icons.bar_chart),
+                        SizedBox(width: 8),
+                        Text('原生数据报告'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'ai',
+                    child: Row(
+                      children: [
+                        Icon(Icons.psychology),
+                        SizedBox(width: 8),
+                        Text('AI 年度总结'),
+                      ],
+                    ),
+                  ),
+                ],
           ),
         ],
       ),
@@ -295,7 +302,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (!mounted) return; // Add this check
                       if (!serviceEnabled) {
                         if (mounted) {
-                          final currentContext = context; // Capture context before async gap
+                          final currentContext =
+                              context; // Capture context before async gap
                           showDialog(
                             context: currentContext,
                             builder:
@@ -306,12 +314,14 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(currentContext),
+                                      onPressed:
+                                          () => Navigator.pop(currentContext),
                                       child: const Text('取消'),
                                     ),
                                     TextButton(
                                       onPressed: () async {
-                                        if (!currentContext.mounted) return; // Check mounted before pop
+                                        if (!currentContext.mounted)
+                                          return; // Check mounted before pop
                                         Navigator.pop(currentContext);
                                         await Geolocator.openLocationSettings();
                                         if (!mounted) return; // Add this check
@@ -464,7 +474,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                           ),
                                         );
                                       } else if (context.mounted) {
-                                        final currentScaffoldMessenger = ScaffoldMessenger.of(context);
+                                        final currentScaffoldMessenger =
+                                            ScaffoldMessenger.of(context);
                                         currentScaffoldMessenger.showSnackBar(
                                           const SnackBar(
                                             content: Text('天气更新失败，请稍后重试'),
@@ -473,7 +484,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                       }
                                     } else {
                                       if (!context.mounted) return;
-                                      final currentScaffoldMessenger = ScaffoldMessenger.of(context);
+                                      final currentScaffoldMessenger =
+                                          ScaffoldMessenger.of(context);
                                       currentScaffoldMessenger.showSnackBar(
                                         const SnackBar(
                                           content: Text('无法获取位置信息以刷新天气'),
@@ -836,32 +848,35 @@ class _SettingsPageState extends State<SettingsPage> {
   /// 显示原生年度报告
   Future<void> _showNativeAnnualReport() async {
     try {
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
       final quotes = await databaseService.getUserQuotes();
       final currentYear = DateTime.now().year;
-      
-      final thisYearQuotes = quotes.where((quote) {
-        final quoteDate = DateTime.parse(quote.date);
-        return quoteDate.year == currentYear;
-      }).toList();
+
+      final thisYearQuotes =
+          quotes.where((quote) {
+            final quoteDate = DateTime.parse(quote.date);
+            return quoteDate.year == currentYear;
+          }).toList();
 
       if (mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AnnualReportPage(
-              year: currentYear,
-              quotes: thisYearQuotes,
-            ),
+            builder:
+                (context) =>
+                    AnnualReportPage(year: currentYear, quotes: thisYearQuotes),
           ),
         );
       }
     } catch (e) {
       AppLogger.e('显示原生年度报告失败', error: e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('生成年度报告失败')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('生成年度报告失败')));
       }
     }
   }
@@ -869,39 +884,48 @@ class _SettingsPageState extends State<SettingsPage> {
   /// 显示AI年度报告
   Future<void> _showAIAnnualReport() async {
     try {
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
       final quotes = await databaseService.getUserQuotes();
       final currentYear = DateTime.now().year;
-      
-      final thisYearQuotes = quotes.where((quote) {
-        final quoteDate = DateTime.parse(quote.date);
-        return quoteDate.year == currentYear;
-      }).toList();
+
+      final thisYearQuotes =
+          quotes.where((quote) {
+            final quoteDate = DateTime.parse(quote.date);
+            return quoteDate.year == currentYear;
+          }).toList();
 
       if (mounted) {
         // 显示加载对话框
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
-            content: Row(
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 16),
-                Text('正在生成AI年度报告...'),
-              ],
-            ),
-          ),
+          builder:
+              (context) => const AlertDialog(
+                content: Row(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(width: 16),
+                    Text('正在生成AI年度报告...'),
+                  ],
+                ),
+              ),
         );
 
         try {
           final aiService = Provider.of<AIService>(context, listen: false);
-          
+
           // 准备数据摘要
           final totalNotes = thisYearQuotes.length;
-          final totalWords = thisYearQuotes.fold<int>(0, (sum, quote) => sum + quote.content.length);
-          final averageWordsPerNote = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
-          
+          final totalWords = thisYearQuotes.fold<int>(
+            0,
+            (sum, quote) => sum + quote.content.length,
+          );
+          final averageWordsPerNote =
+              totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
+
           // 获取标签统计
           final Map<String, int> tagCounts = {};
           for (final quote in thisYearQuotes) {
@@ -909,12 +933,28 @@ class _SettingsPageState extends State<SettingsPage> {
               tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
             }
           }
-          
+
           // 获取积极的笔记内容示例
-          final positiveKeywords = ['成长', '学习', '进步', '成功', '快乐', '感谢', '收获', '突破', '希望'];
-          final positiveQuotes = thisYearQuotes.where((quote) =>
-            positiveKeywords.any((keyword) => quote.content.contains(keyword))
-          ).take(5).map((quote) => quote.content).join('\n');
+          final positiveKeywords = [
+            '成长',
+            '学习',
+            '进步',
+            '成功',
+            '快乐',
+            '感谢',
+            '收获',
+            '突破',
+            '希望',
+          ];
+          final positiveQuotes = thisYearQuotes
+              .where(
+                (quote) => positiveKeywords.any(
+                  (keyword) => quote.content.contains(keyword),
+                ),
+              )
+              .take(5)
+              .map((quote) => quote.content)
+              .join('\n');
 
           final prompt = '''
 你是一个年度报告生成助手。请基于以下用户的笔记数据，生成一份温暖、积极、有意义的年度总结报告。
@@ -947,10 +987,11 @@ $positiveQuotes
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => AIAnnualReportWebView(
-                  htmlContent: result,
-                  year: currentYear,
-                ),
+                builder:
+                    (context) => AIAnnualReportWebView(
+                      htmlContent: result,
+                      year: currentYear,
+                    ),
               ),
             );
           }
@@ -958,18 +999,18 @@ $positiveQuotes
           Navigator.pop(context); // 关闭加载对话框
           AppLogger.e('生成AI年度报告失败', error: e);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('生成AI年度报告失败')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('生成AI年度报告失败')));
           }
         }
       }
     } catch (e) {
       AppLogger.e('显示AI年度报告失败', error: e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('获取数据失败')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('获取数据失败')));
       }
     }
   }
