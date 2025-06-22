@@ -1302,20 +1302,13 @@ class DatabaseService extends ChangeNotifier {
       );
       logDebug('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
 
-      // 清除缓存，确保数据刷新
-      _quotesCache.clear();
-      _currentQuotes.clear();
-      _filterCache.clear();
+      // 直接添加到当前列表并通知
+      _currentQuotes.insert(0, quote); // 假设最新笔记显示在顶部
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add(List.from(_currentQuotes));
+      }
+      notifyListeners(); // 通知其他监听者（如Homepage的FAB）
 
-      notifyListeners();
-
-      // 确保刷新流和UI
-      _refreshQuotesStream();
-
-      // 延迟再次通知以确保UI更新
-      Future.delayed(const Duration(milliseconds: 200), () {
-        notifyListeners();
-      });
     } catch (e) {
       logDebug('保存笔记到数据库时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
@@ -1536,8 +1529,12 @@ class DatabaseService extends ChangeNotifier {
     }
     final db = database;
     await db.delete('quotes', where: 'id = ?', whereArgs: [id]);
+    // 直接从内存中移除并通知
+    _currentQuotes.removeWhere((quote) => quote.id == id);
+    if (_quotesController != null && !_quotesController!.isClosed) {
+      _quotesController!.add(List.from(_currentQuotes));
+    }
     notifyListeners();
-    _refreshQuotesStream();
   }
 
   /// 更新笔记内容
@@ -1613,8 +1610,16 @@ class DatabaseService extends ChangeNotifier {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       logDebug('笔记已成功更新，ID: ${quote.id}');
-      notifyListeners();
-      _refreshQuotesStream(); // 更新流
+
+      // 更新内存中的笔记列表
+      final index = _currentQuotes.indexWhere((q) => q.id == quote.id);
+      if (index != -1) {
+        _currentQuotes[index] = quote;
+      }
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add(List.from(_currentQuotes));
+      }
+      notifyListeners(); // 通知其他监听者
     } catch (e) {
       logDebug('更新笔记时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
@@ -1874,11 +1879,15 @@ class DatabaseService extends ChangeNotifier {
     String? categoryId,
     String? searchQuery,
     String orderBy = 'date DESC',
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
   }) {
     final tagKey = tagIds?.join(',') ?? '';
     final categoryKey = categoryId ?? '';
     final searchKey = searchQuery ?? '';
-    return '$tagKey|$categoryKey|$searchKey|$orderBy';
+    final weatherKey = selectedWeathers?.join(',') ?? '';
+    final dayPeriodKey = selectedDayPeriods?.join(',') ?? '';
+    return '$tagKey|$categoryKey|$searchKey|$orderBy|$weatherKey|$dayPeriodKey';
   }
 
   // 从缓存中获取数据，如果有的话

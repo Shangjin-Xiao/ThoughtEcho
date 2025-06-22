@@ -59,9 +59,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('无法打开链接: $url')));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(SnackBar(content: Text('无法打开链接: $url')));
     }
   }
   // --- 启动 URL 辅助函数结束 ---
@@ -94,6 +93,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   // 获取 dialog 的 context，用于关闭 dialog
                   final currentDialogContext = dialogContext;
 
+                  // 在异步操作前获取 ScaffoldMessengerState 和 NavigatorState 实例
+                  final settingsScaffoldMessenger = ScaffoldMessenger.of(settingsContext);
+                  final settingsNavigator = Navigator.of(settingsContext);
+                  final currentDialogNavigator = Navigator.of(currentDialogContext);
+
                   // 显示加载指示器（使用 settings page 的 context）
                   showDialog(
                     context: settingsContext,
@@ -125,17 +129,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (!settingsContext.mounted) return;
                       // 根据 weatherService 的状态显示成功或失败提示
                       if (weatherService.currentWeather != '天气数据获取失败') {
-                        ScaffoldMessenger.of(
-                          settingsContext,
-                        ).showSnackBar(const SnackBar(content: Text('天气已更新')));
+                        settingsScaffoldMessenger.showSnackBar(const SnackBar(content: Text('天气已更新')));
                       } else {
-                        ScaffoldMessenger.of(settingsContext).showSnackBar(
+                        settingsScaffoldMessenger.showSnackBar(
                           const SnackBar(content: Text('天气更新失败，请稍后重试')),
                         );
                       }
                     } else {
                       if (!settingsContext.mounted) return;
-                      ScaffoldMessenger.of(settingsContext).showSnackBar(
+                      settingsScaffoldMessenger.showSnackBar(
                         const SnackBar(content: Text('无法获取选中城市的位置信息')),
                       );
                     }
@@ -151,25 +153,29 @@ class _SettingsPageState extends State<SettingsPage> {
                             locationService.getFormattedLocation();
                       });
                     }
-                    ScaffoldMessenger.of(settingsContext).showSnackBar(
+                    settingsScaffoldMessenger.showSnackBar(
                       SnackBar(content: Text('已选择城市: ${cityInfo.name}')),
                     );
 
                     // 5. 关闭加载指示器（使用 settings page context）
-                    Navigator.pop(settingsContext);
+                    if (settingsContext.mounted) {
+                      settingsNavigator.pop();
+                    }
                     // 6. 关闭城市搜索对话框（使用 dialog context）
-                    Navigator.pop(currentDialogContext);
+                    if (currentDialogContext.mounted) {
+                      currentDialogNavigator.pop();
+                    }
                   } catch (e) {
                     // 捕获 setSelectedCity 或 getWeatherData 中的错误
                     // 检查 settings page 是否仍然 mounted
                     if (!settingsContext.mounted) return;
                     // 关闭加载指示器（如果它仍然存在）
                     try {
-                      Navigator.pop(settingsContext);
+                      settingsNavigator.pop();
                     } catch (_) {
                       // 忽略导航栈问题
                     }
-                    ScaffoldMessenger.of(settingsContext).showSnackBar(
+                    settingsScaffoldMessenger.showSnackBar(
                       SnackBar(content: Text('处理城市选择时出错: ${e.toString()}')),
                     );
                     // 不需要关闭 dialogContext，因为错误发生在 dialog 内部的操作中
@@ -243,11 +249,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       bool serviceEnabled =
                           await Geolocator.isLocationServiceEnabled();
-                      if (!mounted) return;
+                      if (!mounted) return; // Add this check
                       if (!serviceEnabled) {
                         if (mounted) {
+                          final currentContext = context; // Capture context before async gap
                           showDialog(
-                            context: context,
+                            context: currentContext,
                             builder:
                                 (context) => AlertDialog(
                                   title: const Text('请启用位置服务'),
@@ -256,15 +263,15 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context),
+                                      onPressed: () => Navigator.pop(currentContext),
                                       child: const Text('取消'),
                                     ),
                                     TextButton(
                                       onPressed: () async {
-                                        if (!mounted) return;
-                                        Navigator.pop(context);
-                                        // 在可能导致上下文无效的异步操作前保存上下文
+                                        if (!currentContext.mounted) return; // Check mounted before pop
+                                        Navigator.pop(currentContext);
                                         await Geolocator.openLocationSettings();
+                                        if (!mounted) return; // Add this check
                                       },
                                       child: const Text('去设置'),
                                     ),
@@ -285,8 +292,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       }
                       final position =
                           await locationService.getCurrentLocation();
-                      if (!mounted) return;
-                      if (position != null && mounted) {
+                      if (!mounted) return; // Add this check
+                      if (position != null) {
+                        // Removed extra mounted check here, as context is already checked above
                         await weatherService.getWeatherData(
                           position.latitude,
                           position.longitude,
@@ -413,18 +421,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                           ),
                                         );
                                       } else if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        final currentScaffoldMessenger = ScaffoldMessenger.of(context);
+                                        currentScaffoldMessenger.showSnackBar(
                                           const SnackBar(
                                             content: Text('天气更新失败，请稍后重试'),
                                           ),
                                         );
                                       }
                                     } else {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
+                                      if (!context.mounted) return;
+                                      final currentScaffoldMessenger = ScaffoldMessenger.of(context);
+                                      currentScaffoldMessenger.showSnackBar(
                                         const SnackBar(
                                           content: Text('无法获取位置信息以刷新天气'),
                                         ),
