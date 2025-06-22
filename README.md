@@ -50,6 +50,11 @@
       <td align="center"><b>💾 数据备份与恢复</b><br>保护你的宝贵想法</td>
       <td align="center"><b>✨ AI 洞察</b><br>智能分析笔记内容 (开发中)</td>
     </tr>
+    <tr>
+      <td align="center"><b>🔍 自然语言搜索</b><br>智能搜索笔记内容 (规划中)</td>
+      <td align="center"><b>📊 数据报告</b><br>周/月/年度笔记统计 (规划中)</td>
+      <td align="center"><b>更多功能</b><br>持续开发中...</td>
+    </tr>
   </table>
 </div>
 
@@ -137,14 +142,17 @@
       <td>
         • 富文本编辑与预览<br>
         • AI分析功能增强<br>
-        • 高级数据可视化
+        • 高级数据可视化<br>
+        • 自然语言搜索笔记<br>
+        • 周/月/年度笔记报告
       </td>
       <td>
         • UI、功能高度自定义<br>
         • 离线AI分析能力<br>
         • 多设备实时同步<br>
         • 地图选点添加位置<br>
-        • 桌面端独立应用
+        • 桌面端独立应用<br>
+        • 高级数据分析与洞察
       </td>
     </tr>
   </table>
@@ -182,6 +190,11 @@
       <td align="center"><b>💬 Hitokoto Integration</b><br>Display quotes with type filtering</td>
       <td align="center"><b>💾 Data Backup & Restore</b><br>Protect your valuable ideas</td>
       <td align="center"><b>✨ AI Insights</b><br>Smart note analysis (WIP)</td>
+    </tr>
+    <tr>
+      <td align="center"><b>🔍 Natural Language Search</b><br>Intelligently search note content (Planned)</td>
+      <td align="center"><b>📊 Data Reports</b><br>Weekly/Monthly/Annual statistics (Planned)</td>
+      <td align="center"><b>More Features</b><br>Continuously developing...</td>
     </tr>
   </table>
 </div>
@@ -265,12 +278,15 @@
         • Markdown editing & preview<br>
         • Image & file support<br>
         • AI feature enhancement<br>
-        • Deep UI customization
+        • Deep UI customization<br>
+        • Natural language note search<br>
+        • Weekly/Monthly/Annual reports
       </td>
       <td>
         • Local AI analysis<br>
         • Code refactoring<br>
-        • Cloud sync (to be evaluated)
+        • Cloud sync (to be evaluated)<br>
+        • Advanced data analysis & insights
       </td>
     </tr>
   </table>
