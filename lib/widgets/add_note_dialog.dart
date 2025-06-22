@@ -1228,8 +1228,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     return FutureBuilder<List<NoteCategory>>(
       future: _tagFuture, // 使用最新的标签数据Future
       builder: (context, snapshot) {
-        // 优先使用最新加载的标签数据，如果为空则使用传入的标签数据
-        final tags = snapshot.data ?? widget.tags;
+        // 优先使用最新加载的标签数据，如果为空则使用空列表，避免使用旧的widget.tags
+        final tags = snapshot.data ?? [];
 
         return Container(
           margin: const EdgeInsets.only(top: 8),

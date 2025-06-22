@@ -393,14 +393,7 @@ class _HomePageState extends State<HomePage>
                   allTags: _tags,
                 ),
           ),
-        ).then((value) {
-          if (value == true) {
-            // 编辑成功后强制刷新列表
-            if (_noteListViewKey.currentState != null) {
-              _noteListViewKey.currentState!.resetAndLoad();
-            }
-          }
-        });
+        );
       } catch (e) {
         // 显示错误信息
         if (mounted) {
