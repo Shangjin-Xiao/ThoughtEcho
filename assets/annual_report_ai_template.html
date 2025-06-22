@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 {{YEAR}} 年度报告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+        .container { max-width: 375px; margin: 0 auto; background: white; min-height: 100vh; }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 40px 20px; text-align: center; position: relative; overflow: hidden;
+        }
+        .year { font-size: 48px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .subtitle { font-size: 18px; opacity: 0.9; margin-bottom: 20px; }
+        .stats-overview { display: flex; justify-content: space-around; margin-top: 20px; }
+        .stat-item { text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; display: block; }
+        .stat-label { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+        .section { padding: 30px 20px; border-bottom: 1px solid #f0f0f0; }
+        .section:last-child { border-bottom: none; }
+        .section-title { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #333; display: flex; align-items: center; }
+        .section-icon { margin-right: 10px; font-size: 24px; }
+        .highlight-card {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 16px; padding: 20px; margin: 15px 0; color: white; text-align: center;
+            box-shadow: 0 8px 32px rgba(255, 154, 158, 0.3);
+        }
+        .highlight-number { font-size: 36px; font-weight: bold; margin-bottom: 8px; }
+        .highlight-text { font-size: 16px; opacity: 0.9; }
+        .chart-container { background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 15px 0; text-align: center; }
+        .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #555; }
+        .month-chart { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
+        .month-item {
+            text-align: center; padding: 10px 5px; border-radius: 8px; background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .month-name { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .month-count { font-size: 18px; font-weight: bold; color: #667eea; }
+        .tag-cloud { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .tag {
+            background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+            padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500;
+        }
+        .tag.popular { font-size: 16px; padding: 10px 20px; }
+        .insight-box {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 12px; padding: 20px; margin: 15px 0; border-left: 4px solid #ff6b6b;
+        }
+        .insight-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #333; }
+        .insight-text { font-size: 14px; line-height: 1.6; color: #555; }
+        .quote-card {
+            background: white; border-radius: 12px; padding: 20px; margin: 15px 0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-left: 4px solid #667eea;
+        }
+        .quote-content { font-size: 16px; line-height: 1.6; margin-bottom: 10px; font-style: italic; color: #444; }
+        .quote-date { font-size: 12px; color: #888; text-align: right; }
+        .achievement-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .achievement {
+            background: white; border-radius: 12px; padding: 20px; text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        .achievement-icon { font-size: 30px; margin-bottom: 10px; }
+        .achievement-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        .achievement-desc { font-size: 12px; color: #666; }
+        .footer { background: #f8f9fa; padding: 30px 20px; text-align: center; }
+        .footer-text { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .footer-logo { font-size: 20px; font-weight: bold; color: #667eea; }
+        .growth-indicator {
+            display: inline-flex; align-items: center; background: #e8f5e8; color: #2e7d2e;
+            padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 8px;
+        }
+        .growth-indicator::before { content: '↗'; margin-right: 4px; }
+        @media (max-width: 375px) { .container { max-width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="year">{{YEAR}}</div>
+            <div class="subtitle">我的思考轨迹</div>
+            <div class="stats-overview">
+                <div class="stat-item">
+                    <span class="stat-number">{{ACTIVE_DAYS}}</span>
+                    <div class="stat-label">记录天数</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{TOTAL_NOTES}}</span>
+                    <div class="stat-label">总笔记数</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{TOTAL_TAGS}}</span>
+                    <div class="stat-label">使用标签</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 总体数据 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">📊</span>
+                年度数据概览
+            </div>
+            
+            <div class="highlight-card">
+                <div class="highlight-number">{{TOTAL_NOTES}}</div>
+                <div class="highlight-text">
+                    今年共记录了 {{TOTAL_NOTES}} 条笔记
+                    <span class="growth-indicator">{{GROWTH_PERCENTAGE}}</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">月度笔记数量</div>
+                <div class="month-chart">
+                    {{MONTHLY_CHART}}
+                </div>
+            </div>
+        </div>
+
+        <!-- 标签分析 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">🏷️</span>
+                标签使用分析
+            </div>
+            
+            <div class="insight-box">
+                <div class="insight-title">最活跃的思考领域</div>
+                <div class="insight-text">
+                    {{TAG_INSIGHT}}
+                </div>
+            </div>
+
+            <div class="tag-cloud">
+                {{TAG_CLOUD}}
+            </div>
+        </div>
+
+        <!-- 写作习惯 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">⏰</span>
+                写作习惯分析
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">最活跃的记录时间</div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <div style="font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                        {{PEAK_TIME}}
+                    </div>
+                    <div style="font-size: 14px; color: #666;">
+                        {{PEAK_TIME_DESC}}
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-box">
+                <div class="insight-title">写作偏好发现</div>
+                <div class="insight-text">
+                    {{WRITING_HABITS}}
+                </div>
+            </div>
+        </div>
+
+        <!-- 精彩回顾 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">✨</span>
+                年度精彩回顾
+            </div>
+            
+            {{FEATURED_QUOTES}}
+        </div>
+
+        <!-- 成就解锁 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">🏆</span>
+                成就解锁
+            </div>
+            
+            <div class="achievement-grid">
+                {{ACHIEVEMENTS}}
+            </div>
+        </div>
+
+        <!-- 未来展望 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">🚀</span>
+                {{NEXT_YEAR}} 年展望
+            </div>
+            
+            <div class="insight-box">
+                <div class="insight-title">基于你的记录习惯建议</div>
+                <div class="insight-text">
+                    {{FUTURE_SUGGESTIONS}}
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            <div class="footer-text">
+                感谢你与心迹一起记录美好的 {{YEAR}} 年
+            </div>
+            <div class="footer-text">
+                继续在 {{NEXT_YEAR}} 年捕捉每一个珍贵的想法 ✨
+            </div>
+            <div class="footer-logo">心迹 ThoughtEcho</div>
+        </div>
+    </div>
+</body>
+</html>

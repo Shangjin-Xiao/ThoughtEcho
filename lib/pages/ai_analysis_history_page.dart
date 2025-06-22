@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/ai_analysis_model.dart';
 import '../services/ai_analysis_database_service.dart';
+import '../services/database_service.dart';
+import '../services/ai_service.dart';
+import '../models/quote_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
-import '../utils/time_utils.dart';
+import '../utils/app_logger.dart';
+import 'ai_annual_report_webview.dart';
+import 'annual_report_page.dart';
 
 /// AI 分析历史记录页面
 class AIAnalysisHistoryPage extends StatefulWidget {
@@ -48,595 +52,589 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
 
     try {
       final analyses = await _aiAnalysisDatabaseService.getAllAnalyses();
-      setState(() {
-        _analyses = analyses;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('加载分析历史记录失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _analyses = analyses;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.e('加载AI分析历史失败', error: e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
-  /// 搜索分析历史记录
-  Future<void> _searchAnalyses() async {
+  /// 搜索分析记录
+  List<AIAnalysis> _searchAnalyses() {
     if (_searchQuery.isEmpty) {
-      _loadAnalyses();
-      return;
+      return _analyses;
     }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final analyses = await _aiAnalysisDatabaseService.searchAnalyses(
-        _searchQuery,
-      );
-      setState(() {
-        _analyses = analyses;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('搜索分析记录失败: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
+    return _analyses.where((analysis) {
+      return analysis.content.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          analysis.title.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
   }
 
-  /// 删除单个分析记录
+  /// 删除分析记录
   Future<void> _deleteAnalysis(AIAnalysis analysis) async {
-    // 确认删除对话框
-    final bool? confirm = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('确定要删除此分析记录吗？此操作不可撤销。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('删除', style: TextStyle(color: Colors.red)),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条分析记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
-    if (confirm != true) return;
-
-    try {
-      final success = await _aiAnalysisDatabaseService.deleteAnalysis(
-        analysis.id!,
-      );
-
-      if (success && mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('分析记录已删除')));
-        _loadAnalyses(); // 重新加载列表
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
-        );
+    if (confirmed == true) {
+      try {
+        await _aiAnalysisDatabaseService.deleteAnalysis(analysis.id!);
+        _loadAnalyses();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除成功')),
+          );
+        }
+      } catch (e) {
+        AppLogger.e('删除分析记录失败', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除失败')),
+          );
+        }
       }
     }
   }
 
-  /// 清空所有分析记录
+  /// 删除所有分析记录
   Future<void> _deleteAllAnalyses() async {
-    // 确认删除对话框
-    final bool? confirm = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除全部'),
-            content: const Text('确定要删除所有AI分析记录吗？此操作不可撤销。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('全部删除', style: TextStyle(color: Colors.red)),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除所有分析记录吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
-    if (confirm != true) return;
-
-    try {
-      final success = await _aiAnalysisDatabaseService.deleteAllAnalyses();
-
-      if (success && mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('所有分析记录已删除')));
-        _loadAnalyses(); // 重新加载列表
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
-        );
+    if (confirmed == true) {
+      try {
+        for (final analysis in _analyses) {
+          if (analysis.id != null) {
+            await _aiAnalysisDatabaseService.deleteAnalysis(analysis.id!);
+          }
+        }
+        _loadAnalyses();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('所有记录已删除')),
+          );
+        }
+      } catch (e) {
+        AppLogger.e('删除所有分析记录失败', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除失败')),
+          );
+        }
       }
     }
   }
 
-  /// 显示分析详情
+  /// 查看分析详情
   void _viewAnalysisDetails(AIAnalysis analysis) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // 这使得底部表可以占据更多的屏幕空间
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.85, // 初始高度为屏幕的85%
-          minChildSize: 0.5, // 最小高度为屏幕的50%
-          maxChildSize: 0.95, // 最大高度为屏幕的95%
-          expand: false,
-          builder: (_, scrollController) {
-            return Column(
-              children: [
-                // 顶部拖动条
-                Container(
-                  width: 40,
-                  height: 5,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.5),
-                  ),
-                ),
-                // 标题栏
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              analysis.title,
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'AI分析记录 · ${TimeUtils.formatDateFromIso(analysis.createdAt)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.copy),
-                        tooltip: '复制内容',
-                        onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(text: analysis.content),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('内容已复制到剪贴板')),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        tooltip: '删除',
-                        onPressed: () {
-                          Navigator.pop(context); // 先关闭底部表
-                          _deleteAnalysis(analysis);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(),
-                // 内容区域
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 使用Markdown组件显示内容
-                        MarkdownBody(
-                          data: analysis.content,
-                          selectable: true,
-                          styleSheet: MarkdownStyleSheet.fromTheme(
-                            Theme.of(context),
-                          ).copyWith(p: Theme.of(context).textTheme.bodyMedium),
-                        ),
-                        const SizedBox(height: 16),
-                        // 元数据
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '分析信息',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onSecondaryContainer,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '类型: ${_getAnalysisTypeName(analysis.analysisType)}',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onSecondaryContainer,
-                                ),
-                              ),
-                              Text(
-                                '风格: ${_getAnalysisStyleName(analysis.analysisStyle)}',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onSecondaryContainer,
-                                ),
-                              ),
-                              if (analysis.quoteCount != null)
-                                Text(
-                                  '分析笔记数量: ${analysis.quoteCount}',
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(
-                                          context,
-                                        ).colorScheme.onSecondaryContainer,
-                                  ),
-                                ),
-                              Text(
-                                '创建时间: ${TimeUtils.formatDateTimeFromIso(analysis.createdAt)}',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onSecondaryContainer,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'AI分析详情',
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '分析时间',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      analysis.createdAt,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '分析内容',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        analysis.content,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'AI分析结果',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: MarkdownBody(
+                        data: analysis.title,
+                        styleSheet: MarkdownStyleSheet(
+                          p: Theme.of(context).textTheme.bodyMedium,
+                          h1: Theme.of(context).textTheme.titleLarge,
+                          h2: Theme.of(context).textTheme.titleMedium,
+                          h3: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// 获取分析类型的中文名称
-  String _getAnalysisTypeName(String type) {
-    switch (type) {
-      case 'comprehensive':
-        return '全面分析';
-      case 'emotional':
-        return '情感洞察';
-      case 'mindmap':
-        return '思维导图';
-      case 'growth':
-        return '成长建议';
-      case 'custom':
-        return '自定义分析';
-      default:
-        return type;
-    }
-  }
-
-  /// 获取分析风格的中文名称
-  String _getAnalysisStyleName(String style) {
-    switch (style) {
-      case 'professional':
-        return '专业分析';
-      case 'friendly':
-        return '友好导师';
-      case 'humorous':
-        return '风趣幽默';
-      case 'literary':
-        return '文学风格';
-      default:
-        return style;
-    }
-  }
-
-  /// 获取分析类型的图标
+  /// 获取分析类型图标
   IconData _getAnalysisTypeIcon(String type) {
     switch (type) {
       case 'emotional':
-        return Icons.mood;
+        return Icons.sentiment_satisfied;
+      case 'comprehensive':
+        return Icons.analytics;
       case 'mindmap':
         return Icons.account_tree;
       case 'growth':
         return Icons.trending_up;
-      case 'comprehensive':
-        return Icons.all_inclusive;
-      case 'custom':
-        return Icons.auto_awesome;
       default:
-        return Icons.analytics;
+        return Icons.psychology;
     }
+  }
+
+  /// 获取分析类型名称
+  String _getAnalysisTypeName(String type) {
+    switch (type) {
+      case 'emotional':
+        return '情感分析';
+      case 'comprehensive':
+        return '综合分析';
+      case 'mindmap':
+        return '思维导图';
+      case 'growth':
+        return '成长分析';
+      default:
+        return 'AI分析';
+    }
+  }
+
+  /// 生成年度报告
+  Future<void> _generateAnnualReport() async {
+    try {
+      // 显示选择对话框
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('选择年度报告类型'),
+          content: const Text('请选择要生成的年度报告类型：'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'ai'),
+              child: const Text('AI 生成报告'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'flutter'),
+              child: const Text('原生 Flutter 报告'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == null) return;
+
+      // 获取今年的笔记数据
+      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final quotes = await databaseService.getUserQuotes();
+      final currentYear = DateTime.now().year;
+      
+      final thisYearQuotes = quotes.where((quote) {
+        final quoteDate = DateTime.parse(quote.date);
+        return quoteDate.year == currentYear;
+      }).toList();
+
+      if (choice == 'ai') {
+        await _generateAIAnnualReport(thisYearQuotes, currentYear);
+      } else {
+        await _generateFlutterAnnualReport(thisYearQuotes, currentYear);
+      }
+    } catch (e) {
+      AppLogger.e('生成年度报告失败', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('生成年度报告失败')),
+        );
+      }
+    }
+  }
+
+  /// 生成AI年度报告
+  Future<void> _generateAIAnnualReport(List<Quote> quotes, int year) async {
+    if (!mounted) return;
+
+    // 显示加载对话框
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在生成AI年度报告...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final aiService = Provider.of<AIService>(context, listen: false);
+      
+      // 准备数据摘要
+      final totalNotes = quotes.length;
+      final totalWords = quotes.fold<int>(0, (sum, quote) => sum + quote.content.length);
+      final averageWordsPerNote = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
+      
+      // 获取标签统计
+      final Map<String, int> tagCounts = {};
+      for (final quote in quotes) {
+        for (final tagId in quote.tagIds) {
+          tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
+        }
+      }
+      
+      // 获取积极的笔记内容示例（避免消极内容）
+      final positiveKeywords = ['成长', '学习', '进步', '成功', '快乐', '感谢', '收获', '突破', '希望'];
+      final positiveQuotes = quotes.where((quote) =>
+        positiveKeywords.any((keyword) => quote.content.contains(keyword))
+      ).take(5).map((quote) => quote.content).join('\n');
+
+      final prompt = '''
+你是一个年度报告生成助手。请基于以下用户的笔记数据，生成一份温暖、积极、有意义的年度总结报告。
+
+用户数据：
+- 年份：$year
+- 总笔记数：$totalNotes 篇
+- 总字数：$totalWords 字
+- 平均每篇字数：$averageWordsPerNote 字
+- 主要标签：${tagCounts.keys.take(5).join(', ')}
+
+部分积极内容示例：
+$positiveQuotes
+
+请参考我提供的HTML模板结构，生成一份完整的HTML年度报告。要求：
+1. 保持模板的美观设计和响应式布局
+2. 用真实数据替换模板中的示例数据
+3. 在精彩回顾部分，只选择积极、正面、有成长意义的内容
+4. 生成鼓励性的洞察和建议
+5. 保持语气温暖、积极向上
+6. 确保HTML在移动端浏览器中能正常显示
+
+请直接返回完整的HTML代码，不需要其他说明。
+''';
+
+      final result = await aiService.analyzeSource(prompt);
+      Navigator.pop(context); // 关闭加载对话框
+
+      if (mounted && result.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AIAnnualReportWebView(
+              htmlContent: result,
+              year: year,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // 关闭加载对话框
+      AppLogger.e('生成AI年度报告失败', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('生成AI年度报告失败')),
+        );
+      }
+    }
+  }
+
+  /// 生成Flutter年度报告
+  Future<void> _generateFlutterAnnualReport(List<Quote> quotes, int year) async {
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AnnualReportPage(
+          year: year,
+          quotes: quotes,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final filteredAnalyses = _searchAnalyses();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI分析历史'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: '清空历史',
-            onPressed: _analyses.isEmpty ? null : _deleteAllAnalyses,
+            onPressed: _generateAnnualReport,
+            icon: const Icon(Icons.analytics),
+            tooltip: '年度报告',
           ),
+          if (_analyses.isNotEmpty)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'delete_all') {
+                  _deleteAllAnalyses();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_sweep),
+                      SizedBox(width: 8),
+                      Text('清空记录'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
       body: Column(
         children: [
           // 搜索栏
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '搜索分析内容',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon:
-                    _searchQuery.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear),
+          if (_analyses.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: '搜索分析记录...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
                           onPressed: () {
-                            _searchController.clear();
                             setState(() {
+                              _searchController.clear();
                               _searchQuery = '';
                             });
                             _loadAnalyses();
                           },
+                          icon: const Icon(Icons.clear),
                         )
-                        : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.colorScheme.outline),
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  ),
                 ),
-                filled: true,
-                fillColor: theme.colorScheme.surface,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                  if (value.isEmpty) {
+                    _loadAnalyses();
+                  } else {
+                    _searchAnalyses();
+                  }
+                },
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-                if (value.isEmpty) {
-                  _loadAnalyses();
-                }
-              },
-              onSubmitted: (_) => _searchAnalyses(),
             ),
-          ),
 
-          // 内容列表
+          // 内容区域
           Expanded(
-            child:
-                _isLoading
-                    ? const AppLoadingView()
-                    : _analyses.isEmpty
-                    ? const AppEmptyView(
-                      svgAsset: 'assets/empty/empty_state.svg',
-                      text: '没有找到AI分析历史记录\n可以在"AI洞察"页面生成并保存分析',
-                    )
-                    : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      itemCount: _analyses.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final analysis = _analyses[index];
-                        return _buildAnalysisCard(analysis, theme);
-                      },
-                    ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 构建分析记录卡片
-  Widget _buildAnalysisCard(AIAnalysis analysis, ThemeData theme) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5),
-      ),
-      child: InkWell(
-        onTap: () => _viewAnalysisDetails(analysis),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 标题和图标
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _getAnalysisTypeIcon(analysis.analysisType),
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          analysis.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          TimeUtils.formatDateFromIso(analysis.createdAt),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(AppTheme.dialogRadius),
-                          ),
-                        ),
-                        builder: (context) {
-                          return SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ListTile(
-                                  leading: const Icon(Icons.copy),
-                                  title: const Text('复制内容'),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    Clipboard.setData(
-                                      ClipboardData(text: analysis.content),
-                                    );
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('内容已复制到剪贴板'),
+            child: _isLoading
+                ? const AppLoadingView()
+                : filteredAnalyses.isEmpty
+                    ? AppEmptyView(
+                        svgAsset: 'assets/empty/empty_state.svg',
+                        text: _analyses.isEmpty ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！' : '未找到匹配的记录\n尝试使用其他关键词搜索',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredAnalyses.length,
+                        itemBuilder: (context, index) {
+                          final analysis = filteredAnalyses[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                            ),
+                            child: InkWell(
+                              onTap: () => _viewAnalysisDetails(analysis),
+                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          _getAnalysisTypeIcon(analysis.analysisType),
+                                          size: 20,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _getAnalysisTypeName(analysis.analysisType),
+                                            style: Theme.of(context).textTheme.titleMedium,
+                                          ),
+                                        ),
+                                        Text(
+                                          analysis.createdAt,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.6),
+                                          ),
+                                        ),
+                                        PopupMenuButton<String>(
+                                          onSelected: (value) {
+                                            if (value == 'delete') {
+                                              _deleteAnalysis(analysis);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.delete, size: 16),
+                                                  SizedBox(width: 8),
+                                                  Text('删除'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      analysis.content,
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surfaceVariant,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                    );
-                                  },
+                                      child: Text(
+                                        analysis.title,
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                ListTile(
-                                  leading: const Icon(Icons.delete_outline),
-                                  title: const Text('删除'),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    _deleteAnalysis(analysis);
-                                  },
-                                ),
-                              ],
+                              ),
                             ),
                           );
                         },
-                      );
-                    },
-                  ),
-                ],
-              ),
-
-              // 内容预览
-              Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: Text(
-                  analysis.content.replaceAll(
-                    RegExp(r'#+ |==+|--+|\*\*|__'),
-                    '',
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-
-              // 底部标签
-              Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
                       ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        _getAnalysisTypeName(analysis.analysisType),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (analysis.quoteCount != null)
-                      Text(
-                        '包含${analysis.quoteCount}条笔记',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                  ],
-                ),
-              ),
-            ],
           ),
-        ),
+        ],
       ),
     );
   }

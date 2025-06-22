@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 2024 年度报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 375px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .year {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .stats-overview {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .section {
+            padding: 30px 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-icon {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 15px 0;
+            color: white;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(255, 154, 158, 0.3);
+        }
+
+        .highlight-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .highlight-text {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .month-chart {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .month-item {
+            text-align: center;
+            padding: 10px 5px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .month-name {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .month-count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .tag.popular {
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+
+        .insight-box {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .insight-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .insight-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .quote-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            position: relative;
+        }
+
+        .quote-content {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+            font-style: italic;
+            color: #444;
+        }
+
+        .quote-date {
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+        }
+
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .achievement {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .achievement-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .achievement-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .achievement-desc {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .footer-logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .growth-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: #e8f5e8;
+            color: #2e7d2e;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .growth-indicator::before {
+            content: '↗';
+            margin-right: 4px;
+        }
+
+        @media (max-width: 375px) {
+            .container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-content">
+                <div class="year">2024</div>
+                <div class="subtitle">我的思考轨迹</div>
+                <div class="stats-overview">
+                    <div class="stat-item">
+                        <span class="stat-number">365</span>
+                        <div class="stat-label">记录天数</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">1,247</span>
+                        <div class="stat-label">总笔记数</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">89</span>
+                        <div class="stat-label">使用标签</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 总体数据 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">📊</span>
+                年度数据概览
+            </div>
+            
+            <div class="highlight-card">
+                <div class="highlight-number">1,247</div>
+                <div class="highlight-text">
+                    今年共记录了 1,247 条笔记
+                    <span class="growth-indicator">+23%</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">月度笔记数量</div>
+                <div class="month-chart">
+                    <div class="month-item">
+                        <div class="month-name">1月</div>
+                        <div class="month-count">98</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">2月</div>
+                        <div class="month-count">87</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">3月</div>
+                        <div class="month-count">145</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">4月</div>
+                        <div class="month-count">132</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">5月</div>
+                        <div class="month-count">156</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">6月</div>
+                        <div class="month-count">143</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">7月</div>
+                        <div class="month-count">129</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">8月</div>
+                        <div class="month-count">118</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">9月</div>
+                        <div class="month-count">102</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">10月</div>
+                        <div class="month-count">95</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">11月</div>
+                        <div class="month-count">124</div>
+                    </div>
+                    <div class="month-item">
+                        <div class="month-name">12月</div>
+                        <div class="month-count">118</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 标签分析 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">🏷️</span>
+                标签使用分析
+            </div>
+            
+            <div class="insight-box">
+                <div class="insight-title">最活跃的思考领域</div>
+                <div class="insight-text">
+                    今年你在"个人成长"和"工作思考"方面投入了最多精力，共记录了 342 条相关笔记。
+                </div>
+            </div>
+
+            <div class="tag-cloud">
+                <span class="tag popular">个人成长</span>
+                <span class="tag popular">工作思考</span>
+                <span class="tag">读书笔记</span>
+                <span class="tag">技术学习</span>
+                <span class="tag">生活感悟</span>
+                <span class="tag">项目规划</span>
+                <span class="tag">健康管理</span>
+                <span class="tag">人际关系</span>
+                <span class="tag">创意想法</span>
+                <span class="tag">目标计划</span>
+            </div>
+        </div>
+
+        <!-- 写作习惯 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">⏰</span>
+                写作习惯分析
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">最活跃的记录时间</div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <div style="font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                        晚上 9-11点
+                    </div>
+                    <div style="font-size: 14px; color: #666;">
+                        你在这个时间段记录了 35% 的笔记
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-box">
+                <div class="insight-title">写作偏好发现</div>
+                <div class="insight-text">
+                    你更喜欢在安静的夜晚整理一天的思考。平均每篇笔记长度为 156 字，说明你善于用简洁的语言捕捉核心想法。
+                </div>
+            </div>
+        </div>
+
+        <!-- 精彩回顾 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">✨</span>
+                年度精彩回顾
+            </div>
+            
+            <div class="quote-card">
+                <div class="quote-content">
+                    "今天意识到，真正的成长不在于追求完美，而在于接受不完美的自己，然后一点点变得更好。每一个小小的进步都值得庆祝。"
+                </div>
+                <div class="quote-date">2024年3月15日</div>
+            </div>
+
+            <div class="quote-card">
+                <div class="quote-content">
+                    "读完《深度工作》后深有感触。决定每天给自己安排2小时的专注时间，远离手机和干扰。第一周的效果就很明显，思路更清晰了。"
+                </div>
+                <div class="quote-date">2024年6月8日</div>
+            </div>
+
+            <div class="quote-card">
+                <div class="quote-content">
+                    "今天和朋友聊天时突然明白，倾听是一种珍贵的能力。当我们真正用心听别人说话时，不仅能帮助他们，也会让自己学到很多。"
+                </div>
+                <div class="quote-date">2024年9月22日</div>
+            </div>
+        </div>
+
+        <!-- 成就解锁 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">🏆</span>
+                成就解锁
+            </div>
+            
+            <div class="achievement-grid">
+                <div class="achievement">
+                    <div class="achievement-icon">🔥</div>
+                    <div class="achievement-title">连续记录达人</div>
+                    <div class="achievement-desc">连续记录 127 天</div>
+                </div>
+                <div class="achievement">
+                    <div class="achievement-icon">📚</div>
+                    <div class="achievement-title">深度思考者</div>
+                    <div class="achievement-desc">单篇超过 500 字的笔记 23 篇</div>
+                </div>
+                <div class="achievement">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="achievement-title">标签大师</div>
+                    <div class="achievement-desc">使用了 89 个不同标签</div>
+                </div>
+                <div class="achievement">
+                    <div class="achievement-icon">🌟</div>
+                    <div class="achievement-title">灵感收集家</div>
+                    <div class="achievement-desc">记录了 1,247 个想法</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 未来展望 -->
+        <div class="section">
+            <div class="section-title">
+                <span class="section-icon">🚀</span>
+                2025 年展望
+            </div>
+            
+            <div class="insight-box">
+                <div class="insight-title">基于你的记录习惯建议</div>
+                <div class="insight-text">
+                    根据你今年的记录模式，建议 2025 年可以尝试：
+                    <br>• 每周设置一个深度思考时间
+                    <br>• 尝试用图片和语音丰富笔记内容  
+                    <br>• 定期回顾和整理过往笔记
+                    <br>• 与朋友分享有价值的思考
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            <div class="footer-text">
+                感谢你与心迹一起记录美好的 2024 年
+            </div>
+            <div class="footer-text">
+                继续在 2025 年捕捉每一个珍贵的想法 ✨
+            </div>
+            <div class="footer-logo">心迹 ThoughtEcho</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:geolocator/geolocator.dart'; // 确保导入 geolocator
-import '../services/clipboard_service.dart'; // 添加剪贴板服务导入
-import '../services/settings_service.dart'; // 添加设置服务导入
+import 'package:geolocator/geolocator.dart';
+import '../services/clipboard_service.dart';
+import '../services/settings_service.dart';
+import '../services/database_service.dart';
+import '../services/ai_service.dart';
+import '../models/quote_model.dart';
+import '../utils/app_logger.dart';
 import 'ai_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
-import 'logs_settings_page.dart'; // 导入新的日志设置页面
-import '../services/location_service.dart'; // 包含 CityInfo 定义
+import 'logs_settings_page.dart';
+import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
 import 'category_settings_page.dart';
+import 'annual_report_page.dart';
+import 'ai_annual_report_webview.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -194,7 +200,44 @@ class _SettingsPageState extends State<SettingsPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(
+        title: const Text('设置'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.analytics_outlined),
+            tooltip: '年度报告',
+            onSelected: (value) {
+              if (value == 'native') {
+                _showNativeAnnualReport();
+              } else if (value == 'ai') {
+                _showAIAnnualReport();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'native',
+                child: Row(
+                  children: [
+                    Icon(Icons.bar_chart),
+                    SizedBox(width: 8),
+                    Text('原生数据报告'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'ai',
+                child: Row(
+                  children: [
+                    Icon(Icons.psychology),
+                    SizedBox(width: 8),
+                    Text('AI 年度总结'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: ListView(
         children: [
           // 位置和天气设置 Card
@@ -788,5 +831,146 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       },
     );
+  }
+
+  /// 显示原生年度报告
+  Future<void> _showNativeAnnualReport() async {
+    try {
+      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final quotes = await databaseService.getUserQuotes();
+      final currentYear = DateTime.now().year;
+      
+      final thisYearQuotes = quotes.where((quote) {
+        final quoteDate = DateTime.parse(quote.date);
+        return quoteDate.year == currentYear;
+      }).toList();
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnnualReportPage(
+              year: currentYear,
+              quotes: thisYearQuotes,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.e('显示原生年度报告失败', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('生成年度报告失败')),
+        );
+      }
+    }
+  }
+
+  /// 显示AI年度报告
+  Future<void> _showAIAnnualReport() async {
+    try {
+      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final quotes = await databaseService.getUserQuotes();
+      final currentYear = DateTime.now().year;
+      
+      final thisYearQuotes = quotes.where((quote) {
+        final quoteDate = DateTime.parse(quote.date);
+        return quoteDate.year == currentYear;
+      }).toList();
+
+      if (mounted) {
+        // 显示加载对话框
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('正在生成AI年度报告...'),
+              ],
+            ),
+          ),
+        );
+
+        try {
+          final aiService = Provider.of<AIService>(context, listen: false);
+          
+          // 准备数据摘要
+          final totalNotes = thisYearQuotes.length;
+          final totalWords = thisYearQuotes.fold<int>(0, (sum, quote) => sum + quote.content.length);
+          final averageWordsPerNote = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
+          
+          // 获取标签统计
+          final Map<String, int> tagCounts = {};
+          for (final quote in thisYearQuotes) {
+            for (final tagId in quote.tagIds) {
+              tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
+            }
+          }
+          
+          // 获取积极的笔记内容示例
+          final positiveKeywords = ['成长', '学习', '进步', '成功', '快乐', '感谢', '收获', '突破', '希望'];
+          final positiveQuotes = thisYearQuotes.where((quote) =>
+            positiveKeywords.any((keyword) => quote.content.contains(keyword))
+          ).take(5).map((quote) => quote.content).join('\n');
+
+          final prompt = '''
+你是一个年度报告生成助手。请基于以下用户的笔记数据，生成一份温暖、积极、有意义的年度总结报告。
+
+用户数据：
+- 年份：$currentYear
+- 总笔记数：$totalNotes 篇
+- 总字数：$totalWords 字
+- 平均每篇字数：$averageWordsPerNote 字
+- 主要标签：${tagCounts.keys.take(5).join(', ')}
+
+部分积极内容示例：
+$positiveQuotes
+
+请参考我提供的HTML模板结构，生成一份完整的HTML年度报告。要求：
+1. 保持模板的美观设计和响应式布局
+2. 用真实数据替换模板中的示例数据
+3. 在精彩回顾部分，只选择积极、正面、有成长意义的内容
+4. 生成鼓励性的洞察和建议
+5. 保持语气温暖、积极向上
+6. 确保HTML在移动端浏览器中能正常显示
+
+请直接返回完整的HTML代码，不需要其他说明。
+''';
+
+          final result = await aiService.analyzeSource(prompt);
+          Navigator.pop(context); // 关闭加载对话框
+
+          if (mounted && result.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AIAnnualReportWebView(
+                  htmlContent: result,
+                  year: currentYear,
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          Navigator.pop(context); // 关闭加载对话框
+          AppLogger.e('生成AI年度报告失败', error: e);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('生成AI年度报告失败')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.e('显示AI年度报告失败', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('获取数据失败')),
+        );
+      }
+    }
   }
 }

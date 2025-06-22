@@ -957,7 +957,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AI 设置')),
+      appBar: AppBar(
+        title: const Text('AI 设置'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            tooltip: '年度报告',
+            onPressed: () {
+              Navigator.of(context).pushNamed('/ai_analysis_history');
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
