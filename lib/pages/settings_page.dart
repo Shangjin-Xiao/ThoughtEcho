@@ -6,7 +6,6 @@ import '../services/clipboard_service.dart';
 import '../services/settings_service.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
-import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 import 'ai_settings_page.dart';
 import 'hitokoto_settings_page.dart';
@@ -16,6 +15,7 @@ import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
+import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
 import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
@@ -73,130 +73,51 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // 显示城市搜索对话框
   void _showCitySearchDialog(BuildContext context) {
-    // listen: false 因为我们只调用方法，不监听变化
     final locationService = Provider.of<LocationService>(
       context,
       listen: false,
     );
     final weatherService = Provider.of<WeatherService>(context, listen: false);
 
+    // 创建天气搜索控制器
+    final weatherController = WeatherSearchController(
+      locationService,
+      weatherService,
+    );
+
     showDialog(
       context: context,
       builder:
-          (dialogContext) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              width: MediaQuery.of(context).size.width * 0.9,
-              padding: const EdgeInsets.all(8.0),
-              child: CitySearchWidget(
-                initialCity: locationService.city,
-                onCitySelected: (cityInfo) async {
-                  // 获取 settings page 的 context，用于显示加载和关闭对话框
-                  final settingsContext = context;
-                  // 获取 dialog 的 context，用于关闭 dialog
-                  final currentDialogContext = dialogContext;
-
-                  // 在异步操作前获取 ScaffoldMessengerState 和 NavigatorState 实例
-                  final settingsScaffoldMessenger = ScaffoldMessenger.of(
-                    settingsContext,
-                  );
-                  final settingsNavigator = Navigator.of(settingsContext);
-                  final currentDialogNavigator = Navigator.of(
-                    currentDialogContext,
-                  );
-
-                  // 显示加载指示器（使用 settings page 的 context）
-                  showDialog(
-                    context: settingsContext,
-                    barrierDismissible: false,
-                    builder:
-                        (context) =>
-                            const Center(child: CircularProgressIndicator()),
-                  );
-
-                  try {
-                    // 1. 设置城市信息
-                    await locationService.setSelectedCity(cityInfo);
-
-                    // 2. 获取更新后的位置
-                    final position = locationService.currentPosition;
-
-                    // 3. 如果位置有效，获取天气
-                    if (position != null) {
-                      await weatherService
-                          .getWeatherData(position.latitude, position.longitude)
-                          .timeout(
-                            const Duration(seconds: 20), // 天气获取总超时20秒
-                            onTimeout: () {
-                              throw Exception('天气获取超时，请稍后重试');
-                            },
-                          );
-
-                      // 检查 settings page 是否仍然 mounted
-                      if (!settingsContext.mounted) return;
-                      // 根据 weatherService 的状态显示成功或失败提示
-                      if (weatherService.currentWeather != '天气数据获取失败') {
-                        settingsScaffoldMessenger.showSnackBar(
-                          const SnackBar(content: Text('天气已更新')),
-                        );
-                      } else {
-                        settingsScaffoldMessenger.showSnackBar(
-                          const SnackBar(content: Text('天气更新失败，请稍后重试')),
-                        );
-                      }
-                    } else {
-                      if (!settingsContext.mounted) return;
-                      settingsScaffoldMessenger.showSnackBar(
-                        const SnackBar(content: Text('无法获取选中城市的位置信息')),
-                      );
-                    }
-
-                    // 4. 更新 SettingsPage 的状态
-                    // 检查 settings page 是否仍然 mounted
-                    if (!settingsContext.mounted) return;
-                    // 使用 _SettingsPageState 的 setState
+          (dialogContext) => ChangeNotifierProvider.value(
+            value: weatherController,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                width: MediaQuery.of(context).size.width * 0.9,
+                padding: const EdgeInsets.all(8.0),
+                child: CitySearchWidget(
+                  weatherController: weatherController,
+                  initialCity: locationService.city,
+                  onSuccess: () {
+                    // 刷新设置页面的状态
                     if (mounted) {
-                      // Check if _SettingsPageState is mounted
                       setState(() {
                         _locationController.text =
                             locationService.getFormattedLocation();
                       });
                     }
-                    settingsScaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('已选择城市: ${cityInfo.name}')),
-                    );
-
-                    // 5. 关闭加载指示器（使用 settings page context）
-                    if (settingsContext.mounted) {
-                      settingsNavigator.pop();
-                    }
-                    // 6. 关闭城市搜索对话框（使用 dialog context）
-                    if (currentDialogContext.mounted) {
-                      currentDialogNavigator.pop();
-                    }
-                  } catch (e) {
-                    // 捕获 setSelectedCity 或 getWeatherData 中的错误
-                    // 检查 settings page 是否仍然 mounted
-                    if (!settingsContext.mounted) return;
-                    // 关闭加载指示器（如果它仍然存在）
-                    try {
-                      settingsNavigator.pop();
-                    } catch (_) {
-                      // 忽略导航栈问题
-                    }
-                    settingsScaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('处理城市选择时出错: ${e.toString()}')),
-                    );
-                    // 不需要关闭 dialogContext，因为错误发生在 dialog 内部的操作中
-                  }
-                },
+                  },
+                ),
               ),
             ),
           ),
-    );
+    ).then((_) {
+      // 对话框关闭后，释放控制器
+      weatherController.dispose();
+    });
   }
 
   @override
