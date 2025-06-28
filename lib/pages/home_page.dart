@@ -19,6 +19,7 @@ import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
 import '../utils/app_logger.dart';
+import '../utils/daily_prompt_generator.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -83,6 +84,24 @@ class _HomePageState extends State<HomePage>
       String? weather = weatherService.currentWeather;
       String? temperature = weatherService.temperature;
 
+      // 检查是否有AI配置，如果没有则使用本地生成的提示
+      if (!aiService.hasValidApiKey()) {
+        // 使用本地的每日提示生成器
+        final localPrompt = DailyPromptGenerator.generatePromptBasedOnContext(
+          city: city,
+          weather: weather,
+          temperature: temperature,
+        );
+
+        if (mounted) {
+          setState(() {
+            _accumulatedPromptText = localPrompt;
+            _isGeneratingDailyPrompt = false;
+          });
+        }
+        return;
+      }
+
       // Call the new stream method with environment context
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
         city: city,
@@ -108,21 +127,23 @@ class _HomePageState extends State<HomePage>
           }
         },
         onError: (error) {
-          // Handle errors
-          logDebug('获取每日提示流出错: $error');
+          // Handle errors - 提供降级策略
+          logDebug('获取每日提示流出错: $error，使用本地生成的提示');
           if (mounted) {
+            // 生成本地提示作为降级
+            final fallbackPrompt =
+                DailyPromptGenerator.generatePromptBasedOnContext(
+                  city: city,
+                  weather: weather,
+                  temperature: temperature,
+                );
+
             setState(() {
-              _accumulatedPromptText = '获取每日思考失败: ${error.toString()}';
+              _accumulatedPromptText = fallbackPrompt;
               _isGeneratingDailyPrompt = false; // Stop loading on error
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('获取每日提示失败: ${error.toString()}'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+
+            // 不显示错误信息，只在debug中记录，用户看到的是降级提示
           }
         },
         onDone: () {
@@ -141,34 +162,53 @@ class _HomePageState extends State<HomePage>
     } catch (e) {
       logDebug('获取每日提示失败 (setup): $e');
       if (mounted) {
+        // 使用本地生成的提示作为降级策略
+        final locationService = context.read<LocationService>();
+        final weatherService = context.read<WeatherService>();
+
+        final fallbackPrompt =
+            DailyPromptGenerator.generatePromptBasedOnContext(
+              city: locationService.city,
+              weather: weatherService.currentWeather,
+              temperature: weatherService.temperature,
+            );
+
         setState(() {
-          _accumulatedPromptText = '获取每日提示失败: ${e.toString()}';
+          _accumulatedPromptText = fallbackPrompt;
           _isGeneratingDailyPrompt = false; // Stop loading on setup error
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('获取每日提示失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+
+        // 只在debug模式下显示错误，普通用户看到降级提示即可
+        logDebug('AI提示获取失败，已使用本地生成的提示');
       }
     }
   } // --- 每日提示相关状态和逻辑结束 ---
 
-  // 统一刷新方法 - 同时刷新每日一言和每日提示
+  // 统一刷新方法 - 先刷新位置天气，再同时刷新每日一言和每日提示
   Future<void> _handleRefresh() async {
     try {
-      // 并行刷新每日一言和每日提示
+      logDebug('开始刷新：先更新位置和天气信息...');
+
+      // 第一步：重新获取位置和天气信息
+      await _refreshLocationAndWeather();
+
+      // 等待一下确保位置和天气信息已更新
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      logDebug('位置和天气信息更新完成，开始刷新内容...');
+
+      // 第二步：并行刷新每日一言和每日提示（现在有最新的位置天气信息）
       await Future.wait([
         // 刷新每日一言
         if (_dailyQuoteViewKey.currentState != null)
           _dailyQuoteViewKey.currentState!.refreshQuote(),
-        // 刷新每日提示
+        // 刷新每日提示（现在会使用最新的位置和天气信息）
         _fetchDailyPrompt(),
       ]);
+
+      logDebug('刷新完成');
     } catch (e) {
+      logDebug('刷新失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -179,6 +219,53 @@ class _HomePageState extends State<HomePage>
           ),
         );
       }
+    }
+  }
+
+  // 刷新位置和天气信息
+  Future<void> _refreshLocationAndWeather() async {
+    if (!mounted) return;
+
+    try {
+      logDebug('开始刷新位置和天气信息...');
+
+      final locationService = Provider.of<LocationService>(
+        context,
+        listen: false,
+      );
+      final weatherService = Provider.of<WeatherService>(
+        context,
+        listen: false,
+      );
+
+      // 如果有位置权限，重新获取位置和天气
+      if (locationService.hasLocationPermission &&
+          locationService.isLocationServiceEnabled) {
+        logDebug('重新获取当前位置...');
+        final position = await locationService.getCurrentLocation(
+          skipPermissionRequest: true,
+        );
+
+        if (!mounted) return;
+
+        if (position != null) {
+          logDebug('位置获取成功，开始刷新天气数据...');
+          // 强制刷新天气数据
+          await weatherService.getWeatherData(
+            position.latitude,
+            position.longitude,
+            forceRefresh: true,
+          );
+          logDebug('天气数据刷新完成: ${weatherService.currentWeather}');
+        } else {
+          logDebug('位置获取失败');
+        }
+      } else {
+        logDebug('位置权限未授予或位置服务未启用，跳过位置和天气刷新');
+      }
+    } catch (e) {
+      logDebug('刷新位置和天气信息时发生错误: $e');
+      // 不抛出异常，让调用方继续执行
     }
   }
 
@@ -197,7 +284,6 @@ class _HomePageState extends State<HomePage>
 
     // 加载标签数据
     _loadTags();
-    _initLocationAndWeather();
 
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
@@ -210,8 +296,8 @@ class _HomePageState extends State<HomePage>
       // 确保标签在应用完全初始化后加载
       _refreshTags();
 
-      // 首次加载每日提示
-      _fetchDailyPrompt(initialLoad: true);
+      // 先初始化位置和天气，然后再获取每日提示
+      _initLocationAndWeatherThenFetchPrompt();
     });
   }
 
@@ -312,39 +398,79 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  // 初始化位置和天气服务，然后获取每日提示
+  Future<void> _initLocationAndWeatherThenFetchPrompt() async {
+    try {
+      logDebug('开始初始化位置和天气服务...');
+
+      // 先初始化位置和天气
+      await _initLocationAndWeather();
+
+      // 等待位置和天气服务完全初始化
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      logDebug('位置和天气服务初始化完成，开始获取每日提示...');
+
+      // 然后获取每日提示（包含位置和天气信息）
+      await _fetchDailyPrompt(initialLoad: true);
+    } catch (e) {
+      logDebug('初始化位置天气和获取每日提示失败: $e');
+      // 即使初始化失败，也尝试获取默认提示
+      await _fetchDailyPrompt(initialLoad: true);
+    }
+  }
+
   // 初始化位置和天气服务
   Future<void> _initLocationAndWeather() async {
     if (!mounted) return;
 
-    final locationService = Provider.of<LocationService>(
-      context,
-      listen: false,
-    );
-    await locationService.init();
-
-    // 再次确保组件仍然挂载
-    if (!mounted) return;
-
-    // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
-    if (locationService.hasLocationPermission &&
-        locationService.isLocationServiceEnabled) {
-      final position = await locationService.getCurrentLocation(
-        skipPermissionRequest: true,
+    try {
+      logDebug('开始初始化位置服务...');
+      final locationService = Provider.of<LocationService>(
+        context,
+        listen: false,
       );
+      await locationService.init();
+
+      logDebug('位置服务初始化完成，权限状态: ${locationService.hasLocationPermission}');
 
       // 再次确保组件仍然挂载
       if (!mounted) return;
 
-      if (position != null) {
-        final weatherService = Provider.of<WeatherService>(
-          context,
-          listen: false,
+      // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
+      if (locationService.hasLocationPermission &&
+          locationService.isLocationServiceEnabled) {
+        logDebug('开始获取当前位置...');
+        final position = await locationService.getCurrentLocation(
+          skipPermissionRequest: true,
         );
-        await weatherService.getWeatherData(
-          position.latitude,
-          position.longitude,
-        );
+
+        // 再次确保组件仍然挂载
+        if (!mounted) return;
+
+        if (position != null) {
+          logDebug('位置获取成功: ${position.latitude}, ${position.longitude}');
+          logDebug('开始获取天气数据...');
+
+          final weatherService = Provider.of<WeatherService>(
+            context,
+            listen: false,
+          );
+          await weatherService.getWeatherData(
+            position.latitude,
+            position.longitude,
+          );
+
+          logDebug('天气数据获取完成: ${weatherService.currentWeather}');
+        } else {
+          logDebug('位置获取失败');
+        }
+      } else {
+        logDebug('位置权限未授予或位置服务未启用');
       }
+    } catch (e) {
+      logDebug('初始化位置和天气服务时发生错误: $e');
+      // 不抛出异常，让调用方继续执行
     }
   }
 
