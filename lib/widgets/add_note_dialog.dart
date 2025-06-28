@@ -483,9 +483,71 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 final allTags =
                                     await databaseService.getCategories();
 
-                                // 不再创建临时Quote对象，而是直接传递null，确保全屏编辑器使用addQuote方法
-                                // 获取当前输入的内容和元数据，但不创建Quote对象
-                                // 不传递initialQuote，这样全屏编辑器会使用addQuote逻辑
+                                // 创建包含当前元数据的临时Quote对象，确保全屏编辑器能继承所有元数据
+                                final locationService =
+                                    Provider.of<LocationService>(
+                                      context,
+                                      listen: false,
+                                    );
+                                final weatherService =
+                                    Provider.of<WeatherService>(
+                                      context,
+                                      listen: false,
+                                    );
+
+                                // 获取位置和天气信息
+                                String? currentLocation;
+                                String? currentWeather;
+                                String? currentTemperature;
+
+                                if (_includeLocation) {
+                                  currentLocation =
+                                      _originalLocation ??
+                                      locationService.getFormattedLocation();
+                                }
+
+                                if (_includeWeather) {
+                                  currentWeather =
+                                      _originalWeather ??
+                                      weatherService.currentWeather;
+                                  currentTemperature =
+                                      _originalTemperature ??
+                                      weatherService.temperature;
+                                }
+
+                                // 创建包含当前所有元数据的临时Quote对象
+                                final tempQuote = Quote(
+                                  id:
+                                      widget
+                                          .initialQuote
+                                          ?.id, // 保持原有ID（如果是编辑模式）
+                                  content: _contentController.text,
+                                  date:
+                                      widget.initialQuote?.date ??
+                                      DateTime.now().toIso8601String(),
+                                  sourceAuthor:
+                                      _authorController.text.trim().isEmpty
+                                          ? null
+                                          : _authorController.text.trim(),
+                                  sourceWork:
+                                      _workController.text.trim().isEmpty
+                                          ? null
+                                          : _workController.text.trim(),
+                                  tagIds: _selectedTagIds,
+                                  colorHex: _selectedColorHex,
+                                  location: currentLocation,
+                                  weather: currentWeather,
+                                  temperature: currentTemperature,
+                                  aiAnalysis: widget.initialQuote?.aiAnalysis,
+                                  sentiment: widget.initialQuote?.sentiment,
+                                  keywords: widget.initialQuote?.keywords,
+                                  summary: widget.initialQuote?.summary,
+                                  categoryId: widget.initialQuote?.categoryId,
+                                  editSource: widget.initialQuote?.editSource,
+                                  deltaContent:
+                                      widget.initialQuote?.deltaContent,
+                                  dayPeriod: widget.initialQuote?.dayPeriod,
+                                );
 
                                 if (!context.mounted) return;
                                 final navigator = Navigator.of(context);
@@ -496,7 +558,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                           initialContent:
                                               _contentController.text,
                                           initialQuote:
-                                              null, // 传递null而不是临时Quote对象
+                                              tempQuote, // 传递包含当前元数据的临时Quote对象
                                           allTags: allTags,
                                         ),
                                   ),
@@ -513,9 +575,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   }
                                 }
                               } catch (e) {
-                                // 使用 context.mounted 检查 Builder 的 context 是否仍然有效
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                // 使用预先获取的 scaffoldMessenger
+                                if (mounted) {
+                                  ScaffoldMessenger.of(
+                                    this.context,
+                                  ).showSnackBar(
                                     SnackBar(
                                       content: Text('打开全屏编辑器失败: $e'),
                                       backgroundColor: Colors.red,

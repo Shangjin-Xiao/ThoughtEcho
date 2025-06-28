@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
-import '../services/ai_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/icon_utils.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import '../theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import '../utils/color_utils.dart'; // Import color_utils.dart
+import '../utils/color_utils.dart';
+import '../utils/ai_dialog_helper.dart'; // 导入新的AI助手
 
 // 添加 note_full_editor_page.dart 的导入
 import '../pages/note_full_editor_page.dart';
-import '../widgets/streaming_text_dialog.dart'; // 导入流式文本对话框
 
 class EditPage extends StatefulWidget {
   final Quote quote;
@@ -33,6 +31,7 @@ class EditPageState extends State<EditPage> {
   late String _aiAnalysis;
   late List<String> _tagIds;
   late String? _colorHex;
+  late AiDialogHelper _aiDialogHelper;
 
   // 添加位置和天气相关变量
   bool _includeLocation = false;
@@ -44,6 +43,7 @@ class EditPageState extends State<EditPage> {
   @override
   void initState() {
     super.initState();
+    _aiDialogHelper = AiDialogHelper(context);
 
     // 检查是否需要跳转到全屏编辑器
     // 延迟执行，确保页面完全加载
@@ -178,355 +178,44 @@ class EditPageState extends State<EditPage> {
     }
   }
 
-  // 显示AI选项菜单
-  void _showAIOptions(BuildContext context) {
-    final theme = Theme.of(context);
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
-        ),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'AI助手',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: theme.colorScheme.outline),
-                  ListTile(
-                    leading: const Icon(Icons.text_fields),
-                    title: const Text('智能分析来源'),
-                    subtitle: const Text('分析文本中可能的作者和作品'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _analyzeSource();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.brush),
-                    title: const Text('润色文本'),
-                    subtitle: const Text('优化文本表达，使其更加流畅、优美'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _polishText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_circle_outline),
-                    title: const Text('续写内容'),
-                    subtitle: const Text('以相同的风格和语调延伸当前内容'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _continueText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.analytics),
-                    title: const Text('深度分析'),
-                    subtitle: const Text('对笔记内容进行深入分析和解读'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _analyzeContent();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  // AI 相关方法
+  void _showAIOptions() {
+    _aiDialogHelper.showAiOptions(
+      onAnalyzeSource: _analyzeSource,
+      onPolishText: _polishText,
+      onContinueText: _continueText,
+      onAnalyzeContent: _analyzeContent,
     );
   }
 
-  // 分析来源
   Future<void> _analyzeSource() async {
-    if (_contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    try {
-      // 显示加载对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在分析来源...'),
-              ],
-            ),
-          );
-        },
-      ); // 调用AI分析来源
-      final result = await aiService.analyzeSource(_contentController.text);
-
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      // 解析JSON结果
-      try {
-        final Map<String, dynamic> sourceData = json.decode(result);
-
-        String? author = sourceData['author'] as String?;
-        String? work = sourceData['work'] as String?;
-        String confidence = sourceData['confidence'] as String? ?? '低';
-        String explanation = sourceData['explanation'] as String? ?? '';
-
-        // 显示结果对话框
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (dialogContext) {
-              return AlertDialog(
-                title: Text('分析结果 (可信度: $confidence)'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (author != null && author.isNotEmpty) ...[
-                      const Text(
-                        '可能的作者:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(author),
-                      const SizedBox(height: 8),
-                    ],
-                    if (work != null && work.isNotEmpty) ...[
-                      const Text(
-                        '可能的作品:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(work),
-                      const SizedBox(height: 8),
-                    ],
-                    if (explanation.isNotEmpty) ...[
-                      const Text(
-                        '分析说明:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(explanation, style: const TextStyle(fontSize: 13)),
-                    ],
-                    if ((author == null || author.isEmpty) &&
-                        (work == null || work.isEmpty))
-                      const Text('未能识别出明确的作者或作品'),
-                  ],
-                ),
-                actions: [
-                  if ((author != null && author.isNotEmpty) ||
-                      (work != null && work.isNotEmpty))
-                    TextButton(
-                      child: const Text('应用分析结果'),
-                      onPressed: () {
-                        setState(() {
-                          if (author != null && author.isNotEmpty) {
-                            _authorController.text = author;
-                          }
-                          if (work != null && work.isNotEmpty) {
-                            _workController.text = work;
-                          }
-                        });
-                        Navigator.of(dialogContext).pop();
-                      },
-                    ),
-                  TextButton(
-                    child: const Text('关闭'),
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));
-        }
-      }
-    } catch (e) {
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
-      }
-    }
+    await _aiDialogHelper.analyzeSource(
+        _contentController, _authorController, _workController);
+    setState(() {});
   }
 
-  // 润色文本
   Future<void> _polishText() async {
-    if (_contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
-      return;
-    }
-
-    // 在异步操作前获取必要的context相关对象
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    try {
-      // 显示流式结果对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return StreamingTextDialog(
-            title: '润色结果',
-            textStream: aiService.streamPolishText(_contentController.text),
-            applyButtonText: '应用更改',
-            onApply: (polishedText) {
-              _contentController.text = polishedText;
-            },
-            onCancel: () {},
-          );
-        },
-      );
-    } catch (e) {
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(SnackBar(content: Text('润色失败: $e')));
-      }
-    }
+    await _aiDialogHelper.polishText(_contentController);
   }
 
-  // 续写文本
   Future<void> _continueText() async {
-    if (_contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    try {
-      // 显示流式结果对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return StreamingTextDialog(
-            title: '续写结果',
-            textStream: aiService.streamContinueText(_contentController.text),
-            applyButtonText: '追加到笔记',
-            onApply: (continuedText) {
-              _contentController.text += continuedText;
-            },
-            onCancel: () {},
-          );
-        },
-      );
-    } catch (e) {
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('续写失败: $e')));
-      }
-    }
+    await _aiDialogHelper.continueText(_contentController);
   }
 
-  // 深入分析内容
   Future<void> _analyzeContent() async {
-    if (_contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    try {
-      // 显示流式结果对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          final quote = Quote(
-            id: widget.quote.id,
-            content: _contentController.text,
-            date: widget.quote.date,
-            location: _includeLocation ? _location : null,
-            weather: _includeWeather ? _weather : null,
-            temperature: _includeWeather ? _temperature : null,
-          );
-          return StreamingTextDialog(
-            title: '笔记分析',
-            textStream: aiService.streamSummarizeNote(quote),
-            applyButtonText: '更新分析结果', // 或者其他合适的文本
-            onApply: (analysisResult) {
-              setState(() {
-                _aiAnalysis = analysisResult;
-              });
-            },
-            onCancel: () {},
-            isMarkdown: true, // 分析结果通常是Markdown格式
-          );
-        },
-      );
-
-      // 显示成功提示
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('分析完成')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
-      }
-    }
+    final quote = Quote(
+      id: widget.quote.id,
+      content: _contentController.text,
+      date: widget.quote.date,
+      location: _includeLocation ? _location : null,
+      weather: _includeWeather ? _weather : null,
+      temperature: _includeWeather ? _temperature : null,
+    );
+    await _aiDialogHelper.analyzeContent(quote, onFinish: (analysisResult) {
+      setState(() {
+        _aiAnalysis = analysisResult;
+      });
+    });
   }
 
   // 检查是否需要跳转到全屏编辑器
@@ -543,14 +232,33 @@ class EditPageState extends State<EditPage> {
         final allTags = await databaseService.getCategories();
 
         if (mounted) {
-          // 关闭当前页面并打开全屏编辑器
+          // 创建包含当前编辑状态的更新后的Quote对象
+          final updatedQuote = widget.quote.copyWith(
+            content: _contentController.text,
+            sourceAuthor:
+                _authorController.text.trim().isEmpty
+                    ? null
+                    : _authorController.text.trim(),
+            sourceWork:
+                _workController.text.trim().isEmpty
+                    ? null
+                    : _workController.text.trim(),
+            tagIds: _tagIds,
+            colorHex: _colorHex,
+            location: _includeLocation ? _location : null,
+            weather: _includeWeather ? _weather : null,
+            temperature: _includeWeather ? _temperature : null,
+            aiAnalysis: _aiAnalysis,
+          );
+
+          // 关闭当前页面并打开全屏编辑器，传递更新后的Quote对象
           Navigator.of(context)
               .pushReplacement(
                 MaterialPageRoute(
                   builder:
                       (context) => NoteFullEditorPage(
-                        initialContent: widget.quote.content,
-                        initialQuote: widget.quote,
+                        initialContent: _contentController.text,
+                        initialQuote: updatedQuote, // 传递包含当前编辑状态的Quote对象
                         allTags: allTags, // 传递所有标签
                       ),
                 ),
@@ -596,9 +304,7 @@ class EditPageState extends State<EditPage> {
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'AI助手',
-            onPressed: () {
-              _showAIOptions(context);
-            },
+            onPressed: _showAIOptions,
           ),
           IconButton(
             icon: const Icon(Icons.save),
@@ -896,109 +602,6 @@ class EditPageState extends State<EditPage> {
                                   p: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              ElevatedButton.icon(
-                                style: FilledButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppTheme.buttonRadius,
-                                    ),
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  try {
-                                    final aiService = Provider.of<AIService>(
-                                      context,
-                                      listen: false,
-                                    );
-                                    final summary = await aiService
-                                        .summarizeNote(
-                                          Quote(
-                                            id: widget.quote.id,
-                                            content: _contentController.text,
-                                            date: widget.quote.date,
-                                          ),
-                                        );
-                                    setState(() {
-                                      _aiAnalysis = summary;
-                                    });
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('AI分析失败: $e'),
-                                        duration: const Duration(seconds: 2),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  }
-                                },
-                                icon: const Icon(Icons.auto_awesome, size: 18),
-                                label: const Text('AI'),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.analytics),
-                                tooltip: '分析内容',
-                                onPressed: _analyzeContent,
-                              ),
-                              PopupMenuButton<String>(
-                                onSelected: (String value) {
-                                  switch (value) {
-                                    case 'polish':
-                                      _polishText();
-                                      break;
-                                    case 'continue':
-                                      _continueText();
-                                      break;
-                                    case 'source':
-                                      _analyzeSource();
-                                      break;
-                                  }
-                                },
-                                itemBuilder:
-                                    (
-                                      BuildContext context,
-                                    ) => <PopupMenuEntry<String>>[
-                                      const PopupMenuItem<String>(
-                                        value: 'polish',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.brush, size: 20),
-                                            SizedBox(width: 8),
-                                            Text('润色文本'),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem<String>(
-                                        value: 'continue',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.add_circle_outline,
-                                              size: 20,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text('续写内容'),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem<String>(
-                                        value: 'source',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.text_fields, size: 20),
-                                            SizedBox(width: 8),
-                                            Text('分析来源'),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                              ),
-                            ],
-                          ),
                         ],
                       )
                       : const SizedBox.shrink(); // 如果API未配置，则不显示AI分析部分
