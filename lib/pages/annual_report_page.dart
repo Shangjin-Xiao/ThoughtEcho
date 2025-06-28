@@ -196,7 +196,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       color:
                           _currentPage == index
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.primary.withOpacity(0.3),
+                              : theme.colorScheme.primary.withValues(alpha: 0.3),
                     ),
                   );
                 }),
@@ -287,7 +287,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     fontSize: 16,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     height: 1.4,
                   ),
                 ),

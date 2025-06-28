@@ -11,7 +11,7 @@ class AiDialogHelper {
   final AIService aiService;
 
   AiDialogHelper(this.context)
-      : aiService = Provider.of<AIService>(context, listen: false);
+    : aiService = Provider.of<AIService>(context, listen: false);
 
   // 显示AI选项菜单
   void showAiOptions({
@@ -104,9 +104,10 @@ class AiDialogHelper {
 
   // 分析来源
   Future<void> analyzeSource(
-      TextEditingController contentController,
-      TextEditingController authorController,
-      TextEditingController workController) async {
+    TextEditingController contentController,
+    TextEditingController authorController,
+    TextEditingController workController,
+  ) async {
     if (contentController.text.isEmpty) {
       _showSnackBar('请先输入内容');
       return;
@@ -119,8 +120,7 @@ class AiDialogHelper {
       if (!context.mounted) return;
       Navigator.of(context).pop(); // Close loading dialog
 
-      _showSourceAnalysisResultDialog(
-          result, authorController, workController);
+      _showSourceAnalysisResultDialog(result, authorController, workController);
     } catch (e) {
       if (!context.mounted) return;
       Navigator.of(context).pop();
@@ -146,6 +146,9 @@ class AiDialogHelper {
             applyButtonText: '应用更改',
             onApply: (polishedText) {
               contentController.text = polishedText;
+            },
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
             },
           );
         },
@@ -174,6 +177,9 @@ class AiDialogHelper {
             onApply: (continuedText) {
               contentController.text += continuedText;
             },
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
           );
         },
       );
@@ -183,8 +189,10 @@ class AiDialogHelper {
   }
 
   // 深入分析内容
-  Future<void> analyzeContent(Quote quote,
-      {required Function(String) onFinish}) async {
+  Future<void> analyzeContent(
+    Quote quote, {
+    required Function(String) onFinish,
+  }) async {
     if (quote.content.isEmpty) {
       _showSnackBar('请先输入内容');
       return;
@@ -200,6 +208,9 @@ class AiDialogHelper {
             textStream: aiService.streamSummarizeNote(quote),
             applyButtonText: '更新分析结果',
             onApply: onFinish,
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: true,
           );
         },
@@ -210,9 +221,10 @@ class AiDialogHelper {
   }
 
   void _showSourceAnalysisResultDialog(
-      String result,
-      TextEditingController authorController,
-      TextEditingController workController) {
+    String result,
+    TextEditingController authorController,
+    TextEditingController workController,
+  ) {
     try {
       final Map<String, dynamic> sourceData = json.decode(result);
       String? author = sourceData['author'] as String?;
@@ -230,20 +242,26 @@ class AiDialogHelper {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (author != null && author.isNotEmpty) ...[
-                  const Text('可能的作者:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    '可能的作者:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   Text(author),
                   const SizedBox(height: 8),
                 ],
                 if (work != null && work.isNotEmpty) ...[
-                  const Text('可能的作品:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    '可能的作品:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   Text(work),
                   const SizedBox(height: 8),
                 ],
                 if (explanation.isNotEmpty) ...[
-                  const Text('分析说明:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    '分析说明:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   Text(explanation, style: const TextStyle(fontSize: 13)),
                 ],
                 if ((author == null || author.isEmpty) &&
@@ -300,8 +318,9 @@ class AiDialogHelper {
 
   void _showSnackBar(String message) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }
