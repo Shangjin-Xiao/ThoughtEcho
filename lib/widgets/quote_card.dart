@@ -55,7 +55,9 @@ class QuoteCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
           fontStyle: FontStyle.italic,
-          color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
         ),
         textAlign: TextAlign.right,
       );
@@ -71,7 +73,9 @@ class QuoteCard extends StatelessWidget {
       style: TextStyle(
         fontSize: 14,
         fontStyle: FontStyle.italic,
-        color: Theme.of(context).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+        color: Theme.of(
+          context,
+        ).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
       ),
       textAlign: TextAlign.right,
     );

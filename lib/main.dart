@@ -23,7 +23,7 @@ import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
 import 'theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'pages/onboarding_page.dart'; // 添加引导页面导入
+import 'pages/onboarding_page.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -409,7 +409,7 @@ class MyApp extends StatelessWidget {
               showUpdateReady
                   ? const OnboardingPage(showUpdateReady: true)
                   : !hasCompletedOnboarding
-                  ? const OnboardingPage() // 如果未完成引导，显示引导页面
+                  ? const OnboardingPage() // 使用新的引导页面
                   : isEmergencyMode
                   ? const EmergencyRecoveryPage()
                   : HomePage(

@@ -558,7 +558,10 @@ class _LogsPageState extends State<LogsPage> {
                 builder: (context, logService, child) {
                   // 获取内存中的日志（实时）与历史日志
                   final memoryLogs = logService.logs.where(_filterLog).toList();
-                  final allLogs = [...memoryLogs, ..._historyLogs.where(_filterLog)];
+                  final allLogs = [
+                    ...memoryLogs,
+                    ..._historyLogs.where(_filterLog),
+                  ];
 
                   return RefreshIndicator(
                     onRefresh: _refreshLogs,
@@ -634,7 +637,8 @@ class _LogsPageState extends State<LogsPage> {
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // 日志头部（时间和级别）
                                         Row(
@@ -659,7 +663,9 @@ class _LogsPageState extends State<LogsPage> {
                                               Expanded(
                                                 child: Text(
                                                   '[${log.source}]',
-                                                  style: theme.textTheme.labelSmall
+                                                  style: theme
+                                                      .textTheme
+                                                      .labelSmall
                                                       ?.copyWith(
                                                         color: theme
                                                             .colorScheme
@@ -668,7 +674,8 @@ class _LogsPageState extends State<LogsPage> {
                                                               0.7,
                                                             ), // Use applyOpacity
                                                       ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             Text(
@@ -716,7 +723,8 @@ class _LogsPageState extends State<LogsPage> {
                                               '包含错误信息',
                                               style: theme.textTheme.bodySmall
                                                   ?.copyWith(
-                                                    color: theme.colorScheme.error,
+                                                    color:
+                                                        theme.colorScheme.error,
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
@@ -736,7 +744,10 @@ class _LogsPageState extends State<LogsPage> {
             Consumer<UnifiedLogService>(
               builder: (context, logService, child) {
                 final memoryLogs = logService.logs.where(_filterLog).toList();
-                final allLogs = [...memoryLogs, ..._historyLogs.where(_filterLog)];
+                final allLogs = [
+                  ...memoryLogs,
+                  ..._historyLogs.where(_filterLog),
+                ];
                 return Container(
                   color: theme.colorScheme.surface,
                   padding: const EdgeInsets.symmetric(

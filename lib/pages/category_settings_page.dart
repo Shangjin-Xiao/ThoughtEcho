@@ -77,14 +77,16 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               await context.read<DatabaseService>().addCategory(
                                 _categoryController.text,
                                 iconName: _selectedIconName,
-                              );                              if (!mounted) return;
+                              );
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('分类添加成功')),
                               );
                               _categoryController.clear();
                               setState(() {
                                 _selectedIconName = null;
-                              });                            } catch (e) {
+                              });
+                            } catch (e) {
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('添加分类失败：$e')),
@@ -513,7 +515,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                 final dbService = Provider.of<DatabaseService>(
                   context,
                   listen: false,
-                );                await dbService.updateCategory(
+                );
+                await dbService.updateCategory(
                   category.id,
                   newName,
                   iconName: selectedIcon,

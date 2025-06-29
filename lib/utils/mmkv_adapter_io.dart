@@ -13,31 +13,36 @@ class MMKVAdapter implements StorageAdapter {
   }
 
   @override
-  Future<bool> setString(String key, String value) async => Future.value(_mmkv.encodeString(key, value));
+  Future<bool> setString(String key, String value) async =>
+      Future.value(_mmkv.encodeString(key, value));
 
   @override
   String? getString(String key) => _mmkv.decodeString(key);
 
   @override
-  Future<bool> setInt(String key, int value) async => Future.value(_mmkv.encodeInt(key, value));
+  Future<bool> setInt(String key, int value) async =>
+      Future.value(_mmkv.encodeInt(key, value));
 
   @override
   int? getInt(String key) => _mmkv.decodeInt(key);
 
   @override
-  Future<bool> setDouble(String key, double value) async => Future.value(_mmkv.encodeDouble(key, value));
+  Future<bool> setDouble(String key, double value) async =>
+      Future.value(_mmkv.encodeDouble(key, value));
 
   @override
   double? getDouble(String key) => _mmkv.decodeDouble(key);
 
   @override
-  Future<bool> setBool(String key, bool value) async => Future.value(_mmkv.encodeBool(key, value));
+  Future<bool> setBool(String key, bool value) async =>
+      Future.value(_mmkv.encodeBool(key, value));
 
   @override
   bool? getBool(String key) => _mmkv.decodeBool(key);
 
   @override
-  Future<bool> setStringList(String key, List<String> value) async => setString(key, json.encode(value));
+  Future<bool> setStringList(String key, List<String> value) async =>
+      setString(key, json.encode(value));
 
   @override
   List<String>? getStringList(String key) {

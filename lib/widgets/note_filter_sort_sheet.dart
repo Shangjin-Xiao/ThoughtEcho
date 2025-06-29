@@ -16,8 +16,9 @@ class NoteFilterSortSheet extends StatefulWidget {
     String sortType,
     bool sortAscending,
     List<String> selectedWeathers,
-    List<String> selectedDayPeriods
-  ) onApply;
+    List<String> selectedDayPeriods,
+  )
+  onApply;
 
   const NoteFilterSortSheet({
     super.key,
@@ -52,8 +53,14 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     _tempSelectedTagIds = List.from(widget.selectedTagIds);
     _tempSortType = widget.sortType;
     _tempSortAscending = widget.sortAscending;
-    _tempSelectedWeathers = widget.selectedWeathers != null ? List.from(widget.selectedWeathers!) : <String>[];
-    _tempSelectedDayPeriods = widget.selectedDayPeriods != null ? List.from(widget.selectedDayPeriods!) : <String>[];
+    _tempSelectedWeathers =
+        widget.selectedWeathers != null
+            ? List.from(widget.selectedWeathers!)
+            : <String>[];
+    _tempSelectedDayPeriods =
+        widget.selectedDayPeriods != null
+            ? List.from(widget.selectedDayPeriods!)
+            : <String>[];
   }
 
   @override
@@ -69,45 +76,60 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('筛选与排序', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                '筛选与排序',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 20),
               Text('标签筛选', style: theme.textTheme.bodyLarge),
               Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
-                children: widget.allTags.map((tag) {
-                  final isSelected = _tempSelectedTagIds.contains(tag.id);
-                  // Use IconUtils to get the icon
-                  final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-                  final dynamic tagIcon = IconUtils.getIconData(tag.iconName); // getIconData handles null/empty and returns default
+                children:
+                    widget.allTags.map((tag) {
+                      final isSelected = _tempSelectedTagIds.contains(tag.id);
+                      // Use IconUtils to get the icon
+                      final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+                      final dynamic tagIcon = IconUtils.getIconData(
+                        tag.iconName,
+                      ); // getIconData handles null/empty and returns default
 
-                  return FilterChip(
-                    selected: isSelected,
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                          isEmoji
-                            ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
-                            // Use the IconData from IconUtils
-                            : (tagIcon is IconData) // Check if it's IconData
-                                ? Icon(tagIcon, size: 16)
-                                : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
-                        if (tag.iconName != null && tag.iconName!.isNotEmpty) const SizedBox(width: 4),
-                        Text(tag.name, style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _tempSelectedTagIds.add(tag.id);
-                        } else {
-                          _tempSelectedTagIds.remove(tag.id);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+                      return FilterChip(
+                        selected: isSelected,
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (tag.iconName != null &&
+                                tag.iconName!.isNotEmpty)
+                              isEmoji
+                                  ? Text(
+                                    tag.iconName!,
+                                    style: const TextStyle(fontSize: 16),
+                                  )
+                                  // Use the IconData from IconUtils
+                                  : (tagIcon
+                                      is IconData) // Check if it's IconData
+                                  ? Icon(tagIcon, size: 16)
+                                  : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
+                            if (tag.iconName != null &&
+                                tag.iconName!.isNotEmpty)
+                              const SizedBox(width: 4),
+                            Text(tag.name, style: theme.textTheme.bodyMedium),
+                          ],
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _tempSelectedTagIds.add(tag.id);
+                            } else {
+                              _tempSelectedTagIds.remove(tag.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 20),
               Text('天气筛选', style: theme.textTheme.bodyLarge),
@@ -118,29 +140,38 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                   ...WeatherService.weatherKeyToLabel.keys
                       .where((key) => key != 'unknown')
                       .map((weatherKey) {
-                    final isSelected = _tempSelectedWeathers.contains(weatherKey);
-                    final icon = WeatherService.getWeatherIconDataByKey(weatherKey);
-                    return FilterChip(
-                      selected: isSelected,
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(icon, size: 16),
-                          const SizedBox(width: 4),
-                          Text(WeatherService.getWeatherDescription(weatherKey), style: theme.textTheme.bodyMedium),
-                        ],
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _tempSelectedWeathers.add(weatherKey);
-                          } else {
-                            _tempSelectedWeathers.remove(weatherKey);
-                          }
-                        });
-                      },
-                    );
-                  }),
+                        final isSelected = _tempSelectedWeathers.contains(
+                          weatherKey,
+                        );
+                        final icon = WeatherService.getWeatherIconDataByKey(
+                          weatherKey,
+                        );
+                        return FilterChip(
+                          selected: isSelected,
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(icon, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                WeatherService.getWeatherDescription(
+                                  weatherKey,
+                                ),
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _tempSelectedWeathers.add(weatherKey);
+                              } else {
+                                _tempSelectedWeathers.remove(weatherKey);
+                              }
+                            });
+                          },
+                        );
+                      }),
                 ],
               ),
               const SizedBox(height: 20),
@@ -150,7 +181,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 runSpacing: 8.0,
                 children: [
                   ...TimeUtils.dayPeriodKeyToLabel.keys.map((periodKey) {
-                    final isSelected = _tempSelectedDayPeriods.contains(periodKey);
+                    final isSelected = _tempSelectedDayPeriods.contains(
+                      periodKey,
+                    );
                     final icon = TimeUtils.getDayPeriodIconByKey(periodKey);
                     return FilterChip(
                       selected: isSelected,
@@ -159,7 +192,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                         children: [
                           Icon(icon, size: 16),
                           const SizedBox(width: 4),
-                          Text(TimeUtils.getDayPeriodLabel(periodKey), style: theme.textTheme.bodyMedium),
+                          Text(
+                            TimeUtils.getDayPeriodLabel(periodKey),
+                            style: theme.textTheme.bodyMedium,
+                          ),
                         ],
                       ),
                       onSelected: (selected) {
@@ -177,16 +213,18 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               ),
               const SizedBox(height: 24),
               Text('排序方式', style: theme.textTheme.bodyLarge),
-              ..._sortTypeKeyToLabel.entries.map((entry) => RadioListTile<String>(
-                title: Text(entry.value),
-                value: entry.key,
-                groupValue: _tempSortType,
-                onChanged: (value) {
-                  setState(() {
-                    _tempSortType = value!;
-                  });
-                },
-              )),
+              ..._sortTypeKeyToLabel.entries.map(
+                (entry) => RadioListTile<String>(
+                  title: Text(entry.value),
+                  value: entry.key,
+                  groupValue: _tempSortType,
+                  onChanged: (value) {
+                    setState(() {
+                      _tempSortType = value!;
+                    });
+                  },
+                ),
+              ),
               SwitchListTile(
                 title: const Text('升序'),
                 value: _tempSortAscending,

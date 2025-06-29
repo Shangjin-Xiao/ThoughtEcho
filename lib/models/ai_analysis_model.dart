@@ -1,12 +1,12 @@
-
-
 /// AI分析结果模型
 class AIAnalysis {
   final String? id;
   final String title;
   final String content;
-  final String analysisType; // 'comprehensive', 'emotional', 'mindmap', 'growth' 或 'custom'
-  final String analysisStyle; // 'professional', 'friendly', 'humorous', 'literary'
+  final String
+  analysisType; // 'comprehensive', 'emotional', 'mindmap', 'growth' 或 'custom'
+  final String
+  analysisStyle; // 'professional', 'friendly', 'humorous', 'literary'
   final String? customPrompt; // 自定义提示词（如果使用）
   final String createdAt;
   final List<String>? relatedQuoteIds; // 相关的笔记ID列表
@@ -35,7 +35,9 @@ class AIAnalysis {
         return idsStr.split(',');
       }
       if (json['related_quote_ids'] is List) {
-        return (json['related_quote_ids'] as List).map((e) => e.toString()).toList();
+        return (json['related_quote_ids'] as List)
+            .map((e) => e.toString())
+            .toList();
       }
       return null;
     }

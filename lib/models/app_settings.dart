@@ -47,7 +47,8 @@ class AppSettings {
       clipboardMonitoringEnabled:
           clipboardMonitoringEnabled ?? this.clipboardMonitoringEnabled,
       defaultStartPage: defaultStartPage ?? this.defaultStartPage,
-      hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+      hasCompletedOnboarding:
+          hasCompletedOnboarding ?? this.hasCompletedOnboarding,
     );
   }
 }

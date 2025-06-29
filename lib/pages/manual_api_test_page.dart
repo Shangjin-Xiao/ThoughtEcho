@@ -74,13 +74,14 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _testApiKey,
-              child: _isLoading 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('测试API密钥'),
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Text('测试API密钥'),
             ),
             const SizedBox(height: 24),
             if (_testResult.isNotEmpty) ...[
@@ -145,7 +146,9 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       buffer.writeln('  API URL: $apiUrl');
       buffer.writeln('  Model: $model');
       buffer.writeln('  API Key长度: ${apiKey.length}');
-      buffer.writeln('  API Key前缀: ${apiKey.substring(0, apiKey.length > 10 ? 10 : apiKey.length)}...');
+      buffer.writeln(
+        '  API Key前缀: ${apiKey.substring(0, apiKey.length > 10 ? 10 : apiKey.length)}...',
+      );
       buffer.writeln();
 
       // 检查密钥格式
@@ -155,13 +158,13 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       } else {
         buffer.writeln('  ✅ 无换行符');
       }
-      
+
       if (apiKey.startsWith(' ') || apiKey.endsWith(' ')) {
         buffer.writeln('  ❌ 包含前后空格');
       } else {
         buffer.writeln('  ✅ 无前后空格');
       }
-      
+
       if (apiKey.startsWith('Bearer ')) {
         buffer.writeln('  ⚠️  包含"Bearer "前缀（可能导致问题）');
       } else {
@@ -175,17 +178,12 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       dio.options.receiveTimeout = const Duration(seconds: 30);
 
       // 构建请求
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       final requestBody = <String, dynamic>{
         'model': model,
         'messages': [
-          {
-            'role': 'user',
-            'content': '请简单回复"测试成功"',
-          }
+          {'role': 'user', 'content': '请简单回复"测试成功"'},
         ],
         'max_tokens': 10,
         'temperature': 0.1,
@@ -221,11 +219,11 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       buffer.writeln('响应结果:');
       buffer.writeln('  状态码: ${response.statusCode}');
       buffer.writeln('  响应头: ${response.headers}');
-      
+
       if (response.statusCode == 200) {
         buffer.writeln('  ✅ 请求成功!');
         buffer.writeln('  响应内容: ${json.encode(response.data)}');
-        
+
         // 尝试解析响应
         try {
           final responseData = response.data;
@@ -244,12 +242,11 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
         buffer.writeln('  ❌ 请求失败，状态码: ${response.statusCode}');
         buffer.writeln('  错误响应: ${response.data}');
       }
-
     } catch (e) {
       buffer.writeln('测试失败:');
       buffer.writeln('  错误类型: ${e.runtimeType}');
       buffer.writeln('  错误信息: $e');
-      
+
       if (e is DioException) {
         buffer.writeln('  Dio错误类型: ${e.type}');
         buffer.writeln('  响应状态码: ${e.response?.statusCode}');

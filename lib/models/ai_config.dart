@@ -53,9 +53,7 @@ class LegacyAIConfigWrapper implements AIConfig {
 
   @override
   Map<String, String> buildHeaders() {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     // 根据不同的AI服务提供商设置认证头
     if (apiUrl.contains('openai.com') || apiUrl.contains('api.openai.com')) {
@@ -88,18 +86,20 @@ class LegacyAIConfigWrapper implements AIConfig {
 
     // 确保stream参数是boolean类型
     if (adjustedData.containsKey('stream')) {
-      adjustedData['stream'] = adjustedData['stream'] == true || adjustedData['stream'] == 'true';
+      adjustedData['stream'] =
+          adjustedData['stream'] == true || adjustedData['stream'] == 'true';
     }
 
     // Anthropic特殊处理
     if (apiUrl.contains('anthropic.com')) {
       adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确
-      if (adjustedData.containsKey('stream') && adjustedData['stream'] == true) {
+      if (adjustedData.containsKey('stream') &&
+          adjustedData['stream'] == true) {
         adjustedData['stream'] = true; // 确保是boolean类型
       }
     }
 
     return adjustedData;
   }
-} 
+}

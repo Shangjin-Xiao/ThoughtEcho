@@ -190,7 +190,10 @@ class EditPageState extends State<EditPage> {
 
   Future<void> _analyzeSource() async {
     await _aiDialogHelper.analyzeSource(
-        _contentController, _authorController, _workController);
+      _contentController,
+      _authorController,
+      _workController,
+    );
     setState(() {});
   }
 
@@ -211,11 +214,14 @@ class EditPageState extends State<EditPage> {
       weather: _includeWeather ? _weather : null,
       temperature: _includeWeather ? _temperature : null,
     );
-    await _aiDialogHelper.analyzeContent(quote, onFinish: (analysisResult) {
-      setState(() {
-        _aiAnalysis = analysisResult;
-      });
-    });
+    await _aiDialogHelper.analyzeContent(
+      quote,
+      onFinish: (analysisResult) {
+        setState(() {
+          _aiAnalysis = analysisResult;
+        });
+      },
+    );
   }
 
   // 检查是否需要跳转到全屏编辑器

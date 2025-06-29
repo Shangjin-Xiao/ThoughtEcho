@@ -1308,7 +1308,6 @@ class DatabaseService extends ChangeNotifier {
         _quotesController!.add(List.from(_currentQuotes));
       }
       notifyListeners(); // 通知其他监听者（如Homepage的FAB）
-
     } catch (e) {
       logDebug('保存笔记到数据库时出错: $e');
       rethrow; // 重新抛出异常，让调用者处理
