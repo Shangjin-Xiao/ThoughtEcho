@@ -53,7 +53,7 @@ flutter clean && flutter pub get
 
 ### 核心技术栈
 - **Framework**: Flutter 3.7.2+ (Dart)
-- **状态管理**: Provider, GetIt依赖注入
+- **状态管理**: Provider
 - **本地数据库**: sqflite (移动端), sqflite_common_ffi (桌面端)
 - **网络**: Dio HTTP客户端
 - **UI**: Material 3, flex_color_scheme, dynamic_color
