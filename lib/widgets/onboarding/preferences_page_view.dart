@@ -1,0 +1,400 @@
+import 'package:flutter/material.dart';
+import '../../models/onboarding_models.dart';
+import '../../config/onboarding_config.dart';
+
+/// 偏好设置页面组件
+class PreferencesPageView extends StatefulWidget {
+  final OnboardingPageData pageData;
+  final OnboardingState state;
+  final Function(String key, dynamic value) onPreferenceChanged;
+
+  const PreferencesPageView({
+    super.key,
+    required this.pageData,
+    required this.state,
+    required this.onPreferenceChanged,
+  });
+
+  @override
+  State<PreferencesPageView> createState() => _PreferencesPageViewState();
+}
+
+class _PreferencesPageViewState extends State<PreferencesPageView>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late List<Animation<double>> _itemAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    final preferencesCount = OnboardingConfig.preferences.length;
+    _itemAnimations = List.generate(preferencesCount, (index) {
+      return Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(
+            index * 0.1,
+            0.4 + index * 0.1,
+            curve: Curves.easeOutBack,
+          ),
+        ),
+      );
+    });
+
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        _animationController.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 页面标题
+          Text(
+            widget.pageData.title,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.pageData.subtitle,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+
+          if (widget.pageData.description != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              widget.pageData.description!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 32),
+
+          // 偏好设置列表
+          ...OnboardingConfig.preferences.asMap().entries.map((entry) {
+            final index = entry.key;
+            final preference = entry.value;
+
+            return AnimatedBuilder(
+              animation: _itemAnimations[index],
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _itemAnimations[index].value,
+                  child: Opacity(
+                    opacity: _itemAnimations[index].value,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      child: _buildPreferenceItem(preference, theme),
+                    ),
+                  ),
+                );
+              },
+            );
+          }).toList(),
+
+          const SizedBox(height: 24),
+
+          // 说明信息
+          _buildInfoCard(theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferenceItem(
+    OnboardingPreference<dynamic> preference,
+    ThemeData theme,
+  ) {
+    switch (preference.type) {
+      case OnboardingPreferenceType.toggle:
+        return _buildTogglePreference(preference, theme);
+      case OnboardingPreferenceType.radio:
+        return _buildRadioPreference(preference, theme);
+      case OnboardingPreferenceType.multiSelect:
+        return _buildMultiSelectPreference(preference, theme);
+    }
+  }
+
+  Widget _buildTogglePreference(
+    OnboardingPreference<dynamic> preference,
+    ThemeData theme,
+  ) {
+    final value =
+        widget.state.getPreference<bool>(preference.key) ??
+        preference.defaultValue as bool;
+
+    return Card(
+      elevation: 2,
+      child: SwitchListTile(
+        value: value,
+        onChanged: (newValue) {
+          widget.onPreferenceChanged(preference.key, newValue);
+        },
+        title: Text(
+          preference.title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            preference.description,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ),
+        activeColor: theme.colorScheme.primary,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      ),
+    );
+  }
+
+  Widget _buildRadioPreference(
+    OnboardingPreference<dynamic> preference,
+    ThemeData theme,
+  ) {
+    final value =
+        widget.state.getPreference<int>(preference.key) ??
+        preference.defaultValue as int;
+    final options = preference.options ?? [];
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              preference.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              preference.description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...options.map((option) {
+              return RadioListTile<int>(
+                value: option.value as int,
+                groupValue: value,
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    widget.onPreferenceChanged(preference.key, newValue);
+                  }
+                },
+                title: Text(option.label),
+                subtitle:
+                    option.description != null
+                        ? Text(
+                          option.description!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        )
+                        : null,
+                contentPadding: EdgeInsets.zero,
+                activeColor: theme.colorScheme.primary,
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMultiSelectPreference(
+    OnboardingPreference<dynamic> preference,
+    ThemeData theme,
+  ) {
+    final value =
+        widget.state.getPreference<String>(preference.key) ??
+        preference.defaultValue as String;
+    final selectedValues = value.split(',').where((v) => v.isNotEmpty).toSet();
+    final options = preference.options ?? [];
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              preference.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              preference.description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 快速操作按钮
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final allValues = options
+                          .map((o) => o.value as String)
+                          .join(',');
+                      widget.onPreferenceChanged(preference.key, allValues);
+                    },
+                    icon: const Icon(Icons.select_all, size: 16),
+                    label: const Text('全选'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // 至少保留一个选项
+                      final firstValue =
+                          options.isNotEmpty
+                              ? options.first.value as String
+                              : '';
+                      widget.onPreferenceChanged(preference.key, firstValue);
+                    },
+                    icon: const Icon(Icons.clear_all, size: 16),
+                    label: const Text('清空'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 选项网格
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  options.map((option) {
+                    final isSelected = selectedValues.contains(
+                      option.value as String,
+                    );
+                    return FilterChip(
+                      label: Text(option.label),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        final newSelectedValues = Set<String>.from(
+                          selectedValues,
+                        );
+                        if (selected) {
+                          newSelectedValues.add(option.value as String);
+                        } else {
+                          newSelectedValues.remove(option.value as String);
+                          // 确保至少有一个选项被选中
+                          if (newSelectedValues.isEmpty && options.isNotEmpty) {
+                            newSelectedValues.add(
+                              options.first.value as String,
+                            );
+                          }
+                        }
+                        widget.onPreferenceChanged(
+                          preference.key,
+                          newSelectedValues.join(','),
+                        );
+                      },
+                      selectedColor: theme.colorScheme.primaryContainer,
+                      checkmarkColor: theme.colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color:
+                            isSelected
+                                ? theme.colorScheme.onPrimaryContainer
+                                : theme.colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '关于设置',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '• 所有设置都可以随时在应用的设置页面中修改\n• 我们重视您的隐私，所有数据都存储在您的设备上\n• 权限将在您需要使用相关功能时请求',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

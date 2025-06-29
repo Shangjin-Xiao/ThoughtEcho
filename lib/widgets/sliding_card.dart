@@ -40,12 +40,11 @@ class _SlidingCardState extends State<SlidingCard>
       begin: 1.0,
       end: 0.85,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    
+
     // 悬停动画（Material Design 微交互）
-    _hoverScaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.02,
-    ).animate(CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic));
+    _hoverScaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+    );
   }
 
   @override
@@ -100,8 +99,9 @@ class _SlidingCardState extends State<SlidingCard>
       animation: Listenable.merge([_controller, _hoverController]),
       builder: (context, child) {
         // 组合点击和悬停的缩放效果
-        final combinedScale = _scaleAnimation.value * _hoverScaleAnimation.value;
-        
+        final combinedScale =
+            _scaleAnimation.value * _hoverScaleAnimation.value;
+
         // 根据状态选择阴影
         List<BoxShadow> currentShadow;
         if (_isPressed) {
@@ -145,16 +145,21 @@ class _SlidingCardState extends State<SlidingCard>
                       padding: const EdgeInsets.all(24),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cardRadius,
+                        ),
                         boxShadow: currentShadow,
                         color: theme.cardColor,
                         // 微妙的边框效果（Material Design）
-                        border: _isHovered 
-                          ? Border.all(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                              width: 1,
-                            )
-                          : null,
+                        border:
+                            _isHovered
+                                ? Border.all(
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  width: 1,
+                                )
+                                : null,
                       ),
                       child: SingleChildScrollView(
                         child: Column(
@@ -166,17 +171,22 @@ class _SlidingCardState extends State<SlidingCard>
                               duration: const Duration(milliseconds: 200),
                               padding: EdgeInsets.all(_isHovered ? 4 : 0),
                               decoration: BoxDecoration(
-                                color: _isHovered 
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                                  : Colors.transparent,
+                                color:
+                                    _isHovered
+                                        ? theme.colorScheme.primary.withValues(
+                                          alpha: 0.08,
+                                        )
+                                        : Colors.transparent,
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: Icon(
-                                Icons.format_quote, 
+                                Icons.format_quote,
                                 size: 40,
-                                color: _isHovered 
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                color:
+                                    _isHovered
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.7),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -192,9 +202,8 @@ class _SlidingCardState extends State<SlidingCard>
                                     '← 左滑添加到笔记',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: theme.colorScheme.onSurface.withValues(
-                                        alpha: 0.5,
-                                      ),
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),

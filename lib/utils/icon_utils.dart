@@ -36,24 +36,144 @@ class IconUtils {
     'label': Icons.label,
     'brush': Icons.brush,
   };
-  
+
   // 常用emoji分类 - 与笔记和思考相关的emoji
   static final Map<String, List<String>> emojiCategories = {
-    '情感': ['😊', '😌', '🥰', '😍', '🤔', '🧐', '🤯', '😲', '😢', '😭', '😤', '😠', '😩', '🥺', '😵', '🥴'],
-    '思考': ['💭', '🧠', '💡', '✨', '🔍', '🔎', '📝', '✏️', '📔', '📕', '📒', '📚', '🗂️', '📋', '📌', '🖋️'],
-    '自然': ['🌈', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '🌪️', '🌫️', '🌊', '🏞️'],
-    '心情': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '💕', '💞', '💓', '💗', '💖', '💘'],
-    '生活': ['🏡', '🌃', '🌆', '🌇', '🌉', '🏙️', '🚗', '🚶', '🧘', '🍵', '☕', '🍷', '🎵', '🎬', '🎨', '🎭'],
-    '成长': ['🌱', '🌿', '🌴', '🌳', '🌲', '🌵', '🌾', '🍀', '🍃', '🌺', '🌻', '🌼', '🌷', '🪴', '🎋', '🪷'],
-    '奖励': ['🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '⭐', '🌟', '🔥', '💯', '🎯', '👑', '🎊', '🎉'],
+    '情感': [
+      '😊',
+      '😌',
+      '🥰',
+      '😍',
+      '🤔',
+      '🧐',
+      '🤯',
+      '😲',
+      '😢',
+      '😭',
+      '😤',
+      '😠',
+      '😩',
+      '🥺',
+      '😵',
+      '🥴',
+    ],
+    '思考': [
+      '💭',
+      '🧠',
+      '💡',
+      '✨',
+      '🔍',
+      '🔎',
+      '📝',
+      '✏️',
+      '📔',
+      '📕',
+      '📒',
+      '📚',
+      '🗂️',
+      '📋',
+      '📌',
+      '🖋️',
+    ],
+    '自然': [
+      '🌈',
+      '☀️',
+      '🌤️',
+      '⛅',
+      '🌥️',
+      '☁️',
+      '🌦️',
+      '🌧️',
+      '⛈️',
+      '🌩️',
+      '🌨️',
+      '❄️',
+      '🌪️',
+      '🌫️',
+      '🌊',
+      '🏞️',
+    ],
+    '心情': [
+      '❤️',
+      '🧡',
+      '💛',
+      '💚',
+      '💙',
+      '💜',
+      '🖤',
+      '🤍',
+      '🤎',
+      '💔',
+      '💕',
+      '💞',
+      '💓',
+      '💗',
+      '💖',
+      '💘',
+    ],
+    '生活': [
+      '🏡',
+      '🌃',
+      '🌆',
+      '🌇',
+      '🌉',
+      '🏙️',
+      '🚗',
+      '🚶',
+      '🧘',
+      '🍵',
+      '☕',
+      '🍷',
+      '🎵',
+      '🎬',
+      '🎨',
+      '🎭',
+    ],
+    '成长': [
+      '🌱',
+      '🌿',
+      '🌴',
+      '🌳',
+      '🌲',
+      '🌵',
+      '🌾',
+      '🍀',
+      '🍃',
+      '🌺',
+      '🌻',
+      '🌼',
+      '🌷',
+      '🪴',
+      '🎋',
+      '🪷',
+    ],
+    '奖励': [
+      '🏆',
+      '🥇',
+      '🥈',
+      '🥉',
+      '🏅',
+      '🎖️',
+      '🏵️',
+      '🎗️',
+      '⭐',
+      '🌟',
+      '🔥',
+      '💯',
+      '🎯',
+      '👑',
+      '🎊',
+      '🎉',
+    ],
   };
 
   // 检查图标名称是否为emoji
   static bool isEmoji(String? iconName) {
     if (iconName == null || iconName.isEmpty) return false;
-    
+
     // 简单检测是否是emoji - 单个字符且不在分类图标中
-    return iconName.characters.length == 1 && !categoryIcons.containsKey(iconName);
+    return iconName.characters.length == 1 &&
+        !categoryIcons.containsKey(iconName);
   }
 
   // 获取图标数据
@@ -61,12 +181,12 @@ class IconUtils {
     if (iconName == null || iconName.isEmpty) {
       return Icons.label; // 默认图标
     }
-    
+
     // 如果是emoji，直接返回
     if (isEmoji(iconName)) {
       return Icons.emoji_emotions; // 占位图标，实际显示时会使用emoji文本
     }
-    
+
     // 返回Material图标
     return categoryIcons[iconName] ?? Icons.label;
   }
@@ -76,12 +196,12 @@ class IconUtils {
     if (iconName == null || iconName.isEmpty) {
       return Icons.label;
     }
-    
+
     // 如果是emoji，直接返回emoji字符串
     if (isEmoji(iconName)) {
       return iconName;
     }
-    
+
     // 返回Material图标
     return categoryIcons[iconName] ?? Icons.label;
   }
@@ -89,17 +209,18 @@ class IconUtils {
   // 获取所有可用图标
   static List<MapEntry<String, dynamic>> getAllIcons() {
     final List<MapEntry<String, dynamic>> allIcons = [];
-    
+
     // 添加基础emoji
-    final allEmojis = emojiCategories.values.expand((emojis) => emojis).toList();
+    final allEmojis =
+        emojiCategories.values.expand((emojis) => emojis).toList();
     allIcons.addAll(allEmojis.map((emoji) => MapEntry(emoji, emoji)));
-    
+
     // 添加Material图标
     allIcons.addAll(categoryIcons.entries);
-    
+
     return allIcons;
   }
-  
+
   // 获取分类后的emoji
   static Map<String, List<String>> getCategorizedEmojis() {
     return emojiCategories;
@@ -110,12 +231,12 @@ class IconUtils {
     if (iconName == null || iconName.isEmpty) {
       return const Icon(Icons.label);
     }
-    
+
     // 如果是emoji，返回文本widget
     if (isEmoji(iconName)) {
       return Text(iconName, style: const TextStyle(fontSize: 24));
     }
-    
+
     // 返回Material图标
     return Icon(categoryIcons[iconName] ?? Icons.label);
   }

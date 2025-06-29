@@ -11,27 +11,26 @@ class WeatherWidget extends StatelessWidget {
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
-    
+
     // 构建位置显示文本
     String locationText = '未知位置';
     if (locationService.city != null) {
       // 使用城市名作为主要显示
       locationText = locationService.city!;
-      
+
       // 如果有区县信息，添加到显示中
-      if (locationService.district != null && locationService.district!.isNotEmpty) {
+      if (locationService.district != null &&
+          locationService.district!.isNotEmpty) {
         locationText = '${locationService.city} · ${locationService.district}';
       }
     } else if (locationService.province != null) {
       // 如果没有城市但有省份
       locationText = locationService.province!;
     }
-    
+
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -60,7 +59,10 @@ class WeatherWidget extends StatelessWidget {
                 ),
                 // 显示位置信息的小标签
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.secondaryContainer,
                     borderRadius: BorderRadius.circular(12),
@@ -89,18 +91,21 @@ class WeatherWidget extends StatelessWidget {
             const SizedBox(height: 16),
             Icon(
               weatherService.weatherIcon == 'error'
-                ? Icons.error_outline
-                : (weatherService.weatherIcon != null 
-                  ? weatherService.getWeatherIconData() 
-                  : Icons.cloud_queue),
+                  ? Icons.error_outline
+                  : (weatherService.weatherIcon != null
+                      ? weatherService.getWeatherIconData()
+                      : Icons.cloud_queue),
               size: 40, // 稍微放大图标
-              color: weatherService.weatherIcon == 'error' 
-                ? Colors.red 
-                : theme.colorScheme.primary,
+              color:
+                  weatherService.weatherIcon == 'error'
+                      ? Colors.red
+                      : theme.colorScheme.primary,
             ),
             const SizedBox(height: 8),
             Text(
-              WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown'),
+              WeatherService.getWeatherDescription(
+                weatherService.currentWeather ?? 'unknown',
+              ),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 15),
             ),

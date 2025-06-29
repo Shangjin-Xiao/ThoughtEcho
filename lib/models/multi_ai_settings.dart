@@ -22,23 +22,32 @@ class MultiAISettings {
   }
 
   // 为了向后兼容，保留 availableProviders getter
-  List<AIProviderSettings> get availableProviders => providers;  factory MultiAISettings.fromJson(Map<String, dynamic> json) {
+  List<AIProviderSettings> get availableProviders => providers;
+  factory MultiAISettings.fromJson(Map<String, dynamic> json) {
     return MultiAISettings(
-      providers: (json['providers'] as List<dynamic>?)
-              ?.map((e) => AIProviderSettings.fromJson(e as Map<String, dynamic>))
+      providers:
+          (json['providers'] as List<dynamic>?)
+              ?.map(
+                (e) => AIProviderSettings.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           (json['availableProviders'] as List<dynamic>?)
-              ?.map((e) => AIProviderSettings.fromJson(e as Map<String, dynamic>))
+              ?.map(
+                (e) => AIProviderSettings.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
-      currentProviderId: json['currentProviderId'] as String? ?? 
+      currentProviderId:
+          json['currentProviderId'] as String? ??
           _extractCurrentProviderIdFromLegacy(json),
       enableFailover: json['enableFailover'] ?? true,
     );
   }
 
   // 辅助方法：从旧版本的 currentProvider 对象中提取 ID
-  static String? _extractCurrentProviderIdFromLegacy(Map<String, dynamic> json) {
+  static String? _extractCurrentProviderIdFromLegacy(
+    Map<String, dynamic> json,
+  ) {
     final currentProvider = json['currentProvider'];
     if (currentProvider != null && currentProvider is Map<String, dynamic>) {
       return currentProvider['id'] as String?;
@@ -71,9 +80,7 @@ class MultiAISettings {
   // 静态方法：创建默认设置
   static MultiAISettings defaultSettings() {
     return MultiAISettings(
-      providers: [
-        AIProviderSettings.defaultSettings(),
-      ],
+      providers: [AIProviderSettings.defaultSettings()],
       currentProviderId: null,
       enableFailover: true,
     );

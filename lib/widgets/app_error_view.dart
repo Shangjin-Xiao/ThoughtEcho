@@ -16,4 +16,4 @@ class AppErrorView extends StatelessWidget {
       ),
     );
   }
-} 
+}

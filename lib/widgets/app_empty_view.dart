@@ -10,11 +10,15 @@ class AppEmptyView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox, size: 72, color: Theme.of(context).colorScheme.outline),
+          Icon(
+            Icons.inbox,
+            size: 72,
+            color: Theme.of(context).colorScheme.outline,
+          ),
           const SizedBox(height: 16),
           Text(text, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
   }
-} 
+}

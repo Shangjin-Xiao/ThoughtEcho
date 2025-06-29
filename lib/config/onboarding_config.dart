@@ -1,0 +1,131 @@
+import 'package:flutter/material.dart';
+import '../models/onboarding_models.dart';
+import '../services/api_service.dart';
+
+/// 引导页面配置
+class OnboardingConfig {
+  // 引导页面列表
+  static const List<OnboardingPageData> pages = [
+    // 第1页：欢迎页面
+    OnboardingPageData(
+      title: '欢迎使用心迹',
+      subtitle: '记录生活点滴，留存思想灵感',
+      description: '让我们开始一段美好的思想记录之旅',
+      type: OnboardingPageType.welcome,
+    ),
+
+    // 第2页：核心功能展示
+    OnboardingPageData(
+      title: '核心功能',
+      subtitle: '发现心迹的强大能力',
+      features: _coreFeatures,
+      type: OnboardingPageType.features,
+    ),
+
+    // 第3页：个性化设置
+    OnboardingPageData(
+      title: '个性化设置',
+      subtitle: '定制您的专属体验',
+      description: '这些设置可以随时在应用中修改',
+      type: OnboardingPageType.preferences,
+    ),
+  ];
+
+  // 核心功能列表
+  static const List<OnboardingFeature> _coreFeatures = [
+    OnboardingFeature(
+      title: '智能笔记',
+      description: '支持富文本编辑，自动记录时间、位置和天气',
+      icon: Icons.edit_note,
+      isHighlight: true,
+    ),
+    OnboardingFeature(
+      title: '每日一言',
+      description: '精选名言警句，为您的一天带来灵感启发',
+      icon: Icons.format_quote,
+    ),
+    OnboardingFeature(
+      title: 'AI 洞察',
+      description: '智能分析您的笔记内容，发现思维模式和情感变化',
+      icon: Icons.psychology,
+    ),
+    OnboardingFeature(
+      title: '本地优先',
+      description: '所有数据存储在您的设备上，确保隐私安全',
+      icon: Icons.security,
+    ),
+  ];
+
+  // 偏好设置列表
+  static final List<OnboardingPreference<dynamic>> preferences = [
+    // 默认启动页面
+    OnboardingPreference<int>(
+      key: 'defaultStartPage',
+      title: '默认启动页面',
+      description: '选择打开应用时首先看到的页面',
+      defaultValue: 0,
+      type: OnboardingPreferenceType.radio,
+      options: const [
+        OnboardingPreferenceOption<int>(
+          value: 0,
+          label: '主页概览',
+          description: '查看每日一言和最近笔记',
+        ),
+        OnboardingPreferenceOption<int>(
+          value: 1,
+          label: '笔记列表',
+          description: '直接进入笔记管理界面',
+        ),
+      ],
+    ),
+
+    // 剪贴板监控
+    OnboardingPreference<bool>(
+      key: 'clipboardMonitoring',
+      title: '剪贴板监控',
+      description: '检测剪贴板内容，方便快速添加到笔记',
+      defaultValue: false,
+      type: OnboardingPreferenceType.toggle,
+    ),
+
+    // 一言类型选择
+    OnboardingPreference<String>(
+      key: 'hitokotoTypes',
+      title: '每日一言类型',
+      description: '选择您感兴趣的内容类型',
+      defaultValue: 'a,b,c,d',
+      type: OnboardingPreferenceType.multiSelect,
+      options:
+          ApiService.hitokotoTypes.entries
+              .map(
+                (entry) => OnboardingPreferenceOption<String>(
+                  value: entry.key,
+                  label: entry.value,
+                ),
+              )
+              .toList(),
+    ),
+  ];
+
+  // 快速操作提示
+  static const List<String> quickTips = [
+    '💡 单击「每日一言」可复制内容',
+    '✨ 双击「每日一言」可快速添加到笔记',
+    '🏷️ 使用标签来组织您的笔记',
+    '🔍 支持全文搜索，快速找到目标内容',
+  ];
+
+  // 获取总页数
+  static int get totalPages => pages.length;
+
+  // 检查是否为最后一页
+  static bool isLastPage(int pageIndex) => pageIndex == pages.length - 1;
+
+  // 获取页面数据
+  static OnboardingPageData getPageData(int pageIndex) {
+    if (pageIndex < 0 || pageIndex >= pages.length) {
+      throw ArgumentError('Invalid page index: $pageIndex');
+    }
+    return pages[pageIndex];
+  }
+}

@@ -12,31 +12,32 @@ import 'package:uuid/uuid.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// AI分析数据库服务
-/// 
+///
 /// 专门用于管理AI分析结果，使用单独的数据库文件存储
 class AIAnalysisDatabaseService extends ChangeNotifier {
   static Database? _database;
   final _uuid = const Uuid();
-  
+
   // 内存存储，用于 Web 平台或调试存储
   final List<AIAnalysis> _memoryStore = [];
-  
+
   // 流控制器，用于广播分析结果变更
   final _analysesController = StreamController<List<AIAnalysis>>.broadcast();
-  
+
   // 单例模式
-  static final AIAnalysisDatabaseService _instance = AIAnalysisDatabaseService._internal();
-  
+  static final AIAnalysisDatabaseService _instance =
+      AIAnalysisDatabaseService._internal();
+
   factory AIAnalysisDatabaseService() {
     return _instance;
   }
-  
+
   AIAnalysisDatabaseService._internal();
 
   /// 初始化数据库
   Future<Database> get database async {
     if (_database != null) return _database!;
-    
+
     // 初始化平台特定代码
     if (Platform.isWindows || Platform.isLinux) {
       // 为Windows和Linux平台设置sqflite_ffi
@@ -58,10 +59,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         onUpgrade: _onUpgradeDatabase,
       );
     }
-    
+
     return _database!;
   }
-  
+
   /// 获取数据库文件路径
   Future<String> _getDatabasePath() async {
     if (Platform.isWindows || Platform.isLinux) {
@@ -71,7 +72,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       return join(await getDatabasesPath(), 'ai_analyses.db');
     }
   }
-  
+
   /// 创建数据库表
   Future<void> _createDatabase(Database db, int version) async {
     await db.execute('''
@@ -88,40 +89,47 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       )
     ''');
   }
-  
+
   /// 数据库升级处理
-  Future<void> _onUpgradeDatabase(Database db, int oldVersion, int newVersion) async {
+  Future<void> _onUpgradeDatabase(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     // 这里处理未来可能的数据库升级逻辑
     if (oldVersion < 2) {
       // 版本1到版本2的迁移代码（如果需要）
     }
   }
-  
+
   /// 关闭数据库连接
   Future<void> closeDatabase() async {
     if (_database != null) {
       await _database!.close();
       _database = null;
     }
-    
+
     if (!_analysesController.isClosed) {
       await _analysesController.close();
     }
   }
-  
+
   /// 保存AI分析结果
   Future<AIAnalysis> saveAnalysis(AIAnalysis analysis) async {
     try {
       final newAnalysis = analysis.copyWith(
         id: analysis.id ?? _uuid.v4(),
-        createdAt: analysis.createdAt.isNotEmpty 
-            ? analysis.createdAt 
-            : DateTime.now().toIso8601String(),
+        createdAt:
+            analysis.createdAt.isNotEmpty
+                ? analysis.createdAt
+                : DateTime.now().toIso8601String(),
       );
-      
+
       if (kIsWeb) {
         // Web平台使用内存存储
-        final existingIndex = _memoryStore.indexWhere((item) => item.id == newAnalysis.id);
+        final existingIndex = _memoryStore.indexWhere(
+          (item) => item.id == newAnalysis.id,
+        );
         if (existingIndex >= 0) {
           _memoryStore[existingIndex] = newAnalysis;
         } else {
@@ -136,18 +144,18 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
-      
+
       // 通知监听器数据已更新
       notifyListeners();
       _notifyAnalysesChanged();
-      
+
       return newAnalysis;
     } catch (e) {
       AppLogger.e('保存AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       rethrow;
     }
   }
-  
+
   /// 获取所有AI分析结果
   Future<List<AIAnalysis>> getAllAnalyses() async {
     try {
@@ -161,7 +169,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           'ai_analyses',
           orderBy: 'created_at DESC',
         );
-        
+
         return List.generate(maps.length, (i) {
           return AIAnalysis.fromJson(maps[i]);
         });
@@ -171,7 +179,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       return [];
     }
   }
-  
+
   /// 根据ID获取单个分析结果
   Future<AIAnalysis?> getAnalysisById(String id) async {
     try {
@@ -187,7 +195,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           whereArgs: [id],
           limit: 1,
         );
-        
+
         if (maps.isEmpty) return null;
         return AIAnalysis.fromJson(maps.first);
       }
@@ -196,7 +204,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       return null;
     }
   }
-  
+
   /// 删除分析结果
   Future<bool> deleteAnalysis(String id) async {
     try {
@@ -206,24 +214,20 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       } else {
         // 非Web平台使用SQLite
         final db = await database;
-        await db.delete(
-          'ai_analyses',
-          where: 'id = ?',
-          whereArgs: [id],
-        );
+        await db.delete('ai_analyses', where: 'id = ?', whereArgs: [id]);
       }
-      
+
       // 通知监听器数据已更新
       notifyListeners();
       _notifyAnalysesChanged();
-      
+
       return true;
     } catch (e) {
       AppLogger.e('删除AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return false;
     }
   }
-  
+
   /// 删除所有分析结果
   Future<bool> deleteAllAnalyses() async {
     try {
@@ -235,24 +239,26 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         final db = await database;
         await db.delete('ai_analyses');
       }
-      
+
       // 通知监听器数据已更新
       notifyListeners();
       _notifyAnalysesChanged();
-      
+
       return true;
     } catch (e) {
       AppLogger.e('删除所有AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return false;
     }
   }
-  
+
   /// 按照分析类型搜索
   Future<List<AIAnalysis>> searchAnalysesByType(String analysisType) async {
     try {
       if (kIsWeb) {
         // Web平台使用内存存储
-        return _memoryStore.where((item) => item.analysisType == analysisType).toList();
+        return _memoryStore
+            .where((item) => item.analysisType == analysisType)
+            .toList();
       } else {
         // 非Web平台使用SQLite
         final db = await database;
@@ -262,7 +268,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           whereArgs: [analysisType],
           orderBy: 'created_at DESC',
         );
-        
+
         return List.generate(maps.length, (i) {
           return AIAnalysis.fromJson(maps[i]);
         });
@@ -272,16 +278,19 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       return [];
     }
   }
-  
+
   /// 搜索AI分析内容
   Future<List<AIAnalysis>> searchAnalyses(String query) async {
     try {
       if (kIsWeb) {
         // Web平台使用内存存储
-        return _memoryStore.where((item) =>
-            item.title.toLowerCase().contains(query.toLowerCase()) ||
-            item.content.toLowerCase().contains(query.toLowerCase())
-        ).toList();
+        return _memoryStore
+            .where(
+              (item) =>
+                  item.title.toLowerCase().contains(query.toLowerCase()) ||
+                  item.content.toLowerCase().contains(query.toLowerCase()),
+            )
+            .toList();
       } else {
         // 非Web平台使用SQLite
         final db = await database;
@@ -291,7 +300,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           whereArgs: ['%$query%', '%$query%'],
           orderBy: 'created_at DESC',
         );
-        
+
         return List.generate(maps.length, (i) {
           return AIAnalysis.fromJson(maps[i]);
         });
@@ -301,10 +310,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       return [];
     }
   }
-  
+
   /// 获取流以监听分析列表变更
   Stream<List<AIAnalysis>> get analysesStream => _analysesController.stream;
-  
+
   /// 通知分析列表已更改
   void _notifyAnalysesChanged() async {
     if (!_analysesController.isClosed) {
@@ -312,13 +321,13 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       _analysesController.add(analyses);
     }
   }
-  
+
   /// 从导出的JSON文件中恢复分析数据
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
       int count = 0;
-      
+
       for (var item in jsonList) {
         if (item is Map<String, dynamic>) {
           final analysis = AIAnalysis.fromJson(item);
@@ -326,14 +335,14 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           count++;
         }
       }
-      
+
       return count;
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return 0;
     }
   }
-  
+
   /// 将分析数据导出为JSON字符串
   Future<String> exportToJson() async {
     try {

@@ -22,6 +22,7 @@ flutter build apk --release   # Android APK
 flutter build windows         # Windows桌面
 flutter build web             # Web部署
 ```
+注意:除非用户要求,请勿使用构建或运行命令
 
 ### 代码质量检查
 ```bash

@@ -1,5 +1,5 @@
 /// AI提示词管理器
-/// 
+///
 /// 统一管理所有AI服务使用的系统提示词，避免重复代码
 class AIPromptManager {
   static final AIPromptManager _instance = AIPromptManager._internal();
@@ -7,7 +7,8 @@ class AIPromptManager {
   AIPromptManager._internal();
 
   /// 个人成长导师提示词（最常用的基础提示词）
-  static const String personalGrowthCoachPrompt = '''你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：
+  static const String personalGrowthCoachPrompt =
+      '''你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：
 
 1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。
 
@@ -18,7 +19,8 @@ class AIPromptManager {
 请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。''';
 
   /// 每日提示生成器提示词
-  static const String dailyPromptGeneratorPrompt = '''你是一位富有智慧和洞察力的思考引导者，擅长根据当下的环境和时间为用户提供深度启发的思考提示。你的任务是生成一个简洁而富有启发性的问题或观察点，帮助用户进行有意义的日记记录和自我反思。
+  static const String dailyPromptGeneratorPrompt =
+      '''你是一位富有智慧和洞察力的思考引导者，擅长根据当下的环境和时间为用户提供深度启发的思考提示。你的任务是生成一个简洁而富有启发性的问题或观察点，帮助用户进行有意义的日记记录和自我反思。
 
 请根据以下信息生成一个个性化的思考提示：
 - 当前时间：{时间信息}
@@ -55,7 +57,8 @@ class AIPromptManager {
 5. 回答应该清晰、简洁且有条理''';
 
   /// 文本续写助手提示词
-  static const String textContinuationPrompt = '''你是一位专业的写作助手，擅长理解文本的风格、语气和内容，并能够自然地续写文本。
+  static const String textContinuationPrompt =
+      '''你是一位专业的写作助手，擅长理解文本的风格、语气和内容，并能够自然地续写文本。
 
 任务：
 1. 仔细分析原文的写作风格、语气和主题
@@ -71,7 +74,8 @@ class AIPromptManager {
 5. 返回完整的续写部分，不要重复原文''';
 
   /// 来源分析助手提示词
-  static const String sourceAnalysisPrompt = '''你是一个专业的文本分析助手，你的任务是分析文本中可能提到的作者和作品。
+  static const String sourceAnalysisPrompt =
+      '''你是一个专业的文本分析助手，你的任务是分析文本中可能提到的作者和作品。
 请以JSON格式返回以下信息：
 {
   "author": "推测的作者名称，如果无法确定则留空",
@@ -266,28 +270,32 @@ $question''';
     final now = DateTime.now();
     final hour = now.hour;
     final minute = now.minute;
-    
+
     // 格式化时间信息
     String timeInfo;
     if (hour >= 5 && hour < 12) {
-      timeInfo = '早晨 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      timeInfo =
+          '早晨 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } else if (hour >= 12 && hour < 18) {
-      timeInfo = '下午 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      timeInfo =
+          '下午 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } else if (hour >= 18 && hour < 23) {
-      timeInfo = '晚上 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      timeInfo =
+          '晚上 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } else {
-      timeInfo = '深夜 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      timeInfo =
+          '深夜 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     }
-    
+
     // 格式化天气信息
     String weatherInfo = weather ?? '未知';
     if (temperature != null) {
       weatherInfo += '，温度$temperature';
     }
-    
+
     // 格式化位置信息
     String locationInfo = city ?? '未知地点';
-    
+
     // 替换模板中的占位符
     return dailyPromptGeneratorPrompt
         .replaceAll('{时间信息}', timeInfo)
