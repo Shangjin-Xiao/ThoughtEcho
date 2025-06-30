@@ -174,6 +174,15 @@ class OnboardingController extends ChangeNotifier {
           _state.getPreference<bool>('clipboardMonitoring') ?? false;
       _clipboardService.setEnableClipboardMonitoring(clipboardEnabled);
 
+      // 应用位置服务设置
+      final locationEnabled =
+          _state.getPreference<bool>('locationService') ?? false;
+      if (locationEnabled) {
+        // 位置服务在偏好设置页面已经处理了权限申请
+        // 这里只需要记录设置状态
+        logInfo('位置服务已启用');
+      }
+
       logDebug('用户偏好设置保存完成');
     } catch (e) {
       logError('保存用户偏好设置失败', error: e, source: 'OnboardingController');

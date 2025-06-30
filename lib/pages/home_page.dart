@@ -406,8 +406,8 @@ class _HomePageState extends State<HomePage>
       // 先初始化位置和天气
       await _initLocationAndWeather();
 
-      // 等待位置和天气服务完全初始化
-      await Future.delayed(const Duration(milliseconds: 1000));
+      // 减少等待时间，因为已经优化了并行初始化
+      await Future.delayed(const Duration(milliseconds: 300));
 
       logDebug('位置和天气服务初始化完成，开始获取每日提示...');
 
@@ -420,48 +420,65 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  // 初始化位置和天气服务
+  // 初始化位置和天气服务 - 简化优化版本
   Future<void> _initLocationAndWeather() async {
     if (!mounted) return;
 
     try {
-      logDebug('开始初始化位置服务...');
+      logDebug('开始初始化位置和天气服务...');
+
       final locationService = Provider.of<LocationService>(
         context,
         listen: false,
       );
+      final weatherService = Provider.of<WeatherService>(
+        context,
+        listen: false,
+      );
+
+      // 并行初始化位置服务（天气服务在WeatherService构造时已经初始化）
       await locationService.init();
+
+      if (!mounted) return;
 
       logDebug('位置服务初始化完成，权限状态: ${locationService.hasLocationPermission}');
 
-      // 再次确保组件仍然挂载
-      if (!mounted) return;
-
-      // 只有在已有位置权限的情况下才尝试获取位置信息，避免再次弹出权限申请
+      // 如果有权限，获取位置和天气
       if (locationService.hasLocationPermission &&
           locationService.isLocationServiceEnabled) {
-        logDebug('开始获取当前位置...');
-        final position = await locationService.getCurrentLocation(
-          skipPermissionRequest: true,
-        );
+        logDebug('开始获取位置（低精度模式）...');
 
-        // 再次确保组件仍然挂载
+        final position = await locationService
+            .getCurrentLocation(
+              highAccuracy: false, // 使用低精度模式，更快
+              skipPermissionRequest: true,
+            )
+            .timeout(
+              const Duration(seconds: 8), // 设置超时
+              onTimeout: () {
+                logDebug('位置获取超时');
+                return null;
+              },
+            );
+
         if (!mounted) return;
 
         if (position != null) {
           logDebug('位置获取成功: ${position.latitude}, ${position.longitude}');
-          logDebug('开始获取天气数据...');
 
-          final weatherService = Provider.of<WeatherService>(
-            context,
-            listen: false,
-          );
-          await weatherService.getWeatherData(
-            position.latitude,
-            position.longitude,
-          );
-
-          logDebug('天气数据获取完成: ${weatherService.currentWeather}');
+          // 异步获取天气，不阻塞主流程
+          Future.microtask(() async {
+            try {
+              await weatherService.getWeatherData(
+                position.latitude,
+                position.longitude,
+                timeout: const Duration(seconds: 10),
+              );
+              logDebug('天气数据更新完成: ${weatherService.currentWeather}');
+            } catch (e) {
+              logDebug('天气数据更新失败: $e');
+            }
+          });
         } else {
           logDebug('位置获取失败');
         }

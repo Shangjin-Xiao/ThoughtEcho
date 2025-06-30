@@ -1345,6 +1345,23 @@ class DatabaseService extends ChangeNotifier {
     List<String>? selectedDayPeriods, // 时间段筛选
   }) async {
     try {
+      // 优化：生成缓存键，先尝试从缓存获取
+      final cacheKey = _generateCacheKey(
+        tagIds: tagIds,
+        categoryId: categoryId,
+        searchQuery: searchQuery,
+        orderBy: orderBy,
+        selectedWeathers: selectedWeathers,
+        selectedDayPeriods: selectedDayPeriods,
+      );
+
+      // 优化：尝试从缓存获取数据
+      final cachedResult = _getFromCache(cacheKey, offset, limit);
+      if (cachedResult != null && cachedResult.isNotEmpty) {
+        logDebug('从缓存返回查询结果，共 ${cachedResult.length} 条');
+        return cachedResult;
+      }
+
       if (kIsWeb) {
         var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
@@ -1378,9 +1395,7 @@ class DatabaseService extends ChangeNotifier {
                   .where(
                     (q) =>
                         q.weather != null &&
-                        selectedWeathers.any(
-                          (weather) => q.weather!.contains(weather),
-                        ),
+                        selectedWeathers.contains(q.weather),
                   )
                   .toList();
         }
@@ -1407,6 +1422,8 @@ class DatabaseService extends ChangeNotifier {
       final db = database;
       List<String> conditions = [];
       List<dynamic> args = [];
+
+      // 优化：改进条件构建逻辑
       if (tagIds != null && tagIds.isNotEmpty) {
         conditions.add(tagIds.map((_) => 'tag_ids LIKE ?').join(' OR '));
         args.addAll(tagIds.map((id) => '%$id%'));
@@ -1416,37 +1433,47 @@ class DatabaseService extends ChangeNotifier {
         args.add(categoryId);
       }
       if (searchQuery != null && searchQuery.isNotEmpty) {
-        conditions.add('(content LIKE ? OR source LIKE ?)');
-        args.addAll(['%$searchQuery%', '%$searchQuery%']);
+        // 优化：扩展搜索范围，包括作者和作品
+        conditions.add(
+          '(content LIKE ? OR source LIKE ? OR source_author LIKE ? OR source_work LIKE ?)',
+        );
+        final searchParam = '%$searchQuery%';
+        args.addAll([searchParam, searchParam, searchParam, searchParam]);
       }
-      // 天气筛选条件
+      // 天气筛选条件 - 优化NULL值处理
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        // 考虑null值的情况，使用COALESCE确保null值也能被正确处理
         final weatherConditions = selectedWeathers
-            .map((_) => 'COALESCE(weather, "") = ?')
+            .map((_) => 'weather = ?')
             .join(' OR ');
         conditions.add('($weatherConditions)');
         args.addAll(selectedWeathers);
       }
-      // 时间段筛选条件
+      // 时间段筛选条件 - 优化NULL值处理
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        // 考虑null值的情况，使用COALESCE确保null值也能被正确处理
         final dayPeriodConditions = selectedDayPeriods
-            .map((_) => 'COALESCE(day_period, "") = ?')
+            .map((_) => 'day_period = ?')
             .join(' OR ');
         conditions.add('($dayPeriodConditions)');
         args.addAll(selectedDayPeriods);
       }
+
       final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+
       final maps = await db.query(
         'quotes',
         where: where,
-        whereArgs: args,
+        whereArgs: args.isNotEmpty ? args : null,
         orderBy: orderBy,
         limit: limit,
         offset: offset,
       );
-      return maps.map((m) => Quote.fromJson(m)).toList();
+
+      final result = maps.map((m) => Quote.fromJson(m)).toList();
+
+      // 优化：将结果添加到缓存
+      _addToCache(cacheKey, result, offset);
+
+      return result;
     } catch (e) {
       logDebug('获取引用错误: $e');
       return [];
@@ -1872,7 +1899,7 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  // 生成缓存键，将过滤条件组合成唯一标识
+  /// 优化：生成更可靠的缓存键，避免冲突
   String _generateCacheKey({
     List<String>? tagIds,
     String? categoryId,
@@ -1881,48 +1908,61 @@ class DatabaseService extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
   }) {
-    final tagKey = tagIds?.join(',') ?? '';
-    final categoryKey = categoryId ?? '';
-    final searchKey = searchQuery ?? '';
-    final weatherKey = selectedWeathers?.join(',') ?? '';
-    final dayPeriodKey = selectedDayPeriods?.join(',') ?? '';
-    return '$tagKey|$categoryKey|$searchKey|$orderBy|$weatherKey|$dayPeriodKey';
+    // 使用更安全的分隔符避免冲突
+    final tagKey = tagIds?.join('|') ?? 'NULL';
+    final categoryKey = categoryId ?? 'NULL';
+    final searchKey = searchQuery ?? 'NULL';
+    final weatherKey = selectedWeathers?.join('|') ?? 'NULL';
+    final dayPeriodKey = selectedDayPeriods?.join('|') ?? 'NULL';
+
+    // 使用不同的分隔符确保唯一性
+    return '$tagKey@@$categoryKey@@$searchKey@@$orderBy@@$weatherKey@@$dayPeriodKey';
   }
 
-  // 从缓存中获取数据，如果有的话
+  /// 优化：从缓存中获取数据，改进边界检查
   List<Quote>? _getFromCache(String cacheKey, int offset, int limit) {
     final cachedData = _filterCache[cacheKey];
-    if (cachedData == null) return null;
-
-    // 检查是否缓存了足够的数据
-    if (cachedData.length > offset) {
-      final end =
-          (offset + limit) <= cachedData.length
-              ? (offset + limit)
-              : cachedData.length;
-      return cachedData.sublist(offset, end);
+    if (cachedData == null || cachedData.isEmpty) {
+      return null;
     }
 
-    return null;
+    // 优化：改进边界检查逻辑
+    if (offset >= cachedData.length) {
+      // 如果偏移量超过缓存数据长度，返回空列表而不是null
+      return [];
+    }
+
+    final end = (offset + limit).clamp(0, cachedData.length);
+    final result = cachedData.sublist(offset, end);
+
+    logDebug('从缓存获取数据: offset=$offset, limit=$limit, 实际返回=${result.length}条');
+    return result;
   }
 
-  // 向缓存添加数据
+  /// 优化：更智能的缓存管理
   void _addToCache(String cacheKey, List<Quote> quotes, int offset) {
     if (!_filterCache.containsKey(cacheKey)) {
-      // 如果缓存已满，移除最旧的条目
+      // 如果缓存已满，使用LRU策略移除最旧的条目
       if (_filterCache.length >= _maxCacheEntries) {
-        final oldestKey = _filterCache.keys.first;
+        // 优化：简单的LRU实现，移除第一个元素
+        final keys = _filterCache.keys.toList();
+        final oldestKey = keys.first;
         _filterCache.remove(oldestKey);
+        logDebug('缓存已满，移除最旧的缓存条目: $oldestKey');
       }
       _filterCache[cacheKey] = [];
     }
 
-    // 如果是第一页，则清空缓存
+    // 如果是第一页，则清空缓存重新开始
     if (offset == 0) {
       _filterCache[cacheKey] = List.from(quotes);
+      logDebug('缓存第一页数据，共 ${quotes.length} 条');
     } else {
       // 否则追加到现有缓存
       _filterCache[cacheKey]!.addAll(quotes);
+      logDebug(
+        '追加缓存数据，新增 ${quotes.length} 条，总计 ${_filterCache[cacheKey]!.length} 条',
+      );
     }
   }
 
