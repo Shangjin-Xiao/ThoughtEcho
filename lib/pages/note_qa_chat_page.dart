@@ -10,6 +10,8 @@ import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/chat_theme_helper.dart';
+import '../widgets/markdown_message_bubble.dart';
+import '../widgets/chat_input_suggestions.dart';
 
 /// 现代化的问笔记聊天界面页面
 class NoteQAChatPage extends StatefulWidget {
@@ -214,6 +216,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         theme: ChatThemeHelper.createChatTheme(theme),
         showUserAvatars: true,
         showUserNames: true,
+        textMessageBuilder: _customTextMessageBuilder,
         inputOptions: InputOptions(
           enabled: !_isResponding,
           sendButtonVisibilityMode: SendButtonVisibilityMode.always,
@@ -257,20 +260,32 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     );
   }
 
+  /// 自定义文本消息构建器，支持Markdown渲染
+  Widget _customTextMessageBuilder(
+    types.TextMessage message, {
+    required int messageWidth,
+    required bool showName,
+  }) {
+    final isCurrentUser = message.author.id == _user.id;
+    return MarkdownMessageBubble(
+      message: message,
+      isCurrentUser: isCurrentUser,
+      theme: Theme.of(context),
+    );
+  }
+
   Widget _buildQuickQuestionButtons(ThemeData theme) {
-    final quickQuestions = [
-      '这篇笔记的核心思想是什么？',
-      '从中能得到什么启发？',
-      '如何应用到实际生活中？',
-      '反映了什么思维模式？',
-    ];
+    // 使用智能建议生成问题
+    final smartSuggestions = ChatInputSuggestions.generateSuggestions(
+      widget.quote.content,
+    );
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children:
-          quickQuestions.map((question) {
+          smartSuggestions.map((question) {
             return ActionChip(
               label: Text(
                 question,
