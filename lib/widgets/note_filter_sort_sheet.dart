@@ -137,41 +137,51 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 spacing: 8.0,
                 runSpacing: 8.0,
                 children: [
-                  ...WeatherService.weatherKeyToLabel.keys
-                      .where((key) => key != 'unknown')
-                      .map((weatherKey) {
-                        final isSelected = _tempSelectedWeathers.contains(
-                          weatherKey,
-                        );
-                        final icon = WeatherService.getWeatherIconDataByKey(
-                          weatherKey,
-                        );
-                        return FilterChip(
-                          selected: isSelected,
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(icon, size: 16),
-                              const SizedBox(width: 4),
-                              Text(
-                                WeatherService.getWeatherDescription(
-                                  weatherKey,
-                                ),
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
+                  ...WeatherService.filterCategoryToLabel.keys.map((
+                    filterCategory,
+                  ) {
+                    final isSelected = _tempSelectedWeathers.any(
+                      (selectedWeather) =>
+                          WeatherService.getWeatherKeysByFilterCategory(
+                            filterCategory,
+                          ).contains(selectedWeather),
+                    );
+                    final icon = WeatherService.getFilterCategoryIcon(
+                      filterCategory,
+                    );
+                    return FilterChip(
+                      selected: isSelected,
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icon, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            WeatherService
+                                .filterCategoryToLabel[filterCategory]!,
+                            style: theme.textTheme.bodyMedium,
                           ),
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _tempSelectedWeathers.add(weatherKey);
-                              } else {
-                                _tempSelectedWeathers.remove(weatherKey);
-                              }
-                            });
-                          },
-                        );
-                      }),
+                        ],
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          final categoryKeys =
+                              WeatherService.getWeatherKeysByFilterCategory(
+                                filterCategory,
+                              );
+                          if (selected) {
+                            // 添加该分类下的所有天气key
+                            _tempSelectedWeathers.addAll(categoryKeys);
+                          } else {
+                            // 移除该分类下的所有天气key
+                            _tempSelectedWeathers.removeWhere(
+                              (weather) => categoryKeys.contains(weather),
+                            );
+                          }
+                        });
+                      },
+                    );
+                  }),
                 ],
               ),
               const SizedBox(height: 20),
@@ -252,16 +262,19 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                   ),
                   const SizedBox(width: 12),
                   FilledButton(
-                    onPressed: () {
-                      widget.onApply(
-                        _tempSelectedTagIds,
-                        _tempSortType,
-                        _tempSortAscending,
-                        _tempSelectedWeathers,
-                        _tempSelectedDayPeriods,
-                      );
-                      Navigator.pop(context);
-                    },
+                    onPressed:
+                        _hasChanges()
+                            ? () {
+                              widget.onApply(
+                                _tempSelectedTagIds,
+                                _tempSortType,
+                                _tempSortAscending,
+                                _tempSelectedWeathers,
+                                _tempSelectedDayPeriods,
+                              );
+                              Navigator.pop(context);
+                            }
+                            : null, // 优化：如果没有变化则禁用按钮
                     child: const Text('应用'),
                   ),
                 ],
@@ -271,5 +284,26 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
         ),
       ),
     );
+  }
+
+  /// 优化：检查是否有筛选条件变化
+  bool _hasChanges() {
+    return !_areListsEqual(_tempSelectedTagIds, widget.selectedTagIds) ||
+        _tempSortType != widget.sortType ||
+        _tempSortAscending != widget.sortAscending ||
+        !_areListsEqual(_tempSelectedWeathers, widget.selectedWeathers ?? []) ||
+        !_areListsEqual(
+          _tempSelectedDayPeriods,
+          widget.selectedDayPeriods ?? [],
+        );
+  }
+
+  /// 优化：辅助方法：比较两个列表是否相等
+  bool _areListsEqual(List<String> list1, List<String> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i] != list2[i]) return false;
+    }
+    return true;
   }
 }

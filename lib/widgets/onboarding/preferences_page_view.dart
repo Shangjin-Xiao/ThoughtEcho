@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
+import '../../services/location_service.dart';
 
 /// 偏好设置页面组件
 class PreferencesPageView extends StatefulWidget {
@@ -152,7 +155,70 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       elevation: 2,
       child: SwitchListTile(
         value: value,
-        onChanged: (newValue) {
+        onChanged: (newValue) async {
+          // 如果是位置服务，需要特殊处理权限申请
+          if (preference.key == 'locationService' && newValue) {
+            final locationService = Provider.of<LocationService>(
+              context,
+              listen: false,
+            );
+
+            // 请求位置权限
+            final hasPermission =
+                await locationService.requestLocationPermission();
+            if (!hasPermission) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('位置权限被拒绝，无法启用位置服务'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+              return; // 不更新状态
+            }
+
+            // 检查位置服务是否启用
+            final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+            if (!serviceEnabled) {
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder:
+                      (context) => AlertDialog(
+                        title: const Text('位置服务未启用'),
+                        content: const Text('请在系统设置中启用位置服务'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('取消'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await Geolocator.openLocationSettings();
+                            },
+                            child: const Text('去设置'),
+                          ),
+                        ],
+                      ),
+                );
+              }
+              return; // 不更新状态
+            }
+
+            // 获取当前位置
+            final position = await locationService.getCurrentLocation();
+            if (position != null && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('位置服务已启用'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          }
+
           widget.onPreferenceChanged(preference.key, newValue);
         },
         title: Text(

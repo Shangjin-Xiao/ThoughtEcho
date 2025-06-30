@@ -31,7 +31,7 @@ dart format .
 
 # 代码分析
 flutter analyze
-
+注意：请尽可能使用编辑器工具而非运行命令进行代码分析
 # 依赖检查
 flutter pub deps
 

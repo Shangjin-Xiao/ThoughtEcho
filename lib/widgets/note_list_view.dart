@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
@@ -6,7 +7,6 @@ import '../services/database_service.dart';
 import '../controllers/search_controller.dart'; // 导入我们自定义的搜索控制器
 import '../utils/icon_utils.dart';
 import '../widgets/quote_item_widget.dart';
-import 'dart:async';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
@@ -60,6 +60,10 @@ class NoteListViewState extends State<NoteListView> {
   List<String> _selectedWeathers = [];
   List<String> _selectedDayPeriods = []; // 添加时间段筛选状态
 
+  // 优化：添加防抖定时器
+  Timer? _searchDebounceTimer;
+  static const Duration _searchDebounceDelay = Duration(milliseconds: 500);
+
   @override
   void initState() {
     super.initState();
@@ -103,14 +107,21 @@ class NoteListViewState extends State<NoteListView> {
       _searchController.text = widget.searchQuery;
     }
 
-    // 检查是否有条件变化（来自父组件的 props）
-    if (oldWidget.searchQuery != widget.searchQuery ||
-        !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
-        oldWidget.sortType != widget.sortType ||
-        oldWidget.sortAscending != widget.sortAscending) {
-      // 如果 props 变化，则更新流订阅
+    // 优化：只有在筛选条件真正改变时才更新订阅
+    final bool shouldUpdate = _shouldUpdateSubscription(oldWidget);
+
+    if (shouldUpdate) {
+      // 更新流订阅
       _updateStreamSubscription();
     }
+  }
+
+  /// 优化：判断是否需要更新订阅
+  bool _shouldUpdateSubscription(NoteListView oldWidget) {
+    return oldWidget.searchQuery != widget.searchQuery ||
+        !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
+        oldWidget.sortType != widget.sortType ||
+        oldWidget.sortAscending != widget.sortAscending;
   }
 
   // 辅助方法：比较两个列表是否相等（深比较）
@@ -123,8 +134,11 @@ class NoteListViewState extends State<NoteListView> {
     return true;
   }
 
-  // 新增方法：更新数据库监听流
+  // 优化：新增方法：更新数据库监听流（改进版本）
   void _updateStreamSubscription() {
+    // 防止重复更新
+    if (_isLoading) return;
+
     setState(() {
       _isLoading = true; // 开始加载
       _hasMore = true; // 假设有更多数据
@@ -137,13 +151,12 @@ class NoteListViewState extends State<NoteListView> {
     // 取消现有订阅
     _quotesSub.cancel();
 
-    // 创建新的订阅
+    // 创建新的订阅 - 优化：减少不必要的参数传递
     _quotesSub = db
         .watchQuotes(
           tagIds:
               widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
           limit: _pageSize, // 初始加载限制
-          // offset: _offset,   // 移除 offset，watchQuotes 不支持，分页由 loadMoreQuotes 处理
           orderBy:
               widget.sortType == 'time'
                   ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
@@ -160,7 +173,7 @@ class NoteListViewState extends State<NoteListView> {
             if (mounted) {
               // 确保组件仍然挂载
               setState(() {
-                // _quotes.clear(); // 不再需要，因为在开始时已清空
+                _quotes.clear();
                 _quotes.addAll(list);
                 _hasMore = list.length == _pageSize; // 判断是否还有更多
                 _isLoading = false; // 加载完成
@@ -172,17 +185,26 @@ class NoteListViewState extends State<NoteListView> {
               setState(() {
                 _isLoading = false; // 出错时停止加载
               });
-              // 可以添加错误处理逻辑，例如显示 SnackBar
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('加载笔记失败: $error'),
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              // 优化：更友好的错误提示
+              _showErrorSnackBar('加载笔记失败: $error');
             }
           },
         );
+  }
+
+  /// 优化：显示错误提示的统一方法
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: '重试',
+          onPressed: () => _updateStreamSubscription(),
+        ),
+      ),
+    );
   }
 
   // 移除重复的 _areListsEqual 定义
@@ -191,6 +213,7 @@ class NoteListViewState extends State<NoteListView> {
   void dispose() {
     _quotesSub.cancel();
     _searchController.dispose();
+    _searchDebounceTimer?.cancel(); // 优化：清理防抖定时器
     super.dispose();
   }
 
@@ -324,8 +347,11 @@ class NoteListViewState extends State<NoteListView> {
     );
   }
 
-  // 搜索内容变化回调
+  // 优化：搜索内容变化回调，添加防抖机制
   void _onSearchChanged(String value) {
+    // 取消之前的防抖定时器
+    _searchDebounceTimer?.cancel();
+
     // 立即更新本地UI状态
     setState(() {
       // 如果搜索框被清空，立即重置加载状态
@@ -337,10 +363,28 @@ class NoteListViewState extends State<NoteListView> {
       }
     });
 
+    // 对于清空操作，立即执行
+    if (value.isEmpty) {
+      _performSearch(value);
+      return;
+    }
+
+    // 对于输入操作，使用防抖延迟
+    _searchDebounceTimer = Timer(_searchDebounceDelay, () {
+      if (mounted) {
+        _performSearch(value);
+      }
+    });
+  }
+
+  /// 优化：执行搜索的统一方法
+  void _performSearch(String value) {
+    if (!mounted) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.searchQuery != value) {
         // 使用超时机制，避免搜索无限等待
-        Future.delayed(const Duration(seconds: 5), () {
+        Timer(const Duration(seconds: 5), () {
           if (mounted && _isLoading) {
             setState(() {
               _isLoading = false;

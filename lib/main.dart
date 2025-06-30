@@ -218,6 +218,17 @@ Future<void> main() async {
           ),
         );
 
+        // 简单预初始化位置服务（异步执行，不阻塞UI）
+        Future.microtask(() async {
+          try {
+            logDebug('开始预初始化位置服务...');
+            await locationService.init();
+            logDebug('位置服务预初始化完成');
+          } catch (e) {
+            logDebug('预初始化位置服务失败: $e');
+          }
+        });
+
         // 首屏UI显示后，异步初始化其他服务
         // 使用microtask确保在UI渲染后执行
         Future.microtask(() async {

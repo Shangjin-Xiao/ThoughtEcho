@@ -300,4 +300,58 @@ class WeatherService extends ChangeNotifier {
     'thunderstorm_heavy': '雷暴雨',
     'unknown': '未知',
   };
+
+  // 筛选用的简化天气分类映射
+  static const filterCategoryToLabel = {
+    'sunny': '晴',
+    'rainy': '雨',
+    'cloudy': '多云',
+    'snowy': '雪',
+  };
+
+  // 简化分类到具体天气key的映射
+  static const filterCategoryToKeys = {
+    'sunny': ['clear'],
+    'rainy': [
+      'drizzle',
+      'freezing_rain',
+      'rain',
+      'rain_shower',
+      'thunderstorm',
+      'thunderstorm_heavy',
+    ],
+    'cloudy': ['partly_cloudy', 'cloudy', 'fog'],
+    'snowy': ['snow', 'snow_grains', 'snow_shower'],
+  };
+
+  /// 根据筛选分类获取对应的具体天气key列表
+  static List<String> getWeatherKeysByFilterCategory(String filterCategory) {
+    return filterCategoryToKeys[filterCategory] ?? [];
+  }
+
+  /// 根据具体天气key获取对应的筛选分类
+  static String? getFilterCategoryByWeatherKey(String weatherKey) {
+    for (final entry in filterCategoryToKeys.entries) {
+      if (entry.value.contains(weatherKey)) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  /// 获取筛选分类的图标
+  static IconData getFilterCategoryIcon(String filterCategory) {
+    switch (filterCategory) {
+      case 'sunny':
+        return Icons.wb_sunny;
+      case 'rainy':
+        return Icons.water_drop;
+      case 'cloudy':
+        return Icons.cloud;
+      case 'snowy':
+        return Icons.ac_unit;
+      default:
+        return Icons.cloud_queue;
+    }
+  }
 }

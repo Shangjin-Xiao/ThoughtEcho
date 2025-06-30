@@ -10,7 +10,6 @@ class OnboardingConfig {
     OnboardingPageData(
       title: '欢迎使用心迹',
       subtitle: '记录生活点滴，留存思想灵感',
-      description: '让我们开始一段美好的思想记录之旅',
       type: OnboardingPageType.welcome,
     ),
 
@@ -37,7 +36,6 @@ class OnboardingConfig {
       title: '智能笔记',
       description: '支持富文本编辑，自动记录时间、位置和天气',
       icon: Icons.edit_note,
-      isHighlight: true,
     ),
     OnboardingFeature(
       title: '每日一言',
@@ -47,7 +45,7 @@ class OnboardingConfig {
     OnboardingFeature(
       title: 'AI 洞察',
       description: '智能分析您的笔记内容，发现思维模式和情感变化',
-      icon: Icons.psychology,
+      icon: Icons.auto_awesome,
     ),
     OnboardingFeature(
       title: '本地优先',
@@ -88,12 +86,21 @@ class OnboardingConfig {
       type: OnboardingPreferenceType.toggle,
     ),
 
+    // 位置服务
+    OnboardingPreference<bool>(
+      key: 'locationService',
+      title: '位置服务',
+      description: '启用位置服务以自动记录笔记地点和获取天气信息',
+      defaultValue: false,
+      type: OnboardingPreferenceType.toggle,
+    ),
+
     // 一言类型选择
     OnboardingPreference<String>(
       key: 'hitokotoTypes',
       title: '每日一言类型',
       description: '选择您感兴趣的内容类型',
-      defaultValue: 'a,b,c,d',
+      defaultValue: 'a,b,c,d,e,f,g,h,i,j,k',
       type: OnboardingPreferenceType.multiSelect,
       options:
           ApiService.hitokotoTypes.entries
