@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../utils/color_utils.dart';
 import '../utils/ai_dialog_helper.dart'; // 导入新的AI助手
+import 'note_qa_chat_page.dart'; // 导入问笔记聊天页面
 
 // 添加 note_full_editor_page.dart 的导入
 import '../pages/note_full_editor_page.dart';
@@ -185,6 +186,7 @@ class EditPageState extends State<EditPage> {
       onPolishText: _polishText,
       onContinueText: _continueText,
       onAnalyzeContent: _analyzeContent,
+      onAskQuestion: _askNoteQuestion, // 添加问笔记功能
     );
   }
 
@@ -221,6 +223,40 @@ class EditPageState extends State<EditPage> {
           _aiAnalysis = analysisResult;
         });
       },
+    );
+  }
+
+  // 问笔记功能
+  Future<void> _askNoteQuestion() async {
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      return;
+    }
+
+    // 创建临时Quote对象用于问答
+    final tempQuote = Quote(
+      id: widget.quote.id,
+      content: content,
+      date: DateTime.now().toIso8601String(),
+      sourceAuthor:
+          _authorController.text.trim().isEmpty
+              ? null
+              : _authorController.text.trim(),
+      sourceWork:
+          _workController.text.trim().isEmpty
+              ? null
+              : _workController.text.trim(),
+      location: _includeLocation ? _location : null,
+      weather: _includeWeather ? _weather : null,
+      temperature: _includeWeather ? _temperature : null,
+    );
+
+    // 导航到聊天页面
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
     );
   }
 

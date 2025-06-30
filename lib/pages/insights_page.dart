@@ -123,7 +123,7 @@ class _InsightsPageState extends State<InsightsPage>
         analysisStyle: _selectedAnalysisStyle,
         customPrompt: _showCustomPrompt ? _customPromptController.text : null,
         createdAt: DateTime.now().toIso8601String(),
-        quoteCount: await context.read<DatabaseService>().getUserQuotesCount(),
+        quoteCount: await context.read<DatabaseService>().getQuotesCount(),
       );
 
       // 保存到数据库

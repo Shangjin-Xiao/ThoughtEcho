@@ -1,32 +1,37 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+// Flutter核心库
 import 'package:flutter/foundation.dart';
-import 'package:provider/provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart';
-import 'package:dynamic_color/dynamic_color.dart'; // 添加 dynamic_color 导入
-import 'package:thoughtecho/services/backup_service.dart';
-import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/services/ai_service.dart';
-import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/weather_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
-import 'package:thoughtecho/services/clipboard_service.dart';
-import 'package:thoughtecho/services/unified_log_service.dart';
-import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:thoughtecho/services/network_service.dart';
-import 'utils/app_logger.dart';
-import 'pages/home_page.dart';
-import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
-import 'theme/app_theme.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'pages/onboarding_page.dart';
+
+// 第三方包
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+// 项目内部
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/backup_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/network_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
+import 'utils/app_logger.dart';
+import 'theme/app_theme.dart';
+import 'pages/home_page.dart';
+import 'pages/onboarding_page.dart';
+import 'pages/backup_restore_page.dart';
 
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
@@ -69,7 +74,6 @@ final List<Map<String, dynamic>> _deferredErrors = [];
 Future<void> main() async {
   await runZonedGuarded<Future<void>>(
     () async {
-      // 确保Flutter绑定已初始化，这样我们可以使用平台通道和插件
       WidgetsFlutterBinding.ensureInitialized();
 
       // 初始化日志系统
@@ -77,7 +81,6 @@ Future<void> main() async {
 
       // 全局记录未捕获的异步错误
       PlatformDispatcher.instance.onError = (error, stack) {
-        // 使用新的日志系统而不是logDebug
         logError(
           '捕获到平台分发器错误: $error',
           error: error,
@@ -96,9 +99,6 @@ Future<void> main() async {
 
         return true; // 返回true表示错误已处理
       };
-
-      // 初始化日志系统
-      AppLogger.initialize();
 
       // 捕获Flutter框架异常并写入日志服务
       FlutterError.onError = (FlutterErrorDetails details) {
@@ -182,7 +182,6 @@ Future<void> main() async {
         // 使用ValueNotifier跟踪服务初始化状态
         final servicesInitialized = ValueNotifier<bool>(false);
 
-        // 启动应用UI
         runApp(
           MultiProvider(
             providers: [
@@ -193,9 +192,7 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => clipboardService),
               ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
-              ChangeNotifierProvider(
-                create: (_) => aiAnalysisDbService,
-              ),
+              ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
               Provider.value(
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService
@@ -210,22 +207,51 @@ Future<void> main() async {
                     (context, settings, previous) =>
                         previous ?? AIService(settingsService: settings),
               ),
-              ProxyProvider3<DatabaseService, SettingsService,
-                  AIAnalysisDatabaseService, BackupService>(
-                update: (context, dbService, settingsService, aiService,
-                        previous) =>
-                    BackupService(
-                  databaseService: dbService,
-                  settingsService: settingsService,
-                  aiAnalysisDbService: aiService,
-                ),
+              ProxyProvider3<
+                DatabaseService,
+                SettingsService,
+                AIAnalysisDatabaseService,
+                BackupService
+              >(
+                update:
+                    (
+                      context,
+                      dbService,
+                      settingsService,
+                      aiService,
+                      previous,
+                    ) => BackupService(
+                      databaseService: dbService,
+                      settingsService: settingsService,
+                      aiAnalysisDbService: aiService,
+                    ),
               ),
             ],
-            child: MyApp(
-              navigatorKey: navigatorKey,
-              isEmergencyMode: _isEmergencyMode,
-              showUpdateReady: showUpdateReady,
-              showFullOnboarding: showFullOnboarding,
+            child: Builder(
+              builder: (context) {
+                // 启动后上报延迟错误
+                if (_deferredErrors.isNotEmpty) {
+                  final logService = Provider.of<UnifiedLogService>(
+                    context,
+                    listen: false,
+                  );
+                  for (var err in _deferredErrors) {
+                    logService.error(
+                      err['message'],
+                      error: err['error'],
+                      stackTrace: err['stackTrace'],
+                      source: err['source'],
+                    );
+                  }
+                  _deferredErrors.clear();
+                }
+                return MyApp(
+                  navigatorKey: navigatorKey,
+                  isEmergencyMode: _isEmergencyMode,
+                  showUpdateReady: showUpdateReady,
+                  showFullOnboarding: showFullOnboarding,
+                );
+              },
             ),
           ),
         );
@@ -945,5 +971,3 @@ Future<void> _initializeDatabaseNormally(
     );
   }
 }
-
-

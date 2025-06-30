@@ -772,16 +772,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _askNoteQuestion,
-        icon: const Icon(Icons.chat),
-        label: const Text('问笔记'),
-        backgroundColor: theme.colorScheme.secondary,
-        foregroundColor: theme.colorScheme.onSecondary,
-        elevation: 2,
-        extendedTextStyle: const TextStyle(fontWeight: FontWeight.w500),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      // 移除全屏编辑器中的问笔记悬浮按钮
+      // floatingActionButton: null,
     );
   }
 
