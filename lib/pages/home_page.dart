@@ -1027,6 +1027,9 @@ class _HomePageState extends State<HomePage>
                   sortType: _sortType,
                   sortAscending: _sortAscending,
                   onSortChanged: _handleSortChanged,
+                  onSearchChanged: (query) {
+                    searchController.updateSearch(query);
+                  },
                   onEdit: _showEditQuoteDialog,
                   onDelete: _showDeleteConfirmDialog,
                   onAskAI: _showAIQuestionDialog,

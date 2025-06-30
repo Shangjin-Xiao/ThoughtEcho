@@ -179,7 +179,14 @@ class AIService extends ChangeNotifier {
         final multiSettings = _settingsService.multiAISettings;
         final currentProvider = multiSettings.currentProvider!;
 
-        final userMessage = _promptManager.buildUserMessage(quote.content);
+        // 直接使用Quote的content字段（纯文本内容）
+        final content = quote.content.trim();
+
+        if (content.isEmpty) {
+          throw Exception('没有可分析的文本内容');
+        }
+
+        final userMessage = _promptManager.buildUserMessage(content);
         final response = await _requestHelper.makeRequestWithProvider(
           url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
@@ -206,7 +213,15 @@ class AIService extends ChangeNotifier {
         final multiSettings = _settingsService.multiAISettings;
         final currentProvider = multiSettings.currentProvider!;
 
-        final userMessage = _promptManager.buildUserMessage(quote.content);
+        // 直接使用Quote的content字段（纯文本内容）
+        final content = quote.content.trim();
+
+        if (content.isEmpty) {
+          controller.addError(Exception('没有可分析的文本内容'));
+          return;
+        }
+
+        final userMessage = _promptManager.buildUserMessage(content);
         await _requestHelper.makeStreamRequestWithProvider(
           url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
@@ -672,8 +687,15 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final currentProvider = await _getCurrentProviderWithApiKey();
 
+        // 直接使用Quote的content字段（纯文本内容）
+        final content = quote.content.trim();
+
+        if (content.isEmpty) {
+          throw Exception('没有可分析的文本内容');
+        }
+
         final userMessage = _promptManager.buildQAUserMessage(
-          quote.content,
+          content,
           question,
         );
         final response = await _requestHelper.makeRequestWithProvider(
@@ -704,8 +726,16 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final currentProvider = await _getCurrentProviderWithApiKey();
 
+        // 直接使用Quote的content字段（纯文本内容）
+        final content = quote.content.trim();
+
+        if (content.isEmpty) {
+          controller.addError(Exception('没有可分析的文本内容'));
+          return;
+        }
+
         final userMessage = _promptManager.buildQAUserMessage(
-          quote.content,
+          content,
           question,
         );
         await _requestHelper.makeStreamRequestWithProvider(
@@ -815,13 +845,20 @@ class AIService extends ChangeNotifier {
     try {
       final multiSettings = _settingsService.multiAISettings;
 
+      // 直接使用Quote的content字段（纯文本内容）
+      final content = quote.content.trim();
+
+      if (content.isEmpty) {
+        throw Exception('没有可分析的文本内容');
+      }
+
       final messages = [
         {
           'role': 'system',
           'content':
               '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
         },
-        {'role': 'user', 'content': '请分析以下内容：\n${quote.content}'},
+        {'role': 'user', 'content': '请分析以下内容：\n$content'},
       ];
       final response = await AINetworkManager.makeRequest(
         url: '',

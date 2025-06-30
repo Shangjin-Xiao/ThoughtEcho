@@ -89,7 +89,9 @@ class _WelcomePageViewState extends State<WelcomePageView>
                     Text(
                       widget.pageData.subtitle,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.8),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.8,
+                        ),
                       ),
                       textAlign: TextAlign.center,
                     ),

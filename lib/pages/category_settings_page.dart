@@ -522,6 +522,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   iconName: selectedIcon,
                 );
 
+                // 修复内存泄露：在异步操作后检查mounted状态
                 if (!mounted) return;
                 Navigator.pop(dialogContext);
               },
@@ -578,17 +579,19 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       if (confirmed == true && mounted) {
         try {
           final dbService = context.read<DatabaseService>();
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
           await dbService.deleteCategory(category.id);
 
+          // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
-          scaffoldMessenger.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('分类删除成功')),
           );
         } catch (e) {
+          // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
-          scaffoldMessenger.showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('删除分类失败：$e')),
+          );
         }
       }
     });

@@ -52,9 +52,54 @@ class DatabaseService extends ChangeNotifier {
   bool _watchHasMore = true;
   String? _watchSearchQuery;
 
-  // 查询缓存，减少重复数据库查询
+  // 优化：查询缓存，减少重复数据库查询
   final Map<String, List<Quote>> _filterCache = {};
-  final int _maxCacheEntries = 10; // 最多缓存10组过滤条件的结果
+  final Map<String, DateTime> _cacheTimestamps = {}; // 缓存时间戳
+  final int _maxCacheEntries = 20; // 增加缓存容量
+  final Duration _cacheExpiration = const Duration(minutes: 3); // 调整缓存过期时间
+
+  // 优化：查询结果缓存
+  final Map<String, int> _countCache = {}; // 计数查询缓存
+  final Map<String, DateTime> _countCacheTimestamps = {};
+
+  /// 优化：检查并清理过期缓存
+  void _cleanExpiredCache() {
+    final now = DateTime.now();
+    final expiredKeys = <String>[];
+    final expiredCountKeys = <String>[];
+
+    // 清理查询缓存
+    for (final entry in _cacheTimestamps.entries) {
+      if (now.difference(entry.value) > _cacheExpiration) {
+        expiredKeys.add(entry.key);
+      }
+    }
+
+    for (final key in expiredKeys) {
+      _filterCache.remove(key);
+      _cacheTimestamps.remove(key);
+    }
+
+    // 清理计数缓存
+    for (final entry in _countCacheTimestamps.entries) {
+      if (now.difference(entry.value) > _cacheExpiration) {
+        expiredCountKeys.add(entry.key);
+      }
+    }
+
+    for (final key in expiredCountKeys) {
+      _countCache.remove(key);
+      _countCacheTimestamps.remove(key);
+    }
+  }
+
+  /// 优化：清空所有缓存（在数据变更时调用）
+  void _clearAllCache() {
+    _filterCache.clear();
+    _cacheTimestamps.clear();
+    _countCache.clear();
+    _countCacheTimestamps.clear();
+  }
 
   // 添加存储天气筛选条件的变量
   List<String>? _watchSelectedWeathers;
@@ -1302,6 +1347,9 @@ class DatabaseService extends ChangeNotifier {
       );
       logDebug('笔记已成功保存到数据库，ID: ${quoteMap['id']}');
 
+      // 优化：数据变更后清空缓存
+      _clearAllCache();
+
       // 直接添加到当前列表并通知
       _currentQuotes.insert(0, quote); // 假设最新笔记显示在顶部
       if (_quotesController != null && !_quotesController!.isClosed) {
@@ -1318,7 +1366,8 @@ class DatabaseService extends ChangeNotifier {
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
       logDebug('刷新笔记流数据');
-      // 清除缓存，确保获取最新数据
+      // 优化：清除所有缓存，确保获取最新数据
+      _clearAllCache();
 
       // 重置状态并加载新数据
       _watchOffset = 0;

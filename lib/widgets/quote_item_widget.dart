@@ -8,6 +8,7 @@ import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 
+/// 优化：使用StatelessWidget保持高性能，数据变化通过父组件管理
 class QuoteItemWidget extends StatelessWidget {
   final Quote quote;
   final List<NoteCategory> tags;
@@ -32,8 +33,22 @@ class QuoteItemWidget extends StatelessWidget {
     this.tagBuilder,
   });
 
-  // 判断是否需要展开按钮（富文本或长文本）
+  // 优化：缓存计算结果，避免重复计算
+  static final Map<String, bool> _expansionCache = <String, bool>{};
+  static int _cacheHitCount = 0; // 统计缓存命中次数
+
+  /// 优化：判断是否需要展开按钮（富文本或长文本）- 带缓存
   bool _needsExpansion(Quote quote) {
+    final cacheKey =
+        '${quote.id}_${quote.content.length}_${quote.deltaContent?.length ?? 0}';
+
+    if (_expansionCache.containsKey(cacheKey)) {
+      _cacheHitCount++;
+      return _expansionCache[cacheKey]!;
+    }
+
+    bool needsExpansion = false;
+
     // 新笔记（富文本）
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       try {
@@ -52,17 +67,42 @@ class QuoteItemWidget extends StatelessWidget {
             }
           }
           // 超过3行或内容长度超过150字符时显示折叠按钮
-          return lineCount > 3 || totalLength > 150;
+          needsExpansion = lineCount > 3 || totalLength > 150;
         }
       } catch (_) {
         // 富文本解析失败，回退到纯文本判断
         final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-        return lineCount > 3 || quote.content.length > 150;
+        needsExpansion = lineCount > 3 || quote.content.length > 150;
+      }
+    } else {
+      // 旧笔记（纯文本）
+      final int lineCount = 1 + '\n'.allMatches(quote.content).length;
+      needsExpansion = lineCount > 3 || quote.content.length > 150;
+    }
+
+    // 缓存结果
+    _expansionCache[cacheKey] = needsExpansion;
+
+    // 优化：限制缓存大小，防止内存泄漏，并清理最旧的缓存
+    if (_expansionCache.length > 200) {
+      final keysToRemove = _expansionCache.keys.take(50).toList();
+      for (final key in keysToRemove) {
+        _expansionCache.remove(key);
       }
     }
-    // 旧笔记（纯文本）
-    final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-    return lineCount > 3 || quote.content.length > 150;
+
+    return needsExpansion;
+  }
+
+  /// 清理缓存的静态方法（可在适当时机调用）
+  static void clearExpansionCache() {
+    _expansionCache.clear();
+    _cacheHitCount = 0;
+  }
+
+  /// 获取缓存统计信息
+  static Map<String, int> getCacheStats() {
+    return {'cacheSize': _expansionCache.length, 'cacheHits': _cacheHitCount};
   }
 
   String _formatSource(String author, String work) {

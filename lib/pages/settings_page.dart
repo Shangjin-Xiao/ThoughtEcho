@@ -241,8 +241,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ),
                                     TextButton(
                                       onPressed: () async {
-                                        if (!currentContext.mounted)
+                                        if (!currentContext.mounted) {
                                           return; // Check mounted before pop
+                                        }
                                         Navigator.pop(currentContext);
                                         await Geolocator.openLocationSettings();
                                         if (!mounted) return; // Add this check
