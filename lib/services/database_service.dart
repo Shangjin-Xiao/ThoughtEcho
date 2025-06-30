@@ -697,59 +697,40 @@ class DatabaseService extends ChangeNotifier {
     ];
   }
 
+  /// 将所有笔记和分类数据导出为Map对象
+  Future<Map<String, dynamic>> exportDataAsMap() async {
+    try {
+      final db = database;
+      final dbVersion = await db.getVersion();
+
+      // 查询所有数据
+      final categories = await db.query('categories');
+      final quotes = await db.query('quotes');
+
+      // 构建与旧版exportAllData兼容的JSON结构
+      return {
+        'metadata': {
+          'app': '心迹',
+          'version': dbVersion,
+          'exportTime': DateTime.now().toIso8601String(),
+        },
+        'categories': categories,
+        'quotes': quotes,
+      };
+    } catch (e) {
+      logDebug('数据导出为Map时失败: $e');
+      rethrow;
+    }
+  }
+
   /// 导出全部数据到 JSON 格式
   ///
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则保存到应用文档目录
   /// 返回保存的文件路径
   Future<String> exportAllData({String? customPath}) async {
     try {
-      final db = database;
-
-      // 查询所有数据并转换为 JSON 友好的格式
-      final categories = await db.query('categories');
-      final quotes = await db.query('quotes');
-
-      final jsonData = {
-        'metadata': {
-          'app': '心迹',
-          'version': await db.getVersion(),
-          'exportTime': DateTime.now().toIso8601String(),
-        },
-        'categories':
-            categories
-                .map(
-                  (c) => {
-                    'id': c['id'],
-                    'name': c['name'],
-                    'isDefault': c['is_default'] == 1,
-                    'iconName': c['icon_name'],
-                  },
-                )
-                .toList(),
-        'quotes':
-            quotes
-                .map(
-                  (q) => {
-                    'id': q['id'],
-                    'content': q['content'],
-                    'date': q['date'],
-                    'source': q['source'],
-                    'sourceAuthor': q['source_author'],
-                    'sourceWork': q['source_work'],
-                    'tagIds': q['tag_ids'],
-                    'aiAnalysis': q['ai_analysis'],
-                    'sentiment': q['sentiment'],
-                    'keywords': q['keywords'],
-                    'summary': q['summary'],
-                    'categoryId': q['category_id'],
-                    'colorHex': q['color_hex'],
-                    'location': q['location'],
-                    'weather': q['weather'],
-                    'temperature': q['temperature'],
-                  },
-                )
-                .toList(),
-      };
+      // 调用新方法获取数据
+      final jsonData = await exportDataAsMap();
 
       // 转换为格式化的 JSON 字符串
       final jsonStr = const JsonEncoder.withIndent('  ').convert(jsonData);
@@ -774,167 +755,45 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 从 JSON 文件导入数据
-  ///
-  /// [filePath] - 导入文件的路径
-  /// [clearExisting] - 是否清空现有数据，默认为 true
-  Future<void> importData(String filePath, {bool clearExisting = true}) async {
+  /// 从Map对象导入数据
+  Future<void> importDataFromMap(
+    Map<String, dynamic> data, {
+    bool clearExisting = true,
+  }) async {
     try {
       final db = database;
-      final file = File(filePath);
-      final jsonStr = await file.readAsString();
-      final data = json.decode(jsonStr) as Map<String, dynamic>;
 
-      // 验证数据格式 (与 validateBackupFile 保持一致)
-      if (!data.containsKey('metadata') ||
-          !data.containsKey('categories') ||
-          !data.containsKey('quotes')) {
-        throw Exception('备份文件格式无效，缺少必要的顶层数据结构 (metadata, categories, quotes)');
+      // 验证数据格式
+      if (!data.containsKey('categories') || !data.containsKey('quotes')) {
+        throw Exception('备份数据格式无效，缺少 "categories" 或 "quotes" 键');
       }
 
       // 开始事务
       await db.transaction((txn) async {
-        // 如果选择清空现有数据
         if (clearExisting) {
           logDebug('清空现有数据并导入新数据');
           await txn.delete('categories');
           await txn.delete('quotes');
+        }
 
-          // 恢复分类数据
-          final categories = data['categories'] as List;
-          for (final c in categories) {
-            await txn.insert('categories', {
-              'id': c['id'],
-              'name': c['name'],
-              'is_default': c['isDefault'] ? 1 : 0,
-              'icon_name': c['iconName'],
-            });
-          }
+        // 恢复分类数据
+        final categories = data['categories'] as List;
+        for (final c in categories) {
+          await txn.insert(
+            'categories',
+            c as Map<String, dynamic>,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
 
-          // 恢复笔记数据
-          final quotes = data['quotes'] as List;
-          for (final q in quotes) {
-            await txn.insert('quotes', {
-              'id': q['id'],
-              'content': q['content'],
-              'date': q['date'],
-              'source': q['source'],
-              'source_author': q['sourceAuthor'],
-              'source_work': q['sourceWork'],
-              'tag_ids': q['tagIds'],
-              'ai_analysis': q['aiAnalysis'],
-              'sentiment': q['sentiment'],
-              'keywords': q['keywords'],
-              'summary': q['summary'],
-              'category_id': q['categoryId'],
-              'color_hex': q['colorHex'],
-              'location': q['location'],
-              'weather': q['weather'],
-              'temperature': q['temperature'],
-            });
-          }
-        } else {
-          logDebug('合并数据');
-
-          // 获取现有分类和笔记的ID列表，用于检查是否存在
-          final existingCategories = await txn.query('categories');
-          final existingCategoryIds =
-              existingCategories.map((c) => c['id'] as String).toSet();
-
-          // 创建一个映射，用于检查分类名称重复
-          final existingCategoryNames = {
-            for (var c in existingCategories)
-              (c['name'] as String).toLowerCase(): c['id'] as String,
-          };
-
-          final existingQuotes = await txn.query('quotes', columns: ['id']);
-          final existingQuoteIds =
-              existingQuotes.map((q) => q['id'] as String).toSet();
-
-          // 合并分类数据
-          final categories = data['categories'] as List;
-          for (final c in categories) {
-            final categoryId = c['id'] as String;
-            final categoryName = (c['name'] as String).toLowerCase();
-
-            // 检查是否已存在同名分类
-            if (existingCategoryNames.containsKey(categoryName)) {
-              // 如果存在同名分类，使用现有的ID
-              final existingId = existingCategoryNames[categoryName];
-              logDebug('发现同名分类: $categoryName，使用现有ID: $existingId');
-
-              // 更新引用新导入分类的笔记，让它们引用现有的同名分类
-              final quotes = data['quotes'] as List;
-              for (final q in quotes) {
-                if (q['categoryId'] == categoryId) {
-                  q['categoryId'] = existingId;
-                }
-              }
-
-              // 跳过此分类的导入
-              continue;
-            }
-
-            final categoryData = {
-              'id': categoryId,
-              'name': c['name'],
-              'is_default': c['isDefault'] ? 1 : 0,
-              'icon_name': c['iconName'],
-            };
-
-            if (existingCategoryIds.contains(categoryId)) {
-              // 更新现有分类
-              await txn.update(
-                'categories',
-                categoryData,
-                where: 'id = ?',
-                whereArgs: [categoryId],
-              );
-            } else {
-              // 插入新分类
-              await txn.insert('categories', categoryData);
-              // 更新映射以包含新添加的分类
-              existingCategoryNames[categoryName] = categoryId;
-              existingCategoryIds.add(categoryId);
-            }
-          }
-
-          // 合并笔记数据
-          final quotes = data['quotes'] as List;
-          for (final q in quotes) {
-            final quoteId = q['id'] as String;
-            final quoteData = {
-              'id': quoteId,
-              'content': q['content'],
-              'date': q['date'],
-              'source': q['source'],
-              'source_author': q['sourceAuthor'],
-              'source_work': q['sourceWork'],
-              'tag_ids': q['tagIds'],
-              'ai_analysis': q['aiAnalysis'],
-              'sentiment': q['sentiment'],
-              'keywords': q['keywords'],
-              'summary': q['summary'],
-              'category_id': q['categoryId'],
-              'color_hex': q['colorHex'],
-              'location': q['location'],
-              'weather': q['weather'],
-              'temperature': q['temperature'],
-            };
-
-            if (existingQuoteIds.contains(quoteId)) {
-              // 更新现有笔记
-              await txn.update(
-                'quotes',
-                quoteData,
-                where: 'id = ?',
-                whereArgs: [quoteId],
-              );
-            } else {
-              // 插入新笔记
-              await txn.insert('quotes', quoteData);
-            }
-          }
+        // 恢复笔记数据
+        final quotes = data['quotes'] as List;
+        for (final q in quotes) {
+          await txn.insert(
+            'quotes',
+            q as Map<String, dynamic>,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
         }
       });
 
@@ -945,6 +804,27 @@ class DatabaseService extends ChangeNotifier {
       await patchQuotesDayPeriod();
       await migrateWeatherToKey();
       await migrateDayPeriodToKey();
+    } catch (e) {
+      logDebug('从Map导入数据失败: $e');
+      rethrow;
+    }
+  }
+  
+  /// 从 JSON 文件导入数据
+  ///
+  /// [filePath] - 导入文件的路径
+  /// [clearExisting] - 是否清空现有数据，默认为 true
+  Future<void> importData(String filePath, {bool clearExisting = true}) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('备份文件不存在: $filePath');
+      }
+      final jsonStr = await file.readAsString();
+      final data = json.decode(jsonStr) as Map<String, dynamic>;
+
+      // 调用新的核心导入逻辑
+      await importDataFromMap(data, clearExisting: clearExisting);
     } catch (e) {
       logDebug('数据导入失败: $e');
       rethrow;

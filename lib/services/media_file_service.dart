@@ -107,4 +107,69 @@ class MediaFileService {
       return false;
     }
   }
+
+  /// 获取所有媒体文件路径（用于备份）
+  static Future<List<String>> getAllMediaFilePaths() async {
+    try {
+      final List<String> allPaths = [];
+      final appDir = await getApplicationDocumentsDirectory();
+      final mediaDir = Directory(path.join(appDir.path, _mediaFolder));
+
+      if (await mediaDir.exists()) {
+        await for (final entity in mediaDir.list(recursive: true)) {
+          if (entity is File) {
+            allPaths.add(entity.path);
+          }
+        }
+      }
+
+      return allPaths;
+    } catch (e) {
+      if (kDebugMode) {
+        print('获取媒体文件路径失败: $e');
+      }
+      return [];
+    }
+  }
+
+  /// 从备份目录恢复媒体文件
+  static Future<bool> restoreMediaFiles(String backupMediaDir) async {
+    try {
+      final backupDir = Directory(backupMediaDir);
+      if (!await backupDir.exists()) {
+        return false;
+      }
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final targetMediaDir = Directory(path.join(appDir.path, _mediaFolder));
+
+      // 确保目标目录存在
+      if (!await targetMediaDir.exists()) {
+        await targetMediaDir.create(recursive: true);
+      }
+
+      // 递归复制所有文件
+      await for (final entity in backupDir.list(recursive: true)) {
+        if (entity is File) {
+          // 计算相对路径
+          final relativePath = path.relative(entity.path, from: backupMediaDir);
+          final targetPath = path.join(targetMediaDir.path, relativePath);
+
+          // 确保目标目录存在
+          final targetFile = File(targetPath);
+          await targetFile.parent.create(recursive: true);
+
+          // 复制文件
+          await entity.copy(targetPath);
+        }
+      }
+
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('恢复媒体文件失败: $e');
+      }
+      return false;
+    }
+  }
 }

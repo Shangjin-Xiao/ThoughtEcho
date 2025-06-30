@@ -1,0 +1,251 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:archive/archive_io.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/media_file_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
+
+/// 备份与恢复服务
+///
+/// 负责协调各个数据服务，将应用数据打包成一个.zip文件进行备份，
+/// 或从备份文件中恢复数据。
+class BackupService {
+  final DatabaseService _databaseService;
+  final SettingsService _settingsService;
+  final AIAnalysisDatabaseService _aiAnalysisDbService;
+
+  BackupService({
+    required DatabaseService databaseService,
+    required SettingsService settingsService,
+    required AIAnalysisDatabaseService aiAnalysisDbService,
+  }) : _databaseService = databaseService,
+       _settingsService = settingsService,
+       _aiAnalysisDbService = aiAnalysisDbService;
+
+  static const String _backupDataFile = 'backup_data.json';
+  static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
+
+  /// 导出所有应用数据
+  ///
+  /// [includeMediaFiles] - 是否在备份中包含媒体文件（图片等）
+  /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则创建在临时目录
+  /// 返回最终备份文件的路径
+  Future<String> exportAllData({
+    required bool includeMediaFiles,
+    String? customPath,
+  }) async {
+    final tempDir = await getTemporaryDirectory();
+    final backupId = DateTime.now().millisecondsSinceEpoch;
+    final archivePath =
+        customPath ??
+        path.join(tempDir.path, 'thoughtecho_backup_$backupId.zip');
+
+    try {
+      final encoder = ZipFileEncoder();
+      encoder.create(archivePath);
+
+      // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
+      final backupData = await _gatherStructuredData();
+      final jsonData = jsonEncode(backupData);
+      final jsonBytes = utf8.encode(jsonData);
+
+      // 创建临时文件来存储JSON数据
+      final tempDir = await getTemporaryDirectory();
+      final jsonFile = File(path.join(tempDir.path, _backupDataFile));
+      await jsonFile.writeAsBytes(jsonBytes);
+      encoder.addFile(jsonFile);
+
+      // 2. (可选) 导出媒体文件
+      if (includeMediaFiles) {
+        final mediaFiles = await MediaFileService.getAllMediaFilePaths();
+        final appDir = await getApplicationDocumentsDirectory();
+
+        for (final filePath in mediaFiles) {
+          // 获取相对于应用文档目录的路径，以保持目录结构
+          final relativePath = path.relative(filePath, from: appDir.path);
+          final file = File(filePath);
+          if (await file.exists()) {
+            encoder.addFile(file, relativePath);
+          }
+        }
+      }
+
+      encoder.close();
+      logDebug('数据导出成功，路径: $archivePath');
+      return archivePath;
+    } catch (e, s) {
+      AppLogger.e('数据导出失败', error: e, stackTrace: s, source: 'BackupService');
+      rethrow;
+    }
+  }
+
+  /// 从备份文件导入数据
+  ///
+  /// [filePath] - 备份文件的路径 (.zip 或旧版 .json)
+  /// [clearExisting] - 是否在导入前清空现有数据
+  Future<void> importData(String filePath, {bool clearExisting = true}) async {
+    // 处理旧版 JSON 备份文件
+    if (path.extension(filePath).toLowerCase() == '.json') {
+      logDebug('开始导入旧版JSON备份...');
+      return await _handleLegacyImport(filePath, clearExisting: clearExisting);
+    }
+
+    // 处理新的 ZIP 备份文件
+    final tempDir = await getTemporaryDirectory();
+    final importDir = Directory(
+      path.join(
+        tempDir.path,
+        'import_${DateTime.now().millisecondsSinceEpoch}',
+      ),
+    );
+    if (await importDir.exists()) {
+      await importDir.delete(recursive: true);
+    }
+    await importDir.create(recursive: true);
+
+    try {
+      // 1. 解压备份包
+      final inputStream = InputFileStream(filePath);
+      final archive = ZipDecoder().decodeBuffer(inputStream);
+
+      // 2. 恢复结构化数据
+      final backupDataFile = archive.findFile(_backupDataFile);
+      if (backupDataFile == null) {
+        throw Exception('备份文件无效: 未找到 backup_data.json');
+      }
+
+      final backupData = jsonDecode(
+        utf8.decode(backupDataFile.content as List<int>),
+      );
+      await _restoreStructuredData(backupData, clearExisting: clearExisting);
+
+      // 3. 恢复媒体文件
+      final mediaFilesExist = archive.files.any(
+        (file) => file.name.contains('/'),
+      );
+
+      if (mediaFilesExist) {
+        // 清理现有的媒体文件
+        if (clearExisting) {
+          final allMedia = await MediaFileService.getAllMediaFilePaths();
+          for (final p in allMedia) {
+            await MediaFileService.deleteMediaFile(p);
+          }
+        }
+
+        // 将备份中的媒体文件解压到临时目录
+        for (final file in archive.files) {
+          if (!file.isFile || file.name == _backupDataFile) continue;
+          final targetPath = path.join(importDir.path, file.name);
+          final targetFile = File(targetPath);
+          await targetFile.parent.create(recursive: true);
+          await targetFile.writeAsBytes(file.content as List<int>);
+        }
+        // 从临时目录恢复到应用目录
+        await MediaFileService.restoreMediaFiles(importDir.path);
+        logDebug('媒体文件恢复完成');
+      }
+    } catch (e, s) {
+      AppLogger.e('数据导入失败', error: e, stackTrace: s, source: 'BackupService');
+      rethrow;
+    } finally {
+      // 清理临时解压目录
+      if (await importDir.exists()) {
+        await importDir.delete(recursive: true);
+      }
+    }
+  }
+
+  /// 验证备份文件是否有效
+  Future<bool> validateBackupFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) return false;
+
+      // 验证新的 zip 格式
+      if (path.extension(filePath).toLowerCase() == '.zip') {
+        final inputStream = InputFileStream(filePath);
+        final archive = ZipDecoder().decodeBuffer(inputStream);
+        // 核心验证：必须包含 backup_data.json 文件
+        return archive.findFile(_backupDataFile) != null;
+      }
+
+      // 验证旧的 json 格式
+      if (path.extension(filePath).toLowerCase() == '.json') {
+        return await _databaseService.validateBackupFile(filePath);
+      }
+
+      return false;
+    } catch (e) {
+      AppLogger.e('无效的备份文件', error: e, source: 'BackupService');
+      return false;
+    }
+  }
+
+  /// 聚合所有结构化数据到一个Map中
+  Future<Map<String, dynamic>> _gatherStructuredData() async {
+    final notesData = await _databaseService.exportDataAsMap();
+    final settingsData = _settingsService.getAllSettingsForBackup();
+    final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
+
+    return {
+      'version': _backupVersion,
+      'createdAt': DateTime.now().toIso8601String(),
+      'notes': notesData,
+      'settings': settingsData,
+      'ai_analysis': aiAnalysisData,
+    };
+  }
+
+  /// 从Map中恢复结构化数据
+  Future<void> _restoreStructuredData(
+    Map<String, dynamic> backupData, {
+    bool clearExisting = true,
+  }) async {
+    // 如果选择清空，则先清空所有相关数据
+    if (clearExisting) {
+      await _databaseService.importDataFromMap({
+        'categories': [],
+        'quotes': [],
+      }, clearExisting: true);
+      await _aiAnalysisDbService.deleteAllAnalyses();
+    }
+
+    // ��复笔记和分类
+    if (backupData.containsKey('notes')) {
+      await _databaseService.importDataFromMap(
+        backupData['notes'] as Map<String, dynamic>,
+        clearExisting: false, // 在这里总是false，因为上面已经处理过清空逻辑
+      );
+    }
+    // 恢复设置
+    if (backupData.containsKey('settings')) {
+      await _settingsService.restoreAllSettingsFromBackup(
+        backupData['settings'] as Map<String, dynamic>,
+      );
+    }
+    // 恢复AI分析历史
+    if (backupData.containsKey('ai_analysis')) {
+      await _aiAnalysisDbService.importAnalysesFromList(
+        (backupData['ai_analysis'] as List).cast<Map<String, dynamic>>(),
+      );
+    }
+  }
+
+  /// 处理旧版JSON备份文件的导入
+  Future<void> _handleLegacyImport(
+    String filePath, {
+    bool clearExisting = true,
+  }) async {
+    final isValid = await _databaseService.validateBackupFile(filePath);
+    if (!isValid) {
+      throw Exception('无效的旧版备份文件。');
+    }
+    // 旧版备份只包含笔记和分类，直接调用databaseService导入
+    await _databaseService.importData(filePath, clearExisting: clearExisting);
+  }
+}

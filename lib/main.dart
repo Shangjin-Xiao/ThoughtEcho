@@ -8,16 +8,17 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:dynamic_color/dynamic_color.dart'; // 添加 dynamic_color 导入
-import 'services/database_service.dart';
-import 'services/settings_service.dart';
-import 'services/ai_service.dart';
-import 'services/location_service.dart';
-import 'services/weather_service.dart';
-import 'services/mmkv_service.dart';
-import 'services/clipboard_service.dart';
-import 'services/unified_log_service.dart';
-import 'services/ai_analysis_database_service.dart';
-import 'services/network_service.dart';
+import 'package:thoughtecho/services/backup_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/network_service.dart';
 import 'utils/app_logger.dart';
 import 'pages/home_page.dart';
 import 'pages/backup_restore_page.dart'; // 导入备份恢复页面
@@ -170,6 +171,7 @@ Future<void> main() async {
         final weatherService = WeatherService();
         final clipboardService = ClipboardService(); // 创建统一日志服务
         final unifiedLogService = UnifiedLogService.instance;
+        final aiAnalysisDbService = AIAnalysisDatabaseService();
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
@@ -192,7 +194,7 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(
-                create: (_) => AIAnalysisDatabaseService(),
+                create: (_) => aiAnalysisDbService,
               ),
               Provider.value(
                 value: mmkvService,
@@ -207,6 +209,16 @@ Future<void> main() async {
                 update:
                     (context, settings, previous) =>
                         previous ?? AIService(settingsService: settings),
+              ),
+              ProxyProvider3<DatabaseService, SettingsService,
+                  AIAnalysisDatabaseService, BackupService>(
+                update: (context, dbService, settingsService, aiService,
+                        previous) =>
+                    BackupService(
+                  databaseService: dbService,
+                  settingsService: settingsService,
+                  aiAnalysisDbService: aiService,
+                ),
               ),
             ],
             child: MyApp(
@@ -858,7 +870,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
       // 创建导出文件名
       final now = DateTime.now();
       final timestamp =
-          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
       final exportFileName = 'thoughtecho_emergency_$timestamp.db';
       final exportFile = File(join(downloadsDir.path, exportFileName));
 
@@ -933,3 +945,5 @@ Future<void> _initializeDatabaseNormally(
     );
   }
 }
+
+
