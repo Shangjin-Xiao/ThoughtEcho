@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -17,6 +18,8 @@ import 'dart:math' show min; // 添加math包导入
 import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
 import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../widgets/quill_enhanced_toolbar.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -643,15 +646,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // 紧凑型工具栏
-            // Wrap the toolbar in a SingleChildScrollView for horizontal scrolling
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                height: 45,
-                child: quill.QuillSimpleToolbar(controller: _controller),
-              ),
-            ),
+            // 增强工具栏
+            FullScreenToolbar(controller: _controller),
             // 显示已选元数据指示条
             if (_selectedTagIds.isNotEmpty ||
                 _selectedColorHex != null ||
@@ -742,13 +738,34 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ],
                 ),
               ),
-            // 编辑器主体
+            // 编辑器主体 - 使用增强配置
             Expanded(
               child: Container(
                 color: theme.colorScheme.surface,
                 padding: const EdgeInsets.all(16),
-                // 使用基础编辑器配置，确保能正常编辑和保存
-                child: quill.QuillEditor.basic(controller: _controller),
+                // 使用增强配置支持图片、视频等嵌入内容
+                child: quill.QuillEditor(
+                  controller: _controller,
+                  scrollController: ScrollController(),
+                  focusNode: FocusNode(),
+                  config: quill.QuillEditorConfig(
+                    // 添加扩展的嵌入构建器
+                    embedBuilders:
+                        kIsWeb
+                            ? FlutterQuillEmbeds.editorWebBuilders()
+                            : FlutterQuillEmbeds.editorBuilders(),
+                    // 启用全屏编辑的相关配置
+                    placeholder: '开始编写你的想法...',
+                    padding: const EdgeInsets.all(16),
+                    autoFocus: false,
+                    expands: false,
+                    scrollable: true,
+                    // 支持各种交互
+                    enableInteractiveSelection: true,
+                    enableSelectionToolbar: true,
+                    showCursor: true,
+                  ),
+                ),
               ),
             ),
           ],
