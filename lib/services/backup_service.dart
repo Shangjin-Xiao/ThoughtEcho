@@ -131,7 +131,7 @@ class BackupService {
 
       if (mediaFilesExist) {
         List<String>? clearedMediaPaths;
-        
+
         try {
           // 清理现有的媒体文件（记录已清理的路径用于回滚）
           if (clearExisting) {
@@ -149,13 +149,15 @@ class BackupService {
             await targetFile.parent.create(recursive: true);
             await targetFile.writeAsBytes(file.content as List<int>);
           }
-          
+
           // 从临时目录恢复到应用目录
-          final restoreSuccess = await MediaFileService.restoreMediaFiles(importDir.path);
+          final restoreSuccess = await MediaFileService.restoreMediaFiles(
+            importDir.path,
+          );
           if (!restoreSuccess) {
             throw Exception('媒体文件恢复失败');
           }
-          
+
           logDebug('媒体文件恢复完成');
         } catch (mediaError) {
           // 媒体文件恢复失败时的错误处理
@@ -170,7 +172,7 @@ class BackupService {
     } finally {
       // 确保资源释放
       inputStream?.close();
-      
+
       // 清理临时解压目录
       try {
         if (await importDir.exists()) {
