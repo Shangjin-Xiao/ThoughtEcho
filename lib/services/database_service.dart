@@ -256,7 +256,7 @@ class DatabaseService extends ChangeNotifier {
           'CREATE INDEX idx_quotes_category_id ON quotes(category_id)',
         );
         await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
-        
+
         // 创建新的 quote_tags 关联表
         await db.execute('''
           CREATE TABLE quote_tags(
@@ -267,8 +267,12 @@ class DatabaseService extends ChangeNotifier {
             FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
           )
         ''');
-        await db.execute('CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)');
-        await db.execute('CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)');
+        await db.execute(
+          'CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)',
+        );
+        await db.execute(
+          'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
+        );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
@@ -373,7 +377,9 @@ class DatabaseService extends ChangeNotifier {
 
         // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
         if (oldVersion < 10) {
-          logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion���添加 edit_source 字段');
+          logDebug(
+            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion���添加 edit_source 字段',
+          );
           await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
           logDebug('数据库升级：edit_source 字段添加完成');
         }
@@ -385,10 +391,12 @@ class DatabaseService extends ChangeNotifier {
           await db.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
           logDebug('数据库升级：delta_content 字段添加完成');
         }
-        
+
         // 如果数据库版本低于 12，创建 quote_tags 表并迁移数据
         if (oldVersion < 12) {
-          logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据');
+          logDebug(
+            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据',
+          );
           await db.execute('''
             CREATE TABLE quote_tags(
               quote_id TEXT NOT NULL,
@@ -398,11 +406,18 @@ class DatabaseService extends ChangeNotifier {
               FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
             )
           ''');
-          await db.execute('CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)');
-          await db.execute('CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)');
+          await db.execute(
+            'CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)',
+          );
+          await db.execute(
+            'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
+          );
 
           // 迁移数据
-          final quotesWithTags = await db.query('quotes', columns: ['id', 'tag_ids']);
+          final quotesWithTags = await db.query(
+            'quotes',
+            columns: ['id', 'tag_ids'],
+          );
           final batch = db.batch();
           for (final quote in quotesWithTags) {
             final quoteId = quote['id'] as String;
@@ -411,7 +426,10 @@ class DatabaseService extends ChangeNotifier {
               final tagIds = tagIdsString.split(',');
               for (final tagId in tagIds) {
                 if (tagId.isNotEmpty) {
-                  batch.insert('quote_tags', {'quote_id': quoteId, 'tag_id': tagId});
+                  batch.insert('quote_tags', {
+                    'quote_id': quoteId,
+                    'tag_id': tagId,
+                  });
                 }
               }
             }
@@ -859,7 +877,7 @@ class DatabaseService extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// 从 JSON 文件导入数据
   ///
   /// [filePath] - 导入文件的路径
@@ -1313,9 +1331,10 @@ class DatabaseService extends ChangeNotifier {
         // Web平台的逻辑保持不变
         var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered = filtered
-              .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
-              .toList();
+          filtered =
+              filtered
+                  .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+                  .toList();
         }
         // ... 其他web筛选 ...
         return filtered;
@@ -1342,20 +1361,22 @@ class DatabaseService extends ChangeNotifier {
 
       // 天气筛选
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        final weatherConditions =
-            selectedWeathers.map((_) => 'q.weather = ?').join(' OR ');
+        final weatherConditions = selectedWeathers
+            .map((_) => 'q.weather = ?')
+            .join(' OR ');
         conditions.add('($weatherConditions)');
         args.addAll(selectedWeathers);
       }
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodConditions =
-            selectedDayPeriods.map((_) => 'q.day_period = ?').join(' OR ');
+        final dayPeriodConditions = selectedDayPeriods
+            .map((_) => 'q.day_period = ?')
+            .join(' OR ');
         conditions.add('($dayPeriodConditions)');
         args.addAll(selectedDayPeriods);
       }
-      
+
       // 标签筛选 (使用子查询)
       if (tagIds != null && tagIds.isNotEmpty) {
         // 找到包含所有指定标签的 quote_id
@@ -1366,7 +1387,8 @@ class DatabaseService extends ChangeNotifier {
         args.add(tagIds.length);
       }
 
-      final where = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+      final where =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
       // 主查询，使用 LEFT JOIN 和 GROUP_CONCAT
       final query = '''
@@ -1379,7 +1401,10 @@ class DatabaseService extends ChangeNotifier {
         LIMIT ? OFFSET ?
       ''';
 
-      final finalArgs = List.from(args)..add(limit)..add(offset);
+      final finalArgs =
+          List.from(args)
+            ..add(limit)
+            ..add(offset);
 
       final maps = await db.rawQuery(query, finalArgs);
 
@@ -1389,8 +1414,6 @@ class DatabaseService extends ChangeNotifier {
       return [];
     }
   }
-
-  
 
   /// 获取笔记总数，用于分页
   Future<int> getQuotesCount({
@@ -1423,19 +1446,21 @@ class DatabaseService extends ChangeNotifier {
         final searchParam = '%$searchQuery%';
         args.addAll([searchParam, searchParam, searchParam, searchParam]);
       }
-      
+
       // 天气筛选
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        final weatherConditions =
-            selectedWeathers.map((_) => 'q.weather = ?').join(' OR ');
+        final weatherConditions = selectedWeathers
+            .map((_) => 'q.weather = ?')
+            .join(' OR ');
         conditions.add('($weatherConditions)');
         args.addAll(selectedWeathers);
       }
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodConditions =
-            selectedDayPeriods.map((_) => 'q.day_period = ?').join(' OR ');
+        final dayPeriodConditions = selectedDayPeriods
+            .map((_) => 'q.day_period = ?')
+            .join(' OR ');
         conditions.add('($dayPeriodConditions)');
         args.addAll(selectedDayPeriods);
       }
@@ -1445,19 +1470,22 @@ class DatabaseService extends ChangeNotifier {
         // 如果有标签筛选，我们需要一个更复杂的查询来计算唯一匹配的笔记
         final subQuery =
             'SELECT quote_id FROM quote_tags WHERE tag_id IN (${tagIds.map((_) => '?').join(',')}) GROUP BY quote_id HAVING COUNT(DISTINCT tag_id) = ?';
-        
-        final whereClause = conditions.isNotEmpty ? 'AND ${conditions.join(' AND ')}' : '';
+
+        final whereClause =
+            conditions.isNotEmpty ? 'AND ${conditions.join(' AND ')}' : '';
 
         query = '''
           SELECT COUNT(DISTINCT q.id)
           FROM quotes q
           WHERE q.id IN ($subQuery) $whereClause
         ''';
-        
-        // 子查询的参数需要先于主查询的参数
-        final finalArgs = List.from(tagIds)..add(tagIds.length)..addAll(args);
-        args = finalArgs;
 
+        // 子查询的参数需要先于主查询的参数
+        final finalArgs =
+            List.from(tagIds)
+              ..add(tagIds.length)
+              ..addAll(args);
+        args = finalArgs;
       } else {
         // 没有标签筛选，使用简单的 COUNT
         final whereClause =
@@ -1547,13 +1575,20 @@ class DatabaseService extends ChangeNotifier {
         );
 
         // 2. 删除旧的标签关联
-        await txn.delete('quote_tags', where: 'quote_id = ?', whereArgs: [quote.id]);
+        await txn.delete(
+          'quote_tags',
+          where: 'quote_id = ?',
+          whereArgs: [quote.id],
+        );
 
         // 3. 插入新的标签关联
         if (quote.tagIds.isNotEmpty) {
           final batch = txn.batch();
           for (final tagId in quote.tagIds) {
-            batch.insert('quote_tags', {'quote_id': quote.id!, 'tag_id': tagId});
+            batch.insert('quote_tags', {
+              'quote_id': quote.id!,
+              'tag_id': tagId,
+            });
           }
           await batch.commit(noResult: true);
         }
@@ -1818,8 +1853,12 @@ class DatabaseService extends ChangeNotifier {
       }
     } catch (e) {
       logDebug('加载更多笔记失败: $e');
+      // 确保即使出错也通知UI，避免无限加载状态
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add(List.from(_currentQuotes));
+      }
     } finally {
-      _isLoading = false;
+      _isLoading = false; // 确保加载状态总是被重置
     }
   }
 

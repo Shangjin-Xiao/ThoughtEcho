@@ -27,6 +27,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
+import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
 import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
@@ -193,6 +194,7 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
+              ChangeNotifierProvider(create: (_) => NoteSearchController()),
               Provider.value(
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService

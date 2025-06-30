@@ -13,6 +13,7 @@ import '../utils/color_utils.dart'; // Import color_utils
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
+import '../controllers/search_controller.dart';
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -27,6 +28,9 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
   final bool isLoadingTags; // 新增标签加载状态参数
+  final List<String> selectedWeathers; // 新增天气筛选参数
+  final List<String> selectedDayPeriods; // 新增时间段筛选参数
+  final Function(List<String>, List<String>) onFilterChanged; // 新增筛选变化回调
 
   const NoteListView({
     super.key,
@@ -42,6 +46,9 @@ class NoteListView extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.isLoadingTags = false, // 默认为false
+    this.selectedWeathers = const [],
+    this.selectedDayPeriods = const [],
+    required this.onFilterChanged,
   });
 
   @override
@@ -60,8 +67,6 @@ class NoteListViewState extends State<NoteListView> {
   bool _hasMore = true;
   static const int _pageSize = 20;
   late StreamSubscription<List<Quote>> _quotesSub;
-  List<String> _selectedWeathers = [];
-  List<String> _selectedDayPeriods = []; // 添加时间段筛选状态
 
   // 优化：添加防抖定时器
   Timer? _searchDebounceTimer;
@@ -96,9 +101,9 @@ class NoteListViewState extends State<NoteListView> {
           searchQuery:
               widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
           selectedWeathers:
-              _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+              widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
           selectedDayPeriods:
-              _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
+              widget.selectedDayPeriods.isNotEmpty ? widget.selectedDayPeriods : null,
         )
         .listen((list) {
           if (mounted) {
@@ -108,6 +113,17 @@ class NoteListViewState extends State<NoteListView> {
               _hasMore = list.length % _pageSize == 0;
               _isLoading = false;
             });
+
+            // 通知搜索控制器数据加载完成
+            try {
+              final searchController = Provider.of<NoteSearchController>(
+                context,
+                listen: false,
+              );
+              searchController.setSearchState(false);
+            } catch (e) {
+              logDebug('更新搜索控制器状态失败: $e');
+            }
           }
         });
     // 加载第一页
@@ -137,7 +153,9 @@ class NoteListViewState extends State<NoteListView> {
     return oldWidget.searchQuery != widget.searchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortAscending != widget.sortAscending;
+        oldWidget.sortAscending != widget.sortAscending ||
+        !_areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) ||
+        !_areListsEqual(oldWidget.selectedDayPeriods, widget.selectedDayPeriods);
   }
 
   // 辅助方法：比较两个列表是否相等（深比较）
@@ -180,9 +198,9 @@ class NoteListViewState extends State<NoteListView> {
           searchQuery:
               widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
           selectedWeathers:
-              _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
+              widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
           selectedDayPeriods:
-              _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
+              widget.selectedDayPeriods.isNotEmpty ? widget.selectedDayPeriods : null,
         )
         .listen(
           (list) {
@@ -397,15 +415,37 @@ class NoteListViewState extends State<NoteListView> {
   void _performSearch(String value) {
     if (!mounted) return;
 
+    // 如果是非空搜索，通知搜索控制器开始搜索
+    if (value.isNotEmpty) {
+      try {
+        final searchController = Provider.of<NoteSearchController>(
+          context,
+          listen: false,
+        );
+        searchController.setSearchState(true);
+      } catch (e) {
+        logDebug('设置搜索状态失败: $e');
+      }
+    }
+
     // 直接调用父组件的搜索回调
     widget.onSearchChanged(value);
 
-    // 设置超时保护
-    Timer(const Duration(seconds: 3), () {
+    // 设置超时保护，确保加载状态不会永远卡住
+    Timer(const Duration(seconds: 5), () {
       if (mounted && _isLoading) {
         setState(() {
           _isLoading = false;
         });
+        try {
+          final searchController = Provider.of<NoteSearchController>(
+            context,
+            listen: false,
+          );
+          searchController.resetSearchState();
+        } catch (e) {
+          logDebug('重置搜索状态失败: $e');
+        }
         logDebug('搜索超时，已重置加载状态');
       }
     });
@@ -414,7 +454,20 @@ class NoteListViewState extends State<NoteListView> {
   @override
   Widget build(BuildContext context) {
     final db = Provider.of<DatabaseService>(context);
+    final searchController = Provider.of<NoteSearchController>(context);
     final theme = Theme.of(context);
+
+    // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
+    if (searchController.searchError != null && _isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          searchController.resetSearchState();
+        }
+      });
+    }
 
     // 响应式设计：根据屏幕宽度调整布局
     final width = MediaQuery.of(context).size.width;
@@ -446,7 +499,19 @@ class NoteListViewState extends State<NoteListView> {
                           controller: _searchController,
                           decoration: InputDecoration(
                             hintText: '搜索笔记...',
-                            prefixIcon: const Icon(Icons.search),
+                            prefixIcon:
+                                searchController.isSearching
+                                    ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: Padding(
+                                        padding: EdgeInsets.all(12.0),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                    : const Icon(Icons.search),
                             contentPadding: EdgeInsets.symmetric(
                               vertical: constraints.maxWidth < 600 ? 8.0 : 12.0,
                             ),
@@ -482,9 +547,8 @@ class NoteListViewState extends State<NoteListView> {
                                   selectedTagIds: widget.selectedTagIds,
                                   sortType: widget.sortType,
                                   sortAscending: widget.sortAscending,
-                                  selectedWeathers: _selectedWeathers,
-                                  selectedDayPeriods:
-                                      _selectedDayPeriods, // 传递时间段筛选状态
+                                  selectedWeathers: widget.selectedWeathers,
+                                  selectedDayPeriods: widget.selectedDayPeriods, // 传递时间段筛选状态
                                   onApply: (
                                     tagIds,
                                     sortType,
@@ -497,11 +561,10 @@ class NoteListViewState extends State<NoteListView> {
                                       sortType,
                                       sortAscending,
                                     );
-                                    setState(() {
-                                      _selectedWeathers = selectedWeathers;
-                                      _selectedDayPeriods =
-                                          selectedDayPeriods; // 更新时间段筛选状态
-                                    });
+                                    widget.onFilterChanged(
+                                      selectedWeathers,
+                                      selectedDayPeriods,
+                                    );
                                     // 在状态更新后，立即触发数据库流的更新
                                     _updateStreamSubscription();
                                   },
@@ -514,8 +577,8 @@ class NoteListViewState extends State<NoteListView> {
                 ),
 
                 // 筛选条件总结
-                (_selectedWeathers.isNotEmpty ||
-                        _selectedDayPeriods.isNotEmpty ||
+                (widget.selectedWeathers.isNotEmpty ||
+                        widget.selectedDayPeriods.isNotEmpty ||
                         widget.selectedTagIds.isNotEmpty)
                     ? Container(
                       padding: EdgeInsets.symmetric(
@@ -540,16 +603,13 @@ class NoteListViewState extends State<NoteListView> {
                           ),
                           const Spacer(),
                           if (widget.selectedTagIds.isNotEmpty ||
-                              _selectedWeathers.isNotEmpty ||
-                              _selectedDayPeriods.isNotEmpty)
+                              widget.selectedWeathers.isNotEmpty ||
+                              widget.selectedDayPeriods.isNotEmpty)
                             TextButton(
                               onPressed: () {
-                                setState(() {
-                                  widget.onTagSelectionChanged([]);
-                                  _selectedWeathers.clear();
-                                  _selectedDayPeriods.clear();
-                                  _updateStreamSubscription();
-                                });
+                                widget.onTagSelectionChanged([]);
+                                widget.onFilterChanged([], []);
+                                _updateStreamSubscription();
                               },
                               child: const Text('清除全部'),
                             ),
@@ -596,7 +656,7 @@ class NoteListViewState extends State<NoteListView> {
                     : const SizedBox.shrink(),
 
                 // 天气筛选器
-                _selectedWeathers.isNotEmpty
+                widget.selectedWeathers.isNotEmpty
                     ? Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: horizontalPadding,
@@ -607,7 +667,7 @@ class NoteListViewState extends State<NoteListView> {
                         spacing: 8,
                         runSpacing: 8,
                         children:
-                            _selectedWeathers.map((weatherKey) {
+                            widget.selectedWeathers.map((weatherKey) {
                               // 找到对应的天气分类
                               String? categoryKey;
                               for (final entry
@@ -639,10 +699,10 @@ class NoteListViewState extends State<NoteListView> {
                                 avatar: Icon(weatherIcon, size: 16),
                                 label: Text(weatherLabel),
                                 onDeleted: () {
-                                  setState(() {
-                                    _selectedWeathers.remove(weatherKey);
-                                    _updateStreamSubscription();
-                                  });
+                                  final newWeathers = List<String>.from(widget.selectedWeathers)
+                                    ..remove(weatherKey);
+                                  widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
+                                  _updateStreamSubscription();
                                 },
                                 backgroundColor: theme.colorScheme.secondary
                                     .applyOpacity(0.1),
@@ -656,7 +716,7 @@ class NoteListViewState extends State<NoteListView> {
                     : const SizedBox.shrink(),
 
                 // 时间段筛选器
-                _selectedDayPeriods.isNotEmpty
+                widget.selectedDayPeriods.isNotEmpty
                     ? Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: horizontalPadding,
@@ -667,7 +727,7 @@ class NoteListViewState extends State<NoteListView> {
                         spacing: 8,
                         runSpacing: 8,
                         children:
-                            _selectedDayPeriods.map((periodKey) {
+                            widget.selectedDayPeriods.map((periodKey) {
                               final periodLabel = TimeUtils.getDayPeriodLabel(
                                 periodKey,
                               );
@@ -678,10 +738,10 @@ class NoteListViewState extends State<NoteListView> {
                                 avatar: Icon(periodIcon, size: 16),
                                 label: Text(periodLabel),
                                 onDeleted: () {
-                                  setState(() {
-                                    _selectedDayPeriods.remove(periodKey);
-                                    _updateStreamSubscription();
-                                  });
+                                  final newDayPeriods = List<String>.from(widget.selectedDayPeriods)
+                                    ..remove(periodKey);
+                                  widget.onFilterChanged(widget.selectedWeathers, newDayPeriods);
+                                  _updateStreamSubscription();
                                 },
                                 backgroundColor: theme.colorScheme.tertiary
                                     .applyOpacity(0.1),

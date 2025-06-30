@@ -42,8 +42,9 @@ class _HomePageState extends State<HomePage>
   String _sortType = 'time';
   bool _sortAscending = false;
 
-  // 搜索控制器
-  final _searchController = NoteSearchController();
+  // 筛选设置
+  List<String> _selectedWeathers = [];
+  List<String> _selectedDayPeriods = [];
 
   late TabController _tabController; // 新增：NoteListView的全局Key
   final GlobalKey<NoteListViewState> _noteListViewKey =
@@ -649,379 +650,372 @@ class _HomePageState extends State<HomePage>
         settingsService.aiSettings.model.isNotEmpty;
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
-    return ChangeNotifierProvider.value(
-      value: _searchController,
-      child: Scaffold(
-        appBar:
-            _currentIndex == 1
-                ? null // 记录页不需要标题栏
-                : AppBar(
-                  title: const Text('心迹'),
-                  actions: [
-                    // 显示标签加载状态
-                    if (_isLoadingTags && _currentIndex == 1)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2.0),
+    return Scaffold(
+      appBar:
+          _currentIndex == 1
+              ? null // 记录页不需要标题栏
+              : AppBar(
+                title: const Text('心迹'),
+                actions: [
+                  // 显示标签加载状态
+                  if (_isLoadingTags && _currentIndex == 1)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                      ),
+                    ),
+
+                  // 显示服务初始化状态指示器
+                  if (!servicesInitialized)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                      ),
+                    ),
+
+                  // 显示位置和天气信息
+                  if (_currentIndex == 0 &&
+                      locationService.city != null &&
+                      !locationService.city!.contains("Throttled!") &&
+                      weatherService.currentWeather != null &&
+                      locationService.hasLocationPermission)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cardRadius,
+                          ),
+                          boxShadow: AppTheme.defaultShadow,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              locationService.getDisplayLocation(),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '|',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer.withAlpha(128),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              weatherService.getWeatherIconData(),
+                              size: 18,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
+                              '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    ),
+                ],
+              ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          // 首页 - 每日一言和每日提示
+          RefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenHeight = constraints.maxHeight;
+                final screenWidth = constraints.maxWidth;
+                final isSmallScreen = screenHeight < 600;
 
-                    // 显示服务初始化状态指示器
-                    if (!servicesInitialized)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.0),
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: screenHeight, // 确保占满整个屏幕高度
+                    child: Column(
+                      children: [
+                        // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
+                        Expanded(
+                          child: Container(
+                            constraints: BoxConstraints(
+                              minHeight: screenHeight * 0.45, // 最小45%高度
+                            ),
+                            child: DailyQuoteView(
+                              key: _dailyQuoteViewKey,
+                              onAddQuote:
+                                  (content, author, work, hitokotoData) =>
+                                      _showAddQuoteDialog(
+                                        prefilledContent: content,
+                                        prefilledAuthor: author,
+                                        prefilledWork: work,
+                                        hitokotoData: hitokotoData,
+                                      ),
+                            ),
+                          ),
                         ),
-                      ),
 
-                    // 显示位置和天气信息
-                    if (_currentIndex == 0 &&
-                        locationService.city != null &&
-                        !locationService.city!.contains("Throttled!") &&
-                        weatherService.currentWeather != null &&
-                        locationService.hasLocationPermission)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                        // 每日提示部分 - 固定在底部，紧凑布局
+                        Container(
+                          width: double.infinity,
+                          margin: EdgeInsets.fromLTRB(
+                            screenWidth > 600 ? 16.0 : 12.0, // 与每日一言左右边距对齐
+                            4.0, // 减少上边距
+                            screenWidth > 600 ? 16.0 : 12.0, // 与每日一言左右边距对齐
+                            12.0, // 减少下边距
+                          ),
+                          padding: EdgeInsets.all(
+                            screenWidth > 600 ? 18.0 : 14.0, // 减少内边距
                           ),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.cardRadius,
-                            ),
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: AppTheme.defaultShadow,
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withAlpha(30),
+                              width: 1,
+                            ),
                           ),
-                          child: Row(
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.lightbulb_outline,
+                                    color: theme.colorScheme.primary,
+                                    size: screenWidth > 600 ? 22 : 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '今日思考',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: screenWidth > 600 ? 16 : 15,
+                                        ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                locationService.getDisplayLocation(),
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimaryContainer,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '|',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimaryContainer
-                                      .withAlpha(128),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                weatherService.getWeatherIconData(),
-                                size: 18,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
-                                '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              SizedBox(height: isSmallScreen ? 6 : 8),
+
+                              // 提示内容区域 - 更紧凑
+                              _isGeneratingDailyPrompt &&
+                                      _accumulatedPromptText.isEmpty
+                                  ? Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      SizedBox(height: isSmallScreen ? 4 : 6),
+                                      Text(
+                                        isAiConfigured
+                                            ? '正在加载今日思考...'
+                                            : '正在获取默认提示...',
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .withAlpha(160),
+                                              fontSize:
+                                                  screenWidth > 600 ? 13 : 12,
+                                            ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  )
+                                  : Text(
+                                    _accumulatedPromptText.isNotEmpty
+                                        ? _accumulatedPromptText.trim()
+                                        : (isAiConfigured
+                                            ? '等待今日思考...'
+                                            : '暂无今日思考'),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      height: 1.4,
+                                      fontSize: screenWidth > 600 ? 15 : 14,
+                                      color:
+                                          _accumulatedPromptText.isNotEmpty
+                                              ? theme
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.color
+                                              : theme.colorScheme.onSurface
+                                                  .withAlpha(120),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 3, // 限制最大行数
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                             ],
                           ),
                         ),
-                      ),
-                  ],
-                ),
-        body: IndexedStack(
-          index: _currentIndex,
-          children: [
-            // 首页 - 每日一言和每日提示
-            RefreshIndicator(
-              onRefresh: _handleRefresh,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final screenHeight = constraints.maxHeight;
-                  final screenWidth = constraints.maxWidth;
-                  final isSmallScreen = screenHeight < 600;
-
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: SizedBox(
-                      height: screenHeight, // 确保占满整个屏幕高度
-                      child: Column(
-                        children: [
-                          // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
-                          Expanded(
-                            child: Container(
-                              constraints: BoxConstraints(
-                                minHeight: screenHeight * 0.45, // 最小45%高度
-                              ),
-                              child: DailyQuoteView(
-                                key: _dailyQuoteViewKey,
-                                onAddQuote:
-                                    (content, author, work, hitokotoData) =>
-                                        _showAddQuoteDialog(
-                                          prefilledContent: content,
-                                          prefilledAuthor: author,
-                                          prefilledWork: work,
-                                          hitokotoData: hitokotoData,
-                                        ),
-                              ),
-                            ),
-                          ),
-
-                          // 每日提示部分 - 固定在底部，紧凑布局
-                          Container(
-                            width: double.infinity,
-                            margin: EdgeInsets.fromLTRB(
-                              screenWidth > 600 ? 16.0 : 12.0, // 与每日一言左右边距对齐
-                              4.0, // 减少上边距
-                              screenWidth > 600 ? 16.0 : 12.0, // 与每日一言左右边距对齐
-                              12.0, // 减少下边距
-                            ),
-                            padding: EdgeInsets.all(
-                              screenWidth > 600 ? 18.0 : 14.0, // 减少内边距
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: AppTheme.defaultShadow,
-                              border: Border.all(
-                                color: theme.colorScheme.outline.withAlpha(30),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.lightbulb_outline,
-                                      color: theme.colorScheme.primary,
-                                      size: screenWidth > 600 ? 22 : 18,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '今日思考',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            color: theme.colorScheme.primary,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize:
-                                                screenWidth > 600 ? 16 : 15,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: isSmallScreen ? 6 : 8),
-
-                                // 提示内容区域 - 更紧凑
-                                _isGeneratingDailyPrompt &&
-                                        _accumulatedPromptText.isEmpty
-                                    ? Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        ),
-                                        SizedBox(height: isSmallScreen ? 4 : 6),
-                                        Text(
-                                          isAiConfigured
-                                              ? '正在加载今日思考...'
-                                              : '正在获取默认提示...',
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                color: theme
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withAlpha(160),
-                                                fontSize:
-                                                    screenWidth > 600 ? 13 : 12,
-                                              ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    )
-                                    : Text(
-                                      _accumulatedPromptText.isNotEmpty
-                                          ? _accumulatedPromptText.trim()
-                                          : (isAiConfigured
-                                              ? '等待今日思考...'
-                                              : '暂无今日思考'),
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            height: 1.4,
-                                            fontSize:
-                                                screenWidth > 600 ? 15 : 14,
-                                            color:
-                                                _accumulatedPromptText
-                                                        .isNotEmpty
-                                                    ? theme
-                                                        .textTheme
-                                                        .bodyMedium
-                                                        ?.color
-                                                    : theme
-                                                        .colorScheme
-                                                        .onSurface
-                                                        .withAlpha(120),
-                                          ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 3, // 限制最大行数
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
-                  );
-                },
-              ),
-            ),
-            // 笔记列表页
-            Consumer<NoteSearchController>(
-              builder: (context, searchController, child) {
-                return NoteListView(
-                  key: _noteListViewKey, // 绑定全局Key
-                  tags: _tags,
-                  selectedTagIds: _selectedTagIds,
-                  onTagSelectionChanged: (tagIds) {
-                    setState(() {
-                      _selectedTagIds = tagIds;
-                    });
-                  },
-                  searchQuery: searchController.searchQuery,
-                  sortType: _sortType,
-                  sortAscending: _sortAscending,
-                  onSortChanged: _handleSortChanged,
-                  onSearchChanged: (query) {
-                    searchController.updateSearch(query);
-                  },
-                  onEdit: _showEditQuoteDialog,
-                  onDelete: _showDeleteConfirmDialog,
-                  onAskAI: _showAIQuestionDialog,
-                  isLoadingTags: _isLoadingTags, // 传递标签加载状态
+                  ),
                 );
               },
             ),
-            // AI页
-            const InsightsPage(),
-            // 设置页
-            const SettingsPage(),
-          ],
-        ),
-        floatingActionButton: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: AppTheme.accentShadow,
           ),
-          child: FloatingActionButton(
-            heroTag: 'homePageFAB',
-            onPressed: () => _showAddQuoteDialog(),
-            elevation: 0,
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: theme.colorScheme.onPrimary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.add, size: 28),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // 毛玻璃模糊效果
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface.withValues(
-                  alpha: 0.8,
-                ), // 半透明背景
-              ),
-              child: NavigationBar(
-                selectedIndex: _currentIndex,
-                onDestinationSelected: (index) {
-                  _onTabChanged(index);
+          // 笔记列表页
+          Consumer<NoteSearchController>(
+            builder: (context, searchController, child) {
+              return NoteListView(
+                key: _noteListViewKey, // 绑定全局Key
+                tags: _tags,
+                selectedTagIds: _selectedTagIds,
+                onTagSelectionChanged: (tagIds) {
+                  setState(() {
+                    _selectedTagIds = tagIds;
+                  });
                 },
-                elevation: 0,
-                backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
-                surfaceTintColor: Colors.transparent, // 移除表面着色
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.home_outlined),
-                    selectedIcon: Icon(
-                      Icons.home,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: '首页',
+                searchQuery: searchController.searchQuery,
+                sortType: _sortType,
+                sortAscending: _sortAscending,
+                onSortChanged: _handleSortChanged,
+                onSearchChanged: (query) {
+                  searchController.updateSearch(query);
+                },
+                onEdit: _showEditQuoteDialog,
+                onDelete: _showDeleteConfirmDialog,
+                onAskAI: _showAIQuestionDialog,
+                isLoadingTags: _isLoadingTags, // 传递标签加载状态
+                selectedWeathers: _selectedWeathers,
+                selectedDayPeriods: _selectedDayPeriods,
+                onFilterChanged: (weathers, dayPeriods) {
+                  setState(() {
+                    _selectedWeathers = weathers;
+                    _selectedDayPeriods = dayPeriods;
+                  });
+                },
+              );
+            },
+          ),
+          // AI页
+          const InsightsPage(),
+          // 设置页
+          const SettingsPage(),
+        ],
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppTheme.accentShadow,
+        ),
+        child: FloatingActionButton(
+          heroTag: 'homePageFAB',
+          onPressed: () => _showAddQuoteDialog(),
+          elevation: 0,
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(Icons.add, size: 28),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // 毛玻璃模糊效果
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface.withValues(alpha: 0.8), // 半透明背景
+            ),
+            child: NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (index) {
+                _onTabChanged(index);
+              },
+              elevation: 0,
+              backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
+              surfaceTintColor: Colors.transparent, // 移除表面着色
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.home_outlined),
+                  selectedIcon: Icon(
+                    Icons.home,
+                    color: theme.colorScheme.primary,
                   ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.book_outlined),
-                    selectedIcon: Icon(
-                      Icons.book,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: '记录',
+                  label: '首页',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.book_outlined),
+                  selectedIcon: Icon(
+                    Icons.book,
+                    color: theme.colorScheme.primary,
                   ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.auto_awesome_outlined),
-                    selectedIcon: Icon(
-                      Icons.auto_awesome,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: 'AI',
+                  label: '记录',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  selectedIcon: Icon(
+                    Icons.auto_awesome,
+                    color: theme.colorScheme.primary,
                   ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(
-                      Icons.settings,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: '设置',
+                  label: 'AI',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(
+                    Icons.settings,
+                    color: theme.colorScheme.primary,
                   ),
-                ],
-              ),
+                  label: '设置',
+                ),
+              ],
             ),
           ),
         ),
