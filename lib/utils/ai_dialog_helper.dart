@@ -19,6 +19,7 @@ class AiDialogHelper {
     required VoidCallback onPolishText,
     required VoidCallback onContinueText,
     required VoidCallback onAnalyzeContent,
+    VoidCallback? onAskQuestion, // 添加问笔记回调
   }) {
     final theme = Theme.of(context);
 
@@ -93,6 +94,16 @@ class AiDialogHelper {
                       onAnalyzeContent();
                     },
                   ),
+                  if (onAskQuestion != null)
+                    ListTile(
+                      leading: const Icon(Icons.chat),
+                      title: const Text('问笔记'),
+                      subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onAskQuestion();
+                      },
+                    ),
                 ],
               ),
             ),

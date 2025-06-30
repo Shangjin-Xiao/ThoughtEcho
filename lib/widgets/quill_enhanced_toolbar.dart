@@ -14,20 +14,19 @@ class QuillEnhancedToolbar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      height: 60,
+      height: 48, // 减小高度
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.1),
-            offset: const Offset(0, 2),
-            blurRadius: 4,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        scrollDirection: Axis.horizontal, // 支持左右滑动
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: quill.QuillSimpleToolbar(
           controller: controller,
           config: quill.QuillSimpleToolbarConfig(
@@ -56,11 +55,11 @@ class QuillEnhancedToolbar extends StatelessWidget {
             showClearFormat: true,
             // 布局配置
             multiRowsDisplay: false,
-            decoration: const BoxDecoration(color: Colors.transparent),
+            decoration: BoxDecoration(color: theme.colorScheme.surface),
             buttonOptions: quill.QuillSimpleToolbarButtonOptions(
               base: quill.QuillToolbarBaseButtonOptions(
-                iconSize: 18,
-                iconButtonFactor: 1.0,
+                iconSize: 18, // 减小图标尺寸
+                iconButtonFactor: 1.0, // 减小按钮因子
               ),
             ),
           ),

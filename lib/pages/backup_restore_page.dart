@@ -1,15 +1,18 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:provider/provider.dart';
+
+import 'package:cross_file/cross_file.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import '../services/database_service.dart';
-import 'home_page.dart';
-import '../utils/color_utils.dart'; // Import color_utils.dart
-import '../utils/app_logger.dart';
+
+import '../services/backup_service.dart';
 import '../utils/time_utils.dart';
 
+/// 备份与还原页面
+/// 
+/// 支持新版ZIP格式备份（包含媒体文件）和旧版JSON格式兼容
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
 
@@ -18,530 +21,469 @@ class BackupRestorePage extends StatefulWidget {
 }
 
 class _BackupRestorePageState extends State<BackupRestorePage> {
-  Future<void> _handleExport(BuildContext context) async {
-    // 检查组件已挂载
-    if (!mounted) return;
-
-    // 创建上下文快照 - 在异步操作前获取所有需要的context相关对象，以便在异步操作后可以安全使用
-    final scaffoldMessengerState = ScaffoldMessenger.of(context);
-    final dbService = Provider.of<DatabaseService>(context, listen: false);
-    final overlayState = Overlay.of(
-      context,
-    ); // 在调用 _showLoadingOverlay 前获取 OverlayState
-
-    try {
-      if (!mounted) return;
-      final loadingOverlay = _showLoadingOverlay(
-        overlayState,
-        '准备导出数据...',
-      ); // 传递 overlayState
-      bool canExport = false;
-      try {
-        canExport = await dbService.checkCanExport();
-      } catch (e) {
-        logDebug('数据库访问验证失败: $e');
-      }
-
-      if (!mounted) {
-        loadingOverlay.remove();
-        return;
-      }
-      loadingOverlay.remove(); // 移动到 mounted 检查之后      if (!mounted) return;
-      if (!canExport) {
-        if (mounted) {
-          // 在调用 _showErrorDialog 前添加 mounted 检查
-          final currentContext = context; // 保存context
-          _showErrorDialog(
-            currentContext,
-            '数据访问错误',
-            '无法访问数据库，请确保应用有足够的存储权限，然后重试。',
-          );
-        }
-        return;
-      }
-      if (!mounted) return;
-      String? choice;
-      if (mounted) {
-        final dialogContext = context; // 保存 context 以避免跨 async gap 使用
-        choice = await showDialog<String>(
-          context: dialogContext,
-          builder:
-              (dialogContext) => AlertDialog(
-                title: const Text('选择备份方式'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.save),
-                      title: const Text('保存到本地'),
-                      subtitle: const Text('选择保存位置'),
-                      onTap: () => Navigator.pop(dialogContext, 'save'),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.share),
-                      title: const Text('分享备份文件'),
-                      subtitle: const Text('通过其他应用分享'),
-                      onTap: () => Navigator.pop(dialogContext, 'share'),
-                    ),
-                  ],
-                ),
-              ),
-        );
-      }
-      if (!mounted) return;
-      if (choice == null) return;
-      String path = '';
-      if (!mounted) return;
-      final progressOverlay = _showLoadingOverlay(overlayState, '正在导出数据...');
-      try {
-        if (choice == 'save') {
-          final now = DateTime.now();
-          final formattedDate = TimeUtils.formatFileTimestamp(now);
-          final fileName = '心迹_备份_$formattedDate.json';
-          if (Platform.isWindows) {
-            final tempDir = await getTemporaryDirectory();
-            final tempFilePath = '${tempDir.path}/$fileName';
-            final tempFile = await dbService.exportAllData(
-              customPath: tempFilePath,
-            );
-            progressOverlay.remove();
-            if (!mounted) return;
-            final saveLocation = await getSaveLocation(
-              suggestedName: fileName,
-              acceptedTypeGroups: [
-                const XTypeGroup(label: 'JSON', extensions: ['json']),
-              ],
-            );
-            if (saveLocation == null) {
-              try {
-                File(tempFile).deleteSync();
-              } catch (_) {}
-              return;
-            }
-            if (!mounted) return;
-            final saveOverlay = _showLoadingOverlay(overlayState, '正在保存文件...');
-            try {
-              await File(tempFile).copy(saveLocation.path);
-              await File(tempFile).delete();
-              path = saveLocation.path;
-              saveOverlay.remove();
-              if (!mounted) return;
-              if (mounted) {
-                scaffoldMessengerState.showSnackBar(
-                  SnackBar(
-                    content: Text('备份已保存到: $path'),
-                    duration: const Duration(seconds: 3),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            } catch (e) {
-              saveOverlay.remove();
-              rethrow;
-            }
-          } else if (Platform.isAndroid) {
-            final docsDir = await getApplicationDocumentsDirectory();
-            final localPath = '${docsDir.path}/$fileName';
-            path = await dbService.exportAllData(customPath: localPath);
-            progressOverlay.remove();
-            if (!mounted) return;
-            if (mounted) {
-              scaffoldMessengerState.showSnackBar(
-                const SnackBar(
-                  content: Text('备份文件已生成，即将打开分享选项...'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-
-            await Future.delayed(const Duration(seconds: 1));
-            if (!mounted) return;
-            await Share.shareXFiles(
-              [XFile(path)],
-              text: '心迹备份文件',
-              subject: '保存心迹备份文件',
-            );
-
-            if (!mounted) return;
-            if (mounted) {
-              scaffoldMessengerState.showSnackBar(
-                const SnackBar(
-                  content: Text('提示: 选择"保存到设备"可将备份文件保存到本地存储'),
-                  duration: Duration(seconds: 5),
-                ),
-              );
-            }
-          } else {
-            try {
-              if (!mounted) return;
-              final saveLocation = await getSaveLocation(
-                suggestedName: fileName,
-                acceptedTypeGroups: [
-                  const XTypeGroup(label: 'JSON', extensions: ['json']),
-                ],
-              );
-              progressOverlay.remove();
-              if (saveLocation == null) return;
-              if (!mounted) return;
-              final exportOverlay = _showLoadingOverlay(
-                overlayState,
-                '正在保存数据...',
-              );
-              try {
-                path = await dbService.exportAllData(
-                  customPath: saveLocation.path,
-                );
-                exportOverlay.remove();
-                if (!mounted) return;
-                scaffoldMessengerState.showSnackBar(
-                  SnackBar(
-                    content: Text('备份已保存到: $path'),
-                    duration: const Duration(seconds: 5),
-                  ),
-                );
-              } catch (e) {
-                exportOverlay.remove();
-                rethrow;
-              }
-            } catch (e) {
-              progressOverlay.remove();
-              rethrow;
-            }
-          }
-        } else {
-          path = await dbService.exportAllData();
-          progressOverlay.remove();
-          if (!mounted) return;
-          await Share.shareXFiles([XFile(path)], text: '心迹应用数据备份');
-        }
-      } catch (e) {
-        progressOverlay.remove();
-        if (!mounted) return;
-        if (mounted) {
-          final currentContext = context;
-          _showErrorDialog(
-            currentContext,
-            '备份失败',
-            '无法完成备份: $e\n\n请检查应用权限和剩余存储空间。',
-          );
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      if (mounted) {
-        final currentContext = context;
-        _showErrorDialog(currentContext, '备份失败', '发生未知错误: $e\n\n请重试并检查应用权限。');
-      }
-    }
-  }
-
-  Future<void> _handleImport(BuildContext context) async {
-    // 异步操作前获取所有需要的context相关对象
-    final navigator = Navigator.of(context);
-    final dbService = Provider.of<DatabaseService>(context, listen: false);
-    final overlayState = Overlay.of(context); // 提前获取 OverlayState
-
-    try {
-      const XTypeGroup jsonTypeGroup = XTypeGroup(
-        label: 'JSON',
-        extensions: ['json'],
-      );
-      final XFile? file = await openFile(acceptedTypeGroups: [jsonTypeGroup]);
-      final result =
-          file != null
-              ? {
-                'files': [file],
-              }
-              : null;
-      if (result == null) return;
-      if (!mounted) return;
-      final selectedFile = result['files']![0];
-      final validateOverlay = _showLoadingOverlay(overlayState, '正在验证备份文件...');
-      bool isValidBackup = false;
-      String errorMessage = '';
-      try {
-        isValidBackup = await dbService.validateBackupFile(selectedFile.path);
-      } catch (e) {
-        errorMessage = e.toString();
-      } finally {
-        validateOverlay.remove();
-      }
-      if (!mounted) return;
-      if (!isValidBackup) {
-        if (mounted) {
-          final currentContext = context;
-          _showErrorDialog(
-            currentContext,
-            '无效的备份文件',
-            '所选文件不是有效的心迹备份文件${errorMessage.isNotEmpty ? ':\n\n$errorMessage' : '。'}\n\n请选择有效的备份文件。',
-          );
-        }
-        return;
-      }
-      if (!mounted) return;
-      final dialogContext = context; // 保存 context 以避免跨 async gap 使用
-      final importOption = await showDialog<String>(
-        context: dialogContext,
-        builder:
-            (dialogContext) => AlertDialog(
-              title: const Text('导入选项'),
-              content: const Text('请选择导入方式：'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, 'cancel'),
-                  child: const Text('取消'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, 'clear'),
-                  child: const Text('清空并导入'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, 'merge'),
-                  child: const Text('合并数据'),
-                ),
-              ],
-            ),
-      );
-      if (!mounted) return;
-      if (importOption == 'cancel' || importOption == null) return;
-      if (importOption == 'clear') {
-        final confirmDialogContext = context; // 保存 context 以避免跨 async gap 使用
-        final confirmed = await showDialog<bool>(
-          context: confirmDialogContext,
-          builder:
-              (dialogContext) => AlertDialog(
-                title: const Text('确认清空数据'),
-                content: const Text('这将清空当前所有数据，确定要继续吗？'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, false),
-                    child: const Text('取消'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, true),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('确定清空并导入'),
-                  ),
-                ],
-              ),
-        );
-        if (confirmed != true) return;
-        if (!mounted) return;
-      }
-      final importOverlay = _showLoadingOverlay(overlayState, '正在导入数据...');
-      try {
-        final bool clearExisting = importOption == 'clear';
-        await dbService.importData(
-          selectedFile.path,
-          clearExisting: clearExisting,
-        );
-        importOverlay.remove();
-        if (!mounted) return;
-        if (mounted) {
-          final currentContext = context;
-          await showDialog(
-            context: currentContext,
-            barrierDismissible: false,
-            builder:
-                (dialogContext) => AlertDialog(
-                  title: const Text('导入成功'),
-                  content: const Text('数据已成功导入。\n\n需要重启应用以完成导入过程。'),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(dialogContext);
-                        if (mounted) {
-                          navigator.pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (_) => const HomePage()),
-                            (route) => false,
-                          );
-                        }
-                      },
-                      child: const Text('重启应用'),
-                    ),
-                  ],
-                ),
-          );
-        }
-      } catch (e) {
-        importOverlay.remove();
-        if (!mounted) return;
-        if (mounted) {
-          final currentContext = context;
-          if (mounted) {
-            _showErrorDialog(currentContext, '导入失败', '导入数据时发生错误: $e');
-          }
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      if (mounted) {
-        final currentContext = context;
-        if (mounted) {
-          _showErrorDialog(currentContext, '恢复失败', '无法访问或读取备份文件: $e');
-        }
-      }
-    }
-  }
-
-  OverlayEntry _showLoadingOverlay(OverlayState overlayState, String message) {
-    if (!mounted) return OverlayEntry(builder: (_) => const SizedBox.shrink());
-
-    // 在使用context前先获取需要的overlay
-    // final overlayState = Overlay.of(context); // 这行将被移除，OverlayState 已作为参数传入
-
-    final overlay = OverlayEntry(
-      builder:
-          (overlayContext) => Container(
-            color: Colors.black.applyOpacity(0.5),
-            child: Center(
-              child: Card(
-                margin: const EdgeInsets.all(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(message),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-    );
-    overlayState.insert(overlay);
-    return overlay;
-  }
-
-  void _showErrorDialog(BuildContext context, String title, String message) {
-    if (!mounted) return;
-    // 已经在方法开始有 mounted 检查，并且是同步调用 showDialog，所以这里不需要额外的 mounted 检查
-    showDialog(
-      context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('确定'),
-              ),
-            ],
-          ),
-    );
-  }
+  bool _isLoading = false;
+  bool _includeMediaFiles = true; // 默认包含媒体文件
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('数据备份与恢复')),
-      body: ListView(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              '定期备份数据可以帮助您防止意外数据丢失。建议每次进行重要更改后都创建一个备份。',
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.applyOpacity(0.7), // Use applyOpacity
-              ),
+      appBar: AppBar(
+        title: const Text('数据备份与还原'),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildBackupSection(),
+            const SizedBox(height: 24),
+            _buildRestoreSection(),
+            const SizedBox(height: 24),
+            _buildInfoSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建备份区域
+  Widget _buildBackupSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.backup,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '数据备份',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.backup),
-            title: const Text('备份数据'),
-            subtitle: const Text('导出所有数据并选择保存方式'),
-            onTap: () => _handleExport(context),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.restore),
-            title: const Text('恢复数据'),
-            subtitle: const Text('从备份文件导入数据'),
-            onTap: () => _handleImport(context),
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              color:
-                  Colors.amber, // This is a const color, so it should be fine.
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.warning,
-                          size: 20,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onError.applyOpacity(0.8),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          '数据安全提示',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '1. 请在多个位置保存备份文件，如云存储和本地存储\n'
-                      '2. 导入前建议先备份当前数据，以防导入失败\n'
-                      '3. 确保备份文件来源可靠，避免导入损坏的文件\n'
-                      '4. 推荐在重要操作或APP更新前进行备份',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '重要提示：',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onError.applyOpacity(0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '• 恢复数据时，如果选择"清空并导入"，当前设备上的所有笔记和标签都将被删除，并替换为备份文件中的数据。此操作无法撤销。',
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onError.applyOpacity(0.85),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• 如果选择"合并数据"，备份文件中的数据将尝试与现有数据合并。如果存在ID冲突的笔记或标签，备份文件中的版本将覆盖现有版本。',
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onError.applyOpacity(0.85),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• 请确保您从可信任的来源导入备份文件，以避免潜在的数据损坏或安全风险。',
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onError.applyOpacity(0.85),
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 16),
+            
+            // 媒体文件选项
+            CheckboxListTile(
+              title: const Text('包含媒体文件'),
+              subtitle: const Text('勾选后将备份图片、音频等媒体文件（文件更大但更完整）'),
+              value: _includeMediaFiles,
+              onChanged: _isLoading ? null : (value) {
+                setState(() {
+                  _includeMediaFiles = value ?? true;
+                });
+              },
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // 备份按钮
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : _handleBackup,
+                icon: _isLoading 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_alt),
+                label: Text(_isLoading ? '正在备份...' : '创建备份'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
+            
+            const SizedBox(height: 8),
+            Text(
+              '将创建${_includeMediaFiles ? 'ZIP' : 'JSON'}格式的备份文件，包含所有笔记、设置${_includeMediaFiles ? '和媒体文件' : ''}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建还原区域
+  Widget _buildRestoreSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.restore,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '数据还原',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : _handleRestore,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('选择备份文件还原'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Theme.of(context).colorScheme.onSecondary,
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 8),
+            Text(
+              '支持新版ZIP格式和旧版JSON格式的备份文件',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建信息区域
+  Widget _buildInfoSection() {
+    return Card(
+      color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '重要提示',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            _buildInfoItem(
+              '数据安全',
+              '还原数据将覆盖当前所有数据，请在还原前确保当前数据已备份',
+            ),
+            _buildInfoItem(
+              '备份建议',
+              '建议定期备份数据到多个位置（本地、云存储等）',
+            ),
+            _buildInfoItem(
+              '格式说明',
+              '新版ZIP格式包含完整数据和媒体文件，旧版JSON格式仅包含文本数据',
+            ),
+            _buildInfoItem(
+              '兼容性',
+              '支持导入新版ZIP格式和旧版JSON格式的备份文件',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            margin: const EdgeInsets.only(top: 8, right: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.bodySmall,
+                children: [
+                  TextSpan(
+                    text: '$title: ',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  TextSpan(text: content),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 处理备份操作
+  Future<void> _handleBackup() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final backupService = Provider.of<BackupService>(context, listen: false);
+      final now = DateTime.now();
+      final formattedDate = TimeUtils.formatFileTimestamp(now);
+      final extension = _includeMediaFiles ? 'zip' : 'json';
+      final fileName = '心迹_备份_$formattedDate.$extension';
+
+      String? backupPath;
+
+      if (kIsWeb) {
+        // Web 平台：直接创建备份并分享
+        backupPath = await backupService.exportAllData(
+          includeMediaFiles: _includeMediaFiles,
+        );
+        
+        if (mounted) {
+          await Share.shareXFiles(
+            [XFile(backupPath)],
+            text: '心迹备份文件',
+            subject: fileName,
+          );
+          
+          _showSuccessSnackBar('备份文件已准备就绪，请通过分享保存');
+        }
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        // 移动平台：创建备份并分享
+        backupPath = await backupService.exportAllData(
+          includeMediaFiles: _includeMediaFiles,
+        );
+        
+        if (mounted) {
+          await Share.shareXFiles(
+            [XFile(backupPath)],
+            text: '心迹备份文件',
+            subject: fileName,
+          );
+          
+          _showSuccessSnackBar('备份完成，请选择保存位置');
+        }
+      } else {
+        // 桌面平台：选择保存位置
+        final saveLocation = await getSaveLocation(
+          suggestedName: fileName,
+          acceptedTypeGroups: [
+            XTypeGroup(
+              label: _includeMediaFiles ? 'ZIP 文件' : 'JSON 文件',
+              extensions: [extension],
+            ),
+          ],
+        );
+
+        if (saveLocation != null && mounted) {
+          backupPath = await backupService.exportAllData(
+            includeMediaFiles: _includeMediaFiles,
+            customPath: saveLocation.path,
+          );
+          
+          _showSuccessSnackBar('备份已保存到: ${saveLocation.path}');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('备份失败', '无法完成备份：$e\n\n请检查存储空间和权限设置。');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// 处理还原操作
+  Future<void> _handleRestore() async {
+    if (!mounted) return;
+
+    try {
+      // 选择备份文件
+      const typeGroups = [
+        XTypeGroup(label: 'ZIP 备份文件', extensions: ['zip']),
+        XTypeGroup(label: 'JSON 备份文件', extensions: ['json']),
+        XTypeGroup(label: '所有支持的格式', extensions: ['zip', 'json']),
+      ];
+
+      final file = await openFile(acceptedTypeGroups: typeGroups);
+      if (file == null || !mounted) return;
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      final backupService = Provider.of<BackupService>(context, listen: false);
+
+      // 验证备份文件
+      final isValid = await backupService.validateBackupFile(file.path);
+      if (!isValid) {
+        if (mounted) {
+          _showErrorDialog(
+            '无效的备份文件',
+            '所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。',
+          );
+        }
+        return;
+      }
+
+      // 确认还原操作
+      if (mounted) {
+        final confirmed = await _showRestoreConfirmDialog();
+        if (!confirmed) return;
+      }
+
+      // 执行还原
+      await backupService.importData(file.path, clearExisting: true);
+
+      if (mounted) {
+        // 还原成功，回到主页并显示成功消息
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('数据还原成功！所有数据已更新。'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('还原失败', '无法完成数据还原：$e\n\n请检查备份文件是否完整。');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// 显示还原确认对话框
+  Future<bool> _showRestoreConfirmDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('确认还原数据'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '此操作将：',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 8),
+            Text('• 删除当前设备上的所有笔记和设置'),
+            Text('• 用备份文件中的数据替换'),
+            Text('• 此操作无法撤销'),
+            SizedBox(height: 16),
+            Text(
+              '请确保您已经备份了当前的重要数据。',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('确认还原'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  /// 显示成功提示
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  /// 显示错误对话框
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(title),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
           ),
         ],
       ),

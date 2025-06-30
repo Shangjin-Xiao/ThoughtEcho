@@ -94,7 +94,7 @@ class Quote {
 
   // 将Quote对象转换为JSON
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> json = {
       'id': id,
       'content': content,
       'date': date,
@@ -102,7 +102,7 @@ class Quote {
       'source': source,
       'source_author': sourceAuthor,
       'source_work': sourceWork,
-      'tag_ids': tagIds.join(','),
+      // 'tag_ids' 不再直接保存到此表中，它将通过关联表进行管理
       'sentiment': sentiment,
       'keywords': keywords?.join(','),
       'summary': summary,
@@ -115,6 +115,9 @@ class Quote {
       'delta_content': deltaContent, // 新增：Delta JSON
       'day_period': dayPeriod, // 新增：时间段
     };
+    // 移除tag_ids字段，因为它不再直接存储在quotes表中
+    json.remove('tag_ids');
+    return json;
   }
 
   // 复制并修改当前Quote对象
