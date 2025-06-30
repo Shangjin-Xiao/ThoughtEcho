@@ -1,13 +1,12 @@
 /// Mock AI Service for testing
 import 'package:flutter/foundation.dart';
-import 'package:mockito/mockito.dart';
 import 'dart:async';
 
-import '../../lib/models/quote_model.dart';
-import '../../lib/models/ai_analysis_model.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/models/ai_analysis_model.dart';
 import '../test_utils/test_data.dart';
 
-class MockAIService extends ChangeNotifier with Mock {
+class MockAIService extends ChangeNotifier {
   bool _isInitialized = false;
   bool _hasValidApiKey = false;
   String? _lastError;

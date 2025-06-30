@@ -1,10 +1,11 @@
 /// Mock LocationService for testing
 import 'package:flutter/foundation.dart';
-import 'package:mockito/mockito.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
-class MockLocationService extends ChangeNotifier with Mock {
+import 'package:thoughtecho/services/location_service.dart';
+
+class MockLocationService extends ChangeNotifier {
   Position? _currentPosition;
   String? _currentAddress;
   bool _hasLocationPermission = false;

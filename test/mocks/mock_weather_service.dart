@@ -1,9 +1,8 @@
 /// Mock WeatherService for testing
 import 'package:flutter/foundation.dart';
-import 'package:mockito/mockito.dart';
 import 'dart:async';
 
-import '../../lib/models/weather_data.dart';
+import 'package:thoughtecho/models/weather_data.dart';
 import '../test_utils/test_data.dart';
 
 enum WeatherServiceState {

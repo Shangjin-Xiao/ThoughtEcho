@@ -4,9 +4,9 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 
-import '../../lib/services/database_service.dart';
-import '../../lib/models/quote_model.dart';
-import '../../lib/models/note_category.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import '../test_utils/test_data.dart';
 import '../test_utils/test_helpers.dart';
 

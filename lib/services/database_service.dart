@@ -118,6 +118,11 @@ class DatabaseService extends ChangeNotifier {
     return _database!;
   }
 
+  /// Test method to set a test database instance
+  static void setTestDatabase(Database testDb) {
+    _database = testDb;
+  }
+
   Future<void> init() async {
     if (kIsWeb) {
       // Web平台特定的初始化

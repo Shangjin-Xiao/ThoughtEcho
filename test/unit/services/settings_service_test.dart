@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../lib/services/settings_service.dart';
-import '../../lib/models/ai_settings.dart';
-import '../../lib/models/app_settings.dart';
-import '../../lib/models/multi_ai_settings.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/models/ai_settings.dart';
+import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import '../test_utils/test_helpers.dart';
 
 void main() {

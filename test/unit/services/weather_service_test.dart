@@ -1,8 +1,8 @@
 /// Unit tests for WeatherService
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/services/weather_service.dart';
-import '../../lib/models/weather_data.dart';
+import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/models/weather_data.dart';
 import '../mocks/mock_weather_service.dart';
 import '../test_utils/test_data.dart';
 import '../test_utils/test_helpers.dart';

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import '../../lib/pages/home_page.dart';
+import 'package:thoughtecho/pages/home_page.dart';
 import '../mocks/mock_database_service.dart';
 import '../mocks/mock_settings_service.dart';
 import '../mocks/mock_location_service.dart';

@@ -2,7 +2,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../../lib/services/location_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
 import '../mocks/mock_location_service.dart';
 import '../test_utils/test_helpers.dart';
 

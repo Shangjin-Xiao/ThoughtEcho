@@ -4,8 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 
-import '../../lib/services/ai_analysis_database_service.dart';
-import '../../lib/models/ai_analysis_model.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/models/ai_analysis_model.dart';
 import '../test_utils/test_data.dart';
 import '../test_utils/test_helpers.dart';
 
