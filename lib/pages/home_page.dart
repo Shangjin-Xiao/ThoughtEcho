@@ -15,6 +15,7 @@ import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
 import 'insights_page.dart';
 import 'settings_page.dart';
+import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
@@ -610,102 +611,10 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // 显示AI问答对话框
+  // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
-    final controller = TextEditingController();
-    final aiService = context.read<AIService>();
-    String currentAnswer = '';
-    bool isLoading = false;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setDialogState) {
-            return AlertDialog(
-              title: const Text('问笔记'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    TextField(
-                      controller: controller,
-                      decoration: const InputDecoration(hintText: '请输入你的问题'),
-                      enabled: !isLoading, // 提问过程中禁用输入框
-                    ),
-                    if (isLoading) ...[
-                      const SizedBox(height: 16),
-                      const Center(child: CircularProgressIndicator()),
-                      const SizedBox(height: 8),
-                      const Center(child: Text('正在获取回答...')),
-                    ] else if (currentAnswer.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      const Text(
-                        '回答:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      SelectableText(currentAnswer), // 使用 SelectableText 允许复制
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('关闭'),
-                ),
-                TextButton(
-                  onPressed:
-                      isLoading
-                          ? null
-                          : () async {
-                            // 提问过程中禁用按钮
-                            if (controller.text.isEmpty) return;
-                            setDialogState(() {
-                              isLoading = true;
-                              currentAnswer = ''; // 清空之前的回答
-                            });
-                            try {
-                              final stream = aiService.streamAskQuestion(
-                                quote,
-                                controller.text,
-                              );
-                              stream.listen(
-                                (chunk) {
-                                  setDialogState(() {
-                                    currentAnswer += chunk;
-                                  });
-                                },
-                                onDone: () {
-                                  setDialogState(() {
-                                    isLoading = false;
-                                  });
-                                },
-                                onError: (error) {
-                                  logDebug('流式问答错误: $error');
-                                  setDialogState(() {
-                                    isLoading = false;
-                                    currentAnswer +=
-                                        '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
-                                  });
-                                },
-                              );
-                            } catch (e) {
-                              logDebug('提问失败: $e');
-                              setDialogState(() {
-                                isLoading = false;
-                                currentAnswer =
-                                    '获取回答失败: ${e.toString()}'; // 显示错误信息
-                              });
-                            }
-                          },
-                  child: Text(isLoading ? '' : '提问'), // 提问中不显示文本
-                ),
-              ],
-            );
-          },
-        );
-      },
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: quote)),
     );
   }
 

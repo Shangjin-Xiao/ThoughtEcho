@@ -326,17 +326,9 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      int count = 0;
-
-      for (var item in jsonList) {
-        if (item is Map<String, dynamic>) {
-          final analysis = AIAnalysis.fromJson(item);
-          await saveAnalysis(analysis);
-          count++;
-        }
-      }
-
-      return count;
+      final analyses =
+          jsonList.map((item) => item as Map<String, dynamic>).toList();
+      return await importAnalysesFromList(analyses);
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return 0;
@@ -346,12 +338,40 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 将分析数据导出为JSON字符串
   Future<String> exportToJson() async {
     try {
-      final analyses = await getAllAnalyses();
-      final jsonList = analyses.map((analysis) => analysis.toJson()).toList();
-      return json.encode(jsonList);
+      final analysesList = await exportAnalysesAsList();
+      return json.encode(analysesList);
     } catch (e) {
       AppLogger.e('导出AI分析到JSON失败: $e', error: e, source: 'AIAnalysisDB');
       return '[]';
+    }
+  }
+
+  /// 将所有AI分析导出为List<Map>
+  Future<List<Map<String, dynamic>>> exportAnalysesAsList() async {
+    try {
+      final analyses = await getAllAnalyses();
+      return analyses.map((analysis) => analysis.toJson()).toList();
+    } catch (e) {
+      AppLogger.e('导出AI分析为List失败: $e', error: e, source: 'AIAnalysisDB');
+      return [];
+    }
+  }
+
+  /// 从List<Map>导入AI分析数据
+  Future<int> importAnalysesFromList(
+    List<Map<String, dynamic>> analyses,
+  ) async {
+    try {
+      int count = 0;
+      for (var item in analyses) {
+        final analysis = AIAnalysis.fromJson(item);
+        await saveAnalysis(analysis);
+        count++;
+      }
+      return count;
+    } catch (e) {
+      AppLogger.e('从List恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
+      return 0;
     }
   }
 

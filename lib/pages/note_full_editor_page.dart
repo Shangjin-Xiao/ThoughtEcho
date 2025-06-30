@@ -18,6 +18,7 @@ import 'dart:math' show min; // 添加math包导入
 import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
 import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
+import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/quill_enhanced_toolbar.dart';
 
@@ -771,6 +772,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _askNoteQuestion,
+        icon: const Icon(Icons.chat),
+        label: const Text('问笔记'),
+        backgroundColor: theme.colorScheme.secondary,
+        foregroundColor: theme.colorScheme.onSecondary,
+        elevation: 2,
+        extendedTextStyle: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -1389,6 +1400,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       _analyzeContent();
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.chat),
+                    title: const Text('问笔记'),
+                    subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _askNoteQuestion();
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1692,6 +1712,29 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
     // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
     // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
+  }
+
+  // 问笔记功能
+  Future<void> _askNoteQuestion() async {
+    final plainText = _controller.document.toPlainText().trim();
+    if (plainText.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      return;
+    }
+
+    // 创建临时Quote对象用于问答
+    final tempQuote = Quote(
+      id: widget.initialQuote?.id ?? '',
+      content: plainText,
+      date: DateTime.now().toIso8601String(),
+    );
+
+    // 导航到聊天页面
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
+    );
   }
 
   @override

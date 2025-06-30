@@ -321,4 +321,57 @@ class SettingsService extends ChangeNotifier {
   Future<void> updateMultiAISettings(MultiAISettings settings) async {
     await saveMultiAISettings(settings);
   }
+
+  /// 获取所有设置数据用于备份
+  Map<String, dynamic> getAllSettingsForBackup() {
+    return {
+      'ai_settings': _aiSettings.toJson(),
+      'multi_ai_settings': _multiAISettings.toJson(),
+      'app_settings': _appSettings.toJson(),
+      'theme_mode': _themeMode.index,
+    };
+  }
+
+  /// 从备份数据恢复所有设置
+  Future<void> restoreAllSettingsFromBackup(
+    Map<String, dynamic> backupData,
+  ) async {
+    try {
+      // 恢复AI设置
+      if (backupData.containsKey('ai_settings')) {
+        final aiSettingsJson =
+            backupData['ai_settings'] as Map<String, dynamic>;
+        final aiSettings = AISettings.fromJson(aiSettingsJson);
+        await updateAISettings(aiSettings);
+      }
+
+      // 恢复多provider AI设置
+      if (backupData.containsKey('multi_ai_settings')) {
+        final multiAiSettingsJson =
+            backupData['multi_ai_settings'] as Map<String, dynamic>;
+        final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
+        await saveMultiAISettings(multiAiSettings);
+      }
+
+      // 恢复应用设置
+      if (backupData.containsKey('app_settings')) {
+        final appSettingsJson =
+            backupData['app_settings'] as Map<String, dynamic>;
+        final appSettings = AppSettings.fromJson(appSettingsJson);
+        await updateAppSettings(appSettings);
+      }
+
+      // 恢复主题模式
+      if (backupData.containsKey('theme_mode')) {
+        final themeModeIndex = backupData['theme_mode'] as int;
+        final themeMode = ThemeMode.values[themeModeIndex];
+        await updateThemeMode(themeMode);
+      }
+
+      logDebug('设置数据恢复完成');
+    } catch (e) {
+      AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');
+      rethrow;
+    }
+  }
 }
