@@ -42,12 +42,17 @@ dependencies:
   dynamic_color: ^1.6.6
   flutter_quill: ^11.4.0
   flutter_quill_extensions: ^11.0.0
+  video_player: ^2.8.1
+  chewie: ^1.7.4
+  file_picker: ^6.1.1
+  image_picker: ^1.0.4
   package_info_plus: ^8.3.0 # 更新版本解决依赖冲突
   logging: ^1.2.0 # 添加 logging 包用于日志管理
   logging_flutter: ^3.0.0 # 添加 logging_flutter 包用于Flutter日志管理
   # 性能优化相关包
   infinite_scroll_pagination: ^4.0.0 # 高性能无限滚动分页
   visibility_detector: ^0.4.0 # 可见性检测，实现懒加载
+  audioplayers: ^6.5.0
 
 dev_dependencies:
   flutter_test:

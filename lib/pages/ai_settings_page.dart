@@ -960,13 +960,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
       appBar: AppBar(
         title: const Text('AI 设置'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.analytics_outlined),
-            tooltip: '年度报告',
-            onPressed: () {
-              Navigator.of(context).pushNamed('/ai_analysis_history');
-            },
-          ),
+          // 隐藏年度报告功能
+          // IconButton(
+          //   icon: const Icon(Icons.analytics_outlined),
+          //   tooltip: '年度报告',
+          //   onPressed: () {
+          //     Navigator.of(context).pushNamed('/ai_analysis_history');
+          //   },
+          // ),
         ],
       ),
       body: SingleChildScrollView(

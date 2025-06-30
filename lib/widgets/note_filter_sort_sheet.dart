@@ -47,6 +47,16 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   late List<String> _tempSelectedWeathers;
   late List<String> _tempSelectedDayPeriods;
 
+  // 性能优化：缓存常用数据
+  late final List<String> _weatherCategories;
+  late final List<String> _dayPeriodKeys;
+
+  // 性能优化：缓存天气图标和标签映射，避免build过程中重复计算
+  late final Map<String, IconData> _weatherIconCache;
+  late final Map<String, String> _weatherLabelCache;
+  late final Map<String, IconData> _dayPeriodIconCache;
+  late final Map<String, String> _dayPeriodLabelCache;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +71,31 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
         widget.selectedDayPeriods != null
             ? List.from(widget.selectedDayPeriods!)
             : <String>[];
+
+    // 性能优化：预计算常用数据和缓存映射
+    _weatherCategories = WeatherService.filterCategoryToLabel.keys.toList();
+    _dayPeriodKeys = TimeUtils.dayPeriodKeyToLabel.keys.toList();
+
+    // 预缓存天气相关数据
+    _weatherIconCache = {};
+    _weatherLabelCache = {};
+    for (final category in _weatherCategories) {
+      _weatherIconCache[category] = WeatherService.getFilterCategoryIcon(
+        category,
+      );
+      _weatherLabelCache[category] =
+          WeatherService.filterCategoryToLabel[category]!;
+    }
+
+    // 预缓存时间段相关数据
+    _dayPeriodIconCache = {};
+    _dayPeriodLabelCache = {};
+    for (final periodKey in _dayPeriodKeys) {
+      _dayPeriodIconCache[periodKey] = TimeUtils.getDayPeriodIconByKey(
+        periodKey,
+      );
+      _dayPeriodLabelCache[periodKey] = TimeUtils.getDayPeriodLabel(periodKey);
+    }
   }
 
   @override
@@ -76,179 +111,17 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '筛选与排序',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text('标签筛选', style: theme.textTheme.bodyLarge),
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children:
-                    widget.allTags.map((tag) {
-                      final isSelected = _tempSelectedTagIds.contains(tag.id);
-                      // Use IconUtils to get the icon
-                      final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-                      final dynamic tagIcon = IconUtils.getIconData(
-                        tag.iconName,
-                      ); // getIconData handles null/empty and returns default
-
-                      return FilterChip(
-                        selected: isSelected,
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (tag.iconName != null &&
-                                tag.iconName!.isNotEmpty)
-                              isEmoji
-                                  ? Text(
-                                    tag.iconName!,
-                                    style: const TextStyle(fontSize: 16),
-                                  )
-                                  // Use the IconData from IconUtils
-                                  : (tagIcon
-                                      is IconData) // Check if it's IconData
-                                  ? Icon(tagIcon, size: 16)
-                                  : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
-                            if (tag.iconName != null &&
-                                tag.iconName!.isNotEmpty)
-                              const SizedBox(width: 4),
-                            Text(tag.name, style: theme.textTheme.bodyMedium),
-                          ],
-                        ),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _tempSelectedTagIds.add(tag.id);
-                            } else {
-                              _tempSelectedTagIds.remove(tag.id);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-              ),
-              const SizedBox(height: 20),
-              Text('天气筛选', style: theme.textTheme.bodyLarge),
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: [
-                  ...WeatherService.filterCategoryToLabel.keys.map((
-                    filterCategory,
-                  ) {
-                    final isSelected = _tempSelectedWeathers.any(
-                      (selectedWeather) =>
-                          WeatherService.getWeatherKeysByFilterCategory(
-                            filterCategory,
-                          ).contains(selectedWeather),
-                    );
-                    final icon = WeatherService.getFilterCategoryIcon(
-                      filterCategory,
-                    );
-                    return FilterChip(
-                      selected: isSelected,
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(icon, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            WeatherService
-                                .filterCategoryToLabel[filterCategory]!,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          final categoryKeys =
-                              WeatherService.getWeatherKeysByFilterCategory(
-                                filterCategory,
-                              );
-                          if (selected) {
-                            // 添加该分类下的所有天气key
-                            _tempSelectedWeathers.addAll(categoryKeys);
-                          } else {
-                            // 移除该分类下的所有天气key
-                            _tempSelectedWeathers.removeWhere(
-                              (weather) => categoryKeys.contains(weather),
-                            );
-                          }
-                        });
-                      },
-                    );
-                  }),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text('时间段筛选', style: theme.textTheme.bodyLarge),
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: [
-                  ...TimeUtils.dayPeriodKeyToLabel.keys.map((periodKey) {
-                    final isSelected = _tempSelectedDayPeriods.contains(
-                      periodKey,
-                    );
-                    final icon = TimeUtils.getDayPeriodIconByKey(periodKey);
-                    return FilterChip(
-                      selected: isSelected,
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(icon, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            TimeUtils.getDayPeriodLabel(periodKey),
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _tempSelectedDayPeriods.add(periodKey);
-                          } else {
-                            _tempSelectedDayPeriods.remove(periodKey);
-                          }
-                        });
-                      },
-                    );
-                  }),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text('排序方式', style: theme.textTheme.bodyLarge),
-              ..._sortTypeKeyToLabel.entries.map(
-                (entry) => RadioListTile<String>(
-                  title: Text(entry.value),
-                  value: entry.key,
-                  groupValue: _tempSortType,
-                  onChanged: (value) {
-                    setState(() {
-                      _tempSortType = value!;
-                    });
-                  },
-                ),
-              ),
-              SwitchListTile(
-                title: const Text('升序'),
-                value: _tempSortAscending,
-                onChanged: (value) {
-                  setState(() {
-                    _tempSortAscending = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
+              // 标题和重置按钮
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  FilledButton.tonal(
+                  Text(
+                    '筛选与排序',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
                     onPressed: () {
                       setState(() {
                         _tempSelectedTagIds.clear();
@@ -260,7 +133,42 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                     },
                     child: const Text('重置'),
                   ),
-                  const SizedBox(width: 12),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // 筛选条件卡片
+              _buildFilterCard(
+                title: '标签筛选',
+                child: _buildTagsFilter(theme),
+                theme: theme,
+              ),
+              const SizedBox(height: 12),
+
+              _buildFilterCard(
+                title: '天气筛选',
+                child: _buildWeatherFilter(theme),
+                theme: theme,
+              ),
+              const SizedBox(height: 12),
+
+              _buildFilterCard(
+                title: '时间段筛选',
+                child: _buildDayPeriodFilter(theme),
+                theme: theme,
+              ),
+              const SizedBox(height: 12),
+
+              _buildFilterCard(
+                title: '排序方式',
+                child: _buildSortOptions(theme),
+                theme: theme,
+              ),
+
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
                   FilledButton(
                     onPressed:
                         _hasChanges()
@@ -283,6 +191,217 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           ),
         ),
       ),
+    );
+  }
+
+  /// 构建筛选条件卡片
+  Widget _buildFilterCard({
+    required String title,
+    required Widget child,
+    required ThemeData theme,
+  }) {
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建标签筛选器
+  Widget _buildTagsFilter(ThemeData theme) {
+    if (widget.allTags.isEmpty) {
+      return Text(
+        '暂无标签',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 200), // 限制最大高度
+      child: SingleChildScrollView(
+        child: Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children:
+              widget.allTags.map((tag) {
+                final isSelected = _tempSelectedTagIds.contains(tag.id);
+                // Use IconUtils to get the icon
+                final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+                final dynamic tagIcon = IconUtils.getIconData(
+                  tag.iconName,
+                ); // getIconData handles null/empty and returns default
+
+                return FilterChip(
+                  selected: isSelected,
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                        isEmoji
+                            ? Text(
+                              tag.iconName!,
+                              style: const TextStyle(fontSize: 16),
+                            )
+                            // Use the IconData from IconUtils
+                            : (tagIcon is IconData) // Check if it's IconData
+                            ? Icon(tagIcon, size: 16)
+                            : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
+                      if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                        const SizedBox(width: 4),
+                      Text(tag.name, style: theme.textTheme.bodyMedium),
+                    ],
+                  ),
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _tempSelectedTagIds.add(tag.id);
+                      } else {
+                        _tempSelectedTagIds.remove(tag.id);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+        ),
+      ),
+    );
+  }
+
+  /// 构建天气筛选器
+  Widget _buildWeatherFilter(ThemeData theme) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children:
+          _weatherCategories.map((filterCategory) {
+            final isSelected = _tempSelectedWeathers.any(
+              (selectedWeather) =>
+                  WeatherService.getWeatherKeysByFilterCategory(
+                    filterCategory,
+                  ).contains(selectedWeather),
+            );
+            // 使用预缓存的图标和标签，提升性能
+            final icon = _weatherIconCache[filterCategory]!;
+            final label = _weatherLabelCache[filterCategory]!;
+            return FilterChip(
+              selected: isSelected,
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16),
+                  const SizedBox(width: 4),
+                  Text(label, style: theme.textTheme.bodyMedium),
+                ],
+              ),
+              onSelected: (selected) {
+                setState(() {
+                  final categoryKeys =
+                      WeatherService.getWeatherKeysByFilterCategory(
+                        filterCategory,
+                      );
+                  if (selected) {
+                    // 添加该分类下的所有天气key
+                    _tempSelectedWeathers.addAll(categoryKeys);
+                  } else {
+                    // 移除该分类下的所有天气key
+                    _tempSelectedWeathers.removeWhere(
+                      (weather) => categoryKeys.contains(weather),
+                    );
+                  }
+                });
+              },
+            );
+          }).toList(),
+    );
+  }
+
+  /// 构建时间段筛选器
+  Widget _buildDayPeriodFilter(ThemeData theme) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children:
+          _dayPeriodKeys.map((periodKey) {
+            final isSelected = _tempSelectedDayPeriods.contains(periodKey);
+            // 使用预缓存的图标和标签，提升性能
+            final icon = _dayPeriodIconCache[periodKey]!;
+            final label = _dayPeriodLabelCache[periodKey]!;
+            return FilterChip(
+              selected: isSelected,
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16),
+                  const SizedBox(width: 4),
+                  Text(label, style: theme.textTheme.bodyMedium),
+                ],
+              ),
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    _tempSelectedDayPeriods.add(periodKey);
+                  } else {
+                    _tempSelectedDayPeriods.remove(periodKey);
+                  }
+                });
+              },
+            );
+          }).toList(),
+    );
+  }
+
+  /// 构建排序选项
+  Widget _buildSortOptions(ThemeData theme) {
+    return Column(
+      children: [
+        ..._sortTypeKeyToLabel.entries.map(
+          (entry) => RadioListTile<String>(
+            title: Text(entry.value),
+            value: entry.key,
+            groupValue: _tempSortType,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (value) {
+              setState(() {
+                _tempSortType = value!;
+              });
+            },
+          ),
+        ),
+        SwitchListTile(
+          title: const Text('升序'),
+          value: _tempSortAscending,
+          contentPadding: EdgeInsets.zero,
+          onChanged: (value) {
+            setState(() {
+              _tempSortAscending = value;
+            });
+          },
+        ),
+      ],
     );
   }
 

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
-import '../controllers/search_controller.dart'; // 导入我们自定义的搜索控制器
 import '../utils/icon_utils.dart';
 import '../widgets/quote_item_widget.dart';
 import '../widgets/app_loading_view.dart';
@@ -12,6 +11,8 @@ import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../services/weather_service.dart'; // 导入天气服务
+import '../utils/time_utils.dart'; // 导入时间工具
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -21,6 +22,7 @@ class NoteListView extends StatefulWidget {
   final String sortType;
   final bool sortAscending;
   final Function(String, bool) onSortChanged;
+  final Function(String) onSearchChanged; // 新增搜索变化回调
   final Function(Quote) onEdit;
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
@@ -35,6 +37,7 @@ class NoteListView extends StatefulWidget {
     required this.sortType,
     required this.sortAscending,
     required this.onSortChanged,
+    required this.onSearchChanged, // 新增必需的搜索回调
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
@@ -70,7 +73,16 @@ class NoteListViewState extends State<NoteListView> {
     _searchController.text = widget.searchQuery;
     _hasMore = true;
     _isLoading = true;
-    // 初始订阅数据流
+    // 优化：延迟初始化数据流订阅，避免build过程中的副作用
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeDataStream();
+    });
+  }
+
+  /// 优化：将数据流初始化分离到独立方法
+  void _initializeDataStream() {
+    if (!mounted) return; // 确保组件仍然挂载
+
     final db = Provider.of<DatabaseService>(context, listen: false);
     _quotesSub = db
         .watchQuotes(
@@ -81,18 +93,22 @@ class NoteListViewState extends State<NoteListView> {
               widget.sortType == 'time'
                   ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
                   : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+          searchQuery:
+              widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
           selectedWeathers:
               _selectedWeathers.isNotEmpty ? _selectedWeathers : null,
           selectedDayPeriods:
               _selectedDayPeriods.isNotEmpty ? _selectedDayPeriods : null,
         )
         .listen((list) {
-          setState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-            _hasMore = list.length % _pageSize == 0;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _quotes.clear();
+              _quotes.addAll(list);
+              _hasMore = list.length % _pageSize == 0;
+              _isLoading = false;
+            });
+          }
         });
     // 加载第一页
     _loadMore();
@@ -381,33 +397,16 @@ class NoteListViewState extends State<NoteListView> {
   void _performSearch(String value) {
     if (!mounted) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.searchQuery != value) {
-        // 使用超时机制，避免搜索无限等待
-        Timer(const Duration(seconds: 5), () {
-          if (mounted && _isLoading) {
-            setState(() {
-              _isLoading = false;
-            });
-            logDebug('搜索超时，已重置加载状态');
-          }
+    // 直接调用父组件的搜索回调
+    widget.onSearchChanged(value);
+
+    // 设置超时保护
+    Timer(const Duration(seconds: 3), () {
+      if (mounted && _isLoading) {
+        setState(() {
+          _isLoading = false;
         });
-
-        // 触发父组件更新搜索参数
-        widget.onSortChanged(widget.sortType, widget.sortAscending);
-
-        // 更新全局搜索状态 - 使用立即更新以提高响应速度
-        final searchController = Provider.of<NoteSearchController>(
-          context,
-          listen: false,
-        );
-
-        // 如果是清空搜索，使用clearSearch方法，避免任何延迟
-        if (value.isEmpty) {
-          searchController.clearSearch();
-        } else {
-          searchController.updateSearch(value);
-        }
+        logDebug('搜索超时，已重置加载状态');
       }
     });
   }
@@ -514,6 +513,51 @@ class NoteListViewState extends State<NoteListView> {
                   ),
                 ),
 
+                // 筛选条件总结
+                (_selectedWeathers.isNotEmpty ||
+                        _selectedDayPeriods.isNotEmpty ||
+                        widget.selectedTagIds.isNotEmpty)
+                    ? Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 8.0,
+                      ),
+                      width: double.infinity,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.filter_alt,
+                            size: 16,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '已选择筛选条件',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (widget.selectedTagIds.isNotEmpty ||
+                              _selectedWeathers.isNotEmpty ||
+                              _selectedDayPeriods.isNotEmpty)
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  widget.onTagSelectionChanged([]);
+                                  _selectedWeathers.clear();
+                                  _selectedDayPeriods.clear();
+                                  _updateStreamSubscription();
+                                });
+                              },
+                              child: const Text('清除全部'),
+                            ),
+                        ],
+                      ),
+                    )
+                    : const SizedBox.shrink(),
+
                 // 标签筛选器
                 widget.selectedTagIds.isNotEmpty
                     ? Container(
@@ -542,6 +586,105 @@ class NoteListViewState extends State<NoteListView> {
                                 },
                                 backgroundColor: theme.colorScheme.primary
                                     .applyOpacity(0.1), // MODIFIED
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    )
+                    : const SizedBox.shrink(),
+
+                // 天气筛选器
+                _selectedWeathers.isNotEmpty
+                    ? Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 4.0,
+                      ),
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            _selectedWeathers.map((weatherKey) {
+                              // 找到对应的天气分类
+                              String? categoryKey;
+                              for (final entry
+                                  in WeatherService
+                                      .filterCategoryToLabel
+                                      .entries) {
+                                final categoryWeathers =
+                                    WeatherService.getWeatherKeysByFilterCategory(
+                                      entry.key,
+                                    );
+                                if (categoryWeathers.contains(weatherKey)) {
+                                  categoryKey = entry.key;
+                                  break;
+                                }
+                              }
+
+                              final weatherLabel =
+                                  WeatherService
+                                      .weatherKeyToLabel[weatherKey] ??
+                                  weatherKey;
+                              final weatherIcon =
+                                  categoryKey != null
+                                      ? WeatherService.getFilterCategoryIcon(
+                                        categoryKey,
+                                      )
+                                      : Icons.wb_sunny;
+
+                              return Chip(
+                                avatar: Icon(weatherIcon, size: 16),
+                                label: Text(weatherLabel),
+                                onDeleted: () {
+                                  setState(() {
+                                    _selectedWeathers.remove(weatherKey);
+                                    _updateStreamSubscription();
+                                  });
+                                },
+                                backgroundColor: theme.colorScheme.secondary
+                                    .applyOpacity(0.1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    )
+                    : const SizedBox.shrink(),
+
+                // 时间段筛选器
+                _selectedDayPeriods.isNotEmpty
+                    ? Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 4.0,
+                      ),
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            _selectedDayPeriods.map((periodKey) {
+                              final periodLabel = TimeUtils.getDayPeriodLabel(
+                                periodKey,
+                              );
+                              final periodIcon =
+                                  TimeUtils.getDayPeriodIconByKey(periodKey);
+
+                              return Chip(
+                                avatar: Icon(periodIcon, size: 16),
+                                label: Text(periodLabel),
+                                onDeleted: () {
+                                  setState(() {
+                                    _selectedDayPeriods.remove(periodKey);
+                                    _updateStreamSubscription();
+                                  });
+                                },
+                                backgroundColor: theme.colorScheme.tertiary
+                                    .applyOpacity(0.1),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20),
                                 ),
