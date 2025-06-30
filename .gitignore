@@ -254,3 +254,24 @@ flutter_test_*_report.json
 pubspec.lock
 android/local.properties
 android/local.properties
+
+# Testing artifacts
+coverage/
+test/mocks/*.mocks.dart
+*.mocks.dart
+test_results/
+integration_test_results/
+test_reports/
+.test_coverage/
+
+# Test databases and temporary files
+test_database.db
+test_database.db-*
+test_temp/
+temp_test_files/
+
+# CI/CD artifacts
+deps.json
+test_coverage.lcov
+*.coverage
+coverage.xml

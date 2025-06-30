@@ -61,6 +61,13 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.13.1
+  # Testing dependencies
+  mockito: ^5.4.4
+  build_runner: ^2.4.8
+  integration_test:
+    sdk: flutter
+  # Code coverage
+  coverage: ^1.6.3
 
 # 应用图标配置
 flutter_launcher_icons:

@@ -1,0 +1,87 @@
+# Test configuration for ThoughtEcho
+
+# Test file patterns
+test_file_pattern: "**/*_test.dart"
+integration_test_pattern: "integration_test/**/*_test.dart"
+
+# Mock generation
+mock_generation:
+  enabled: true
+  output_directory: "test/mocks/"
+  source_directories:
+    - "lib/services/"
+    - "lib/models/"
+
+# Test coverage
+coverage:
+  enabled: true
+  output_directory: "coverage/"
+  include_patterns:
+    - "lib/**/*.dart"
+  exclude_patterns:
+    - "lib/**/*.g.dart"
+    - "lib/**/*.freezed.dart"
+    - "lib/**/*.mocks.dart"
+    - "lib/main.dart"
+  minimum_coverage: 70
+
+# Test timeout settings
+timeouts:
+  unit_test: 30 # seconds
+  widget_test: 45 # seconds
+  integration_test: 120 # seconds
+
+# Test environments
+environments:
+  - name: "development"
+    database: ":memory:"
+    api_endpoints:
+      ai_service: "https://api.openai.com/v1"
+      weather_service: "https://api.openweathermap.org/data/2.5"
+  
+  - name: "testing"
+    database: ":memory:"
+    api_endpoints:
+      ai_service: "mock"
+      weather_service: "mock"
+
+# Integration test configuration
+integration_tests:
+  platforms:
+    - "flutter-tester"
+    - "web-server"
+  devices:
+    android:
+      - "flutter-tester"
+    ios:
+      - "flutter-tester"
+    web:
+      - "chrome"
+      - "web-server"
+    desktop:
+      - "flutter-tester"
+
+# Performance test thresholds
+performance:
+  app_startup_time: 5000 # milliseconds
+  database_query_time: 1000 # milliseconds
+  ai_request_timeout: 30000 # milliseconds
+  ui_interaction_time: 100 # milliseconds
+
+# Test data
+test_data:
+  sample_quotes:
+    - content: "这是一个测试笔记"
+      category: "test-category"
+      date: "2024-01-01T10:00:00.000Z"
+    - content: "另一个测试笔记，包含更多内容"
+      category: "test-category-2"
+      date: "2024-01-02T15:30:00.000Z"
+  
+  sample_categories:
+    - id: "test-category"
+      name: "测试分类"
+      icon: "bookmark"
+    - id: "test-category-2"
+      name: "另一个测试分类"
+      icon: "note"

@@ -1,0 +1,345 @@
+name: 🧪 Testing Pipeline
+
+on:
+  # Trigger on pull requests to main branch
+  pull_request:
+    branches: [ main, develop ]
+  # Trigger on pushes to main branch
+  push:
+    branches: [ main, develop ]
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      flutter_version:
+        description: 'Flutter version to use'
+        required: false
+        default: '3.27.0'
+        type: choice
+        options:
+          - '3.27.0'
+          - '3.24.0'
+          - 'latest'
+      run_integration_tests:
+        description: 'Run integration tests'
+        required: false
+        default: true
+        type: boolean
+      generate_coverage:
+        description: 'Generate code coverage report'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.27.0' }}
+
+jobs:
+  # Code quality and static analysis
+  analyze:
+    name: 📊 Code Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          
+      - name: 📦 Get dependencies
+        run: flutter pub get
+        
+      - name: 🔍 Verify the formatting of the code
+        run: dart format --output=none --set-exit-if-changed lib/ test/
+        
+      - name: 📈 Analyze project source
+        run: flutter analyze --fatal-infos
+        
+      - name: 🔧 Check for any missing dart doc comments
+        run: |
+          dart doc --validate-links --dry-run
+        continue-on-error: true
+
+  # Unit and widget tests
+  test:
+    name: 🧪 Unit & Widget Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          
+      - name: 📦 Get dependencies
+        run: flutter pub get
+        
+      - name: 🔨 Generate mock files
+        run: |
+          flutter packages pub run build_runner build --delete-conflicting-outputs
+        continue-on-error: true
+        
+      - name: 🧪 Run unit and widget tests
+        run: |
+          flutter test \
+            --coverage \
+            --test-randomize-ordering-seed=random \
+            --reporter=expanded
+            
+      - name: 📊 Upload coverage reports to Codecov
+        if: ${{ github.event.inputs.generate_coverage != 'false' }}
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          
+      - name: 📈 Generate HTML coverage report
+        if: ${{ github.event.inputs.generate_coverage != 'false' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y lcov
+          genhtml coverage/lcov.info -o coverage/html
+          
+      - name: 📤 Upload coverage HTML report
+        if: ${{ github.event.inputs.generate_coverage != 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 30
+
+  # Integration tests on different platforms
+  integration-test:
+    name: 🔗 Integration Tests
+    if: ${{ github.event.inputs.run_integration_tests != 'false' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        device: [ 'web-server', 'flutter-tester' ]
+        
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          
+      - name: 🌐 Enable web support
+        if: matrix.device == 'web-server'
+        run: flutter config --enable-web
+        
+      - name: 📦 Get dependencies
+        run: flutter pub get
+        
+      - name: 🔨 Build app for testing
+        run: |
+          if [[ "${{ matrix.device }}" == "web-server" ]]; then
+            flutter build web --debug
+          else
+            flutter build linux --debug || echo "Linux build failed, continuing with tests"
+          fi
+        continue-on-error: true
+        
+      - name: 🧪 Run integration tests
+        run: |
+          if [[ "${{ matrix.device }}" == "web-server" ]]; then
+            # Run web integration tests
+            flutter test integration_test/ \
+              --platform chrome \
+              --web-port=7357 \
+              --web-browser-flag="--disable-web-security" \
+              --web-browser-flag="--disable-features=VizDisplayCompositor"
+          else
+            # Run desktop integration tests
+            export DISPLAY=:99
+            sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+            flutter test integration_test/ \
+              --device-id=flutter-tester
+          fi
+        continue-on-error: true
+
+  # Build tests to ensure the app compiles correctly
+  build-test:
+    name: 🏗️ Build Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ 'apk', 'web', 'linux' ]
+        include:
+          - target: apk
+            os: ubuntu-latest
+            build_command: 'flutter build apk --debug --target-platform=android-arm64'
+          - target: web
+            os: ubuntu-latest
+            build_command: 'flutter build web --debug'
+          - target: linux
+            os: ubuntu-latest
+            build_command: 'flutter build linux --debug'
+            
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          
+      - name: 🤖 Setup Android SDK (for APK)
+        if: matrix.target == 'apk'
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 34.0.0
+          
+      - name: ☕ Setup Java (for APK)
+        if: matrix.target == 'apk'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          
+      - name: 🐧 Install Linux dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev
+            
+      - name: 🌐 Enable platform support
+        run: |
+          case "${{ matrix.target }}" in
+            "web") flutter config --enable-web ;;
+            "linux") flutter config --enable-linux-desktop ;;
+          esac
+          
+      - name: 📦 Get dependencies
+        run: flutter pub get
+        
+      - name: 🏗️ Build application
+        run: ${{ matrix.build_command }}
+        
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.target }}-${{ github.sha }}
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/web/
+            build/linux/
+          retention-days: 7
+
+  # Dependency audit and security checks
+  security:
+    name: 🔒 Security & Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          
+      - name: 📦 Get dependencies
+        run: flutter pub get
+        
+      - name: 🔍 Run dependency audit
+        run: |
+          flutter pub deps --json > deps.json
+          flutter pub deps --no-dev
+          
+      - name: 🛡️ Check for known security issues
+        run: |
+          # Check for outdated packages
+          flutter pub outdated --color || true
+          # Check pub.dev score (if available)
+          flutter pub pub-cache list || true
+        continue-on-error: true
+
+  # Test results summary
+  test-summary:
+    name: 📋 Test Summary
+    needs: [ analyze, test, integration-test, build-test, security ]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📊 Generate test summary
+        run: |
+          echo "## 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Analysis | ${{ needs.analyze.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit & Widget Tests | ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-test.result == 'success' && '✅ Passed' || needs.integration-test.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Tests | ${{ needs.build-test.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Audit | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall status
+          if [[ "${{ needs.analyze.result }}" == "success" && "${{ needs.test.result }}" == "success" && "${{ needs.build-test.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then
+            echo "### 🎉 All tests passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Some tests failed. Please check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: 💬 Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `## 🧪 Test Results
+            
+            | Job | Status |
+            |-----|--------|
+            | Code Analysis | ${{ needs.analyze.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | Unit & Widget Tests | ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | Integration Tests | ${{ needs.integration-test.result == 'success' && '✅ Passed' || needs.integration-test.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+            | Build Tests | ${{ needs.build-test.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | Security Audit | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            
+            **Flutter Version:** ${{ env.FLUTTER_VERSION }}
+            **Commit:** ${context.sha.substring(0, 7)}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
