@@ -107,9 +107,10 @@ class BackupService {
     }
     await importDir.create(recursive: true);
 
+    InputFileStream? inputStream;
     try {
-      // 1. 解压备份包
-      final inputStream = InputFileStream(filePath);
+      // 1. 解压备份包 - 使用流式处理优化内存使用
+      inputStream = InputFileStream(filePath);
       final archive = ZipDecoder().decodeBuffer(inputStream);
 
       // 2. 恢复结构化数据
@@ -129,46 +130,69 @@ class BackupService {
       );
 
       if (mediaFilesExist) {
-        // 清理现有的媒体文件
-        if (clearExisting) {
-          final allMedia = await MediaFileService.getAllMediaFilePaths();
-          for (final p in allMedia) {
-            await MediaFileService.deleteMediaFile(p);
+        List<String>? clearedMediaPaths;
+        
+        try {
+          // 清理现有的媒体文件（记录已清理的路径用于回滚）
+          if (clearExisting) {
+            clearedMediaPaths = await MediaFileService.getAllMediaFilePaths();
+            for (final p in clearedMediaPaths) {
+              await MediaFileService.deleteMediaFile(p);
+            }
           }
-        }
 
-        // 将备份中的媒体文件解压到临时目录
-        for (final file in archive.files) {
-          if (!file.isFile || file.name == _backupDataFile) continue;
-          final targetPath = path.join(importDir.path, file.name);
-          final targetFile = File(targetPath);
-          await targetFile.parent.create(recursive: true);
-          await targetFile.writeAsBytes(file.content as List<int>);
+          // 将备份中的媒体文件解压到临时目录
+          for (final file in archive.files) {
+            if (!file.isFile || file.name == _backupDataFile) continue;
+            final targetPath = path.join(importDir.path, file.name);
+            final targetFile = File(targetPath);
+            await targetFile.parent.create(recursive: true);
+            await targetFile.writeAsBytes(file.content as List<int>);
+          }
+          
+          // 从临时目录恢复到应用目录
+          final restoreSuccess = await MediaFileService.restoreMediaFiles(importDir.path);
+          if (!restoreSuccess) {
+            throw Exception('媒体文件恢复失败');
+          }
+          
+          logDebug('媒体文件恢复完成');
+        } catch (mediaError) {
+          // 媒体文件恢复失败时的错误处理
+          logDebug('媒体文件恢复失败，将清理不完整状态: $mediaError');
+          // 注意：这里不进行回滚，因为可能导致更复杂的状态
+          rethrow;
         }
-        // 从临时目录恢复到应用目录
-        await MediaFileService.restoreMediaFiles(importDir.path);
-        logDebug('媒体文件恢复完成');
       }
     } catch (e, s) {
       AppLogger.e('数据导入失败', error: e, stackTrace: s, source: 'BackupService');
       rethrow;
     } finally {
+      // 确保资源释放
+      inputStream?.close();
+      
       // 清理临时解压目录
-      if (await importDir.exists()) {
-        await importDir.delete(recursive: true);
+      try {
+        if (await importDir.exists()) {
+          await importDir.delete(recursive: true);
+        }
+      } catch (cleanupError) {
+        logDebug('清理临时目录失败: $cleanupError');
+        // 清理失败不阻塞主流程
       }
     }
   }
 
   /// 验证备份文件是否有效
   Future<bool> validateBackupFile(String filePath) async {
+    InputFileStream? inputStream;
     try {
       final file = File(filePath);
       if (!await file.exists()) return false;
 
       // 验证新的 zip 格式
       if (path.extension(filePath).toLowerCase() == '.zip') {
-        final inputStream = InputFileStream(filePath);
+        inputStream = InputFileStream(filePath);
         final archive = ZipDecoder().decodeBuffer(inputStream);
         // 核心验证：必须包含 backup_data.json 文件
         return archive.findFile(_backupDataFile) != null;
@@ -183,6 +207,9 @@ class BackupService {
     } catch (e) {
       AppLogger.e('无效的备份文件', error: e, source: 'BackupService');
       return false;
+    } finally {
+      // 确保流被正确关闭
+      inputStream?.close();
     }
   }
 
