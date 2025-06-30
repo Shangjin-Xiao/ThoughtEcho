@@ -11,7 +11,7 @@ import '../services/backup_service.dart';
 import '../utils/time_utils.dart';
 
 /// 备份与还原页面
-/// 
+///
 /// 支持新版ZIP格式备份（包含媒体文件）和旧版JSON格式兼容
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
@@ -27,10 +27,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('数据备份与还原'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('数据备份与还原'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -64,52 +61,58 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 const SizedBox(width: 8),
                 Text(
                   '数据备份',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // 媒体文件选项
             CheckboxListTile(
               title: const Text('包含媒体文件'),
               subtitle: const Text('勾选后将备份图片、音频等媒体文件（文件更大但更完整）'),
               value: _includeMediaFiles,
-              onChanged: _isLoading ? null : (value) {
-                setState(() {
-                  _includeMediaFiles = value ?? true;
-                });
-              },
+              onChanged:
+                  _isLoading
+                      ? null
+                      : (value) {
+                        setState(() {
+                          _includeMediaFiles = value ?? true;
+                        });
+                      },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // 备份按钮
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _isLoading ? null : _handleBackup,
-                icon: _isLoading 
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_alt),
+                icon:
+                    _isLoading
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.save_alt),
                 label: Text(_isLoading ? '正在备份...' : '创建备份'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 8),
             Text(
               '将创建${_includeMediaFiles ? 'ZIP' : 'JSON'}格式的备份文件，包含所有笔记、设置${_includeMediaFiles ? '和媒体文件' : ''}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -135,14 +138,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 const SizedBox(width: 8),
                 Text(
                   '数据还原',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -156,12 +159,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 8),
             Text(
               '支持新版ZIP格式和旧版JSON格式的备份文件',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -173,7 +178,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   /// 构建信息区域
   Widget _buildInfoSection() {
     return Card(
-      color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.1),
+      color: Theme.of(
+        context,
+      ).colorScheme.errorContainer.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -196,23 +203,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ],
             ),
             const SizedBox(height: 12),
-            
-            _buildInfoItem(
-              '数据安全',
-              '还原数据将覆盖当前所有数据，请在还原前确保当前数据已备份',
-            ),
-            _buildInfoItem(
-              '备份建议',
-              '建议定期备份数据到多个位置（本地、云存储等）',
-            ),
-            _buildInfoItem(
-              '格式说明',
-              '新版ZIP格式包含完整数据和媒体文件，旧版JSON格式仅包含文本数据',
-            ),
-            _buildInfoItem(
-              '兼容性',
-              '支持导入新版ZIP格式和旧版JSON格式的备份文件',
-            ),
+
+            _buildInfoItem('数据安全', '还原数据将覆盖当前所有数据，请在还原前确保当前数据已备份'),
+            _buildInfoItem('备份建议', '建议定期备份数据到多个位置（本地、云存储等）'),
+            _buildInfoItem('格式说明', '新版ZIP格式包含完整数据和媒体文件，旧版JSON格式仅包含文本数据'),
+            _buildInfoItem('兼容性', '支持导入新版ZIP格式和旧版JSON格式的备份文件'),
           ],
         ),
       ),
@@ -256,7 +251,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   /// 处理备份操作
   Future<void> _handleBackup() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
     });
@@ -275,14 +270,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
         );
-        
+
         if (mounted) {
           await Share.shareXFiles(
             [XFile(backupPath)],
             text: '心迹备份文件',
             subject: fileName,
           );
-          
+
           _showSuccessSnackBar('备份文件已准备就绪，请通过分享保存');
         }
       } else if (Platform.isAndroid || Platform.isIOS) {
@@ -290,14 +285,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
         );
-        
+
         if (mounted) {
           await Share.shareXFiles(
             [XFile(backupPath)],
             text: '心迹备份文件',
             subject: fileName,
           );
-          
+
           _showSuccessSnackBar('备份完成，请选择保存位置');
         }
       } else {
@@ -317,7 +312,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             includeMediaFiles: _includeMediaFiles,
             customPath: saveLocation.path,
           );
-          
+
           _showSuccessSnackBar('备份已保存到: ${saveLocation.path}');
         }
       }
@@ -359,10 +354,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final isValid = await backupService.validateBackupFile(file.path);
       if (!isValid) {
         if (mounted) {
-          _showErrorDialog(
-            '无效的备份文件',
-            '所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。',
-          );
+          _showErrorDialog('无效的备份文件', '所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。');
         }
         return;
       }
@@ -379,7 +371,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (mounted) {
         // 还原成功，回到主页并显示成功消息
         Navigator.of(context).popUntil((route) => route.isFirst);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('数据还原成功！所有数据已更新。'),
@@ -405,54 +397,56 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   /// 显示还原确认对话框
   Future<bool> _showRestoreConfirmDialog() async {
     return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('确认还原数据'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '此操作将：',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 8),
-            Text('• 删除当前设备上的所有笔记和设置'),
-            Text('• 用备份文件中的数据替换'),
-            Text('• 此操作无法撤销'),
-            SizedBox(height: 16),
-            Text(
-              '请确保您已经备份了当前的重要数据。',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('确认还原数据'),
+                  ],
+                ),
+                content: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '此操作将：',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 8),
+                    Text('• 删除当前设备上的所有笔记和设置'),
+                    Text('• 用备份文件中的数据替换'),
+                    Text('• 此操作无法撤销'),
+                    SizedBox(height: 16),
+                    Text(
+                      '请确保您已经备份了当前的重要数据。',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('取消'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('确认还原'),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('确认还原'),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   /// 显示成功提示
@@ -471,22 +465,23 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   void _showErrorDialog(String title, String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.error, color: Colors.red),
-            const SizedBox(width: 8),
-            Text(title),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+      builder:
+          (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.error, color: Colors.red),
+                const SizedBox(width: 8),
+                Text(title),
+              ],
+            ),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('确定'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }
