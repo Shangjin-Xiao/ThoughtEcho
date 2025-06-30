@@ -43,11 +43,13 @@ class NoteSearchController extends ChangeNotifier {
       try {
         _searchQuery = query;
 
-        // 添加最大搜索时间限制，5秒后自动重置搜索状态
-        Future.delayed(const Duration(seconds: 5), () {
+        // 添加最大搜索时间限制，确保搜索状态不会永远卡住
+        Future.delayed(const Duration(seconds: 8), () {
           if (_isSearching) {
             _isSearching = false;
+            _searchError = '搜索超时，请重试';
             notifyListeners();
+            logDebug('搜索超时，已自动重置状态');
           }
         });
 
@@ -56,7 +58,7 @@ class NoteSearchController extends ChangeNotifier {
         _searchError = '搜索处理出错: $e';
         _isSearching = false;
         notifyListeners();
-        logDebug('搜索控制器错误: $_searchError');
+        logError('搜索控制器错误: $_searchError', error: e);
       }
     });
   }
@@ -90,6 +92,15 @@ class NoteSearchController extends ChangeNotifier {
       _isSearching = isSearching;
       notifyListeners();
     }
+  }
+
+  /// 重置搜索状态（用于解决卡住的搜索状态）
+  void resetSearchState() {
+    _debounceTimer?.cancel();
+    _isSearching = false;
+    _searchError = null;
+    notifyListeners();
+    logDebug('搜索状态已手动重置');
   }
 
   @override

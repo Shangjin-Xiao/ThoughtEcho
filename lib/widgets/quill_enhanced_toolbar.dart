@@ -54,6 +54,8 @@ class QuillEnhancedToolbar extends StatelessWidget {
 
             // 布局配置
             multiRowsDisplay: false,
+            toolbarIconAlignment: WrapAlignment.start, // 确保左对齐
+            toolbarSectionSpacing: 8, // 增加按钮间距
             decoration: BoxDecoration(color: Colors.transparent),
           ),
         ),
