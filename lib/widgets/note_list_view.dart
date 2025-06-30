@@ -101,9 +101,13 @@ class NoteListViewState extends State<NoteListView> {
           searchQuery:
               widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
           selectedWeathers:
-              widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
+              widget.selectedWeathers.isNotEmpty
+                  ? widget.selectedWeathers
+                  : null,
           selectedDayPeriods:
-              widget.selectedDayPeriods.isNotEmpty ? widget.selectedDayPeriods : null,
+              widget.selectedDayPeriods.isNotEmpty
+                  ? widget.selectedDayPeriods
+                  : null,
         )
         .listen((list) {
           if (mounted) {
@@ -155,7 +159,10 @@ class NoteListViewState extends State<NoteListView> {
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending ||
         !_areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) ||
-        !_areListsEqual(oldWidget.selectedDayPeriods, widget.selectedDayPeriods);
+        !_areListsEqual(
+          oldWidget.selectedDayPeriods,
+          widget.selectedDayPeriods,
+        );
   }
 
   // 辅助方法：比较两个列表是否相等（深比较）
@@ -198,9 +205,13 @@ class NoteListViewState extends State<NoteListView> {
           searchQuery:
               widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
           selectedWeathers:
-              widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
+              widget.selectedWeathers.isNotEmpty
+                  ? widget.selectedWeathers
+                  : null,
           selectedDayPeriods:
-              widget.selectedDayPeriods.isNotEmpty ? widget.selectedDayPeriods : null,
+              widget.selectedDayPeriods.isNotEmpty
+                  ? widget.selectedDayPeriods
+                  : null,
         )
         .listen(
           (list) {
@@ -548,7 +559,8 @@ class NoteListViewState extends State<NoteListView> {
                                   sortType: widget.sortType,
                                   sortAscending: widget.sortAscending,
                                   selectedWeathers: widget.selectedWeathers,
-                                  selectedDayPeriods: widget.selectedDayPeriods, // 传递时间段筛选状态
+                                  selectedDayPeriods:
+                                      widget.selectedDayPeriods, // 传递时间段筛选状态
                                   onApply: (
                                     tagIds,
                                     sortType,
@@ -699,9 +711,13 @@ class NoteListViewState extends State<NoteListView> {
                                 avatar: Icon(weatherIcon, size: 16),
                                 label: Text(weatherLabel),
                                 onDeleted: () {
-                                  final newWeathers = List<String>.from(widget.selectedWeathers)
-                                    ..remove(weatherKey);
-                                  widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
+                                  final newWeathers = List<String>.from(
+                                    widget.selectedWeathers,
+                                  )..remove(weatherKey);
+                                  widget.onFilterChanged(
+                                    newWeathers,
+                                    widget.selectedDayPeriods,
+                                  );
                                   _updateStreamSubscription();
                                 },
                                 backgroundColor: theme.colorScheme.secondary
@@ -738,9 +754,13 @@ class NoteListViewState extends State<NoteListView> {
                                 avatar: Icon(periodIcon, size: 16),
                                 label: Text(periodLabel),
                                 onDeleted: () {
-                                  final newDayPeriods = List<String>.from(widget.selectedDayPeriods)
-                                    ..remove(periodKey);
-                                  widget.onFilterChanged(widget.selectedWeathers, newDayPeriods);
+                                  final newDayPeriods = List<String>.from(
+                                    widget.selectedDayPeriods,
+                                  )..remove(periodKey);
+                                  widget.onFilterChanged(
+                                    widget.selectedWeathers,
+                                    newDayPeriods,
+                                  );
                                   _updateStreamSubscription();
                                 },
                                 backgroundColor: theme.colorScheme.tertiary
