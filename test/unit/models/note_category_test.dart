@@ -1,7 +1,7 @@
 /// Unit tests for NoteCategory model
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/models/note_category.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import '../test_utils/test_data.dart';
 import '../test_utils/test_helpers.dart';
 

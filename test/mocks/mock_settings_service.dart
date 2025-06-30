@@ -1,12 +1,11 @@
 /// Mock SettingsService for testing
 import 'package:flutter/material.dart';
-import 'package:mockito/mockito.dart';
 
-import '../../lib/models/ai_settings.dart';
-import '../../lib/models/app_settings.dart';
-import '../../lib/models/multi_ai_settings.dart';
+import 'package:thoughtecho/models/ai_settings.dart';
+import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 
-class MockSettingsService extends ChangeNotifier with Mock {
+class MockSettingsService extends ChangeNotifier {
   AISettings _aiSettings = const AISettings();
   AppSettings _appSettings = const AppSettings();
   MultiAISettings _multiAISettings = const MultiAISettings();

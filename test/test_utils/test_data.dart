@@ -2,10 +2,10 @@
 /// Provides common test data objects and factory methods
 library test_utils;
 
-import '../models/quote_model.dart';
-import '../models/note_category.dart';
-import '../models/ai_analysis_model.dart';
-import '../models/weather_data.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/ai_analysis_model.dart';
+import 'package:thoughtecho/models/weather_data.dart';
 
 class TestData {
   /// Test quotes data

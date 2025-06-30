@@ -1,13 +1,12 @@
 /// Mock DatabaseService for testing
 import 'package:flutter/foundation.dart';
-import 'package:mockito/mockito.dart';
 import 'dart:async';
 
-import '../../lib/models/quote_model.dart';
-import '../../lib/models/note_category.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import '../test_utils/test_data.dart';
 
-class MockDatabaseService extends ChangeNotifier with Mock {
+class MockDatabaseService extends ChangeNotifier {
   final List<Quote> _quotes = [];
   final List<NoteCategory> _categories = [];
   final StreamController<List<Quote>> _quotesController = StreamController<List<Quote>>.broadcast();

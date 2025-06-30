@@ -1,9 +1,8 @@
 /// Mock ClipboardService for testing
 import 'package:flutter/foundation.dart';
-import 'package:mockito/mockito.dart';
 import 'dart:async';
 
-class MockClipboardService extends ChangeNotifier with Mock {
+class MockClipboardService extends ChangeNotifier {
   bool _enableClipboardMonitoring = false;
   String _lastProcessedContent = '';
   String? _currentClipboardContent;

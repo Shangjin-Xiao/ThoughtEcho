@@ -1,7 +1,7 @@
 /// Unit tests for ClipboardService
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/services/clipboard_service.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
 import '../mocks/mock_clipboard_service.dart';
 import '../test_utils/test_helpers.dart';
 
