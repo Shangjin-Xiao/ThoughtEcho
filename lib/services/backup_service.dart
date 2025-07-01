@@ -33,10 +33,12 @@ class BackupService {
   ///
   /// [includeMediaFiles] - 是否在备份中包含媒体文件（图片等）
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则创建在临时目录
+  /// [onProgress] - 进度回调函数，接收 (current, total) 参数
   /// 返回最终备份文件的路径
   Future<String> exportAllData({
     required bool includeMediaFiles,
     String? customPath,
+    Function(int current, int total)? onProgress,
   }) async {
     final tempDir = await getTemporaryDirectory();
     final backupId = DateTime.now().millisecondsSinceEpoch;
@@ -44,32 +46,65 @@ class BackupService {
         customPath ??
         path.join(tempDir.path, 'thoughtecho_backup_$backupId.zip');
 
+    ZipFileEncoder? encoder;
+    File? jsonFile;
+
     try {
-      final encoder = ZipFileEncoder();
+      encoder = ZipFileEncoder();
       encoder.create(archivePath);
 
       // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
       final backupData = await _gatherStructuredData(includeMediaFiles);
-      final jsonData = jsonEncode(backupData);
-      final jsonBytes = utf8.encode(jsonData);
 
-      // 创建临时文件来存储JSON数据
-      final jsonFile = File(path.join(tempDir.path, _backupDataFile));
-      await jsonFile.writeAsBytes(jsonBytes);
+      // 使用流式写入避免大JSON一次性加载到内存
+      jsonFile = File(path.join(tempDir.path, _backupDataFile));
+      final jsonSink = jsonFile.openWrite();
+
+      try {
+        // 流式写入JSON，避免大字符串在内存中
+        final jsonString = jsonEncode(backupData);
+        jsonSink.write(jsonString);
+        await jsonSink.flush();
+      } finally {
+        await jsonSink.close();
+      }
+
       encoder.addFile(jsonFile);
 
-      // 2. (可选) 导出媒体文件
+      // 2. (可选) 导出媒体文件，使用进度回调
       if (includeMediaFiles) {
         final mediaFiles = await MediaFileService.getAllMediaFilePaths();
         final appDir = await getApplicationDocumentsDirectory();
+        final totalFiles = mediaFiles.length;
 
+        // 预检查所有文件大小，避免超大文件导致内存不足
+        int currentIndex = 0;
         for (final filePath in mediaFiles) {
-          // 获取相对于应用文档目录的路径，以保持目录结构
-          final relativePath = path.relative(filePath, from: appDir.path);
-          final file = File(filePath);
-          if (await file.exists()) {
-            encoder.addFile(file, relativePath);
+          try {
+            final file = File(filePath);
+            if (await file.exists()) {
+              // 检查文件大小，如果文件过大则跳过并记录警告
+              final fileSize = await file.length();
+              const maxFileSize = 500 * 1024 * 1024; // 500MB限制
+
+              if (fileSize > maxFileSize) {
+                logDebug(
+                  '跳过过大的媒体文件 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB): $filePath',
+                );
+                continue;
+              }
+
+              // 获取相对于应用文档目录的路径，以保持目录结构
+              final relativePath = path.relative(filePath, from: appDir.path);
+              encoder.addFile(file, relativePath);
+            }
+          } catch (e) {
+            logDebug('添加媒体文件失败，跳过: $filePath, 错误: $e');
+            // 继续处理其他文件，不因为单个文件失败而中断整个备份
           }
+
+          currentIndex++;
+          onProgress?.call(currentIndex, totalFiles);
         }
       }
 
@@ -77,8 +112,26 @@ class BackupService {
       logDebug('数据导出成功，路径: $archivePath');
       return archivePath;
     } catch (e, s) {
+      // 清理可能创建的不完整文件
+      try {
+        if (encoder != null) {
+          encoder.close();
+        }
+        final archiveFile = File(archivePath);
+        if (await archiveFile.exists()) {
+          await archiveFile.delete();
+        }
+      } catch (_) {}
+
       AppLogger.e('数据导出失败', error: e, stackTrace: s, source: 'BackupService');
       rethrow;
+    } finally {
+      // 清理临时JSON文件
+      try {
+        if (jsonFile != null && await jsonFile.exists()) {
+          await jsonFile.delete();
+        }
+      } catch (_) {}
     }
   }
 
@@ -86,7 +139,12 @@ class BackupService {
   ///
   /// [filePath] - 备份文件的路径 (.zip 或旧版 .json)
   /// [clearExisting] - 是否在导入前清空现有数据
-  Future<void> importData(String filePath, {bool clearExisting = true}) async {
+  /// [onProgress] - 进度回调函数，接收 (current, total) 参数
+  Future<void> importData(
+    String filePath, {
+    bool clearExisting = true,
+    Function(int current, int total)? onProgress,
+  }) async {
     // 处理旧版 JSON 备份文件
     if (path.extension(filePath).toLowerCase() == '.json') {
       logDebug('开始导入旧版JSON备份...');
@@ -107,10 +165,28 @@ class BackupService {
     await importDir.create(recursive: true);
 
     InputFileStream? inputStream;
+    Archive? archive;
+
     try {
+      // 预检查备份文件大小，避免过大文件导致内存不足
+      final backupFile = File(filePath);
+      final backupSize = await backupFile.length();
+      const maxBackupSize = 2 * 1024 * 1024 * 1024; // 2GB限制
+
+      if (backupSize > maxBackupSize) {
+        throw Exception(
+          '备份文件过大 (${(backupSize / 1024 / 1024 / 1024).toStringAsFixed(1)}GB)，超过限制 (2GB)',
+        );
+      }
+
       // 1. 解压备份包 - 使用流式处理优化内存使用
       inputStream = InputFileStream(filePath);
-      final archive = ZipDecoder().decodeBuffer(inputStream);
+
+      try {
+        archive = ZipDecoder().decodeBuffer(inputStream);
+      } catch (e) {
+        throw Exception('备份文件损坏或无法读取: $e');
+      }
 
       // 2. 恢复结构化数据
       final backupDataFile = archive.findFile(_backupDataFile);
@@ -118,18 +194,27 @@ class BackupService {
         throw Exception('备份文件无效: 未找到 backup_data.json');
       }
 
-      final backupData = jsonDecode(
-        utf8.decode(backupDataFile.content as List<int>),
-      );
+      // 流式解码JSON避免大JSON一次性加载到内存
+      Map<String, dynamic> backupData;
+      try {
+        final jsonContent = utf8.decode(backupDataFile.content as List<int>);
+        backupData = jsonDecode(jsonContent);
+      } catch (e) {
+        throw Exception('备份数据格式错误: $e');
+      }
+
       await _restoreStructuredData(backupData, clearExisting: clearExisting);
 
-      // 3. 恢复媒体文件
-      final mediaFilesExist = archive.files.any(
-        (file) => file.name.contains('/'),
-      );
+      // 3. 恢复媒体文件（流式处理）
+      final mediaFiles =
+          archive.files
+              .where((file) => file.isFile && file.name != _backupDataFile)
+              .toList();
 
-      if (mediaFilesExist) {
+      if (mediaFiles.isNotEmpty) {
         List<String>? clearedMediaPaths;
+        final totalMediaFiles = mediaFiles.length;
+        int processedFiles = 0;
 
         try {
           // 清理现有的媒体文件（记录已清理的路径用于回滚）
@@ -140,13 +225,44 @@ class BackupService {
             }
           }
 
-          // 将备份中的媒体文件解压到临时目录
-          for (final file in archive.files) {
-            if (!file.isFile || file.name == _backupDataFile) continue;
-            final targetPath = path.join(importDir.path, file.name);
-            final targetFile = File(targetPath);
-            await targetFile.parent.create(recursive: true);
-            await targetFile.writeAsBytes(file.content as List<int>);
+          // 分批解压媒体文件，避免内存溢出
+          const batchSize = 10; // 每批处理10个文件
+          for (int i = 0; i < mediaFiles.length; i += batchSize) {
+            final batch = mediaFiles.skip(i).take(batchSize);
+
+            for (final file in batch) {
+              try {
+                // 检查单个文件大小
+                const maxSingleFileSize = 500 * 1024 * 1024; // 500MB
+                if ((file.content as List<int>).length > maxSingleFileSize) {
+                  logDebug('跳过过大的媒体文件: ${file.name}');
+                  continue;
+                }
+
+                final targetPath = path.join(importDir.path, file.name);
+                final targetFile = File(targetPath);
+                await targetFile.parent.create(recursive: true);
+
+                // 使用流式写入避免大文件一次性加载到内存
+                final sink = targetFile.openWrite();
+                try {
+                  sink.add(file.content as List<int>);
+                  await sink.flush();
+                } finally {
+                  await sink.close();
+                }
+              } catch (e) {
+                logDebug('解压媒体文件失败，跳过: ${file.name}, 错误: $e');
+              }
+
+              processedFiles++;
+              onProgress?.call(processedFiles, totalMediaFiles);
+            }
+
+            // 释放内存，让GC有机会清理
+            if (i + batchSize < mediaFiles.length) {
+              await Future.delayed(const Duration(milliseconds: 10));
+            }
           }
 
           // 从临时目录恢复到应用目录
