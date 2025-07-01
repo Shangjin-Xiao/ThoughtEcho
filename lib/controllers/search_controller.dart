@@ -59,7 +59,11 @@ class NoteSearchController extends ChangeNotifier {
         _searchError = '搜索处理出错: $e';
         _isSearching = false;
         notifyListeners();
-        logError('搜索控制器错误: $_searchError', error: e, source: 'SearchController');
+        logError(
+          '搜索控制器错误: $_searchError',
+          error: e,
+          source: 'SearchController',
+        );
       }
     });
   }

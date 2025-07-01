@@ -1386,44 +1386,64 @@ class DatabaseService extends ChangeNotifier {
         // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered = filtered
-              .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
-              .toList();
+          filtered =
+              filtered
+                  .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+                  .toList();
         }
         if (categoryId != null && categoryId.isNotEmpty) {
           filtered = filtered.where((q) => q.categoryId == categoryId).toList();
         }
         if (searchQuery != null && searchQuery.isNotEmpty) {
           final query = searchQuery.toLowerCase();
-          filtered = filtered.where((q) =>
-              q.content.toLowerCase().contains(query) ||
-              (q.source?.toLowerCase().contains(query) ?? false) ||
-              (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
-              (q.sourceWork?.toLowerCase().contains(query) ?? false)
-          ).toList();
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.content.toLowerCase().contains(query) ||
+                        (q.source?.toLowerCase().contains(query) ?? false) ||
+                        (q.sourceAuthor?.toLowerCase().contains(query) ??
+                            false) ||
+                        (q.sourceWork?.toLowerCase().contains(query) ?? false),
+                  )
+                  .toList();
         }
         if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-          filtered = filtered.where((q) =>
-              q.weather != null && selectedWeathers.contains(q.weather)
-          ).toList();
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.weather != null &&
+                        selectedWeathers.contains(q.weather),
+                  )
+                  .toList();
         }
         if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-          filtered = filtered.where((q) =>
-              q.dayPeriod != null && selectedDayPeriods.contains(q.dayPeriod)
-          ).toList();
+          filtered =
+              filtered
+                  .where(
+                    (q) =>
+                        q.dayPeriod != null &&
+                        selectedDayPeriods.contains(q.dayPeriod),
+                  )
+                  .toList();
         }
-        
+
         // 排序
         filtered.sort((a, b) {
           if (orderBy.startsWith('date')) {
             final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
             final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
-            return orderBy.contains('ASC') ? dateA.compareTo(dateB) : dateB.compareTo(dateA);
+            return orderBy.contains('ASC')
+                ? dateA.compareTo(dateB)
+                : dateB.compareTo(dateA);
           } else {
-            return orderBy.contains('ASC') ? a.content.compareTo(b.content) : b.content.compareTo(a.content);
+            return orderBy.contains('ASC')
+                ? a.content.compareTo(b.content)
+                : b.content.compareTo(a.content);
           }
         });
-        
+
         // 分页
         final start = offset.clamp(0, filtered.length);
         final end = (offset + limit).clamp(0, filtered.length);
@@ -1431,42 +1451,46 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = database;
-      
+
       // 添加查询超时保护
       final completer = Completer<List<Quote>>();
       Timer? timeoutTimer;
-      
+
       try {
         // 设置12秒超时
         timeoutTimer = Timer(const Duration(seconds: 12), () {
           if (!completer.isCompleted) {
-            completer.completeError(TimeoutException('数据库查询超时', const Duration(seconds: 12)));
+            completer.completeError(
+              TimeoutException('数据库查询超时', const Duration(seconds: 12)),
+            );
           }
         });
-        
+
         // 异步执行查询
         _performDatabaseQuery(
-          db: db,
-          tagIds: tagIds,
-          categoryId: categoryId,
-          searchQuery: searchQuery,
-          selectedWeathers: selectedWeathers,
-          selectedDayPeriods: selectedDayPeriods,
-          orderBy: orderBy,
-          limit: limit,
-          offset: offset,
-        ).then((result) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result);
-          }
-        }).catchError((error) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.completeError(error);
-          }
-        });
-        
+              db: db,
+              tagIds: tagIds,
+              categoryId: categoryId,
+              searchQuery: searchQuery,
+              selectedWeathers: selectedWeathers,
+              selectedDayPeriods: selectedDayPeriods,
+              orderBy: orderBy,
+              limit: limit,
+              offset: offset,
+            )
+            .then((result) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                completer.complete(result);
+              }
+            })
+            .catchError((error) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                completer.completeError(error);
+              }
+            });
+
         return await completer.future;
       } finally {
         timeoutTimer?.cancel();
@@ -1479,7 +1503,7 @@ class DatabaseService extends ChangeNotifier {
       return [];
     }
   }
-  
+
   /// 执行实际的数据库查询（优化版本）
   Future<List<Quote>> _performDatabaseQuery({
     required Database db,
@@ -1536,7 +1560,9 @@ class DatabaseService extends ChangeNotifier {
       // 使用更高效的EXISTS子查询代替复杂的GROUP BY HAVING
       if (tagIds.length == 1) {
         // 单个标签的简单查询
-        conditions.add('EXISTS (SELECT 1 FROM quote_tags qt WHERE qt.quote_id = q.id AND qt.tag_id = ?)');
+        conditions.add(
+          'EXISTS (SELECT 1 FROM quote_tags qt WHERE qt.quote_id = q.id AND qt.tag_id = ?)',
+        );
         args.add(tagIds.first);
       } else {
         // 多个标签时使用优化的子查询
@@ -1551,7 +1577,8 @@ class DatabaseService extends ChangeNotifier {
       }
     }
 
-    final where = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final where =
+        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
     // 使用简化的查询，避免GROUP_CONCAT的性能问题
     query = '''
@@ -2027,7 +2054,7 @@ class DatabaseService extends ChangeNotifier {
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.add(List.from(_currentQuotes));
       }
-      
+
       // 如果是超时错误，重新抛出让UI处理
       if (e is TimeoutException) {
         rethrow;
