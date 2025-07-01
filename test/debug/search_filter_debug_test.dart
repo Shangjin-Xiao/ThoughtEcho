@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import '../../lib/services/database_service.dart';
-import '../../lib/models/quote_model.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/models/quote_model.dart';
 
 void main() {
   late DatabaseService databaseService;

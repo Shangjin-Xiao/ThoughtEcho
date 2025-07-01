@@ -941,7 +941,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     widget.controller.document.insert(index, '\n');
     widget.controller.document.insert(
       index + 1,
-      quill.BlockEmbed.custom(quill.CustomBlockEmbed('divider', '')),
+      quill.BlockEmbed.custom(const quill.CustomBlockEmbed('divider', '')),
     );
     widget.controller.updateSelection(
       TextSelection.collapsed(offset: index + 2),

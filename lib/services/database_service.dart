@@ -871,6 +871,13 @@ class DatabaseService extends ChangeNotifier {
             categoryData['is_default'] = categoryData['isDefault'];
             categoryData.remove('isDefault');
           }
+          
+          // 处理旧版图标字段兼容性
+          if (categoryData.containsKey('iconName')) {
+            // 将旧版的 iconName 字段转换为新版的 icon_name
+            categoryData['icon_name'] = categoryData['iconName'];
+            categoryData.remove('iconName');
+          }
 
           await txn.insert(
             'categories',
@@ -1498,7 +1505,7 @@ class DatabaseService extends ChangeNotifier {
     } catch (e) {
       logError('获取笔记失败: $e', error: e, source: 'DatabaseService');
       if (e is TimeoutException) {
-        throw e; // 重新抛出超时异常，让调用者处理
+        rethrow; // 重新抛出超时异常，让调用者处理
       }
       return [];
     }
