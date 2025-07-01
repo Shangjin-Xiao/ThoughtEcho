@@ -242,7 +242,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -259,7 +259,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: MarkdownBody(
@@ -684,7 +684,7 @@ $positiveQuotes
                                       color:
                                           Theme.of(
                                             context,
-                                          ).colorScheme.surfaceVariant,
+                                          ).colorScheme.surfaceContainerHighest,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(

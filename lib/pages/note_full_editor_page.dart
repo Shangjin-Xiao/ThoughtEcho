@@ -21,6 +21,7 @@ import '../utils/app_logger.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/quill_enhanced_toolbar.dart';
+import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -754,7 +755,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                     embedBuilders:
                         kIsWeb
                             ? FlutterQuillEmbeds.editorWebBuilders()
-                            : FlutterQuillEmbeds.editorBuilders(),
+                            : QuillEditorExtensions.getEmbedBuilders(),
                     // 启用全屏编辑的相关配置
                     placeholder: '开始编写你的想法...',
                     padding: const EdgeInsets.all(16),

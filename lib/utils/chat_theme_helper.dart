@@ -8,7 +8,7 @@ class ChatThemeHelper {
     final colorScheme = appTheme.colorScheme;
 
     return DefaultChatTheme(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       primaryColor: colorScheme.primary,
       secondaryColor: colorScheme.surface,
 

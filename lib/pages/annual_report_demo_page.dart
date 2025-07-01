@@ -3,7 +3,7 @@ import '../models/quote_model.dart';
 import 'annual_report_page.dart';
 
 class AnnualReportDemoPage extends StatelessWidget {
-  const AnnualReportDemoPage({Key? key}) : super(key: key);
+  const AnnualReportDemoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +64,7 @@ class AnnualReportDemoPage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder:
-                        (context) => AnnualReportPage(
+                        (context) => const AnnualReportPage(
                           year: 2024,
                           quotes: [], // 空数据演示
                         ),

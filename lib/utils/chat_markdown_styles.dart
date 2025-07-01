@@ -15,7 +15,7 @@ class ChatMarkdownStyleSheet {
     final codeBlockBg =
         isDarkMode
             ? colorScheme.surface.withOpacity(0.8)
-            : colorScheme.surfaceVariant.withOpacity(0.5);
+            : colorScheme.surfaceContainerHighest.withOpacity(0.5);
 
     // 引用块颜色
     final blockquoteBg = colorScheme.primary.withOpacity(0.08);

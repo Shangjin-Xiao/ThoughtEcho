@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 import '../services/media_file_service.dart';
 
 /// 增强的全屏编辑器工具栏组件
@@ -21,7 +22,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     final theme = Theme.of(context);
 
     return Container(
-      height: 44, // 紧凑高度
+      height: 48, // 稍微增大高度
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
@@ -90,9 +91,9 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               tooltip: '插入视频',
             ),
             _buildToolbarButton(
-              icon: Icons.camera_alt,
-              onPressed: _insertCamera,
-              tooltip: '拍照',
+              icon: Icons.audiotrack,
+              onPressed: _insertAudio,
+              tooltip: '插入音频',
             ),
             _buildToolbarButton(
               icon: Icons.link,
@@ -115,6 +116,12 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               icon: Icons.format_clear,
               onPressed: _clearFormat,
               tooltip: '清除格式',
+            ),
+            const SizedBox(width: 8), // 分隔符
+            _buildToolbarButton(
+              icon: Icons.help_outline,
+              onPressed: () => _showMemoryWarning('general'),
+              tooltip: '文件大小限制说明',
             ),
           ],
         ),
@@ -140,12 +147,12 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(4),
           child: Container(
-            width: 32, // 减小宽度从40到32
-            height: 32, // 减小高度从40到32
+            width: 36, // 稍微增大宽度
+            height: 36, // 稍微增大高度
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(4)),
             child: Icon(
               icon,
-              size: 16, // 减小图标尺寸从18到16
+              size: 18, // 稍微增大图标尺寸
               color:
                   onPressed == null
                       ? theme.colorScheme.onSurface.withOpacity(0.38)
@@ -186,6 +193,15 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         text,
         null,
       );
+
+      // 保持选中状态
+      widget.controller.updateSelection(
+        TextSelection(
+          baseOffset: selection.start,
+          extentOffset: selection.start + text.length,
+        ),
+        quill.ChangeSource.local,
+      );
     }
   }
 
@@ -198,8 +214,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     _showMediaDialog('video');
   }
 
-  void _insertCamera() {
-    _showMediaDialog('camera');
+  void _insertAudio() {
+    _showMediaDialog('audio');
   }
 
   void _insertLink() {
@@ -223,13 +239,22 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
                     _insertMediaFromFile(type);
                   },
                 ),
-                if (type == 'image' || type == 'camera')
+                if (type == 'image')
                   ListTile(
                     leading: const Icon(Icons.camera_alt),
                     title: const Text('拍照'),
                     onTap: () {
                       Navigator.pop(context);
                       _insertMediaFromCamera();
+                    },
+                  ),
+                if (type == 'video')
+                  ListTile(
+                    leading: const Icon(Icons.videocam),
+                    title: const Text('录制视频'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _insertVideoFromCamera();
                     },
                   ),
                 ListTile(
@@ -288,23 +313,34 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               ),
               FilledButton(
                 onPressed: () {
-                  if (urlController.text.isNotEmpty) {
-                    final text =
-                        textController.text.isNotEmpty
-                            ? textController.text
-                            : urlController.text;
+                  final url = urlController.text.trim();
+                  final text = textController.text.trim();
 
-                    final index = widget.controller.selection.baseOffset;
-                    final length = text.length;
+                  if (url.isNotEmpty) {
+                    // 基本URL验证
+                    if (Uri.tryParse(url) != null) {
+                      final displayText = text.isNotEmpty ? text : url;
+                      final index = widget.controller.selection.baseOffset;
+                      final length = displayText.length;
 
-                    widget.controller.replaceText(index, 0, text, null);
-                    widget.controller.formatText(
-                      index,
-                      length,
-                      quill.LinkAttribute(urlController.text),
-                    );
+                      widget.controller.replaceText(
+                        index,
+                        0,
+                        displayText,
+                        null,
+                      );
+                      widget.controller.formatText(
+                        index,
+                        length,
+                        quill.LinkAttribute(url),
+                      );
+                      Navigator.pop(context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('请输入有效的链接地址')),
+                      );
+                    }
                   }
-                  Navigator.pop(context);
                 },
                 child: const Text('插入'),
               ),
@@ -316,10 +352,11 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   String _getMediaTypeName(String type) {
     switch (type) {
       case 'image':
-      case 'camera':
         return '图片';
       case 'video':
         return '视频';
+      case 'audio':
+        return '音频';
       default:
         return '媒体';
     }
@@ -332,13 +369,19 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         case 'image':
           typeGroup = const XTypeGroup(
             label: 'images',
-            extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+            extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
           );
           break;
         case 'video':
           typeGroup = const XTypeGroup(
             label: 'videos',
-            extensions: ['mp4', 'avi', 'mov', 'mkv', 'webm'],
+            extensions: ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv'],
+          );
+          break;
+        case 'audio':
+          typeGroup = const XTypeGroup(
+            label: 'audios',
+            extensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'],
           );
           break;
         default:
@@ -347,9 +390,36 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
       final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
       if (file != null) {
+        // 检查文件大小 - 根据平台和文件类型设置不同限制
+        final fileSize = await file.length();
+        final maxSize = _getMaxFileSize(type);
+
+        if (fileSize > maxSize) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_getFileSizeErrorMessage(type, maxSize)),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
         await _insertMediaFile(file.path, type);
       }
+    } on OutOfMemoryError {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('内存不足，无法处理选择的${_getMediaTypeName(type)}文件'),
+            duration: const Duration(seconds: 4),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
+      debugPrint('File selection error: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -358,15 +428,82 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     }
   }
 
+  /// 根据文件类型和平台获取最大文件大小限制
+  int _getMaxFileSize(String type) {
+    // 移动平台内存限制更严格
+    final isMobile =
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+
+    switch (type) {
+      case 'image':
+        return isMobile ? 5 * 1024 * 1024 : 15 * 1024 * 1024; // 5MB/15MB
+      case 'video':
+        return isMobile ? 15 * 1024 * 1024 : 30 * 1024 * 1024; // 15MB/30MB
+      case 'audio':
+        return isMobile ? 8 * 1024 * 1024 : 20 * 1024 * 1024; // 8MB/20MB
+      default:
+        return isMobile ? 5 * 1024 * 1024 : 15 * 1024 * 1024; // 5MB/15MB
+    }
+  }
+
+  /// 获取文件大小错误提示信息
+  String _getFileSizeErrorMessage(String type, int maxSize) {
+    final maxSizeMB = (maxSize / (1024 * 1024)).round();
+    final typeName = _getMediaTypeName(type);
+    final isMobile =
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+
+    return '${typeName}文件太大，请选择小于${maxSizeMB}MB的文件${isMobile ? '（移动设备内存限制）' : ''}';
+  }
+
   void _insertMediaFromCamera() async {
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+      // 移动平台使用更高的压缩率
+      final isMobile =
+          defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS;
+
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: isMobile ? 70 : 85, // 移动端70%质量，桌面端85%质量
+        maxWidth: isMobile ? 1024 : 1920, // 限制图片分辨率
+        maxHeight: isMobile ? 1024 : 1920,
+      );
 
       if (image != null) {
+        // 检查拍摄图片的大小
+        final fileSize = await image.length();
+        final maxSize = _getMaxFileSize('image');
+
+        if (fileSize > maxSize) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_getFileSizeErrorMessage('image', maxSize)),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
         await _insertMediaFile(image.path, 'image');
       }
+    } on OutOfMemoryError {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('内存不足，无法处理拍摄的图片'),
+            duration: Duration(seconds: 4),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
+      debugPrint('Camera capture error: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -375,15 +512,80 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     }
   }
 
-  /// 插入媒体文件到编辑器
+  void _insertVideoFromCamera() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      // 移动平台使用更严格的录制限制
+      final isMobile =
+          defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS;
+
+      final XFile? video = await picker.pickVideo(
+        source: ImageSource.camera,
+        maxDuration: Duration(seconds: isMobile ? 30 : 60), // 移动端30秒，桌面端60秒
+      );
+
+      if (video != null) {
+        // 检查录制视频的大小
+        final fileSize = await video.length();
+        final maxSize = _getMaxFileSize('video');
+
+        if (fileSize > maxSize) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_getFileSizeErrorMessage('video', maxSize)),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
+        await _insertMediaFile(video.path, 'video');
+      }
+    } on OutOfMemoryError {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('内存不足，无法处理录制的视频'),
+            duration: Duration(seconds: 4),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Video recording error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('录制视频失败: $e')));
+      }
+    }
+  }
+
+  /// 插入媒体文件到编辑器（本地文件）
   Future<void> _insertMediaFile(String filePath, String type) async {
     try {
-      // 获取当前光标位置
-      final int index = widget.controller.selection.baseOffset;
+      // 再次检查文件大小（防止绕过前面的检查）
+      final file = await XFile(filePath).length();
+      final maxSize = _getMaxFileSize(type);
 
+      if (file > maxSize) {
+        throw Exception('文件大小超过限制');
+      }
+
+      // 检查可用内存（简单估算）
+      if (file > 5 * 1024 * 1024) {
+        // 文件大于5MB时进行内存检查
+        // 这里可以添加更复杂的内存检查逻辑
+        debugPrint(
+          'Warning: Large file detected (${(file / (1024 * 1024)).toStringAsFixed(1)}MB)',
+        );
+      }
+
+      // 首先将媒体文件保存到应用私有目录
       String? savedPath;
-
-      // 将文件保存到应用目录
       switch (type) {
         case 'image':
           savedPath = await MediaFileService.saveImage(filePath);
@@ -391,8 +593,10 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         case 'video':
           savedPath = await MediaFileService.saveVideo(filePath);
           break;
+        case 'audio':
+          savedPath = await MediaFileService.saveAudio(filePath);
+          break;
         default:
-          // 对于其他文件类型，尝试作为图片保存
           savedPath = await MediaFileService.saveImage(filePath);
       }
 
@@ -400,19 +604,54 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         throw Exception('保存媒体文件失败');
       }
 
+      await _insertMediaEmbed(savedPath, type);
+    } on OutOfMemoryError {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('内存不足，无法处理这个${_getMediaTypeName(type)}文件\n建议选择更小的文件'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Media file insertion error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('插入${_getMediaTypeName(type)}失败: ${e.toString()}'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  /// 插入媒体embed到编辑器（通用方法）
+  Future<void> _insertMediaEmbed(String path, String type) async {
+    try {
+      // 获取当前光标位置
+      final int index = widget.controller.selection.baseOffset;
+
       // 根据文件类型创建相应的embed
       late quill.BlockEmbed embed;
 
       switch (type) {
         case 'image':
-          embed = quill.BlockEmbed.image(savedPath);
+          embed = quill.BlockEmbed.image(path);
           break;
         case 'video':
-          embed = quill.BlockEmbed.video(savedPath);
+          embed = quill.BlockEmbed.video(path);
+          break;
+        case 'audio':
+          // 使用自定义的音频embed
+          embed = quill.BlockEmbed.custom(
+            quill.CustomBlockEmbed('audio', path),
+          );
           break;
         default:
-          // 对于其他文件类型，作为图片处理
-          embed = quill.BlockEmbed.image(savedPath);
+          embed = quill.BlockEmbed.image(path);
       }
 
       // 插入embed到文档
@@ -438,41 +677,11 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     }
   }
 
-  /// 从URL插入媒体
+  /// 从URL插入媒体（不保存到本地）
   void _insertMediaFromUrlString(String url, String type) async {
     try {
-      // 对于URL，直接插入不保存到本地
-      final int index = widget.controller.selection.baseOffset;
-
-      // 根据文件类型创建相应的embed
-      late quill.BlockEmbed embed;
-
-      switch (type) {
-        case 'image':
-          embed = quill.BlockEmbed.image(url);
-          break;
-        case 'video':
-          embed = quill.BlockEmbed.video(url);
-          break;
-        default:
-          // 对于其他文件类型，作为图片处理
-          embed = quill.BlockEmbed.image(url);
-      }
-
-      // 插入embed到文档
-      widget.controller.document.insert(index, embed);
-
-      // 移动光标到插入内容之后
-      widget.controller.updateSelection(
-        TextSelection.collapsed(offset: index + 1),
-        quill.ChangeSource.local,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${_getMediaTypeName(type)}插入成功')),
-        );
-      }
+      // URL直接插入，不需要保存到本地
+      await _insertMediaEmbed(url, type);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -496,6 +705,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
                 labelText: '${_getMediaTypeName(type)}地址',
                 hintText: 'https://example.com/media.jpg',
               ),
+              keyboardType: TextInputType.url,
+              autocorrect: false,
             ),
             actions: [
               TextButton(
@@ -504,12 +715,70 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               ),
               FilledButton(
                 onPressed: () {
-                  if (urlController.text.isNotEmpty) {
-                    _insertMediaFromUrlString(urlController.text, type);
+                  final url = urlController.text.trim();
+                  if (url.isNotEmpty) {
+                    // 基本URL验证
+                    if (Uri.tryParse(url) != null &&
+                        (url.startsWith('http://') ||
+                            url.startsWith('https://'))) {
+                      Navigator.pop(context);
+                      _insertMediaFromUrlString(url, type);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('请输入有效的URL地址')),
+                      );
+                    }
                   }
-                  Navigator.pop(context);
                 },
                 child: const Text('插入'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  /// 显示内存和文件大小相关的提示信息
+  void _showMemoryWarning(String type) {
+    final isMobile =
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('⚠️ 内存使用提示'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('为防止应用崩溃，已设置文件大小限制：'),
+                const SizedBox(height: 8),
+                const Text('📱 移动设备:'),
+                const Text('• 图片: 最大 5MB'),
+                const Text('• 视频: 最大 15MB'),
+                const Text('• 音频: 最大 8MB'),
+                if (!isMobile) ...[
+                  const SizedBox(height: 8),
+                  const Text('💻 桌面设备:'),
+                  const Text('• 图片: 最大 15MB'),
+                  const Text('• 视频: 最大 30MB'),
+                  const Text('• 音频: 最大 20MB'),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  '建议使用压缩工具减小文件大小，或选择较短的视频片段。',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('知道了'),
               ),
             ],
           ),

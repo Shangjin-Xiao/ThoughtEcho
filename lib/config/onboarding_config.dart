@@ -57,13 +57,13 @@ class OnboardingConfig {
   // 偏好设置列表
   static final List<OnboardingPreference<dynamic>> preferences = [
     // 默认启动页面
-    OnboardingPreference<int>(
+    const OnboardingPreference<int>(
       key: 'defaultStartPage',
       title: '默认启动页面',
       description: '选择打开应用时首先看到的页面',
       defaultValue: 0,
       type: OnboardingPreferenceType.radio,
-      options: const [
+      options: [
         OnboardingPreferenceOption<int>(
           value: 0,
           label: '主页概览',
@@ -78,7 +78,7 @@ class OnboardingConfig {
     ),
 
     // 剪贴板监控
-    OnboardingPreference<bool>(
+    const OnboardingPreference<bool>(
       key: 'clipboardMonitoring',
       title: '剪贴板监控',
       description: '检测剪贴板内容，方便快速添加到笔记',
@@ -87,7 +87,7 @@ class OnboardingConfig {
     ),
 
     // 位置服务
-    OnboardingPreference<bool>(
+    const OnboardingPreference<bool>(
       key: 'locationService',
       title: '位置服务',
       description: '启用位置服务以自动记录笔记地点和获取天气信息',
