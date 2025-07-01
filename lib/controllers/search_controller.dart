@@ -43,22 +43,23 @@ class NoteSearchController extends ChangeNotifier {
       try {
         _searchQuery = query;
 
-        // 添加最大搜索时间限制，确保搜索状态不会永远卡住
-        Future.delayed(const Duration(seconds: 8), () {
-          if (_isSearching) {
+        // 添加较短的搜索时间限制，确保搜索状态不会永远卡住
+        Future.delayed(const Duration(seconds: 10), () {
+          if (_isSearching && _searchQuery == query) {
             _isSearching = false;
             _searchError = '搜索超时，请重试';
             notifyListeners();
-            logDebug('搜索超时，已自动重置状态');
+            logDebug('搜索超时，已自动重置状态，查询: $query');
           }
         });
 
         notifyListeners();
+        logDebug('搜索查询已更新: $query', source: 'SearchController');
       } catch (e) {
         _searchError = '搜索处理出错: $e';
         _isSearching = false;
         notifyListeners();
-        logError('搜索控制器错误: $_searchError', error: e);
+        logError('搜索控制器错误: $_searchError', error: e, source: 'SearchController');
       }
     });
   }
