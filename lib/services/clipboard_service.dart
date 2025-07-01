@@ -34,7 +34,7 @@ class ClipboardService extends ChangeNotifier {
   String _lastProcessedContent = '';
 
   // 使用安全包装类替代直接的MMKV
-  late final SafeMMKV _storage;
+  SafeMMKV? _storage;
 
   // 构造函数
   ClipboardService();
@@ -48,7 +48,7 @@ class ClipboardService extends ChangeNotifier {
   Future<void> _initPreferences() async {
     try {
       _storage = SafeMMKV();
-      await _storage.initialize();
+      await _storage!.initialize();
       _loadPreferences();
       logDebug('剪贴板服务初始化完成，监控状态: $_enableClipboardMonitoring');
     } catch (e) {
@@ -59,7 +59,7 @@ class ClipboardService extends ChangeNotifier {
   // 从存储加载首选项
   void _loadPreferences() {
     _enableClipboardMonitoring =
-        _storage.getBool(_keyEnableClipboardMonitoring) ?? false;
+        _storage?.getBool(_keyEnableClipboardMonitoring) ?? false;
     logDebug('加载剪贴板监控设置: $_enableClipboardMonitoring');
     notifyListeners();
   }
@@ -67,7 +67,7 @@ class ClipboardService extends ChangeNotifier {
   // 设置是否启用剪贴板监控
   void setEnableClipboardMonitoring(bool value) {
     _enableClipboardMonitoring = value;
-    _storage.setBool(_keyEnableClipboardMonitoring, value);
+    _storage?.setBool(_keyEnableClipboardMonitoring, value);
     logDebug('剪贴板监控设置已更新: $value');
     notifyListeners();
   }

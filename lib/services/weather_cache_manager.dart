@@ -9,7 +9,7 @@ class WeatherCacheManager {
   static const String _cacheExpiryKey = 'weather_cache_expiry';
   static const Duration _defaultCacheDuration = Duration(hours: 3);
 
-  late SafeMMKV _storage;
+  SafeMMKV? _storage;
   bool _isInitialized = false;
 
   /// 初始化缓存管理器
@@ -18,7 +18,7 @@ class WeatherCacheManager {
 
     try {
       _storage = SafeMMKV();
-      await _storage.initialize();
+      await _storage!.initialize();
       _isInitialized = true;
       logDebug('天气缓存管理器初始化完成');
     } catch (e) {
@@ -41,8 +41,8 @@ class WeatherCacheManager {
       if (!await _ensureInitialized()) return;
 
       final cacheData = weatherData.toJson();
-      await _storage.setString(_cacheKey, json.encode(cacheData));
-      await _storage.setString(
+      await _storage!.setString(_cacheKey, json.encode(cacheData));
+      await _storage!.setString(
         _cacheExpiryKey,
         DateTime.now().add(_defaultCacheDuration).toIso8601String(),
       );
@@ -63,7 +63,7 @@ class WeatherCacheManager {
       if (!await _ensureInitialized()) return null;
 
       // 检查缓存是否过期
-      final cacheExpiryString = _storage.getString(_cacheExpiryKey);
+      final cacheExpiryString = _storage!.getString(_cacheExpiryKey);
       if (cacheExpiryString != null) {
         final cacheExpiry = DateTime.parse(cacheExpiryString);
         if (DateTime.now().isAfter(cacheExpiry)) {
@@ -76,7 +76,7 @@ class WeatherCacheManager {
       }
 
       // 加载缓存数据
-      final cacheJson = _storage.getString(_cacheKey);
+      final cacheJson = _storage!.getString(_cacheKey);
       if (cacheJson == null) {
         logDebug('天气缓存数据不存在');
         return null;
@@ -113,8 +113,8 @@ class WeatherCacheManager {
     try {
       if (!await _ensureInitialized()) return;
 
-      await _storage.remove(_cacheKey);
-      await _storage.remove(_cacheExpiryKey);
+      await _storage!.remove(_cacheKey);
+      await _storage!.remove(_cacheExpiryKey);
       logDebug('天气缓存已清除');
     } catch (e) {
       logError('清除天气缓存失败: $e', error: e);
@@ -140,8 +140,8 @@ class WeatherCacheManager {
     try {
       if (!await _ensureInitialized()) return null;
 
-      final cacheJson = _storage.getString(_cacheKey);
-      final cacheExpiryString = _storage.getString(_cacheExpiryKey);
+      final cacheJson = _storage!.getString(_cacheKey);
+      final cacheExpiryString = _storage!.getString(_cacheExpiryKey);
 
       if (cacheJson == null || cacheExpiryString == null) {
         return null;

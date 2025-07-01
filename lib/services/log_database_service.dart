@@ -505,7 +505,7 @@ class LogDatabaseService {
   LogDatabaseService._internal();
 
   // 日志存储实现
-  late final LogStorage _storage;
+  LogStorage? _storage;
   bool _initialized = false;
 
   // 获取数据库实例
@@ -530,7 +530,7 @@ class LogDatabaseService {
       }
 
       // 初始化存储
-      await _storage.initialize();
+      await _storage!.initialize();
 
       // 设置初始化完成标志
       _initialized = true;
@@ -553,13 +553,13 @@ class LogDatabaseService {
   /// 添加日志
   Future<int> insertLog(Map<String, dynamic> log) async {
     await _ensureInitialized();
-    return _storage.insertLog(log);
+    return _storage!.insertLog(log);
   }
 
   /// 批量添加日志
   Future<void> insertLogs(List<Map<String, dynamic>> logs) async {
     await _ensureInitialized();
-    return _storage.insertLogs(logs);
+    return _storage!.insertLogs(logs);
   }
 
   /// 查询日志
@@ -574,7 +574,7 @@ class LogDatabaseService {
     String orderBy = 'timestamp DESC',
   }) async {
     await _ensureInitialized();
-    return _storage.queryLogs(
+    return _storage!.queryLogs(
       level: level,
       searchText: searchText,
       source: source,
@@ -589,31 +589,31 @@ class LogDatabaseService {
   /// 获取日志数量
   Future<int> getLogCount() async {
     await _ensureInitialized();
-    return _storage.getLogCount();
+    return _storage!.getLogCount();
   }
 
   /// 清除旧日志，保持数据库大小可控
   Future<int> deleteOldLogs(int maxLogCount) async {
     await _ensureInitialized();
-    return _storage.deleteOldLogs(maxLogCount);
+    return _storage!.deleteOldLogs(maxLogCount);
   }
 
   /// 清除所有日志
   Future<int> clearAllLogs() async {
     await _ensureInitialized();
-    return _storage.clearAllLogs();
+    return _storage!.clearAllLogs();
   }
 
   /// 获取最近的日志
   Future<List<Map<String, dynamic>>> getRecentLogs(int limit) async {
     await _ensureInitialized();
-    return _storage.getRecentLogs(limit);
+    return _storage!.getRecentLogs(limit);
   }
 
   /// 关闭数据库
   Future<void> close() async {
-    if (_initialized) {
-      await _storage.close();
+    if (_initialized && _storage != null) {
+      await _storage!.close();
       _initialized = false;
     }
   }
@@ -622,12 +622,12 @@ class LogDatabaseService {
   Future<void> _cleanupOldLogs() async {
     try {
       // 获取日志总数
-      final count = await _storage.getLogCount();
+      final count = await _storage!.getLogCount();
 
       // 如果超过最大限制，删除最旧的日志
       const int maxLogsToKeep = 1000; // 保留最近1000条日志
       if (count > maxLogsToKeep) {
-        await _storage.deleteOldLogs(maxLogsToKeep); // 只执行清理，无需记录条数
+        await _storage!.deleteOldLogs(maxLogsToKeep); // 只执行清理，无需记录条数
       }
     } catch (e) {
       logDebug('清理旧日志失败: $e');
