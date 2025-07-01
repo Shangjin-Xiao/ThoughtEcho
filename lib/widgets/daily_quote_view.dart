@@ -128,10 +128,9 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       margin: EdgeInsets.symmetric(
         horizontal: screenWidth > 600 ? 16.0 : 12.0,
         vertical: 16.0,
-      ),
-      child: SlidingCard(
+      ),      child: SlidingCard(
         child: Padding(
-          padding: EdgeInsets.all(screenWidth > 600 ? 24.0 : 16.0),
+          padding: EdgeInsets.all(screenWidth > 600 ? 20.0 : 12.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -161,9 +160,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                   children: [
                     Flexible(
                       child: Text(
-                        dailyQuote['content'],
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontSize: screenWidth > 600 ? 24 : 20, // 增大字体
+                        dailyQuote['content'],                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontSize: screenWidth > 600 ? 26 : 22, // 增大字体
                           height: 1.5, // 增加行高，提升可读性
                           fontWeight: FontWeight.w500, // 稍微加粗
                         ),

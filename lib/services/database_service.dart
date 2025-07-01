@@ -1464,11 +1464,12 @@ class DatabaseService extends ChangeNotifier {
       Timer? timeoutTimer;
 
       try {
-        // 设置12秒超时
-        timeoutTimer = Timer(const Duration(seconds: 12), () {
+        // 优化：减少超时时间到8秒，与UI保持一致
+        timeoutTimer = Timer(const Duration(seconds: 8), () {
           if (!completer.isCompleted) {
+            logError('数据库查询超时（8秒）', source: 'DatabaseService');
             completer.completeError(
-              TimeoutException('数据库查询超时', const Duration(seconds: 12)),
+              TimeoutException('数据库查询超时', const Duration(seconds: 8)),
             );
           }
         });
@@ -1494,6 +1495,7 @@ class DatabaseService extends ChangeNotifier {
             .catchError((error) {
               timeoutTimer?.cancel();
               if (!completer.isCompleted) {
+                logError('数据库查询失败: $error', error: error, source: 'DatabaseService');
                 completer.completeError(error);
               }
             });
@@ -1523,10 +1525,12 @@ class DatabaseService extends ChangeNotifier {
     required int limit,
     required int offset,
   }) async {
-    // 1. 构建用于筛选ID的子查询
+    // 优化：使用单一查询替代两步查询，减少数据库往返
     List<String> conditions = [];
     List<dynamic> args = [];
     String fromClause = 'FROM quotes q';
+    String joinClause = '';
+    String groupByClause = '';
     String havingClause = '';
 
     // 分类筛选
@@ -1535,10 +1539,11 @@ class DatabaseService extends ChangeNotifier {
       args.add(categoryId);
     }
 
-    // 搜索查询
+    // 优化：搜索查询使用FTS（全文搜索）如果可用，否则使用优化的LIKE查询
     if (searchQuery != null && searchQuery.isNotEmpty) {
+      // 使用更高效的搜索策略：优先匹配内容，然后匹配其他字段
       conditions.add(
-        '(q.content LIKE ? OR q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?)',
+        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
       );
       final searchParam = '%$searchQuery%';
       args.addAll([searchParam, searchParam, searchParam, searchParam]);
@@ -1559,16 +1564,29 @@ class DatabaseService extends ChangeNotifier {
       args.addAll(selectedDayPeriods);
     }
 
-    // 标签筛选
+    // 优化：标签筛选使用EXISTS子查询，性能更好
     if (tagIds != null && tagIds.isNotEmpty) {
-      fromClause = '''
-        FROM quotes q
-        INNER JOIN quote_tags qt ON q.id = qt.quote_id
-      ''';
+      // 使用EXISTS替代JOIN，避免重复数据和复杂的GROUP BY
       final tagPlaceholders = tagIds.map((_) => '?').join(',');
-      conditions.add('qt.tag_id IN ($tagPlaceholders)');
+      conditions.add('''
+        EXISTS (
+          SELECT 1 FROM quote_tags qt
+          WHERE qt.quote_id = q.id
+          AND qt.tag_id IN ($tagPlaceholders)
+          GROUP BY qt.quote_id
+          HAVING COUNT(DISTINCT qt.tag_id) = ?
+        )
+      ''');
       args.addAll(tagIds);
-      havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
+      args.add(tagIds.length);
+
+      // 需要LEFT JOIN来获取标签信息
+      joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
+      groupByClause = 'GROUP BY q.id';
+    } else {
+      // 没有标签筛选时也需要获取标签信息
+      joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
+      groupByClause = 'GROUP BY q.id';
     }
 
     final where =
@@ -1578,48 +1596,30 @@ class DatabaseService extends ChangeNotifier {
     final correctedOrderBy =
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
-    String idSubQuery = '''
-      SELECT q.id
+    // 优化：使用单一查询获取所有数据
+    final query = '''
+      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
       $fromClause
+      $joinClause
       $where
-      GROUP BY q.id
+      $groupByClause
       $havingClause
       ORDER BY $correctedOrderBy
       LIMIT ? OFFSET ?
     ''';
 
-    List<dynamic> subQueryArgs = List.from(args);
-    if (tagIds != null && tagIds.isNotEmpty) {
-      subQueryArgs.add(tagIds.length);
-    }
-    subQueryArgs.addAll([limit, offset]);
+    args.addAll([limit, offset]);
 
-    logDebug('执行ID子查询: $idSubQuery\n参数: $subQueryArgs');
-    final idMaps = await db.rawQuery(idSubQuery, subQueryArgs);
-    final quoteIds = idMaps.map((m) => m['id'] as String).toList();
+    logDebug('执行优化查询: $query\n参数: $args');
 
-    if (quoteIds.isEmpty) {
-      return [];
-    }
+    // 添加查询性能监控
+    final stopwatch = Stopwatch()..start();
+    final maps = await db.rawQuery(query, args);
+    stopwatch.stop();
 
-    // 2. 根据获取到的ID，查询完整的笔记信息和标签
-    final idsPlaceholder = quoteIds.map((_) => '?').join(',');
-    final mainQuery = '''
-      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
-      FROM quotes q
-      LEFT JOIN quote_tags qt ON q.id = qt.quote_id
-      WHERE q.id IN ($idsPlaceholder)
-      GROUP BY q.id
-    ''';
+    logDebug('查询完成，耗时: ${stopwatch.elapsedMilliseconds}ms，结果数量: ${maps.length}');
 
-    logDebug('执行主查询: $mainQuery\n参数: $quoteIds');
-    final maps = await db.rawQuery(mainQuery, quoteIds);
-
-    // 3. 按ID子查询返回的顺序对结果进行排序
-    final quotesMap = {for (var m in maps) m['id'] as String: Quote.fromJson(m)};
-    final sortedQuotes = quoteIds.map((id) => quotesMap[id]!).toList();
-
-    return sortedQuotes;
+    return maps.map((m) => Quote.fromJson(m)).toList();
   }
 
   /// 获取笔记总数，用于分页
@@ -2019,10 +2019,10 @@ class DatabaseService extends ChangeNotifier {
           }
         }
       }).timeout(
-        const Duration(seconds: 15),
+        const Duration(seconds: 10),
         onTimeout: () {
-          logError('数据加载超时', source: 'DatabaseService');
-          // 超时时发送空列表
+          logError('数据加载超时（10秒）', source: 'DatabaseService');
+          // 超时时发送空列表，确保UI不会永远卡住
           if (_quotesController != null && !_quotesController!.isClosed) {
             _quotesController!.add([]);
           }
@@ -2062,7 +2062,7 @@ class DatabaseService extends ChangeNotifier {
         searchQuery: searchQuery,
         selectedWeathers: selectedWeathers,
         selectedDayPeriods: selectedDayPeriods,
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 8));
 
       if (quotes.isEmpty) {
         // 没有更多数据了

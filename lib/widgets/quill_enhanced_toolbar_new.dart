@@ -84,13 +84,21 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               isBackground: true,
               options: const quill.QuillToolbarColorButtonOptions(),
             ),
-            _buildDivider(),
-
-            // 第四组：标题
+            _buildDivider(),            // 第四组：标题和字体
             quill.QuillToolbarSelectHeaderStyleDropdownButton(
               controller: widget.controller,
               options:
                   const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
+            ),
+            // 字号选择按钮
+            quill.QuillToolbarFontSizeButton(
+              controller: widget.controller,
+              options: const quill.QuillToolbarFontSizeButtonOptions(),
+            ),
+            // 字体选择按钮（可选）
+            quill.QuillToolbarFontFamilyButton(
+              controller: widget.controller,
+              options: const quill.QuillToolbarFontFamilyButtonOptions(),
             ),
             _buildDivider(),
 
