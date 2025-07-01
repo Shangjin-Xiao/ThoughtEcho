@@ -1516,8 +1516,11 @@ class DatabaseService extends ChangeNotifier {
     required int limit,
     required int offset,
   }) async {
+    // 1. 构建用于筛选ID的子查询
     List<String> conditions = [];
     List<dynamic> args = [];
+    String fromClause = 'FROM quotes q';
+    String havingClause = '';
 
     // 分类筛选
     if (categoryId != null && categoryId.isNotEmpty) {
@@ -1536,69 +1539,80 @@ class DatabaseService extends ChangeNotifier {
 
     // 天气筛选
     if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-      final weatherConditions = selectedWeathers
-          .map((_) => 'q.weather = ?')
-          .join(' OR ');
-      conditions.add('($weatherConditions)');
+      final weatherPlaceholders = selectedWeathers.map((_) => '?').join(',');
+      conditions.add('q.weather IN ($weatherPlaceholders)');
       args.addAll(selectedWeathers);
     }
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodConditions = selectedDayPeriods
-          .map((_) => 'q.day_period = ?')
-          .join(' OR ');
-      conditions.add('($dayPeriodConditions)');
+      final dayPeriodPlaceholders =
+          selectedDayPeriods.map((_) => '?').join(',');
+      conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
 
-    String query;
-    List<dynamic> finalArgs;
-
-    // 优化标签筛选逻辑
+    // 标签筛选
     if (tagIds != null && tagIds.isNotEmpty) {
-      // 使用更高效的EXISTS子查询代替复杂的GROUP BY HAVING
-      if (tagIds.length == 1) {
-        // 单个标签的简单查询
-        conditions.add(
-          'EXISTS (SELECT 1 FROM quote_tags qt WHERE qt.quote_id = q.id AND qt.tag_id = ?)',
-        );
-        args.add(tagIds.first);
-      } else {
-        // 多个标签时使用优化的子查询
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
-        conditions.add('''
-          (SELECT COUNT(DISTINCT qt.tag_id) 
-           FROM quote_tags qt 
-           WHERE qt.quote_id = q.id AND qt.tag_id IN ($tagPlaceholders)) = ?
-        ''');
-        args.addAll(tagIds);
-        args.add(tagIds.length);
-      }
+      fromClause = '''
+        FROM quotes q
+        INNER JOIN quote_tags qt ON q.id = qt.quote_id
+      ''';
+      final tagPlaceholders = tagIds.map((_) => '?').join(',');
+      conditions.add('qt.tag_id IN ($tagPlaceholders)');
+      args.addAll(tagIds);
+      havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
     }
 
     final where =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-    // 使用简化的查询，避免GROUP_CONCAT的性能问题
-    query = '''
-      SELECT q.*, (
-        SELECT GROUP_CONCAT(qt.tag_id) 
-        FROM quote_tags qt 
-        WHERE qt.quote_id = q.id
-      ) as tag_ids
-      FROM quotes q
+    final orderByParts = orderBy.split(' ');
+    final correctedOrderBy =
+        'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
+
+    String idSubQuery = '''
+      SELECT q.id
+      $fromClause
       $where
-      ORDER BY $orderBy
+      GROUP BY q.id
+      $havingClause
+      ORDER BY $correctedOrderBy
       LIMIT ? OFFSET ?
     ''';
 
-    finalArgs = List.from(args)..addAll([limit, offset]);
+    List<dynamic> subQueryArgs = List.from(args);
+    if (tagIds != null && tagIds.isNotEmpty) {
+      subQueryArgs.add(tagIds.length);
+    }
+    subQueryArgs.addAll([limit, offset]);
 
-    logDebug('执行查询，条件: ${conditions.length}个, 参数: ${finalArgs.length}个');
+    logDebug('执行ID子查询: $idSubQuery\n参数: $subQueryArgs');
+    final idMaps = await db.rawQuery(idSubQuery, subQueryArgs);
+    final quoteIds = idMaps.map((m) => m['id'] as String).toList();
 
-    final maps = await db.rawQuery(query, finalArgs);
-    return maps.map((m) => Quote.fromJson(m)).toList();
+    if (quoteIds.isEmpty) {
+      return [];
+    }
+
+    // 2. 根据获取到的ID，查询完整的笔记信息和标签
+    final idsPlaceholder = quoteIds.map((_) => '?').join(',');
+    final mainQuery = '''
+      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+      FROM quotes q
+      LEFT JOIN quote_tags qt ON q.id = qt.quote_id
+      WHERE q.id IN ($idsPlaceholder)
+      GROUP BY q.id
+    ''';
+
+    logDebug('执行主查询: $mainQuery\n参数: $quoteIds');
+    final maps = await db.rawQuery(mainQuery, quoteIds);
+
+    // 3. 按ID子查询返回的顺序对结果进行排序
+    final quotesMap = {for (var m in maps) m['id'] as String: Quote.fromJson(m)};
+    final sortedQuotes = quoteIds.map((id) => quotesMap[id]!).toList();
+
+    return sortedQuotes;
   }
 
   /// 获取笔记总数，用于分页
@@ -1635,43 +1649,49 @@ class DatabaseService extends ChangeNotifier {
 
       // 天气筛选
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        final weatherConditions = selectedWeathers
-            .map((_) => 'q.weather = ?')
-            .join(' OR ');
-        conditions.add('($weatherConditions)');
+        final weatherPlaceholders = selectedWeathers.map((_) => '?').join(',');
+        conditions.add('q.weather IN ($weatherPlaceholders)');
         args.addAll(selectedWeathers);
       }
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodConditions = selectedDayPeriods
-            .map((_) => 'q.day_period = ?')
-            .join(' OR ');
-        conditions.add('($dayPeriodConditions)');
+        final dayPeriodPlaceholders =
+            selectedDayPeriods.map((_) => '?').join(',');
+        conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
 
       String query;
+      List<dynamic> finalArgs = List.from(args);
+
       if (tagIds != null && tagIds.isNotEmpty) {
-        // 如果有标签筛选，我们需要一个更复杂的查询来计算唯一匹配的笔记
-        final subQuery =
-            'SELECT quote_id FROM quote_tags WHERE tag_id IN (${tagIds.map((_) => '?').join(',')}) GROUP BY quote_id HAVING COUNT(DISTINCT tag_id) = ?';
+        // 使用 INNER JOIN 和 GROUP BY 来进行计数
+        final tagPlaceholders = tagIds.map((_) => '?').join(',');
 
-        final whereClause =
-            conditions.isNotEmpty ? 'AND ${conditions.join(' AND ')}' : '';
-
-        query = '''
-          SELECT COUNT(DISTINCT q.id)
+        String subQuery = '''
+          SELECT 1
           FROM quotes q
-          WHERE q.id IN ($subQuery) $whereClause
+          INNER JOIN quote_tags qt ON q.id = qt.quote_id
         ''';
 
-        // 子查询的参数需要先于主查询的参数
-        final finalArgs =
-            List.from(tagIds)
-              ..add(tagIds.length)
-              ..addAll(args);
-        args = finalArgs;
+        conditions.add('qt.tag_id IN ($tagPlaceholders)');
+        finalArgs.addAll(tagIds);
+
+        final whereClause =
+            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+        String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
+        finalArgs.add(tagIds.length);
+
+        query = '''
+          SELECT COUNT(*) FROM (
+            $subQuery
+            $whereClause
+            GROUP BY q.id
+            $havingClause
+          )
+        ''';
       } else {
         // 没有标签筛选，使用简单的 COUNT
         final whereClause =
@@ -1679,7 +1699,8 @@ class DatabaseService extends ChangeNotifier {
         query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 
-      final result = await db.rawQuery(query, args);
+      logDebug('执行计数查询: $query\n参数: $finalArgs');
+      final result = await db.rawQuery(query, finalArgs);
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
       logDebug('获取笔记总数错误: $e');

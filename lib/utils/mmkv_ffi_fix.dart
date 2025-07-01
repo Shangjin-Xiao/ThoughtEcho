@@ -347,81 +347,91 @@ abstract class StorageAdapter {
 
 /// SharedPreferences 存储适配器
 class SharedPrefsAdapter implements StorageAdapter {
-  late sp.SharedPreferences _prefs;
+  sp.SharedPreferences? _prefs;
+  bool _initialized = false;
 
   @override
   Future<void> initialize() async {
+    if (_initialized) return; // 防止重复初始化
     _prefs = await sp.SharedPreferences.getInstance();
+    _initialized = true;
+  }
+
+  sp.SharedPreferences get prefs {
+    if (_prefs == null) {
+      throw StateError('SharedPrefsAdapter 尚未初始化');
+    }
+    return _prefs!;
   }
 
   @override
   Future<bool> setString(String key, String value) {
-    return _prefs.setString(key, value);
+    return prefs.setString(key, value);
   }
 
   @override
   String? getString(String key) {
-    return _prefs.getString(key);
+    return prefs.getString(key);
   }
 
   @override
   Future<bool> setInt(String key, int value) {
-    return _prefs.setInt(key, value);
+    return prefs.setInt(key, value);
   }
 
   @override
   int? getInt(String key) {
-    return _prefs.getInt(key);
+    return prefs.getInt(key);
   }
 
   @override
   Future<bool> setDouble(String key, double value) {
-    return _prefs.setDouble(key, value);
+    return prefs.setDouble(key, value);
   }
 
   @override
   double? getDouble(String key) {
-    return _prefs.getDouble(key);
+    return prefs.getDouble(key);
   }
 
   @override
   Future<bool> setBool(String key, bool value) {
-    return _prefs.setBool(key, value);
+    return prefs.setBool(key, value);
   }
 
   @override
   bool? getBool(String key) {
-    return _prefs.getBool(key);
+    return prefs.getBool(key);
   }
 
   @override
   Future<bool> setStringList(String key, List<String> value) async {
-    return _prefs.setStringList(key, value);
+    return prefs.setStringList(key, value);
   }
 
   @override
   List<String>? getStringList(String key) {
-    return _prefs.getStringList(key);
+    return prefs.getStringList(key);
   }
 
   @override
   bool containsKey(String key) {
-    return _prefs.containsKey(key);
+    return prefs.containsKey(key);
   }
 
   @override
   Future<bool> remove(String key) {
-    return _prefs.remove(key);
+    return prefs.remove(key);
   }
 
   @override
   Future<bool> clear() {
-    return _prefs.clear();
+    return prefs.clear();
   }
 
   @override
   Set<String> getKeys() {
-    return _prefs.getKeys();
+    return prefs.getKeys();
   }
 }
 
