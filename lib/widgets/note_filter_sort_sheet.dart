@@ -387,7 +387,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           final isSelected = _tempSelectedDayPeriods.contains(periodKey);
           // 使用预缓存的图标和标签，提升性能
           final icon = _dayPeriodIconCache[periodKey]!;
-          final label = _dayPeriodLabelCache[periodKey]!;          return FilterChip(
+          final label = _dayPeriodLabelCache[periodKey]!;
+          return FilterChip(
             selected: isSelected,
             label: Row(
               mainAxisSize: MainAxisSize.min,
