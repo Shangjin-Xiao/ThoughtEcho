@@ -959,7 +959,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI 设置'),
-        actions: [
+        actions: const [
           // 隐藏年度报告功能
           // IconButton(
           //   icon: const Icon(Icons.analytics_outlined),

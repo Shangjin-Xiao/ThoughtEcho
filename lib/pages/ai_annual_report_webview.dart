@@ -9,10 +9,10 @@ class AIAnnualReportWebView extends StatefulWidget {
   final int year;
 
   const AIAnnualReportWebView({
-    Key? key,
+    super.key,
     required this.htmlContent,
     required this.year,
-  }) : super(key: key);
+  });
 
   @override
   State<AIAnnualReportWebView> createState() => _AIAnnualReportWebViewState();

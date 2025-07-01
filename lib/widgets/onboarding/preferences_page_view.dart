@@ -118,7 +118,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 );
               },
             );
-          }).toList(),
+          }),
 
           const SizedBox(height: 24),
 
@@ -294,7 +294,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 contentPadding: EdgeInsets.zero,
                 activeColor: theme.colorScheme.primary,
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -428,7 +428,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
       ),

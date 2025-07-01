@@ -7,8 +7,7 @@ class AnnualReportPage extends StatefulWidget {
   final int year;
   final List<Quote> quotes;
 
-  const AnnualReportPage({Key? key, required this.year, required this.quotes})
-    : super(key: key);
+  const AnnualReportPage({super.key, required this.year, required this.quotes});
 
   @override
   State<AnnualReportPage> createState() => _AnnualReportPageState();
@@ -779,7 +778,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
               ),
             ),
-            child: Text(
+            child: const Text(
               '继续记录 2025',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
