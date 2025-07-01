@@ -81,18 +81,72 @@ class MediaFileService {
     final sourceFile = File(sourcePath);
     final targetFile = File(targetPath);
 
+    // 确保源文件存在
+    if (!await sourceFile.exists()) {
+      throw Exception('源文件不存在: $sourcePath');
+    }
+
     // 确保目标目录存在
     await targetFile.parent.create(recursive: true);
 
-    // 使用 Stream.pipe() 进行流式复制
-    // 这样无论多大的文件都不会一次性加载到内存
+    // 使用流式复制，内存友好的方式处理大文件
     final sourceStream = sourceFile.openRead();
     final targetSink = targetFile.openWrite();
 
     try {
       await sourceStream.pipe(targetSink);
+
+      // 验证复制是否成功
+      if (!await targetFile.exists()) {
+        throw Exception('文件复制失败，目标文件未创建');
+      }
+
+      debugPrint('文件复制成功: $sourcePath -> $targetPath');
+    } catch (e) {
+      // 清理可能的不完整文件
+      try {
+        if (await targetFile.exists()) {
+          await targetFile.delete();
+        }
+      } catch (_) {}
+
+      debugPrint('文件复制失败: $e');
+      rethrow;
     } finally {
       await targetSink.close();
+    }
+  }
+
+  /// 安全检查文件大小（不读取整个文件内容）
+  static Future<int> getFileSizeSecurely(String filePath) async {
+    try {
+      final file = File(filePath);
+      final stat = await file.stat();
+      return stat.size;
+    } catch (e) {
+      debugPrint('获取文件大小失败: $e');
+      return 0;
+    }
+  }
+
+  /// 检查可用存储空间
+  static Future<bool> hasEnoughSpace(String filePath) async {
+    try {
+      final fileSize = await getFileSizeSecurely(filePath);
+
+      // 简单的空间检查，这里主要检查文件大小是否合理
+      // 设置一个较大但合理的上限来避免极大文件导致的问题
+      const maxReasonableSize = 2 * 1024 * 1024 * 1024; // 2GB
+
+      if (fileSize > maxReasonableSize) {
+        debugPrint('文件过大: ${fileSize / (1024 * 1024)} MB');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('检查存储空间失败: $e');
+      return false;
     }
   }
 

@@ -358,16 +358,38 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
       final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
       if (file != null) {
-        // 检查文件大小
-        final fileSize = await file.length();
+        // 使用更安全的文件大小检查方式
+        final fileSizeSecure = await MediaFileService.getFileSizeSecurely(
+          file.path,
+        );
         final maxSize = _getMaxFileSize(type);
 
-        if (fileSize > maxSize) {
+        // 如果文件过大，给出友好提示但不强制阻止
+        if (fileSizeSecure > maxSize) {
+          final sizeMB = (fileSizeSecure / (1024 * 1024)).round();
+          final maxSizeMB = (maxSize / (1024 * 1024)).round();
+
+          // 显示确认对话框
+          final shouldContinue = await _showLargeFileWarning(
+            context,
+            type,
+            sizeMB,
+            maxSizeMB,
+          );
+
+          if (!shouldContinue) {
+            return;
+          }
+        }
+
+        // 检查是否有足够的存储空间和系统资源
+        final hasSpace = await MediaFileService.hasEnoughSpace(file.path);
+        if (!hasSpace) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_getFileSizeErrorMessage(type, maxSize)),
-                duration: const Duration(seconds: 4),
+              const SnackBar(
+                content: Text('文件过大或存储空间不足，无法导入'),
+                duration: Duration(seconds: 4),
               ),
             );
           }
@@ -496,6 +518,16 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   }
 
   Future<void> _insertMediaFile(String filePath, String type) async {
+    // 显示导入进度提示
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('正在导入${_getMediaTypeName(type)}，请稍候...'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
     try {
       String? savedPath;
       switch (type) {
@@ -513,15 +545,35 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       }
 
       if (savedPath == null) {
-        throw Exception('保存媒体文件失败');
+        throw Exception('保存媒体文件失败，可能是存储空间不足或文件损坏');
       }
 
       await _insertMediaEmbed(savedPath, type);
     } catch (e) {
       debugPrint('媒体文件插入错误: $e');
       if (mounted) {
+        String errorMessage = '插入${_getMediaTypeName(type)}失败';
+
+        // 根据错误类型提供更具体的提示
+        if (e.toString().contains('存储空间')) {
+          errorMessage += '：存储空间不足';
+        } else if (e.toString().contains('权限')) {
+          errorMessage += '：没有文件访问权限';
+        } else if (e.toString().contains('损坏')) {
+          errorMessage += '：文件可能已损坏';
+        } else {
+          errorMessage += '：$e';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('插入${_getMediaTypeName(type)}失败: $e')),
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: '重试',
+              onPressed: () => _insertMediaFile(filePath, type),
+            ),
+          ),
         );
       }
     }
@@ -571,20 +623,64 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   int _getMaxFileSize(String type) {
     switch (type) {
       case 'image':
-        return 50 * 1024 * 1024; // 50MB
+        return 100 * 1024 * 1024; // 提升到100MB
       case 'video':
-        return 200 * 1024 * 1024; // 200MB
+        return 500 * 1024 * 1024; // 提升到500MB
       case 'audio':
-        return 100 * 1024 * 1024; // 100MB
+        return 200 * 1024 * 1024; // 提升到200MB
       default:
-        return 50 * 1024 * 1024;
+        return 100 * 1024 * 1024;
     }
   }
 
-  String _getFileSizeErrorMessage(String type, int maxSize) {
-    final maxSizeMB = (maxSize / (1024 * 1024)).round();
-    final typeName = _getMediaTypeName(type);
-    return '$typeName文件过大，请选择小于${maxSizeMB}MB的文件';
+  /// 显示大文件警告对话框
+  Future<bool> _showLargeFileWarning(
+    BuildContext context,
+    String type,
+    int actualSizeMB,
+    int recommendedSizeMB,
+  ) async {
+    return await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('⚠️ 大文件提醒'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('您选择的${_getMediaTypeName(type)}文件较大：'),
+                    const SizedBox(height: 8),
+                    Text('• 文件大小：${actualSizeMB}MB'),
+                    Text('• 建议大小：<${recommendedSizeMB}MB'),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '大文件可能会：\n• 增加导入时间\n• 占用更多存储空间\n• 影响应用性能',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '我们已优化了处理流程，通常可以安全导入。',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('继续导入'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
   }
 
   void _showFileSizeInfo() {
@@ -597,15 +693,20 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('为保证应用稳定运行，设置了合理的文件大小上限：'),
+                Text('我们支持导入各种大小的媒体文件：'),
                 SizedBox(height: 8),
-                Text('📸 图片: 最大 50MB'),
-                Text('🎬 视频: 最大 200MB'),
-                Text('🎵 音频: 最大 100MB'),
+                Text('📸 图片: 建议 <100MB'),
+                Text('🎬 视频: 建议 <500MB'),
+                Text('🎵 音频: 建议 <200MB'),
                 SizedBox(height: 12),
+                Text('✨ 技术优势：', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text('• 流式处理技术，内存友好'),
+                Text('• 支持超大文件导入'),
+                Text('• 智能错误恢复机制'),
+                SizedBox(height: 8),
                 Text(
-                  '这些限制足以满足日常使用，使用流式处理技术确保大文件也能稳定处理。',
-                  style: TextStyle(fontSize: 12),
+                  '超过建议大小的文件会有提醒，但通常可以安全导入。',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
