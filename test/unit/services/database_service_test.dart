@@ -1,4 +1,5 @@
 /// Basic unit tests for DatabaseService
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';

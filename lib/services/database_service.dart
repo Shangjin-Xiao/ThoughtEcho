@@ -776,9 +776,17 @@ class DatabaseService extends ChangeNotifier {
       final db = database;
       final dbVersion = await db.getVersion();
 
-      // 查询所有数据
+      // 查询所有分类数据
       final categories = await db.query('categories');
-      final quotes = await db.query('quotes');
+
+      // 查询笔记数据并重建tag_ids字段以保持向后兼容
+      final quotesWithTags = await db.rawQuery('''
+        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        FROM quotes q
+        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
+        GROUP BY q.id
+        ORDER BY q.date DESC
+      ''');
 
       // 构建与旧版exportAllData兼容的JSON结构
       return {
@@ -788,7 +796,7 @@ class DatabaseService extends ChangeNotifier {
           'exportTime': DateTime.now().toIso8601String(),
         },
         'categories': categories,
-        'quotes': quotes,
+        'quotes': quotesWithTags,
       };
     } catch (e) {
       logDebug('数据导出为Map时失败: $e');
@@ -845,6 +853,7 @@ class DatabaseService extends ChangeNotifier {
       await db.transaction((txn) async {
         if (clearExisting) {
           logDebug('清空现有数据并导入新数据');
+          await txn.delete('quote_tags'); // 先删除关联表
           await txn.delete('categories');
           await txn.delete('quotes');
         }
@@ -852,9 +861,20 @@ class DatabaseService extends ChangeNotifier {
         // 恢复分类数据
         final categories = data['categories'] as List;
         for (final c in categories) {
+          final categoryData = Map<String, dynamic>.from(
+            c as Map<String, dynamic>,
+          );
+
+          // 处理旧版分类数据兼容性
+          if (categoryData.containsKey('isDefault')) {
+            // 将旧版的 isDefault 字段转换为新版的 is_default
+            categoryData['is_default'] = categoryData['isDefault'];
+            categoryData.remove('isDefault');
+          }
+
           await txn.insert(
             'categories',
-            c as Map<String, dynamic>,
+            categoryData,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
@@ -862,11 +882,41 @@ class DatabaseService extends ChangeNotifier {
         // 恢复笔记数据
         final quotes = data['quotes'] as List;
         for (final q in quotes) {
+          final quoteData = Map<String, dynamic>.from(
+            q as Map<String, dynamic>,
+          );
+
+          // 处理旧版笔记数据兼容性
+          String? tagIdsString;
+          if (quoteData.containsKey('tag_ids')) {
+            // 保存tag_ids用于后续创建关联关系
+            tagIdsString = quoteData['tag_ids'] as String?;
+            // 从笔记数据中移除tag_ids字段，因为新版不再直接存储在quotes表中
+            quoteData.remove('tag_ids');
+          }
+
+          // 插入笔记记录
           await txn.insert(
             'quotes',
-            q as Map<String, dynamic>,
+            quoteData,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
+
+          // 如果有标签信息，创建标签关联记录
+          if (tagIdsString != null && tagIdsString.isNotEmpty) {
+            final quoteId = quoteData['id'] as String;
+            final tagIds = tagIdsString
+                .split(',')
+                .where((id) => id.trim().isNotEmpty);
+
+            for (final tagId in tagIds) {
+              await txn.insert(
+                'quote_tags',
+                {'quote_id': quoteId, 'tag_id': tagId.trim()},
+                conflictAlgorithm: ConflictAlgorithm.ignore, // 避免重复插入
+              );
+            }
+          }
         }
       });
 

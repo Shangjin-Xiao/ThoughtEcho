@@ -37,7 +37,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
-            // 所有按钮放在一行，支持左右滑动
+            // 基础文本格式组
             _buildToolbarButton(
               icon: Icons.format_bold,
               onPressed: () => _toggleFormat(quill.Attribute.bold),
@@ -62,12 +62,80 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               isActive: _isFormatActive(quill.Attribute.strikeThrough),
               tooltip: '删除线',
             ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 标题组
             _buildToolbarButton(
-              icon: Icons.format_list_numbered,
-              onPressed: () => _toggleFormat(quill.Attribute.ol),
-              isActive: _isFormatActive(quill.Attribute.ol),
-              tooltip: '有序列表',
+              icon: Icons.title,
+              onPressed: () => _toggleHeader(1),
+              isActive: _isHeaderActive(1),
+              tooltip: '标题1',
             ),
+            _buildToolbarButton(
+              icon: Icons.format_size,
+              onPressed: () => _toggleHeader(2),
+              isActive: _isHeaderActive(2),
+              tooltip: '标题2',
+            ),
+            _buildToolbarButton(
+              icon: Icons.text_fields,
+              onPressed: () => _toggleHeader(3),
+              isActive: _isHeaderActive(3),
+              tooltip: '标题3',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 颜色和高亮
+            _buildToolbarButton(
+              icon: Icons.format_color_text,
+              onPressed: _showTextColorPicker,
+              tooltip: '文字颜色',
+            ),
+            _buildToolbarButton(
+              icon: Icons.format_color_fill,
+              onPressed: _showBackgroundColorPicker,
+              tooltip: '背景颜色',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 对齐方式组
+            _buildToolbarButton(
+              icon: Icons.format_align_left,
+              onPressed: () => _toggleAlignment(quill.Attribute.leftAlignment),
+              isActive: _isAlignmentActive(quill.Attribute.leftAlignment),
+              tooltip: '左对齐',
+            ),
+            _buildToolbarButton(
+              icon: Icons.format_align_center,
+              onPressed:
+                  () => _toggleAlignment(quill.Attribute.centerAlignment),
+              isActive: _isAlignmentActive(quill.Attribute.centerAlignment),
+              tooltip: '居中对齐',
+            ),
+            _buildToolbarButton(
+              icon: Icons.format_align_right,
+              onPressed: () => _toggleAlignment(quill.Attribute.rightAlignment),
+              isActive: _isAlignmentActive(quill.Attribute.rightAlignment),
+              tooltip: '右对齐',
+            ),
+            _buildToolbarButton(
+              icon: Icons.format_align_justify,
+              onPressed:
+                  () => _toggleAlignment(quill.Attribute.justifyAlignment),
+              isActive: _isAlignmentActive(quill.Attribute.justifyAlignment),
+              tooltip: '两端对齐',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 列表和缩进组
             _buildToolbarButton(
               icon: Icons.format_list_bulleted,
               onPressed: () => _toggleFormat(quill.Attribute.ul),
@@ -75,11 +143,54 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               tooltip: '无序列表',
             ),
             _buildToolbarButton(
+              icon: Icons.format_list_numbered,
+              onPressed: () => _toggleFormat(quill.Attribute.ol),
+              isActive: _isFormatActive(quill.Attribute.ol),
+              tooltip: '有序列表',
+            ),
+            _buildToolbarButton(
+              icon: Icons.checklist,
+              onPressed: () => _toggleFormat(quill.Attribute.unchecked),
+              isActive: _isFormatActive(quill.Attribute.unchecked),
+              tooltip: '任务列表',
+            ),
+            _buildToolbarButton(
+              icon: Icons.format_indent_increase,
+              onPressed: _increaseIndent,
+              tooltip: '增加缩进',
+            ),
+            _buildToolbarButton(
+              icon: Icons.format_indent_decrease,
+              onPressed: _decreaseIndent,
+              tooltip: '减少缩进',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 特殊格式组
+            _buildToolbarButton(
               icon: Icons.format_quote,
               onPressed: () => _toggleFormat(quill.Attribute.blockQuote),
               isActive: _isFormatActive(quill.Attribute.blockQuote),
               tooltip: '引用',
             ),
+            _buildToolbarButton(
+              icon: Icons.code,
+              onPressed: () => _toggleFormat(quill.Attribute.codeBlock),
+              isActive: _isFormatActive(quill.Attribute.codeBlock),
+              tooltip: '代码块',
+            ),
+            _buildToolbarButton(
+              icon: Icons.horizontal_rule,
+              onPressed: _insertHorizontalRule,
+              tooltip: '分割线',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 媒体插入组
             _buildToolbarButton(
               icon: Icons.image,
               onPressed: _insertImage,
@@ -101,6 +212,16 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               tooltip: '插入链接',
             ),
             _buildToolbarButton(
+              icon: Icons.table_chart,
+              onPressed: _insertTable,
+              tooltip: '插入表格',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 操作组
+            _buildToolbarButton(
               icon: Icons.undo,
               onPressed:
                   widget.controller.hasUndo ? widget.controller.undo : null,
@@ -117,11 +238,20 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               onPressed: _clearFormat,
               tooltip: '清除格式',
             ),
-            const SizedBox(width: 8), // 分隔符
+            _buildToolbarButton(
+              icon: Icons.select_all,
+              onPressed: _selectAll,
+              tooltip: '全选',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 帮助信息
             _buildToolbarButton(
               icon: Icons.help_outline,
               onPressed: () => _showMemoryWarning('general'),
-              tooltip: '文件大小限制说明',
+              tooltip: '文件大小说明',
             ),
           ],
         ),
@@ -163,6 +293,16 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           ),
         ),
       ),
+    );
+  }
+
+  // 构建分隔符
+  Widget _buildSeparator() {
+    return Container(
+      width: 1,
+      height: 24,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5),
     );
   }
 
@@ -430,20 +570,16 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
   /// 根据文件类型和平台获取最大文件大小限制
   int _getMaxFileSize(String type) {
-    // 移动平台内存限制更严格
-    final isMobile =
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-
+    // 放宽限制 - 主要防止极端大文件导致崩溃
     switch (type) {
       case 'image':
-        return isMobile ? 5 * 1024 * 1024 : 15 * 1024 * 1024; // 5MB/15MB
+        return 50 * 1024 * 1024; // 50MB - 足够大的现代手机照片
       case 'video':
-        return isMobile ? 15 * 1024 * 1024 : 30 * 1024 * 1024; // 15MB/30MB
+        return 1024 * 1024 * 1024; // 1GB - 短视频
       case 'audio':
-        return isMobile ? 8 * 1024 * 1024 : 20 * 1024 * 1024; // 8MB/20MB
+        return 100 * 1024 * 1024; // 100MB - 长音频
       default:
-        return isMobile ? 5 * 1024 * 1024 : 15 * 1024 * 1024; // 5MB/15MB
+        return 50 * 1024 * 1024;
     }
   }
 
@@ -451,11 +587,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   String _getFileSizeErrorMessage(String type, int maxSize) {
     final maxSizeMB = (maxSize / (1024 * 1024)).round();
     final typeName = _getMediaTypeName(type);
-    final isMobile =
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
 
-    return '${typeName}文件太大，请选择小于${maxSizeMB}MB的文件${isMobile ? '（移动设备内存限制）' : ''}';
+    return '$typeName文件过大，请选择小于${maxSizeMB}MB的文件（防止应用崩溃）';
   }
 
   void _insertMediaFromCamera() async {
@@ -576,11 +709,10 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       }
 
       // 检查可用内存（简单估算）
-      if (file > 5 * 1024 * 1024) {
-        // 文件大于5MB时进行内存检查
-        // 这里可以添加更复杂的内存检查逻辑
+      if (file > 20 * 1024 * 1024) {
+        // 文件大于20MB时给出友好提示
         debugPrint(
-          'Warning: Large file detected (${(file / (1024 * 1024)).toStringAsFixed(1)}MB)',
+          'Large file detected (${(file / (1024 * 1024)).toStringAsFixed(1)}MB), using stream processing',
         );
       }
 
@@ -739,39 +871,24 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
   /// 显示内存和文件大小相关的提示信息
   void _showMemoryWarning(String type) {
-    final isMobile =
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('⚠️ 内存使用提示'),
-            content: Column(
+            title: const Text('📁 文件大小说明'),
+            content: const Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('为防止应用崩溃，已设置文件大小限制：'),
-                const SizedBox(height: 8),
-                const Text('📱 移动设备:'),
-                const Text('• 图片: 最大 5MB'),
-                const Text('• 视频: 最大 15MB'),
-                const Text('• 音频: 最大 8MB'),
-                if (!isMobile) ...[
-                  const SizedBox(height: 8),
-                  const Text('💻 桌面设备:'),
-                  const Text('• 图片: 最大 15MB'),
-                  const Text('• 视频: 最大 30MB'),
-                  const Text('• 音频: 最大 20MB'),
-                ],
-                const SizedBox(height: 12),
+                Text('为保证应用稳定运行，设置了合理的文件大小上限：'),
+                SizedBox(height: 8),
+                Text('� 图片: 最大 50MB'),
+                Text('🎬 视频: 最大 200MB'),
+                Text('🎵 音频: 最大 100MB'),
+                SizedBox(height: 12),
                 Text(
-                  '建议使用压缩工具减小文件大小，或选择较短的视频片段。',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                  '这些限制足以满足日常使用，如需导入更大文件，建议使用专业的压缩工具。',
+                  style: TextStyle(fontSize: 12),
                 ),
               ],
             ),
@@ -784,6 +901,158 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           ),
     );
   }
+
+  // 标题相关方法
+  void _toggleHeader(int level) {
+    final attribute = quill.Attribute.header.withValue(level);
+    widget.controller.formatSelection(attribute);
+  }
+
+  bool _isHeaderActive(int level) {
+    final style = widget.controller.getSelectionStyle();
+    final headerValue = style.attributes[quill.Attribute.header.key]?.value;
+    return headerValue == level;
+  }
+
+  // 对齐相关方法
+  void _toggleAlignment(quill.Attribute attribute) {
+    widget.controller.formatSelection(attribute);
+  }
+
+  bool _isAlignmentActive(quill.Attribute attribute) {
+    final style = widget.controller.getSelectionStyle();
+    return style.attributes.containsKey(attribute.key);
+  }
+
+  // 缩进相关方法
+  void _increaseIndent() {
+    widget.controller.indentSelection(true);
+  }
+
+  void _decreaseIndent() {
+    widget.controller.indentSelection(false);
+  }
+
+  // 插入水平分割线
+  void _insertHorizontalRule() {
+    final index = widget.controller.selection.baseOffset;
+    widget.controller.document.insert(index, '\n');
+    widget.controller.document.insert(
+      index + 1,
+      quill.BlockEmbed.horizontalRule,
+    );
+    widget.controller.updateSelection(
+      TextSelection.collapsed(offset: index + 2),
+      quill.ChangeSource.local,
+    );
+  }
+
+  // 插入表格
+  void _insertTable() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('插入表格'),
+            content: const Text('表格功能即将推出'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // 全选文本
+  void _selectAll() {
+    widget.controller.updateSelection(
+      TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.controller.document.length,
+      ),
+      quill.ChangeSource.local,
+    );
+  }
+
+  // 颜色选择器
+  void _showTextColorPicker() {
+    _showColorPicker('text');
+  }
+
+  void _showBackgroundColorPicker() {
+    _showColorPicker('background');
+  }
+
+  void _showColorPicker(String type) {
+    const commonColors = [
+      Colors.black,
+      Colors.red,
+      Colors.orange,
+      Colors.yellow,
+      Colors.green,
+      Colors.blue,
+      Colors.indigo,
+      Colors.purple,
+      Colors.pink,
+      Colors.brown,
+      Colors.grey,
+    ];
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(type == 'text' ? '选择文字颜色' : '选择背景颜色'),
+            content: SizedBox(
+              width: 300,
+              child: GridView.builder(
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                ),
+                itemCount: commonColors.length,
+                itemBuilder: (context, index) {
+                  final color = commonColors[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      _applyColor(color, type);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _applyColor(Color color, String type) {
+    final hex = '#${color.value.toRadixString(16).substring(2)}';
+    if (type == 'text') {
+      widget.controller.formatSelection(quill.ColorAttribute(hex));
+    } else {
+      widget.controller.formatSelection(quill.BackgroundAttribute(hex));
+    }
+  }
+
+  // ...existing code...
 }
 
 /// 兼容性别名，保持向后兼容

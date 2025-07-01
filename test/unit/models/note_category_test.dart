@@ -1,4 +1,5 @@
 /// Unit tests for NoteCategory model
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/note_category.dart';
 

@@ -52,6 +52,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       _videoController = VideoPlayerController.file(File(widget.filePath));
       await _videoController!.initialize();
 
+      if (!mounted) return;
+
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
         aspectRatio: _videoController!.value.aspectRatio,
@@ -67,7 +69,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         ),
       );
 
-      if (mounted) setState(() {});
+      setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
