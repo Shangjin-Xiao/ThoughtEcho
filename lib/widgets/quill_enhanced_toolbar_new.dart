@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../services/media_file_service.dart';
+import '../services/large_file_manager.dart';
 
 /// 增强的全屏编辑器工具栏组件
 /// 基于flutter_quill官方按钮的完整实现
@@ -366,10 +367,22 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
       final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
       if (file != null) {
-        // 使用更安全的文件大小检查方式
-        final fileSizeSecure = await MediaFileService.getFileSizeSecurely(
-          file.path,
-        );
+        // 使用大文件管理器检查文件
+        final canProcess = await LargeFileManager.canProcessFile(file.path);
+        if (!canProcess) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('文件过大或无法处理，请选择较小的文件'),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
+        // 获取文件大小并显示警告（如果需要）
+        final fileSizeSecure = await LargeFileManager.getFileSizeSecurely(file.path);
         final maxSize = _getMaxFileSize(type);
 
         // 如果文件过大，给出友好提示但不强制阻止
@@ -388,20 +401,6 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           if (!shouldContinue) {
             return;
           }
-        }
-
-        // 检查是否有足够的存储空间和系统资源
-        final hasSpace = await MediaFileService.hasEnoughSpace(file.path);
-        if (!hasSpace) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('文件过大或存储空间不足，无法导入'),
-                duration: Duration(seconds: 4),
-              ),
-            );
-          }
-          return;
         }
 
         await _insertMediaFile(file.path, type);
@@ -526,38 +525,106 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   }
 
   Future<void> _insertMediaFile(String filePath, String type) async {
-    // 显示导入进度提示
+    // 创建取消令牌
+    final cancelToken = LargeFileManager.createCancelToken();
+    
+    // 显示进度对话框
+    bool dialogShown = false;
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('正在导入${_getMediaTypeName(type)}，请稍候...'),
-          duration: const Duration(seconds: 2),
+      dialogShown = true;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('正在导入${_getMediaTypeName(type)}...'),
+              const SizedBox(height: 8),
+              const Text(
+                '大文件可能需要较长时间，请耐心等待',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelToken.cancel();
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('取消'),
+            ),
+          ],
         ),
       );
     }
 
     try {
       String? savedPath;
+      
+      // 根据类型保存文件，带进度回调
       switch (type) {
         case 'image':
-          savedPath = await MediaFileService.saveImage(filePath);
+          savedPath = await MediaFileService.saveImage(
+            filePath,
+            onProgress: (progress) {
+              // 进度回调可以在这里更新UI
+              debugPrint('图片导入进度: ${(progress * 100).toStringAsFixed(1)}%');
+            },
+          );
           break;
         case 'video':
-          savedPath = await MediaFileService.saveVideo(filePath);
+          savedPath = await MediaFileService.saveVideo(
+            filePath,
+            onProgress: (progress) {
+              debugPrint('视频导入进度: ${(progress * 100).toStringAsFixed(1)}%');
+            },
+          );
           break;
         case 'audio':
-          savedPath = await MediaFileService.saveAudio(filePath);
+          savedPath = await MediaFileService.saveAudio(
+            filePath,
+            onProgress: (progress) {
+              debugPrint('音频导入进度: ${(progress * 100).toStringAsFixed(1)}%');
+            },
+          );
           break;
         default:
           savedPath = await MediaFileService.saveImage(filePath);
       }
+
+      // 检查是否被取消
+      cancelToken.throwIfCancelled();
 
       if (savedPath == null) {
         throw Exception('保存媒体文件失败，可能是存储空间不足或文件损坏');
       }
 
       await _insertMediaEmbed(savedPath, type);
+      
+      // 显示成功消息
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_getMediaTypeName(type)}导入成功'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
+      if (e is CancelledException) {
+        debugPrint('媒体文件导入已取消');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('导入已取消')),
+          );
+        }
+        return;
+      }
+      
       debugPrint('媒体文件插入错误: $e');
       if (mounted) {
         String errorMessage = '插入${_getMediaTypeName(type)}失败';
@@ -569,6 +636,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           errorMessage += '：没有文件访问权限';
         } else if (e.toString().contains('损坏')) {
           errorMessage += '：文件可能已损坏';
+        } else if (e.toString().contains('过大')) {
+          errorMessage += '：文件过大，请选择较小的文件';
         } else {
           errorMessage += '：$e';
         }
@@ -577,12 +646,18 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           SnackBar(
             content: Text(errorMessage),
             duration: const Duration(seconds: 4),
+            backgroundColor: Colors.red,
             action: SnackBarAction(
               label: '重试',
               onPressed: () => _insertMediaFile(filePath, type),
             ),
           ),
         );
+      }
+    } finally {
+      // 关闭进度对话框
+      if (dialogShown && mounted) {
+        Navigator.of(context).pop();
       }
     }
   }

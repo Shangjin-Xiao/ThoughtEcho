@@ -19,7 +19,7 @@ import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
 import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import '../widgets/quill_enhanced_toolbar_new.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 
@@ -55,32 +55,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   void initState() {
     super.initState();
 
-    try {
-      // 尝试将initialContent作为Delta解析，否则作为纯文本插入
-      if (widget.initialQuote?.deltaContent != null) {
-        // 如果有富文本内容，优先使用富文本
-        try {
-          final document = quill.Document.fromJson(
-            jsonDecode(widget.initialQuote!.deltaContent!),
-          );
-          _controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
-          );
-          logDebug('成功初始化富文本编辑器');
-        } catch (e) {
-          logDebug('富文本解析失败: $e，将使用纯文本初始化');
-          _initializeAsPlainText();
-        }
-      } else {
-        logDebug('使用纯文本初始化编辑器');
-        _initializeAsPlainText();
-      }
-    } catch (e) {
-      // 如果所有初始化方法都失败，使用空文档
-      logDebug('编辑器初始化失败: $e，使用空文档');
-      _controller = quill.QuillController.basic();
-    }
+    // 先初始化为基本控制器，避免阻塞UI
+    _controller = quill.QuillController.basic();
+
+    // 异步初始化文档内容
+    _initializeDocumentAsync();
 
     // 作者/作品
     _authorController = TextEditingController(
@@ -102,25 +81,107 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _showWeather = _weather != null;
   }
 
+  /// 异步初始化文档内容
+  Future<void> _initializeDocumentAsync() async {
+    try {
+      if (widget.initialQuote?.deltaContent != null) {
+        // 如果有富文本内容，使用后台处理避免阻塞UI
+        logDebug('开始异步解析富文本内容...');
+        
+        final deltaContent = widget.initialQuote!.deltaContent!;
+        
+        // 检查内容大小，决定处理策略
+        if (deltaContent.length > 1024 * 1024) { // 1MB以上使用compute
+          logDebug('大富文本内容，使用后台处理 (${(deltaContent.length / 1024).toStringAsFixed(1)}KB)');
+          
+          try {
+            final deltaJson = await compute(_parseJsonInIsolate, deltaContent);
+            final document = quill.Document.fromJson(deltaJson);
+            
+            if (mounted) {
+              setState(() {
+                _controller.dispose(); // 释放旧控制器
+                _controller = quill.QuillController(
+                  document: document,
+                  selection: const TextSelection.collapsed(offset: 0),
+                );
+              });
+              logDebug('大富文本内容初始化完成');
+            }
+          } catch (e) {
+            logDebug('后台富文本解析失败: $e，回退到纯文本');
+            _initializeAsPlainText();
+          }
+        } else {
+          // 小内容直接处理
+          try {
+            final deltaJson = jsonDecode(deltaContent);
+            final document = quill.Document.fromJson(deltaJson);
+            
+            if (mounted) {
+              setState(() {
+                _controller.dispose(); // 释放旧控制器
+                _controller = quill.QuillController(
+                  document: document,
+                  selection: const TextSelection.collapsed(offset: 0),
+                );
+              });
+              logDebug('富文本内容初始化完成');
+            }
+          } catch (e) {
+            logDebug('富文本解析失败: $e，回退到纯文本');
+            _initializeAsPlainText();
+          }
+        }
+      } else {
+        logDebug('使用纯文本初始化编辑器');
+        _initializeAsPlainText();
+      }
+    } catch (e) {
+      logDebug('文档初始化失败: $e');
+      _initializeAsPlainText();
+    }
+  }
+
+  /// 在Isolate中解析JSON
+  static dynamic _parseJsonInIsolate(String jsonString) {
+    return jsonDecode(jsonString);
+  }
+
+  /// 在Isolate中编码JSON
+  static String _encodeJsonInIsolate(dynamic data) {
+    return jsonEncode(data);
+  }
+
   // 初始化为纯文本的辅助方法
   void _initializeAsPlainText() {
     try {
-      _controller = quill.QuillController(
-        document: quill.Document()..insert(0, widget.initialContent),
-        selection: const TextSelection.collapsed(offset: 0),
-      );
+      if (mounted) {
+        setState(() {
+          _controller.dispose(); // 释放旧控制器
+          _controller = quill.QuillController(
+            document: quill.Document()..insert(0, widget.initialContent),
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+        });
+      }
     } catch (e) {
       // 如果即使初始化纯文本也失败，使用空文档
       logDebug('初始化编辑器为纯文本失败: $e');
-      _controller = quill.QuillController.basic();
+      if (mounted) {
+        setState(() {
+          _controller.dispose(); // 释放旧控制器
+          _controller = quill.QuillController.basic();
 
-      // 尝试安全地添加内容
-      try {
-        if (widget.initialContent.isNotEmpty) {
-          _controller.document.insert(0, widget.initialContent);
-        }
-      } catch (_) {
-        // 忽略失败的内容插入
+          // 尝试安全地添加内容
+          try {
+            if (widget.initialContent.isNotEmpty) {
+              _controller.document.insert(0, widget.initialContent);
+            }
+          } catch (_) {
+            // 忽略失败的内容插入
+          }
+        });
       }
     }
   }
@@ -174,6 +235,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     logDebug('开始保存笔记内容...');
 
+    // 显示保存进度
+    bool showingProgress = false;
+    
     // 获取纯文本内容
     String plainTextContent = '';
     String deltaJson = '';
@@ -183,9 +247,42 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       logDebug('获取到纯文本内容: ${plainTextContent.length} 字符');
 
       final delta = _controller.document.toDelta();
+      final deltaData = delta.toJson();
       logDebug('Delta内容长度: ${delta.length}');
 
-      deltaJson = jsonEncode(delta.toJson());
+      // 检查是否需要后台处理JSON序列化
+      final estimatedSize = deltaData.toString().length * 2; // 粗略估算
+      
+      if (estimatedSize > 1024 * 1024) { // 1MB以上使用后台处理
+        logDebug('大文档内容，使用后台JSON序列化 (估算大小: ${(estimatedSize / 1024).toStringAsFixed(1)}KB)');
+        
+        // 显示进度指示器
+        if (mounted) {
+          showingProgress = true;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 12),
+                  Text('正在处理大文档内容...'),
+                ],
+              ),
+              duration: Duration(seconds: 30),
+            ),
+          );
+        }
+        
+        deltaJson = await compute(_encodeJsonInIsolate, deltaData);
+      } else {
+        // 小文档直接处理
+        deltaJson = jsonEncode(deltaData);
+      }
+      
       logDebug('富文本JSON长度: ${deltaJson.length}');
       logDebug(
         '富文本JSON内容示例: ${deltaJson.substring(0, min(100, deltaJson.length))}...',
@@ -193,12 +290,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       logDebug('获取文档内容失败: $e');
       // 显示错误但继续尝试保存
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('处理富文本时出现问题，尝试以纯文本保存: $e'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('处理富文本时出现问题，尝试以纯文本保存: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
 
       // 尝试获取内容
       try {
@@ -209,6 +308,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         // 不设置deltaJson，这样将不会保存富文本格式
       } catch (_) {
         plainTextContent = widget.initialContent; // 回退到初始内容
+      }
+    } finally {
+      // 隐藏进度指示器
+      if (showingProgress && mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
     }
 
