@@ -109,60 +109,65 @@ class NoteListViewState extends State<NoteListView> {
                   ? widget.selectedDayPeriods
                   : null,
         )
-        .listen((list) {
-          if (mounted) {
-            setState(() {
-              _quotes.clear();
-              _quotes.addAll(list);
-              _hasMore = list.length % _pageSize == 0;
-              _isLoading = false;
-            });
+        .listen(
+          (list) {
+            if (mounted) {
+              setState(() {
+                _quotes.clear();
+                _quotes.addAll(list);
+                _hasMore = list.length % _pageSize == 0;
+                _isLoading = false;
+              });
 
-            // 通知搜索控制器数据加载完成
-            try {
-              final searchController = Provider.of<NoteSearchController>(
-                context,
-                listen: false,
-              );
-              searchController.setSearchState(false);
-            } catch (e) {
-              logDebug('更新搜索控制器状态失败: $e');
+              // 通知搜索控制器数据加载完成
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.setSearchState(false);
+              } catch (e) {
+                logDebug('更新搜索控制器状态失败: $e');
+              }
             }
-          }
-        }, onError: (error) {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            
-            // 重置搜索控制器状态
-            try {
-              final searchController = Provider.of<NoteSearchController>(
-                context,
-                listen: false,
-              );
-              searchController.resetSearchState();
-            } catch (e) {
-              logDebug('重置搜索控制器状态失败: $e');
-            }
-            
-            logError('加载笔记失败: $error', error: error, source: 'NoteListView');
-            
-            // 显示错误提示
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}'),
-                duration: const Duration(seconds: 3),
-                backgroundColor: Colors.red,
-                action: SnackBarAction(
-                  label: '重试',
-                  textColor: Colors.white,
-                  onPressed: () => _updateStreamSubscription(),
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+
+              // 重置搜索控制器状态
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.resetSearchState();
+              } catch (e) {
+                logDebug('重置搜索控制器状态失败: $e');
+              }
+
+              logError('加载笔记失败: $error', error: error, source: 'NoteListView');
+
+              // 显示错误提示
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
+                  ),
+                  duration: const Duration(seconds: 3),
+                  backgroundColor: Colors.red,
+                  action: SnackBarAction(
+                    label: '重试',
+                    textColor: Colors.white,
+                    onPressed: () => _updateStreamSubscription(),
+                  ),
                 ),
-              ),
-            );
-          }
-        });
+              );
+            }
+          },
+        );
     // 加载第一页
     _loadMore();
   }
@@ -491,7 +496,7 @@ class NoteListViewState extends State<NoteListView> {
           logDebug('重置搜索状态失败: $e');
         }
         logDebug('搜索超时，已重置加载状态');
-        
+
         // 显示超时提示
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

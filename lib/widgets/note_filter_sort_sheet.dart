@@ -142,6 +142,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 title: '标签筛选',
                 child: _buildTagsFilter(theme),
                 theme: theme,
+                showScrollHint: widget.allTags.isNotEmpty,
               ),
               const SizedBox(height: 12),
 
@@ -149,6 +150,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 title: '天气筛选',
                 child: _buildWeatherFilter(theme),
                 theme: theme,
+                showScrollHint: true,
               ),
               const SizedBox(height: 12),
 
@@ -156,6 +158,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 title: '时间段筛选',
                 child: _buildDayPeriodFilter(theme),
                 theme: theme,
+                showScrollHint: true,
               ),
               const SizedBox(height: 12),
 
@@ -199,6 +202,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     required String title,
     required Widget child,
     required ThemeData theme,
+    bool showScrollHint = false,
   }) {
     return Card(
       elevation: 0,
@@ -215,16 +219,52 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (showScrollHint) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.swipe_left,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 12),
             child,
           ],
         ),
+      ),
+    );
+  }
+
+  /// 构建水平滑动筛选器包装器
+  Widget _buildHorizontalScrollableFilter({
+    required List<Widget> children,
+    required ThemeData theme,
+  }) {
+    if (children.isEmpty) {
+      return const SizedBox(height: 40);
+    }
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: children.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) => children[index],
+        physics: const BouncingScrollPhysics(),
       ),
     );
   }
@@ -240,138 +280,126 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       );
     }
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 200), // 限制最大高度
-      child: SingleChildScrollView(
-        child: Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children:
-              widget.allTags.map((tag) {
-                final isSelected = _tempSelectedTagIds.contains(tag.id);
-                // Use IconUtils to get the icon
-                final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-                final dynamic tagIcon = IconUtils.getIconData(
-                  tag.iconName,
-                ); // getIconData handles null/empty and returns default
+    final chips =
+        widget.allTags.map((tag) {
+          final isSelected = _tempSelectedTagIds.contains(tag.id);
+          // Use IconUtils to get the icon
+          final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+          final dynamic tagIcon = IconUtils.getIconData(
+            tag.iconName,
+          ); // getIconData handles null/empty and returns default
 
-                return FilterChip(
-                  selected: isSelected,
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                        isEmoji
-                            ? Text(
-                              tag.iconName!,
-                              style: const TextStyle(fontSize: 16),
-                            )
-                            // Use the IconData from IconUtils
-                            : (tagIcon is IconData) // Check if it's IconData
-                            ? Icon(tagIcon, size: 16)
-                            : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
-                      if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                        const SizedBox(width: 4),
-                      Text(tag.name, style: theme.textTheme.bodyMedium),
-                    ],
-                  ),
-                  onSelected: (selected) {
-                    setState(() {
-                      if (selected) {
-                        _tempSelectedTagIds.add(tag.id);
-                      } else {
-                        _tempSelectedTagIds.remove(tag.id);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
-        ),
-      ),
-    );
+          return FilterChip(
+            selected: isSelected,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                  isEmoji
+                      ? Text(
+                        tag.iconName!,
+                        style: const TextStyle(fontSize: 16),
+                      )
+                      // Use the IconData from IconUtils
+                      : (tagIcon is IconData) // Check if it's IconData
+                      ? Icon(tagIcon, size: 16)
+                      : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
+                if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                  const SizedBox(width: 4),
+                Text(tag.name, style: theme.textTheme.bodyMedium),
+              ],
+            ),
+            onSelected: (selected) {
+              setState(() {
+                if (selected) {
+                  _tempSelectedTagIds.add(tag.id);
+                } else {
+                  _tempSelectedTagIds.remove(tag.id);
+                }
+              });
+            },
+          );
+        }).toList();
+
+    return _buildHorizontalScrollableFilter(children: chips, theme: theme);
   }
 
   /// 构建天气筛选器
   Widget _buildWeatherFilter(ThemeData theme) {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children:
-          _weatherCategories.map((filterCategory) {
-            final isSelected = _tempSelectedWeathers.any(
-              (selectedWeather) =>
-                  WeatherService.getWeatherKeysByFilterCategory(
-                    filterCategory,
-                  ).contains(selectedWeather),
-            );
-            // 使用预缓存的图标和标签，提升性能
-            final icon = _weatherIconCache[filterCategory]!;
-            final label = _weatherLabelCache[filterCategory]!;
-            return FilterChip(
-              selected: isSelected,
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 16),
-                  const SizedBox(width: 4),
-                  Text(label, style: theme.textTheme.bodyMedium),
-                ],
-              ),
-              onSelected: (selected) {
-                setState(() {
-                  final categoryKeys =
-                      WeatherService.getWeatherKeysByFilterCategory(
-                        filterCategory,
-                      );
-                  if (selected) {
-                    // 添加该分类下的所有天气key
-                    _tempSelectedWeathers.addAll(categoryKeys);
-                  } else {
-                    // 移除该分类下的所有天气key
-                    _tempSelectedWeathers.removeWhere(
-                      (weather) => categoryKeys.contains(weather),
+    final chips =
+        _weatherCategories.map((filterCategory) {
+          final isSelected = _tempSelectedWeathers.any(
+            (selectedWeather) => WeatherService.getWeatherKeysByFilterCategory(
+              filterCategory,
+            ).contains(selectedWeather),
+          );
+          // 使用预缓存的图标和标签，提升性能
+          final icon = _weatherIconCache[filterCategory]!;
+          final label = _weatherLabelCache[filterCategory]!;
+          return FilterChip(
+            selected: isSelected,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16),
+                const SizedBox(width: 4),
+                Text(label, style: theme.textTheme.bodyMedium),
+              ],
+            ),
+            onSelected: (selected) {
+              setState(() {
+                final categoryKeys =
+                    WeatherService.getWeatherKeysByFilterCategory(
+                      filterCategory,
                     );
-                  }
-                });
-              },
-            );
-          }).toList(),
-    );
+                if (selected) {
+                  // 添加该分类下的所有天气key
+                  _tempSelectedWeathers.addAll(categoryKeys);
+                } else {
+                  // 移除该分类下的所有天气key
+                  _tempSelectedWeathers.removeWhere(
+                    (weather) => categoryKeys.contains(weather),
+                  );
+                }
+              });
+            },
+          );
+        }).toList();
+
+    return _buildHorizontalScrollableFilter(children: chips, theme: theme);
   }
 
   /// 构建时间段筛选器
   Widget _buildDayPeriodFilter(ThemeData theme) {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children:
-          _dayPeriodKeys.map((periodKey) {
-            final isSelected = _tempSelectedDayPeriods.contains(periodKey);
-            // 使用预缓存的图标和标签，提升性能
-            final icon = _dayPeriodIconCache[periodKey]!;
-            final label = _dayPeriodLabelCache[periodKey]!;
-            return FilterChip(
-              selected: isSelected,
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 16),
-                  const SizedBox(width: 4),
-                  Text(label, style: theme.textTheme.bodyMedium),
-                ],
-              ),
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _tempSelectedDayPeriods.add(periodKey);
-                  } else {
-                    _tempSelectedDayPeriods.remove(periodKey);
-                  }
-                });
-              },
-            );
-          }).toList(),
-    );
+    final chips =
+        _dayPeriodKeys.map((periodKey) {
+          final isSelected = _tempSelectedDayPeriods.contains(periodKey);
+          // 使用预缓存的图标和标签，提升性能
+          final icon = _dayPeriodIconCache[periodKey]!;
+          final label = _dayPeriodLabelCache[periodKey]!;
+          return FilterChip(
+            selected: isSelected,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16),
+                const SizedBox(width: 4),
+                Text(label, style: theme.textTheme.bodyMedium),
+              ],
+            ),
+            onSelected: (selected) {
+              setState(() {
+                if (selected) {
+                  _tempSelectedDayPeriods.add(periodKey);
+                } else {
+                  _tempSelectedDayPeriods.remove(periodKey);
+                }
+              });
+            },
+          );
+        }).toList();
+
+    return _buildHorizontalScrollableFilter(children: chips, theme: theme);
   }
 
   /// 构建排序选项
