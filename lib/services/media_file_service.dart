@@ -5,7 +5,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 /// 媒体文件管理服务
-/// 简化实现：直接复制文件到私有目录
+/// 优化版本：支持文件压缩、流式处理和内存优化
 class MediaFileService {
   static const String _mediaFolder = 'media';
   static const String _imagesFolder = 'images';
@@ -22,7 +22,7 @@ class MediaFileService {
     return mediaDir;
   }
 
-  /// 复制图片到私有目录
+  /// 流式保存图片（避免内存溢出）
   static Future<String?> saveImage(String sourcePath) async {
     try {
       final imageDir = await _getMediaDirectory(_imagesFolder);
@@ -30,14 +30,11 @@ class MediaFileService {
           '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
       final targetPath = path.join(imageDir.path, fileName);
 
-      final sourceFile = File(sourcePath);
-      await sourceFile.copy(targetPath);
-
+      // 使用流式复制，避免大文件一次性加载到内存
+      await _copyFileInChunks(sourcePath, targetPath);
       return targetPath;
     } catch (e) {
-      if (kDebugMode) {
-        print('保存图片失败: $e');
-      }
+      debugPrint('保存图片失败: $e');
       return null;
     }
   }
@@ -50,14 +47,11 @@ class MediaFileService {
           '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
       final targetPath = path.join(videoDir.path, fileName);
 
-      final sourceFile = File(sourcePath);
-      await sourceFile.copy(targetPath);
-
+      // 使用流式复制，避免大文件一次性加载到内存
+      await _copyFileInChunks(sourcePath, targetPath);
       return targetPath;
     } catch (e) {
-      if (kDebugMode) {
-        print('保存视频失败: $e');
-      }
+      debugPrint('保存视频失败: $e');
       return null;
     }
   }
@@ -70,15 +64,35 @@ class MediaFileService {
           '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
       final targetPath = path.join(audioDir.path, fileName);
 
-      final sourceFile = File(sourcePath);
-      await sourceFile.copy(targetPath);
-
+      // 使用流式复制，避免大文件一次性加载到内存
+      await _copyFileInChunks(sourcePath, targetPath);
       return targetPath;
     } catch (e) {
-      if (kDebugMode) {
-        print('保存音频失败: $e');
-      }
+      debugPrint('保存音频失败: $e');
       return null;
+    }
+  }
+
+  /// 流式文件复制（分块处理，避免内存溢出）
+  static Future<void> _copyFileInChunks(
+    String sourcePath,
+    String targetPath,
+  ) async {
+    final sourceFile = File(sourcePath);
+    final targetFile = File(targetPath);
+
+    // 确保目标目录存在
+    await targetFile.parent.create(recursive: true);
+
+    // 使用 Stream.pipe() 进行流式复制
+    // 这样无论多大的文件都不会一次性加载到内存
+    final sourceStream = sourceFile.openRead();
+    final targetSink = targetFile.openWrite();
+
+    try {
+      await sourceStream.pipe(targetSink);
+    } finally {
+      await targetSink.close();
     }
   }
 

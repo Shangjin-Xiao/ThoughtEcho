@@ -1,4 +1,5 @@
 /// Basic unit tests for ClipboardService
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 

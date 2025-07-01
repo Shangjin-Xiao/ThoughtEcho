@@ -1,4 +1,5 @@
 /// Basic integration tests for app startup
+library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -12,8 +13,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            appBar: AppBar(title: Text('ThoughtEcho')),
-            body: Center(
+            appBar: AppBar(title: const Text('ThoughtEcho')),
+            body: const Center(
               child: Text('Welcome to ThoughtEcho'),
             ),
           ),
@@ -30,15 +31,15 @@ void main() {
         MaterialApp(
           routes: {
             '/': (context) => Scaffold(
-              appBar: AppBar(title: Text('Home')),
+              appBar: AppBar(title: const Text('Home')),
               body: ElevatedButton(
                 onPressed: () => Navigator.pushNamed(context, '/second'),
-                child: Text('Go to Second'),
+                child: const Text('Go to Second'),
               ),
             ),
             '/second': (context) => Scaffold(
-              appBar: AppBar(title: Text('Second')),
-              body: Text('Second Page'),
+              appBar: AppBar(title: const Text('Second')),
+              body: const Text('Second Page'),
             ),
           },
         ),

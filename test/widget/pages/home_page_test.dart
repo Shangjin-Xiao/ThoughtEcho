@@ -1,4 +1,5 @@
 /// Basic widget tests for HomePage
+library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,8 +10,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            appBar: AppBar(title: Text('Test')),
-            body: Text('Hello World'),
+            appBar: AppBar(title: const Text('Test')),
+            body: const Text('Hello World'),
           ),
         ),
       );
@@ -30,7 +31,7 @@ void main() {
               onPressed: () {
                 pressed = true;
               },
-              child: Text('Press Me'),
+              child: const Text('Press Me'),
             ),
           ),
         ),

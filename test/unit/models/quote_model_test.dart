@@ -1,4 +1,5 @@
 /// Unit tests for Quote model
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 
@@ -37,7 +38,7 @@ void main() {
     });
 
     test('should convert to JSON correctly', () {
-      final quote = Quote(
+      const quote = Quote(
         id: 'test-id',
         content: '测试内容',
         date: '2024-01-01T00:00:00.000Z',

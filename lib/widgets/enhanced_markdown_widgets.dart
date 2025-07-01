@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 /// 增强的代码块组件，支持语法高亮和复制功能
 class CodeBlockWidget extends StatefulWidget {

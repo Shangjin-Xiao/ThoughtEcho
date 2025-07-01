@@ -1,4 +1,5 @@
 /// Basic unit tests for LocationService
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/location_service.dart';
 

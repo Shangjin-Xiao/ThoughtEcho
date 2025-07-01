@@ -1,5 +1,6 @@
 /// Main test file for ThoughtEcho application
 /// This file imports all test suites for easier running
+library;
 import 'package:flutter_test/flutter_test.dart';
 
 // Import model tests

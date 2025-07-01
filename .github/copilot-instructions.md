@@ -1,260 +1,208 @@
-# 心迹（ThoughtEcho）开发指南
+# 心迹（ThoughtEcho）AI 协作指南
 
 ## 项目概述
 
-心迹（ThoughtEcho）是一款基于Flutter开发的本地优先笔记应用，专注于捕捉思维火花、整理个人思考，并通过AI技术提供内容分析和智能洞察。采用本地存储优先策略，确保用户数据隐私和离线可用性。
+心迹（ThoughtEcho）是一款基于Flutter的本地优先笔记应用，专注于捕捉思维火花、整理个人思考，并通过AI技术提供内容分析和智能洞察。采用本地存储优先策略，确保用户数据隐私和离线可用性。
 
-要求：在响应用户进行代码更改时，请务必使用最佳实现，并且注意程序原有逻辑，不要引入重复代码，不要简单问题复杂化，如果必要可以使用pub包，如果你有任何不确定的信息，请使用工具检索互联网
-## 核心命令
-
-### 构建与运行
-```bash
-# 依赖安装
-flutter pub get
-注意：一般情况下，你无须执行依赖安装命令，编辑器会在你添加依赖后自动安装
-# 开发运行
-flutter run                    # 默认设备
-flutter run -d windows         # Windows桌面
-flutter run -d chrome         # Web浏览器
-flutter run -d android        # Android设备
-
-# 生产构建
-flutter build apk --release   # Android APK
-flutter build windows         # Windows桌面
-flutter build web             # Web部署
-```
-注意:除非用户要求,请勿使用构建或运行命令
-
-### 代码质量检查
-```bash
-# 代码格式化
-dart format .
-
-# 代码分析
-flutter analyze
-注意：请尽可能使用编辑器工具而非运行命令进行代码分析
-# 依赖检查
-flutter pub deps
-
-# 单元测试（目前无测试文件）
-flutter test
-
-# 构建修复
-flutter clean && flutter pub get
-```
-
-### 数据库相关
-```bash
-# 数据库文件位置（开发时）
-# Android: /data/data/com.example.thoughtecho/databases/
-# Windows: Documents/databases/
-# Web: 内存数据库
-```
-
-## 高层架构
-
-### 核心技术栈
-- **Framework**: Flutter 3.7.2+ (Dart)
-- **状态管理**: Provider
-- **本地数据库**: sqflite (移动端), sqflite_common_ffi (桌面端)
-- **网络**: Dio HTTP客户端
-- **UI**: Material 3, flex_color_scheme, dynamic_color
-- **富文本**: flutter_quill富文本编辑器
-- **地理位置**: geolocator, geocoding
-- **存储**: flutter_secure_storage, MMKV高性能存储
-- **文件操作**: file_selector, share_plus
-
-### 主要服务层
-- `DatabaseService`: 核心数据存储，SQLite数据库操作
-- `AIService`: AI功能集成，支持多provider
-- `LocationService`: 位置服务，地理定位
-- `WeatherService`: 天气数据获取
-- `SettingsService`: 应用设置管理
-- `UnifiedLogService`: 统一日志系统
-- `ClipboardService`: 剪贴板监听与处理
-
-### 数据模型
-- `Quote`: 笔记模型，支持富文本、标签、位置、天气等元数据
-- `NoteCategory`: 笔记分类/标签模型
-- `AIAnalysis`: AI分析结果模型
-- `AIProviderSettings`: AI服务提供商配置
-
-### 外部集成
-- **AI Services**: OpenAI、Anthropic、OpenRouter等多种AI提供商
-- **一言API**: hitokoto.cn 每日一言集成
-- **天气API**: 第三方天气服务集成
-
-## 代码风格规范
-
-### Dart/Flutter约定
-- 遵循`flutter_lints`规范，使用`analysis_options.yaml`配置
-- 类使用`PascalCase`，方法和变量使用`camelCase`
-- 文件使用`snake_case`命名
-- 私有成员使用下划线前缀(`_private`)
-- 所有公共API必须提供文档注释
-
-### 导入顺序
-```dart
-// 1. Dart core库
-import 'dart:async';
-import 'dart:io';
-
-// 2. Flutter框架
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-
-// 3. 第三方包
-import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
-
-// 4. 项目内部导入
-import '../services/database_service.dart';
-import '../models/quote_model.dart';
-```
-
-### 异步处理模式
-```dart
-// 推荐：使用async/await
-Future<void> saveQuote(Quote quote) async {
-  try {
-    await databaseService.addQuote(quote);
-    notifyListeners();
-  } catch (e) {
-    logError('保存笔记失败: $e', error: e);
-    rethrow;
-  }
-}
-
-// 错误处理：始终包含try-catch
-Future<List<Quote>> loadQuotes() async {
-  try {
-    return await databaseService.getUserQuotes();
-  } catch (e) {
-    logError('加载笔记失败: $e', error: e);
-    return []; // 提供合理的默认值
-  }
-}
-```
-
-### 状态管理模式
-```dart
-// 使用Provider进行状态管理
-class DatabaseService extends ChangeNotifier {
-  Future<void> addQuote(Quote quote) async {
-    // 执行操作
-    notifyListeners(); // 通知UI更新
-  }
-}
-
-// 在Widget中使用
-Consumer<DatabaseService>(
-  builder: (context, db, child) {
-    return ListView.builder(/* ... */);
-  },
-)
-```
-
-### 错误处理规范
-- 所有异步操作必须包含错误处理
-- 使用`UnifiedLogService`记录错误日志
-- 向用户显示友好的错误信息
-- 实现数据库操作的事务回滚机制
-
-### UI组件约定
-- 使用Material 3设计规范
-- 优先使用`AppTheme`中定义的颜色和样式
-- 支持响应式设计，适配不同屏幕尺寸
-- 使用`AppLoadingView`和`AppEmptyView`等通用组件
-
-## 仓库特定规则
-
-### 文件组织结构
-```
-lib/
-├── main.dart                 # 应用入口，多provider初始化
-├── models/                   # 数据模型
-│   ├── quote_model.dart      # 笔记模型，支持JSON序列化
-│   ├── note_category.dart    # 分类标签模型
-│   └── ai_analysis_model.dart # AI分析结果模型
-├── pages/                    # 页面组件
-│   ├── home_page.dart        # 主页面，笔记列表和一言展示
-│   ├── edit_page.dart        # 编辑页面，笔记编辑功能
-│   ├── insights_page.dart    # AI洞察页面
-│   └── settings_page.dart    # 设置页面
-├── services/                 # 业务逻辑服务
-│   ├── database_service.dart # 核心数据库服务
-│   ├── ai_service.dart       # AI功能服务
-│   └── settings_service.dart # 设置管理服务
-├── widgets/                  # 可重用UI组件
-├── utils/                    # 工具类
-└── theme/                    # 主题配置
-    └── app_theme.dart        # 应用主题定义
-```
-
-### 数据库架构
-- **quotes表**: 存储核心笔记数据。
-  - `id` (TEXT, PK): 唯一标识符。
-  - `content` (TEXT): 笔记的纯文本内容。
-  - `delta_content` (TEXT): 富文本内容 (Quill Delta格式的JSON字符串)。
-  - `date` (TEXT): ISO 8601格式的日期字符串。
-  - `category_id` (TEXT): 关联的分类ID。
-  - `tag_ids` (TEXT): 逗号分隔的标签ID字符串 (待优化)。
-  - `source` (TEXT): 来源信息。
-  - `source_author` (TEXT): 来源作者。
-  - `source_work` (TEXT): 来源作品。
-  - `location` (TEXT): 地理位置。
-  - `weather` (TEXT): 天气信息。
-  - `temperature` (TEXT): 温度信息。
-  - `day_period` (TEXT): 时间段标识 (如 'morning', 'evening')。
-  - `color_hex` (TEXT): 笔记的自定义颜色。
-  - `edit_source` (TEXT): 编辑来源 (如 'manual', 'ai')。
-  - `ai_analysis`, `sentiment`, `keywords`, `summary`: AI分析相关字段。
-- **categories表**: 存储笔记分类/标签。
-  - `id` (TEXT, PK): 唯一标识符。
-  - `name` (TEXT): 分类名称。
-  - `is_default` (BOOLEAN): 是否为默认分类。
-  - `icon_name` (TEXT): 关联的图标名称。
-- **ai_analyses表**: AI分析结果存储（独立数据库文件）。
+**重要原则**：在响应用户进行代码更改时，请务必使用最佳实现，注意程序原有逻辑，不要引入重复代码，不要简单问题复杂化。优先使用项目现有的服务和工具类。
+## 关键架构模式
 
 ### 平台适配策略
-- 使用条件导入处理平台差异：`if (dart.library.io)`
-- Web平台使用内存数据库替代SQLite文件存储
-- 桌面平台使用`sqflite_common_ffi`支持
-- 移动平台使用标准`sqflite`
+- **移动端**: 使用标准`sqflite`和`MMKV`
+- **桌面端**: 使用`sqflite_common_ffi`和`databaseFactoryFfi`  
+- **Web端**: 使用内存数据库和`SharedPreferences`
+- **关键初始化**：`initializeDatabasePlatform()`在Windows上调用`sqfliteFfiInit()`
 
-### AI功能实现
-- 支持多provider配置（OpenAI、Anthropic、OpenRouter等）
-- 使用流式响应提升用户体验
-- 实现故障转移机制确保服务可用性
-- 提供自定义提示词模板
+```dart
+// 在Windows平台必须先初始化FFI
+if (Platform.isWindows) {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+}
+```
 
-### 性能优化要点
-- 数据库查询使用索引优化
-- 实现分页加载避免内存压力
-- 使用缓存机制减少重复计算
-- 异步加载提升UI响应性
+### 存储抽象层
+项目使用`SafeMMKV`包装类实现存储抽象，自动处理32位ARM设备兼容性：
+- 32位ARM设备：自动回退到`SharedPreferences`
+- 其他平台：优先使用`MMKV`，失败时回退到`SharedPreferences`
+- Web平台：直接使用`SharedPreferences`
 
-### 数据备份机制
-- JSON格式导出，包含元数据、分类、笔记数据
-- 支持增量导入和覆盖导入两种模式
-- 提供数据验证和冲突解决策略
-- 实现紧急数据恢复功能
+### 富文本编辑器架构
+使用`flutter_quill`实现双格式存储：
+- `content`字段：存储纯文本（用于搜索和显示）
+- `deltaContent`字段：存储Quill Delta JSON（富文本格式）
+- `editSource`字段：标识编辑来源（`'fullscreen'`表示富文本编辑）
+
+## AI服务架构
+
+### 多Provider配置
+项目采用多AI服务商架构，支持故障转移：
+
+```dart
+// 核心类层次
+MultiAISettings -> AIProviderSettings -> AINetworkManager
+              -> APIKeyManager (安全存储)
+```
+
+- **API密钥管理**：使用`flutter_secure_storage`安全存储，配置文件中不保存敏感信息
+- **故障转移**：当前provider失败时自动切换到其他可用provider
+- **支持的服务商**：OpenAI、Anthropic、OpenRouter、DeepSeek、硅基流动等
+
+### 流式响应处理
+AI功能全面支持流式响应，使用`StreamController`和自定义`StreamingTextDialog`：
+
+```dart
+// 流式请求模式
+Stream<String> streamAnalyzeContent(String content) {
+  return _requestHelper.executeStreamOperation(
+    operation: (controller) async {
+      await _requestHelper.makeStreamRequestWithProvider(
+        // ...处理流式数据块
+      );
+    }
+  );
+}
+```
+
+## 核心开发模式
+
+### 异步初始化模式
+应用使用分阶段初始化以优化启动性能：
+
+```dart
+// 关键模式：先显示UI，后台初始化重量级服务
+Future.microtask(() async {
+  // 初始化数据库等重量级服务
+  await databaseService.init();
+  servicesInitialized.value = true;
+});
+```
+
+### Provider状态管理
+使用`MultiProvider`统一管理所有服务，继承`ChangeNotifier`：
+
+```dart
+// 服务必须继承ChangeNotifier并在操作后调用notifyListeners()
+class DatabaseService extends ChangeNotifier {
+  Future<void> addQuote(Quote quote) async {
+    // 执行数据库操作
+    notifyListeners(); // 关键：通知UI更新
+  }
+}
+```
+
+### 错误处理与日志
+使用`UnifiedLogService`统一日志管理，支持持久化存储：
+
+```dart
+// 错误处理标准模式
+try {
+  await databaseService.addQuote(quote);
+} catch (e) {
+  logError('保存笔记失败: $e', error: e, source: 'QuoteEditor');
+  rethrow; // 重新抛出让上层处理
+}
+```
+
+## 数据模型设计
+
+### Quote模型核心字段
+```dart
+class Quote {
+  final String content;        // 纯文本内容（必须）
+  final String? deltaContent;  // 富文本JSON（可选）
+  final String date;           // ISO 8601格式日期
+  final List<String> tagIds;   // 标签ID列表
+  final String? categoryId;    // 分类ID
+  final String? editSource;    // 编辑来源标识
+  final String? dayPeriod;     // 时间段标识
+  // ...位置、天气、AI分析等元数据
+}
+```
+
+### 数据库schema要点
+- **quotes表**：包含富文本双存储字段（`content` + `deltaContent`）
+- **categories表**：支持图标和默认分类标识
+- **版本管理**：使用数据库版本控制进行schema升级
+- **Web平台**：使用内存存储替代SQLite文件操作
+
+## 关键工具类
+
+### 时间处理
+`TimeUtils`提供本地化时间段识别（晨曦、午后、黄昏、夜晚）
+
+### 图标工具
+`IconUtils`统一处理MaterialIcons和Emoji图标显示
+
+### 颜色工具  
+`ColorUtils`提供颜色选择和预设管理
+
+### 网络适配
+`AINetworkManager`统一管理所有AI请求，支持多provider故障转移
+
+## 开发注意事项
+
+1. **平台检查**：始终使用`kIsWeb`和`Platform.isXxx`进行平台特定逻辑
+2. **异步操作**：所有数据库操作必须使用`async/await`并包含错误处理
+3. **UI更新**：修改数据后必须调用`notifyListeners()`
+4. **API密钥**：永远不要在配置文件中存储API密钥，使用`APIKeyManager`
+5. **富文本**：新建富文本功能时使用`NoteFullEditorPage`而非简单文本框
+6. **流式AI**：AI功能优先使用流式响应提升用户体验
+
+## 重要服务详解
+
+### DatabaseService
+- **初始化**：支持平台特定数据库路径和FFI配置
+- **数据流**：使用`StreamController`提供响应式笔记列表
+- **缓存策略**：实现查询结果缓存和分页加载
+- **迁移逻辑**：自动处理数据库schema升级和旧数据迁移
+
+### AIService 
+- **多Provider架构**：`MultiAISettings`统一管理多个AI服务商
+- **安全存储**：API密钥通过`APIKeyManager`存储在`flutter_secure_storage`
+- **流式响应**：所有AI功能支持流式输出，使用`StreamingTextDialog`
+- **故障转移**：当前provider失败时自动切换到备用provider
+
+### SettingsService
+- **存储适配**：使用`SafeMMKV`包装类处理平台差异
+- **配置管理**：统一管理应用设置、AI配置、主题设置等
+- **数据持久化**：设置变更立即保存并通知监听者
+
+## 常见开发任务
+
+### 添加新的笔记功能
+1. 在`Quote`模型中添加新字段
+2. 更新数据库schema（增加版本号和迁移逻辑）
+3. 修改`DatabaseService`的增删改查方法
+4. 在UI中添加对应的输入/显示组件
+
+### 集成新的AI Provider
+1. 在`AIProviderSettings.getPresetProviders()`中添加预设配置
+2. 在`buildHeaders()`和`adjustData()`中添加特定请求格式
+3. 在AI设置页面的`aiPresets`列表中添加UI选项
+4. 测试API兼容性并处理响应格式差异
+
+### 添加新的平台支持
+1. 在`initializeDatabasePlatform()`中添加平台检查
+2. 在`SafeMMKV`中添加平台特定存储逻辑
+3. 更新相关的条件导入和平台检查代码
+4. 测试平台特定功能（如文件选择、分享等）
+
+## 测试与调试
 
 ### 日志系统
-- 使用`UnifiedLogService`统一日志管理
-- 支持不同日志级别：verbose/debug/info/warning/error
-- 日志持久化存储，支持查询和导出
-- 错误堆栈追踪和上下文记录
+- 使用`logDebug()`, `logInfo()`, `logError()`等函数
+- 日志自动持久化到本地数据库
+- 支持按级别、来源、时间范围查询日志
 
-### 国际化支持
-- 使用`flutter_localizations`支持多语言
-- 主要面向中文用户，提供英文支持
-- 适配不同地区的日期时间格式
+### API Key调试
+- `ApiKeyDebugger`提供专门的API密钥调试工具
+- 可以追踪API密钥的保存、读取、使用流程
+- 帮助排查provider切换和认证问题
 
-### 测试策略
-- 关键业务逻辑需要单元测试覆盖
-- 数据库操作需要集成测试验证
-- UI组件需要Widget测试确保功能正常
-- AI功能提供手动测试工具页面
+### 数据库调试
+- 支持数据备份和恢复功能
+- 紧急模式：数据库损坏时显示恢复界面
+- 提供数据库文件导出功能用于调试
 
-这些指南将帮助AI代理更好地理解项目结构、编码规范和业务逻辑，从而提供更准确和一致的代码建议。
+这些指南涵盖了项目的核心架构、关键实现模式和常见开发场景，帮助AI代理快速理解项目结构并提供准确的代码建议。
