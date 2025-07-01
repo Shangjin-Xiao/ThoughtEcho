@@ -1,0 +1,322 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../../lib/services/database_service.dart';
+import '../../lib/models/quote_model.dart';
+
+void main() {
+  late DatabaseService databaseService;
+
+  setUpAll(() async {
+    // 初始化FFI数据库用于测试
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    databaseService = DatabaseService();
+    await databaseService.init();
+  });
+
+  tearDown(() {
+    // 数据库服务的清理
+  });
+
+  group('搜索和筛选功能调试测试', () {
+    test('测试基本的数据库连接和初始化', () async {
+      expect(databaseService.isInitialized, isTrue);
+      print('✓ 数据库初始化成功');
+    });
+
+    test('添加测试数据', () async {
+      // 添加一些测试分类
+      await databaseService.addCategory('测试分类1', iconName: '📝');
+      await databaseService.addCategory('测试分类2', iconName: '💡');
+
+      final categories = await databaseService.getCategories();
+      expect(categories.length, greaterThanOrEqualTo(2));
+      print('✓ 测试分类添加成功: ${categories.length}个');
+
+      // 添加一些测试笔记
+      final testQuotes = [
+        Quote(
+          id: 'test1',
+          content: '这是第一条测试笔记，包含关键词搜索',
+          date: DateTime.now().toIso8601String(),
+          tagIds: [categories.first.id],
+          weather: 'sunny',
+          dayPeriod: 'morning',
+        ),
+        Quote(
+          id: 'test2',
+          content: '第二条笔记用于测试筛选功能',
+          date:
+              DateTime.now()
+                  .subtract(const Duration(hours: 1))
+                  .toIso8601String(),
+          tagIds: [categories.last.id],
+          weather: 'cloudy',
+          dayPeriod: 'afternoon',
+        ),
+        Quote(
+          id: 'test3',
+          content: '第三条笔记包含多个标签',
+          date:
+              DateTime.now()
+                  .subtract(const Duration(hours: 2))
+                  .toIso8601String(),
+          tagIds: [categories.first.id, categories.last.id],
+          weather: 'sunny',
+          dayPeriod: 'evening',
+        ),
+      ];
+
+      for (final quote in testQuotes) {
+        await databaseService.addQuote(quote);
+      }
+
+      print('✓ 测试笔记添加成功: ${testQuotes.length}条');
+    });
+
+    test('测试基本查询性能', () async {
+      final stopwatch = Stopwatch()..start();
+
+      final quotes = await databaseService.getUserQuotes(limit: 20, offset: 0);
+
+      stopwatch.stop();
+      print(
+        '✓ 基本查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
+      );
+
+      expect(
+        stopwatch.elapsedMilliseconds,
+        lessThan(1000),
+        reason: '基本查询应该在1秒内完成',
+      );
+    });
+
+    test('测试搜索查询性能', () async {
+      final stopwatch = Stopwatch()..start();
+
+      try {
+        final quotes = await databaseService.getUserQuotes(
+          searchQuery: '测试',
+          limit: 20,
+          offset: 0,
+        );
+
+        stopwatch.stop();
+        print(
+          '✓ 搜索查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
+        );
+
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(2000),
+          reason: '搜索查询应该在2秒内完成',
+        );
+      } catch (e) {
+        stopwatch.stop();
+        print('✗ 搜索查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        rethrow;
+      }
+    });
+
+    test('测试标签筛选查询性能', () async {
+      final categories = await databaseService.getCategories();
+      if (categories.isEmpty) {
+        print('跳过标签筛选测试：没有可用的分类');
+        return;
+      }
+
+      final stopwatch = Stopwatch()..start();
+
+      try {
+        final quotes = await databaseService.getUserQuotes(
+          tagIds: [categories.first.id],
+          limit: 20,
+          offset: 0,
+        );
+
+        stopwatch.stop();
+        print(
+          '✓ 标签筛选查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
+        );
+
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(3000),
+          reason: '标签筛选查询应该在3秒内完成',
+        );
+      } catch (e) {
+        stopwatch.stop();
+        print('✗ 标签筛选查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        rethrow;
+      }
+    });
+
+    test('测试复合查询性能（搜索+标签+天气）', () async {
+      final categories = await databaseService.getCategories();
+      if (categories.isEmpty) {
+        print('跳过复合查询测试：没有可用的分类');
+        return;
+      }
+
+      final stopwatch = Stopwatch()..start();
+
+      try {
+        final quotes = await databaseService.getUserQuotes(
+          searchQuery: '测试',
+          tagIds: [categories.first.id],
+          selectedWeathers: ['sunny'],
+          limit: 20,
+          offset: 0,
+        );
+
+        stopwatch.stop();
+        print(
+          '✓ 复合查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
+        );
+
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(5000),
+          reason: '复合查询应该在5秒内完成',
+        );
+      } catch (e) {
+        stopwatch.stop();
+        print('✗ 复合查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        rethrow;
+      }
+    });
+
+    test('测试超时场景模拟', () async {
+      final categories = await databaseService.getCategories();
+
+      // 创建大量测试数据来模拟慢查询
+      print('正在创建大量测试数据...');
+      final futures = <Future>[];
+      for (int i = 0; i < 100; i++) {
+        final quote = Quote(
+          id: 'bulk_test_$i',
+          content: '批量测试数据 $i 用于性能测试 包含各种关键词 搜索 筛选 测试',
+          date: DateTime.now().subtract(Duration(minutes: i)).toIso8601String(),
+          tagIds:
+              categories.isNotEmpty
+                  ? [categories[i % categories.length].id]
+                  : [],
+          weather: ['sunny', 'cloudy', 'rainy'][i % 3],
+          dayPeriod: ['morning', 'afternoon', 'evening', 'night'][i % 4],
+        );
+        futures.add(databaseService.addQuote(quote));
+      }
+      await Future.wait(futures);
+      print('✓ 批量数据创建完成');
+
+      final stopwatch = Stopwatch()..start();
+
+      try {
+        final quotes = await databaseService.getUserQuotes(
+          searchQuery: '测试',
+          tagIds: categories.isNotEmpty ? [categories.first.id] : null,
+          selectedWeathers: ['sunny', 'cloudy'],
+          selectedDayPeriods: ['morning', 'afternoon'],
+          limit: 50,
+          offset: 0,
+        );
+
+        stopwatch.stop();
+        print(
+          '✓ 大数据量查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
+        );
+
+        if (stopwatch.elapsedMilliseconds > 10000) {
+          print('⚠️ 警告：查询时间超过10秒，可能会导致UI超时');
+        }
+      } catch (e) {
+        stopwatch.stop();
+        print('✗ 大数据量查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+
+        if (e.toString().contains('TimeoutException')) {
+          print('确认：查询确实会超时');
+        }
+
+        // 不重新抛出异常，我们想要看到这个超时
+      }
+    });
+
+    test('测试数据库索引状态', () async {
+      try {
+        final db = databaseService.database;
+
+        // 检查索引是否存在
+        final indexes = await db.rawQuery('''
+          SELECT name FROM sqlite_master 
+          WHERE type='index' AND tbl_name IN ('quotes', 'quote_tags', 'categories')
+        ''');
+
+        print('数据库索引状态:');
+        for (final index in indexes) {
+          print('  - ${index['name']}');
+        }
+
+        // 检查quote_tags表的索引
+        final quoteTagsIndexes =
+            indexes
+                .where((idx) => idx['name'].toString().contains('quote_tags'))
+                .toList();
+
+        if (quoteTagsIndexes.isEmpty) {
+          print('⚠️ 警告：quote_tags表可能缺少索引，这会导致标签查询变慢');
+        } else {
+          print('✓ quote_tags表索引正常');
+        }
+      } catch (e) {
+        print('✗ 检查索引状态失败: $e');
+      }
+    });
+
+    test('测试查询计划分析', () async {
+      try {
+        final db = databaseService.database;
+        final categories = await databaseService.getCategories();
+
+        if (categories.isNotEmpty) {
+          // 分析标签查询的执行计划
+          final queryPlan = await db.rawQuery(
+            '''
+            EXPLAIN QUERY PLAN
+            SELECT q.*, (
+              SELECT GROUP_CONCAT(qt.tag_id) 
+              FROM quote_tags qt 
+              WHERE qt.quote_id = q.id
+            ) as tag_ids
+            FROM quotes q
+            WHERE EXISTS (SELECT 1 FROM quote_tags qt WHERE qt.quote_id = q.id AND qt.tag_id = ?)
+            ORDER BY q.date DESC
+            LIMIT 20 OFFSET 0
+          ''',
+            [categories.first.id],
+          );
+
+          print('标签查询执行计划:');
+          for (final plan in queryPlan) {
+            print('  ${plan['detail']}');
+          }
+
+          // 检查是否使用了索引
+          final usesIndex = queryPlan.any(
+            (plan) => plan['detail'].toString().toLowerCase().contains('index'),
+          );
+
+          if (!usesIndex) {
+            print('⚠️ 警告：查询可能没有使用索引，性能会较差');
+          } else {
+            print('✓ 查询使用了索引优化');
+          }
+        }
+      } catch (e) {
+        print('✗ 查询计划分析失败: $e');
+      }
+    });
+  });
+}
