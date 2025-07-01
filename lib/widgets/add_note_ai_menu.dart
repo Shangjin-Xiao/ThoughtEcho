@@ -5,6 +5,7 @@ import '../services/ai_service.dart';
 import '../models/quote_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/streaming_text_dialog.dart';
+import '../pages/note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 
 class AddNoteAIMenu extends StatefulWidget {
   final TextEditingController contentController;
@@ -90,14 +91,22 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                       Navigator.pop(context);
                       _continueText();
                     },
-                  ),
-                  ListTile(
+                  ),                  ListTile(
                     leading: const Icon(Icons.analytics),
                     title: const Text('深度分析'),
                     subtitle: const Text('对笔记内容进行深入分析和解读'),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeContent();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.chat),
+                    title: const Text('问笔记'),
+                    subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _askNoteQuestion();
                     },
                   ),
                 ],
@@ -363,7 +372,34 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
           context,
         ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
       }
+    }  }
+
+  // 问笔记功能
+  Future<void> _askNoteQuestion() async {
+    if (widget.contentController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      return;
     }
+
+    // 创建临时Quote对象用于问答
+    final tempQuote = Quote(
+      id: '',
+      content: widget.contentController.text,
+      date: DateTime.now().toIso8601String(),
+      sourceAuthor: widget.authorController.text.trim().isNotEmpty 
+          ? widget.authorController.text.trim() 
+          : null,
+      sourceWork: widget.workController.text.trim().isNotEmpty 
+          ? widget.workController.text.trim() 
+          : null,
+    );
+
+    // 导航到聊天页面
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
+    );
   }
 
   @override

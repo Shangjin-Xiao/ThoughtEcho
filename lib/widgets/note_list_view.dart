@@ -57,6 +57,7 @@ class NoteListView extends StatefulWidget {
 
 class NoteListViewState extends State<NoteListView> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
   final Map<String, bool> _expandedItems = {};
   // 添加固定的GlobalKey，避免重建时生成新Key
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
@@ -296,6 +297,7 @@ class NoteListViewState extends State<NoteListView> {
   void dispose() {
     _quotesSub.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose(); // 清理焦点节点
     _searchDebounceTimer?.cancel(); // 优化：清理防抖定时器
     super.dispose();
   }
@@ -441,7 +443,8 @@ class NoteListViewState extends State<NoteListView> {
       if (value.isEmpty && widget.searchQuery.isNotEmpty) {
         _isLoading = true;
         logDebug('搜索内容被清空，重置加载状态');
-      } else if (value.isNotEmpty) {
+      } else if (value.isNotEmpty && value.length >= 2) {
+        // 优化：只有当搜索内容长度>=2时才显示加载状态
         _isLoading = true;
       }
     });
@@ -452,20 +455,25 @@ class NoteListViewState extends State<NoteListView> {
       return;
     }
 
-    // 对于输入操作，使用防抖延迟
-    _searchDebounceTimer = Timer(_searchDebounceDelay, () {
-      if (mounted) {
-        _performSearch(value);
-      }
-    });
+    // 优化：只有当搜索内容长度>=2时才使用防抖延迟
+    if (value.length >= 2) {
+      _searchDebounceTimer = Timer(_searchDebounceDelay, () {
+        if (mounted) {
+          _performSearch(value);
+        }
+      });
+    } else {
+      // 长度小于2时直接执行，不触发实际搜索
+      _performSearch(value);
+    }
   }
 
   /// 优化：执行搜索的统一方法
   void _performSearch(String value) {
     if (!mounted) return;
 
-    // 如果是非空搜索，通知搜索控制器开始搜索
-    if (value.isNotEmpty) {
+    // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
+    if (value.isNotEmpty && value.length >= 2) {
       try {
         final searchController = Provider.of<NoteSearchController>(
           context,
@@ -480,38 +488,41 @@ class NoteListViewState extends State<NoteListView> {
     // 直接调用父组件的搜索回调
     widget.onSearchChanged(value);
 
-    // 设置更短的超时保护，确保加载状态不会永远卡住
-    Timer(const Duration(seconds: 8), () {
-      if (mounted && _isLoading) {
-        setState(() {
-          _isLoading = false;
-        });
-        try {
-          final searchController = Provider.of<NoteSearchController>(
-            context,
-            listen: false,
-          );
-          searchController.resetSearchState();
-        } catch (e) {
-          logDebug('重置搜索状态失败: $e');
-        }
-        logDebug('搜索超时，已重置加载状态');
+    // 优化：只有在实际搜索时才设置超时保护
+    if (value.isNotEmpty && value.length >= 2) {
+      Timer(const Duration(seconds: 6), () {
+        if (mounted && _isLoading) {
+          setState(() {
+            _isLoading = false;
+          });
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.resetSearchState();
+          } catch (e) {
+            logDebug('重置搜索状态失败: $e');
+          }
+          logDebug('搜索超时，已重置加载状态');
 
-        // 显示超时提示
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('搜索超时，请重试'),
-              duration: const Duration(seconds: 2),
-              action: SnackBarAction(
-                label: '重试',
-                onPressed: () => _performSearch(value),
+          // 显示超时提示
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('搜索超时，请重试'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: '重试',
+                  onPressed: () => _performSearch(value),
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   @override
@@ -560,6 +571,7 @@ class NoteListViewState extends State<NoteListView> {
                       Expanded(
                         child: TextField(
                           controller: _searchController,
+                          focusNode: _searchFocusNode, // 使用管理的焦点节点
                           decoration: InputDecoration(
                             hintText: '搜索笔记...',
                             prefixIcon:

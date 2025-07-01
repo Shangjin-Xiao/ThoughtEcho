@@ -61,9 +61,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               onPressed: () => _toggleFormat(quill.Attribute.strikeThrough),
               isActive: _isFormatActive(quill.Attribute.strikeThrough),
               tooltip: '删除线',
-            ),
-
-            // 分隔符
+            ),            // 分隔符
             _buildSeparator(),
 
             // 标题组
@@ -84,6 +82,19 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               onPressed: () => _toggleHeader(3),
               isActive: _isHeaderActive(3),
               tooltip: '标题3',
+            ),
+
+            // 分隔符
+            _buildSeparator(),
+
+            // 字号和字体组 - 使用官方组件
+            quill.QuillToolbarFontSizeButton(
+              controller: widget.controller,
+              options: const quill.QuillToolbarFontSizeButtonOptions(),
+            ),
+            quill.QuillToolbarFontFamilyButton(
+              controller: widget.controller,
+              options: const quill.QuillToolbarFontFamilyButtonOptions(),
             ),
 
             // 分隔符

@@ -254,3 +254,9 @@ flutter_test_*_report.json
 pubspec.lock
 android/local.properties
 android/local.properties
+pubspec.lock
+windows/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+android/local.properties
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+android/local.properties

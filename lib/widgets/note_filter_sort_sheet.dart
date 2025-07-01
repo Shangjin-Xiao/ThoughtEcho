@@ -303,10 +303,15 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                       // Use the IconData from IconUtils
                       : (tagIcon is IconData) // Check if it's IconData
                       ? Icon(tagIcon, size: 16)
-                      : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)
-                if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                      : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
                   const SizedBox(width: 4),
-                Text(tag.name, style: theme.textTheme.bodyMedium),
+                Flexible(
+                  child: Text(
+                    tag.name, 
+                    style: theme.textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             onSelected: (selected) {
@@ -343,7 +348,13 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               children: [
                 Icon(icon, size: 16),
                 const SizedBox(width: 4),
-                Text(label, style: theme.textTheme.bodyMedium),
+                Flexible(
+                  child: Text(
+                    label, 
+                    style: theme.textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             onSelected: (selected) {
@@ -376,15 +387,20 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           final isSelected = _tempSelectedDayPeriods.contains(periodKey);
           // 使用预缓存的图标和标签，提升性能
           final icon = _dayPeriodIconCache[periodKey]!;
-          final label = _dayPeriodLabelCache[periodKey]!;
-          return FilterChip(
+          final label = _dayPeriodLabelCache[periodKey]!;          return FilterChip(
             selected: isSelected,
             label: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 16),
                 const SizedBox(width: 4),
-                Text(label, style: theme.textTheme.bodyMedium),
+                Flexible(
+                  child: Text(
+                    label, 
+                    style: theme.textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             onSelected: (selected) {
