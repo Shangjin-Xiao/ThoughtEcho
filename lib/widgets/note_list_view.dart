@@ -79,10 +79,21 @@ class NoteListViewState extends State<NoteListView> {
     _searchController.text = widget.searchQuery;
     _hasMore = true;
     _isLoading = true;
+
+    // 添加焦点节点监听器，用于Web平台的焦点管理
+    _searchFocusNode.addListener(_onFocusChanged);
+
     // 优化：延迟初始化数据流订阅，避免build过程中的副作用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDataStream();
     });
+  }
+
+  /// 焦点变化监听器，用于处理Web平台的焦点管理问题
+  void _onFocusChanged() {
+    if (!mounted) return;
+    // 可以在这里添加焦点变化时的逻辑
+    logDebug('搜索框焦点状态: ${_searchFocusNode.hasFocus}');
   }
 
   /// 优化：将数据流初始化分离到独立方法
@@ -216,8 +227,8 @@ class NoteListViewState extends State<NoteListView> {
 
   // 优化：新增方法：更新数据库监听流（改进版本）
   void _updateStreamSubscription() {
-    // 防止重复更新
-    if (_isLoading) return;
+    // 移除阻止更新的守卫条件，确保搜索和筛选能正常工作
+    logDebug('更新数据流订阅，当前加载状态: $_isLoading', source: 'NoteListView');
 
     setState(() {
       _isLoading = true; // 开始加载
@@ -262,6 +273,19 @@ class NoteListViewState extends State<NoteListView> {
                 _hasMore = list.length == _pageSize; // 判断是否还有更多
                 _isLoading = false; // 加载完成
               });
+
+              // 通知搜索控制器数据加载完成
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.setSearchState(false);
+              } catch (e) {
+                logDebug('更新搜索控制器状态失败: $e');
+              }
+
+              logDebug('数据流更新完成，加载了 ${list.length} 条记录', source: 'NoteListView');
             }
           },
           onError: (error) {
@@ -269,8 +293,28 @@ class NoteListViewState extends State<NoteListView> {
               setState(() {
                 _isLoading = false; // 出错时停止加载
               });
+
+              // 重置搜索控制器状态
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.resetSearchState();
+              } catch (e) {
+                logDebug('重置搜索控制器状态失败: $e');
+              }
+
+              logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+              
               // 优化：更友好的错误提示
-              _showErrorSnackBar('加载笔记失败: $error');
+              String errorMessage = '加载笔记失败';
+              if (error.toString().contains('TimeoutException')) {
+                errorMessage = '查询超时，请重试';
+              } else if (error.toString().contains('DatabaseException')) {
+                errorMessage = '数据库查询出错';
+              }
+              _showErrorSnackBar(errorMessage);
             }
           },
         );
@@ -297,7 +341,9 @@ class NoteListViewState extends State<NoteListView> {
   void dispose() {
     _quotesSub.cancel();
     _searchController.dispose();
-    _searchFocusNode.dispose(); // 清理焦点节点
+    // 安全地清理焦点节点和监听器
+    _searchFocusNode.removeListener(_onFocusChanged);
+    _searchFocusNode.dispose();
     _searchDebounceTimer?.cancel(); // 优化：清理防抖定时器
     super.dispose();
   }
@@ -472,6 +518,8 @@ class NoteListViewState extends State<NoteListView> {
   void _performSearch(String value) {
     if (!mounted) return;
 
+    logDebug('执行搜索: "$value"', source: 'NoteListView');
+
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
     if (value.isNotEmpty && value.length >= 2) {
       try {
@@ -488,9 +536,9 @@ class NoteListViewState extends State<NoteListView> {
     // 直接调用父组件的搜索回调
     widget.onSearchChanged(value);
 
-    // 优化：只有在实际搜索时才设置超时保护
+    // 优化：只有在实际搜索时才设置超时保护，缩短超时时间
     if (value.isNotEmpty && value.length >= 2) {
-      Timer(const Duration(seconds: 6), () {
+      Timer(const Duration(seconds: 4), () {
         if (mounted && _isLoading) {
           setState(() {
             _isLoading = false;
@@ -510,11 +558,13 @@ class NoteListViewState extends State<NoteListView> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('搜索超时，请重试'),
-                duration: const Duration(seconds: 2),
+                content: const Text('搜索超时，请重试或检查网络连接'),
+                duration: const Duration(seconds: 3),
                 behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.orange,
                 action: SnackBarAction(
                   label: '重试',
+                  textColor: Colors.white,
                   onPressed: () => _performSearch(value),
                 ),
               ),

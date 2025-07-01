@@ -22,6 +22,7 @@ class _LogsPageState extends State<LogsPage> {
   String? _filterSource;
   String? _searchQuery;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
 
   // 正在加载更多日志
   bool _isLoadingMore = false;
@@ -45,6 +46,7 @@ class _LogsPageState extends State<LogsPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose(); // 清理焦点节点
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
@@ -508,6 +510,7 @@ class _LogsPageState extends State<LogsPage> {
               padding: const EdgeInsets.all(8.0),
               child: TextField(
                 controller: _searchController,
+                focusNode: _searchFocusNode, // 使用管理的焦点节点
                 decoration: InputDecoration(
                   hintText: '搜索日志...',
                   prefixIcon: const Icon(Icons.search),

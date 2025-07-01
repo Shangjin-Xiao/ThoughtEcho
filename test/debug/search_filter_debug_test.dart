@@ -229,18 +229,64 @@ void main() {
           '✓ 大数据量查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
         );
 
-        if (stopwatch.elapsedMilliseconds > 10000) {
-          print('⚠️ 警告：查询时间超过10秒，可能会导致UI超时');
-        }
+        // 修复后的期望：查询应该在5秒内完成或超时
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(6000),
+          reason: '修复后查询应该在6秒内完成或抛出超时异常',
+        );
       } catch (e) {
         stopwatch.stop();
-        print('✗ 大数据量查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        print('查询结果: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
 
         if (e.toString().contains('TimeoutException')) {
-          print('确认：查询确实会超时');
+          print('✓ 超时机制正常工作，在 ${stopwatch.elapsedMilliseconds}ms 后抛出超时异常');
+          expect(
+            stopwatch.elapsedMilliseconds,
+            lessThan(6000),
+            reason: '超时应该在6秒内触发',
+          );
+        } else {
+          print('✗ 非超时异常: $e');
+          rethrow;
         }
+      }
+    });
 
-        // 不重新抛出异常，我们想要看到这个超时
+    test('测试搜索功能修复验证', () async {
+      // 添加测试数据
+      final categories = await databaseService.getCategories();
+      await databaseService.addQuote(Quote(
+        id: 'search_test_1',
+        content: '这是一个搜索测试笔记',
+        date: DateTime.now().toIso8601String(),
+        tagIds: categories.isNotEmpty ? [categories.first.id] : [],
+      ));
+
+      final stopwatch = Stopwatch()..start();
+
+      try {
+        final quotes = await databaseService.getUserQuotes(
+          searchQuery: '搜索测试',
+          limit: 20,
+          offset: 0,
+        );
+
+        stopwatch.stop();
+        print(
+          '✓ 搜索功能测试耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
+        );
+
+        expect(quotes.length, greaterThan(0), reason: '应该找到包含搜索关键词的笔记');
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(3000),
+          reason: '搜索应该在3秒内完成',
+        );
+      } catch (e) {
+        stopwatch.stop();
+        print('✗ 搜索功能测试失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        rethrow;
       }
     });
 

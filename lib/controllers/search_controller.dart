@@ -62,8 +62,8 @@ class NoteSearchController extends ChangeNotifier {
 
         _searchQuery = query;
 
-        // 优化：设置更合理的超时时间
-        _timeoutTimer = Timer(const Duration(seconds: 6), () {
+        // 优化：设置更合理的超时时间，与数据库查询超时保持一致
+        _timeoutTimer = Timer(const Duration(seconds: 5), () {
           if (_isSearching && _searchQuery == query && currentVersion == _searchVersion) {
             _isSearching = false;
             _searchError = '搜索超时，请重试';

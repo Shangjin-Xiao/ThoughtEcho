@@ -2062,7 +2062,13 @@ class DatabaseService extends ChangeNotifier {
         searchQuery: searchQuery,
         selectedWeathers: selectedWeathers,
         selectedDayPeriods: selectedDayPeriods,
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(
+        const Duration(seconds: 5), // 缩短超时时间
+        onTimeout: () {
+          logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
+          throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
+        },
+      );
 
       if (quotes.isEmpty) {
         // 没有更多数据了
