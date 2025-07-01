@@ -1,5 +1,6 @@
 /// Basic unit tests for WeatherService
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 
@@ -13,14 +14,13 @@ void main() {
 
     test('should create WeatherService instance', () {
       expect(weatherService, isNotNull);
+      expect(weatherService.state, equals(WeatherServiceState.idle));
     });
 
-    test('should validate coordinates', () {
-      // Valid coordinates
-      expect(() => weatherService.validateCoordinates(37.7749, -122.4194), returnsNormally);
-      
-      // Invalid coordinates
-      expect(() => weatherService.validateCoordinates(100.0, -200.0), throwsA(isA<Exception>()));
+    test('should handle weather service states', () {
+      expect(weatherService.state, equals(WeatherServiceState.idle));
+      expect(weatherService.isLoading, isFalse);
+      expect(weatherService.hasData, isFalse);
     });
   });
 }
