@@ -15,8 +15,11 @@ void main() {
     });
 
     test('should validate coordinates', () {
-      // Basic validation tests
-      expect(() => weatherService.toString(), returnsNormally);
+      // Valid coordinates
+      expect(() => weatherService.validateCoordinates(37.7749, -122.4194), returnsNormally);
+      
+      // Invalid coordinates
+      expect(() => weatherService.validateCoordinates(100.0, -200.0), throwsA(isA<Exception>()));
     });
   });
 }
