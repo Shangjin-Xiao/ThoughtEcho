@@ -10,7 +10,7 @@ class AppTheme with ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
   static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
 
-  late SafeMMKV _storage;
+  SafeMMKV? _storage;
   Color? _customColor;
   bool _useCustomColor = false;
   bool _useDynamicColor = true; // 默认启用动态取色
@@ -138,16 +138,16 @@ class AppTheme with ChangeNotifier {
 
     try {
       _storage = SafeMMKV();
-      await _storage.initialize();
+      await _storage!.initialize();
       _loadCustomColor();
       _loadThemeMode();
 
       // 首次运行时，不读取存储的设置，保持默认开启
-      if (_storage.containsKey(_useDynamicColorKey)) {
+      if (_storage!.containsKey(_useDynamicColorKey)) {
         _loadDynamicColorSettings();
       } else {
         // 首次运行，设置默认值
-        await _storage.setBool(_useDynamicColorKey, true);
+        await _storage!.setBool(_useDynamicColorKey, true);
         _useDynamicColor = true; // 确保内存中的值也同步更新
       }
 
@@ -214,7 +214,7 @@ class AppTheme with ChangeNotifier {
   // 设置自定义颜色
   Future<void> setCustomColor(Color color) async {
     _customColor = color;
-    await _storage.setInt(
+    await _storage?.setInt(
       _customColorKey,
       color.toARGB32(),
     ); // MODIFIED (reverted as .value is correct for ARGB)
@@ -224,34 +224,34 @@ class AppTheme with ChangeNotifier {
   // 切换是否使用自定义颜色
   Future<void> setUseCustomColor(bool value) async {
     _useCustomColor = value;
-    await _storage.setBool(_useCustomColorKey, value);
+    await _storage?.setBool(_useCustomColorKey, value);
     notifyListeners();
   }
 
   // 设置主题模式
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    await _storage.setString(_themeModeKey, mode.name);
+    await _storage?.setString(_themeModeKey, mode.name);
     notifyListeners();
   }
 
   // 设置是否使用动态取色
   Future<void> setUseDynamicColor(bool value) async {
     _useDynamicColor = value;
-    await _storage.setBool(_useDynamicColorKey, value);
+    await _storage?.setBool(_useDynamicColorKey, value);
     notifyListeners();
   }
 
   // 从持久化存储加载自定义颜色设置
   void _loadCustomColor() {
     try {
-      final colorValue = _storage.getInt(_customColorKey);
+      final colorValue = _storage?.getInt(_customColorKey);
       if (colorValue != null) {
         _customColor = Color(
           colorValue,
         ); // This is correct for reconstructing Color from ARGB int
       }
-      _useCustomColor = _storage.getBool(_useCustomColorKey) ?? false;
+      _useCustomColor = _storage?.getBool(_useCustomColorKey) ?? false;
     } catch (e) {
       logDebug('加载自定义颜色失败: $e');
       _customColor = Colors.blue;
@@ -262,7 +262,7 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载主题模式
   void _loadThemeMode() {
     try {
-      final modeString = _storage.getString(_themeModeKey);
+      final modeString = _storage?.getString(_themeModeKey);
       if (modeString != null) {
         _themeMode = ThemeMode.values.byName(modeString);
       }
@@ -275,7 +275,7 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载动态取色设置
   void _loadDynamicColorSettings() {
     try {
-      final useDynamic = _storage.getBool(_useDynamicColorKey);
+      final useDynamic = _storage?.getBool(_useDynamicColorKey);
       if (useDynamic != null) {
         _useDynamicColor = useDynamic;
       }

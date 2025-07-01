@@ -9,7 +9,7 @@ class MMKVService {
 
   factory MMKVService() => _instance;
 
-  late final SafeMMKV _storage; // 使用我们的安全包装类
+  SafeMMKV? _storage; // 使用我们的安全包装类
   bool _isInitialized = false;
 
   MMKVService._internal();
@@ -20,7 +20,7 @@ class MMKVService {
 
     try {
       _storage = SafeMMKV(); // 使用安全包装类
-      await _storage.initialize(); // 初始化存储
+      await _storage!.initialize(); // 初始化存储
       logDebug('MMKV已初始化，使用安全包装');
       _isInitialized = true;
     } catch (e) {
@@ -40,7 +40,7 @@ class MMKVService {
   Future<bool> setString(String key, String value) async {
     _ensureInitialized();
     try {
-      return await _storage.setString(key, value);
+      return await _storage!.setString(key, value);
     } catch (e) {
       logDebug('MMKV保存字符串失败: $e');
       return false;
@@ -51,7 +51,7 @@ class MMKVService {
   String? getString(String key) {
     _ensureInitialized();
     try {
-      return _storage.getString(key);
+      return _storage!.getString(key);
     } catch (e) {
       logDebug('MMKV获取字符串失败: $e');
       return null;
@@ -62,7 +62,7 @@ class MMKVService {
   Future<bool> setBool(String key, bool value) async {
     _ensureInitialized();
     try {
-      return await _storage.setBool(key, value);
+      return await _storage!.setBool(key, value);
     } catch (e) {
       logDebug('MMKV保存布尔值失败: $e');
       return false;
@@ -73,7 +73,7 @@ class MMKVService {
   bool? getBool(String key) {
     _ensureInitialized();
     try {
-      return _storage.getBool(key);
+      return _storage!.getBool(key);
     } catch (e) {
       logDebug('MMKV获取布尔值失败: $e');
       return null;
@@ -84,7 +84,7 @@ class MMKVService {
   Future<bool> setInt(String key, int value) async {
     _ensureInitialized();
     try {
-      return await _storage.setInt(key, value);
+      return await _storage!.setInt(key, value);
     } catch (e) {
       logDebug('MMKV保存整数值失败: $e');
       return false;
@@ -95,7 +95,7 @@ class MMKVService {
   int? getInt(String key) {
     _ensureInitialized();
     try {
-      return _storage.getInt(key);
+      return _storage!.getInt(key);
     } catch (e) {
       logDebug('MMKV获取整数值失败: $e');
       return null;
@@ -106,7 +106,7 @@ class MMKVService {
   Future<bool> setDouble(String key, double value) async {
     _ensureInitialized();
     try {
-      return await _storage.setDouble(key, value);
+      return await _storage!.setDouble(key, value);
     } catch (e) {
       logDebug('MMKV保存浮点值失败: $e');
       return false;
@@ -117,7 +117,7 @@ class MMKVService {
   double? getDouble(String key) {
     _ensureInitialized();
     try {
-      return _storage.getDouble(key);
+      return _storage!.getDouble(key);
     } catch (e) {
       logDebug('MMKV获取浮点值失败: $e');
       return null;
@@ -128,7 +128,7 @@ class MMKVService {
   Future<bool> setStringList(String key, List<String> value) async {
     _ensureInitialized();
     try {
-      return await _storage.setStringList(key, value);
+      return await _storage!.setStringList(key, value);
     } catch (e) {
       logDebug('MMKV保存字符串列表失败: $e');
       return false;
@@ -139,7 +139,7 @@ class MMKVService {
   List<String>? getStringList(String key) {
     _ensureInitialized();
     try {
-      return _storage.getStringList(key);
+      return _storage!.getStringList(key);
     } catch (e) {
       logDebug('MMKV获取字符串列表失败: $e');
       return null;
@@ -175,7 +175,7 @@ class MMKVService {
   bool containsKey(String key) {
     _ensureInitialized();
     try {
-      return _storage.containsKey(key);
+      return _storage!.containsKey(key);
     } catch (e) {
       logDebug('MMKV检查键失败: $e');
       return false;
@@ -186,7 +186,7 @@ class MMKVService {
   Future<bool> remove(String key) async {
     _ensureInitialized();
     try {
-      return await _storage.remove(key);
+      return await _storage!.remove(key);
     } catch (e) {
       logDebug('MMKV删除键失败: $e');
       return false;
@@ -197,7 +197,7 @@ class MMKVService {
   Future<bool> clear() async {
     _ensureInitialized();
     try {
-      return await _storage.clear();
+      return await _storage!.clear();
     } catch (e) {
       logDebug('MMKV清除所有数据失败: $e');
       return false;
@@ -208,7 +208,7 @@ class MMKVService {
   List<String> getAllKeys() {
     _ensureInitialized();
     try {
-      return _storage.getKeys().toList();
+      return _storage!.getKeys().toList();
     } catch (e) {
       logDebug('MMKV获取所有键失败: $e');
       return [];
