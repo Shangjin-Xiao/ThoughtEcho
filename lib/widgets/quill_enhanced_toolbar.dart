@@ -27,7 +27,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         color: theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -285,7 +285,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               size: 18, // 稍微增大图标尺寸
               color:
                   onPressed == null
-                      ? theme.colorScheme.onSurface.withOpacity(0.38)
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.38)
                       : isActive
                       ? theme.colorScheme.onPrimaryContainer
                       : theme.colorScheme.onSurface,
@@ -302,7 +302,9 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       width: 1,
       height: 24,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5),
+      color: Theme.of(
+        context,
+      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
     );
   }
 
@@ -904,7 +906,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
   // 标题相关方法
   void _toggleHeader(int level) {
-    final attribute = quill.Attribute.header.withValue(level);
+    final attribute = quill.Attribute.fromKeyValue('header', level);
     widget.controller.formatSelection(attribute);
   }
 
@@ -939,7 +941,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
     widget.controller.document.insert(index, '\n');
     widget.controller.document.insert(
       index + 1,
-      quill.BlockEmbed.horizontalRule,
+      quill.BlockEmbed.custom(quill.CustomBlockEmbed('divider', '')),
     );
     widget.controller.updateSelection(
       TextSelection.collapsed(offset: index + 2),
@@ -1044,7 +1046,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   }
 
   void _applyColor(Color color, String type) {
-    final hex = '#${color.value.toRadixString(16).substring(2)}';
+    final hex =
+        '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
     if (type == 'text') {
       widget.controller.formatSelection(quill.ColorAttribute(hex));
     } else {
