@@ -1383,91 +1383,195 @@ class DatabaseService extends ChangeNotifier {
   }) async {
     try {
       if (kIsWeb) {
-        // Web平台的逻辑保持不变
+        // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered =
-              filtered
-                  .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
-                  .toList();
+          filtered = filtered
+              .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+              .toList();
         }
-        // ... 其他web筛选 ...
-        return filtered;
+        if (categoryId != null && categoryId.isNotEmpty) {
+          filtered = filtered.where((q) => q.categoryId == categoryId).toList();
+        }
+        if (searchQuery != null && searchQuery.isNotEmpty) {
+          final query = searchQuery.toLowerCase();
+          filtered = filtered.where((q) =>
+              q.content.toLowerCase().contains(query) ||
+              (q.source?.toLowerCase().contains(query) ?? false) ||
+              (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+              (q.sourceWork?.toLowerCase().contains(query) ?? false)
+          ).toList();
+        }
+        if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+          filtered = filtered.where((q) =>
+              q.weather != null && selectedWeathers.contains(q.weather)
+          ).toList();
+        }
+        if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+          filtered = filtered.where((q) =>
+              q.dayPeriod != null && selectedDayPeriods.contains(q.dayPeriod)
+          ).toList();
+        }
+        
+        // 排序
+        filtered.sort((a, b) {
+          if (orderBy.startsWith('date')) {
+            final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
+            final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
+            return orderBy.contains('ASC') ? dateA.compareTo(dateB) : dateB.compareTo(dateA);
+          } else {
+            return orderBy.contains('ASC') ? a.content.compareTo(b.content) : b.content.compareTo(a.content);
+          }
+        });
+        
+        // 分页
+        final start = offset.clamp(0, filtered.length);
+        final end = (offset + limit).clamp(0, filtered.length);
+        return filtered.sublist(start, end);
       }
 
       final db = database;
-      List<String> conditions = [];
-      List<dynamic> args = [];
-
-      // 分类筛选
-      if (categoryId != null && categoryId.isNotEmpty) {
-        conditions.add('q.category_id = ?');
-        args.add(categoryId);
+      
+      // 添加查询超时保护
+      final completer = Completer<List<Quote>>();
+      Timer? timeoutTimer;
+      
+      try {
+        // 设置12秒超时
+        timeoutTimer = Timer(const Duration(seconds: 12), () {
+          if (!completer.isCompleted) {
+            completer.completeError(TimeoutException('数据库查询超时', const Duration(seconds: 12)));
+          }
+        });
+        
+        // 异步执行查询
+        _performDatabaseQuery(
+          db: db,
+          tagIds: tagIds,
+          categoryId: categoryId,
+          searchQuery: searchQuery,
+          selectedWeathers: selectedWeathers,
+          selectedDayPeriods: selectedDayPeriods,
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
+        ).then((result) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            completer.complete(result);
+          }
+        }).catchError((error) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            completer.completeError(error);
+          }
+        });
+        
+        return await completer.future;
+      } finally {
+        timeoutTimer?.cancel();
       }
-
-      // 搜索查询
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        conditions.add(
-          '(q.content LIKE ? OR q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?)',
-        );
-        final searchParam = '%$searchQuery%';
-        args.addAll([searchParam, searchParam, searchParam, searchParam]);
+    } catch (e) {
+      logError('获取笔记失败: $e', error: e, source: 'DatabaseService');
+      if (e is TimeoutException) {
+        throw e; // 重新抛出超时异常，让调用者处理
       }
+      return [];
+    }
+  }
+  
+  /// 执行实际的数据库查询（优化版本）
+  Future<List<Quote>> _performDatabaseQuery({
+    required Database db,
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    required String orderBy,
+    required int limit,
+    required int offset,
+  }) async {
+    List<String> conditions = [];
+    List<dynamic> args = [];
 
-      // 天气筛选
-      if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        final weatherConditions = selectedWeathers
-            .map((_) => 'q.weather = ?')
-            .join(' OR ');
-        conditions.add('($weatherConditions)');
-        args.addAll(selectedWeathers);
-      }
+    // 分类筛选
+    if (categoryId != null && categoryId.isNotEmpty) {
+      conditions.add('q.category_id = ?');
+      args.add(categoryId);
+    }
 
-      // 时间段筛选
-      if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodConditions = selectedDayPeriods
-            .map((_) => 'q.day_period = ?')
-            .join(' OR ');
-        conditions.add('($dayPeriodConditions)');
-        args.addAll(selectedDayPeriods);
-      }
+    // 搜索查询
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      conditions.add(
+        '(q.content LIKE ? OR q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?)',
+      );
+      final searchParam = '%$searchQuery%';
+      args.addAll([searchParam, searchParam, searchParam, searchParam]);
+    }
 
-      // 标签筛选 (使用子查询)
-      if (tagIds != null && tagIds.isNotEmpty) {
-        // 找到包含所有指定标签的 quote_id
-        final subQuery =
-            'SELECT quote_id FROM quote_tags WHERE tag_id IN (${tagIds.map((_) => '?').join(',')}) GROUP BY quote_id HAVING COUNT(DISTINCT tag_id) = ?';
-        conditions.add('q.id IN ($subQuery)');
+    // 天气筛选
+    if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+      final weatherConditions = selectedWeathers
+          .map((_) => 'q.weather = ?')
+          .join(' OR ');
+      conditions.add('($weatherConditions)');
+      args.addAll(selectedWeathers);
+    }
+
+    // 时间段筛选
+    if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+      final dayPeriodConditions = selectedDayPeriods
+          .map((_) => 'q.day_period = ?')
+          .join(' OR ');
+      conditions.add('($dayPeriodConditions)');
+      args.addAll(selectedDayPeriods);
+    }
+
+    String query;
+    List<dynamic> finalArgs;
+
+    // 优化标签筛选逻辑
+    if (tagIds != null && tagIds.isNotEmpty) {
+      // 使用更高效的EXISTS子查询代替复杂的GROUP BY HAVING
+      if (tagIds.length == 1) {
+        // 单个标签的简单查询
+        conditions.add('EXISTS (SELECT 1 FROM quote_tags qt WHERE qt.quote_id = q.id AND qt.tag_id = ?)');
+        args.add(tagIds.first);
+      } else {
+        // 多个标签时使用优化的子查询
+        final tagPlaceholders = tagIds.map((_) => '?').join(',');
+        conditions.add('''
+          (SELECT COUNT(DISTINCT qt.tag_id) 
+           FROM quote_tags qt 
+           WHERE qt.quote_id = q.id AND qt.tag_id IN ($tagPlaceholders)) = ?
+        ''');
         args.addAll(tagIds);
         args.add(tagIds.length);
       }
-
-      final where =
-          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-
-      // 主查询，使用 LEFT JOIN 和 GROUP_CONCAT
-      final query = '''
-        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
-        FROM quotes q
-        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
-        $where
-        GROUP BY q.id
-        ORDER BY $orderBy
-        LIMIT ? OFFSET ?
-      ''';
-
-      final finalArgs =
-          List.from(args)
-            ..add(limit)
-            ..add(offset);
-
-      final maps = await db.rawQuery(query, finalArgs);
-
-      return maps.map((m) => Quote.fromJson(m)).toList();
-    } catch (e) {
-      logDebug('获取引用错误: $e');
-      return [];
     }
+
+    final where = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+    // 使用简化的查询，避免GROUP_CONCAT的性能问题
+    query = '''
+      SELECT q.*, (
+        SELECT GROUP_CONCAT(qt.tag_id) 
+        FROM quote_tags qt 
+        WHERE qt.quote_id = q.id
+      ) as tag_ids
+      FROM quotes q
+      $where
+      ORDER BY $orderBy
+      LIMIT ? OFFSET ?
+    ''';
+
+    finalArgs = List.from(args)..addAll([limit, offset]);
+
+    logDebug('执行查询，条件: ${conditions.length}个, 参数: ${finalArgs.length}个');
+
+    final maps = await db.rawQuery(query, finalArgs);
+    return maps.map((m) => Quote.fromJson(m)).toList();
   }
 
   /// 获取笔记总数，用于分页
@@ -1853,11 +1957,22 @@ class DatabaseService extends ChangeNotifier {
             selectedDayPeriods: selectedDayPeriods,
           );
         } catch (e) {
-          logDebug('数据初始化或加载失败: $e');
+          logError('数据初始化或加载失败: $e', error: e, source: 'DatabaseService');
           // 即使失败也发送空列表，避免UI挂起
-          _quotesController?.add([]);
+          if (_quotesController != null && !_quotesController!.isClosed) {
+            _quotesController!.add([]);
+          }
         }
-      });
+      }).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          logError('数据加载超时', source: 'DatabaseService');
+          // 超时时发送空列表
+          if (_quotesController != null && !_quotesController!.isClosed) {
+            _quotesController!.add([]);
+          }
+        },
+      );
     }
 
     return _quotesController!.stream;
@@ -1892,7 +2007,7 @@ class DatabaseService extends ChangeNotifier {
         searchQuery: searchQuery,
         selectedWeathers: selectedWeathers,
         selectedDayPeriods: selectedDayPeriods,
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (quotes.isEmpty) {
         // 没有更多数据了
@@ -1907,10 +2022,15 @@ class DatabaseService extends ChangeNotifier {
         _quotesController!.add(List.from(_currentQuotes));
       }
     } catch (e) {
-      logDebug('加载更多笔记失败: $e');
+      logError('加载更多笔记失败: $e', error: e, source: 'DatabaseService');
       // 确保即使出错也通知UI，避免无限加载状态
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.add(List.from(_currentQuotes));
+      }
+      
+      // 如果是超时错误，重新抛出让UI处理
+      if (e is TimeoutException) {
+        rethrow;
       }
     } finally {
       _isLoading = false; // 确保加载状态总是被重置
