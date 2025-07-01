@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../services/backup_service.dart';
+import '../services/large_file_manager.dart';
 import '../utils/time_utils.dart';
 
 /// 备份与还原页面
@@ -22,6 +23,9 @@ class BackupRestorePage extends StatefulWidget {
 class _BackupRestorePageState extends State<BackupRestorePage> {
   bool _isLoading = false;
   bool _includeMediaFiles = true; // 默认包含媒体文件
+  double _progress = 0.0;
+  String _progressText = '';
+  CancelToken? _cancelToken;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +109,42 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ),
             ),
 
+            // 进度显示
+            if (_isLoading) ...[
+              const SizedBox(height: 16),
+              Column(
+                children: [
+                  LinearProgressIndicator(value: _progress / 100),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _progressText,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Text(
+                        '${_progress.toStringAsFixed(0)}%',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      _cancelToken?.cancel();
+                      setState(() {
+                        _isLoading = false;
+                        _progress = 0.0;
+                        _progressText = '';
+                      });
+                    },
+                    child: const Text('取消'),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 8),
             Text(
               '将创建${_includeMediaFiles ? 'ZIP' : 'JSON'}格式的备份文件，包含所有笔记、设置${_includeMediaFiles ? '和媒体文件' : ''}',
@@ -158,6 +198,45 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ),
               ),
             ),
+
+            // 还原进度显示
+            if (_isLoading) ...[
+              const SizedBox(height: 16),
+              Column(
+                children: [
+                  LinearProgressIndicator(value: _progress / 100),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _progressText,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${_progress.toStringAsFixed(0)}%',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      _cancelToken?.cancel();
+                      setState(() {
+                        _isLoading = false;
+                        _progress = 0.0;
+                        _progressText = '';
+                      });
+                    },
+                    child: const Text('取消'),
+                  ),
+                ],
+              ),
+            ],
 
             const SizedBox(height: 8),
             Text(
