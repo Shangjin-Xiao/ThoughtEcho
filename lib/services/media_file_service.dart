@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'large_file_manager.dart';
 
 /// 媒体文件管理服务
 /// 优化版本：支持文件压缩、流式处理和内存优化
@@ -20,232 +21,126 @@ class MediaFileService {
       await mediaDir.create(recursive: true);
     }
     return mediaDir;
-  }
-
-  /// 流式保存图片（避免内存溢出）
+  }  /// 流式保存图片（使用LargeFileManager，避免内存溢出）
   static Future<String?> saveImage(
     String sourcePath, {
     Function(double progress)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     try {
-      // 预检查文件大小和可用空间
-      if (!await _preCheckFile(sourcePath)) {
-        return null;
-      }
+      return await LargeFileManager.executeWithMemoryProtection(
+        () async {
+          // 使用LargeFileManager的文件检查
+          if (!await LargeFileManager.canProcessFile(sourcePath)) {
+            throw Exception('文件无法处理或过大');
+          }
 
-      final imageDir = await _getMediaDirectory(_imagesFolder);
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
-      final targetPath = path.join(imageDir.path, fileName);
+          final imageDir = await _getMediaDirectory(_imagesFolder);
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+          final targetPath = path.join(imageDir.path, fileName);
 
-      // 使用流式复制，避免大文件一次性加载到内存
-      await _copyFileInChunks(sourcePath, targetPath, onProgress: onProgress);
-      return targetPath;
+          // 使用LargeFileManager的分块复制，支持取消和进度回调
+          await LargeFileManager.copyFileInChunks(
+            sourcePath, 
+            targetPath,
+            onProgress: (current, total) {
+              cancelToken?.throwIfCancelled();
+              if (onProgress != null && total > 0) {
+                onProgress(current / total);
+              }
+            },
+          );
+          
+          return targetPath;
+        },
+        operationName: '图片保存',
+      );
     } catch (e) {
       debugPrint('保存图片失败: $e');
       return null;
     }
-  }
-
-  /// 复制视频到私有目录（增强的大文件处理）
+  }  /// 复制视频到私有目录（使用LargeFileManager处理大文件）
   static Future<String?> saveVideo(
     String sourcePath, {
     Function(double progress)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     try {
-      // 对视频文件进行更严格的预检查
-      if (!await _preCheckVideoFile(sourcePath)) {
-        return null;
-      }
+      return await LargeFileManager.executeWithMemoryProtection(
+        () async {
+          // 使用LargeFileManager的文件检查（包含大文件支持）
+          if (!await LargeFileManager.canProcessFile(sourcePath)) {
+            throw Exception('视频文件无法处理或过大');
+          }
 
-      final videoDir = await _getMediaDirectory(_videosFolder);
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
-      final targetPath = path.join(videoDir.path, fileName);
+          final videoDir = await _getMediaDirectory(_videosFolder);
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+          final targetPath = path.join(videoDir.path, fileName);
 
-      // 使用增强的流式复制，带进度回调
-      await _copyFileInChunks(sourcePath, targetPath, onProgress: onProgress);
-      return targetPath;
+          // 使用LargeFileManager的分块复制，支持大视频文件
+          await LargeFileManager.copyFileInChunks(
+            sourcePath, 
+            targetPath,
+            onProgress: (current, total) {
+              cancelToken?.throwIfCancelled();
+              if (onProgress != null && total > 0) {
+                onProgress(current / total);
+              }
+            },
+          );
+          
+          return targetPath;
+        },
+        operationName: '视频保存',
+      );
     } catch (e) {
       debugPrint('保存视频失败: $e');
       return null;
     }
-  }
-
-  /// 复制音频到私有目录
+  }  /// 复制音频到私有目录（使用LargeFileManager）
   static Future<String?> saveAudio(
     String sourcePath, {
     Function(double progress)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     try {
-      // 预检查文件大小和可用空间
-      if (!await _preCheckFile(sourcePath)) {
-        return null;
-      }
+      return await LargeFileManager.executeWithMemoryProtection(
+        () async {
+          // 使用LargeFileManager的文件检查
+          if (!await LargeFileManager.canProcessFile(sourcePath)) {
+            throw Exception('音频文件无法处理或过大');
+          }
 
-      final audioDir = await _getMediaDirectory(_audiosFolder);
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
-      final targetPath = path.join(audioDir.path, fileName);
+          final audioDir = await _getMediaDirectory(_audiosFolder);
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+          final targetPath = path.join(audioDir.path, fileName);
 
-      // 使用流式复制，避免大文件一次性加载到内存
-      await _copyFileInChunks(sourcePath, targetPath, onProgress: onProgress);
-      return targetPath;
+          // 使用LargeFileManager的分块复制
+          await LargeFileManager.copyFileInChunks(
+            sourcePath, 
+            targetPath,
+            onProgress: (current, total) {
+              cancelToken?.throwIfCancelled();
+              if (onProgress != null && total > 0) {
+                onProgress(current / total);
+              }
+            },
+          );
+          
+          return targetPath;
+        },
+        operationName: '音频保存',
+      );
     } catch (e) {
       debugPrint('保存音频失败: $e');
       return null;
     }
   }
-
-  /// 流式文件复制（分块处理，避免内存溢出）
-  static Future<void> _copyFileInChunks(
-    String sourcePath,
-    String targetPath, {
-    Function(double progress)? onProgress,
-  }) async {
-    const chunkSize = 64 * 1024; // 64KB 块大小，平衡性能和内存使用
-    final sourceFile = File(sourcePath);
-    final targetFile = File(targetPath);
-
-    // 确保源文件存在
-    if (!await sourceFile.exists()) {
-      throw Exception('源文件不存在: $sourcePath');
-    }
-
-    // 确保目标目录存在
-    await targetFile.parent.create(recursive: true);
-
-    // 获取文件总大小用于进度计算
-    final totalSize = await sourceFile.length();
-    int copiedBytes = 0;
-
-    // 使用流式复制，内存友好的方式处理大文件
-    final sourceStream = sourceFile.openRead();
-    final targetSink = targetFile.openWrite();
-
-    try {
-      await for (final chunk in sourceStream) {
-        targetSink.add(chunk);
-        copiedBytes += chunk.length;
-
-        // 报告进度
-        if (onProgress != null && totalSize > 0) {
-          final progress = copiedBytes / totalSize;
-          onProgress(progress);
-        }
-
-        // 定期刷新，确保数据写入磁盘
-        if (copiedBytes % (chunkSize * 16) == 0) {
-          await targetSink.flush();
-        }
-      }
-
-      await targetSink.flush();
-
-      // 验证复制是否成功
-      if (!await targetFile.exists()) {
-        throw Exception('文件复制失败，目标文件未创建');
-      }
-
-      // 验证文件大小一致性
-      final targetSize = await targetFile.length();
-      if (targetSize != totalSize) {
-        throw Exception('文件复制不完整，大小不匹配: 期望 $totalSize，实际 $targetSize');
-      }
-
-      debugPrint(
-        '文件复制成功: $sourcePath -> $targetPath (${(totalSize / 1024 / 1024).toStringAsFixed(1)}MB)',
-      );
-    } catch (e) {
-      // 清理可能的不完整文件
-      try {
-        if (await targetFile.exists()) {
-          await targetFile.delete();
-        }
-      } catch (_) {}
-
-      debugPrint('文件复制失败: $e');
-      rethrow;
-    } finally {
-      await targetSink.close();
-    }
-  }
-
-  /// 预检查文件（通用）
-  static Future<bool> _preCheckFile(String filePath) async {
-    try {
-      final file = File(filePath);
-      if (!await file.exists()) {
-        debugPrint('文件不存在: $filePath');
-        return false;
-      }
-
-      final fileSize = await file.length();
-      const maxGeneralFileSize = 500 * 1024 * 1024; // 500MB限制
-
-      if (fileSize > maxGeneralFileSize) {
-        debugPrint(
-          '文件过大 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)，超过限制 (500MB): $filePath',
-        );
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('预检查文件失败: $e');
-      return false;
-    }
-  }
-
-  /// 预检查视频文件（更严格的限制）
-  static Future<bool> _preCheckVideoFile(String filePath) async {
-    try {
-      final file = File(filePath);
-      if (!await file.exists()) {
-        debugPrint('视频文件不存在: $filePath');
-        return false;
-      }
-
-      final fileSize = await file.length();
-
-      // 视频文件更严格的大小限制
-      const maxVideoSize = 1024 * 1024 * 1024; // 1GB限制
-      const minVideoSize = 1024; // 最小1KB，避免空文件
-
-      if (fileSize < minVideoSize) {
-        debugPrint('视频文件过小，可能损坏: $filePath');
-        return false;
-      }
-
-      if (fileSize > maxVideoSize) {
-        debugPrint(
-          '视频文件过大 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)，超过限制 (1GB): $filePath',
-        );
-        return false;
-      }
-
-      // 检查文件扩展名
-      final extension = path.extension(filePath).toLowerCase();
-      const supportedVideoExtensions = {
-        '.mp4',
-        '.mov',
-        '.avi',
-        '.mkv',
-        '.webm',
-        '.3gp',
-      };
-
-      if (!supportedVideoExtensions.contains(extension)) {
-        debugPrint('不支持的视频格式: $extension');
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('预检查视频文件失败: $e');
-      return false;
-    }
-  }
+  /// 使用LargeFileManager替代原有的复制逻辑，已迁移到上面的方法中
+  /// 保留一些辅助方法用于向后兼容和其他功能
 
   /// 安全检查文件大小（不读取整个文件内容）
   static Future<int> getFileSizeSecurely(String filePath) async {
@@ -378,7 +273,6 @@ class MediaFileService {
       return false;
     }
   }
-
   /// 安全导入大文件工具（带进度和取消支持）
   static Future<String?> importLargeFileSecurely(
     String sourcePath,
@@ -387,8 +281,8 @@ class MediaFileService {
     Function()? onCancel,
   }) async {
     try {
-      // 预检查
-      if (!await _preCheckVideoFile(sourcePath)) {
+      // 使用LargeFileManager进行预检查
+      if (!await LargeFileManager.canProcessFile(sourcePath)) {
         return null;
       }
 
@@ -407,8 +301,16 @@ class MediaFileService {
         await targetDir.create(recursive: true);
       }
 
-      // 执行安全复制
-      await _copyFileInChunks(sourcePath, targetPath, onProgress: onProgress);
+      // 使用LargeFileManager执行安全复制
+      await LargeFileManager.copyFileInChunks(
+        sourcePath, 
+        targetPath,
+        onProgress: (current, total) {
+          if (onProgress != null && total > 0) {
+            onProgress(current / total);
+          }
+        },
+      );
 
       return targetPath;
     } catch (e) {

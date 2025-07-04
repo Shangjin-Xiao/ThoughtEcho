@@ -564,8 +564,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
     try {
       String? savedPath;
-      
-      // 根据类型保存文件，带进度回调
+        // 根据类型保存文件，带进度回调和取消支持
       switch (type) {
         case 'image':
           savedPath = await MediaFileService.saveImage(
@@ -574,6 +573,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               // 进度回调可以在这里更新UI
               debugPrint('图片导入进度: ${(progress * 100).toStringAsFixed(1)}%');
             },
+            cancelToken: cancelToken,
           );
           break;
         case 'video':
@@ -582,6 +582,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
             onProgress: (progress) {
               debugPrint('视频导入进度: ${(progress * 100).toStringAsFixed(1)}%');
             },
+            cancelToken: cancelToken,
           );
           break;
         case 'audio':
@@ -590,10 +591,11 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
             onProgress: (progress) {
               debugPrint('音频导入进度: ${(progress * 100).toStringAsFixed(1)}%');
             },
+            cancelToken: cancelToken,
           );
           break;
         default:
-          savedPath = await MediaFileService.saveImage(filePath);
+          savedPath = await MediaFileService.saveImage(filePath, cancelToken: cancelToken);
       }
 
       // 检查是否被取消

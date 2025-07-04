@@ -727,9 +727,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         debugPrint(
           'Large file detected (${(file / (1024 * 1024)).toStringAsFixed(1)}MB), using stream processing',
         );
-      }
-
-      // 首先将媒体文件保存到应用私有目录
+      }      // 使用LargeFileManager支持的MediaFileService保存文件
       String? savedPath;
       switch (type) {
         case 'image':

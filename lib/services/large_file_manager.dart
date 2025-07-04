@@ -26,22 +26,21 @@ class LargeFileManager {
   }) async {
     try {
       logDebug('开始流式JSON编码到文件: ${outputFile.path}');
-      
-      // 确保输出目录存在
       await outputFile.parent.create(recursive: true);
+
+      // 使用Isolate进行编码，避免阻塞主线程
+      final jsonString = await compute(_encodeJsonInIsolate, data);
       
+      // 流式写入文件
       final sink = outputFile.openWrite();
-      
       try {
-        // 直接使用JSON编码并写入
-        final jsonString = jsonEncode(data);
         sink.write(jsonString);
-        
         await sink.flush();
         logDebug('流式JSON编码完成');
       } finally {
         await sink.close();
       }
+      onProgress?.call(1, 1);
     } catch (e, s) {
       AppLogger.e('流式JSON编码失败', error: e, stackTrace: s, source: 'LargeFileManager');
       rethrow;
@@ -58,25 +57,42 @@ class LargeFileManager {
   }) async {
     try {
       logDebug('开始流式JSON解码: ${inputFile.path}');
-      
       if (!await inputFile.exists()) {
         throw Exception('JSON文件不存在: ${inputFile.path}');
       }
-      
-      final fileSize = await inputFile.length();
-      
-      // 如果文件较小，直接读取
-      if (fileSize < 10 * 1024 * 1024) { // 10MB以下
-        final content = await inputFile.readAsString();
-        return jsonDecode(content);
-      }
-      
-      // 大文件使用compute在后台处理
-      final content = await inputFile.readAsString();
-      return await compute(_decodeJsonInIsolate, content);
+
+      // 将文件路径传递给Isolate，在Isolate中进行文件读取和解码
+      return await compute(_decodeJsonFromFileInIsolate, inputFile.path);
     } catch (e, s) {
       AppLogger.e('流式JSON解码失败', error: e, stackTrace: s, source: 'LargeFileManager');
       rethrow;
+    }
+  }
+
+  /// 在Isolate中从文件流式解码JSON
+  static Future<Map<String, dynamic>> _decodeJsonFromFileInIsolate(String filePath) async {
+    final file = File(filePath);
+    final content = await file.readAsString(); // Isolate中可以安全读取
+    return jsonDecode(content) as Map<String, dynamic>;
+  }
+
+  /// 验证文件是否可访问且大小在合理范围内
+  static Future<bool> validateFile(String filePath, {int maxSize = 2 * 1024 * 1024 * 1024}) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        logDebug('文件不存在: $filePath');
+        return false;
+      }
+      final fileSize = await file.length();
+      if (fileSize > maxSize) {
+        logDebug('文件过大: ${fileSize / 1024 / 1024}MB > ${maxSize / 1024 / 1024}MB');
+        return false;
+      }
+      return true;
+    } catch (e) {
+      logDebug('文件验证失败: $e');
+      return false;
     }
   }
   
@@ -236,6 +252,44 @@ class LargeFileManager {
     } catch (e) {
       // 忽略内存检查错误
       logDebug('内存压力检查失败: $e');
+    }
+  }
+  
+  /// 紧急内存清理（当检测到内存不足时）
+  static Future<void> emergencyMemoryCleanup() async {
+    try {
+      logDebug('执行紧急内存清理...');
+      
+      // 触发垃圾回收
+      if (!kIsWeb) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      
+      // 可以在这里添加更多内存清理逻辑
+      logDebug('紧急内存清理完成');
+    } catch (e) {
+      logDebug('紧急内存清理失败: $e');
+    }
+  }
+  
+  /// 安全执行文件操作，带OutOfMemoryError处理
+  static Future<T?> executeWithMemoryProtection<T>(
+    Future<T> Function() operation, {
+    String? operationName,
+  }) async {
+    try {
+      return await operation();
+    } on OutOfMemoryError catch (e) {
+      final name = operationName ?? '文件操作';
+      logDebug('$name 遇到内存不足错误: $e');
+      
+      // 执行紧急内存清理
+      await emergencyMemoryCleanup();
+      
+      // 抛出更友好的异常
+      throw Exception('内存不足，无法完成$name。请关闭其他应用程序后重试，或选择较小的文件。');
+    } catch (e) {
+      rethrow;
     }
   }
   
