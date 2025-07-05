@@ -366,14 +366,13 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       }
 
       final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
-      if (file != null) {
-        // 使用大文件管理器检查文件
+      if (file != null) {        // 使用大文件管理器检查文件是否可读
         final canProcess = await LargeFileManager.canProcessFile(file.path);
         if (!canProcess) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('文件过大或无法处理，请选择较小的文件'),
+                content: Text('文件无法读取或损坏，请检查文件'),
                 duration: Duration(seconds: 4),
               ),
             );
@@ -381,25 +380,32 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           return;
         }
 
-        // 获取文件大小并显示警告（如果需要）
+        // 简单检查文件是否有效，不再限制大小
         final fileSizeSecure = await LargeFileManager.getFileSizeSecurely(file.path);
-        final maxSize = _getMaxFileSize(type);
+        
+        if (fileSizeSecure == 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('文件为空或无法读取'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
 
-        // 如果文件过大，给出友好提示但不强制阻止
-        if (fileSizeSecure > maxSize) {
+        // 对于大文件给出友好提示但不阻止导入
+        if (fileSizeSecure > 100 * 1024 * 1024) { // 100MB以上给出提示
           final sizeMB = (fileSizeSecure / (1024 * 1024)).round();
-          final maxSizeMB = (maxSize / (1024 * 1024)).round();
-
-          // 显示确认对话框
-          final shouldContinue = await _showLargeFileWarning(
-            context,
-            type,
-            sizeMB,
-            maxSizeMB,
-          );
-
-          if (!shouldContinue) {
-            return;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('正在导入大文件 (${sizeMB}MB)，请耐心等待...'),
+                duration: const Duration(seconds: 2),
+                backgroundColor: Colors.blue,
+              ),
+            );
           }
         }
 
@@ -702,71 +708,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           SnackBar(content: Text('插入${_getMediaTypeName(type)}失败: $e')),
         );
       }
-    }
-  }
-
-  int _getMaxFileSize(String type) {
-    switch (type) {
-      case 'image':
-        return 100 * 1024 * 1024; // 提升到100MB
-      case 'video':
-        return 500 * 1024 * 1024; // 提升到500MB
-      case 'audio':
-        return 200 * 1024 * 1024; // 提升到200MB
-      default:
-        return 100 * 1024 * 1024;
-    }
-  }
-
-  /// 显示大文件警告对话框
-  Future<bool> _showLargeFileWarning(
-    BuildContext context,
-    String type,
-    int actualSizeMB,
-    int recommendedSizeMB,
-  ) async {
-    return await showDialog<bool>(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('⚠️ 大文件提醒'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('您选择的${_getMediaTypeName(type)}文件较大：'),
-                    const SizedBox(height: 8),
-                    Text('• 文件大小：${actualSizeMB}MB'),
-                    Text('• 建议大小：<${recommendedSizeMB}MB'),
-                    const SizedBox(height: 12),
-                    const Text(
-                      '大文件可能会：\n• 增加导入时间\n• 占用更多存储空间\n• 影响应用性能',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '我们已优化了处理流程，通常可以安全导入。',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('取消'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('继续导入'),
-                  ),
-                ],
-              ),
-        ) ??
-        false;
-  }
+    }  }
 
   void _showFileSizeInfo() {
     showDialog(
