@@ -19,6 +19,7 @@ import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
 import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
+import 'license_page.dart' as license;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -619,8 +620,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         width: 48,
                         height: 48,
                       ), // 路径修正，兼容所有平台
-                      applicationLegalese: '© 2024 Shangjin Xiao',
-                      children: <Widget>[
+                      applicationLegalese: '© 2024 Shangjin Xiao',                      children: <Widget>[
                         const SizedBox(height: 16),
                         const Text('一款帮助你记录和分析思想的应用。'),
                         const SizedBox(height: 24), // 增加间距
@@ -637,6 +637,21 @@ class _SettingsPageState extends State<SettingsPage> {
                           icon: Icons.language_outlined,
                           text: '访问官网',
                           url: _websiteUrl,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const license.LicensePage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.article_outlined),
+                          label: const Text('查看许可证信息'),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(40),
+                          ),
                         ),
                         // --- 链接添加结束 ---
                       ],

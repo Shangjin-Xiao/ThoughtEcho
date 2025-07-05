@@ -14,24 +14,20 @@ import '../utils/app_logger.dart';
 class OnboardingController extends ChangeNotifier {
   final PageController _pageController = PageController();
   OnboardingState _state = const OnboardingState();
-
   // Services
   late final MigrationService _migrationService;
   late final SettingsService _settingsService;
   late final ClipboardService _clipboardService;
-  late final DatabaseService _databaseService;
 
   PageController get pageController => _pageController;
   OnboardingState get state => _state;
 
   /// 初始化控制器
-  void initialize(BuildContext context) {
-    final databaseService = context.read<DatabaseService>();
+  void initialize(BuildContext context) {    final databaseService = context.read<DatabaseService>();
     final settingsService = context.read<SettingsService>();
     final mmkvService = context.read<MMKVService>();
     final clipboardService = context.read<ClipboardService>();
 
-    _databaseService = databaseService;
     _settingsService = settingsService;
     _clipboardService = clipboardService;
     _migrationService = MigrationService(

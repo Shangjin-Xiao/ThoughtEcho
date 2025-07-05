@@ -12,6 +12,7 @@ import '../services/settings_service.dart';
 import '../services/mmkv_service.dart';
 import '../utils/app_logger.dart';
 import 'home_page.dart';
+import '../utils/lottie_animation_manager.dart';
 
 /// 重构后的新用户引导页面
 ///
@@ -154,7 +155,6 @@ class _OnboardingPageState extends State<OnboardingPage>
 
     return _buildOnboardingView();
   }
-
   /// 加载视图
   Widget _buildLoadingView() {
     return Scaffold(
@@ -162,8 +162,16 @@ class _OnboardingPageState extends State<OnboardingPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final s = (constraints.maxHeight * 0.4).clamp(48.0, 100.0);
+                return EnhancedLottieAnimation(
+                  type: LottieAnimationType.pulseLoading,
+                  width: s,
+                  height: s,
+                  semanticLabel: '正在准备',
+                );
+              },
             ),
             const SizedBox(height: 20),
             Text('正在准备...', style: Theme.of(context).textTheme.titleMedium),
@@ -243,10 +251,13 @@ class _OnboardingPageState extends State<OnboardingPage>
                       '心迹已成功更新到新版本\n数据已自动迁移，无需手动操作',
                       style: theme.textTheme.titleLarge,
                       textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
+                    ),                    const SizedBox(height: 32),
                     if (_errorMessage == null)
-                      const CircularProgressIndicator()
+                      const EnhancedLottieAnimation(
+                        type: LottieAnimationType.pulseLoading,
+                        width: 60,
+                        height: 60,
+                      )
                     else
                       FilledButton(
                         onPressed: _navigateToHome,
@@ -439,15 +450,15 @@ class _OnboardingPageState extends State<OnboardingPage>
             if (OnboardingConfig.isLastPage(state.currentPageIndex))
               FilledButton.icon(
                 onPressed:
-                    state.isCompleting ? null : controller.completeOnboarding,
-                icon:
+                    state.isCompleting ? null : controller.completeOnboarding,                icon:
                     state.isCompleting
                         ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                          child: EnhancedLottieAnimation(
+                            type: LottieAnimationType.loading,
+                            width: 18,
+                            height: 18,
                           ),
                         )
                         : const Icon(Icons.check),

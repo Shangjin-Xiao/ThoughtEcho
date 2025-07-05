@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../services/location_service.dart';
 import '../controllers/weather_search_controller.dart';
+import '../utils/lottie_animation_manager.dart';
 
 class CitySearchWidget extends StatefulWidget {
   final WeatherSearchController weatherController;
@@ -232,7 +233,11 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                           ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: EnhancedLottieAnimation(
+                              type: LottieAnimationType.loading,
+                              width: 16,
+                              height: 16,
+                            ),
                           )
                           : const Icon(Icons.my_location),
                   label: const Text('使用当前位置'),
@@ -254,27 +259,48 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
   ) {
     // 如果控制器正在加载，显示加载指示器
     if (controller.isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('正在处理...'),
+            Flexible(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = (constraints.maxHeight * 0.7).clamp(120.0, 300.0);
+                  return EnhancedLottieAnimation(
+                    type: LottieAnimationType.weatherSearchLoading,
+                    width: size,
+                    height: size,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('正在处理...'),
           ],
         ),
       );
     }
-
     // 如果位置服务正在搜索，显示搜索加载状态
     if (locationService.isSearching) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('搜索城市中...'),
+            Flexible(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = (constraints.maxHeight * 0.7).clamp(120.0, 300.0);
+                  return EnhancedLottieAnimation(
+                    type: LottieAnimationType.weatherSearchLoading,
+                    width: size,
+                    height: size,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('搜索城市中...'),
           ],
         ),
       );
@@ -340,8 +366,11 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                 controller.isLoading
                     ? const SizedBox(
                       width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      height: 20,                            child: EnhancedLottieAnimation(
+                              type: LottieAnimationType.loading,
+                              width: 16,
+                              height: 16,
+                            ),
                     )
                     : Icon(
                       Icons.arrow_forward_ios,

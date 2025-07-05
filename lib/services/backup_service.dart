@@ -399,12 +399,28 @@ class BackupService {
     String filePath, {
     bool clearExisting = true,
   }) async {
-    final isValid = await _databaseService.validateBackupFile(filePath);
-    if (!isValid) {
-      throw Exception('无效的旧版备份文件。');
+    logDebug('开始流式处理旧版JSON备份: $filePath');
+    try {
+      // 1. 使用流式解码器安全地读取和解析JSON文件
+      final backupData = await LargeFileManager.decodeJsonFromFileStreaming(
+        File(filePath),
+      );
+
+      // 2. 验证数据有效性 (可选，但推荐)
+      if (!backupData.containsKey('quotes') || !backupData.containsKey('categories')) {
+        throw Exception('旧版备份文件格式无效: 缺少必要字段');
+      }
+
+      // 3. 使用安全的方法从Map恢复数据
+      await _databaseService.importDataFromMap(
+        backupData,
+        clearExisting: clearExisting,
+      );
+      logDebug('旧版JSON备份导入成功');
+    } catch (e, s) {
+      AppLogger.e('处理旧版JSON备份失败', error: e, stackTrace: s, source: 'BackupService');
+      rethrow;
     }
-    // 旧版备份只包含笔记和分类，直接调用databaseService导入
-    await _databaseService.importData(filePath, clearExisting: clearExisting);
   }
 
   /// 检查备份数据是否包含媒体文件

@@ -5,6 +5,7 @@ import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
+import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
@@ -361,7 +362,22 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    if (_isLoading) {
+    if (_isLoading) {      // 搜索时用专属动画
+      if (widget.searchQuery.isNotEmpty) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final size = (constraints.maxHeight * 0.7).clamp(120.0, 400.0);
+            return Center(
+              child: EnhancedLottieAnimation(
+                type: LottieAnimationType.weatherSearchLoading,
+                width: size,
+                height: size,
+                semanticLabel: '搜索中',
+              ),
+            );
+          },
+        );
+      }
       return const AppLoadingView();
     }
     if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
@@ -369,11 +385,39 @@ class NoteListViewState extends State<NoteListView> {
         svgAsset: 'assets/empty/empty_state.svg',
         text: '还没有笔记，开始记录吧！',
       );
-    }
-    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
-      return const AppEmptyView(
-        svgAsset: 'assets/empty/no_search_results.svg',
-        text: '未找到相关笔记',
+    }    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final size = (constraints.maxHeight * 0.5).clamp(80.0, 220.0);
+                return EnhancedLottieAnimation(
+                  type: LottieAnimationType.notFound,
+                  width: size,
+                  height: size,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '未找到相关笔记',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '尝试使用其他关键词或检查拼写',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -623,16 +667,16 @@ class NoteListViewState extends State<NoteListView> {
                           controller: _searchController,
                           focusNode: _searchFocusNode, // 使用管理的焦点节点
                           decoration: InputDecoration(
-                            hintText: '搜索笔记...',
-                            prefixIcon:
-                                searchController.isSearching
+                            hintText: '搜索笔记...',                            prefixIcon:                                searchController.isSearching
                                     ? const SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: Padding(
                                         padding: EdgeInsets.all(12.0),
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                        child: EnhancedLottieAnimation(
+                                          type: LottieAnimationType.searchLoading,
+                                          width: 16,
+                                          height: 16,
                                         ),
                                       ),
                                     )
