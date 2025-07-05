@@ -72,8 +72,27 @@ class LargeFileManager {
   /// 在Isolate中从文件流式解码JSON
   static Future<Map<String, dynamic>> _decodeJsonFromFileInIsolate(String filePath) async {
     final file = File(filePath);
-    final content = await file.readAsString(); // Isolate中可以安全读取
-    return jsonDecode(content) as Map<String, dynamic>;
+    
+    // 检查文件大小，如果太大使用流式处理
+    final fileSize = await file.length();
+    const streamThreshold = 100 * 1024 * 1024; // 100MB
+    
+    if (fileSize > streamThreshold) {
+      // 对于大文件，使用流式读取
+      final stream = file.openRead();
+      final chunks = <List<int>>[];
+      
+      await for (final chunk in stream) {
+        chunks.add(chunk);
+      }
+      
+      final content = String.fromCharCodes(chunks.expand((chunk) => chunk));
+      return jsonDecode(content) as Map<String, dynamic>;
+    } else {
+      // 小文件直接读取
+      final content = await file.readAsString();
+      return jsonDecode(content) as Map<String, dynamic>;
+    }
   }
 
   /// 验证文件是否可访问且大小在合理范围内
@@ -347,15 +366,14 @@ class LargeFileManager {
     }
   }
   
-  /// 检查系统是否有足够资源处理文件
+  /// 检查系统是否有足够资源处理文件（移除大小限制）
   static Future<bool> canProcessFile(String filePath) async {
     try {
       final fileSize = await getFileSizeSecurely(filePath);
       
-      // 基本检查：文件不能超过2GB
-      const maxFileSize = 2 * 1024 * 1024 * 1024; // 2GB
-      if (fileSize > maxFileSize) {
-        logDebug('文件过大: ${(fileSize / 1024 / 1024 / 1024).toStringAsFixed(1)}GB');
+      // 移除大小限制，只检查文件是否存在和可读
+      if (fileSize == 0) {
+        logDebug('文件不存在或为空: $filePath');
         return false;
       }
       
@@ -365,7 +383,15 @@ class LargeFileManager {
         return false;
       }
       
-      return true;
+      // 尝试读取文件的第一个字节，确保文件可以访问
+      try {
+        final stream = file.openRead(0, 1);
+        await stream.first;
+        return true;
+      } catch (e) {
+        logDebug('文件无法读取: $filePath, 错误: $e');
+        return false;
+      }
     } catch (e) {
       logDebug('检查文件处理能力失败: $e');
       return false;

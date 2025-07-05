@@ -539,20 +539,17 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           break;
         default:
           typeGroup = const XTypeGroup(label: 'files');
-      }
-
-      final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
+      }      final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
       if (file != null) {
-        // 检查文件大小 - 根据平台和文件类型设置不同限制
+        // 简单检查文件是否存在和可读
         final fileSize = await file.length();
-        final maxSize = _getMaxFileSize(type);
 
-        if (fileSize > maxSize) {
+        if (fileSize == 0) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_getFileSizeErrorMessage(type, maxSize)),
-                duration: const Duration(seconds: 4),
+              const SnackBar(
+                content: Text('文件为空或无法读取'),
+                duration: Duration(seconds: 3),
               ),
             );
           }
@@ -577,31 +574,13 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('选择文件失败: $e')));
-      }
-    }
+      }    }
   }
 
-  /// 根据文件类型和平台获取最大文件大小限制
+  /// 根据文件类型和平台获取最大文件大小限制（已移除限制）
   int _getMaxFileSize(String type) {
-    // 放宽限制 - 主要防止极端大文件导致崩溃
-    switch (type) {
-      case 'image':
-        return 50 * 1024 * 1024; // 50MB - 足够大的现代手机照片
-      case 'video':
-        return 1024 * 1024 * 1024; // 1GB - 短视频
-      case 'audio':
-        return 100 * 1024 * 1024; // 100MB - 长音频
-      default:
-        return 50 * 1024 * 1024;
-    }
-  }
-
-  /// 获取文件大小错误提示信息
-  String _getFileSizeErrorMessage(String type, int maxSize) {
-    final maxSizeMB = (maxSize / (1024 * 1024)).round();
-    final typeName = _getMediaTypeName(type);
-
-    return '$typeName文件过大，请选择小于${maxSizeMB}MB的文件（防止应用崩溃）';
+    // 移除文件大小限制，但保留一个很大的值以防止意外
+    return 10 * 1024 * 1024 * 1024; // 10GB - 实际上不限制
   }
 
   void _insertMediaFromCamera() async {
@@ -617,19 +596,16 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         imageQuality: isMobile ? 70 : 85, // 移动端70%质量，桌面端85%质量
         maxWidth: isMobile ? 1024 : 1920, // 限制图片分辨率
         maxHeight: isMobile ? 1024 : 1920,
-      );
-
-      if (image != null) {
-        // 检查拍摄图片的大小
+      );      if (image != null) {
+        // 简单检查文件是否有效
         final fileSize = await image.length();
-        final maxSize = _getMaxFileSize('image');
 
-        if (fileSize > maxSize) {
+        if (fileSize == 0) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_getFileSizeErrorMessage('image', maxSize)),
-                duration: const Duration(seconds: 4),
+              const SnackBar(
+                content: Text('拍摄的图片无效'),
+                duration: Duration(seconds: 3),
               ),
             );
           }
@@ -669,19 +645,16 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       final XFile? video = await picker.pickVideo(
         source: ImageSource.camera,
         maxDuration: Duration(seconds: isMobile ? 30 : 60), // 移动端30秒，桌面端60秒
-      );
-
-      if (video != null) {
-        // 检查录制视频的大小
+      );      if (video != null) {
+        // 简单检查文件是否有效
         final fileSize = await video.length();
-        final maxSize = _getMaxFileSize('video');
 
-        if (fileSize > maxSize) {
+        if (fileSize == 0) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_getFileSizeErrorMessage('video', maxSize)),
-                duration: const Duration(seconds: 4),
+              const SnackBar(
+                content: Text('录制的视频无效'),
+                duration: Duration(seconds: 3),
               ),
             );
           }
