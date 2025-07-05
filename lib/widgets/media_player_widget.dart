@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../utils/lottie_animation_manager.dart';
 
 /// 统一的媒体播放器组件
 /// 支持视频和音频播放，提供丰富的用户体验
@@ -32,18 +33,36 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  // 新增状态：是否已初始化、是否正在初始化
+  bool _isInitialized = false;
+  bool _isInitializing = false;
 
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    // 修改：不再自动初始化，改为懒加载
+    if (widget.mediaType == MediaType.audio) {
+      // 音频文件通常较小，可以立即初始化
+      _initializeAudioPlayer();
+    }
   }
 
-  Future<void> _initializePlayer() async {
-    if (widget.mediaType == MediaType.video) {
-      await _initializeVideoPlayer();
-    } else if (widget.mediaType == MediaType.audio) {
-      await _initializeAudioPlayer();
+  // 新增：用户点击后开始初始化
+  Future<void> _startVideoInitialization() async {
+    if (_isInitialized || _isInitializing) return;
+
+    setState(() {
+      _isInitializing = true;
+    });
+
+    await _initializeVideoPlayer();
+
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+        // 初始化成功后，_chewieController 不会为 null
+        _isInitialized = _chewieController != null;
+      });
     }
   }
 
@@ -167,12 +186,56 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     if (widget.mediaType == MediaType.video) {
-      return _buildEnhancedVideoPlayer();
+      // 根据初始化状态返回不同的小部件
+      if (_isInitialized) {
+        return _buildEnhancedVideoPlayer();
+      } else {
+        return _buildVideoPlaceholder();
+      }
     } else if (widget.mediaType == MediaType.audio) {
       return _buildEnhancedAudioPlayer();
     }
 
     return const SizedBox.shrink();
+  }
+
+  /// 新增：视频占位符，等待用户点击
+  Widget _buildVideoPlaceholder() {
+    return GestureDetector(
+      onTap: _startVideoInitialization,
+      child: Container(
+        width: widget.width ?? 300,
+        height: widget.height ?? 200,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          ),
+        ),
+        child: Center(
+          child: _isInitializing
+              ? _buildVideoLoadingState() // 复用加载动画
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.play_circle_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '点击播放视频',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
   }
 
   Widget _buildEnhancedVideoPlayer() {
@@ -220,7 +283,16 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final s = (constraints.maxHeight * 0.4).clamp(48.0, 120.0);
+              return EnhancedLottieAnimation(
+                type: LottieAnimationType.pulseLoading,
+                width: s,
+                height: s,
+              );
+            },
+          ),
           const SizedBox(height: 16),
           Text(
             '正在加载视频...',

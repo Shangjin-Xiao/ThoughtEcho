@@ -6,6 +6,7 @@ import '../services/ai_analysis_database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
+import '../utils/lottie_animation_manager.dart';
 import '../models/ai_analysis_model.dart';
 import '../models/quote_model.dart';
 import 'ai_analysis_history_page.dart';
@@ -440,14 +441,14 @@ class _InsightsPageState extends State<InsightsPage>
                         ),
                       );
                     },
-                  ),
-                  _isGenerating
-                      ? SizedBox(
+                  ),                      _isGenerating
+                      ? const SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: theme.primaryColor,
+                        child: EnhancedLottieAnimation(
+                          type: LottieAnimationType.aiThinking,
+                          width: 24,
+                          height: 24,
                         ),
                       )
                       : IconButton(
@@ -491,15 +492,15 @@ class _InsightsPageState extends State<InsightsPage>
           _tabController.index == 0
               ? FloatingActionButton.extended(
                 onPressed: _isLoading ? null : _generateInsights,
-                label: Text(_isLoading ? '分析中...' : '开始分析'),
-                icon:
+                label: Text(_isLoading ? '分析中...' : '开始分析'),                icon:
                     _isLoading
                         ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                          child: EnhancedLottieAnimation(
+                            type: LottieAnimationType.aiThinking,
+                            width: 18,
+                            height: 18,
                           ),
                         )
                         : const Icon(Icons.auto_awesome),
@@ -824,16 +825,12 @@ class _InsightsPageState extends State<InsightsPage>
                                     const SnackBar(content: Text('分析结果已复制')),
                                   );
                                 },
-                              ),
-                            // 加载指示器在生成过程中显示
+                              ),                            // 加载指示器在生成过程中显示
                             if (_isGenerating)
-                              SizedBox(
+                              const SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: theme.primaryColor,
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 3),
                               ),
                           ],
                         ),

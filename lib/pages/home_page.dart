@@ -19,6 +19,7 @@ import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
+import '../utils/lottie_animation_manager.dart';
 import '../utils/app_logger.dart';
 import '../utils/daily_prompt_generator.dart';
 
@@ -656,15 +657,18 @@ class _HomePageState extends State<HomePage>
               ? null // 记录页不需要标题栏
               : AppBar(
                 title: const Text('心迹'),
-                actions: [
-                  // 显示标签加载状态
+                actions: [                  // 显示标签加载状态
                   if (_isLoadingTags && _currentIndex == 1)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8.0),
                       child: SizedBox(
                         width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                        height: 16,                        child: EnhancedLottieAnimation(
+                          type: LottieAnimationType.modernLoading,
+                          width: 16,
+                          height: 16,
+                          semanticLabel: '加载标签',
+                        ),
                       ),
                     ),
 
@@ -675,7 +679,12 @@ class _HomePageState extends State<HomePage>
                       child: SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                        child: EnhancedLottieAnimation(
+                          type: LottieAnimationType.pulseLoading,
+                          width: 20,
+                          height: 20,
+                          semanticLabel: '初始化服务',
+                        ),
                       ),
                     ),
 
