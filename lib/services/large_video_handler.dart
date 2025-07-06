@@ -184,6 +184,9 @@ class LargeVideoHandler {
   }
   
   /// 使用内存保护机制复制视频文件
+  /// 使用内存保护机制复制视频文件
+  /// 
+  /// 增强版本：更智能的重试机制，更好的内存管理，动态调整块大小
   static Future<void> _copyVideoFileWithMemoryProtection(
     String sourcePath,
     String targetPath, {
@@ -193,28 +196,49 @@ class LargeVideoHandler {
     CancelToken? cancelToken,
   }) async {
     int retryCount = 0;
+    int adaptiveChunkSize = _calculateOptimalChunkSize(fileSize);
     
+    // 预先清理内存
+    await LargeFileManager.emergencyMemoryCleanup();
+
     while (retryCount < _maxRetryAttempts) {
       try {
-        await _performVideoCopy(
-          sourcePath,
-          targetPath,
-          fileSize: fileSize,
-          onProgress: onProgress,
-          onStatusUpdate: onStatusUpdate,
-          cancelToken: cancelToken,
+        // 使用LargeFileManager的内存保护机制
+        await LargeFileManager.executeWithMemoryProtection(
+          () async {
+            await _performVideoCopy(
+              sourcePath,
+              targetPath,
+              fileSize: fileSize,
+              chunkSize: adaptiveChunkSize,
+              onProgress: onProgress,
+              onStatusUpdate: onStatusUpdate,
+              cancelToken: cancelToken,
+            );
+          },
+          operationName: '视频文件复制',
+          maxRetries: 0, // 我们在这里自己处理重试
         );
-        return; // 成功完成
+        
+        return; // 成功复制，退出循环
       } on OutOfMemoryError catch (e) {
         retryCount++;
         logDebug('视频复制遇到内存不足 (尝试 $retryCount/$_maxRetryAttempts): $e');
         
+        // 减小块大小，降低内存使用
+        adaptiveChunkSize = (adaptiveChunkSize * 0.5).round();
+        if (adaptiveChunkSize < 64 * 1024) { // 最小64KB
+          adaptiveChunkSize = 64 * 1024;
+        }
+        
+        logDebug('调整块大小为 ${adaptiveChunkSize / 1024}KB');
+
         if (retryCount >= _maxRetryAttempts) {
           throw Exception('多次尝试后仍然内存不足，请关闭其他应用后重试');
         }
-        
+
         onStatusUpdate?.call('内存不足，正在重试 ($retryCount/$_maxRetryAttempts)...');
-        
+
         // 清理可能的临时文件
         try {
           final tempFile = File(targetPath);
@@ -222,10 +246,10 @@ class LargeVideoHandler {
             await tempFile.delete();
           }
         } catch (_) {}
-        
-        // 等待一段时间让系统回收内存
+
+        // 等待更长时间让系统回收内存
         await Future.delayed(Duration(seconds: retryCount * 2));
-        
+
         // 触发垃圾回收
         await LargeFileManager.emergencyMemoryCleanup();
       } catch (e) {
@@ -235,11 +259,25 @@ class LargeVideoHandler {
     }
   }
   
+  /// 根据文件大小计算最佳块大小
+  static int _calculateOptimalChunkSize(int fileSize) {
+    if (fileSize > 1024 * 1024 * 1024) { // 1GB以上
+      return 512 * 1024; // 512KB
+    } else if (fileSize > 500 * 1024 * 1024) { // 500MB以上
+      return 1 * 1024 * 1024; // 1MB
+    } else if (fileSize > 100 * 1024 * 1024) { // 100MB以上
+      return 2 * 1024 * 1024; // 2MB
+    } else {
+      return 4 * 1024 * 1024; // 4MB
+    }
+  }
+  
   /// 执行实际的视频文件复制
   static Future<void> _performVideoCopy(
     String sourcePath,
     String targetPath, {
     required int fileSize,
+    int? chunkSize,
     Function(double progress)? onProgress,
     Function(String status)? onStatusUpdate,
     CancelToken? cancelToken,
@@ -247,15 +285,19 @@ class LargeVideoHandler {
     final sourceFile = File(sourcePath);
     final targetFile = File(targetPath);
     
-    // 根据文件大小动态调整块大小
-    int chunkSize = _videoChunkSize;
-    if (fileSize > 500 * 1024 * 1024) { // 500MB以上
-      chunkSize = 2 * 1024 * 1024; // 2MB
-    } else if (fileSize > 100 * 1024 * 1024) { // 100MB以上
-      chunkSize = 1024 * 1024; // 1MB
-    } else {
-      chunkSize = 512 * 1024; // 512KB
+    // 使用传入的块大小或根据文件大小动态调整
+    int actualChunkSize = chunkSize ?? _videoChunkSize;
+    if (chunkSize == null) {
+      if (fileSize > 500 * 1024 * 1024) { // 500MB以上
+        actualChunkSize = 2 * 1024 * 1024; // 2MB
+      } else if (fileSize > 100 * 1024 * 1024) { // 100MB以上
+        actualChunkSize = 1024 * 1024; // 1MB
+      } else {
+        actualChunkSize = 512 * 1024; // 512KB
+      }
     }
+    
+    logDebug('使用块大小: ${actualChunkSize / 1024}KB 处理 ${fileSize / (1024 * 1024)}MB 文件');
     
     int copiedBytes = 0;
     
@@ -272,7 +314,7 @@ class LargeVideoHandler {
           
           // 计算本次读取的大小
           final remainingBytes = fileSize - copiedBytes;
-          final currentChunkSize = remainingBytes < chunkSize ? remainingBytes : chunkSize;
+          final currentChunkSize = remainingBytes < actualChunkSize ? remainingBytes : actualChunkSize;
           
           // 读取数据块
           final buffer = Uint8List(currentChunkSize);

@@ -265,8 +265,14 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
         extensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
       );
       
-      final XFile? file = await openFile(
-        acceptedTypeGroups: [typeGroup],
+      // 使用内存保护机制包装文件选择操作
+      final XFile? file = await LargeFileManager.executeWithMemoryProtection<XFile?>(
+        () async {
+          return await openFile(
+            acceptedTypeGroups: [typeGroup],
+          );
+        },
+        operationName: '选择视频文件',
       );
       
       if (file != null) {
@@ -275,8 +281,14 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
           _videoInfo = null;
         });
         
-        // 获取文件信息
-        final videoInfo = await LargeVideoHandler.getVideoFileInfo(file.path);
+        // 获取文件信息 - 也使用内存保护
+        final videoInfo = await LargeFileManager.executeWithMemoryProtection<VideoFileInfo?>(
+          () async {
+            return await LargeVideoHandler.getVideoFileInfo(file.path);
+          },
+          operationName: '获取视频信息',
+        );
+        
         if (videoInfo != null) {
           setState(() {
             _videoInfo = videoInfo;
@@ -307,23 +319,29 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
     _cancelToken = LargeFileManager.createCancelToken();
     
     try {
-      final result = await MediaFileService.saveVideo(
-        _selectedFilePath!,
-        onProgress: (progress) {
-          if (mounted) {
-            setState(() {
-              _progress = progress;
-            });
-          }
+      // 使用内存保护机制包装视频导入操作
+      final result = await LargeFileManager.executeWithMemoryProtection<String?>(
+        () async {
+          return await MediaFileService.saveVideo(
+            _selectedFilePath!,
+            onProgress: (progress) {
+              if (mounted) {
+                setState(() {
+                  _progress = progress;
+                });
+              }
+            },
+            onStatusUpdate: (status) {
+              if (mounted) {
+                setState(() {
+                  _statusMessage = status;
+                });
+              }
+            },
+            cancelToken: _cancelToken,
+          );
         },
-        onStatusUpdate: (status) {
-          if (mounted) {
-            setState(() {
-              _statusMessage = status;
-            });
-          }
-        },
-        cancelToken: _cancelToken,
+        operationName: '视频导入',
       );
       
       if (result != null && mounted) {

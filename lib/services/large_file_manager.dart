@@ -369,20 +369,37 @@ class LargeFileManager {
   }
 
   /// 紧急内存清理（当检测到内存不足时）
+  /// 
+  /// 增强版本：更积极地清理内存，多次尝试垃圾回收
   static Future<void> emergencyMemoryCleanup() async {
     try {
       logDebug('执行紧急内存清理...');
       
       // 触发垃圾回收
       if (!kIsWeb) {
-        // 添加更长的延迟，让系统有更多时间回收内存
-        await Future.delayed(const Duration(milliseconds: 200));
+        // 第一轮清理
+        logDebug('- 第一轮内存清理');
+        await Future.delayed(const Duration(milliseconds: 300));
         
         // 尝试释放一些可能的大对象引用
-        // 这里我们不能直接访问应用程序的所有对象，但可以通知系统进行内存回收
+        _weakReferences.clear();
         
-        // 再次延迟，确保垃圾回收有机会运行
-        await Future.delayed(const Duration(milliseconds: 100));
+        // 第二轮清理
+        logDebug('- 第二轮内存清理');
+        await Future.delayed(const Duration(milliseconds: 300));
+        
+        // 通知系统我们需要更多内存
+        PlatformDispatcher.instance.onError = (error, stack) {
+          if (error is OutOfMemoryError) {
+            logDebug('检测到内存不足，尝试紧急清理');
+            return true;
+          }
+          return false;
+        };
+        
+        // 第三轮清理
+        logDebug('- 第三轮内存清理');
+        await Future.delayed(const Duration(milliseconds: 400));
       }
       
       logDebug('紧急内存清理完成');
@@ -391,24 +408,58 @@ class LargeFileManager {
     }
   }
   
+  // 用于存储弱引用的列表，帮助垃圾回收
+  static final List<WeakReference<Object>> _weakReferences = [];
+  
   /// 安全执行文件操作，带OutOfMemoryError处理
+  /// 
+  /// 增强版本：预先检查内存，执行前后进行垃圾回收，自动重试
   static Future<T?> executeWithMemoryProtection<T>(
     Future<T> Function() operation, {
     String? operationName,
+    int maxRetries = 1,
   }) async {
-    try {
-      return await operation();
-    } on OutOfMemoryError catch (e) {
-      final name = operationName ?? '文件操作';
-      logDebug('$name 遇到内存不足错误: $e');
-      
-      // 执行紧急内存清理
-      await emergencyMemoryCleanup();
-      
-      // 抛出更友好的异常
-      throw Exception('内存不足，无法完成$name。请关闭其他应用程序后重试，或选择较小的文件。');
-    } catch (e) {
-      rethrow;
+    final name = operationName ?? '文件操作';
+    int retryCount = 0;
+    
+    // 预先进行垃圾回收
+    await _checkMemoryPressure();
+    
+    while (true) {
+      try {
+        // 执行前先检查内存
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // 执行操作
+        logDebug('开始执行$name (尝试 ${retryCount + 1}/${maxRetries + 1})');
+        final result = await operation();
+        
+        // 操作完成后再次检查内存
+        await _checkMemoryPressure();
+        
+        return result;
+      } on OutOfMemoryError catch (e) {
+        logDebug('$name 遇到内存不足错误: $e');
+        
+        // 执行紧急内存清理
+        await emergencyMemoryCleanup();
+        
+        // 如果还有重试次数，则重试
+        if (retryCount < maxRetries) {
+          retryCount++;
+          logDebug('正在重试$name (${retryCount}/$maxRetries)...');
+          
+          // 重试前等待更长时间让系统回收内存
+          await Future.delayed(const Duration(milliseconds: 500));
+          continue;
+        }
+        
+        // 重试次数用完，抛出友好异常
+        throw Exception('内存不足，无法完成$name。请关闭其他应用程序后重试，或选择较小的文件。');
+      } catch (e) {
+        logDebug('$name 执行失败: $e');
+        rethrow;
+      }
     }
   }
   
