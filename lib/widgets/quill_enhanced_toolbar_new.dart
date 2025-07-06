@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../services/media_file_service.dart';
 import '../services/large_file_manager.dart';
+import '../services/large_video_handler.dart';
+import 'enhanced_media_import_dialog.dart';
 
 /// 增强的全屏编辑器工具栏组件
 /// 基于flutter_quill官方按钮的完整实现
@@ -264,7 +266,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   }
 
   void _insertVideo() {
-    _showMediaDialog('video');
+    // 对于视频文件，使用增强的导入对话框
+    _showEnhancedVideoImportDialog();
   }
 
   void _insertAudio() {
@@ -745,6 +748,46 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
             ],
           ),
     );
+  }
+
+  /// 显示增强的视频导入对话框
+  void _showEnhancedVideoImportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => EnhancedMediaImportDialog(
+        onFileImported: (filePath) {
+          _insertVideoEmbed(filePath);
+        },
+      ),
+    );
+  }
+
+  /// 插入视频嵌入块
+  void _insertVideoEmbed(String filePath) {
+    try {
+      final embed = quill.BlockEmbed.video(filePath);
+      final index = widget.controller.selection.baseOffset;
+      final length = widget.controller.selection.extentOffset - index;
+
+      widget.controller.replaceText(
+        index,
+        length,
+        embed,
+        quill.ChangeSource.local,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('视频插入成功')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('插入视频失败: $e')),
+        );
+      }
+    }
   }
 }
 
