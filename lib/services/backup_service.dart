@@ -30,7 +30,7 @@ class BackupService {
   static const String _backupDataFile = 'backup_data.json';
   static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
 
-  /// 导出所有应用数据
+  /// 导出所有应用数据（增强版，支持大文件安全处理）
   ///
   /// [includeMediaFiles] - 是否在备份中包含媒体文件（图片等）
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则创建在临时目录
@@ -38,6 +38,24 @@ class BackupService {
   /// [cancelToken] - 取消令牌，支持取消操作
   /// 返回最终备份文件的路径
   Future<String> exportAllData({
+    required bool includeMediaFiles,
+    String? customPath,
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    return await LargeFileManager.executeWithMemoryProtection(
+      () async => _performExportWithProtection(
+        includeMediaFiles: includeMediaFiles,
+        customPath: customPath,
+        onProgress: onProgress,
+        cancelToken: cancelToken,
+      ),
+      operationName: '数据备份',
+    ) ?? (throw Exception('备份操作失败'));
+  }
+
+  /// 执行受保护的导出操作
+  Future<String> _performExportWithProtection({
     required bool includeMediaFiles,
     String? customPath,
     Function(int current, int total)? onProgress,
@@ -155,13 +173,31 @@ class BackupService {
     }
   }
 
-  /// 从备份文件导入数据
+  /// 从备份文件导入数据（增强版，支持大文件安全处理）
   ///
   /// [filePath] - 备份文件的路径 (.zip 或旧版 .json)
   /// [clearExisting] - 是否在导入前清空现有数据
   /// [onProgress] - 进度回调函数，接收 (current, total) 参数
   /// [cancelToken] - 取消令牌，支持取消操作
   Future<void> importData(
+    String filePath, {
+    bool clearExisting = true,
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    await LargeFileManager.executeWithMemoryProtection(
+      () async => _performImportWithProtection(
+        filePath,
+        clearExisting: clearExisting,
+        onProgress: onProgress,
+        cancelToken: cancelToken,
+      ),
+      operationName: '数据导入',
+    );
+  }
+
+  /// 执行受保护的导入操作
+  Future<void> _performImportWithProtection(
     String filePath, {
     bool clearExisting = true,
     Function(int current, int total)? onProgress,
@@ -204,11 +240,9 @@ class BackupService {
       
       logDebug('备份文件信息: $zipInfo');
       
-      const maxBackupSize = 5 * 1024 * 1024 * 1024; // 5GB限制
-      if (zipInfo.compressedSize > maxBackupSize) {
-        throw Exception(
-          '备份文件过大 (${zipInfo.compressedSizeFormatted})，超过限制 (5GB)',
-        );
+      // 移除大小限制，只记录日志
+      if (zipInfo.compressedSize > 2 * 1024 * 1024 * 1024) { // 2GB以上记录警告日志
+        logDebug('警告：备份文件较大 (${zipInfo.compressedSizeFormatted})，可能需要较长处理时间');
       }
 
       cancelToken?.throwIfCancelled();
@@ -266,9 +300,15 @@ class BackupService {
         }
       }
 
-      // 从临时目录恢复到应用目录
+      // 从临时目录恢复到应用目录（使用增强的大文件处理）
       final restoreSuccess = await MediaFileService.restoreMediaFiles(
         importDir.path,
+        onProgress: (current, total) {
+          // 媒体文件恢复进度占总进度的30%
+          final mediaProgress = (current / total * 30).round();
+          onProgress?.call(70 + mediaProgress, 100);
+        },
+        cancelToken: cancelToken,
       );
       
       if (!restoreSuccess) {
