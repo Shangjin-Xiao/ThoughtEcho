@@ -347,6 +347,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         // Web 平台：直接创建备份并分享
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
+          onProgress: (current, total) {
+            if (mounted) {
+              setState(() {
+                _progress = (current / total * 100).toDouble();
+                _progressText = '正在创建备份... $current/$total';
+              });
+            }
+          },
+          cancelToken: _cancelToken,
         );
 
         if (mounted) {
@@ -362,6 +371,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         // 移动平台：创建备份并分享
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
+          onProgress: (current, total) {
+            if (mounted) {
+              setState(() {
+                _progress = (current / total * 100).toDouble();
+                _progressText = '正在创建备份... $current/$total';
+              });
+            }
+          },
+          cancelToken: _cancelToken,
         );
 
         if (mounted) {
@@ -389,6 +407,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           backupPath = await backupService.exportAllData(
             includeMediaFiles: _includeMediaFiles,
             customPath: saveLocation.path,
+            onProgress: (current, total) {
+              if (mounted) {
+                setState(() {
+                  _progress = (current / total * 100).toDouble();
+                  _progressText = '正在创建备份... $current/$total';
+                });
+              }
+            },
+            cancelToken: _cancelToken,
           );
 
           _showSuccessSnackBar('备份已保存到: ${saveLocation.path}');
@@ -396,7 +423,24 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('备份失败', '无法完成备份：$e\n\n请检查存储空间和权限设置。');
+        String errorMessage = '无法完成备份：$e';
+        
+        // 针对不同类型的错误提供更友好的提示
+        if (e.toString().contains('OutOfMemoryError') || 
+            e.toString().contains('内存不足')) {
+          errorMessage = '备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试';
+        } else if (e.toString().contains('存储空间') || 
+                   e.toString().contains('No space left')) {
+          errorMessage = '备份失败：存储空间不足\n\n请清理设备存储空间后重试。';
+        } else if (e.toString().contains('权限') || 
+                   e.toString().contains('Permission')) {
+          errorMessage = '备份失败：权限不足\n\n请检查应用的存储权限设置。';
+        } else if (e.toString().contains('cancelled') || 
+                   e.toString().contains('取消')) {
+          errorMessage = '备份已取消';
+        }
+        
+        _showErrorDialog('备份失败', errorMessage);
       }
     } finally {
       if (mounted) {
@@ -444,7 +488,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
 
       // 执行还原
-      await backupService.importData(file.path, clearExisting: true);
+      await backupService.importData(
+        file.path, 
+        clearExisting: true,
+        onProgress: (current, total) {
+          if (mounted) {
+            setState(() {
+              _progress = (current / total * 100).toDouble();
+              _progressText = '正在还原数据... $current/$total';
+            });
+          }
+        },
+        cancelToken: _cancelToken,
+      );
 
       if (mounted) {
         // 还原成功，回到主页并显示成功消息
@@ -461,7 +517,27 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('还原失败', '无法完成数据还原：$e\n\n请检查备份文件是否完整。');
+        String errorMessage = '无法完成数据还原：$e';
+        
+        // 针对不同类型的错误提供更友好的提示
+        if (e.toString().contains('OutOfMemoryError') || 
+            e.toString().contains('内存不足')) {
+          errorMessage = '还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大';
+        } else if (e.toString().contains('存储空间') || 
+                   e.toString().contains('No space left')) {
+          errorMessage = '还原失败：存储空间不足\n\n请清理设备存储空间后重试。';
+        } else if (e.toString().contains('权限') || 
+                   e.toString().contains('Permission')) {
+          errorMessage = '还原失败：权限不足\n\n请检查应用的存储权限设置。';
+        } else if (e.toString().contains('cancelled') || 
+                   e.toString().contains('取消')) {
+          errorMessage = '还原已取消';
+        } else if (e.toString().contains('无效') || 
+                   e.toString().contains('corrupt')) {
+          errorMessage = '还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。';
+        }
+        
+        _showErrorDialog('还原失败', errorMessage);
       }
     } finally {
       if (mounted) {
