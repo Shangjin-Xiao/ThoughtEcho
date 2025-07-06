@@ -11,13 +11,31 @@ import '../utils/app_logger.dart';
 /// 
 /// 专门处理大ZIP文件的创建和解压，避免内存溢出
 class ZipStreamProcessor {
-  /// 流式创建ZIP文件
+  /// 流式创建ZIP文件（增强版，支持大文件安全处理）
   /// 
   /// [outputPath] - 输出ZIP文件路径
   /// [files] - 要添加的文件列表 {relativePath: absolutePath}
   /// [onProgress] - 进度回调 (current, total)
   /// [cancelToken] - 取消令牌
   static Future<void> createZipStreaming(
+    String outputPath,
+    Map<String, String> files, {
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    return await LargeFileManager.executeWithMemoryProtection(
+      () async => _performZipCreation(
+        outputPath,
+        files,
+        onProgress: onProgress,
+        cancelToken: cancelToken,
+      ),
+      operationName: 'ZIP文件创建',
+    );
+  }
+
+  /// 执行受保护的ZIP创建操作
+  static Future<void> _performZipCreation(
     String outputPath,
     Map<String, String> files, {
     Function(int current, int total)? onProgress,
@@ -82,7 +100,7 @@ class ZipStreamProcessor {
     // fileStream will be closed by the encoder
   }
   
-  /// 流式解压ZIP文件
+  /// 流式解压ZIP文件（增强版，支持大文件安全处理）
   /// 
   /// [zipPath] - ZIP文件路径
   /// [extractPath] - 解压目标目录
@@ -90,6 +108,26 @@ class ZipStreamProcessor {
   /// [cancelToken] - 取消令牌
   /// [fileFilter] - 文件过滤器，返回true表示解压该文件
   static Future<void> extractZipStreaming(
+    String zipPath,
+    String extractPath, {
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+    bool Function(String fileName)? fileFilter,
+  }) async {
+    return await LargeFileManager.executeWithMemoryProtection(
+      () async => _performZipExtraction(
+        zipPath,
+        extractPath,
+        onProgress: onProgress,
+        cancelToken: cancelToken,
+        fileFilter: fileFilter,
+      ),
+      operationName: 'ZIP文件解压',
+    );
+  }
+
+  /// 执行受保护的ZIP解压操作
+  static Future<void> _performZipExtraction(
     String zipPath,
     String extractPath, {
     Function(int current, int total)? onProgress,
@@ -338,12 +376,12 @@ class ZipStreamProcessor {
         
         for (final file in archive) {
           if (file.name == fileName) {
-            // 检查文件大小，避免小文件也受到不必要限制
-            const reasonableMemoryLimit = 500 * 1024 * 1024; // 500MB内存限制
+            // 检查文件大小，对于大文件记录日志但不限制
+            const largeFileThreshold = 500 * 1024 * 1024; // 500MB
             
-            if (file.size > reasonableMemoryLimit) {
-              logDebug('文件过大，建议使用流式解压: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)');
-              return null;
+            if (file.size > largeFileThreshold) {
+              logDebug('注意：提取大文件到内存: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)');
+              // 不再返回null，继续处理大文件
             }
             
             // 对于小文件，可以安全加载到内存

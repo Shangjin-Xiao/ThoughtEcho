@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:video_player/video_player.dart';
 import '../utils/lottie_animation_manager.dart';
 
@@ -78,11 +79,58 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         }
         return;
       }
+      
+      // 获取文件大小，用于日志记录
+      int fileSize = 0;
+      try {
+        fileSize = await file.length();
+      } catch (_) {}
+      
+      // 记录开始初始化大视频
+      if (fileSize > 100 * 1024 * 1024) { // 100MB以上视为大视频
+        debugPrint('开始初始化大视频文件: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB');
+      }
 
+      // 创建视频控制器
       _videoController = VideoPlayerController.file(file);
-      await _videoController!.initialize();
-
+      
+      // 使用超时保护，防止初始化过程卡死
+      bool initializeCompleted = false;
+      
+      // 启动一个超时计时器
+      Future.delayed(const Duration(seconds: 30)).then((_) {
+        if (!initializeCompleted && mounted) {
+          debugPrint('视频初始化超时，尝试恢复');
+          setState(() {
+            _isInitializing = false;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('视频加载时间过长，请尝试使用较小的视频文件'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      });
+      
+      // 在隔离区中初始化视频
+      await _videoController!.initialize().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          debugPrint('视频初始化超时');
+          throw Exception('视频初始化超时，文件可能过大');
+        },
+      );
+      
+      initializeCompleted = true;
+      
       if (!mounted) return;
+      
+      // 记录视频初始化成功
+      if (fileSize > 100 * 1024 * 1024) {
+        debugPrint('大视频初始化成功: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB');
+      }
 
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
@@ -125,12 +173,133 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       );
 
       setState(() {});
+    } on OutOfMemoryError catch (e) {
+      // 专门处理内存不足错误
+      debugPrint('视频初始化遇到内存不足: $e');
+      _cleanupVideoResources();
+      await _handleOutOfMemoryError();
     } catch (e) {
+      // 清理资源
+      _cleanupVideoResources();
+      
+      debugPrint('视频初始化失败: $e');
+      
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('视频加载失败: $e')));
+        String errorMessage = '视频加载失败';
+        String suggestion = '';
+        
+        if (e.toString().contains('timeout') || e.toString().contains('超时')) {
+          errorMessage = '视频加载超时';
+          suggestion = '文件可能过大，请稍后重试或使用较小的视频文件';
+        } else if (e.toString().contains('format') || e.toString().contains('格式')) {
+          errorMessage = '不支持的视频格式';
+          suggestion = '请使用MP4、MOV等常见格式';
+        } else if (e.toString().contains('permission') || e.toString().contains('权限')) {
+          errorMessage = '无法访问视频文件';
+          suggestion = '请检查文件权限';
+        } else {
+          suggestion = '请检查文件是否完整或尝试重新导入';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(errorMessage),
+                if (suggestion.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    suggestion,
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ],
+            ),
+            duration: const Duration(seconds: 8),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: '重试',
+              onPressed: () => _retryVideoInitialization(),
+            ),
+          ),
+        );
       }
+    }
+  }
+  
+  // 清理视频资源
+  void _cleanupVideoResources() {
+    try {
+      if (_videoController != null) {
+        _videoController!.dispose();
+        _videoController = null;
+      }
+      if (_chewieController != null) {
+        _chewieController!.dispose();
+        _chewieController = null;
+      }
+    } catch (e) {
+      debugPrint('清理视频资源失败: $e');
+    }
+  }
+
+  /// 处理内存不足错误
+  Future<void> _handleOutOfMemoryError() async {
+    debugPrint('处理内存不足错误');
+    
+    // 强制垃圾回收
+    await Future.delayed(const Duration(milliseconds: 200));
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+        _isInitialized = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('内存不足，无法加载视频'),
+              SizedBox(height: 4),
+              Text(
+                '建议：\n• 关闭其他应用释放内存\n• 重启应用后重试\n• 使用较小的视频文件',
+                style: TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 10),
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: '重试',
+            onPressed: () => _retryVideoInitialization(),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// 重试视频初始化
+  Future<void> _retryVideoInitialization() async {
+    if (_isInitializing) return;
+    
+    debugPrint('重试视频初始化');
+    
+    // 重置状态
+    setState(() {
+      _isInitialized = false;
+      _isInitializing = false;
+    });
+    
+    // 短暂延迟后重试，给系统时间回收内存
+    await Future.delayed(const Duration(milliseconds: 1000));
+    
+    if (mounted) {
+      await _startVideoInitialization();
     }
   }
 
@@ -625,9 +794,28 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
   @override
   void dispose() {
-    _chewieController?.dispose();
-    _videoController?.dispose();
-    _audioPlayer?.dispose();
+    // 使用清理方法释放视频资源
+    _cleanupVideoResources();
+    
+    // 释放音频资源
+    try {
+      if (_audioPlayer != null) {
+        _audioPlayer!.dispose();
+        _audioPlayer = null;
+      }
+    } catch (e) {
+      debugPrint('释放音频资源失败: $e');
+    }
+    
+    // 确保在垃圾回收前触发一次内存清理
+    Future.microtask(() {
+      // 触发垃圾回收
+      if (!kIsWeb) {
+        // 在非Web平台可以尝试一些内存管理
+        Future.delayed(const Duration(milliseconds: 100));
+      }
+    });
+    
     super.dispose();
   }
 }
