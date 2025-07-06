@@ -57,7 +57,7 @@ class LargeVideoHandler {
       await _copyVideoFileWithMemoryProtection(
         sourcePath,
         targetPath,
-        fileSize: preCheckResult.fileSize,
+        fileSize: preCheckResult.fileSize ?? 0,
         onProgress: onProgress,
         onStatusUpdate: onStatusUpdate,
         cancelToken: cancelToken,
