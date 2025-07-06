@@ -336,7 +336,7 @@ class LargeVideoHandler {
           onProgress?.call(progress);
           
           // 定期刷新和内存检查
-          if (copiedBytes % (chunkSize * 10) == 0) {
+          if (chunkSize != null && copiedBytes % (chunkSize * 10) == 0) {
             await writer.flush();
             
             // 对于大文件，定期检查内存压力
@@ -346,7 +346,7 @@ class LargeVideoHandler {
           }
           
           // 状态更新
-          if (copiedBytes % (chunkSize * 20) == 0) {
+          if (chunkSize != null && copiedBytes % (chunkSize * 20) == 0) {
             final progressPercent = (progress * 100).toInt();
             onStatusUpdate?.call('正在复制... $progressPercent%');
           }

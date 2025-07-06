@@ -388,14 +388,8 @@ class LargeFileManager {
         logDebug('- 第二轮内存清理');
         await Future.delayed(const Duration(milliseconds: 300));
         
-        // 通知系统我们需要更多内存
-        PlatformDispatcher.instance.onError = (error, stack) {
-          if (error is OutOfMemoryError) {
-            logDebug('检测到内存不足，尝试紧急清理');
-            return true;
-          }
-          return false;
-        };
+        // 尝试释放更多内存
+        logDebug('检测到内存不足，尝试紧急清理');
         
         // 第三轮清理
         logDebug('- 第三轮内存清理');
