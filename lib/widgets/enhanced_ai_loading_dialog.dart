@@ -100,7 +100,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
                   return SizedBox(
                     width: s,
                     height: s,
-                    child: CircularProgressIndicator(strokeWidth: 4),
+                    child: const CircularProgressIndicator(strokeWidth: 4),
                   );
                 } else {
                   return EnhancedLottieAnimation(

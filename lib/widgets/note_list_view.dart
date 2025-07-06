@@ -409,7 +409,7 @@ class NoteListViewState extends State<NoteListView> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               '尝试使用其他关键词或检查拼写',
               style: TextStyle(
                 fontSize: 14,

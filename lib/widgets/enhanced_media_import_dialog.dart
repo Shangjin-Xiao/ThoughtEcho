@@ -148,7 +148,7 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.warning_amber,
                     size: 16,
                     color: Colors.orange,
