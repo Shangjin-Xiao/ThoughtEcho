@@ -86,7 +86,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
               isBackground: true,
               options: const quill.QuillToolbarColorButtonOptions(),
             ),
-            _buildDivider(),            // 第四组：标题和字体
+            _buildDivider(), // 第四组：标题和字体
             quill.QuillToolbarSelectHeaderStyleDropdownButton(
               controller: widget.controller,
               options:
@@ -368,7 +368,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       }
 
       final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
-      if (file != null) {        // 使用大文件管理器检查文件是否可读
+      if (file != null) {
+        // 使用大文件管理器检查文件是否可读
         final canProcess = await LargeFileManager.canProcessFile(file.path);
         if (!canProcess) {
           if (mounted) {
@@ -383,8 +384,10 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         }
 
         // 简单检查文件是否有效，不再限制大小
-        final fileSizeSecure = await LargeFileManager.getFileSizeSecurely(file.path);
-        
+        final fileSizeSecure = await LargeFileManager.getFileSizeSecurely(
+          file.path,
+        );
+
         if (fileSizeSecure == 0) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -398,7 +401,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
         }
 
         // 对于大文件给出友好提示但不阻止导入
-        if (fileSizeSecure > 100 * 1024 * 1024) { // 100MB以上给出提示
+        if (fileSizeSecure > 100 * 1024 * 1024) {
+          // 100MB以上给出提示
           final sizeMB = (fileSizeSecure / (1024 * 1024)).round();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -535,7 +539,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   Future<void> _insertMediaFile(String filePath, String type) async {
     // 创建取消令牌
     final cancelToken = LargeFileManager.createCancelToken();
-    
+
     // 显示进度对话框
     bool dialogShown = false;
     if (mounted) {
@@ -543,36 +547,37 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('正在导入${_getMediaTypeName(type)}...'),
-              const SizedBox(height: 8),
-              const Text(
-                '大文件可能需要较长时间，请耐心等待',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+        builder:
+            (dialogContext) => AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('正在导入${_getMediaTypeName(type)}...'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '大文件可能需要较长时间，请耐心等待',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                cancelToken.cancel();
-                Navigator.of(dialogContext).pop();
-              },
-              child: const Text('取消'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    cancelToken.cancel();
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('取消'),
+                ),
+              ],
             ),
-          ],
-        ),
       );
     }
 
     try {
       String? savedPath;
-        // 根据类型保存文件，带进度回调和取消支持
+      // 根据类型保存文件，带进度回调和取消支持
       switch (type) {
         case 'image':
           savedPath = await MediaFileService.saveImage(
@@ -603,7 +608,10 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           );
           break;
         default:
-          savedPath = await MediaFileService.saveImage(filePath, cancelToken: cancelToken);
+          savedPath = await MediaFileService.saveImage(
+            filePath,
+            cancelToken: cancelToken,
+          );
       }
 
       // 检查是否被取消
@@ -614,7 +622,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       }
 
       await _insertMediaEmbed(savedPath, type);
-      
+
       // 显示成功消息
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -628,13 +636,13 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       if (e is CancelledException) {
         debugPrint('媒体文件导入已取消');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('导入已取消')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('导入已取消')));
         }
         return;
       }
-      
+
       debugPrint('媒体文件插入错误: $e');
       if (mounted) {
         String errorMessage = '插入${_getMediaTypeName(type)}失败';
@@ -710,7 +718,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
           SnackBar(content: Text('插入${_getMediaTypeName(type)}失败: $e')),
         );
       }
-    }  }
+    }
+  }
 
   void _showFileSizeInfo() {
     showDialog(
@@ -753,11 +762,12 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   void _showEnhancedVideoImportDialog() {
     showDialog(
       context: context,
-      builder: (context) => EnhancedMediaImportDialog(
-        onFileImported: (filePath) {
-          _insertVideoEmbed(filePath);
-        },
-      ),
+      builder:
+          (context) => EnhancedMediaImportDialog(
+            onFileImported: (filePath) {
+              _insertVideoEmbed(filePath);
+            },
+          ),
     );
   }
 
@@ -768,23 +778,18 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       final index = widget.controller.selection.baseOffset;
       final length = widget.controller.selection.extentOffset - index;
 
-      widget.controller.replaceText(
-        index,
-        length,
-        embed,
-        quill.ChangeSource.local,
-      );
+      widget.controller.replaceText(index, length, embed, null);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('视频插入成功')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('视频插入成功')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('插入视频失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('插入视频失败: $e')));
       }
     }
   }
