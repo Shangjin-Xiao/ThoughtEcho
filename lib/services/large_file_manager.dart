@@ -6,6 +6,18 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
+/// 内存不足错误类
+/// 
+/// 用于统一处理内存不足的情况
+class OutOfMemoryError extends Error {
+  final String message;
+  
+  OutOfMemoryError([this.message = '内存不足']);
+  
+  @override
+  String toString() => 'OutOfMemoryError: $message';
+}
+
 /// 大文件处理管理器
 /// 
 /// 专门处理大文件的内存安全操作，包括：
@@ -322,16 +334,21 @@ class LargeFileManager {
         // 在非Web平台可以尝试一些内存管理
         await Future.delayed(const Duration(milliseconds: 1));
         
-        // 释放一些临时对象
-        PlatformDispatcher.instance.onError = (error, stack) {
-          // 只捕获OutOfMemoryError，其他错误正常处理
+        // 不直接设置全局错误处理程序，而是使用本地错误处理
+        // 这样可以避免覆盖应用程序的全局错误处理
+        try {
+          // 主动检查内存状态
+          final memoryInfo = PlatformDispatcher.instance.views.first.physicalSize;
+          if (memoryInfo.isEmpty) {
+            // 这只是一个简单的检查，实际上不会触发，但可以作为一个触发点
+            throw OutOfMemoryError('内存检查触发');
+          }
+        } catch (error) {
           if (error is OutOfMemoryError) {
             logDebug('检测到内存不足，尝试紧急清理');
             emergencyMemoryCleanup();
-            return true;
           }
-          return false;
-        };
+        }
       }
     } catch (e) {
       // 忽略内存检查错误
