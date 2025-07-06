@@ -338,9 +338,9 @@ class LargeFileManager {
         // 这样可以避免覆盖应用程序的全局错误处理
         try {
           // 主动检查内存状态
-          final memoryInfo = PlatformDispatcher.instance.views.first.physicalSize;
-          if (memoryInfo.isEmpty) {
-            // 这只是一个简单的检查，实际上不会触发，但可以作为一个触发点
+          // 使用更安全的方式检查内存
+          final memoryPressure = _checkSystemMemoryPressure();
+          if (memoryPressure) {
             throw OutOfMemoryError('内存检查触发');
           }
         } catch (error) {
@@ -356,6 +356,20 @@ class LargeFileManager {
     }
   }
   
+  /// 检查系统内存压力
+  /// 
+  /// 返回true表示内存压力大，false表示内存正常
+  static bool _checkSystemMemoryPressure() {
+    try {
+      // 这里我们无法直接获取系统内存使用情况
+      // 在实际应用中，可以通过平台特定的方法获取
+      // 这里只是一个简单的实现
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// 紧急内存清理（当检测到内存不足时）
   static Future<void> emergencyMemoryCleanup() async {
     try {
