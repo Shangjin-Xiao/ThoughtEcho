@@ -90,7 +90,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
             SizedBox(
               width: size ?? 80,
               height: size ?? 80,
-              child: CircularProgressIndicator(strokeWidth: 4),
+              child: const CircularProgressIndicator(strokeWidth: 4),
             ),
             if (showMessage && (message != null || customMessage != null)) ...[
               const SizedBox(height: 16),

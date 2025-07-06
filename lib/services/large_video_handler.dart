@@ -81,7 +81,7 @@ class LargeVideoHandler {
       
       // 检查文件是否存在
       if (!await file.exists()) {
-        return VideoPreCheckResult(
+        return const VideoPreCheckResult(
           isValid: false,
           errorMessage: '视频文件不存在',
         );
@@ -90,7 +90,7 @@ class LargeVideoHandler {
       // 获取文件大小
       final fileSize = await file.length();
       if (fileSize == 0) {
-        return VideoPreCheckResult(
+        return const VideoPreCheckResult(
           isValid: false,
           errorMessage: '视频文件为空',
         );
@@ -120,7 +120,7 @@ class LargeVideoHandler {
       // 检查文件头，简单验证是否为有效的视频文件
       final isValidVideo = await _validateVideoFileHeader(file);
       if (!isValidVideo) {
-        return VideoPreCheckResult(
+        return const VideoPreCheckResult(
           isValid: false,
           errorMessage: '文件可能已损坏或不是有效的视频文件',
         );

@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../services/media_file_service.dart';
 import '../services/large_file_manager.dart';
-import '../services/large_video_handler.dart';
 import 'enhanced_media_import_dialog.dart';
 
 /// 增强的全屏编辑器工具栏组件
