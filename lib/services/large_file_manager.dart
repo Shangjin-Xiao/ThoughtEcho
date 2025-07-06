@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
@@ -191,17 +193,19 @@ class LargeFileManager {
     }
   }
   
-  /// 分块复制文件（内存安全）
+  /// 分块复制文件（内存安全增强版）
   /// 
   /// [source] - 源文件路径
   /// [target] - 目标文件路径
   /// [chunkSize] - 块大小，默认64KB
   /// [onProgress] - 进度回调 (current, total)
+  /// [cancelToken] - 取消令牌，允许取消操作
   static Future<void> copyFileInChunks(
     String source,
     String target, {
     int chunkSize = _defaultChunkSize,
     Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     final sourceFile = File(source);
     final targetFile = File(target);
@@ -214,39 +218,84 @@ class LargeFileManager {
     await targetFile.parent.create(recursive: true);
     
     final totalSize = await sourceFile.length();
+    
+    // 根据文件大小动态调整块大小，大文件使用更大的块以提高效率
+    int adjustedChunkSize = chunkSize;
+    if (totalSize > 100 * 1024 * 1024) { // 100MB以上
+      adjustedChunkSize = 512 * 1024; // 512KB
+    } else if (totalSize > 10 * 1024 * 1024) { // 10MB以上
+      adjustedChunkSize = 256 * 1024; // 256KB
+    } else if (totalSize > 1 * 1024 * 1024) { // 1MB以上
+      adjustedChunkSize = 128 * 1024; // 128KB
+    }
+    
     int copiedBytes = 0;
     
-    final sourceStream = sourceFile.openRead();
-    final targetSink = targetFile.openWrite();
-    
+    // 使用更高效的分块读写方式
     try {
-      await for (final chunk in sourceStream) {
-        targetSink.add(chunk);
-        copiedBytes += chunk.length;
-        
-        // 报告进度
-        onProgress?.call(copiedBytes, totalSize);
-        
-        // 定期刷新，确保数据写入磁盘
-        if (copiedBytes % (chunkSize * 16) == 0) {
-          await targetSink.flush();
+      // 对于大文件，使用固定大小的块读取，避免内存峰值
+      final RandomAccessFile reader = await sourceFile.open(mode: FileMode.read);
+      final IOSink writer = targetFile.openWrite();
+      
+      try {
+        bool continueReading = true;
+        while (continueReading && copiedBytes < totalSize) {
+          // 检查是否取消
+          if (cancelToken?.isCancelled == true) {
+            logDebug('文件复制操作被取消');
+            throw const CancelledException();
+          }
+          
+          // 读取一个块
+          final buffer = Uint8List(adjustedChunkSize);
+          final bytesRead = await reader.readInto(buffer);
+          
+          if (bytesRead <= 0) {
+            continueReading = false;
+            continue;
+          }
+          
+          // 如果读取的字节数小于缓冲区大小，只写入实际读取的部分
+          if (bytesRead < adjustedChunkSize) {
+            writer.add(buffer.sublist(0, bytesRead));
+          } else {
+            writer.add(buffer);
+          }
+          
+          copiedBytes += bytesRead;
+          
+          // 报告进度
+          onProgress?.call(copiedBytes, totalSize);
+          
+          // 定期刷新，确保数据写入磁盘
+          if (copiedBytes % (adjustedChunkSize * 16) == 0) {
+            await writer.flush();
+          }
+          
+          // 内存压力检查和垃圾回收
+          if (copiedBytes % (adjustedChunkSize * 32) == 0) {
+            await _checkMemoryPressure();
+          }
+          
+          // 对于非常大的文件，添加短暂暂停，让UI线程有机会响应
+          if (totalSize > 100 * 1024 * 1024 && copiedBytes % (10 * 1024 * 1024) == 0) {
+            await Future.delayed(const Duration(milliseconds: 1));
+          }
         }
         
-        // 内存压力检查
-        if (copiedBytes % (chunkSize * 64) == 0) {
-          await _checkMemoryPressure();
+        await writer.flush();
+        
+        // 验证复制完整性
+        final targetSize = await targetFile.length();
+        if (targetSize != totalSize) {
+          throw Exception('文件复制不完整: 期望 $totalSize 字节，实际 $targetSize 字节');
         }
+        
+        logDebug('文件复制完成: $source -> $target (${(totalSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+      } finally {
+        await reader.close();
+        await writer.close();
       }
-      
-      await targetSink.flush();
-      
-      // 验证复制完整性
-      final targetSize = await targetFile.length();
-      if (targetSize != totalSize) {
-        throw Exception('文件复制不完整: 期望 $totalSize 字节，实际 $targetSize 字节');
-      }
-      
-      logDebug('文件复制完成: $source -> $target (${(totalSize / 1024 / 1024).toStringAsFixed(1)}MB)');
     } catch (e) {
       // 清理不完整的目标文件
       try {
@@ -254,9 +303,14 @@ class LargeFileManager {
           await targetFile.delete();
         }
       } catch (_) {}
+      
+      if (e is CancelledException) {
+        logDebug('文件复制已取消: $source -> $target');
+      } else {
+        logDebug('文件复制失败: $source -> $target, 错误: $e');
+      }
+      
       rethrow;
-    } finally {
-      await targetSink.close();
     }
   }
   
@@ -267,6 +321,17 @@ class LargeFileManager {
       if (!kIsWeb) {
         // 在非Web平台可以尝试一些内存管理
         await Future.delayed(const Duration(milliseconds: 1));
+        
+        // 释放一些临时对象
+        PlatformDispatcher.instance.onError = (error, stack) {
+          // 只捕获OutOfMemoryError，其他错误正常处理
+          if (error is OutOfMemoryError) {
+            logDebug('检测到内存不足，尝试紧急清理');
+            emergencyMemoryCleanup();
+            return true;
+          }
+          return false;
+        };
       }
     } catch (e) {
       // 忽略内存检查错误
@@ -281,10 +346,16 @@ class LargeFileManager {
       
       // 触发垃圾回收
       if (!kIsWeb) {
+        // 添加更长的延迟，让系统有更多时间回收内存
+        await Future.delayed(const Duration(milliseconds: 200));
+        
+        // 尝试释放一些可能的大对象引用
+        // 这里我们不能直接访问应用程序的所有对象，但可以通知系统进行内存回收
+        
+        // 再次延迟，确保垃圾回收有机会运行
         await Future.delayed(const Duration(milliseconds: 100));
       }
       
-      // 可以在这里添加更多内存清理逻辑
       logDebug('紧急内存清理完成');
     } catch (e) {
       logDebug('紧急内存清理失败: $e');

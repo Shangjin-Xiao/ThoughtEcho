@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'large_file_manager.dart';
+import 'large_video_handler.dart';
 
 /// 媒体文件管理服务
 /// 优化版本：支持文件压缩、流式处理和内存优化
@@ -60,43 +61,66 @@ class MediaFileService {
       debugPrint('保存图片失败: $e');
       return null;
     }
-  }  /// 复制视频到私有目录（使用LargeFileManager处理大文件）
+  }  /// 复制视频到私有目录（使用增强的大视频处理器）
   static Future<String?> saveVideo(
     String sourcePath, {
     Function(double progress)? onProgress,
+    Function(String status)? onStatusUpdate,
     CancelToken? cancelToken,
   }) async {
     try {
       return await LargeFileManager.executeWithMemoryProtection(
         () async {
-          // 使用LargeFileManager的文件检查（包含大文件支持）
-          if (!await LargeFileManager.canProcessFile(sourcePath)) {
-            throw Exception('视频文件无法处理或过大');
+          // 首先检查是否为大视频文件
+          final videoInfo = await LargeVideoHandler.getVideoFileInfo(sourcePath);
+          if (videoInfo == null) {
+            throw Exception('无法获取视频文件信息');
           }
-
-          final videoDir = await _getMediaDirectory(_videosFolder);
-          final fileName =
-              '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
-          final targetPath = path.join(videoDir.path, fileName);
-
-          // 使用LargeFileManager的分块复制，支持大视频文件
-          await LargeFileManager.copyFileInChunks(
-            sourcePath, 
-            targetPath,
-            onProgress: (current, total) {
-              cancelToken?.throwIfCancelled();
-              if (onProgress != null && total > 0) {
-                onProgress(current / total);
-              }
-            },
-          );
           
-          return targetPath;
+          final videoDir = await _getMediaDirectory(_videosFolder);
+          
+          // 对于大视频文件（超过50MB），使用专门的处理器
+          if (videoInfo.fileSizeMB > 50) {
+            debugPrint('检测到大视频文件: ${videoInfo.fileSizeMB.toStringAsFixed(1)}MB，使用专用处理器');
+            
+            return await LargeVideoHandler.importLargeVideoSafely(
+              sourcePath,
+              videoDir.path,
+              onProgress: onProgress,
+              onStatusUpdate: onStatusUpdate,
+              cancelToken: cancelToken,
+            );
+          } else {
+            // 小视频文件使用原有的处理方式
+            if (!await LargeFileManager.canProcessFile(sourcePath)) {
+              throw Exception('视频文件无法处理');
+            }
+
+            final fileName =
+                '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+            final targetPath = path.join(videoDir.path, fileName);
+
+            // 使用LargeFileManager的分块复制
+            await LargeFileManager.copyFileInChunks(
+              sourcePath, 
+              targetPath,
+              onProgress: (current, total) {
+                cancelToken?.throwIfCancelled();
+                if (onProgress != null && total > 0) {
+                  onProgress(current / total);
+                }
+              },
+              cancelToken: cancelToken,
+            );
+            
+            return targetPath;
+          }
         },
         operationName: '视频保存',
       );
     } catch (e) {
       debugPrint('保存视频失败: $e');
+      onStatusUpdate?.call('保存失败: $e');
       return null;
     }
   }  /// 复制音频到私有目录（使用LargeFileManager）
@@ -159,13 +183,9 @@ class MediaFileService {
     try {
       final fileSize = await getFileSizeSecurely(filePath);
 
-      // 简单的空间检查，这里主要检查文件大小是否合理
-      // 设置一个较大但合理的上限来避免极大文件导致的问题
-      const maxReasonableSize = 2 * 1024 * 1024 * 1024; // 2GB
-
-      if (fileSize > maxReasonableSize) {
-        debugPrint('文件过大: ${fileSize / (1024 * 1024)} MB');
-        return false;
+      // 移除大小限制，只记录日志
+      if (fileSize > 2 * 1024 * 1024 * 1024) { // 2GB以上记录警告日志
+        debugPrint('警告：文件较大: ${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB，请确保有足够存储空间');
       }
 
       return true;
@@ -225,8 +245,12 @@ class MediaFileService {
     }
   }
 
-  /// 从备份目录恢复媒体文件
-  static Future<bool> restoreMediaFiles(String backupMediaDir) async {
+  /// 从备份目录恢复媒体文件（增强版，支持大文件安全处理）
+  static Future<bool> restoreMediaFiles(
+    String backupMediaDir, {
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
     try {
       final backupDir = Directory(backupMediaDir);
       if (!await backupDir.exists()) {
@@ -234,42 +258,67 @@ class MediaFileService {
       }
 
       final appDir = await getApplicationDocumentsDirectory();
-      if (kDebugMode) {
-        print('开始恢复媒体文件，备份目录: $backupMediaDir');
-        print('应用目录: ${appDir.path}');
-      }
+      debugPrint('开始恢复媒体文件，备份目录: $backupMediaDir');
+      debugPrint('应用目录: ${appDir.path}');
 
-      // 递归复制所有文件
+      // 先收集所有需要恢复的文件
+      final List<File> filesToRestore = [];
       await for (final entity in backupDir.list(recursive: true)) {
         if (entity is File) {
-          // 计算相对于备份目录的路径
-          final relativePath = path.relative(entity.path, from: backupMediaDir);
+          filesToRestore.add(entity);
+        }
+      }
 
-          // 直接拼接到应用目录，不要再加 _mediaFolder
-          // 因为 relativePath 已经包含了 'media/images/xxx.jpg' 这样的完整路径
+      final totalFiles = filesToRestore.length;
+      int processedFiles = 0;
+
+      // 使用内存保护机制逐个恢复文件
+      for (final file in filesToRestore) {
+        cancelToken?.throwIfCancelled();
+
+        try {
+          // 计算相对于备份目录的路径
+          final relativePath = path.relative(file.path, from: backupMediaDir);
           final targetPath = path.join(appDir.path, relativePath);
 
-          if (kDebugMode) {
-            print('恢复文件: $relativePath -> $targetPath');
-          }
+          debugPrint('恢复文件: $relativePath -> $targetPath');
 
           // 确保目标目录存在
           final targetFile = File(targetPath);
           await targetFile.parent.create(recursive: true);
 
-          // 复制文件
-          await entity.copy(targetPath);
+          // 检查文件大小，决定使用哪种复制方法
+          final fileSize = await file.length();
+          
+          if (fileSize > 50 * 1024 * 1024) { // 50MB以上使用分块复制
+            debugPrint('检测到大文件 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)，使用分块复制');
+            
+            await LargeFileManager.copyFileInChunks(
+              file.path,
+              targetPath,
+              onProgress: (current, total) {
+                // 这里可以添加单个文件的进度回调
+              },
+              cancelToken: cancelToken,
+            );
+          } else {
+            // 小文件使用标准复制
+            await file.copy(targetPath);
+          }
+
+          processedFiles++;
+          onProgress?.call(processedFiles, totalFiles);
+
+        } catch (e) {
+          debugPrint('恢复单个文件失败: ${file.path}, 错误: $e');
+          // 继续处理其他文件，不因单个文件失败而中断整个恢复过程
         }
       }
 
-      if (kDebugMode) {
-        print('媒体文件恢复完成');
-      }
+      debugPrint('媒体文件恢复完成，成功恢复 $processedFiles/$totalFiles 个文件');
       return true;
     } catch (e) {
-      if (kDebugMode) {
-        print('恢复媒体文件失败: $e');
-      }
+      debugPrint('恢复媒体文件失败: $e');
       return false;
     }
   }
