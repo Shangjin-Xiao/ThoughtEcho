@@ -155,7 +155,7 @@ class LargeFileManager {
         // 估算数据大小
         final estimatedSize = _estimateJsonSize(mapData);
         
-        if (estimatedSize > 50 * 1024 * 1024) { // 50MB以上使用Isolate
+        if (estimatedSize > 200 * 1024 * 1024) { // 提高到200MB以上才使用Isolate
           logDebug('使用Isolate处理大JSON编码 (估算大小: ${(estimatedSize / 1024 / 1024).toStringAsFixed(1)}MB)');
           onProgress?.call(0.5);
           final result = await compute(_encodeJsonInIsolate, mapData);
@@ -172,7 +172,7 @@ class LargeFileManager {
         // 解码：String -> Map
         final jsonString = data as String;
         
-        if (jsonString.length > 50 * 1024 * 1024) { // 50MB以上使用Isolate
+        if (jsonString.length > 200 * 1024 * 1024) { // 提高到200MB以上才使用Isolate
           logDebug('使用Isolate处理大JSON解码 (大小: ${(jsonString.length / 1024 / 1024).toStringAsFixed(1)}MB)');
           onProgress?.call(0.5);
           final result = await compute(_decodeJsonInIsolate, jsonString);
@@ -452,7 +452,7 @@ class LargeFileManager {
         // 如果还有重试次数，则重试
         if (retryCount < maxRetries) {
           retryCount++;
-          logDebug('正在重试$name (${retryCount}/$maxRetries)...');
+          logDebug('正在重试$name ($retryCount/$maxRetries)...');
           
           // 重试前等待更长时间让系统回收内存
           await Future.delayed(const Duration(milliseconds: 500));

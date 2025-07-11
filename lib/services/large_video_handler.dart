@@ -259,16 +259,19 @@ class LargeVideoHandler {
     }
   }
   
-  /// 根据文件大小计算最佳块大小
+  /// 根据文件大小和内存状态计算最佳块大小
   static int _calculateOptimalChunkSize(int fileSize) {
+    // 更保守的块大小策略，避免内存峰值
     if (fileSize > 1024 * 1024 * 1024) { // 1GB以上
-      return 512 * 1024; // 512KB
+      return 128 * 1024; // 128KB - 减小块大小
     } else if (fileSize > 500 * 1024 * 1024) { // 500MB以上
-      return 1 * 1024 * 1024; // 1MB
+      return 256 * 1024; // 256KB
     } else if (fileSize > 100 * 1024 * 1024) { // 100MB以上
-      return 2 * 1024 * 1024; // 2MB
+      return 512 * 1024; // 512KB
+    } else if (fileSize > 50 * 1024 * 1024) { // 50MB以上
+      return 1024 * 1024; // 1MB
     } else {
-      return 4 * 1024 * 1024; // 4MB
+      return 2 * 1024 * 1024; // 2MB
     }
   }
   

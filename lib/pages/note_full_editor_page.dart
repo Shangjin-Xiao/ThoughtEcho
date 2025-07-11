@@ -90,8 +90,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         
         final deltaContent = widget.initialQuote!.deltaContent!;
         
-        // 检查内容大小，决定处理策略
-        if (deltaContent.length > 1024 * 1024) { // 1MB以上使用compute
+        // 检查内容大小，决定处理策略 - 提高阈值减少Isolate使用
+        if (deltaContent.length > 5 * 1024 * 1024) { // 提高到5MB以上才使用compute
           logDebug('大富文本内容，使用后台处理 (${(deltaContent.length / 1024).toStringAsFixed(1)}KB)');
           
           try {
