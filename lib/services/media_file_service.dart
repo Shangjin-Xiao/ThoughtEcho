@@ -126,7 +126,22 @@ class MediaFileService {
       }, operationName: '视频保存');
     } catch (e) {
       debugPrint('保存视频失败: $e');
-      onStatusUpdate?.call('保存失败: $e');
+      
+      // 提供更详细的错误信息
+      String errorMessage;
+      if (e is CancelledException) {
+        errorMessage = '视频导入已取消';
+      } else if (e.toString().contains('内存不足')) {
+        errorMessage = '内存不足，请关闭其他应用后重试或选择较小的视频文件';
+      } else if (e.toString().contains('空间不足')) {
+        errorMessage = '存储空间不足，请清理设备存储后重试';
+      } else if (e.toString().contains('权限')) {
+        errorMessage = '无法访问文件，请检查文件权限';
+      } else {
+        errorMessage = '保存失败: ${e.toString()}';
+      }
+      
+      onStatusUpdate?.call(errorMessage);
       return null;
     }
   }

@@ -345,8 +345,8 @@ class LargeVideoHandler {
             }
           }
           
-          // 状态更新
-          if (chunkSize != null && copiedBytes % (chunkSize * 20) == 0) {
+          // 状态更新 - 修复modulo操作避免除零错误
+          if (chunkSize != null && chunkSize > 0 && copiedBytes % (chunkSize * 20) == 0) {
             final progressPercent = (progress * 100).toInt();
             onStatusUpdate?.call('正在复制... $progressPercent%');
           }
