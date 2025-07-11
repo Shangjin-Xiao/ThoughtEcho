@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'app_logger.dart';
@@ -152,10 +153,10 @@ class DeviceMemoryManager {
       // 根据文件大小调整
       if (fileSize > 1024 * 1024 * 1024) {
         // 1GB以上的文件使用更小的块
-        baseChunkSize = Math.min(baseChunkSize, 16 * 1024);
+        baseChunkSize = math.min(baseChunkSize, 16 * 1024);
       } else if (fileSize < 10 * 1024 * 1024) {
         // 10MB以下的文件可以使用更大的块
-        baseChunkSize = Math.max(baseChunkSize, 64 * 1024);
+        baseChunkSize = math.max(baseChunkSize, 64 * 1024);
       }
       
       logDebug('推荐块大小: ${(baseChunkSize / 1024).toStringAsFixed(1)}KB '
@@ -192,23 +193,38 @@ class DeviceMemoryManager {
   /// 获取Android内存信息
   Future<Map<String, int>> _getAndroidMemoryInfo() async {
     try {
-      // 这里应该使用原生方法获取实际的内存信息
-      // 为了简化，现在返回估计值
-      // 在实际实现中，可以通过MethodChannel调用Android的ActivityManager
-      
       const platform = MethodChannel('thoughtecho/memory_info');
       try {
         final result = await platform.invokeMethod('getMemoryInfo');
+        
+        // 使用真实的内存信息
+        final totalMem = result['totalMem'] as int? ?? 4 * 1024 * 1024 * 1024;
+        final availMem = result['availMem'] as int? ?? 1 * 1024 * 1024 * 1024;
+        final appMaxMemory = result['appMaxMemory'] as int? ?? 512 * 1024 * 1024;
+        final appUsedMemory = result['appUsedMemory'] as int? ?? 256 * 1024 * 1024;
+        final lowMemory = result['lowMemory'] as bool? ?? false;
+        
+        logDebug('Android内存信息: 总内存=${(totalMem / 1024 / 1024).toStringAsFixed(0)}MB, '
+                 '可用=${(availMem / 1024 / 1024).toStringAsFixed(0)}MB, '
+                 '应用最大=${(appMaxMemory / 1024 / 1024).toStringAsFixed(0)}MB, '
+                 '应用已用=${(appUsedMemory / 1024 / 1024).toStringAsFixed(0)}MB, '
+                 '低内存警告=$lowMemory');
+        
+        // 如果系统报告低内存，调整可用内存估算
+        final adjustedAvailMem = lowMemory ? (availMem * 0.5).toInt() : availMem;
+        
         return {
-          'total': result['totalMem'] ?? 4 * 1024 * 1024 * 1024,
-          'available': result['availMem'] ?? 1 * 1024 * 1024 * 1024,
+          'total': totalMem,
+          'available': adjustedAvailMem,
+          'appMaxMemory': appMaxMemory,
+          'appUsedMemory': appUsedMemory,
         };
       } catch (e) {
         // 如果原生方法不可用，返回保守估计值
         logDebug('原生内存检测不可用，使用估计值: $e');
         return {
           'total': 4 * 1024 * 1024 * 1024, // 4GB
-          'available': 1 * 1024 * 1024 * 1024, // 1GB
+          'available': 512 * 1024 * 1024, // 512MB - 更保守的估计
         };
       }
     } catch (e) {
@@ -318,8 +334,3 @@ extension MemoryPressureLevelExt on MemoryPressureLevel {
   }
 }
 
-/// 修复类名问题的Math类
-class Math {
-  static T min<T extends num>(T a, T b) => a < b ? a : b;
-  static T max<T extends num>(T a, T b) => a > b ? a : b;
-}

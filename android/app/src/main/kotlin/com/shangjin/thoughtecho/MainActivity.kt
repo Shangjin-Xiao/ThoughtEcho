@@ -3,10 +3,16 @@ package com.shangjin.thoughtecho
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
 // import android.view.WindowManager // Commented out as it's no longer needed
 // import android.util.Log // Commented out as it's no longer needed
 
 class MainActivity : FlutterActivity() {
+    
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        flutterEngine.plugins.add(MemoryInfoPlugin())
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         // Temporarily comment out the hardware acceleration check as it might cause issues before super.onCreate()
         // if (!is64BitDevice()) {

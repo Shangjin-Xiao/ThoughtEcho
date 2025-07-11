@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/device_memory_manager.dart';
 
 /// 备份与恢复服务
 ///
@@ -43,6 +44,14 @@ class BackupService {
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
+    // 预先检查内存状态
+    final memoryManager = DeviceMemoryManager();
+    final memoryPressure = await memoryManager.getMemoryPressureLevel();
+    
+    if (memoryPressure == MemoryPressureLevel.critical) {
+      throw Exception('内存不足，无法执行备份操作。请关闭其他应用后重试。');
+    }
+    
     return await LargeFileManager.executeWithMemoryProtection(
       () async => _performExportWithProtection(
         includeMediaFiles: includeMediaFiles,
@@ -51,6 +60,7 @@ class BackupService {
         cancelToken: cancelToken,
       ),
       operationName: '数据备份',
+      maxRetries: memoryPressure == MemoryPressureLevel.high ? 0 : 1, // 高内存压力时不重试
     ) ?? (throw Exception('备份操作失败'));
   }
 

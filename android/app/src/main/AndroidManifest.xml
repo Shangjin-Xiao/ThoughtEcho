@@ -4,6 +4,7 @@
         android:label="心迹"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:largeHeap="true"
         android:hardwareAccelerated="false"> <!-- 将硬件加速设置为false，避免32位设备上的渲染问题 -->
         <activity
             android:name=".MainActivity"
