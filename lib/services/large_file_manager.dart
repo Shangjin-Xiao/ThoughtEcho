@@ -254,6 +254,12 @@ class LargeFileManager {
           // 检查是否取消
           if (cancelToken?.isCancelled == true) {
             logDebug('文件复制操作被取消');
+            // 清理不完整的目标文件
+            try {
+              if (await targetFile.exists()) {
+                await targetFile.delete();
+              }
+            } catch (_) {}
             throw const CancelledException();
           }
           
@@ -283,12 +289,12 @@ class LargeFileManager {
           onProgress?.call(copiedBytes, totalSize);
           
           // 定期刷新，确保数据写入磁盘
-          if (copiedBytes % (adjustedChunkSize * 16) == 0) {
+          if (adjustedChunkSize > 0 && copiedBytes % (adjustedChunkSize * 16) == 0) {
             await writer.flush();
           }
           
           // 内存压力检查和垃圾回收
-          if (copiedBytes % (adjustedChunkSize * 32) == 0) {
+          if (adjustedChunkSize > 0 && copiedBytes % (adjustedChunkSize * 32) == 0) {
             await _checkMemoryPressure();
           }
           
