@@ -191,7 +191,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.3),
+                    ).colorScheme.onSurface.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -230,7 +230,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                           ).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.7),
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -349,6 +349,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         listen: false,
       );
       final quotes = await databaseService.getUserQuotes();
+      if (!mounted) return;
+      
       final currentYear = DateTime.now().year;
 
       final thisYearQuotes =
@@ -459,9 +461,10 @@ $positiveQuotes
 ''';
 
       final result = await aiService.analyzeSource(prompt);
+      if (!mounted) return;
       Navigator.pop(context); // 关闭加载对话框
 
-      if (mounted && result.isNotEmpty) {
+      if (result.isNotEmpty) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -472,7 +475,9 @@ $positiveQuotes
         );
       }
     } catch (e) {
-      Navigator.pop(context); // 关闭加载对话框
+      if (mounted) {
+        Navigator.pop(context); // 关闭加载对话框
+      }
       AppLogger.e('生成AI年度报告失败', error: e);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -641,7 +646,7 @@ $positiveQuotes
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.6),
+                                              .withValues(alpha: 0.6),
                                         ),
                                       ),
                                       PopupMenuButton<String>(
