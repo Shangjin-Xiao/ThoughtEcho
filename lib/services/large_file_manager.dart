@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
@@ -256,8 +257,12 @@ class LargeFileManager {
             throw const CancelledException();
           }
           
+          // 计算本次应该读取的字节数
+          final remainingBytes = totalSize - copiedBytes;
+          final currentChunkSize = remainingBytes < adjustedChunkSize ? remainingBytes : adjustedChunkSize;
+          
           // 读取一个块
-          final buffer = Uint8List(adjustedChunkSize);
+          final buffer = Uint8List(currentChunkSize);
           final bytesRead = await reader.readInto(buffer);
           
           if (bytesRead <= 0) {
@@ -265,8 +270,8 @@ class LargeFileManager {
             continue;
           }
           
-          // 如果读取的字节数小于缓冲区大小，只写入实际读取的部分
-          if (bytesRead < adjustedChunkSize) {
+          // 写入实际读取的数据
+          if (bytesRead < buffer.length) {
             writer.add(buffer.sublist(0, bytesRead));
           } else {
             writer.add(buffer);

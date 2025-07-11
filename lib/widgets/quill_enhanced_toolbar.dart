@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../services/media_file_service.dart';
+import 'enhanced_media_import_dialog.dart';
 
 /// 增强的全屏编辑器工具栏组件
 /// 重写版本 - 确保稳定显示和完整功能
@@ -364,7 +365,8 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
   }
 
   void _insertVideo() {
-    _showMediaDialog('video');
+    // 使用增强的视频导入对话框替代原来的基础对话框
+    _showEnhancedVideoImportDialog();
   }
 
   void _insertAudio() {
@@ -1034,6 +1036,46 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
       widget.controller.formatSelection(quill.ColorAttribute(hex));
     } else {
       widget.controller.formatSelection(quill.BackgroundAttribute(hex));
+    }
+  }
+
+  /// 显示增强的视频导入对话框
+  void _showEnhancedVideoImportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => EnhancedMediaImportDialog(
+        onFileImported: (filePath) {
+          _insertVideoEmbed(filePath);
+        },
+      ),
+    );
+  }
+
+  /// 插入视频嵌入块
+  void _insertVideoEmbed(String filePath) {
+    try {
+      final embed = quill.BlockEmbed.video(filePath);
+      final index = widget.controller.selection.baseOffset;
+      final length = widget.controller.selection.extentOffset - index;
+
+      widget.controller.replaceText(index, length, embed, null);
+      
+      // 移动光标到嵌入块之后
+      final newPosition = index + 1;
+      widget.controller.updateSelection(
+        TextSelection.collapsed(offset: newPosition),
+        quill.ChangeSource.local,
+      );
+    } catch (e) {
+      debugPrint('插入视频失败: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('插入视频失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
