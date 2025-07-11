@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'device_memory_manager.dart';
 import 'app_logger.dart';
 

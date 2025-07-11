@@ -14,12 +14,12 @@ class ChatMarkdownStyleSheet {
     // 代码块背景色
     final codeBlockBg =
         isDarkMode
-            ? colorScheme.surface.withOpacity(0.8)
-            : colorScheme.surfaceContainerHighest.withOpacity(0.5);
+            ? colorScheme.surface.withValues(alpha: 0.8)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
 
     // 引用块颜色
-    final blockquoteBg = colorScheme.primary.withOpacity(0.08);
-    final blockquoteBorder = colorScheme.primary.withOpacity(0.3);
+    final blockquoteBg = colorScheme.primary.withValues(alpha: 0.08);
+    final blockquoteBorder = colorScheme.primary.withValues(alpha: 0.3);
 
     return MarkdownStyleSheet(
       // 段落样式
@@ -72,7 +72,7 @@ class ChatMarkdownStyleSheet {
       em: TextStyle(color: baseColor, fontStyle: FontStyle.italic),
       strong: TextStyle(color: baseColor, fontWeight: FontWeight.bold),
       del: TextStyle(
-        color: baseColor.withOpacity(0.7),
+        color: baseColor.withValues(alpha: 0.7),
         decoration: TextDecoration.lineThrough,
       ),
 
@@ -80,12 +80,12 @@ class ChatMarkdownStyleSheet {
       a: TextStyle(
         color: colorScheme.primary,
         decoration: TextDecoration.underline,
-        decorationColor: colorScheme.primary.withOpacity(0.6),
+        decorationColor: colorScheme.primary.withValues(alpha: 0.6),
       ),
 
       // 引用块样式
       blockquote: textTheme.bodyMedium?.copyWith(
-        color: baseColor.withOpacity(0.9),
+        color: baseColor.withValues(alpha: 0.9),
         fontSize: 15,
         fontStyle: FontStyle.italic,
         height: 1.4,
@@ -112,7 +112,7 @@ class ChatMarkdownStyleSheet {
         color: codeBlockBg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: colorScheme.outline.withOpacity(0.2),
+          color: colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -134,7 +134,7 @@ class ChatMarkdownStyleSheet {
       ),
       tableBody: textTheme.bodyMedium?.copyWith(color: baseColor, fontSize: 14),
       tableBorder: TableBorder.all(
-        color: colorScheme.outline.withOpacity(0.3),
+        color: colorScheme.outline.withValues(alpha: 0.3),
         width: 1,
         borderRadius: BorderRadius.circular(4),
       ),
@@ -148,14 +148,14 @@ class ChatMarkdownStyleSheet {
       horizontalRuleDecoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: colorScheme.outline.withOpacity(0.3),
+            color: colorScheme.outline.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
       ),
 
       // 其他样式
-      textScaleFactor: 1.0,
+      textScaler: const TextScaler.linear(1.0),
     );
   }
 

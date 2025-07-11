@@ -14,7 +14,6 @@ class DeviceMemoryManager {
 
   // 内存信息缓存
   int? _totalMemory;
-  int? _availableMemory;
   DateTime? _lastCheck;
   static const Duration _cacheTimeout = Duration(seconds: 5);
 
@@ -132,7 +131,6 @@ class DeviceMemoryManager {
   /// 根据可用内存推荐最佳块大小
   Future<int> getOptimalChunkSize(int fileSize) async {
     try {
-      final available = await getAvailableMemory();
       final usageRatio = await getMemoryUsageRatio();
       
       // 基础块大小
@@ -280,7 +278,6 @@ class DeviceMemoryManager {
   /// 清理内存缓存
   void clearCache() {
     _totalMemory = null;
-    _availableMemory = null;
     _lastCheck = null;
   }
 }

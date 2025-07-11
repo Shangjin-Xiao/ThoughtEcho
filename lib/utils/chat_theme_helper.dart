@@ -35,7 +35,7 @@ class ChatThemeHelper {
         fontWeight: FontWeight.w500,
       ),
       sentMessageCaptionTextStyle: TextStyle(
-        color: colorScheme.onPrimary.withOpacity(0.7),
+        color: colorScheme.onPrimary.withValues(alpha: 0.7),
         fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
