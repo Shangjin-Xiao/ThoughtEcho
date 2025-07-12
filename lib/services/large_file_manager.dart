@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
@@ -524,31 +525,65 @@ class LargeFileManager {
   /// 检查系统是否有足够资源处理文件（移除大小限制）
   static Future<bool> canProcessFile(String filePath) async {
     try {
-      final fileSize = await getFileSizeSecurely(filePath);
-      
-      // 移除大小限制，只检查文件是否存在和可读
-      if (fileSize == 0) {
-        logDebug('文件不存在或为空: $filePath');
-        return false;
-      }
-      
-      // 检查文件是否可读
+      logDebug('开始检查文件处理能力: $filePath');
+
+      // 首先检查文件是否存在
       final file = File(filePath);
       if (!await file.exists()) {
+        logDebug('文件不存在: $filePath');
         return false;
       }
-      
+
+      // 获取文件大小
+      final fileSize = await getFileSizeSecurely(filePath);
+      if (fileSize == 0) {
+        logDebug('文件为空: $filePath');
+        return false;
+      }
+
+      logDebug('文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
+
       // 尝试读取文件的第一个字节，确保文件可以访问
       try {
-        final stream = file.openRead(0, 1);
-        await stream.first;
-        return true;
+        // 使用更安全的方式检查文件可读性
+        final randomAccessFile = await file.open(mode: FileMode.read);
+        try {
+          // 尝试读取第一个字节
+          final buffer = Uint8List(1);
+          final bytesRead = await randomAccessFile.readInto(buffer);
+
+          if (bytesRead > 0) {
+            logDebug('文件可读性检查通过: $filePath');
+            return true;
+          } else {
+            logDebug('文件无法读取数据: $filePath');
+            return false;
+          }
+        } finally {
+          await randomAccessFile.close();
+        }
       } catch (e) {
-        logDebug('文件无法读取: $filePath, 错误: $e');
+        logDebug('文件读取测试失败: $filePath, 错误: $e');
+
+        // 如果是权限问题，尝试其他方法
+        if (e.toString().contains('permission') || e.toString().contains('权限')) {
+          logDebug('检测到权限问题，尝试备用检查方法');
+          try {
+            // 尝试使用流的方式检查
+            final stream = file.openRead(0, 1);
+            await stream.first;
+            logDebug('备用检查方法成功: $filePath');
+            return true;
+          } catch (e2) {
+            logDebug('备用检查方法也失败: $filePath, 错误: $e2');
+            return false;
+          }
+        }
+
         return false;
       }
     } catch (e) {
-      logDebug('检查文件处理能力失败: $e');
+      logDebug('检查文件处理能力失败: $filePath, 错误: $e');
       return false;
     }
   }

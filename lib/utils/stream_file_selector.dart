@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
 import 'app_logger.dart';
@@ -13,30 +14,53 @@ class StreamFileSelector {
   static Future<XFile?> selectVideoFile() async {
     try {
       logDebug('开始流式选择视频文件...');
-      
+
       // 首先尝试使用我们的原生实现
       if (await isNativeFileSelectorAvailable()) {
-        final result = await _channel.invokeMethod('selectVideoFile', {
-          'extensions': ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
-          'allowMultiple': false,
-        });
-        
-        if (result != null && result is String) {
-          logDebug('原生选择文件成功: $result');
-          return XFile(result);
+        try {
+          final result = await _channel.invokeMethod('selectVideoFile', {
+            'extensions': ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
+            'allowMultiple': false,
+          }).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              logDebug('原生文件选择超时');
+              return null;
+            },
+          );
+
+          if (result != null && result is String) {
+            logDebug('原生选择视频文件成功: $result');
+            // 立即验证文件是否存在
+            final file = File(result);
+            if (await file.exists()) {
+              final fileSize = await file.length();
+              logDebug('文件验证成功，大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
+              return XFile(result);
+            } else {
+              logDebug('原生选择的文件不存在: $result');
+              throw Exception('选择的文件不存在');
+            }
+          }
+        } catch (e) {
+          logDebug('原生文件选择失败，回退到标准方法: $e');
         }
       }
-      
-      // 回退到标准file_selector，但只用于小文件
-      logDebug('回退到标准file_selector');
+
+      // 回退到标准file_selector
+      logDebug('使用标准file_selector选择视频文件');
       const XTypeGroup typeGroup = XTypeGroup(
         label: 'videos',
         extensions: <String>['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
       );
 
-      return await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+      final result = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+      if (result != null) {
+        logDebug('标准文件选择成功: ${result.path}');
+      }
+      return result;
     } catch (e) {
-      logDebug('流式文件选择失败: $e');
+      logDebug('视频文件选择失败: $e');
       return null;
     }
   }
@@ -45,30 +69,53 @@ class StreamFileSelector {
   static Future<XFile?> selectImageFile() async {
     try {
       logDebug('开始流式选择图片文件...');
-      
+
       // 首先尝试使用我们的原生实现
       if (await isNativeFileSelectorAvailable()) {
-        final result = await _channel.invokeMethod('selectImageFile', {
-          'extensions': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
-          'allowMultiple': false,
-        });
-        
-        if (result != null && result is String) {
-          logDebug('原生选择图片成功: $result');
-          return XFile(result);
+        try {
+          final result = await _channel.invokeMethod('selectImageFile', {
+            'extensions': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+            'allowMultiple': false,
+          }).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              logDebug('原生图片选择超时');
+              return null;
+            },
+          );
+
+          if (result != null && result is String) {
+            logDebug('原生选择图片文件成功: $result');
+            // 立即验证文件是否存在
+            final file = File(result);
+            if (await file.exists()) {
+              final fileSize = await file.length();
+              logDebug('图片文件验证成功，大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
+              return XFile(result);
+            } else {
+              logDebug('原生选择的图片文件不存在: $result');
+              throw Exception('选择的图片文件不存在');
+            }
+          }
+        } catch (e) {
+          logDebug('原生图片选择失败，回退到标准方法: $e');
         }
       }
-      
+
       // 回退到标准file_selector
-      logDebug('回退到标准file_selector');
+      logDebug('使用标准file_selector选择图片文件');
       const XTypeGroup typeGroup = XTypeGroup(
         label: 'images',
         extensions: <String>['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
       );
 
-      return await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+      final result = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+      if (result != null) {
+        logDebug('标准图片选择成功: ${result.path}');
+      }
+      return result;
     } catch (e) {
-      logDebug('流式图片选择失败: $e');
+      logDebug('图片文件选择失败: $e');
       return null;
     }
   }
@@ -80,23 +127,42 @@ class StreamFileSelector {
   }) async {
     try {
       logDebug('开始流式选择文件...');
-      
+
       // 首先尝试使用我们的原生实现
       if (await isNativeFileSelectorAvailable()) {
-        final result = await _channel.invokeMethod('selectFile', {
-          'extensions': extensions ?? [],
-          'description': description ?? 'All Files',
-          'allowMultiple': false,
-        });
-        
-        if (result != null && result is String) {
-          logDebug('原生选择文件成功: $result');
-          return XFile(result);
+        try {
+          final result = await _channel.invokeMethod('selectFile', {
+            'extensions': extensions ?? [],
+            'description': description ?? 'All Files',
+            'allowMultiple': false,
+          }).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              logDebug('原生文件选择超时');
+              return null;
+            },
+          );
+
+          if (result != null && result is String) {
+            logDebug('原生选择文件成功: $result');
+            // 立即验证文件是否存在
+            final file = File(result);
+            if (await file.exists()) {
+              final fileSize = await file.length();
+              logDebug('文件验证成功，大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
+              return XFile(result);
+            } else {
+              logDebug('原生选择的文件不存在: $result');
+              throw Exception('选择的文件不存在');
+            }
+          }
+        } catch (e) {
+          logDebug('原生文件选择失败，回退到标准方法: $e');
         }
       }
-      
+
       // 回退到标准file_selector
-      logDebug('回退到标准file_selector');
+      logDebug('使用标准file_selector选择文件');
       final typeGroups = <XTypeGroup>[];
       if (extensions != null && extensions.isNotEmpty) {
         typeGroups.add(XTypeGroup(
@@ -107,9 +173,13 @@ class StreamFileSelector {
         typeGroups.add(const XTypeGroup(label: 'All Files'));
       }
 
-      return await openFile(acceptedTypeGroups: typeGroups);
+      final result = await openFile(acceptedTypeGroups: typeGroups);
+      if (result != null) {
+        logDebug('标准文件选择成功: ${result.path}');
+      }
+      return result;
     } catch (e) {
-      logDebug('流式文件选择失败: $e');
+      logDebug('文件选择失败: $e');
       return null;
     }
   }
@@ -117,7 +187,14 @@ class StreamFileSelector {
   /// 检查原生文件选择器是否可用
   static Future<bool> isNativeFileSelectorAvailable() async {
     try {
-      final result = await _channel.invokeMethod('isAvailable');
+      // 添加超时机制，避免长时间等待
+      final result = await _channel.invokeMethod('isAvailable').timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          logDebug('原生文件选择器检查超时');
+          return false;
+        },
+      );
       return result == true;
     } catch (e) {
       logDebug('检查原生文件选择器可用性失败: $e');

@@ -37,12 +37,17 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
 
     final preferencesCount = OnboardingConfig.preferences.length;
     _itemAnimations = List.generate(preferencesCount, (index) {
+      // Calculate intervals that ensure end values don't exceed 1.0
+      final startDelay = index * 0.1;
+      const animationDuration = 0.4; // Fixed duration for each animation
+      final endTime = (startDelay + animationDuration).clamp(0.0, 1.0);
+
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _animationController,
           curve: Interval(
-            index * 0.1,
-            0.4 + index * 0.1,
+            startDelay,
+            endTime,
             curve: Curves.easeOutBack,
           ),
         ),

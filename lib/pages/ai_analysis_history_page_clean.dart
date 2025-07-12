@@ -588,7 +588,7 @@ $dataStats
 
 $htmlTemplate
 
-替换规则：
+替换规则和示例：
 - {{YEAR}} → $year
 - {{ACTIVE_DAYS}} → $activeDays
 - {{TOTAL_NOTES}} → $totalNotes
@@ -596,26 +596,30 @@ $htmlTemplate
 - {{TOTAL_WORDS}} → $totalWords
 - {{AVERAGE_WORDS}} → $averageWordsPerNote
 - {{NEXT_YEAR}} → ${year + 1}
-- {{GROWTH_PERCENTAGE}} → 根据数据生成合理的增长描述
-- {{MONTHLY_CHART}} → 生成12个月的数据展示HTML
-- {{TAG_CLOUD}} → 生成分类标签云HTML
-- {{TAG_INSIGHT}} → 基于分类使用情况的洞察
-- {{PEAK_TIME}} → 分析最活跃的记录时间
-- {{PEAK_TIME_DESC}} → 时间偏好描述
-- {{WRITING_HABITS}} → 写作习惯分析
-- {{FEATURED_QUOTES}} → 精选笔记展示HTML
-- {{ACHIEVEMENTS}} → 成就解锁HTML
-- {{FUTURE_SUGGESTIONS}} → 未来建议
+- {{GROWTH_PERCENTAGE}} → 生成如"相比去年增长15%"的描述
+- {{MONTHLY_CHART}} → 生成如下格式的HTML:
+  <div class="month-item"><div class="month-name">1月</div><div class="month-count">5</div></div>
+- {{TAG_CLOUD}} → 生成如下格式的HTML:
+  <span class="tag">工作</span><span class="tag popular">学习</span>
+- {{TAG_INSIGHT}} → 生成基于分类使用情况的洞察文本
+- {{PEAK_TIME}} → 如"晚上 20:00-22:00"
+- {{PEAK_TIME_DESC}} → 如"您更喜欢在夜晚进行思考和记录"
+- {{WRITING_HABITS}} → 生成写作习惯分析文本
+- {{FEATURED_QUOTES}} → 生成如下格式的HTML:
+  <div class="quote-card"><div class="quote-content">笔记内容</div><div class="quote-date">2024-01-01</div></div>
+- {{ACHIEVEMENTS}} → 生成如下格式的HTML:
+  <div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-title">坚持记录</div><div class="achievement-desc">连续记录30天</div></div>
+- {{FUTURE_SUGGESTIONS}} → 生成未来建议文本
 
-要求：
-1. 保持HTML模板的完整结构和样式
-2. 用真实数据替换所有占位符
-3. 生成积极正面的内容分析
-4. 确保数据准确性和一致性
-5. 语气温暖鼓励，富有洞察力
-6. 适合移动端显示
+重要要求：
+1. 必须返回完整的HTML代码，从<!DOCTYPE html>开始到</html>结束
+2. 不要返回JSON格式或其他格式
+3. 不要添加任何解释性文字，只返回HTML代码
+4. 确保所有占位符都被替换为实际内容
+5. 保持HTML的完整性和可读性
+6. 使用真实的数据进行替换
 
-请直接返回完整的HTML代码，确保所有占位符都被正确替换。
+请直接返回完整的HTML代码：
 ''';
 
       final result = await aiService.analyzeSource(prompt);
@@ -623,12 +627,48 @@ $htmlTemplate
       Navigator.pop(context); // 关闭加载对话框
 
       if (result.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AIAnnualReportWebView(htmlContent: result, year: year),
-          ),
-        );
+        // 验证返回的内容是否为HTML格式
+        final trimmedResult = result.trim();
+        String finalHtmlContent = result;
+
+        if (!trimmedResult.toLowerCase().startsWith('<!doctype') &&
+            !trimmedResult.toLowerCase().startsWith('<html')) {
+          // 如果不是HTML格式，尝试使用模板生成
+          try {
+            finalHtmlContent = await _generateFallbackReport(
+              htmlTemplate, quotes, year, activeDays, totalNotes,
+              totalWords, averageWordsPerNote, categoryCounts, monthlyStats, positiveQuotes
+            );
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('AI返回格式异常，已使用备用模板生成报告'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          } catch (e) {
+            // 如果备用方案也失败，使用原始内容
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('AI返回的不是标准HTML格式，将显示原始内容'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        }
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AIAnnualReportWebView(htmlContent: finalHtmlContent, year: year),
+            ),
+          );
+        }
       } else {
         throw Exception('AI返回了空的报告内容');
       }
@@ -643,6 +683,69 @@ $htmlTemplate
         );
       }
     }
+  }
+
+  /// 生成备用HTML报告
+  Future<String> _generateFallbackReport(
+    String template,
+    List<Quote> quotes,
+    int year,
+    int activeDays,
+    int totalNotes,
+    int totalWords,
+    int averageWordsPerNote,
+    Map<String, int> categoryCounts,
+    Map<int, int> monthlyStats,
+    List<Quote> positiveQuotes,
+  ) async {
+    // 生成月度图表HTML
+    final monthlyChart = List.generate(12, (i) {
+      final month = i + 1;
+      final count = monthlyStats[month] ?? 0;
+      final monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+      return '<div class="month-item"><div class="month-name">${monthNames[i]}</div><div class="month-count">$count</div></div>';
+    }).join('\n');
+
+    // 生成分类标签云HTML
+    final tagCloud = categoryCounts.entries.take(10).map((entry) {
+      final isPopular = entry.value > (totalNotes * 0.1);
+      return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
+    }).join('');
+
+    // 生成精选笔记HTML
+    final featuredQuotes = positiveQuotes.take(3).map((quote) {
+      final content = quote.content.length > 150 ? '${quote.content.substring(0, 150)}...' : quote.content;
+      final date = DateTime.parse(quote.date).toString().substring(0, 10);
+      return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
+    }).join('\n');
+
+    // 生成成就HTML
+    final achievements = [
+      if (totalNotes >= 50) '<div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-title">记录达人</div><div class="achievement-desc">记录了$totalNotes条笔记</div></div>',
+      if (activeDays >= 30) '<div class="achievement"><div class="achievement-icon">📅</div><div class="achievement-title">坚持不懈</div><div class="achievement-desc">活跃记录$activeDays天</div></div>',
+      if (totalWords >= 10000) '<div class="achievement"><div class="achievement-icon">✍️</div><div class="achievement-title">文字创作者</div><div class="achievement-desc">累计写作${totalWords}字</div></div>',
+      if (categoryCounts.isNotEmpty) '<div class="achievement"><div class="achievement-icon">🎯</div><div class="achievement-title">分类整理</div><div class="achievement-desc">使用了${categoryCounts.length}个分类</div></div>',
+    ].join('\n');
+
+    // 替换模板中的占位符
+    return template
+        .replaceAll('{{YEAR}}', year.toString())
+        .replaceAll('{{ACTIVE_DAYS}}', activeDays.toString())
+        .replaceAll('{{TOTAL_NOTES}}', totalNotes.toString())
+        .replaceAll('{{TOTAL_TAGS}}', categoryCounts.length.toString())
+        .replaceAll('{{TOTAL_WORDS}}', totalWords.toString())
+        .replaceAll('{{AVERAGE_WORDS}}', averageWordsPerNote.toString())
+        .replaceAll('{{NEXT_YEAR}}', (year + 1).toString())
+        .replaceAll('{{GROWTH_PERCENTAGE}}', '持续成长中')
+        .replaceAll('{{MONTHLY_CHART}}', monthlyChart)
+        .replaceAll('{{TAG_CLOUD}}', tagCloud)
+        .replaceAll('{{TAG_INSIGHT}}', '您在${categoryCounts.keys.take(3).join('、')}等方面记录较多，体现了丰富的思考维度。')
+        .replaceAll('{{PEAK_TIME}}', '全天候')
+        .replaceAll('{{PEAK_TIME_DESC}}', '您的记录时间分布均匀，体现了良好的记录习惯。')
+        .replaceAll('{{WRITING_HABITS}}', '您保持着规律的记录习惯，平均每篇笔记$averageWordsPerNote字，内容丰富且有深度。')
+        .replaceAll('{{FEATURED_QUOTES}}', featuredQuotes)
+        .replaceAll('{{ACHIEVEMENTS}}', achievements)
+        .replaceAll('{{FUTURE_SUGGESTIONS}}', '继续保持记录的好习惯，可以尝试在不同时间段记录，丰富内容的多样性。建议定期回顾过往记录，从中获得成长的启发。');
   }
 
   /// 生成Flutter年度报告
