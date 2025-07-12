@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../services/media_file_service.dart';
+import '../utils/stream_file_selector.dart';
 import 'enhanced_media_import_dialog.dart';
 
 /// 增强的全屏编辑器工具栏组件
@@ -519,29 +520,24 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
   void _insertMediaFromFile(String type) async {
     try {
-      XTypeGroup typeGroup;
+      // typeGroup 变量已不再使用，因为我们使用 StreamFileSelector
       switch (type) {
         case 'image':
-          typeGroup = const XTypeGroup(
-            label: 'images',
-            extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
-          );
           break;
         case 'video':
-          typeGroup = const XTypeGroup(
-            label: 'videos',
-            extensions: ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv'],
-          );
           break;
         case 'audio':
-          typeGroup = const XTypeGroup(
-            label: 'audios',
-            extensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'],
-          );
           break;
         default:
-          typeGroup = const XTypeGroup(label: 'files');
-      }      final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
+          break;
+      }      
+      
+      final XFile? file;
+      if (type.toString().contains('video')) {
+        file = await StreamFileSelector.selectVideoFile();
+      } else {
+        file = await StreamFileSelector.selectImageFile();
+      }
       if (file != null) {
         // 简单检查文件是否存在和可读
         final fileSize = await file.length();
@@ -1031,7 +1027,7 @@ class _QuillEnhancedToolbarState extends State<QuillEnhancedToolbar> {
 
   void _applyColor(Color color, String type) {
     final hex =
-        '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
     if (type == 'text') {
       widget.controller.formatSelection(quill.ColorAttribute(hex));
     } else {

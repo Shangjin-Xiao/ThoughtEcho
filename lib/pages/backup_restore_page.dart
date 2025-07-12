@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
 import '../utils/time_utils.dart';
+import '../utils/stream_file_selector.dart';
 
 /// 备份与还原页面
 ///
@@ -463,7 +464,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         XTypeGroup(label: '所有支持的格式', extensions: ['zip', 'json']),
       ];
 
-      final file = await openFile(acceptedTypeGroups: typeGroups);
+      final XFile? file = await StreamFileSelector.selectFile(
+        extensions: ['zip', 'json'],
+        description: 'Backup Files',
+      );
       if (file == null || !mounted) return;
 
       setState(() {
