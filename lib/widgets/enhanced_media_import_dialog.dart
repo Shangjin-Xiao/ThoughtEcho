@@ -293,14 +293,34 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
           setState(() {
             _videoInfo = videoInfo;
           });
+        } else {
+          // 如果无法获取视频信息，显示警告但仍允许导入
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('无法获取视频文件详细信息，但仍可尝试导入'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage;
+        if (e.toString().contains('内存不足')) {
+          errorMessage = '内存不足，无法处理该文件。请尝试选择较小的文件或重启应用';
+        } else if (e.toString().contains('权限') || e.toString().contains('access')) {
+          errorMessage = '无法访问所选文件，请检查文件权限';
+        } else {
+          errorMessage = '选择文件失败: ${e.toString()}';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('选择文件失败: $e'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
