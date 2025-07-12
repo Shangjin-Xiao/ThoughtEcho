@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as path;
+import 'app_logger.dart';
 
 /// 媒体文件优化工具类
 /// 提供流式处理、压缩、分块处理等功能来减少内存使用
@@ -27,6 +28,13 @@ class MediaOptimizationUtils {
       // 小文件直接复制，无需优化
       if (fileSize < 1 * 1024 * 1024) {
         // 1MB以下
+        await file.copy(outputPath);
+        return outputPath;
+      }
+
+      // 检查文件大小，对于超大图片使用分块处理
+      if (fileSize > 100 * 1024 * 1024) { // 100MB以上
+        logDebug('图片文件过大 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)，跳过优化');
         await file.copy(outputPath);
         return outputPath;
       }

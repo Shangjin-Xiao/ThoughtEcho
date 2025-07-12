@@ -15,6 +15,7 @@ import 'package:uuid/uuid.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/app_logger.dart';
+import 'large_file_manager.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
@@ -950,8 +951,11 @@ class DatabaseService extends ChangeNotifier {
       if (!await file.exists()) {
         throw Exception('备份文件不存在: $filePath');
       }
-      final jsonStr = await file.readAsString();
-      final data = json.decode(jsonStr) as Map<String, dynamic>;
+      // 使用流式JSON解析避免大文件OOM
+      final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
+      if (data is! Map<String, dynamic>) {
+        throw Exception('备份文件格式不正确');
+      }
 
       // 调用新的核心导入逻辑
       await importDataFromMap(data, clearExisting: clearExisting);
@@ -987,8 +991,8 @@ class DatabaseService extends ChangeNotifier {
         throw Exception('文件不存在: $filePath');
       }
 
-      final content = await file.readAsString();
-      final data = json.decode(content);
+      // 使用流式JSON解析避免大文件OOM
+      final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
 
       // 确保解码后是 Map 类型
       if (data is! Map<String, dynamic>) {
