@@ -320,7 +320,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               '尝试使用不同的关键词或城市名称',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -377,7 +377,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                       size: 16,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.5),
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
             onTap: controller.isLoading ? null : () => _selectCity(city),
           ),

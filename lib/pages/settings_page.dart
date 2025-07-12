@@ -918,6 +918,7 @@ $positiveQuotes
 ''';
 
           final result = await aiService.analyzeSource(prompt);
+          if (!mounted) return;
           Navigator.pop(context); // 关闭加载对话框
 
           if (mounted && result.isNotEmpty) {
@@ -933,7 +934,9 @@ $positiveQuotes
             );
           }
         } catch (e) {
-          Navigator.pop(context); // 关闭加载对话框
+          if (mounted) {
+            Navigator.pop(context); // 关闭加载对话框
+          }
           AppLogger.e('生成AI年度报告失败', error: e);
           if (mounted) {
             ScaffoldMessenger.of(

@@ -278,7 +278,7 @@ class EmptyStateWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_rounded, size: iconSize, color: theme.colorScheme.primary.withOpacity(0.18)),
+          Icon(Icons.inbox_rounded, size: iconSize, color: theme.colorScheme.primary.withValues(alpha: 0.18)),
           const SizedBox(height: 24),
           Text(
             title,

@@ -80,7 +80,7 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           style: BorderStyle.solid,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -143,9 +143,9 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -261,11 +261,6 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
   
   Future<void> _selectFile() async {
     try {
-      const XTypeGroup typeGroup = XTypeGroup(
-        label: '视频文件',
-        extensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
-      );
-      
       // 使用内存保护机制包装文件选择操作
       final XFile? file = await LargeFileManager.executeWithMemoryProtection<XFile?>(
         () async {

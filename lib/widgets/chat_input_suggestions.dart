@@ -38,11 +38,11 @@ class ChatInputSuggestions extends StatelessWidget {
               ),
               backgroundColor: theme.colorScheme.surface,
               side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.3),
+                color: theme.colorScheme.outline.withValues(alpha: 0.3),
               ),
               onPressed: () => onSuggestionTap(suggestion),
               elevation: 2,
-              shadowColor: theme.shadowColor.withOpacity(0.1),
+              shadowColor: theme.shadowColor.withValues(alpha: 0.1),
             ),
           );
         },

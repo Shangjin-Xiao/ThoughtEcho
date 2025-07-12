@@ -29,7 +29,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
         color: widget.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: widget.theme.colorScheme.outline.withOpacity(0.2),
+          color: widget.theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -39,7 +39,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: widget.theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              color: widget.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(7),
                 topRight: Radius.circular(7),
@@ -53,7 +53,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: widget.theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: widget.theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 IconButton(
@@ -91,6 +91,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
 
   void _copyCode() async {
     await Clipboard.setData(ClipboardData(text: widget.code));
+    if (!mounted) return;
     setState(() {
       _isCopied = true;
     });
@@ -105,12 +106,14 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
     });
 
     // 显示提示
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('代码已复制到剪贴板'),
-        duration: Duration(seconds: 1),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('代码已复制到剪贴板'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 }
 
@@ -127,11 +130,11 @@ class QuoteBlockWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.05),
+        color: theme.colorScheme.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
-            color: theme.colorScheme.primary.withOpacity(0.4),
+            color: theme.colorScheme.primary.withValues(alpha: 0.4),
             width: 4,
           ),
         ),
@@ -142,7 +145,7 @@ class QuoteBlockWidget extends StatelessWidget {
           Icon(
             Icons.format_quote,
             size: 20,
-            color: theme.colorScheme.primary.withOpacity(0.7),
+            color: theme.colorScheme.primary.withValues(alpha: 0.7),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -151,7 +154,7 @@ class QuoteBlockWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontStyle: FontStyle.italic,
-                color: theme.colorScheme.onSurface.withOpacity(0.9),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                 height: 1.4,
               ),
             ),

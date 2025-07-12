@@ -84,7 +84,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.15),
+              color: theme.shadowColor.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -175,7 +175,7 @@ class EnhancedAIProgressDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.15),
+              color: theme.shadowColor.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),

@@ -82,7 +82,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           Text(
             widget.pageData.subtitle,
             style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
 
@@ -91,7 +91,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             Text(
               widget.pageData.description!,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -232,7 +232,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           child: Text(
             preference.description,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -268,7 +268,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             Text(
               preference.description,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -287,7 +287,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                         ? Text(
                           option.description!,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         )
                         : null,
@@ -328,7 +328,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             Text(
               preference.description,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -428,9 +428,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,7 +456,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           Text(
             '• 所有设置都可以随时在应用的设置页面中修改\n• 我们重视您的隐私，所有数据都存储在您的设备上\n• 权限将在您需要使用相关功能时请求',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.8),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ],
