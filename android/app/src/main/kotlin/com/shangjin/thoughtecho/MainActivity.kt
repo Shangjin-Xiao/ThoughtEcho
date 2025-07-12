@@ -12,6 +12,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.plugins.add(MemoryInfoPlugin())
+        flutterEngine.plugins.add(StreamFileSelector())
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         // Temporarily comment out the hardware acceleration check as it might cause issues before super.onCreate()

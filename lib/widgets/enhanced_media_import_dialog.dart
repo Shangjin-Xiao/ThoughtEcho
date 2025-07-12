@@ -3,6 +3,7 @@ import 'package:file_selector/file_selector.dart';
 import '../services/media_file_service.dart';
 import '../services/large_file_manager.dart';
 import '../services/large_video_handler.dart';
+import '../utils/stream_file_selector.dart';
 
 /// 增强的媒体导入对话框
 /// 
@@ -268,9 +269,7 @@ class _EnhancedMediaImportDialogState extends State<EnhancedMediaImportDialog> {
       // 使用内存保护机制包装文件选择操作
       final XFile? file = await LargeFileManager.executeWithMemoryProtection<XFile?>(
         () async {
-          return await openFile(
-            acceptedTypeGroups: [typeGroup],
-          );
+          return await StreamFileSelector.selectVideoFile();
         },
         operationName: '选择视频文件',
       );
