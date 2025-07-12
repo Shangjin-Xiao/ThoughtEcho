@@ -214,15 +214,47 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         return;
       }
 
+      // 立即验证选择的文件
+      logDebug('文件选择成功，路径: ${file.path}');
+
       setState(() {
-        _statusMessage = '正在处理文件...';
+        _statusMessage = '正在验证文件...';
         _progress = 0.1;
+      });
+
+      // 首先检查文件是否存在
+      final fileExists = await File(file.path).exists();
+      if (!fileExists) {
+        logDebug('文件不存在: ${file.path}');
+        throw Exception('选择的文件不存在或已被移动删除\n路径: ${file.path}');
+      }
+
+      // 获取文件大小
+      final fileSize = await lfm.LargeFileManager.getFileSizeSecurely(file.path);
+      if (fileSize == 0) {
+        logDebug('文件大小为0: ${file.path}');
+        throw Exception('选择的文件为空\n路径: ${file.path}');
+      }
+
+      logDebug('文件验证通过，大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
+
+      // 检查文件扩展名是否支持
+      final extension = file.path.split('.').last.toLowerCase();
+      final supportedExtensions = _getSupportedExtensions();
+      if (!supportedExtensions.contains(extension)) {
+        throw Exception('不支持的文件格式: .$extension\n支持的格式: ${supportedExtensions.join(', ')}');
+      }
+
+      setState(() {
+        _statusMessage = '正在检查文件兼容性...';
+        _progress = 0.2;
       });
 
       // 检查文件是否可以处理
       final canProcess = await lfm.LargeFileManager.canProcessFile(file.path);
       if (!canProcess) {
-        throw Exception('文件无法读取或已损坏');
+        logDebug('文件无法处理: ${file.path}');
+        throw Exception('文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试');
       }
 
       setState(() {
@@ -488,6 +520,20 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         return '音频';
       default:
         return '媒体';
+    }
+  }
+
+  /// 获取支持的文件扩展名
+  List<String> _getSupportedExtensions() {
+    switch (widget.mediaType) {
+      case 'image':
+        return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+      case 'video':
+        return ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'];
+      case 'audio':
+        return ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'];
+      default:
+        return [];
     }
   }
 

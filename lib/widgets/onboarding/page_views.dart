@@ -212,12 +212,17 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
 
     final features = widget.pageData.features ?? [];
     _featureAnimations = List.generate(features.length, (index) {
+      // Calculate intervals that ensure end values don't exceed 1.0
+      final startDelay = index * 0.1; // Reduced from 0.15 to 0.1
+      const animationDuration = 0.4; // Fixed duration for each animation
+      final endTime = (startDelay + animationDuration).clamp(0.0, 1.0);
+
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _animationController,
           curve: Interval(
-            index * 0.15,
-            0.6 + index * 0.15,
+            startDelay,
+            endTime,
             curve: Curves.easeOutBack,
           ),
         ),

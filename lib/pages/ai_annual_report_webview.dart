@@ -357,9 +357,41 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     );
   }
 
-  String _extractTextFromHtml(String html) {
-    // 简单的HTML标签移除，提取文本内容
-    String text = html
+  String _extractTextFromHtml(String content) {
+    // 检查是否是JSON格式
+    if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+      return '''
+⚠️ 检测到技术性内容格式
+
+AI返回了JSON格式的数据而不是HTML报告。这可能是因为：
+• AI模型理解有误
+• 提示词需要优化
+• 数据格式转换问题
+
+建议：
+1. 重新生成报告
+2. 尝试使用原生Flutter报告
+3. 检查网络连接
+
+如需查看原始数据，请点击"在浏览器中查看"按钮。
+''';
+    }
+
+    // 检查是否包含HTML标签
+    if (!content.contains('<html') && !content.contains('<!DOCTYPE')) {
+      return '''
+📄 纯文本内容预览
+
+${content.length > 500 ? content.substring(0, 500) + '...' : content}
+
+💡 提示：完整内容请在浏览器中查看
+''';
+    }
+
+    // 提取HTML中的文本内容
+    String text = content
+        .replaceAll(RegExp(r'<script[^>]*>.*?</script>', dotAll: true), '')
+        .replaceAll(RegExp(r'<style[^>]*>.*?</style>', dotAll: true), '')
         .replaceAll(RegExp(r'<[^>]*>'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
@@ -379,23 +411,104 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     try {
       // 创建临时HTML文件
       final tempDir = await getTemporaryDirectory();
-      final htmlFile = File(
-        '${tempDir.path}/annual_report_${widget.year}.html',
-      );
-      await htmlFile.writeAsString(widget.htmlContent);
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final htmlFile = File('${tempDir.path}/annual_report_${widget.year}_$timestamp.html');
+
+      // 检查内容格式并处理
+      String contentToWrite = widget.htmlContent;
+
+      // 如果不是HTML格式，包装成HTML
+      if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
+          !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
+        contentToWrite = '''
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 ${widget.year} 年度报告</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .json-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>心迹 ${widget.year} 年度报告</h1>
+            <p>生成时间: ${DateTime.now().toString().substring(0, 19)}</p>
+        </div>
+        <div class="content ${widget.htmlContent.trim().startsWith('{') ? 'json-content' : ''}">${widget.htmlContent}</div>
+    </div>
+</body>
+</html>
+''';
+      }
+
+      await htmlFile.writeAsString(contentToWrite);
 
       // 在浏览器中打开
       final uri = Uri.file(htmlFile.path);
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('报告已在浏览器中打开'),
+                ],
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        }
       } else {
-        throw 'Could not launch $uri';
+        throw '无法启动浏览器';
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('无法打开浏览器: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('无法打开浏览器: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     } finally {
       if (mounted) {
