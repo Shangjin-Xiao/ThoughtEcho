@@ -27,6 +27,9 @@ class DatabaseService extends ChangeNotifier {
   // 内存存储分类数据
   final List<NoteCategory> _categoryStore = [];
 
+  // 标记是否已经dispose，避免重复操作
+  bool _isDisposed = false;
+
   // 定义默认一言分类的固定 ID
   static const String defaultCategoryIdHitokoto = 'default_hitokoto';
   static const String defaultCategoryIdAnime = 'default_anime';
@@ -63,6 +66,25 @@ class DatabaseService extends ChangeNotifier {
   final Map<String, int> _countCache = {}; // 计数查询缓存
   final Map<String, DateTime> _countCacheTimestamps = {};
 
+  // 优化：缓存清理定时器，避免每次查询都清理
+  Timer? _cacheCleanupTimer;
+  DateTime _lastCacheCleanup = DateTime.now();
+
+  /// 优化：定期清理过期缓存，而不是每次查询都清理
+  /// 兼容性说明：这个变更不影响外部API，只是内部优化
+  void _scheduleCacheCleanup() {
+    // 如果距离上次清理不到1分钟，跳过
+    if (DateTime.now().difference(_lastCacheCleanup).inMinutes < 1) {
+      return;
+    }
+
+    _cacheCleanupTimer?.cancel();
+    _cacheCleanupTimer = Timer(const Duration(seconds: 30), () {
+      _cleanExpiredCache();
+      _lastCacheCleanup = DateTime.now();
+    });
+  }
+
   /// 优化：检查并清理过期缓存
   void _cleanExpiredCache() {
     final now = DateTime.now();
@@ -92,6 +114,8 @@ class DatabaseService extends ChangeNotifier {
       _countCache.remove(key);
       _countCacheTimestamps.remove(key);
     }
+
+    logDebug('缓存清理完成，移除 ${expiredKeys.length} 个查询缓存和 ${expiredCountKeys.length} 个计数缓存');
   }
 
   /// 优化：清空所有缓存（在数据变更时调用）
@@ -194,6 +218,9 @@ class DatabaseService extends ChangeNotifier {
 
       // 检查并修复数据库结构
       await _checkAndFixDatabaseStructure();
+
+      // 优化：在初始化阶段执行所有数据迁移，避免运行时重复检查
+      await _performAllDataMigrations();
 
       // 初始化默认分类/标签
       await initDefaultHitokotoCategories();
@@ -1385,6 +1412,9 @@ class DatabaseService extends ChangeNotifier {
     List<String>? selectedDayPeriods, // 时间段筛选
   }) async {
     try {
+      // 优化：定期清理缓存而不是每次查询都清理
+      _scheduleCacheCleanup();
+
       if (kIsWeb) {
         // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
@@ -1627,8 +1657,40 @@ class DatabaseService extends ChangeNotifier {
     List<String>? selectedDayPeriods,
   }) async {
     if (kIsWeb) {
-      // Web平台的逻辑保持不变
-      return _memoryStore.length;
+      // 优化：Web平台直接在内存中应用筛选逻辑计算数量，避免加载大量数据
+      var filtered = _memoryStore;
+
+      if (tagIds != null && tagIds.isNotEmpty) {
+        filtered = filtered.where((q) => q.tagIds.any((tag) => tagIds.contains(tag))).toList();
+      }
+
+      if (categoryId != null && categoryId.isNotEmpty) {
+        filtered = filtered.where((q) => q.categoryId == categoryId).toList();
+      }
+
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        final query = searchQuery.toLowerCase();
+        filtered = filtered.where((q) =>
+            q.content.toLowerCase().contains(query) ||
+            (q.source?.toLowerCase().contains(query) ?? false) ||
+            (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+            (q.sourceWork?.toLowerCase().contains(query) ?? false)
+        ).toList();
+      }
+
+      if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+        filtered = filtered.where((q) =>
+            q.weather != null && selectedWeathers.contains(q.weather)
+        ).toList();
+      }
+
+      if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+        filtered = filtered.where((q) =>
+            q.dayPeriod != null && selectedDayPeriods.contains(q.dayPeriod)
+        ).toList();
+      }
+
+      return filtered.length;
     }
     try {
       final db = database;
@@ -1990,14 +2052,7 @@ class DatabaseService extends ChangeNotifier {
       // 在新的异步上下文中执行初始化
       Future(() async {
         try {
-          if (!kIsWeb) {
-            // 检查并迁移天气数据
-            await _checkAndMigrateWeatherData(); // 待移除
-            // 检查并迁移时间段数据
-            await _checkAndMigrateDayPeriodData(); // 待移除
-            // 补全缺失的时间段数据
-            await patchQuotesDayPeriod();
-          }
+          // 优化：移除重复的数据迁移检查，这些已在初始化阶段完成
 
           // 加载第一页数据
           await loadMoreQuotes(
@@ -2459,5 +2514,103 @@ class DatabaseService extends ChangeNotifier {
       logDebug('根据 ID 获取分类失败: $e');
       return null;
     }
+  }
+
+  /// 优化：在初始化阶段执行所有数据迁移
+  /// 兼容性保证：所有迁移都是向后兼容的，不会破坏现有数据
+  Future<void> _performAllDataMigrations() async {
+    if (kIsWeb) return; // Web平台无需数据迁移
+
+    try {
+      logDebug('开始执行数据迁移...');
+
+      // 兼容性检查：验证数据库结构完整性
+      await _validateDatabaseCompatibility();
+
+      // 检查并迁移天气数据
+      await _checkAndMigrateWeatherData();
+
+      // 检查并迁移时间段数据
+      await _checkAndMigrateDayPeriodData();
+
+      // 补全缺失的时间段数据
+      await patchQuotesDayPeriod();
+
+      logDebug('所有数据迁移完成');
+    } catch (e) {
+      logError('数据迁移失败: $e', error: e, source: 'DatabaseService');
+      // 不重新抛出异常，避免影响应用启动
+    }
+  }
+
+  /// 兼容性验证：检查数据库结构完整性
+  Future<void> _validateDatabaseCompatibility() async {
+    try {
+      final db = database;
+
+      // 检查关键表是否存在
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+      );
+      final tableNames = tables.map((t) => t['name'] as String).toSet();
+
+      final requiredTables = {'quotes', 'categories', 'quote_tags'};
+      final missingTables = requiredTables.difference(tableNames);
+
+      if (missingTables.isNotEmpty) {
+        logError('缺少必要的数据库表: $missingTables', source: 'DatabaseService');
+        throw Exception('数据库结构不完整，缺少表: $missingTables');
+      }
+
+      // 检查quote_tags表的数据完整性
+      final quoteTagsCount = await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
+      final quotesWithTagsCount = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quotes WHERE tag_ids IS NOT NULL AND tag_ids != ""'
+      );
+
+      logDebug('兼容性检查完成 - quote_tags表记录数: ${quoteTagsCount.first['count']}, '
+               '有标签的quotes记录数: ${quotesWithTagsCount.first['count']}');
+
+    } catch (e) {
+      logError('数据库兼容性验证失败: $e', error: e, source: 'DatabaseService');
+      // 不抛出异常，让应用继续运行
+    }
+  }
+
+  /// 优化：添加dispose方法，确保资源正确释放
+  /// 注意：这是新增方法，现有代码调用时需要确保在适当时机调用dispose()
+  @override
+  void dispose() {
+    if (_isDisposed) return;
+
+    _isDisposed = true;
+
+    // 关闭所有StreamController
+    if (!_categoriesController.isClosed) {
+      _categoriesController.close();
+    }
+
+    if (_quotesController != null && !_quotesController!.isClosed) {
+      _quotesController!.close();
+      _quotesController = null;
+    }
+
+    // 取消定时器
+    _cacheCleanupTimer?.cancel();
+    _cacheCleanupTimer = null;
+
+    // 清理缓存
+    _filterCache.clear();
+    _cacheTimestamps.clear();
+    _countCache.clear();
+    _countCacheTimestamps.clear();
+
+    // 清理内存存储
+    _memoryStore.clear();
+    _categoryStore.clear();
+
+    logDebug('DatabaseService资源已释放');
+
+    super.dispose();
   }
 }

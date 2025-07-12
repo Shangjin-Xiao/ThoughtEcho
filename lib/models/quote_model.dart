@@ -179,13 +179,5 @@ class Quote {
   };
 }
 
-class QuoteModel {
-  final String? author;
-
-  // 添加 const 构造函数，默认值为空字符串
-  const QuoteModel({this.author = ''});
-
-  String getDisplayAuthor() {
-    return author?.toUpperCase() ?? 'UNKNOWN';
-  }
-}
+// 移除了冗余的QuoteModel类，该类在项目中未被使用
+// 如果将来需要类似功能，可以直接在Quote类中添加相应方法
