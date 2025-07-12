@@ -379,7 +379,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           ),
         ),
         child: Center(
@@ -397,7 +397,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     Text(
                       '点击播放视频',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -419,7 +419,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -446,7 +446,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -466,7 +466,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           Text(
             '正在加载视频...',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -483,11 +483,11 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -531,7 +531,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -544,7 +544,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   Icons.more_vert,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 onSelected: (value) => _handleAudioMenuAction(value),
                 itemBuilder:
@@ -616,7 +616,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     activeColor: Theme.of(context).colorScheme.primary,
                     inactiveColor: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.3),
+                    ).colorScheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -647,9 +647,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.3),
+            Colors.black.withValues(alpha: 0.3),
             Colors.transparent,
-            Colors.black.withOpacity(0.3),
+            Colors.black.withValues(alpha: 0.3),
           ],
         ),
       ),

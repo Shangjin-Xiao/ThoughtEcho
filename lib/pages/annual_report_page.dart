@@ -536,7 +536,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                     fontSize: 14,
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -557,7 +557,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       size: 80,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.3),
+                      ).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -566,7 +566,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                         fontSize: 18,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -640,7 +640,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                       decoration: BoxDecoration(
                                         color: Theme.of(
                                           context,
-                                        ).colorScheme.primary.withOpacity(0.1),
+                                        ).colorScheme.primary.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: FractionallySizedBox(
@@ -762,7 +762,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             '每一个想法都值得被记录\n每一次记录都是成长的足迹',
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -819,7 +819,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(icon, color: color, size: 28),
@@ -837,7 +837,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       fontSize: 14,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -861,7 +861,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             fontSize: 14,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -896,7 +896,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -914,7 +914,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     fontSize: 14,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -956,7 +956,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -980,7 +980,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             content,
             style: TextStyle(
               fontSize: 15,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),

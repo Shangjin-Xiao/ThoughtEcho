@@ -38,7 +38,7 @@ class LottieLoadingWidget extends StatelessWidget {
           Text(
             text!,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: textColor ?? theme.colorScheme.onSurface.withOpacity(0.7),
+              color: textColor ?? theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -94,7 +94,7 @@ class LottieLoadingOverlay extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       color: backgroundColor ?? 
-             theme.colorScheme.surface.withOpacity(blurBackground ? 0.8 : 1.0),
+             theme.colorScheme.surface.withValues(alpha: blurBackground ? 0.8 : 1.0),
       child: Center(
         child: LottieLoadingWidget(
           size: 120,

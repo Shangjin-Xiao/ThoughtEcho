@@ -53,7 +53,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: widget.theme.shadowColor.withOpacity(0.1),
+                color: widget.theme.shadowColor.withValues(alpha: 0.1),
                 offset: const Offset(0, 2),
                 blurRadius: 4,
               ),
@@ -96,7 +96,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
                           '正在思考中...',
                           style: TextStyle(
                             color: widget.theme.colorScheme.onSurface
-                                .withOpacity(0.7),
+                                .withValues(alpha: 0.7),
                             fontSize: 14,
                             fontStyle: FontStyle.italic,
                           ),
@@ -127,7 +127,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
           width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color: widget.theme.colorScheme.primary.withOpacity(opacity),
+            color: widget.theme.colorScheme.primary.withValues(alpha: opacity),
             shape: BoxShape.circle,
           ),
         );

@@ -101,7 +101,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
                       Text(
                         widget.pageData.description!,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -150,7 +150,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.3),
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -258,7 +258,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
           Text(
             widget.pageData.subtitle,
             style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 32),
@@ -301,9 +301,9 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +333,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
                   child: Text(
                     tip,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -359,7 +359,7 @@ class _FeatureCard extends StatelessWidget {
     return Card(
       elevation: isHighlight ? 8 : 2,
       shadowColor:
-          isHighlight ? theme.colorScheme.primary.withOpacity(0.3) : null,
+          isHighlight ? theme.colorScheme.primary.withValues(alpha: 0.3) : null,
       child: Container(
         decoration:
             isHighlight
@@ -422,8 +422,8 @@ class _FeatureCard extends StatelessWidget {
                         color:
                             isHighlight
                                 ? theme.colorScheme.onPrimaryContainer
-                                    .withOpacity(0.8)
-                                : theme.colorScheme.onSurface.withOpacity(0.7),
+                                    .withValues(alpha: 0.8)
+                                : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],

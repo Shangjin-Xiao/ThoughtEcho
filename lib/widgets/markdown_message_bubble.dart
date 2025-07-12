@@ -40,7 +40,7 @@ class MarkdownMessageBubble extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.1),
+                  color: theme.shadowColor.withValues(alpha: 0.1),
                   offset: const Offset(0, 2),
                   blurRadius: 4,
                 ),
@@ -100,7 +100,7 @@ class MarkdownMessageBubble extends StatelessWidget {
                     fontSize: 11,
                     color:
                         isCurrentUser
-                            ? theme.colorScheme.onPrimary.withOpacity(0.7)
+                            ? theme.colorScheme.onPrimary.withValues(alpha: 0.7)
                             : theme.colorScheme.outline,
                   ),
                 ),

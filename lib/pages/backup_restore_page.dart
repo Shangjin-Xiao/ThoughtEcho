@@ -458,12 +458,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
     try {
       // 选择备份文件
-      const typeGroups = [
-        XTypeGroup(label: 'ZIP 备份文件', extensions: ['zip']),
-        XTypeGroup(label: 'JSON 备份文件', extensions: ['json']),
-        XTypeGroup(label: '所有支持的格式', extensions: ['zip', 'json']),
-      ];
-
       final XFile? file = await StreamFileSelector.selectFile(
         extensions: ['zip', 'json'],
         description: 'Backup Files',

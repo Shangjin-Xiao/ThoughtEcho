@@ -408,7 +408,7 @@ class _OnboardingPageState extends State<OnboardingPage>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.1),
+              color: theme.shadowColor.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -440,7 +440,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     color:
                         state.currentPageIndex == index
                             ? theme.colorScheme.primary
-                            : theme.colorScheme.primary.withOpacity(0.3),
+                            : theme.colorScheme.primary.withValues(alpha: 0.3),
                   ),
                 );
               }),
