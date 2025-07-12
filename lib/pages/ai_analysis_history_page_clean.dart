@@ -344,6 +344,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (choice == null) return;
 
       // 获取今年的笔记数据
+      if (!mounted) return;
       final databaseService = Provider.of<DatabaseService>(
         context,
         listen: false,

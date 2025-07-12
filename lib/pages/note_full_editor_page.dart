@@ -20,7 +20,7 @@ import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
-import '../widgets/quill_enhanced_toolbar_new.dart';
+import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 
 class NoteFullEditorPage extends StatefulWidget {
@@ -752,8 +752,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // 增强工具栏
-            FullScreenToolbar(controller: _controller),
+            // 统一的增强工具栏
+            UnifiedQuillToolbar(controller: _controller),
             // 显示已选元数据指示条
             if (_selectedTagIds.isNotEmpty ||
                 _selectedColorHex != null ||

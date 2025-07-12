@@ -79,18 +79,22 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 iconName: _selectedIconName,
                               );
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('分类添加成功')),
-                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('分类添加成功')),
+                                );
+                              }
                               _categoryController.clear();
                               setState(() {
                                 _selectedIconName = null;
                               });
                             } catch (e) {
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('添加分类失败：$e')),
-                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('添加分类失败：$e')),
+                                );
+                              }
                             } finally {
                               if (mounted) {
                                 setState(() => _isLoading = false);
@@ -524,7 +528,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
                 // 修复内存泄露：在异步操作后检查mounted状态
                 if (!mounted) return;
-                Navigator.pop(dialogContext);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
               },
               child: const Text('保存'),
             ),
@@ -576,22 +582,26 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
             ],
           ),
     ).then((confirmed) async {
-      if (confirmed == true && mounted) {
+      if (confirmed == true && mounted && context.mounted) {
         try {
           final dbService = context.read<DatabaseService>();
           await dbService.deleteCategory(category.id);
 
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('分类删除成功')),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('分类删除成功')),
+            );
+          }
         } catch (e) {
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('删除分类失败：$e')),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('删除分类失败：$e')),
+            );
+          }
         }
       }
     });

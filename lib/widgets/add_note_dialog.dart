@@ -485,6 +485,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 // 修复内存泄露：在异步操作后检查mounted状态
                                 if (!mounted) return;
+                                if (!context.mounted) return;
 
                                 // 创建包含当前元数据的临时Quote对象，确保全屏编辑器能继承所有元数据
                                 final locationService =
@@ -571,13 +572,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 if (result != null && result == true) {
                                   // 如果笔记已在全屏编辑器中保存，关闭本对话框
-                                  if (mounted) {
+                                  if (mounted && context.mounted) {
                                     Navigator.pop(context);
                                   }
                                 }
                               } catch (e) {
                                 // 修复内存泄露：检查mounted状态
-                                if (mounted) {
+                                if (mounted && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('打开全屏编辑器失败: $e'),
