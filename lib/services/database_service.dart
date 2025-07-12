@@ -953,9 +953,6 @@ class DatabaseService extends ChangeNotifier {
       }
       // 使用流式JSON解析避免大文件OOM
       final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
-      if (data is! Map<String, dynamic>) {
-        throw Exception('备份文件格式不正确');
-      }
 
       // 调用新的核心导入逻辑
       await importDataFromMap(data, clearExisting: clearExisting);
@@ -993,11 +990,6 @@ class DatabaseService extends ChangeNotifier {
 
       // 使用流式JSON解析避免大文件OOM
       final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
-
-      // 确保解码后是 Map 类型
-      if (data is! Map<String, dynamic>) {
-        throw Exception('备份文件顶层结构不是有效的 JSON 对象');
-      }
 
       // --- 修改处 ---
       // 验证基本结构，应与 exportAllData 导出的结构一致
