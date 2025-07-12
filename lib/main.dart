@@ -187,6 +187,7 @@ Future<void> main() async {
           MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => settingsService),
+              // 兼容性说明：DatabaseService现在有dispose方法，但Provider会自动处理
               ChangeNotifierProvider(create: (_) => databaseService),
               ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
