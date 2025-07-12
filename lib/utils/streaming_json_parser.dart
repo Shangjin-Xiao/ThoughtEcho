@@ -47,7 +47,6 @@ class StreamingJsonParser {
     final buffer = StringBuffer();
     
     // 分块读取文件
-    const chunkSize = 1024 * 1024; // 1MB块
     final stream = file.openRead();
     
     await for (final chunk in stream) {

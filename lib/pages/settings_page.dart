@@ -211,7 +211,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       bool permissionGranted =
                           await locationService.requestLocationPermission();
                       if (!permissionGranted) {
-                        if (mounted) {
+                        if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('无法获取位置权限')),
                           );
@@ -223,7 +223,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           await Geolocator.isLocationServiceEnabled();
                       if (!mounted) return; // Add this check
                       if (!serviceEnabled) {
-                        if (mounted) {
+                        if (mounted && context.mounted) {
                           final currentContext =
                               context; // Capture context before async gap
                           showDialog(
@@ -258,7 +258,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         return;
                       }
 
-                      if (mounted) {
+                      if (mounted && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('正在获取位置...'),
@@ -276,29 +276,35 @@ class _SettingsPageState extends State<SettingsPage> {
                           position.longitude,
                         );
                         if (!mounted) return;
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        scaffoldMessenger.removeCurrentSnackBar();
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(content: Text('位置服务已启用，位置已更新')),
-                        );
+                        if (context.mounted) {
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          scaffoldMessenger.removeCurrentSnackBar();
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(content: Text('位置服务已启用，位置已更新')),
+                          );
+                        }
                         setState(() {
                           _locationController.text =
                               locationService.getFormattedLocation();
                         });
                       } else {
                         if (!mounted) return;
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        scaffoldMessenger.removeCurrentSnackBar();
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(content: Text('无法获取当前位置')),
-                        );
+                        if (context.mounted) {
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          scaffoldMessenger.removeCurrentSnackBar();
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(content: Text('无法获取当前位置')),
+                          );
+                        }
                       }
                     } else {
                       if (!mounted) return;
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(content: Text('位置服务已禁用')),
-                      );
+                      if (context.mounted) {
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(content: Text('位置服务已禁用')),
+                        );
+                      }
                     }
                     if (mounted) {
                       setState(() {});
