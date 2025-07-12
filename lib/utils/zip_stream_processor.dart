@@ -376,12 +376,12 @@ class ZipStreamProcessor {
         
         for (final file in archive) {
           if (file.name == fileName) {
-            // 检查文件大小，对于大文件记录日志但不限制
-            const largeFileThreshold = 500 * 1024 * 1024; // 500MB
+            // 检查文件大小，避免将超大文件加载到内存
+            const largeFileThreshold = 100 * 1024 * 1024; // 100MB
             
             if (file.size > largeFileThreshold) {
-              logDebug('注意：提取大文件到内存: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)');
-              // 不再返回null，继续处理大文件
+              logDebug('文件过大，无法提取到内存: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)');
+              throw Exception('文件过大，无法提取到内存: ${(file.size / 1024 / 1024).toStringAsFixed(1)}MB');
             }
             
             // 对于小文件，可以安全加载到内存
