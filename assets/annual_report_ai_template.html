@@ -83,61 +83,310 @@
             font-weight: 400;
             letter-spacing: 0.5px;
         }
-        .section { padding: 30px 20px; border-bottom: 1px solid #f0f0f0; }
+        .section {
+            padding: 35px 25px;
+            border-bottom: 1px solid #f5f5f5;
+            position: relative;
+        }
         .section:last-child { border-bottom: none; }
-        .section-title { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #333; display: flex; align-items: center; }
-        .section-icon { margin-right: 10px; font-size: 24px; }
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 40px;
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+        .section-icon {
+            margin-right: 12px;
+            font-size: 26px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
         .highlight-card {
             background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            border-radius: 16px; padding: 20px; margin: 15px 0; color: white; text-align: center;
-            box-shadow: 0 8px 32px rgba(255, 154, 158, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 20px 0;
+            color: white;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(255, 154, 158, 0.3);
+            position: relative;
+            overflow: hidden;
         }
-        .highlight-number { font-size: 36px; font-weight: bold; margin-bottom: 8px; }
-        .highlight-text { font-size: 16px; opacity: 0.9; }
-        .chart-container { background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 15px 0; text-align: center; }
-        .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #555; }
-        .month-chart { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
+        .highlight-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+        }
+        .highlight-number {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .highlight-text {
+            font-size: 17px;
+            opacity: 0.95;
+            font-weight: 400;
+            line-height: 1.4;
+        }
+        .chart-container {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #495057;
+        }
+        .month-chart {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
         .month-item {
-            text-align: center; padding: 10px 5px; border-radius: 8px; background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            padding: 15px 8px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .month-name { font-size: 12px; color: #666; margin-bottom: 5px; }
-        .month-count { font-size: 18px; font-weight: bold; color: #667eea; }
-        .tag-cloud { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .month-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        .month-name {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .month-count {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 20px 0;
+            justify-content: center;
+        }
         .tag {
-            background: linear-gradient(135deg, #667eea, #764ba2); color: white;
-            padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .tag.popular { font-size: 16px; padding: 10px 20px; }
+        .tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .tag.popular {
+            font-size: 16px;
+            padding: 12px 22px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
         .insight-box {
             background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            border-radius: 12px; padding: 20px; margin: 15px 0; border-left: 4px solid #ff6b6b;
+            border-radius: 16px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #ff6b6b;
+            box-shadow: 0 8px 25px rgba(252, 182, 159, 0.3);
+            position: relative;
         }
-        .insight-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #333; }
-        .insight-text { font-size: 14px; line-height: 1.6; color: #555; }
+        .insight-box::before {
+            content: '💡';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            opacity: 0.7;
+        }
+        .insight-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #2c3e50;
+        }
+        .insight-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #5a5a5a;
+            font-weight: 400;
+        }
         .quote-card {
-            background: white; border-radius: 12px; padding: 20px; margin: 15px 0;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-left: 4px solid #667eea;
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+            position: relative;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .quote-content { font-size: 16px; line-height: 1.6; margin-bottom: 10px; font-style: italic; color: #444; }
-        .quote-date { font-size: 12px; color: #888; text-align: right; }
-        .achievement-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .quote-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+        .quote-card::before {
+            content: '"';
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 40px;
+            color: #667eea;
+            opacity: 0.3;
+            font-family: serif;
+        }
+        .quote-content {
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 15px;
+            font-style: italic;
+            color: #444;
+            padding-left: 20px;
+        }
+        .quote-date {
+            font-size: 13px;
+            color: #999;
+            text-align: right;
+            font-weight: 500;
+        }
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin: 20px 0;
+        }
         .achievement {
-            background: white; border-radius: 12px; padding: 20px; text-align: center;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .achievement-icon { font-size: 30px; margin-bottom: 10px; }
-        .achievement-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #333; }
-        .achievement-desc { font-size: 12px; color: #666; }
-        .footer { background: #f8f9fa; padding: 30px 20px; text-align: center; }
-        .footer-text { font-size: 14px; color: #666; margin-bottom: 10px; }
-        .footer-logo { font-size: 20px; font-weight: bold; color: #667eea; }
+        .achievement:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+        .achievement-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        .achievement-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        .achievement-desc {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        .footer {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 40px 25px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer-text {
+            font-size: 15px;
+            color: #6c757d;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .footer-logo {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 10px;
+        }
         .growth-indicator {
-            display: inline-flex; align-items: center; background: #e8f5e8; color: #2e7d2e;
-            padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 8px;
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+            color: #155724;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 10px;
+            box-shadow: 0 2px 8px rgba(21, 87, 36, 0.2);
         }
-        .growth-indicator::before { content: '↗'; margin-right: 4px; }
-        @media (max-width: 375px) { .container { max-width: 100%; } }
+        .growth-indicator::before {
+            content: '📈';
+            margin-right: 6px;
+        }
+        .scroll-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .scroll-indicator:hover {
+            transform: scale(1.1);
+        }
+        @media (max-width: 414px) {
+            .container { max-width: 100%; }
+            .year { font-size: 48px; }
+            .section { padding: 30px 20px; }
+            .highlight-card { padding: 20px; }
+            .chart-container { padding: 20px; }
+        }
+        @media (max-width: 375px) {
+            .stats-overview { flex-direction: column; gap: 15px; }
+            .stat-item { margin-bottom: 10px; }
+            .achievement-grid { grid-template-columns: 1fr; }
+            .month-chart { grid-template-columns: repeat(3, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -145,19 +394,19 @@
         <!-- 头部 -->
         <div class="header">
             <div class="year">{{YEAR}}</div>
-            <div class="subtitle">我的思考轨迹</div>
+            <div class="subtitle">✨ 我的思考轨迹 ✨</div>
             <div class="stats-overview">
                 <div class="stat-item">
                     <span class="stat-number">{{ACTIVE_DAYS}}</span>
-                    <div class="stat-label">记录天数</div>
+                    <div class="stat-label">📅 记录天数</div>
                 </div>
                 <div class="stat-item">
                     <span class="stat-number">{{TOTAL_NOTES}}</span>
-                    <div class="stat-label">总笔记数</div>
+                    <div class="stat-label">📝 总笔记数</div>
                 </div>
                 <div class="stat-item">
                     <span class="stat-number">{{TOTAL_TAGS}}</span>
-                    <div class="stat-label">使用标签</div>
+                    <div class="stat-label">🏷️ 使用标签</div>
                 </div>
             </div>
         </div>
@@ -271,13 +520,46 @@
         <!-- 页脚 -->
         <div class="footer">
             <div class="footer-text">
-                感谢你与心迹一起记录美好的 {{YEAR}} 年
+                🙏 感谢你与心迹一起记录美好的 {{YEAR}} 年
             </div>
             <div class="footer-text">
-                继续在 {{NEXT_YEAR}} 年捕捉每一个珍贵的想法 ✨
+                🚀 继续在 {{NEXT_YEAR}} 年捕捉每一个珍贵的想法 ✨
             </div>
             <div class="footer-logo">心迹 ThoughtEcho</div>
         </div>
+
+        <!-- 回到顶部按钮 -->
+        <div class="scroll-indicator" onclick="scrollToTop()">
+            ⬆️
+        </div>
     </div>
+
+    <script>
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // 添加滚动动画
+        window.addEventListener('scroll', function() {
+            const scrollIndicator = document.querySelector('.scroll-indicator');
+            if (window.scrollY > 300) {
+                scrollIndicator.style.opacity = '1';
+            } else {
+                scrollIndicator.style.opacity = '0';
+            }
+        });
+
+        // 页面加载动画
+        window.addEventListener('load', function() {
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.5s ease-in-out';
+            setTimeout(() => {
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
 </body>
 </html>
