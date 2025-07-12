@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
@@ -253,11 +254,21 @@ class LargeFileManager {
           // 检查是否取消
           if (cancelToken?.isCancelled == true) {
             logDebug('文件复制操作被取消');
+            // 清理不完整的目标文件
+            try {
+              if (await targetFile.exists()) {
+                await targetFile.delete();
+              }
+            } catch (_) {}
             throw const CancelledException();
           }
           
+          // 计算本次应该读取的字节数
+          final remainingBytes = totalSize - copiedBytes;
+          final currentChunkSize = remainingBytes < adjustedChunkSize ? remainingBytes : adjustedChunkSize;
+          
           // 读取一个块
-          final buffer = Uint8List(adjustedChunkSize);
+          final buffer = Uint8List(currentChunkSize);
           final bytesRead = await reader.readInto(buffer);
           
           if (bytesRead <= 0) {
@@ -265,8 +276,8 @@ class LargeFileManager {
             continue;
           }
           
-          // 如果读取的字节数小于缓冲区大小，只写入实际读取的部分
-          if (bytesRead < adjustedChunkSize) {
+          // 写入实际读取的数据
+          if (bytesRead < buffer.length) {
             writer.add(buffer.sublist(0, bytesRead));
           } else {
             writer.add(buffer);
@@ -278,12 +289,12 @@ class LargeFileManager {
           onProgress?.call(copiedBytes, totalSize);
           
           // 定期刷新，确保数据写入磁盘
-          if (copiedBytes % (adjustedChunkSize * 16) == 0) {
+          if (adjustedChunkSize > 0 && copiedBytes % (adjustedChunkSize * 16) == 0) {
             await writer.flush();
           }
           
           // 内存压力检查和垃圾回收
-          if (copiedBytes % (adjustedChunkSize * 32) == 0) {
+          if (adjustedChunkSize > 0 && copiedBytes % (adjustedChunkSize * 32) == 0) {
             await _checkMemoryPressure();
           }
           

@@ -309,6 +309,12 @@ class LargeVideoHandler {
         while (copiedBytes < fileSize) {
           // 检查取消状态
           if (cancelToken?.isCancelled == true) {
+            // 清理不完整的目标文件
+            try {
+              if (await targetFile.exists()) {
+                await targetFile.delete();
+              }
+            } catch (_) {}
             throw const CancelledException();
           }
           
@@ -336,7 +342,7 @@ class LargeVideoHandler {
           onProgress?.call(progress);
           
           // 定期刷新和内存检查
-          if (chunkSize != null && copiedBytes % (chunkSize * 10) == 0) {
+          if (chunkSize != null && chunkSize > 0 && copiedBytes % (chunkSize * 10) == 0) {
             await writer.flush();
             
             // 对于大文件，定期检查内存压力
@@ -345,8 +351,8 @@ class LargeVideoHandler {
             }
           }
           
-          // 状态更新
-          if (chunkSize != null && copiedBytes % (chunkSize * 20) == 0) {
+          // 状态更新 - 修复modulo操作避免除零错误
+          if (chunkSize != null && chunkSize > 0 && copiedBytes % (chunkSize * 20) == 0) {
             final progressPercent = (progress * 100).toInt();
             onStatusUpdate?.call('正在复制... $progressPercent%');
           }
