@@ -30,6 +30,9 @@ class DatabaseService extends ChangeNotifier {
   // 标记是否已经dispose，避免重复操作
   bool _isDisposed = false;
 
+  // 提供访问_watchHasMore状态的getter
+  bool get hasMoreQuotes => _watchHasMore;
+
   // 定义默认一言分类的固定 ID
   static const String defaultCategoryIdHitokoto = 'default_hitokoto';
   static const String defaultCategoryIdAnime = 'default_anime';
@@ -171,17 +174,21 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       // Web平台特定的初始化
       logDebug('在Web平台初始化内存存储');
-      // 添加一些示例数据以便Web平台测试
+      // 添加足够的示例数据以便Web平台测试分页功能
       if (_memoryStore.isEmpty) {
-        _memoryStore.add(
-          Quote(
+        final now = DateTime.now();
+        for (int i = 0; i < 25; i++) {
+          final quote = Quote(
             id: _uuid.v4(),
-            content: '欢迎使用心迹 - Web版',
-            date: DateTime.now().toIso8601String(),
-            source: '示例来源',
-            aiAnalysis: '这是Web平台示例笔记',
-          ),
-        );
+            content: '这是第${i + 1}条示例笔记 - Web版测试数据',
+            date: now.subtract(Duration(hours: i)).toIso8601String(),
+            source: '示例来源${i + 1}',
+            aiAnalysis: '这是第${i + 1}条Web平台示例笔记的AI分析',
+          );
+          _memoryStore.add(quote);
+          logDebug('生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}');
+        }
+        logDebug('Web平台已生成${_memoryStore.length}条示例数据');
       }
 
       if (_categoryStore.isEmpty) {
@@ -1768,10 +1775,21 @@ class DatabaseService extends ChangeNotifier {
           }
         });
 
-        // 分页
+        // 分页 - 修复：确保正确处理边界情况
         final start = offset.clamp(0, filtered.length);
         final end = (offset + limit).clamp(0, filtered.length);
-        return filtered.sublist(start, end);
+
+        logDebug('Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end');
+
+        // 如果起始位置已经超出数据范围，直接返回空列表
+        if (start >= filtered.length) {
+          logDebug('起始位置超出范围，返回空列表');
+          return [];
+        }
+
+        final result = filtered.sublist(start, end);
+        logDebug('Web分页返回${result.length}条数据');
+        return result;
       }
 
       // 修复：统一查询超时时间和重试机制
@@ -2391,6 +2409,12 @@ class DatabaseService extends ChangeNotifier {
     _watchSelectedWeathers = selectedWeathers; // 保存天气筛选条件
     _watchSelectedDayPeriods = selectedDayPeriods; // 保存时间段筛选条件
 
+    // 修复：筛选条件变化时重置_watchHasMore状态
+    if (hasFilterChanged) {
+      _watchHasMore = true;
+      logDebug('筛选条件变化，重置_watchHasMore=true');
+    }
+
     // 修复：如果有筛选条件变更或未初始化，重新创建流
     if (hasFilterChanged ||
         _quotesController == null ||
@@ -2460,7 +2484,7 @@ class DatabaseService extends ChangeNotifier {
     }
 
     _isLoading = true;
-    logDebug('开始加载更多笔记，当前已有 ${_currentQuotes.length} 条');
+    logDebug('开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit');
 
     try {
       final quotes = await getUserQuotes(
@@ -2483,10 +2507,17 @@ class DatabaseService extends ChangeNotifier {
       if (quotes.isEmpty) {
         // 没有更多数据了
         _watchHasMore = false;
+        logDebug('没有更多笔记数据，设置_watchHasMore=false');
       } else {
         _currentQuotes.addAll(quotes);
+
+        // 简化：统一的_watchHasMore判断逻辑
         _watchHasMore = quotes.length >= _watchLimit;
+        logDebug('本次加载${quotes.length}条，限制$_watchLimit条，_watchHasMore=$_watchHasMore，总计${_currentQuotes.length}条');
       }
+
+      // 通知状态变化
+      notifyListeners();
 
       // 通知订阅者
       if (_quotesController != null && !_quotesController!.isClosed) {

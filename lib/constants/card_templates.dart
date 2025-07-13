@@ -8,14 +8,14 @@ class CardTemplates {
     String? author,
     String? date,
   }) {
-    final displayContent =
-        content.length > 80 ? '${content.substring(0, 80)}...' : content;
+    // 使用智能内容处理，保持知识内容的完整性
+    final displayContent = _processDisplayContent(content, maxLength: 160);
     final displayDate =
         date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
-    // 将长文本分行处理
-    final lines = _splitTextIntoLines(displayContent, 20);
+    // 将长文本分行处理，增加每行字符数以适应更多内容
+    final lines = _splitTextIntoLines(displayContent, 35);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -42,10 +42,7 @@ class CardTemplates {
   <rect x="188" y="100" width="18" height="2" fill="#667eea"/>
   <rect x="188" y="104" width="24" height="2" fill="#667eea"/>
 
-  <!-- 标题 -->
-  <text x="200" y="160" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="bold">
-    知识笔记
-  </text>
+  <!-- 移除标题，只保留内容 -->
 
   <!-- 内容区域 -->
   <rect x="30" y="190" width="340" height="280" fill="#FFFFFF" fill-opacity="0.95" rx="15"/>
@@ -70,15 +67,14 @@ class CardTemplates {
     String? author,
     String? date,
   }) {
-    final displayContent =
-        content.length > 60 ? '${content.substring(0, 60)}...' : content;
+    // 使用智能内容处理，保持引用的完整性
+    final displayContent = _processDisplayContent(content, maxLength: 120);
     final displayDate =
         date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
-    final displayAuthor = author ?? '佚名';
 
-    // 将引用内容分行
-    final lines = _splitTextIntoLines(displayContent, 18);
+    // 将引用内容分行，增加每行字符数以适应更多内容
+    final lines = _splitTextIntoLines(displayContent, 35);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -107,14 +103,11 @@ class CardTemplates {
   <!-- 引用内容 - 使用text元素 -->
   ${_generateTextLines(lines, 200, 260, 16, '#333333')}
 
-  <!-- 作者信息 -->
-  <text x="200" y="470" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">
-    —— $displayAuthor
-  </text>
+  <!-- 移除作者标签，只保留内容 -->
 
-  <!-- 底部信息 -->
-  <text x="200" y="550" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.8" font-family="Arial, sans-serif" font-size="12">
-    $displayDate · ThoughtEcho
+  <!-- 底部日期信息 -->
+  <text x="200" y="570" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.6" font-family="Arial, sans-serif" font-size="10">
+    $displayDate
   </text>
 </svg>
 ''';
@@ -126,14 +119,14 @@ class CardTemplates {
     String? author,
     String? date,
   }) {
-    final displayContent =
-        content.length > 80 ? '${content.substring(0, 80)}...' : content;
+    // 使用智能内容处理，保持哲学思考的完整性
+    final displayContent = _processDisplayContent(content, maxLength: 180);
     final displayDate =
         date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
-    // 将思考内容分行
-    final lines = _splitTextIntoLines(displayContent, 20);
+    // 将思考内容分行，增加每行字符数以适应更多内容
+    final lines = _splitTextIntoLines(displayContent, 35);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -161,10 +154,7 @@ class CardTemplates {
   <circle cx="205" cy="150" r="2" fill="white"/>
   <circle cx="210" cy="158" r="1" fill="white"/>
 
-  <!-- 标题 -->
-  <text x="200" y="190" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="bold">
-    哲学思考
-  </text>
+  <!-- 移除标题，只保留内容 -->
 
   <!-- 内容区域 -->
   <rect x="30" y="230" width="340" height="250" fill="#FFFFFF" fill-opacity="0.95" rx="15"/>
@@ -172,12 +162,9 @@ class CardTemplates {
   <!-- 思考内容 - 使用text元素 -->
   ${_generateTextLines(lines, 200, 270, 16, '#333333')}
 
-  <!-- 底部信息 -->
-  <text x="200" y="530" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12">
-    ${author != null ? '思考者：$author' : ''}
-  </text>
-  <text x="200" y="560" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.8" font-family="Arial, sans-serif" font-size="12">
-    $displayDate · ThoughtEcho
+  <!-- 底部日期信息 -->
+  <text x="200" y="570" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.6" font-family="Arial, sans-serif" font-size="10">
+    $displayDate
   </text>
 </svg>
 ''';
@@ -207,20 +194,29 @@ class CardTemplates {
   /// 将文本分割成多行
   static List<String> _splitTextIntoLines(String text, int maxCharsPerLine) {
     final lines = <String>[];
-    final words = text.split('');
+    final words = text.split(' '); // 按空格分割为单词
     String currentLine = '';
 
-    for (final char in words) {
-      if (currentLine.length + 1 <= maxCharsPerLine) {
-        currentLine += char;
+    for (final word in words) {
+      // 检查添加这个单词后是否会超过限制
+      final potentialLine = currentLine.isEmpty ? word : '$currentLine $word';
+      
+      if (potentialLine.length <= maxCharsPerLine) {
+        currentLine = potentialLine;
       } else {
+        // 如果当前行不为空，保存当前行并开始新行
         if (currentLine.isNotEmpty) {
           lines.add(currentLine);
-          currentLine = char;
+          currentLine = word;
+        } else {
+          // 如果单个单词就超过了限制，强制换行
+          lines.add(word);
+          currentLine = '';
         }
       }
     }
 
+    // 添加最后一行
     if (currentLine.isNotEmpty) {
       lines.add(currentLine);
     }
@@ -246,5 +242,24 @@ class CardTemplates {
     }
 
     return buffer.toString();
+  }
+
+  /// 智能处理显示内容，保持完整性同时满足UI约束
+  static String _processDisplayContent(String content, {int maxLength = 200}) {
+    // 如果内容不超过限制，直接返回
+    if (content.length <= maxLength) {
+      return content;
+    }
+    
+    // 尝试在单词边界截断
+    final truncated = content.substring(0, maxLength);
+    final lastSpaceIndex = truncated.lastIndexOf(' ');
+    
+    // 如果找到空格，在该处截断；否则在字符限制处截断
+    if (lastSpaceIndex > maxLength * 0.7) { // 确保不会截断太多
+      return '${truncated.substring(0, lastSpaceIndex)}...';
+    } else {
+      return '$truncated...';
+    }
   }
 }

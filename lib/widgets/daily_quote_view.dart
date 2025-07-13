@@ -126,12 +126,12 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       // 去掉固定高度，让容器适应父组件的尺寸
       width: double.infinity,
       margin: EdgeInsets.symmetric(
-        horizontal: screenWidth > 600 ? 16.0 : 12.0,
+        horizontal: screenWidth > 600 ? 10.0 : 2.0, // 调整外边距使总间距与今日思考一致
         vertical: 16.0,
       ),
       child: SlidingCard(
         child: Padding(
-          padding: EdgeInsets.all(screenWidth > 600 ? 12.0 : 4.0),
+          padding: EdgeInsets.zero, // 移除内边距，依靠SlidingCard的24px padding提供间距
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

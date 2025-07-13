@@ -19,6 +19,9 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // 重建UI以更新按钮状态
+    });
   }
 
   @override
@@ -30,31 +33,84 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI 功能'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'AI设置',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AISettingsPage()),
-              );
-            },
+      body: Column(
+        children: [
+          // 极简顶部导航 - 只有文字，无背景
+          Container(
+            height: 20,
+            margin: const EdgeInsets.only(top: 4),
+            child: Stack(
+              children: [
+                // 居中的导航文字
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _tabController.animateTo(0),
+                        child: Text(
+                          'AI洞察',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: _tabController.index == 0 ? FontWeight.w600 : FontWeight.normal,
+                            color: _tabController.index == 0 
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        width: 1,
+                        height: 12,
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                      GestureDetector(
+                        onTap: () => _tabController.animateTo(1),
+                        child: Text(
+                          'AI周期报告',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: _tabController.index == 1 ? FontWeight.w600 : FontWeight.normal,
+                            color: _tabController.index == 1 
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 右侧设置按钮
+                Positioned(
+                  right: 12,
+                  top: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AISettingsPage()),
+                      );
+                    },
+                    child: Icon(
+                      Icons.settings,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 内容区域
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: const [InsightsPage(), AIPeriodicReportPage()],
+            ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.insights), text: 'AI洞察'),
-            Tab(icon: Icon(Icons.auto_awesome), text: 'AI周期报告'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [InsightsPage(), AIPeriodicReportPage()],
       ),
     );
   }

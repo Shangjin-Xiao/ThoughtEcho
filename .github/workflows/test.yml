@@ -24,7 +24,7 @@ permissions:
   checks: write
 
 env:
-  FLUTTER_VERSION: '3.29.2'
+  FLUTTER_VERSION: '3.32.6'
   PUB_CACHE: ~/.pub-cache
 
 jobs:
@@ -139,14 +139,25 @@ jobs:
     - name: Merge and generate coverage report
       run: |
         mkdir -p merged-coverage
-        # Initialize empty lcov file
-        echo "" > merged-coverage/lcov.info
-        # Merge all lcov files using lcov -a option for proper accumulation
+        # Use the first existing lcov file as initial seed instead of empty file
+        first_file=""
         for file in coverage-artifacts/*/lcov.info; do
           if [ -f "$file" ]; then
-            lcov -a merged-coverage/lcov.info -a "$file" -o merged-coverage/lcov.info
+            if [ -z "$first_file" ]; then
+              first_file="$file"
+              cp "$file" merged-coverage/lcov.info
+              echo "Using $file as initial seed"
+            else
+              lcov -a merged-coverage/lcov.info -a "$file" -o merged-coverage/lcov.info
+              echo "Merged $file"
+            fi
           fi
         done
+        # Check if we found any lcov files
+        if [ -z "$first_file" ]; then
+          echo "No lcov files found to merge"
+          echo "" > merged-coverage/lcov.info
+        fi
         lcov --summary merged-coverage/lcov.info
         lcov --list merged-coverage/lcov.info
 

@@ -39,8 +39,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
+  late TabController _aiTabController; // AI页面的TabController
   List<NoteCategory> _tags = [];
   List<String> _selectedTagIds = [];
   bool _isLoadingTags = true; // 添加标签加载状态标志
@@ -53,7 +54,7 @@ class _HomePageState extends State<HomePage>
   List<String> _selectedWeathers = [];
   List<String> _selectedDayPeriods = [];
 
-  late TabController _tabController; // 新增：NoteListView的全局Key
+  // 新增：NoteListView的全局Key
   final GlobalKey<NoteListViewState> _noteListViewKey =
       GlobalKey<NoteListViewState>();
   final GlobalKey<DailyQuoteViewState> _dailyQuoteViewKey =
@@ -284,7 +285,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _aiTabController = TabController(length: 2, vsync: this);
 
     // 使用传入的初始页面参数
     _currentIndex = widget.initialPage;
@@ -327,7 +328,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
     _promptSubscription?.cancel(); // Cancel daily prompt subscription
@@ -779,7 +780,7 @@ class _HomePageState extends State<HomePage>
           _currentIndex == 1
               ? null // 记录页不需要标题栏
               : AppBar(
-                title: const Text('心迹'),
+                toolbarHeight: 0,
                 actions: [
                   // 显示标签加载状态
                   if (_isLoadingTags && _currentIndex == 1)
