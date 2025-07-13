@@ -50,7 +50,7 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
           controller: _tabController,
           tabs: const [
             Tab(
-              icon: Icon(Icons.psychology),
+              icon: Icon(Icons.insights),
               text: 'AI洞察',
             ),
             Tab(
