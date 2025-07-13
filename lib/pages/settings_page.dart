@@ -150,9 +150,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     value: 'native',
                     child: Row(
                       children: [
-                        Icon(Icons.bar_chart),
+                        Icon(Icons.analytics_outlined),
                         SizedBox(width: 8),
-                        Text('原生数据报告'),
+                        Text('年度报告'),
                       ],
                     ),
                   ),
@@ -160,7 +160,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     value: 'ai',
                     child: Row(
                       children: [
-                        Icon(Icons.psychology),
+                        Icon(Icons.auto_awesome),
                         SizedBox(width: 8),
                         Text('AI 年度总结'),
                       ],
@@ -283,12 +283,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           await locationService.getCurrentLocation();
                       if (!mounted) return; // Add this check
                       if (position != null) {
-                        // Removed extra mounted check here, as context is already checked above
-                        await weatherService.getWeatherData(
-                          position.latitude,
-                          position.longitude,
-                        );
-                        if (!mounted) return;
                         if (context.mounted) {
                           final scaffoldMessenger = ScaffoldMessenger.of(context);
                           scaffoldMessenger.removeCurrentSnackBar();
@@ -502,7 +496,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ListTile(
                   title: const Text('AI设置'),
                   subtitle: const Text('配置AI分析所需的API信息和多服务商管理'),
-                  leading: const Icon(Icons.psychology_outlined),
+                  leading: const Icon(Icons.auto_awesome),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(

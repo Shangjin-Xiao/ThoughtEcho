@@ -83,7 +83,8 @@ class SVGCardWidget extends StatelessWidget {
             print('SVG内容: $svgContent');
             print('错误堆栈: $stackTrace');
           }
-          return _buildErrorWidget('SVG渲染失败: ${error.toString()}');
+          // 使用回退SVG模板而不是错误提示
+          return _buildFallbackSVG();
         },
       );
     } catch (e) {
@@ -134,6 +135,108 @@ class SVGCardWidget extends StatelessWidget {
             ),
           ),
         );
+  }
+
+  /// 构建回退SVG模板
+  Widget _buildFallbackSVG() {
+    // 尝试从原始SVG内容中提取文本内容
+    String extractedContent = _extractContentFromSVG(svgContent);
+
+    // 生成回退SVG
+    final fallbackSVG = _generateFallbackSVGContent(extractedContent);
+
+    try {
+      return SvgPicture.string(
+        fallbackSVG,
+        fit: fit,
+      );
+    } catch (e) {
+      // 如果回退SVG也失败，则显示错误提示
+      return _buildErrorWidget('SVG渲染完全失败');
+    }
+  }
+
+  /// 从SVG内容中提取文本
+  String _extractContentFromSVG(String svg) {
+    try {
+      // 尝试提取text标签中的内容
+      final textMatches = RegExp(r'<text[^>]*>([^<]+)</text>').allMatches(svg);
+      final texts = textMatches.map((match) => match.group(1)?.trim() ?? '').where((text) => text.isNotEmpty).toList();
+
+      if (texts.isNotEmpty) {
+        return texts.first;
+      }
+
+      // 尝试提取foreignObject中的内容
+      final foreignMatches = RegExp(r'<foreignObject[^>]*>.*?<div[^>]*>([^<]+)</div>', dotAll: true).allMatches(svg);
+      if (foreignMatches.isNotEmpty) {
+        final content = foreignMatches.first.group(1)?.trim() ?? '';
+        if (content.isNotEmpty) {
+          return content;
+        }
+      }
+
+      return '内容解析失败';
+    } catch (e) {
+      return '无法提取内容';
+    }
+  }
+
+  /// 生成回退SVG内容
+  String _generateFallbackSVGContent(String content) {
+    // 限制内容长度
+    final displayContent = content.length > 50 ? '${content.substring(0, 50)}...' : content;
+
+    return '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+  <defs>
+    <linearGradient id="fallbackBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff7b7b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="400" height="600" fill="url(#fallbackBg)" rx="20"/>
+
+  <!-- 警告图标 -->
+  <circle cx="200" cy="120" r="30" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="2"/>
+  <text x="200" y="130" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24">⚠</text>
+
+  <!-- 标题 -->
+  <text x="200" y="180" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">
+    SVG生成失败
+  </text>
+
+  <!-- 内容区域 -->
+  <rect x="30" y="220" width="340" height="280" fill="rgba(255,255,255,0.9)" rx="15"/>
+
+  <!-- 内容文字 -->
+  <text x="200" y="260" text-anchor="middle" fill="#333" font-family="Arial, sans-serif" font-size="14" font-weight="bold">
+    原始内容：
+  </text>
+
+  <!-- 分割线 -->
+  <line x1="50" y1="280" x2="350" y2="280" stroke="#ddd" stroke-width="1"/>
+
+  <!-- 提取的内容 -->
+  <foreignObject x="50" y="300" width="300" height="180">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #555; padding: 10px; text-align: center; word-wrap: break-word;">
+      ${displayContent.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}
+    </div>
+  </foreignObject>
+
+  <!-- 底部提示 -->
+  <text x="200" y="540" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12">
+    请尝试重新生成或检查AI配置
+  </text>
+
+  <!-- ThoughtEcho标识 -->
+  <text x="200" y="570" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="10">
+    ThoughtEcho - 备用模板
+  </text>
+</svg>
+''';
   }
 }
 
