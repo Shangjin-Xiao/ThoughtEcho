@@ -17,6 +17,7 @@ class QuoteItemWidget extends StatelessWidget {
   final Function() onEdit;
   final Function() onDelete;
   final Function() onAskAI;
+  final Function()? onGenerateCard;
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
@@ -30,6 +31,7 @@ class QuoteItemWidget extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
+    this.onGenerateCard,
     this.tagBuilder,
   });
 
@@ -133,13 +135,15 @@ class QuoteItemWidget extends StatelessWidget {
     // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
 
     // Determine the background color of the card
-    // If the quote has a color, use it, otherwise use the theme's surface container high color
+    // If the quote has a color, use it, otherwise use fixed color based on theme
     final Color cardColor =
         quote.colorHex != null && quote.colorHex!.isNotEmpty
             ? Color(
               int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
             ) // Ensure alpha for hex string
-            : theme.colorScheme.surfaceContainerHigh;
+            : (theme.brightness == Brightness.light 
+                ? Colors.white 
+                : const Color(0xFF2D2D2D));
 
     // Determine the text color based on the card color
 
@@ -401,6 +405,8 @@ class QuoteItemWidget extends StatelessWidget {
                         onAskAI();
                       } else if (value == 'edit') {
                         onEdit();
+                      } else if (value == 'generate_card') {
+                        onGenerateCard?.call();
                       } else if (value == 'delete') {
                         onDelete();
                       }
@@ -433,6 +439,20 @@ class QuoteItemWidget extends StatelessWidget {
                               ],
                             ),
                           ),
+                          if (onGenerateCard != null)
+                            PopupMenuItem<String>(
+                              value: 'generate_card',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('生成卡片分享'),
+                                ],
+                              ),
+                            ),
                           PopupMenuItem<String>(
                             value: 'delete',
                             child: Row(

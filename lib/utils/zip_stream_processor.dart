@@ -87,17 +87,16 @@ class ZipStreamProcessor {
   /// 内部辅助方法：以流的方式添加文件到ZIP
   static Future<void> _addFileStreaming(ZipFileEncoder encoder, File file, String relativePath) async {
     final stat = await file.stat();
-    final fileStream = InputFileStream(file.path);
-    final archiveFile = ArchiveFile.stream(
+    final fileBytes = await file.readAsBytes();
+    final archiveFile = ArchiveFile(
       relativePath,
-      stat.size,
-      fileStream,
+      fileBytes.length,
+      fileBytes,
     );
     archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
     archiveFile.mode = stat.mode;
     
     encoder.addArchiveFile(archiveFile);
-    // fileStream will be closed by the encoder
   }
   
   /// 流式解压ZIP文件（增强版，支持大文件安全处理）
@@ -206,11 +205,12 @@ class ZipStreamProcessor {
 
     try {
       // 使用流式解压，避免一次性加载整个ZIP到内存
-      final inputStream = InputFileStream(zipPath);
+      final zipFile = File(zipPath);
+      final bytes = await zipFile.readAsBytes();
       final decoder = ZipDecoder();
       
-      // 解压整个archive，但立即流式处理每个文件
-      final archive = decoder.decodeBuffer(inputStream);
+      // 使用新的流式解压API
+      final archive = decoder.decodeBytes(bytes);
       
       final filesToProcess = archive.files.where((file) => file.isFile).toList();
       final totalFiles = filesToProcess.length;
@@ -231,9 +231,7 @@ class ZipStreamProcessor {
           file.writeContent(OutputFileStream(outputPath));
         } catch (e) {
           // 如果writeContent失败，尝试直接写入content
-          if (file.content != null) {
-            outputStream.add(file.content as List<int>);
-          }
+          outputStream.add(file.content);
         } finally {
           await outputStream.close();
         }
@@ -247,7 +245,6 @@ class ZipStreamProcessor {
         }
       }
       
-      await inputStream.close();
       sendPort.send('done'); // 3. 发送完成信号
     } catch (e, s) {
       sendPort.send({
@@ -267,16 +264,17 @@ class ZipStreamProcessor {
         return false;
       }
       
-      // 使用流式方式打开ZIP文件，避免加载全部内容到内存
-      final inputStream = InputFileStream(zipPath);
+      // 读取ZIP文件内容
+      final bytes = await zipFile.readAsBytes();
       try {
         final decoder = ZipDecoder();
-        final archive = decoder.decodeBuffer(inputStream);
+        final archive = decoder.decodeBytes(bytes);
         
         // 只检查文件头，不解压内容
         return archive.isNotEmpty;
-      } finally {
-        await inputStream.close();
+      } catch (e) {
+        logDebug('ZIP文件解码失败: $zipPath, 错误: $e');
+        return false;
       }
     } catch (e) {
       logDebug('ZIP文件验证失败: $zipPath, 错误: $e');
@@ -297,14 +295,15 @@ class ZipStreamProcessor {
       final inputStream = InputFileStream(zipPath);
       try {
         final decoder = ZipDecoder();
-        final archive = decoder.decodeBuffer(inputStream);
+        final bytes = await zipFile.readAsBytes();
+        final archive = decoder.decodeBytes(bytes);
         
         int totalUncompressedSize = 0;
         int fileCount = 0;
         final fileNames = <String>[];
         
         for (final file in archive) {
-          totalUncompressedSize += file.size;
+          totalUncompressedSize += file.size.toInt();
           fileCount++;
           fileNames.add(file.name);
         }
@@ -339,8 +338,10 @@ class ZipStreamProcessor {
       
       final inputStream = InputFileStream(zipPath);
       try {
+        final zipFile = File(zipPath);
+        final bytes = await zipFile.readAsBytes();
         final decoder = ZipDecoder();
-        final archive = decoder.decodeBuffer(inputStream);
+        final archive = decoder.decodeBytes(bytes);
         
         for (final file in archive) {
           if (file.name == fileName) {
@@ -371,8 +372,9 @@ class ZipStreamProcessor {
       
       final inputStream = InputFileStream(zipPath);
       try {
+        final bytes = await zipFile.readAsBytes();
         final decoder = ZipDecoder();
-        final archive = decoder.decodeBuffer(inputStream);
+        final archive = decoder.decodeBytes(bytes);
         
         for (final file in archive) {
           if (file.name == fileName) {

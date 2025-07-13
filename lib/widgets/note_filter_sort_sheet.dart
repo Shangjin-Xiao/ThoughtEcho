@@ -206,7 +206,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   }) {
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      color: theme.brightness == Brightness.light 
+          ? Colors.white 
+          : theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(

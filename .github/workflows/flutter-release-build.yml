@@ -31,24 +31,8 @@ jobs:
       
       - name: 准备构建环境
         run: |
-          cat > android/gradle.properties << EOF
-          # JVM优化配置 - 针对大文件处理优化，兼容Java 17
-          org.gradle.jvmargs=-Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
-          org.gradle.parallel=true
-          org.gradle.caching=true
-          org.gradle.configureondemand=true
-          android.useAndroidX=true
-          android.enableJetifier=true
-          android.defaults.buildfeatures.buildconfig=true
-          android.nonTransitiveRClass=false
-          android.nonFinalResIds=false
-          android.enableR8.fullMode=true
-          android.enableR8=true
-          android.useNewApkCreator=true
-          kotlin.incremental=true
-          kotlin.incremental.useClasspathSnapshot=true
-          kotlin.caching.enabled=true
-          EOF
+          # 设置Java环境变量用于大内存构建
+          echo "GRADLE_OPTS=-Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED" >> $GITHUB_ENV
 
       - name: 创建签名密钥
         run: |

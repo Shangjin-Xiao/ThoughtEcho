@@ -3,6 +3,7 @@ plugins {
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
@@ -31,7 +32,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.shangjin.thoughtecho"
-    compileSdkVersion 34
+    compileSdk 35
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -50,13 +51,14 @@ android {
     defaultConfig {
         applicationId "com.shangjin.thoughtecho"
         minSdkVersion 23
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
 
         // 大文件处理优化配置
         manifestPlaceholders = [
+            'applicationName': 'io.flutter.app.FlutterApplication',
             'largeHeap': 'true',
             'hardwareAccelerated': 'false'
         ]
@@ -127,16 +129,6 @@ android {
         exclude 'META-INF/LICENSE.txt'
         exclude 'META-INF/NOTICE'
         exclude 'META-INF/NOTICE.txt'
-    }
-
-    // 编译优化
-    dexOptions {
-        javaMaxHeapSize "4g"
-        preDexLibraries = false
-        additionalParameters = [
-            "--multi-dex",
-            "--set-max-idx-number=48000"
-        ]
     }
 }
 
