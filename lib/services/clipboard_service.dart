@@ -364,9 +364,10 @@ class ClipboardService extends ChangeNotifier {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Theme.of(context).brightness == Brightness.light 
-            ? Colors.white 
-            : Theme.of(context).colorScheme.surface,
+        backgroundColor:
+            Theme.of(context).brightness == Brightness.light
+                ? Colors.white
+                : Theme.of(context).colorScheme.surface,
         builder:
             (context) => AddNoteDialog(
               prefilledContent: content,

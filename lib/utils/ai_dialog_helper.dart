@@ -25,9 +25,10 @@ class AiDialogHelper {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: theme.brightness == Brightness.light 
-          ? Colors.white 
-          : theme.colorScheme.surface,
+      backgroundColor:
+          theme.brightness == Brightness.light
+              ? Colors.white
+              : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppTheme.dialogRadius),

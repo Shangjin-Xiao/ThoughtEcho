@@ -141,8 +141,8 @@ class QuoteItemWidget extends StatelessWidget {
             ? Color(
               int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
             ) // Ensure alpha for hex string
-            : (theme.brightness == Brightness.light 
-                ? Colors.white 
+            : (theme.brightness == Brightness.light
+                ? Colors.white
                 : const Color(0xFF2D2D2D));
 
     // Determine the text color based on the card color

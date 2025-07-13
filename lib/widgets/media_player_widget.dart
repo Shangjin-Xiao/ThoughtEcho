@@ -79,24 +79,27 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         }
         return;
       }
-      
+
       // 获取文件大小，用于日志记录
       int fileSize = 0;
       try {
         fileSize = await file.length();
       } catch (_) {}
-      
+
       // 记录开始初始化大视频
-      if (fileSize > 100 * 1024 * 1024) { // 100MB以上视为大视频
-        debugPrint('开始初始化大视频文件: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB');
+      if (fileSize > 100 * 1024 * 1024) {
+        // 100MB以上视为大视频
+        debugPrint(
+          '开始初始化大视频文件: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB',
+        );
       }
 
       // 创建视频控制器
       _videoController = VideoPlayerController.file(file);
-      
+
       // 使用超时保护，防止初始化过程卡死
       bool initializeCompleted = false;
-      
+
       // 启动一个超时计时器
       Future.delayed(const Duration(seconds: 30)).then((_) {
         if (!initializeCompleted && mounted) {
@@ -104,7 +107,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           setState(() {
             _isInitializing = false;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('视频加载时间过长，请尝试使用较小的视频文件'),
@@ -113,7 +116,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           );
         }
       });
-      
+
       // 在隔离区中初始化视频
       await _videoController!.initialize().timeout(
         const Duration(seconds: 30),
@@ -122,14 +125,16 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           throw Exception('视频初始化超时，文件可能过大');
         },
       );
-      
+
       initializeCompleted = true;
-      
+
       if (!mounted) return;
-      
+
       // 记录视频初始化成功
       if (fileSize > 100 * 1024 * 1024) {
-        debugPrint('大视频初始化成功: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB');
+        debugPrint(
+          '大视频初始化成功: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB',
+        );
       }
 
       _chewieController = ChewieController(
@@ -181,26 +186,28 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     } catch (e) {
       // 清理资源
       _cleanupVideoResources();
-      
+
       debugPrint('视频初始化失败: $e');
-      
+
       if (mounted) {
         String errorMessage = '视频加载失败';
         String suggestion = '';
-        
+
         if (e.toString().contains('timeout') || e.toString().contains('超时')) {
           errorMessage = '视频加载超时';
           suggestion = '文件可能过大，请稍后重试或使用较小的视频文件';
-        } else if (e.toString().contains('format') || e.toString().contains('格式')) {
+        } else if (e.toString().contains('format') ||
+            e.toString().contains('格式')) {
           errorMessage = '不支持的视频格式';
           suggestion = '请使用MP4、MOV等常见格式';
-        } else if (e.toString().contains('permission') || e.toString().contains('权限')) {
+        } else if (e.toString().contains('permission') ||
+            e.toString().contains('权限')) {
           errorMessage = '无法访问视频文件';
           suggestion = '请检查文件权限';
         } else {
           suggestion = '请检查文件是否完整或尝试重新导入';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Column(
@@ -228,7 +235,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       }
     }
   }
-  
+
   // 清理视频资源
   void _cleanupVideoResources() {
     try {
@@ -248,16 +255,16 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   /// 处理内存不足错误
   Future<void> _handleOutOfMemoryError() async {
     debugPrint('处理内存不足错误');
-    
+
     // 强制垃圾回收
     await Future.delayed(const Duration(milliseconds: 200));
-    
+
     if (mounted) {
       setState(() {
         _isInitializing = false;
         _isInitialized = false;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Column(
@@ -286,18 +293,18 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   /// 重试视频初始化
   Future<void> _retryVideoInitialization() async {
     if (_isInitializing) return;
-    
+
     debugPrint('重试视频初始化');
-    
+
     // 重置状态
     setState(() {
       _isInitialized = false;
       _isInitializing = false;
     });
-    
+
     // 短暂延迟后重试，给系统时间回收内存
     await Future.delayed(const Duration(milliseconds: 1000));
-    
+
     if (mounted) {
       await _startVideoInitialization();
     }
@@ -383,25 +390,28 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           ),
         ),
         child: Center(
-          child: _isInitializing
-              ? _buildVideoLoadingState() // 复用加载动画
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.play_circle_outline,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '点击播放视频',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          child:
+              _isInitializing
+                  ? _buildVideoLoadingState() // 复用加载动画
+                  : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.play_circle_outline,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '点击播放视频',
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
         ),
       ),
     );
@@ -466,7 +476,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           Text(
             '正在加载视频...',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -796,7 +808,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   void dispose() {
     // 使用清理方法释放视频资源
     _cleanupVideoResources();
-    
+
     // 释放音频资源
     try {
       if (_audioPlayer != null) {
@@ -806,7 +818,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     } catch (e) {
       debugPrint('释放音频资源失败: $e');
     }
-    
+
     // 确保在垃圾回收前触发一次内存清理
     Future.microtask(() {
       // 触发垃圾回收
@@ -815,7 +827,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         Future.delayed(const Duration(milliseconds: 100));
       }
     });
-    
+
     super.dispose();
   }
 }

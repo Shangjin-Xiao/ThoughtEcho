@@ -88,9 +88,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (widget.initialQuote?.deltaContent != null) {
         // 如果有富文本内容，使用后台处理避免阻塞UI
         logDebug('开始异步解析富文本内容...');
-        
+
         final deltaContent = widget.initialQuote!.deltaContent!;
-        
+
         // 使用内存安全的处理策略
         await _initializeRichTextContentSafely(deltaContent);
       } else {
@@ -109,22 +109,27 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       final memoryManager = DeviceMemoryManager();
       final contentSize = deltaContent.length;
 
-      logDebug('开始内存安全的富文本初始化，内容大小: ${(contentSize / 1024).toStringAsFixed(1)}KB');
+      logDebug(
+        '开始内存安全的富文本初始化，内容大小: ${(contentSize / 1024).toStringAsFixed(1)}KB',
+      );
 
       // 检查内存压力
       final memoryPressure = await memoryManager.getMemoryPressureLevel();
 
-      if (memoryPressure >= 3) { // 临界状态
+      if (memoryPressure >= 3) {
+        // 临界状态
         logDebug('内存不足，回退到纯文本模式');
         _initializeAsPlainText();
         return;
       }
 
       // 根据内容大小和内存压力选择处理策略
-      if (contentSize > 10 * 1024 * 1024) { // 10MB以上
+      if (contentSize > 10 * 1024 * 1024) {
+        // 10MB以上
         logDebug('超大富文本内容，使用分段加载');
         await _initializeWithChunkedLoading(deltaContent);
-      } else if (contentSize > 2 * 1024 * 1024 || memoryPressure >= 2) { // 2MB以上或高内存压力
+      } else if (contentSize > 2 * 1024 * 1024 || memoryPressure >= 2) {
+        // 2MB以上或高内存压力
         logDebug('大富文本内容，使用后台处理');
         await _initializeWithIsolate(deltaContent);
       } else {
@@ -240,16 +245,19 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       // 检查内存压力
       final memoryPressure = await memoryManager.getMemoryPressureLevel();
 
-      if (memoryPressure >= 3) { // 临界状态
+      if (memoryPressure >= 3) {
+        // 临界状态
         logDebug('内存不足，使用最小化处理');
         return _getMinimalDocumentContent();
       }
 
       // 根据内容大小和内存压力选择处理策略
-      if (estimatedSize > 5 * 1024 * 1024) { // 5MB以上
+      if (estimatedSize > 5 * 1024 * 1024) {
+        // 5MB以上
         logDebug('超大文档，使用分段处理');
         return await _getDocumentContentWithChunking(deltaData);
-      } else if (estimatedSize > 1 * 1024 * 1024 || memoryPressure >= 2) { // 1MB以上或高内存压力
+      } else if (estimatedSize > 1 * 1024 * 1024 || memoryPressure >= 2) {
+        // 1MB以上或高内存压力
         logDebug('大文档，使用后台处理');
         return await _getDocumentContentWithIsolate(deltaData);
       } else {
@@ -269,7 +277,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       final plainText = _controller.document.toPlainText();
       final minimalDelta = [
         {"insert": plainText},
-        {"insert": "\n"}
+        {"insert": "\n"},
       ];
       return jsonEncode(minimalDelta);
     } catch (e) {
@@ -314,11 +322,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             final simplified = Map<String, dynamic>.from(item);
 
             // 移除大型嵌入内容，保留引用
-            if (simplified.containsKey('insert') && simplified['insert'] is Map) {
+            if (simplified.containsKey('insert') &&
+                simplified['insert'] is Map) {
               final insert = simplified['insert'] as Map;
               if (insert.containsKey('image') || insert.containsKey('video')) {
                 // 保留类型信息但移除实际数据
-                simplified['insert'] = {'type': insert.keys.first, 'simplified': true};
+                simplified['insert'] = {
+                  'type': insert.keys.first,
+                  'simplified': true,
+                };
               }
             }
 
@@ -421,8 +433,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     logDebug('开始保存笔记内容...');
 
-
-    
     // 获取纯文本内容
     String plainTextContent = '';
     String deltaJson = '';
@@ -433,7 +443,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
       // 使用内存安全的方法获取富文本内容
       deltaJson = await _getDocumentContentSafely();
-      
+
       logDebug('富文本JSON长度: ${deltaJson.length}');
       logDebug(
         '富文本JSON内容示例: ${deltaJson.substring(0, min(100, deltaJson.length))}...',
@@ -1035,9 +1045,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: theme.brightness == Brightness.light 
-          ? Colors.white 
-          : theme.colorScheme.surface,
+      backgroundColor:
+          theme.brightness == Brightness.light
+              ? Colors.white
+              : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1575,9 +1586,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: theme.brightness == Brightness.light 
-          ? Colors.white 
-          : theme.colorScheme.surface,
+      backgroundColor:
+          theme.brightness == Brightness.light
+              ? Colors.white
+              : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(12), // 使用圆角

@@ -494,7 +494,8 @@ class _InsightsPageState extends State<InsightsPage>
           _tabController.index == 0
               ? FloatingActionButton.extended(
                 onPressed: _isLoading ? null : _generateInsights,
-                label: Text(_isLoading ? '分析中...' : '开始分析'),                icon:
+                label: Text(_isLoading ? '分析中...' : '开始分析'),
+                icon:
                     _isLoading
                         ? const SizedBox(
                           width: 18,
@@ -827,12 +828,14 @@ class _InsightsPageState extends State<InsightsPage>
                                     const SnackBar(content: Text('分析结果已复制')),
                                   );
                                 },
-                              ),                            // 加载指示器在生成过程中显示
+                              ), // 加载指示器在生成过程中显示
                             if (_isGenerating)
                               const SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 3),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                ),
                               ),
                           ],
                         ),

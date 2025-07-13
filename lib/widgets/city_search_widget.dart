@@ -266,7 +266,10 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
             Flexible(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final size = (constraints.maxHeight * 0.7).clamp(120.0, 300.0);
+                  final size = (constraints.maxHeight * 0.7).clamp(
+                    120.0,
+                    300.0,
+                  );
                   return EnhancedLottieAnimation(
                     type: LottieAnimationType.weatherSearchLoading,
                     width: size,
@@ -290,7 +293,10 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
             Flexible(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final size = (constraints.maxHeight * 0.7).clamp(120.0, 300.0);
+                  final size = (constraints.maxHeight * 0.7).clamp(
+                    120.0,
+                    300.0,
+                  );
                   return EnhancedLottieAnimation(
                     type: LottieAnimationType.weatherSearchLoading,
                     width: size,
@@ -320,7 +326,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               '尝试使用不同的关键词或城市名称',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -366,11 +374,12 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                 controller.isLoading
                     ? const SizedBox(
                       width: 20,
-                      height: 20,                            child: EnhancedLottieAnimation(
-                              type: LottieAnimationType.loading,
-                              width: 16,
-                              height: 16,
-                            ),
+                      height: 20,
+                      child: EnhancedLottieAnimation(
+                        type: LottieAnimationType.loading,
+                        width: 16,
+                        height: 16,
+                      ),
                     )
                     : Icon(
                       Icons.arrow_forward_ios,

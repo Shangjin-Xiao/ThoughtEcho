@@ -1,5 +1,6 @@
 /// Basic unit tests for AI Analysis Database Service
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 

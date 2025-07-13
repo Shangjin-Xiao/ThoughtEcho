@@ -30,8 +30,8 @@ class DeviceMemoryManager {
   /// 获取设备总内存（字节）
   Future<int> getTotalMemory() async {
     try {
-      if (_totalMemory != null && 
-          _lastCheck != null && 
+      if (_totalMemory != null &&
+          _lastCheck != null &&
           DateTime.now().difference(_lastCheck!) < _cacheTimeout) {
         return _totalMemory!;
       }
@@ -121,15 +121,17 @@ class DeviceMemoryManager {
   Future<bool> canProcessFile(int fileSize) async {
     try {
       final available = await getAvailableMemory();
-      
+
       // 保守策略：文件大小不应超过可用内存的1/4
       // 这给系统留下足够的缓冲空间
       final maxSafeSize = available ~/ 4;
-      
-      logDebug('内存检查: 文件大小=${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB, '
-               '可用内存=${(available / 1024 / 1024).toStringAsFixed(1)}MB, '
-               '安全限制=${(maxSafeSize / 1024 / 1024).toStringAsFixed(1)}MB');
-               
+
+      logDebug(
+        '内存检查: 文件大小=${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB, '
+        '可用内存=${(available / 1024 / 1024).toStringAsFixed(1)}MB, '
+        '安全限制=${(maxSafeSize / 1024 / 1024).toStringAsFixed(1)}MB',
+      );
+
       return fileSize <= maxSafeSize;
     } catch (e) {
       logDebug('内存检查失败: $e');
@@ -142,10 +144,10 @@ class DeviceMemoryManager {
   Future<int> getOptimalChunkSize(int fileSize) async {
     try {
       final usageRatio = await getMemoryUsageRatio();
-      
+
       // 基础块大小
       int baseChunkSize = 64 * 1024; // 64KB
-      
+
       // 根据内存压力调整
       if (usageRatio > 0.8) {
         // 高内存压力：使用很小的块
@@ -157,7 +159,7 @@ class DeviceMemoryManager {
         // 低内存压力：可以使用较大的块
         baseChunkSize = 128 * 1024; // 128KB
       }
-      
+
       // 根据文件大小调整
       if (fileSize > 1024 * 1024 * 1024) {
         // 1GB以上的文件使用更小的块
@@ -166,11 +168,13 @@ class DeviceMemoryManager {
         // 10MB以下的文件可以使用更大的块
         baseChunkSize = math.max(baseChunkSize, 64 * 1024);
       }
-      
-      logDebug('推荐块大小: ${(baseChunkSize / 1024).toStringAsFixed(1)}KB '
-               '(文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB, '
-               '内存使用率: ${(usageRatio * 100).toStringAsFixed(1)}%)');
-               
+
+      logDebug(
+        '推荐块大小: ${(baseChunkSize / 1024).toStringAsFixed(1)}KB '
+        '(文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB, '
+        '内存使用率: ${(usageRatio * 100).toStringAsFixed(1)}%)',
+      );
+
       return baseChunkSize;
     } catch (e) {
       logDebug('计算最佳块大小失败: $e');
@@ -207,23 +211,28 @@ class DeviceMemoryManager {
       const platform = MethodChannel('thoughtecho/memory_info');
       try {
         final result = await platform.invokeMethod('getMemoryInfo');
-        
+
         // 使用真实的内存信息
         final totalMem = result['totalMem'] as int? ?? 4 * 1024 * 1024 * 1024;
         final availMem = result['availMem'] as int? ?? 1 * 1024 * 1024 * 1024;
-        final appMaxMemory = result['appMaxMemory'] as int? ?? 512 * 1024 * 1024;
-        final appUsedMemory = result['appUsedMemory'] as int? ?? 256 * 1024 * 1024;
+        final appMaxMemory =
+            result['appMaxMemory'] as int? ?? 512 * 1024 * 1024;
+        final appUsedMemory =
+            result['appUsedMemory'] as int? ?? 256 * 1024 * 1024;
         final lowMemory = result['lowMemory'] as bool? ?? false;
-        
-        logDebug('Android内存信息: 总内存=${(totalMem / 1024 / 1024).toStringAsFixed(0)}MB, '
-                 '可用=${(availMem / 1024 / 1024).toStringAsFixed(0)}MB, '
-                 '应用最大=${(appMaxMemory / 1024 / 1024).toStringAsFixed(0)}MB, '
-                 '应用已用=${(appUsedMemory / 1024 / 1024).toStringAsFixed(0)}MB, '
-                 '低内存警告=$lowMemory');
-        
+
+        logDebug(
+          'Android内存信息: 总内存=${(totalMem / 1024 / 1024).toStringAsFixed(0)}MB, '
+          '可用=${(availMem / 1024 / 1024).toStringAsFixed(0)}MB, '
+          '应用最大=${(appMaxMemory / 1024 / 1024).toStringAsFixed(0)}MB, '
+          '应用已用=${(appUsedMemory / 1024 / 1024).toStringAsFixed(0)}MB, '
+          '低内存警告=$lowMemory',
+        );
+
         // 如果系统报告低内存，调整可用内存估算
-        final adjustedAvailMem = lowMemory ? (availMem * 0.5).toInt() : availMem;
-        
+        final adjustedAvailMem =
+            lowMemory ? (availMem * 0.5).toInt() : availMem;
+
         return {
           'total': totalMem,
           'available': adjustedAvailMem,
@@ -248,7 +257,7 @@ class DeviceMemoryManager {
     try {
       // 这里应该使用原生方法获取实际的内存信息
       // 为了简化，现在返回估计值
-      
+
       const platform = MethodChannel('thoughtecho/memory_info');
       try {
         final result = await platform.invokeMethod('getMemoryInfo');
@@ -278,10 +287,10 @@ class DeviceMemoryManager {
         tempLists.add(List.filled(1000, 0));
       }
       tempLists = null;
-      
+
       // 给GC一些时间
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       logDebug('已建议执行垃圾回收');
     } catch (e) {
       logDebug('触发垃圾回收失败: $e');
@@ -293,14 +302,17 @@ class DeviceMemoryManager {
     try {
       // 检查缓存
       if (_lastPressureCheck != null &&
-          DateTime.now().difference(_lastPressureCheck!) < const Duration(seconds: 2)) {
+          DateTime.now().difference(_lastPressureCheck!) <
+              const Duration(seconds: 2)) {
         return _lastPressureLevel;
       }
 
       if (Platform.isAndroid) {
         try {
           const platform = MethodChannel('thoughtecho/memory_info');
-          final pressureLevel = await platform.invokeMethod('getMemoryPressureLevel');
+          final pressureLevel = await platform.invokeMethod(
+            'getMemoryPressureLevel',
+          );
           _lastPressureLevel = pressureLevel ?? 1;
           _lastPressureCheck = DateTime.now();
           return _lastPressureLevel;
@@ -388,7 +400,8 @@ class DeviceMemoryManager {
 
   /// 获取内存状态流
   Stream<Map<String, dynamic>>? get memoryStatusStream {
-    _memoryStatusController ??= StreamController<Map<String, dynamic>>.broadcast();
+    _memoryStatusController ??=
+        StreamController<Map<String, dynamic>>.broadcast();
     return _memoryStatusController?.stream;
   }
 
@@ -437,9 +450,9 @@ class DeviceMemoryManager {
 
 /// 内存压力级别
 enum MemoryPressureLevel {
-  low,      // 低压力 (<60%)
-  medium,   // 中等压力 (60-80%)
-  high,     // 高压力 (80-90%)
+  low, // 低压力 (<60%)
+  medium, // 中等压力 (60-80%)
+  high, // 高压力 (80-90%)
   critical, // 临界压力 (>90%)
 }
 
@@ -458,7 +471,7 @@ extension MemoryPressureLevelExt on MemoryPressureLevel {
         return '内存不足';
     }
   }
-  
+
   /// 获取建议操作
   String get suggestion {
     switch (this) {
@@ -472,15 +485,15 @@ extension MemoryPressureLevelExt on MemoryPressureLevel {
         return '内存严重不足，请重启应用或使用更小的文件';
     }
   }
-  
+
   /// 是否应该暂停处理
   bool get shouldPause {
     return this == MemoryPressureLevel.critical;
   }
-  
+
   /// 是否应该警告用户
   bool get shouldWarn {
-    return this == MemoryPressureLevel.high || this == MemoryPressureLevel.critical;
+    return this == MemoryPressureLevel.high ||
+        this == MemoryPressureLevel.critical;
   }
 }
-

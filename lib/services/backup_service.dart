@@ -49,20 +49,22 @@ class BackupService {
     final memoryManager = DeviceMemoryManager();
     final memoryPressure = await memoryManager.getMemoryPressureLevel();
 
-    if (memoryPressure >= 3) { // 临界状态
+    if (memoryPressure >= 3) {
+      // 临界状态
       throw Exception('内存不足，无法执行备份操作。请关闭其他应用后重试。');
     }
-    
+
     return await LargeFileManager.executeWithMemoryProtection(
-      () async => _performExportWithProtection(
-        includeMediaFiles: includeMediaFiles,
-        customPath: customPath,
-        onProgress: onProgress,
-        cancelToken: cancelToken,
-      ),
-      operationName: '数据备份',
-      maxRetries: memoryPressure >= 2 ? 0 : 1, // 高内存压力时不重试
-    ) ?? (throw Exception('备份操作失败'));
+          () async => _performExportWithProtection(
+            includeMediaFiles: includeMediaFiles,
+            customPath: customPath,
+            onProgress: onProgress,
+            cancelToken: cancelToken,
+          ),
+          operationName: '数据备份',
+          maxRetries: memoryPressure >= 2 ? 0 : 1, // 高内存压力时不重试
+        ) ??
+        (throw Exception('备份操作失败'));
   }
 
   /// 执行受保护的导出操作
@@ -82,17 +84,17 @@ class BackupService {
 
     try {
       cancelToken?.throwIfCancelled();
-      
+
       // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
       logDebug('开始收集结构化数据...');
       final backupData = await _gatherStructuredData(includeMediaFiles);
-      
+
       cancelToken?.throwIfCancelled();
 
       // 2. 使用流式JSON写入避免大JSON一次性加载到内存
       jsonFile = File(path.join(tempDir.path, _backupDataFile));
       logDebug('开始流式写入JSON数据...');
-      
+
       await LargeFileManager.encodeJsonToFileStreaming(
         backupData,
         jsonFile,
@@ -106,7 +108,7 @@ class BackupService {
 
       // 3. 准备ZIP文件列表
       final filesToZip = <String, String>{};
-      
+
       // 添加JSON文件
       filesToZip[_backupDataFile] = jsonFile.path;
 
@@ -118,7 +120,7 @@ class BackupService {
 
         for (final filePath in mediaFiles) {
           cancelToken?.throwIfCancelled();
-          
+
           try {
             // 检查文件是否可以处理
             if (await LargeFileManager.canProcessFile(filePath)) {
@@ -137,7 +139,7 @@ class BackupService {
 
       // 5. 使用流式ZIP创建
       logDebug('开始创建ZIP文件，包含 ${filesToZip.length} 个文件...');
-      
+
       await ZipStreamProcessor.createZipStreaming(
         archivePath,
         filesToZip,
@@ -150,13 +152,13 @@ class BackupService {
       );
 
       logDebug('数据导出成功，路径: $archivePath');
-      
+
       // 验证生成的ZIP文件
       final isValid = await ZipStreamProcessor.validateZipFile(archivePath);
       if (!isValid) {
         throw Exception('生成的备份文件验证失败');
       }
-      
+
       return archivePath;
     } catch (e, s) {
       // 清理可能创建的不完整文件
@@ -225,7 +227,10 @@ class BackupService {
     // 处理旧版 JSON 备份文件
     if (path.extension(filePath).toLowerCase() == '.json') {
       logDebug('开始导入旧版JSON备份...');
-      return await _handleLegacyImportSafely(filePath, clearExisting: clearExisting);
+      return await _handleLegacyImportSafely(
+        filePath,
+        clearExisting: clearExisting,
+      );
     }
 
     // 处理新的 ZIP 备份文件 - 使用流式处理
@@ -284,7 +289,7 @@ class BackupService {
       // 3. 恢复结构化数据
       logDebug('开始恢复结构化数据...');
       final jsonFile = File(path.join(importDir.path, _backupDataFile));
-      
+
       if (!await jsonFile.exists()) {
         throw Exception('备份文件无效: 未找到 $_backupDataFile');
       }
@@ -305,10 +310,11 @@ class BackupService {
 
       // 4. 恢复媒体文件
       logDebug('开始恢复媒体文件...');
-      
+
       // 清理现有媒体文件
       if (clearExisting) {
-        final existingMediaPaths = await MediaFileService.getAllMediaFilePaths();
+        final existingMediaPaths =
+            await MediaFileService.getAllMediaFilePaths();
         for (final mediaPath in existingMediaPaths) {
           try {
             await MediaFileService.deleteMediaFile(mediaPath);
@@ -328,20 +334,19 @@ class BackupService {
         },
         cancelToken: cancelToken,
       );
-      
+
       if (!restoreSuccess) {
         throw Exception('媒体文件恢复失败');
       }
 
       onProgress?.call(100, 100);
       logDebug('数据导入完成');
-      
     } catch (e, s) {
       if (e is CancelledException) {
         logDebug('导入操作已取消');
         rethrow;
       }
-      
+
       AppLogger.e('数据导入失败', error: e, stackTrace: s, source: 'BackupService');
       rethrow;
     } finally {
@@ -368,7 +373,7 @@ class BackupService {
         // 使用流式处理器验证
         final isValid = await ZipStreamProcessor.validateZipFile(filePath);
         if (!isValid) return false;
-        
+
         // 检查是否包含必需的文件
         return await ZipStreamProcessor.containsFile(filePath, _backupDataFile);
       }
@@ -452,8 +457,6 @@ class BackupService {
     }
   }
 
-
-
   /// 检查备份数据是否包含媒体文件
   Future<bool> _checkBackupHasMediaFiles(
     Map<String, dynamic> backupData,
@@ -482,23 +485,26 @@ class BackupService {
           final deltaContent = quote['deltaContent'] as String;
           try {
             // 使用流式JSON处理避免大内容OOM
-            if (deltaContent.length > 10 * 1024 * 1024) { // 10MB以上
+            if (deltaContent.length > 10 * 1024 * 1024) {
+              // 10MB以上
               logDebug('富文本内容过大，跳过媒体路径转换');
               // 保留原内容，避免OOM
             } else {
-              final deltaJson = await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                deltaContent,
-                encode: false,
-              );
+              final deltaJson =
+                  await LargeFileManager.processLargeJson<Map<String, dynamic>>(
+                    deltaContent,
+                    encode: false,
+                  );
               final convertedDelta = _convertDeltaMediaPaths(
                 deltaJson,
                 appPath,
                 true,
               );
-              quote['deltaContent'] = await LargeFileManager.processLargeJson<String>(
-                convertedDelta,
-                encode: true,
-              );
+              quote['deltaContent'] =
+                  await LargeFileManager.processLargeJson<String>(
+                    convertedDelta,
+                    encode: true,
+                  );
             }
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
@@ -532,23 +538,26 @@ class BackupService {
           final deltaContent = quote['deltaContent'] as String;
           try {
             // 使用流式JSON处理避免大内容OOM
-            if (deltaContent.length > 10 * 1024 * 1024) { // 10MB以上
+            if (deltaContent.length > 10 * 1024 * 1024) {
+              // 10MB以上
               logDebug('富文本内容过大，跳过媒体路径转换');
               // 保留原内容，避免OOM
             } else {
-              final deltaJson = await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                deltaContent,
-                encode: false,
-              );
+              final deltaJson =
+                  await LargeFileManager.processLargeJson<Map<String, dynamic>>(
+                    deltaContent,
+                    encode: false,
+                  );
               final convertedDelta = _convertDeltaMediaPaths(
                 deltaJson,
                 appPath,
                 false,
               );
-              quote['deltaContent'] = await LargeFileManager.processLargeJson<String>(
-                convertedDelta,
-                encode: true,
-              );
+              quote['deltaContent'] =
+                  await LargeFileManager.processLargeJson<String>(
+                    convertedDelta,
+                    encode: true,
+                  );
             }
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
@@ -682,7 +691,8 @@ class BackupService {
     }
 
     // 对于大文件，给出警告
-    if (fileSize > 1024 * 1024 * 1024) { // 1GB以上
+    if (fileSize > 1024 * 1024 * 1024) {
+      // 1GB以上
       logDebug('警告：备份文件较大，可能需要较长处理时间');
     }
   }
@@ -706,7 +716,12 @@ class BackupService {
       logDebug('流式解压失败，尝试回退方法: $e');
 
       // 如果流式解压失败，尝试使用传统方法
-      await _extractBackupFallback(filePath, extractPath, onProgress, cancelToken);
+      await _extractBackupFallback(
+        filePath,
+        extractPath,
+        onProgress,
+        cancelToken,
+      );
     }
   }
 
@@ -752,9 +767,11 @@ class BackupService {
       }
 
       // 根据文件大小选择处理策略
-      if (fileSize > 50 * 1024 * 1024) { // 50MB以上
+      if (fileSize > 50 * 1024 * 1024) {
+        // 50MB以上
         await _handleLargeJsonImport(filePath, clearExisting);
-      } else if (fileSize > 10 * 1024 * 1024 || memoryPressure >= 2) { // 10MB以上或高内存压力
+      } else if (fileSize > 10 * 1024 * 1024 || memoryPressure >= 2) {
+        // 10MB以上或高内存压力
         await _handleMediumJsonImport(filePath, clearExisting);
       } else {
         await _handleSmallJsonImport(filePath, clearExisting);
@@ -766,14 +783,20 @@ class BackupService {
   }
 
   /// 处理小型JSON导入
-  Future<void> _handleSmallJsonImport(String filePath, bool clearExisting) async {
+  Future<void> _handleSmallJsonImport(
+    String filePath,
+    bool clearExisting,
+  ) async {
     final content = await File(filePath).readAsString();
     final data = jsonDecode(content);
     await _processImportData(data, clearExisting);
   }
 
   /// 处理中型JSON导入
-  Future<void> _handleMediumJsonImport(String filePath, bool clearExisting) async {
+  Future<void> _handleMediumJsonImport(
+    String filePath,
+    bool clearExisting,
+  ) async {
     // 使用Isolate处理
     final content = await File(filePath).readAsString();
     final data = await compute(_parseJsonInIsolate, content);
@@ -781,21 +804,24 @@ class BackupService {
   }
 
   /// 处理大型JSON导入
-  Future<void> _handleLargeJsonImport(String filePath, bool clearExisting) async {
+  Future<void> _handleLargeJsonImport(
+    String filePath,
+    bool clearExisting,
+  ) async {
     // 使用流式处理
-    await LargeFileManager.streamProcessFile(
-      filePath,
-      (dataStream, totalSize) async {
-        final chunks = <String>[];
-        await for (final chunk in dataStream) {
-          chunks.add(String.fromCharCodes(chunk));
-        }
-        final content = chunks.join();
-        final data = await compute(_parseJsonInIsolate, content);
-        await _processImportData(data, clearExisting);
-        return true;
-      },
-    );
+    await LargeFileManager.streamProcessFile(filePath, (
+      dataStream,
+      totalSize,
+    ) async {
+      final chunks = <String>[];
+      await for (final chunk in dataStream) {
+        chunks.add(String.fromCharCodes(chunk));
+      }
+      final content = chunks.join();
+      final data = await compute(_parseJsonInIsolate, content);
+      await _processImportData(data, clearExisting);
+      return true;
+    });
   }
 
   /// 在Isolate中解析JSON

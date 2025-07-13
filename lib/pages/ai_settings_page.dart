@@ -1105,16 +1105,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         children: [
                           Text(
                             'AI卡片生成',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '启用后可以为笔记生成精美的分享卡片',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey[600]),
                           ),
                           const SizedBox(height: 12),
                           Consumer<SettingsService>(
@@ -1124,7 +1122,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                                 subtitle: const Text('生成SVG格式的精美卡片用于分享'),
                                 value: settingsService.aiCardGenerationEnabled,
                                 onChanged: (value) {
-                                  settingsService.setAICardGenerationEnabled(value);
+                                  settingsService.setAICardGenerationEnabled(
+                                    value,
+                                  );
                                 },
                                 contentPadding: EdgeInsets.zero,
                               );

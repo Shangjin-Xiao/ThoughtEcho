@@ -8,11 +8,11 @@ import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
 
 /// ZIP流式处理器
-/// 
+///
 /// 专门处理大ZIP文件的创建和解压，避免内存溢出
 class ZipStreamProcessor {
   /// 流式创建ZIP文件（增强版，支持大文件安全处理）
-  /// 
+  ///
   /// [outputPath] - 输出ZIP文件路径
   /// [files] - 要添加的文件列表 {relativePath: absolutePath}
   /// [onProgress] - 进度回调 (current, total)
@@ -43,7 +43,7 @@ class ZipStreamProcessor {
   }) async {
     final encoder = ZipFileEncoder();
     encoder.create(outputPath);
-    
+
     try {
       logDebug('开始流式创建ZIP: $outputPath');
       int processed = 0;
@@ -69,14 +69,19 @@ class ZipStreamProcessor {
 
         processed++;
         onProgress?.call(processed, total);
-        
+
         // 短暂延迟以允许其他事件处理
         if (processed % 10 == 0) {
           await Future.delayed(const Duration(milliseconds: 1));
         }
       }
     } catch (e, s) {
-      AppLogger.e('流式创建ZIP失败', error: e, stackTrace: s, source: 'ZipStreamProcessor');
+      AppLogger.e(
+        '流式创建ZIP失败',
+        error: e,
+        stackTrace: s,
+        source: 'ZipStreamProcessor',
+      );
       rethrow;
     } finally {
       encoder.close();
@@ -85,22 +90,22 @@ class ZipStreamProcessor {
   }
 
   /// 内部辅助方法：以流的方式添加文件到ZIP
-  static Future<void> _addFileStreaming(ZipFileEncoder encoder, File file, String relativePath) async {
+  static Future<void> _addFileStreaming(
+    ZipFileEncoder encoder,
+    File file,
+    String relativePath,
+  ) async {
     final stat = await file.stat();
     final fileBytes = await file.readAsBytes();
-    final archiveFile = ArchiveFile(
-      relativePath,
-      fileBytes.length,
-      fileBytes,
-    );
+    final archiveFile = ArchiveFile(relativePath, fileBytes.length, fileBytes);
     archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
     archiveFile.mode = stat.mode;
-    
+
     encoder.addArchiveFile(archiveFile);
   }
-  
+
   /// 流式解压ZIP文件（增强版，支持大文件安全处理）
-  /// 
+  ///
   /// [zipPath] - ZIP文件路径
   /// [extractPath] - 解压目标目录
   /// [onProgress] - 进度回调 (current, total)
@@ -163,10 +168,13 @@ class ZipStreamProcessor {
         } else if (message is String && message == 'done') {
           completer.complete();
         } else if (message is Map && message.containsKey('error')) {
-          completer.completeError(Exception(message['error']), StackTrace.fromString(message['stackTrace'] ?? ''));
+          completer.completeError(
+            Exception(message['error']),
+            StackTrace.fromString(message['stackTrace'] ?? ''),
+          );
         }
       });
-      
+
       // 监听取消
       cancelToken?.throwIfCancelled();
       cancelListener() {
@@ -175,7 +183,7 @@ class ZipStreamProcessor {
           completer.completeError(const CancelledException());
         }
       }
-      
+
       // 简单的轮询检查取消状态
       Timer.periodic(const Duration(milliseconds: 100), (timer) {
         if (completer.isCompleted) {
@@ -186,10 +194,14 @@ class ZipStreamProcessor {
       });
 
       await completer.future;
-
     } catch (e, s) {
       if (e is! CancelledException) {
-        AppLogger.e('流式解压ZIP失败', error: e, stackTrace: s, source: 'ZipStreamProcessor');
+        AppLogger.e(
+          '流式解压ZIP失败',
+          error: e,
+          stackTrace: s,
+          source: 'ZipStreamProcessor',
+        );
       }
       rethrow;
     } finally {
@@ -208,11 +220,12 @@ class ZipStreamProcessor {
       final zipFile = File(zipPath);
       final bytes = await zipFile.readAsBytes();
       final decoder = ZipDecoder();
-      
+
       // 使用新的流式解压API
       final archive = decoder.decodeBytes(bytes);
-      
-      final filesToProcess = archive.files.where((file) => file.isFile).toList();
+
+      final filesToProcess =
+          archive.files.where((file) => file.isFile).toList();
       final totalFiles = filesToProcess.length;
       sendPort.send(totalFiles); // 1. 发送总文件数
 
@@ -220,10 +233,10 @@ class ZipStreamProcessor {
       for (final file in filesToProcess) {
         final outputPath = '$extractPath/${file.name}';
         final outputFile = File(outputPath);
-        
+
         // 确保目录存在
         await outputFile.parent.create(recursive: true);
-        
+
         // 流式写入文件
         final outputStream = outputFile.openWrite();
         try {
@@ -235,27 +248,24 @@ class ZipStreamProcessor {
         } finally {
           await outputStream.close();
         }
-        
+
         processedCount++;
         sendPort.send(processedCount); // 2. 发送当前进度
-        
+
         // 每处理5个文件，给系统一个喘息的机会
         if (processedCount % 5 == 0) {
           await Future.delayed(const Duration(milliseconds: 10));
         }
       }
-      
+
       sendPort.send('done'); // 3. 发送完成信号
     } catch (e, s) {
-      sendPort.send({
-        'error': e.toString(),
-        'stackTrace': s.toString(),
-      });
+      sendPort.send({'error': e.toString(), 'stackTrace': s.toString()});
     }
   }
-  
+
   /// 验证ZIP文件完整性（流式方式）
-  /// 
+  ///
   /// [zipPath] - ZIP文件路径
   static Future<bool> validateZipFile(String zipPath) async {
     try {
@@ -263,13 +273,13 @@ class ZipStreamProcessor {
       if (!await zipFile.exists()) {
         return false;
       }
-      
+
       // 读取ZIP文件内容
       final bytes = await zipFile.readAsBytes();
       try {
         final decoder = ZipDecoder();
         final archive = decoder.decodeBytes(bytes);
-        
+
         // 只检查文件头，不解压内容
         return archive.isNotEmpty;
       } catch (e) {
@@ -281,9 +291,9 @@ class ZipStreamProcessor {
       return false;
     }
   }
-  
+
   /// 获取ZIP文件信息（流式方式）
-  /// 
+  ///
   /// [zipPath] - ZIP文件路径
   static Future<ZipInfo?> getZipInfo(String zipPath) async {
     try {
@@ -291,25 +301,25 @@ class ZipStreamProcessor {
       if (!await zipFile.exists()) {
         return null;
       }
-      
+
       final inputStream = InputFileStream(zipPath);
       try {
         final decoder = ZipDecoder();
         final bytes = await zipFile.readAsBytes();
         final archive = decoder.decodeBytes(bytes);
-        
+
         int totalUncompressedSize = 0;
         int fileCount = 0;
         final fileNames = <String>[];
-        
+
         for (final file in archive) {
           totalUncompressedSize += file.size.toInt();
           fileCount++;
           fileNames.add(file.name);
         }
-        
+
         final zipSize = await zipFile.length();
-        
+
         return ZipInfo(
           compressedSize: zipSize,
           uncompressedSize: totalUncompressedSize,
@@ -324,9 +334,9 @@ class ZipStreamProcessor {
       return null;
     }
   }
-  
+
   /// 检查ZIP是否包含特定文件（流式方式）
-  /// 
+  ///
   /// [zipPath] - ZIP文件路径
   /// [fileName] - 要查找的文件名
   static Future<bool> containsFile(String zipPath, String fileName) async {
@@ -335,20 +345,20 @@ class ZipStreamProcessor {
       if (!await zipFile.exists()) {
         return false;
       }
-      
+
       final inputStream = InputFileStream(zipPath);
       try {
         final zipFile = File(zipPath);
         final bytes = await zipFile.readAsBytes();
         final decoder = ZipDecoder();
         final archive = decoder.decodeBytes(bytes);
-        
+
         for (final file in archive) {
           if (file.name == fileName) {
             return true;
           }
         }
-        
+
         return false;
       } finally {
         await inputStream.close();
@@ -358,39 +368,46 @@ class ZipStreamProcessor {
       return false;
     }
   }
-  
+
   /// 从ZIP中提取单个文件到内存（改进版）
-  /// 
+  ///
   /// [zipPath] - ZIP文件路径
   /// [fileName] - 要提取的文件名
-  static Future<Uint8List?> extractFileToMemory(String zipPath, String fileName) async {
+  static Future<Uint8List?> extractFileToMemory(
+    String zipPath,
+    String fileName,
+  ) async {
     try {
       final zipFile = File(zipPath);
       if (!await zipFile.exists()) {
         return null;
       }
-      
+
       final inputStream = InputFileStream(zipPath);
       try {
         final bytes = await zipFile.readAsBytes();
         final decoder = ZipDecoder();
         final archive = decoder.decodeBytes(bytes);
-        
+
         for (final file in archive) {
           if (file.name == fileName) {
             // 检查文件大小，避免将超大文件加载到内存
             const largeFileThreshold = 100 * 1024 * 1024; // 100MB
-            
+
             if (file.size > largeFileThreshold) {
-              logDebug('文件过大，无法提取到内存: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)');
-              throw Exception('文件过大，无法提取到内存: ${(file.size / 1024 / 1024).toStringAsFixed(1)}MB');
+              logDebug(
+                '文件过大，无法提取到内存: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)',
+              );
+              throw Exception(
+                '文件过大，无法提取到内存: ${(file.size / 1024 / 1024).toStringAsFixed(1)}MB',
+              );
             }
-            
+
             // 对于小文件，可以安全加载到内存
             return Uint8List.fromList(file.content as List<int>);
           }
         }
-        
+
         return null;
       } finally {
         await inputStream.close();
@@ -408,26 +425,26 @@ class ZipInfo {
   final int uncompressedSize;
   final int fileCount;
   final List<String> fileNames;
-  
+
   const ZipInfo({
     required this.compressedSize,
     required this.uncompressedSize,
     required this.fileCount,
     required this.fileNames,
   });
-  
-  double get compressionRatio => 
+
+  double get compressionRatio =>
       uncompressedSize > 0 ? (compressedSize / uncompressedSize) : 0.0;
-  
-  String get compressedSizeFormatted => 
+
+  String get compressedSizeFormatted =>
       '${(compressedSize / 1024 / 1024).toStringAsFixed(1)}MB';
-  
-  String get uncompressedSizeFormatted => 
+
+  String get uncompressedSizeFormatted =>
       '${(uncompressedSize / 1024 / 1024).toStringAsFixed(1)}MB';
-  
+
   @override
   String toString() {
     return 'ZipInfo(files: $fileCount, compressed: $compressedSizeFormatted, '
-           'uncompressed: $uncompressedSizeFormatted, ratio: ${(compressionRatio * 100).toStringAsFixed(1)}%)';
+        'uncompressed: $uncompressedSizeFormatted, ratio: ${(compressionRatio * 100).toStringAsFixed(1)}%)';
   }
 }

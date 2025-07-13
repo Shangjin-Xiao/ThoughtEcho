@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 
 /// 卡片类型枚举
 enum CardType {
-  knowledge,      // 知识卡片
-  quote,          // 引用卡片
-  philosophical,  // 哲学卡片
+  knowledge, // 知识卡片
+  quote, // 引用卡片
+  philosophical, // 哲学卡片
 }
 
 /// AI生成的卡片模型
@@ -14,7 +14,7 @@ class GeneratedCard {
   final String id;
   final String noteId;
   final String originalContent;
-  final String svgContent;        // SVG代码
+  final String svgContent; // SVG代码
   final CardType type;
   final DateTime createdAt;
 
@@ -46,10 +46,7 @@ class GeneratedCard {
       final textPainter = TextPainter(
         text: const TextSpan(
           text: 'AI生成的卡片\n(图片转换功能开发中)',
-          style: TextStyle(
-            color: Color(0xFF666666),
-            fontSize: 16,
-          ),
+          style: TextStyle(color: Color(0xFF666666), fontSize: 16),
         ),
         textDirection: ui.TextDirection.ltr,
       );

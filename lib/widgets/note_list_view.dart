@@ -234,7 +234,7 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：新增方法：更新数据库监听流（改进版本）
   void _updateStreamSubscription() {
     if (!mounted) return; // 确保组件仍然挂载
-    
+
     logDebug('更新数据流订阅，当前加载状态: $_isLoading', source: 'NoteListView');
 
     setState(() {
@@ -295,7 +295,10 @@ class NoteListViewState extends State<NoteListView> {
                 logDebug('更新搜索控制器状态失败: $e');
               }
 
-              logDebug('数据流更新完成，加载了 ${list.length} 条记录', source: 'NoteListView');
+              logDebug(
+                '数据流更新完成，加载了 ${list.length} 条记录',
+                source: 'NoteListView',
+              );
             }
           },
           onError: (error) {
@@ -316,7 +319,7 @@ class NoteListViewState extends State<NoteListView> {
               }
 
               logError('数据流加载失败: $error', error: error, source: 'NoteListView');
-              
+
               // 优化：更友好的错误提示
               String errorMessage = '加载笔记失败';
               if (error.toString().contains('TimeoutException')) {
@@ -355,9 +358,9 @@ class NoteListViewState extends State<NoteListView> {
     } catch (e) {
       logDebug('取消订阅时出错: $e');
     }
-    
+
     _searchController.dispose();
-    
+
     // 安全地清理焦点节点和监听器
     try {
       _searchFocusNode.removeListener(_onFocusChanged);
@@ -365,7 +368,7 @@ class NoteListViewState extends State<NoteListView> {
     } catch (e) {
       logDebug('清理焦点节点时出错: $e');
     }
-    
+
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     super.dispose();
   }
@@ -383,7 +386,8 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    if (_isLoading) {      // 搜索时用专属动画
+    if (_isLoading) {
+      // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -406,7 +410,8 @@ class NoteListViewState extends State<NoteListView> {
         svgAsset: 'assets/empty/empty_state.svg',
         text: '还没有笔记，开始记录吧！',
       );
-    }    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
+    }
+    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -424,18 +429,12 @@ class NoteListViewState extends State<NoteListView> {
             const SizedBox(height: 16),
             const Text(
               '未找到相关笔记',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
             const Text(
               '尝试使用其他关键词或检查拼写',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
@@ -487,9 +486,10 @@ class NoteListViewState extends State<NoteListView> {
                   onEdit: () => widget.onEdit(quote),
                   onDelete: () => widget.onDelete(quote),
                   onAskAI: () => widget.onAskAI(quote),
-                  onGenerateCard: widget.onGenerateCard != null
-                      ? () => widget.onGenerateCard!(quote)
-                      : null,
+                  onGenerateCard:
+                      widget.onGenerateCard != null
+                          ? () => widget.onGenerateCard!(quote)
+                          : null,
                   tagBuilder: (tag) {
                     return Container(
                       padding: const EdgeInsets.symmetric(
@@ -691,14 +691,17 @@ class NoteListViewState extends State<NoteListView> {
                           controller: _searchController,
                           focusNode: _searchFocusNode, // 使用管理的焦点节点
                           decoration: InputDecoration(
-                            hintText: '搜索笔记...',                            prefixIcon:                                searchController.isSearching
+                            hintText: '搜索笔记...',
+                            prefixIcon:
+                                searchController.isSearching
                                     ? const SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: Padding(
                                         padding: EdgeInsets.all(12.0),
                                         child: EnhancedLottieAnimation(
-                                          type: LottieAnimationType.searchLoading,
+                                          type:
+                                              LottieAnimationType.searchLoading,
                                           width: 16,
                                           height: 16,
                                         ),
@@ -729,9 +732,10 @@ class NoteListViewState extends State<NoteListView> {
                           showModalBottomSheet(
                             context: context,
                             isScrollControlled: true, // 允许更大的底部表单
-                            backgroundColor: Theme.of(context).brightness == Brightness.light 
-                                ? Colors.white 
-                                : Theme.of(context).colorScheme.surface,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.light
+                                    ? Colors.white
+                                    : Theme.of(context).colorScheme.surface,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(16),

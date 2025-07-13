@@ -1,5 +1,6 @@
 /// Basic widget tests for HomePage
 library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,9 +22,11 @@ void main() {
       expect(find.text('Test'), findsOneWidget);
     });
 
-    testWidgets('should handle basic interactions', (WidgetTester tester) async {
+    testWidgets('should handle basic interactions', (
+      WidgetTester tester,
+    ) async {
       bool pressed = false;
-      
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

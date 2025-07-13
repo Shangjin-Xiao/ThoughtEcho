@@ -38,7 +38,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
 
     _animationController.forward();
   }
@@ -79,42 +81,43 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    '正在处理报告...',
-                    style: TextStyle(
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontSize: 16,
+      body:
+          _isLoading
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: colorScheme.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      '正在处理报告...',
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            )
-          : FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeaderCard(colorScheme),
-                      const SizedBox(height: 20),
-                      _buildPreviewCard(colorScheme),
-                      const SizedBox(height: 20),
-                      _buildActionButtons(colorScheme),
-                    ],
+                  ],
+                ),
+              )
+              : FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeaderCard(colorScheme),
+                        const SizedBox(height: 20),
+                        _buildPreviewCard(colorScheme),
+                        const SizedBox(height: 20),
+                        _buildActionButtons(colorScheme),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
     );
   }
 
@@ -230,11 +233,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.preview,
-                  color: colorScheme.primary,
-                  size: 24,
-                ),
+                Icon(Icons.preview, color: colorScheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   '报告内容预览',
@@ -363,15 +362,16 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       // 尝试解析JSON以提供更友好的显示
       try {
         // 简单清理JSON格式的显示
-        String cleanJson = content
-            .replaceAll('"author":', '作者: ')
-            .replaceAll('"work":', '作品: ')
-            .replaceAll('"confidence":', '可信度: ')
-            .replaceAll('"explanation":', '说明: ')
-            .replaceAll(RegExp(r'[{}",]'), '')
-            .replaceAll(RegExp(r'\s+'), ' ')
-            .trim();
-        
+        String cleanJson =
+            content
+                .replaceAll('"author":', '作者: ')
+                .replaceAll('"work":', '作品: ')
+                .replaceAll('"confidence":', '可信度: ')
+                .replaceAll('"explanation":', '说明: ')
+                .replaceAll(RegExp(r'[{}",]'), '')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim();
+
         return '''
 ⚠️ 检测到AI返回了JSON数据格式
 
@@ -425,12 +425,13 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
     }
 
     // 提取HTML中的文本内容
-    String text = content
-        .replaceAll(RegExp(r'<script[^>]*>.*?</script>', dotAll: true), '')
-        .replaceAll(RegExp(r'<style[^>]*>.*?</style>', dotAll: true), '')
-        .replaceAll(RegExp(r'<[^>]*>'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    String text =
+        content
+            .replaceAll(RegExp(r'<script[^>]*>.*?</script>', dotAll: true), '')
+            .replaceAll(RegExp(r'<style[^>]*>.*?</style>', dotAll: true), '')
+            .replaceAll(RegExp(r'<[^>]*>'), ' ')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
 
     if (text.length > 800) {
       text = '${text.substring(0, 800)}...';
@@ -449,7 +450,9 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         // 尝试创建临时HTML文件
         final tempDir = await getTemporaryDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final htmlFile = File('${tempDir.path}/annual_report_${widget.year}_$timestamp.html');
+        final htmlFile = File(
+          '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
+        );
 
         // 检查内容格式并处理
         String contentToWrite = widget.htmlContent;

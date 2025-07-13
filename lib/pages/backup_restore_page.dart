@@ -429,22 +429,23 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     } catch (e) {
       if (mounted) {
         String errorMessage = '无法完成备份：$e';
-        
+
         // 针对不同类型的错误提供更友好的提示
-        if (e.toString().contains('OutOfMemoryError') || 
+        if (e.toString().contains('OutOfMemoryError') ||
             e.toString().contains('内存不足')) {
-          errorMessage = '备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试';
-        } else if (e.toString().contains('存储空间') || 
-                   e.toString().contains('No space left')) {
+          errorMessage =
+              '备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试';
+        } else if (e.toString().contains('存储空间') ||
+            e.toString().contains('No space left')) {
           errorMessage = '备份失败：存储空间不足\n\n请清理设备存储空间后重试。';
-        } else if (e.toString().contains('权限') || 
-                   e.toString().contains('Permission')) {
+        } else if (e.toString().contains('权限') ||
+            e.toString().contains('Permission')) {
           errorMessage = '备份失败：权限不足\n\n请检查应用的存储权限设置。';
-        } else if (e.toString().contains('cancelled') || 
-                   e.toString().contains('取消')) {
+        } else if (e.toString().contains('cancelled') ||
+            e.toString().contains('取消')) {
           errorMessage = '备份已取消';
         }
-        
+
         _showErrorDialog('备份失败', errorMessage);
       }
     } finally {
@@ -491,7 +492,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
       // 执行还原
       await backupService.importData(
-        file.path, 
+        file.path,
         clearExisting: true,
         onProgress: (current, total) {
           if (mounted) {
@@ -520,28 +521,31 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     } catch (e) {
       if (mounted) {
         String errorMessage = '无法完成数据还原：$e';
-        
+
         // 修复：针对不同类型的错误提供更友好的提示
-        if (e.toString().contains('OutOfMemoryError') || 
+        if (e.toString().contains('OutOfMemoryError') ||
             e.toString().contains('内存不足')) {
-          errorMessage = '还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大';
-        } else if (e.toString().contains('存储空间') || 
-                   e.toString().contains('No space left')) {
+          errorMessage =
+              '还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大';
+        } else if (e.toString().contains('存储空间') ||
+            e.toString().contains('No space left')) {
           errorMessage = '还原失败：存储空间不足\n\n请清理设备存储空间后重试。';
-        } else if (e.toString().contains('权限') || 
-                   e.toString().contains('Permission')) {
+        } else if (e.toString().contains('权限') ||
+            e.toString().contains('Permission')) {
           errorMessage = '还原失败：权限不足\n\n请检查应用的存储权限设置。';
-        } else if (e.toString().contains('cancelled') || 
-                   e.toString().contains('取消')) {
+        } else if (e.toString().contains('cancelled') ||
+            e.toString().contains('取消')) {
           errorMessage = '还原已取消';
-        } else if (e.toString().contains('无效') || 
-                   e.toString().contains('corrupt')) {
+        } else if (e.toString().contains('无效') ||
+            e.toString().contains('corrupt')) {
           errorMessage = '还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。';
         } else if (e.toString().contains('has no column named')) {
           // 修复：专门处理字段名不匹配的错误
-          final columnMatch = RegExp(r'has no column named (\w+)').firstMatch(e.toString());
+          final columnMatch = RegExp(
+            r'has no column named (\w+)',
+          ).firstMatch(e.toString());
           final columnName = columnMatch?.group(1) ?? '未知字段';
-          
+
           errorMessage = '''还原失败：备份文件格式不兼容
 
 问题：数据库中缺少字段 "$columnName"
@@ -572,7 +576,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
 技术详情：$e''';
         }
-        
+
         _showErrorDialog('还原失败', errorMessage);
       }
     } finally {

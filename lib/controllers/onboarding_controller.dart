@@ -23,7 +23,8 @@ class OnboardingController extends ChangeNotifier {
   OnboardingState get state => _state;
 
   /// 初始化控制器
-  void initialize(BuildContext context) {    final databaseService = context.read<DatabaseService>();
+  void initialize(BuildContext context) {
+    final databaseService = context.read<DatabaseService>();
     final settingsService = context.read<SettingsService>();
     final mmkvService = context.read<MMKVService>();
     final clipboardService = context.read<ClipboardService>();

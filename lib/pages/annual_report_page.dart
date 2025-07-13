@@ -534,9 +534,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                   '使用了 ${tag.count} 次 (${percentage.toStringAsFixed(1)}%)',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -638,9 +639,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                     child: Container(
                                       height: 8,
                                       decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary.withValues(alpha: 0.1),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: FractionallySizedBox(
@@ -762,7 +764,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             '每一个想法都值得被记录\n每一次记录都是成长的足迹',
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -980,7 +984,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             content,
             style: TextStyle(
               fontSize: 15,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),

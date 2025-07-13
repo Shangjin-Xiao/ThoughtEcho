@@ -8,34 +8,37 @@ import 'error_recovery_manager.dart';
 import 'file_processing_fallback_manager.dart';
 
 /// 集成的大文件处理服务
-/// 
+///
 /// 整合所有的内存安全、错误恢复、进度跟踪和降级策略功能
 /// 提供统一的大文件处理接口，防止OOM崩溃
 class IntegratedLargeFileService {
-  static final IntegratedLargeFileService _instance = IntegratedLargeFileService._internal();
+  static final IntegratedLargeFileService _instance =
+      IntegratedLargeFileService._internal();
   factory IntegratedLargeFileService() => _instance;
   IntegratedLargeFileService._internal();
 
   final DeviceMemoryManager _memoryManager = DeviceMemoryManager();
-  final IntelligentMemoryManager _intelligentMemoryManager = IntelligentMemoryManager();
+  final IntelligentMemoryManager _intelligentMemoryManager =
+      IntelligentMemoryManager();
   final EnhancedProgressManager _progressManager = EnhancedProgressManager();
   final ErrorRecoveryManager _errorRecoveryManager = ErrorRecoveryManager();
-  final FileProcessingFallbackManager _fallbackManager = FileProcessingFallbackManager();
-  
+  final FileProcessingFallbackManager _fallbackManager =
+      FileProcessingFallbackManager();
+
   bool _isInitialized = false;
-  
+
   /// 初始化服务
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     try {
       // 初始化各个管理器
       _errorRecoveryManager.initialize();
       await _fallbackManager.initialize();
-      
+
       // 启动智能内存监控
       await _intelligentMemoryManager.startIntelligentMonitoring();
-      
+
       _isInitialized = true;
       logDebug('集成大文件处理服务已初始化');
     } catch (e) {
@@ -43,25 +46,25 @@ class IntegratedLargeFileService {
       rethrow;
     }
   }
-  
+
   /// 关闭服务
   Future<void> dispose() async {
     if (!_isInitialized) return;
-    
+
     try {
       // 停止内存监控
       await _intelligentMemoryManager.stopIntelligentMonitoring();
-      
+
       // 取消所有活动操作
       _progressManager.cancelAllOperations(reason: '服务关闭');
-      
+
       _isInitialized = false;
       logDebug('集成大文件处理服务已关闭');
     } catch (e) {
       logDebug('关闭集成大文件处理服务失败: $e');
     }
   }
-  
+
   /// 安全复制文件
   Future<void> safeCopyFile(
     String sourcePath,
@@ -71,7 +74,7 @@ class IntegratedLargeFileService {
     Function(String error)? onError,
   }) async {
     await _ensureInitialized();
-    
+
     return await _errorRecoveryManager.executeWithRecovery(
       'safe_file_copy',
       () async {
@@ -89,7 +92,7 @@ class IntegratedLargeFileService {
       },
     );
   }
-  
+
   /// 安全导入备份
   Future<void> safeImportBackup(
     String backupPath, {
@@ -98,7 +101,7 @@ class IntegratedLargeFileService {
     Function(String error)? onError,
   }) async {
     await _ensureInitialized();
-    
+
     return await _errorRecoveryManager.executeWithRecovery(
       'safe_backup_import',
       () async {
@@ -108,13 +111,10 @@ class IntegratedLargeFileService {
         );
       },
       maxRetries: 2, // 备份导入重试次数较少
-      context: {
-        'backup_path': backupPath,
-        'operation_type': 'backup_import',
-      },
+      context: {'backup_path': backupPath, 'operation_type': 'backup_import'},
     );
   }
-  
+
   /// 安全处理媒体文件
   Future<String?> safeProcessMedia(
     String sourcePath,
@@ -125,7 +125,7 @@ class IntegratedLargeFileService {
     Function(String error)? onError,
   }) async {
     await _ensureInitialized();
-    
+
     return await _errorRecoveryManager.executeWithRecovery(
       'safe_media_processing',
       () async {
@@ -144,7 +144,7 @@ class IntegratedLargeFileService {
       },
     );
   }
-  
+
   /// 安全处理文本内容
   Future<String> safeProcessText(
     String content, {
@@ -154,7 +154,7 @@ class IntegratedLargeFileService {
     Function(String error)? onError,
   }) async {
     await _ensureInitialized();
-    
+
     return await _errorRecoveryManager.executeWithRecovery(
       'safe_text_processing',
       () async {
@@ -171,11 +171,11 @@ class IntegratedLargeFileService {
       },
     );
   }
-  
+
   /// 检查文件是否可以安全处理
   Future<FileProcessingAssessment> assessFile(String filePath) async {
     await _ensureInitialized();
-    
+
     try {
       final file = File(filePath);
       if (!await file.exists()) {
@@ -186,17 +186,17 @@ class IntegratedLargeFileService {
           recommendedStrategy: 'none',
         );
       }
-      
+
       final fileSize = await file.length();
       final memoryPressure = await _memoryManager.getMemoryPressureLevel();
       final availableMemory = await _memoryManager.getAvailableMemory();
-      
+
       // 评估处理风险
       RiskLevel riskLevel;
       String reason;
       String recommendedStrategy;
       bool canProcess = true;
-      
+
       if (memoryPressure >= 3) {
         // 临界内存状态
         riskLevel = RiskLevel.critical;
@@ -219,7 +219,7 @@ class IntegratedLargeFileService {
         reason = '可以正常处理';
         recommendedStrategy = 'default';
       }
-      
+
       return FileProcessingAssessment(
         canProcess: canProcess,
         riskLevel: riskLevel,
@@ -229,7 +229,6 @@ class IntegratedLargeFileService {
         memoryPressure: memoryPressure,
         availableMemory: availableMemory,
       );
-      
     } catch (e) {
       logDebug('评估文件失败: $e');
       return FileProcessingAssessment(
@@ -240,17 +239,17 @@ class IntegratedLargeFileService {
       );
     }
   }
-  
+
   /// 获取系统状态
   Future<SystemStatus> getSystemStatus() async {
     await _ensureInitialized();
-    
+
     try {
       final memoryInfo = await _memoryManager.getDetailedMemoryInfo();
       final memoryPressure = await _memoryManager.getMemoryPressureLevel();
       final activeOperations = _progressManager.getActiveOperations();
       final errorStats = _errorRecoveryManager.getErrorStatistics();
-      
+
       return SystemStatus(
         memoryInfo: memoryInfo,
         memoryPressure: memoryPressure,
@@ -270,39 +269,39 @@ class IntegratedLargeFileService {
       );
     }
   }
-  
+
   /// 获取进度流
   Stream<ProgressEvent> get progressStream => _progressManager.progressStream;
-  
+
   /// 获取内存压力事件流
-  Stream<MemoryPressureEvent>? get memoryPressureStream => 
+  Stream<MemoryPressureEvent>? get memoryPressureStream =>
       _intelligentMemoryManager.pressureEventStream;
-  
+
   /// 取消所有操作
   void cancelAllOperations({String? reason}) {
     _progressManager.cancelAllOperations(reason: reason ?? '用户取消');
   }
-  
+
   /// 执行紧急清理
   Future<void> performEmergencyCleanup() async {
     await _ensureInitialized();
-    
+
     try {
       // 取消所有操作
       cancelAllOperations(reason: '紧急清理');
-      
+
       // 强制垃圾回收
       await _memoryManager.forceGarbageCollection();
-      
+
       // 清理缓存
       _memoryManager.clearCache();
-      
+
       logDebug('紧急清理完成');
     } catch (e) {
       logDebug('紧急清理失败: $e');
     }
   }
-  
+
   /// 确保服务已初始化
   Future<void> _ensureInitialized() async {
     if (!_isInitialized) {
@@ -320,7 +319,7 @@ class FileProcessingAssessment {
   final int? fileSize;
   final int? memoryPressure;
   final int? availableMemory;
-  
+
   FileProcessingAssessment({
     required this.canProcess,
     required this.riskLevel,
@@ -334,9 +333,9 @@ class FileProcessingAssessment {
 
 /// 风险级别
 enum RiskLevel {
-  low,      // 低风险
-  medium,   // 中等风险
-  high,     // 高风险
+  low, // 低风险
+  medium, // 中等风险
+  high, // 高风险
   critical, // 临界风险
 }
 
@@ -348,7 +347,7 @@ class SystemStatus {
   final Map<String, int> errorStats;
   final bool isHealthy;
   final String? error;
-  
+
   SystemStatus({
     required this.memoryInfo,
     required this.memoryPressure,
@@ -357,7 +356,7 @@ class SystemStatus {
     required this.isHealthy,
     this.error,
   });
-  
+
   /// 获取内存压力描述
   String get memoryPressureDescription {
     switch (memoryPressure) {
@@ -373,7 +372,7 @@ class SystemStatus {
         return '内存状态未知';
     }
   }
-  
+
   /// 获取健康状态描述
   String get healthDescription {
     if (error != null) {

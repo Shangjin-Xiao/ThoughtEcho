@@ -284,7 +284,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (!mounted) return; // Add this check
                       if (position != null) {
                         if (context.mounted) {
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
                           scaffoldMessenger.removeCurrentSnackBar();
                           scaffoldMessenger.showSnackBar(
                             const SnackBar(content: Text('位置服务已启用，位置已更新')),
@@ -297,7 +299,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       } else {
                         if (!mounted) return;
                         if (context.mounted) {
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
                           scaffoldMessenger.removeCurrentSnackBar();
                           scaffoldMessenger.showSnackBar(
                             const SnackBar(content: Text('无法获取当前位置')),
@@ -633,7 +637,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         width: 48,
                         height: 48,
                       ), // 路径修正，兼容所有平台
-                      applicationLegalese: '© 2024 Shangjin Xiao',                      children: <Widget>[
+                      applicationLegalese: '© 2024 Shangjin Xiao',
+                      children: <Widget>[
                         const SizedBox(height: 16),
                         const Text('一款帮助你记录和分析思想的应用。'),
                         const SizedBox(height: 24), // 增加间距
@@ -652,11 +657,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           url: _websiteUrl,
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton.icon(                          onPressed: () {
+                        ElevatedButton.icon(
+                          onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const license.LicensePage(),
+                                builder:
+                                    (context) => const license.LicensePage(),
                               ),
                             );
                           },
@@ -913,7 +920,8 @@ class _SettingsPageState extends State<SettingsPage> {
           }
           for (final quote in thisYearQuotes) {
             final quoteDate = DateTime.parse(quote.date);
-            monthlyData[quoteDate.month] = (monthlyData[quoteDate.month] ?? 0) + 1;
+            monthlyData[quoteDate.month] =
+                (monthlyData[quoteDate.month] ?? 0) + 1;
           }
 
           // 获取标签信息
@@ -935,7 +943,7 @@ class _SettingsPageState extends State<SettingsPage> {
             '傍晚': 0,
             '夜晚': 0,
           };
-          
+
           for (final quote in thisYearQuotes) {
             final quoteDate = DateTime.parse(quote.date);
             final hour = quoteDate.hour;
@@ -952,9 +960,10 @@ class _SettingsPageState extends State<SettingsPage> {
             }
           }
 
-          final peakTime = timePeriods.entries
-              .reduce((a, b) => a.value > b.value ? a : b)
-              .key;
+          final peakTime =
+              timePeriods.entries
+                  .reduce((a, b) => a.value > b.value ? a : b)
+                  .key;
 
           final prompt = '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
 
@@ -990,57 +999,62 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
 请直接返回HTML代码，不需要任何解释。''';
 
           AppLogger.i('开始生成AI年度报告，数据统计：总笔记$totalNotes篇，总字数$totalWords字');
-          
+
           final result = await aiService.generateAnnualReportHTML(prompt);
-          
+
           AppLogger.i('AI年度报告生成完成，内容长度：${result.length}字符');
-          
+
           if (!mounted) return;
           Navigator.pop(context); // 关闭加载对话框
 
           if (mounted && result.isNotEmpty) {
             // 检查返回内容的格式
-            final isHtml = result.trim().toLowerCase().startsWith('<!doctype') || 
-                          result.trim().toLowerCase().startsWith('<html');
-            final isJson = result.trim().startsWith('{') || result.trim().startsWith('[');
-            
+            final isHtml =
+                result.trim().toLowerCase().startsWith('<!doctype') ||
+                result.trim().toLowerCase().startsWith('<html');
+            final isJson =
+                result.trim().startsWith('{') || result.trim().startsWith('[');
+
             AppLogger.i('AI返回内容格式检查：isHtml=$isHtml, isJson=$isJson');
-            
+
             if (isJson) {
               AppLogger.w('AI返回了JSON格式而非HTML，可能是模型理解错误');
             }
-            
+
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => AIAnnualReportWebView(
-                  htmlContent: result,
-                  year: currentYear,
-                ),
+                builder:
+                    (context) => AIAnnualReportWebView(
+                      htmlContent: result,
+                      year: currentYear,
+                    ),
               ),
             );
           } else {
             AppLogger.w('AI返回了空内容');
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('AI返回了空内容，请重试')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('AI返回了空内容，请重试')));
             }
           }
         } catch (e) {
           AppLogger.e('生成AI年度报告失败', error: e);
           if (mounted) {
             Navigator.pop(context); // 关闭加载对话框
-            
+
             String errorMessage = '生成AI年度报告失败';
             if (e.toString().contains('API Key')) {
               errorMessage = '请先在AI设置中配置有效的API Key';
-            } else if (e.toString().contains('network') || e.toString().contains('连接')) {
+            } else if (e.toString().contains('network') ||
+                e.toString().contains('连接')) {
               errorMessage = '网络连接异常，请检查网络后重试';
-            } else if (e.toString().contains('quota') || e.toString().contains('limit')) {
+            } else if (e.toString().contains('quota') ||
+                e.toString().contains('limit')) {
               errorMessage = 'AI服务配额不足，请稍后重试';
             }
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(errorMessage),
@@ -1064,20 +1078,21 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
   Future<void> _testAIAnnualReport() async {
     try {
       AppLogger.i('开始测试AI年度报告功能');
-      
+
       // 显示测试对话框
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('正在测试AI年度报告...'),
-            ],
-          ),
-        ),
+        builder:
+            (context) => const AlertDialog(
+              content: Row(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Text('正在测试AI年度报告...'),
+                ],
+              ),
+            ),
       );
 
       try {
@@ -1131,24 +1146,26 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
 请直接返回HTML代码，不需要任何解释。''';
 
         AppLogger.i('发送测试提示词给AI');
-        
+
         final result = await aiService.generateAnnualReportHTML(testPrompt);
-        
+
         AppLogger.i('AI测试报告生成完成，内容长度：${result.length}字符');
-        
+
         if (!mounted) return;
         Navigator.pop(context); // 关闭加载对话框
 
         if (mounted && result.isNotEmpty) {
           // 详细检查返回内容
           final trimmed = result.trim();
-          final isHtml = trimmed.toLowerCase().startsWith('<!doctype') || 
-                        trimmed.toLowerCase().startsWith('<html');
+          final isHtml =
+              trimmed.toLowerCase().startsWith('<!doctype') ||
+              trimmed.toLowerCase().startsWith('<html');
           final isJson = trimmed.startsWith('{') || trimmed.startsWith('[');
-          final containsHtmlTags = trimmed.contains('<html') || 
-                                  trimmed.contains('<body') || 
-                                  trimmed.contains('<div');
-          
+          final containsHtmlTags =
+              trimmed.contains('<html') ||
+              trimmed.contains('<body') ||
+              trimmed.contains('<div');
+
           AppLogger.i('''
 测试结果分析：
 - 内容长度：${result.length}字符
@@ -1157,79 +1174,87 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
 - 包含HTML标签：$containsHtmlTags
 - 前100字符：${trimmed.length > 100 ? trimmed.substring(0, 100) : trimmed}
 ''');
-          
+
           // 显示结果对话框
           showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('测试结果'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('内容长度：${result.length}字符'),
-                  Text('HTML格式：${isHtml ? '✅' : '❌'}'),
-                  Text('JSON格式：${isJson ? '⚠️' : '✅'}'),
-                  Text('包含HTML标签：${containsHtmlTags ? '✅' : '❌'}'),
-                  const SizedBox(height: 10),
-                  const Text('前100字符：'),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      trimmed.length > 100 ? '${trimmed.substring(0, 100)}...' : trimmed,
-                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('关闭'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AIAnnualReportWebView(
-                          htmlContent: result,
-                          year: 2024,
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('测试结果'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('内容长度：${result.length}字符'),
+                      Text('HTML格式：${isHtml ? '✅' : '❌'}'),
+                      Text('JSON格式：${isJson ? '⚠️' : '✅'}'),
+                      Text('包含HTML标签：${containsHtmlTags ? '✅' : '❌'}'),
+                      const SizedBox(height: 10),
+                      const Text('前100字符：'),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          trimmed.length > 100
+                              ? '${trimmed.substring(0, 100)}...'
+                              : trimmed,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                       ),
-                    );
-                  },
-                  child: const Text('查看报告'),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('关闭'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => AIAnnualReportWebView(
+                                  htmlContent: result,
+                                  year: 2024,
+                                ),
+                          ),
+                        );
+                      },
+                      child: const Text('查看报告'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
           );
         } else {
           AppLogger.w('AI返回了空内容');
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('测试失败：AI返回了空内容')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('测试失败：AI返回了空内容')));
           }
         }
       } catch (e) {
         AppLogger.e('测试AI年度报告失败', error: e);
         if (mounted) {
           Navigator.pop(context); // 关闭加载对话框
-          
+
           String errorMessage = '测试失败：$e';
           if (e.toString().contains('API Key')) {
             errorMessage = '测试失败：请先在AI设置中配置有效的API Key';
-          } else if (e.toString().contains('network') || e.toString().contains('连接')) {
+          } else if (e.toString().contains('network') ||
+              e.toString().contains('连接')) {
             errorMessage = '测试失败：网络连接异常';
           }
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errorMessage),
@@ -1241,9 +1266,9 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
     } catch (e) {
       AppLogger.e('测试AI年度报告初始化失败', error: e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('测试初始化失败')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('测试初始化失败')));
       }
     }
   }

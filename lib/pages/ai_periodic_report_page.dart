@@ -20,18 +20,18 @@ class AIPeriodicReportPage extends StatefulWidget {
 class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   // 时间范围选择
   String _selectedPeriod = 'week'; // week, month, year
   DateTime _selectedDate = DateTime.now();
-  
+
   // 数据状态
   List<Quote> _periodQuotes = [];
   List<GeneratedCard> _featuredCards = [];
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;
   String _insights = '';
-  
+
   // 服务
   AICardGenerationService? _aiCardService;
 
@@ -45,7 +45,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // 初始化AI卡片生成服务
     if (_aiCardService == null) {
       final aiService = context.read<AIService>();
@@ -69,10 +69,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     try {
       final databaseService = context.read<DatabaseService>();
       final quotes = await databaseService.getUserQuotes();
-      
+
       // 根据选择的时间范围筛选笔记
       final filteredQuotes = _filterQuotesByPeriod(quotes);
-      
+
       setState(() {
         _periodQuotes = filteredQuotes;
         _isLoadingData = false;
@@ -91,9 +91,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       });
       AppLogger.e('加载周期数据失败', error: e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载数据失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载数据失败: $e')));
       }
     }
   }
@@ -128,7 +128,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     return quotes.where((quote) {
       final quoteDate = DateTime.parse(quote.date);
       return quoteDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
-             quoteDate.isBefore(endDate.add(const Duration(days: 1)));
+          quoteDate.isBefore(endDate.add(const Duration(days: 1)));
     }).toList();
   }
 
@@ -143,7 +143,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     try {
       // 选择最有代表性的笔记（最多6张卡片）
       final selectedQuotes = _selectRepresentativeQuotes(_periodQuotes);
-      
+
       final cards = await _aiCardService!.generateFeaturedCards(
         selectedQuotes,
         maxCards: 6,
@@ -165,28 +165,29 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   List<Quote> _selectRepresentativeQuotes(List<Quote> quotes) {
     // 按内容长度和多样性选择
     final sortedQuotes = List<Quote>.from(quotes);
-    
+
     // 优先选择内容丰富的笔记
     sortedQuotes.sort((a, b) => b.content.length.compareTo(a.content.length));
-    
+
     // 选择前6条，确保多样性
     final selected = <Quote>[];
     final usedKeywords = <String>{};
-    
+
     for (final quote in sortedQuotes) {
       if (selected.length >= 6) break;
-      
+
       // 简单的关键词去重逻辑
       final words = quote.content.toLowerCase().split(' ');
-      final hasNewKeyword = words.any((word) => 
-        word.length > 3 && !usedKeywords.contains(word));
-      
+      final hasNewKeyword = words.any(
+        (word) => word.length > 3 && !usedKeywords.contains(word),
+      );
+
       if (hasNewKeyword || selected.isEmpty) {
         selected.add(quote);
         usedKeywords.addAll(words.where((word) => word.length > 3));
       }
     }
-    
+
     return selected;
   }
 
@@ -201,7 +202,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     try {
       final aiService = context.read<AIService>();
-      
+
       final prompt = '''
 请分析用户在${_getPeriodName()}的笔记记录，生成简洁的洞察报告：
 
@@ -220,7 +221,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
 ''';
 
       final result = await aiService.polishText(prompt);
-      
+
       setState(() {
         _insights = result;
       });
@@ -269,11 +270,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
         title: Text('AI ${_getPeriodName()}报告'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: '数据概览'),
-            Tab(text: '精选卡片'),
-            Tab(text: 'AI洞察'),
-          ],
+          tabs: const [Tab(text: '数据概览'), Tab(text: '精选卡片'), Tab(text: 'AI洞察')],
         ),
       ),
       body: Column(
@@ -352,7 +349,9 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
 
     final totalNotes = _periodQuotes.length;
     final totalWords = _periodQuotes.fold<int>(
-      0, (sum, quote) => sum + quote.content.length);
+      0,
+      (sum, quote) => sum + quote.content.length,
+    );
     final avgWords = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
     return SingleChildScrollView(
@@ -377,15 +376,14 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
             children: [
               Expanded(child: _buildStatCard('平均字数', '$avgWords', '字/条')),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('活跃天数', '${_getActiveDays()}', '天')),
+              Expanded(
+                child: _buildStatCard('活跃天数', '${_getActiveDays()}', '天'),
+              ),
             ],
           ),
           const SizedBox(height: 24),
           if (_periodQuotes.isNotEmpty) ...[
-            Text(
-              '最近笔记',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('最近笔记', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             ..._periodQuotes.take(3).map((quote) => _buildQuotePreview(quote)),
           ],
@@ -402,10 +400,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(title, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -417,10 +412,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  unit,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(unit, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ],
@@ -431,10 +423,11 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
 
   /// 获取活跃天数
   int _getActiveDays() {
-    final dates = _periodQuotes.map((quote) {
-      final date = DateTime.parse(quote.date);
-      return DateTime(date.year, date.month, date.day);
-    }).toSet();
+    final dates =
+        _periodQuotes.map((quote) {
+          final date = DateTime.parse(quote.date);
+          return DateTime(date.year, date.month, date.day);
+        }).toSet();
     return dates.length;
   }
 
@@ -450,9 +443,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(
-          DateTime.parse(quote.date).toString().substring(0, 16),
-        ),
+        subtitle: Text(DateTime.parse(quote.date).toString().substring(0, 16)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () {
           // 可以添加跳转到笔记详情的逻辑
@@ -472,17 +463,13 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.note_alt_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.note_alt_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               '本${_getPeriodName()}暂无笔记记录',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
             ),
           ],
         ),
@@ -496,10 +483,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Text(
-                '精选卡片',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('精选卡片', style: Theme.of(context).textTheme.titleLarge),
               const Spacer(),
               if (_isGeneratingCards)
                 const SizedBox(
@@ -507,7 +491,8 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              else if (_featuredCards.isEmpty && _aiCardService?.isEnabled == true)
+              else if (_featuredCards.isEmpty &&
+                  _aiCardService?.isEnabled == true)
                 TextButton.icon(
                   onPressed: _generateFeaturedCards,
                   icon: const Icon(Icons.auto_awesome),
@@ -517,46 +502,47 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
           ),
         ),
         Expanded(
-          child: _featuredCards.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.auto_awesome_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _aiCardService?.isEnabled == true
-                            ? '点击上方按钮生成精美卡片'
-                            : 'AI卡片生成功能未启用',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey[600],
+          child:
+              _featuredCards.isEmpty
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Text(
+                          _aiCardService?.isEnabled == true
+                              ? '点击上方按钮生成精美卡片'
+                              : 'AI卡片生成功能未启用',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  )
+                  : GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.7,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                    itemCount: _featuredCards.length,
+                    itemBuilder: (context, index) {
+                      final card = _featuredCards[index];
+                      return GeneratedCardWidget(
+                        card: card,
+                        showActions: false,
+                        onTap: () => _showCardDetail(card),
+                      );
+                    },
                   ),
-                )
-              : GridView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: _featuredCards.length,
-                  itemBuilder: (context, index) {
-                    final card = _featuredCards[index];
-                    return GeneratedCardWidget(
-                      card: card,
-                      showActions: false,
-                      onTap: () => _showCardDetail(card),
-                    );
-                  },
-                ),
         ),
       ],
     );
@@ -566,11 +552,12 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
   void _showCardDetail(GeneratedCard card) {
     showDialog(
       context: context,
-      builder: (context) => CardPreviewDialog(
-        card: card,
-        onShare: () => _shareCard(card),
-        onSave: () => _saveCard(card),
-      ),
+      builder:
+          (context) => CardPreviewDialog(
+            card: card,
+            onShare: () => _shareCard(card),
+            onSave: () => _saveCard(card),
+          ),
     );
   }
 
@@ -583,15 +570,15 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
       await card.toImageBytes();
       // 这里可以添加分享逻辑
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('分享功能开发中')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('分享功能开发中')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('分享失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('分享失败: $e')));
       }
     }
   }
@@ -614,9 +601,9 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -632,19 +619,16 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'AI洞察分析',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('AI洞察分析', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 _insights.isEmpty ? '正在生成洞察分析...' : _insights,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  height: 1.6,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(height: 1.6),
               ),
             ),
           ),

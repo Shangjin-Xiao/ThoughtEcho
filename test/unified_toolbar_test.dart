@@ -16,24 +16,24 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('UnifiedQuillToolbar renders correctly', (WidgetTester tester) async {
+    testWidgets('UnifiedQuillToolbar renders correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: UnifiedQuillToolbar(controller: controller),
-          ),
+          home: Scaffold(body: UnifiedQuillToolbar(controller: controller)),
         ),
       );
 
       // 验证工具栏是否渲染
       expect(find.byType(UnifiedQuillToolbar), findsOneWidget);
-      
+
       // 验证基本按钮是否存在
       expect(find.byIcon(Icons.undo), findsOneWidget);
       expect(find.byIcon(Icons.redo), findsOneWidget);
       expect(find.byIcon(Icons.format_bold), findsOneWidget);
       expect(find.byIcon(Icons.format_italic), findsOneWidget);
-      
+
       // 验证媒体按钮是否存在
       expect(find.byIcon(Icons.image), findsOneWidget);
       expect(find.byIcon(Icons.videocam), findsOneWidget);
@@ -43,9 +43,7 @@ void main() {
     testWidgets('FullScreenToolbar alias works', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: FullScreenToolbar(controller: controller),
-          ),
+          home: Scaffold(body: FullScreenToolbar(controller: controller)),
         ),
       );
 
@@ -64,9 +62,7 @@ void main() {
             quill.FlutterQuillLocalizations.delegate,
           ],
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
-          home: Scaffold(
-            body: UnifiedQuillToolbar(controller: controller),
-          ),
+          home: Scaffold(body: UnifiedQuillToolbar(controller: controller)),
         ),
       );
 
@@ -76,7 +72,7 @@ void main() {
 
       // 验证对话框是否出现
       expect(find.text('导入图片'), findsOneWidget);
-      
+
       // 关闭对话框
       await tester.tap(find.text('取消'));
       await tester.pumpAndSettle();
@@ -87,7 +83,7 @@ void main() {
 
       // 验证对话框是否出现
       expect(find.text('导入视频'), findsOneWidget);
-      
+
       // 关闭对话框
       await tester.tap(find.text('取消'));
       await tester.pumpAndSettle();
@@ -103,16 +99,16 @@ void main() {
     test('Controller integration works', () {
       // 测试控制器基本功能
       expect(controller.document.isEmpty(), isTrue);
-      
+
       // 插入文本
       controller.document.insert(0, 'Test text');
       expect(controller.document.toPlainText(), equals('Test text'));
-      
+
       // 测试撤销/重做功能
       expect(controller.hasUndo, isTrue);
       controller.undo();
       expect(controller.document.isEmpty(), isTrue);
-      
+
       expect(controller.hasRedo, isTrue);
       controller.redo();
       expect(controller.document.toPlainText(), equals('Test text'));

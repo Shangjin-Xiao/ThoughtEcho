@@ -9,9 +9,7 @@ class LicensePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('许可证信息'),
-      ),
+      appBar: AppBar(title: const Text('许可证信息')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -40,7 +38,7 @@ class LicensePage extends StatelessWidget {
     required Widget content,
   }) {
     final theme = Theme.of(context);
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -132,7 +130,10 @@ class LicensePage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed: () => _launchUrl('https://flutter.dev/docs/development/packages-and-plugins/using-packages'),
+          onPressed:
+              () => _launchUrl(
+                'https://flutter.dev/docs/development/packages-and-plugins/using-packages',
+              ),
           icon: const Icon(Icons.open_in_new),
           label: const Text('查看完整依赖列表'),
         ),
@@ -150,11 +151,7 @@ class LicensePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          const Icon(
-            Icons.animation_outlined,
-            size: 16,
-            color: Colors.grey,
-          ),
+          const Icon(Icons.animation_outlined, size: 16, color: Colors.grey),
           const SizedBox(width: 8),
           Expanded(
             child: Column(

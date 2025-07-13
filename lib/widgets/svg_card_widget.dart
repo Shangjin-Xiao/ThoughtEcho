@@ -12,7 +12,7 @@ class SVGCardWidget extends StatelessWidget {
   final BoxFit fit;
   final bool showLoadingIndicator;
   final Widget? errorWidget;
-  
+
   const SVGCardWidget({
     super.key,
     required this.svgContent,
@@ -29,15 +29,22 @@ class SVGCardWidget extends StatelessWidget {
     // 在debug模式下打印SVG内容用于调试
     if (kDebugMode) {
       print('SVG渲染 - 内容长度: ${svgContent.length}');
-      print('SVG渲染 - 前100字符: ${svgContent.length > 100 ? svgContent.substring(0, 100) : svgContent}');
+      print(
+        'SVG渲染 - 前100字符: ${svgContent.length > 100 ? svgContent.substring(0, 100) : svgContent}',
+      );
 
       // 检查SVG内容的关键元素
       final hasViewBox = svgContent.contains('viewBox');
       final hasXmlns = svgContent.contains('xmlns');
       final hasForeignObject = svgContent.contains('foreignObject');
-      final hasEmoji = RegExp(r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]', unicode: true).hasMatch(svgContent);
+      final hasEmoji = RegExp(
+        r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]',
+        unicode: true,
+      ).hasMatch(svgContent);
 
-      print('SVG检查 - viewBox: $hasViewBox, xmlns: $hasXmlns, foreignObject: $hasForeignObject, emoji: $hasEmoji');
+      print(
+        'SVG检查 - viewBox: $hasViewBox, xmlns: $hasXmlns, foreignObject: $hasForeignObject, emoji: $hasEmoji',
+      );
     }
 
     return GestureDetector(
@@ -77,14 +84,13 @@ class SVGCardWidget extends StatelessWidget {
       return SvgPicture.string(
         svgContent,
         fit: fit,
-        placeholderBuilder: showLoadingIndicator
-            ? (context) => Container(
-                color: Colors.grey[200],
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            : null,
+        placeholderBuilder:
+            showLoadingIndicator
+                ? (context) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(child: CircularProgressIndicator()),
+                )
+                : null,
         errorBuilder: (context, error, stackTrace) {
           if (kDebugMode) {
             print('SVG渲染错误: $error');
@@ -113,11 +119,7 @@ class SVGCardWidget extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
                   const SizedBox(height: 8),
                   const Text(
                     'SVG渲染失败',
@@ -131,10 +133,7 @@ class SVGCardWidget extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       message,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -154,10 +153,7 @@ class SVGCardWidget extends StatelessWidget {
     final fallbackSVG = _generateFallbackSVGContent(extractedContent);
 
     try {
-      return SvgPicture.string(
-        fallbackSVG,
-        fit: fit,
-      );
+      return SvgPicture.string(fallbackSVG, fit: fit);
     } catch (e) {
       // 如果回退SVG也失败，则显示错误提示
       return _buildErrorWidget('SVG渲染完全失败');
@@ -169,14 +165,21 @@ class SVGCardWidget extends StatelessWidget {
     try {
       // 尝试提取text标签中的内容
       final textMatches = RegExp(r'<text[^>]*>([^<]+)</text>').allMatches(svg);
-      final texts = textMatches.map((match) => match.group(1)?.trim() ?? '').where((text) => text.isNotEmpty).toList();
+      final texts =
+          textMatches
+              .map((match) => match.group(1)?.trim() ?? '')
+              .where((text) => text.isNotEmpty)
+              .toList();
 
       if (texts.isNotEmpty) {
         return texts.first;
       }
 
       // 尝试提取foreignObject中的内容
-      final foreignMatches = RegExp(r'<foreignObject[^>]*>.*?<div[^>]*>([^<]+)</div>', dotAll: true).allMatches(svg);
+      final foreignMatches = RegExp(
+        r'<foreignObject[^>]*>.*?<div[^>]*>([^<]+)</div>',
+        dotAll: true,
+      ).allMatches(svg);
       if (foreignMatches.isNotEmpty) {
         final content = foreignMatches.first.group(1)?.trim() ?? '';
         if (content.isNotEmpty) {
@@ -193,7 +196,8 @@ class SVGCardWidget extends StatelessWidget {
   /// 生成回退SVG内容
   String _generateFallbackSVGContent(String content) {
     // 限制内容长度
-    final displayContent = content.length > 50 ? '${content.substring(0, 50)}...' : content;
+    final displayContent =
+        content.length > 50 ? '${content.substring(0, 50)}...' : content;
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -257,7 +261,7 @@ class GeneratedCardWidget extends StatelessWidget {
   final bool showActions;
   final double? width;
   final double? height;
-  
+
   const GeneratedCardWidget({
     super.key,
     required this.card,
@@ -310,7 +314,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
-  
+
   const _ActionButton({
     required this.icon,
     required this.label,
@@ -325,9 +329,7 @@ class _ActionButton extends StatelessWidget {
       label: Text(label),
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
@@ -338,7 +340,7 @@ class CardPreviewDialog extends StatelessWidget {
   final GeneratedCard card;
   final VoidCallback? onShare;
   final VoidCallback? onSave;
-  
+
   const CardPreviewDialog({
     super.key,
     required this.card,
@@ -360,11 +362,7 @@ class CardPreviewDialog extends StatelessWidget {
               alignment: Alignment.topRight,
               child: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 28,
-                ),
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
               ),
             ),
             // 卡片内容
@@ -398,7 +396,7 @@ class CardPreviewDialog extends StatelessWidget {
 class CardGenerationLoadingDialog extends StatelessWidget {
   final String message;
   final VoidCallback? onCancel;
-  
+
   const CardGenerationLoadingDialog({
     super.key,
     this.message = '正在生成卡片...',
@@ -418,10 +416,7 @@ class CardGenerationLoadingDialog extends StatelessWidget {
       ),
       actions: [
         if (onCancel != null)
-          TextButton(
-            onPressed: onCancel,
-            child: const Text('取消'),
-          ),
+          TextButton(onPressed: onCancel, child: const Text('取消')),
       ],
     );
   }

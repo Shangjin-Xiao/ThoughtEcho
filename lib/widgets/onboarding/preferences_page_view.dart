@@ -45,11 +45,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _animationController,
-          curve: Interval(
-            startDelay,
-            endTime,
-            curve: Curves.easeOutCubic,
-          ),
+          curve: Interval(startDelay, endTime, curve: Curves.easeOutCubic),
         ),
       );
     });
@@ -297,7 +293,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                         ? Text(
                           option.description!,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                         )
                         : null,
@@ -440,7 +438,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

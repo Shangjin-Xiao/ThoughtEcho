@@ -6,19 +6,19 @@ import '../utils/app_logger.dart';
 import 'stream_file_processor.dart';
 
 /// 内存不足错误类
-/// 
+///
 /// 用于统一处理内存不足的情况
 class OutOfMemoryError extends Error {
   final String message;
-  
+
   OutOfMemoryError([this.message = '内存不足']);
-  
+
   @override
   String toString() => 'OutOfMemoryError: $message';
 }
 
 /// 大文件处理管理器
-/// 
+///
 /// 专门处理大文件的内存安全操作，包括：
 /// - 流式JSON编解码
 /// - 分块文件处理
@@ -26,9 +26,9 @@ class OutOfMemoryError extends Error {
 /// - 进度回调支持
 class LargeFileManager {
   static const int _defaultChunkSize = 64 * 1024; // 64KB
-  
+
   /// 流式JSON编码到文件
-  /// 
+  ///
   /// [data] - 要编码的数据
   /// [outputFile] - 输出文件
   /// [onProgress] - 进度回调 (current, total)
@@ -43,7 +43,7 @@ class LargeFileManager {
 
       // 使用Isolate进行编码，避免阻塞主线程
       final jsonString = await compute(_encodeJsonInIsolate, data);
-      
+
       // 流式写入文件
       final sink = outputFile.openWrite();
       try {
@@ -55,13 +55,18 @@ class LargeFileManager {
       }
       onProgress?.call(1, 1);
     } catch (e, s) {
-      AppLogger.e('流式JSON编码失败', error: e, stackTrace: s, source: 'LargeFileManager');
+      AppLogger.e(
+        '流式JSON编码失败',
+        error: e,
+        stackTrace: s,
+        source: 'LargeFileManager',
+      );
       rethrow;
     }
   }
-  
+
   /// 流式JSON解码从文件
-  /// 
+  ///
   /// [inputFile] - 输入文件
   /// [onProgress] - 进度回调
   static Future<Map<String, dynamic>> decodeJsonFromFileStreaming(
@@ -77,28 +82,35 @@ class LargeFileManager {
       // 将文件路径传递给Isolate，在Isolate中进行文件读取和解码
       return await compute(_decodeJsonFromFileInIsolate, inputFile.path);
     } catch (e, s) {
-      AppLogger.e('流式JSON解码失败', error: e, stackTrace: s, source: 'LargeFileManager');
+      AppLogger.e(
+        '流式JSON解码失败',
+        error: e,
+        stackTrace: s,
+        source: 'LargeFileManager',
+      );
       rethrow;
     }
   }
 
   /// 在Isolate中从文件流式解码JSON
-  static Future<Map<String, dynamic>> _decodeJsonFromFileInIsolate(String filePath) async {
+  static Future<Map<String, dynamic>> _decodeJsonFromFileInIsolate(
+    String filePath,
+  ) async {
     final file = File(filePath);
-    
+
     // 检查文件大小，如果太大使用流式处理
     final fileSize = await file.length();
     const streamThreshold = 100 * 1024 * 1024; // 100MB
-    
+
     if (fileSize > streamThreshold) {
       // 对于大文件，使用流式读取
       final stream = file.openRead();
       final chunks = <List<int>>[];
-      
+
       await for (final chunk in stream) {
         chunks.add(chunk);
       }
-      
+
       final content = String.fromCharCodes(chunks.expand((chunk) => chunk));
       return jsonDecode(content) as Map<String, dynamic>;
     } else {
@@ -109,7 +121,10 @@ class LargeFileManager {
   }
 
   /// 验证文件是否可访问且大小在合理范围内
-  static Future<bool> validateFile(String filePath, {int maxSize = 2 * 1024 * 1024 * 1024}) async {
+  static Future<bool> validateFile(
+    String filePath, {
+    int maxSize = 2 * 1024 * 1024 * 1024,
+  }) async {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
@@ -118,7 +133,9 @@ class LargeFileManager {
       }
       final fileSize = await file.length();
       if (fileSize > maxSize) {
-        logDebug('文件过大: ${fileSize / 1024 / 1024}MB > ${maxSize / 1024 / 1024}MB');
+        logDebug(
+          '文件过大: ${fileSize / 1024 / 1024}MB > ${maxSize / 1024 / 1024}MB',
+        );
         return false;
       }
       return true;
@@ -127,19 +144,19 @@ class LargeFileManager {
       return false;
     }
   }
-  
+
   /// 在Isolate中解码JSON
   static Map<String, dynamic> _decodeJsonInIsolate(String jsonString) {
     return jsonDecode(jsonString);
   }
-  
+
   /// 在Isolate中编码JSON
   static String _encodeJsonInIsolate(Map<String, dynamic> data) {
     return jsonEncode(data);
   }
-  
+
   /// 安全的大JSON处理（自动选择策略）
-  /// 
+  ///
   /// [data] - 要处理的数据
   /// [encode] - true为编码，false为解码
   static Future<T> processLargeJson<T>(
@@ -151,12 +168,15 @@ class LargeFileManager {
       if (encode) {
         // 编码：Map -> String
         final mapData = data as Map<String, dynamic>;
-        
+
         // 估算数据大小
         final estimatedSize = _estimateJsonSize(mapData);
-        
-        if (estimatedSize > 200 * 1024 * 1024) { // 提高到200MB以上才使用Isolate
-          logDebug('使用Isolate处理大JSON编码 (估算大小: ${(estimatedSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+
+        if (estimatedSize > 200 * 1024 * 1024) {
+          // 提高到200MB以上才使用Isolate
+          logDebug(
+            '使用Isolate处理大JSON编码 (估算大小: ${(estimatedSize / 1024 / 1024).toStringAsFixed(1)}MB)',
+          );
           onProgress?.call(0.5);
           final result = await compute(_encodeJsonInIsolate, mapData);
           onProgress?.call(1.0);
@@ -171,9 +191,12 @@ class LargeFileManager {
       } else {
         // 解码：String -> Map
         final jsonString = data as String;
-        
-        if (jsonString.length > 200 * 1024 * 1024) { // 提高到200MB以上才使用Isolate
-          logDebug('使用Isolate处理大JSON解码 (大小: ${(jsonString.length / 1024 / 1024).toStringAsFixed(1)}MB)');
+
+        if (jsonString.length > 200 * 1024 * 1024) {
+          // 提高到200MB以上才使用Isolate
+          logDebug(
+            '使用Isolate处理大JSON解码 (大小: ${(jsonString.length / 1024 / 1024).toStringAsFixed(1)}MB)',
+          );
           onProgress?.call(0.5);
           final result = await compute(_decodeJsonInIsolate, jsonString);
           onProgress?.call(1.0);
@@ -187,11 +210,16 @@ class LargeFileManager {
         }
       }
     } catch (e, s) {
-      AppLogger.e('大JSON处理失败', error: e, stackTrace: s, source: 'LargeFileManager');
+      AppLogger.e(
+        '大JSON处理失败',
+        error: e,
+        stackTrace: s,
+        source: 'LargeFileManager',
+      );
       rethrow;
     }
   }
-  
+
   /// 估算JSON数据的序列化大小
   static int _estimateJsonSize(Map<String, dynamic> data) {
     try {
@@ -203,9 +231,9 @@ class LargeFileManager {
       return 100 * 1024 * 1024; // 100MB
     }
   }
-  
+
   /// 分块复制文件（内存安全增强版）
-  /// 
+  ///
   /// [source] - 源文件路径
   /// [target] - 目标文件路径
   /// [chunkSize] - 块大小，默认64KB
@@ -220,34 +248,39 @@ class LargeFileManager {
   }) async {
     final sourceFile = File(source);
     final targetFile = File(target);
-    
+
     if (!await sourceFile.exists()) {
       throw Exception('源文件不存在: $source');
     }
-    
+
     // 确保目标目录存在
     await targetFile.parent.create(recursive: true);
-    
+
     final totalSize = await sourceFile.length();
-    
+
     // 根据文件大小动态调整块大小，大文件使用更大的块以提高效率
     int adjustedChunkSize = chunkSize;
-    if (totalSize > 100 * 1024 * 1024) { // 100MB以上
+    if (totalSize > 100 * 1024 * 1024) {
+      // 100MB以上
       adjustedChunkSize = 512 * 1024; // 512KB
-    } else if (totalSize > 10 * 1024 * 1024) { // 10MB以上
+    } else if (totalSize > 10 * 1024 * 1024) {
+      // 10MB以上
       adjustedChunkSize = 256 * 1024; // 256KB
-    } else if (totalSize > 1 * 1024 * 1024) { // 1MB以上
+    } else if (totalSize > 1 * 1024 * 1024) {
+      // 1MB以上
       adjustedChunkSize = 128 * 1024; // 128KB
     }
-    
+
     int copiedBytes = 0;
-    
+
     // 使用更高效的分块读写方式
     try {
       // 对于大文件，使用固定大小的块读取，避免内存峰值
-      final RandomAccessFile reader = await sourceFile.open(mode: FileMode.read);
+      final RandomAccessFile reader = await sourceFile.open(
+        mode: FileMode.read,
+      );
       final IOSink writer = targetFile.openWrite();
-      
+
       try {
         bool continueReading = true;
         while (continueReading && copiedBytes < totalSize) {
@@ -262,57 +295,65 @@ class LargeFileManager {
             } catch (_) {}
             throw const CancelledException();
           }
-          
+
           // 计算本次应该读取的字节数
           final remainingBytes = totalSize - copiedBytes;
-          final currentChunkSize = remainingBytes < adjustedChunkSize ? remainingBytes : adjustedChunkSize;
-          
+          final currentChunkSize =
+              remainingBytes < adjustedChunkSize
+                  ? remainingBytes
+                  : adjustedChunkSize;
+
           // 读取一个块
           final buffer = Uint8List(currentChunkSize);
           final bytesRead = await reader.readInto(buffer);
-          
+
           if (bytesRead <= 0) {
             continueReading = false;
             continue;
           }
-          
+
           // 写入实际读取的数据
           if (bytesRead < buffer.length) {
             writer.add(buffer.sublist(0, bytesRead));
           } else {
             writer.add(buffer);
           }
-          
+
           copiedBytes += bytesRead;
-          
+
           // 报告进度
           onProgress?.call(copiedBytes, totalSize);
-          
+
           // 定期刷新，确保数据写入磁盘
-          if (adjustedChunkSize > 0 && copiedBytes % (adjustedChunkSize * 16) == 0) {
+          if (adjustedChunkSize > 0 &&
+              copiedBytes % (adjustedChunkSize * 16) == 0) {
             await writer.flush();
           }
-          
+
           // 内存压力检查和垃圾回收
-          if (adjustedChunkSize > 0 && copiedBytes % (adjustedChunkSize * 32) == 0) {
+          if (adjustedChunkSize > 0 &&
+              copiedBytes % (adjustedChunkSize * 32) == 0) {
             await _checkMemoryPressure();
           }
-          
+
           // 对于非常大的文件，添加短暂暂停，让UI线程有机会响应
-          if (totalSize > 100 * 1024 * 1024 && copiedBytes % (10 * 1024 * 1024) == 0) {
+          if (totalSize > 100 * 1024 * 1024 &&
+              copiedBytes % (10 * 1024 * 1024) == 0) {
             await Future.delayed(const Duration(milliseconds: 1));
           }
         }
-        
+
         await writer.flush();
-        
+
         // 验证复制完整性
         final targetSize = await targetFile.length();
         if (targetSize != totalSize) {
           throw Exception('文件复制不完整: 期望 $totalSize 字节，实际 $targetSize 字节');
         }
-        
-        logDebug('文件复制完成: $source -> $target (${(totalSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+
+        logDebug(
+          '文件复制完成: $source -> $target (${(totalSize / 1024 / 1024).toStringAsFixed(1)}MB)',
+        );
       } finally {
         await reader.close();
         await writer.close();
@@ -324,17 +365,17 @@ class LargeFileManager {
           await targetFile.delete();
         }
       } catch (_) {}
-      
+
       if (e is CancelledException) {
         logDebug('文件复制已取消: $source -> $target');
       } else {
         logDebug('文件复制失败: $source -> $target, 错误: $e');
       }
-      
+
       rethrow;
     }
   }
-  
+
   /// 检查内存压力并尝试释放
   static Future<void> _checkMemoryPressure() async {
     try {
@@ -342,7 +383,7 @@ class LargeFileManager {
       if (!kIsWeb) {
         // 在非Web平台可以尝试一些内存管理
         await Future.delayed(const Duration(milliseconds: 1));
-        
+
         // 不直接设置全局错误处理程序，而是使用本地错误处理
         // 这样可以避免覆盖应用程序的全局错误处理
         try {
@@ -364,9 +405,9 @@ class LargeFileManager {
       logDebug('内存压力检查失败: $e');
     }
   }
-  
+
   /// 检查系统内存压力
-  /// 
+  ///
   /// 返回true表示内存压力大，false表示内存正常
   static bool _checkSystemMemoryPressure() {
     try {
@@ -380,44 +421,44 @@ class LargeFileManager {
   }
 
   /// 紧急内存清理（当检测到内存不足时）
-  /// 
+  ///
   /// 增强版本：更积极地清理内存，多次尝试垃圾回收
   static Future<void> emergencyMemoryCleanup() async {
     try {
       logDebug('执行紧急内存清理...');
-      
+
       // 触发垃圾回收
       if (!kIsWeb) {
         // 第一轮清理
         logDebug('- 第一轮内存清理');
         await Future.delayed(const Duration(milliseconds: 300));
-        
+
         // 尝试释放一些可能的大对象引用
         _weakReferences.clear();
-        
+
         // 第二轮清理
         logDebug('- 第二轮内存清理');
         await Future.delayed(const Duration(milliseconds: 300));
-        
+
         // 尝试释放更多内存
         logDebug('检测到内存不足，尝试紧急清理');
-        
+
         // 第三轮清理
         logDebug('- 第三轮内存清理');
         await Future.delayed(const Duration(milliseconds: 400));
       }
-      
+
       logDebug('紧急内存清理完成');
     } catch (e) {
       logDebug('紧急内存清理失败: $e');
     }
   }
-  
+
   // 用于存储弱引用的列表，帮助垃圾回收
   static final List<WeakReference<Object>> _weakReferences = [];
-  
+
   /// 安全执行文件操作，带OutOfMemoryError处理
-  /// 
+  ///
   /// 增强版本：预先检查内存，执行前后进行垃圾回收，自动重试
   static Future<T?> executeWithMemoryProtection<T>(
     Future<T> Function() operation, {
@@ -426,39 +467,39 @@ class LargeFileManager {
   }) async {
     final name = operationName ?? '文件操作';
     int retryCount = 0;
-    
+
     // 预先进行垃圾回收
     await _checkMemoryPressure();
-    
+
     while (true) {
       try {
         // 执行前先检查内存
         await Future.delayed(const Duration(milliseconds: 100));
-        
+
         // 执行操作
         logDebug('开始执行$name (尝试 ${retryCount + 1}/${maxRetries + 1})');
         final result = await operation();
-        
+
         // 操作完成后再次检查内存
         await _checkMemoryPressure();
-        
+
         return result;
       } on OutOfMemoryError catch (e) {
         logDebug('$name 遇到内存不足错误: $e');
-        
+
         // 执行紧急内存清理
         await emergencyMemoryCleanup();
-        
+
         // 如果还有重试次数，则重试
         if (retryCount < maxRetries) {
           retryCount++;
           logDebug('正在重试$name ($retryCount/$maxRetries)...');
-          
+
           // 重试前等待更长时间让系统回收内存
           await Future.delayed(const Duration(milliseconds: 500));
           continue;
         }
-        
+
         // 重试次数用完，抛出友好异常
         throw Exception('内存不足，无法完成$name。请关闭其他应用程序后重试，或选择较小的文件。');
       } catch (e) {
@@ -467,9 +508,9 @@ class LargeFileManager {
       }
     }
   }
-  
+
   /// 批量处理文件（内存安全）
-  /// 
+  ///
   /// [files] - 文件列表
   /// [processor] - 处理函数
   /// [batchSize] - 批次大小
@@ -482,22 +523,22 @@ class LargeFileManager {
   }) async {
     final results = <T>[];
     final total = files.length;
-    
+
     for (int i = 0; i < files.length; i += batchSize) {
       final batch = files.skip(i).take(batchSize).toList();
-      
+
       // 并行处理当前批次
       final batchResults = await Future.wait(
         batch.map(processor),
         eagerError: false,
       );
-      
+
       results.addAll(batchResults);
-      
+
       // 报告进度
       final processed = (i + batch.length).clamp(0, total);
       onProgress?.call(processed, total);
-      
+
       // 批次间短暂休息，让系统有机会回收内存
       if (i + batchSize < files.length) {
         await Future.delayed(const Duration(milliseconds: 50));
@@ -543,7 +584,9 @@ class LargeFileManager {
       // 定期检查取消状态
       Timer? cancelCheckTimer;
       if (cancelToken != null) {
-        cancelCheckTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+        cancelCheckTimer = Timer.periodic(const Duration(milliseconds: 100), (
+          _,
+        ) {
           if (cancelToken.isCancelled) {
             streamCancelToken.cancel();
           }
@@ -583,7 +626,9 @@ class LargeFileManager {
       // 定期检查取消状态
       Timer? cancelCheckTimer;
       if (cancelToken != null) {
-        cancelCheckTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+        cancelCheckTimer = Timer.periodic(const Duration(milliseconds: 100), (
+          _,
+        ) {
           if (cancelToken.isCancelled) {
             streamCancelToken.cancel();
           }
@@ -603,7 +648,7 @@ class LargeFileManager {
       throw const CancelledException();
     }
   }
-  
+
   /// 检查系统是否有足够资源处理文件（移除大小限制）
   static Future<bool> canProcessFile(String filePath) async {
     try {
@@ -648,7 +693,8 @@ class LargeFileManager {
         logDebug('文件读取测试失败: $filePath, 错误: $e');
 
         // 如果是权限问题，尝试其他方法
-        if (e.toString().contains('permission') || e.toString().contains('权限')) {
+        if (e.toString().contains('permission') ||
+            e.toString().contains('权限')) {
           logDebug('检测到权限问题，尝试备用检查方法');
           try {
             // 尝试使用流的方式检查
@@ -669,7 +715,7 @@ class LargeFileManager {
       return false;
     }
   }
-  
+
   /// 创建取消令牌
   static CancelToken createCancelToken() {
     return CancelToken();
@@ -679,13 +725,13 @@ class LargeFileManager {
 /// 取消令牌
 class CancelToken {
   bool _isCancelled = false;
-  
+
   bool get isCancelled => _isCancelled;
-  
+
   void cancel() {
     _isCancelled = true;
   }
-  
+
   void throwIfCancelled() {
     if (_isCancelled) {
       throw const CancelledException();
@@ -696,7 +742,7 @@ class CancelToken {
 /// 取消异常
 class CancelledException implements Exception {
   const CancelledException();
-  
+
   @override
   String toString() => '操作已取消';
 }
