@@ -50,13 +50,25 @@ android {
     defaultConfig {
         applicationId "com.shangjin.thoughtecho"
         minSdkVersion 23
-        targetSdkVersion 34  // 修正: targetSdkVersion 不应高于 compileSdkVersion
+        targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+
+        // 大文件处理优化配置
+        manifestPlaceholders = [
+            'largeHeap': 'true',
+            'hardwareAccelerated': 'false'
+        ]
+
+        // NDK配置
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
+
+        // 内存和性能优化
+        vectorDrawables.useSupportLibrary = true
+        resConfigs "en", "zh"
     }
 
     signingConfigs {
@@ -80,13 +92,51 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false  // 禁用代码混淆
-            shrinkResources false  // 禁用资源压缩
+            minifyEnabled true   // 启用代码混淆以减少APK大小
+            shrinkResources true // 启用资源压缩
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // 大文件处理优化
+            manifestPlaceholders = [
+                'enableCrashlytics': 'true'
+            ]
+
+            // 性能优化
+            zipAlignEnabled true
+            debuggable false
         }
         debug {
             signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+            debuggable true
+
+            // 调试模式的内存优化
+            manifestPlaceholders = [
+                'enableCrashlytics': 'false'
+            ]
         }
+    }
+
+    // 打包优化
+    packagingOptions {
+        pickFirst '**/libc++_shared.so'
+        pickFirst '**/libjsc.so'
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/NOTICE.txt'
+    }
+
+    // 编译优化
+    dexOptions {
+        javaMaxHeapSize "4g"
+        preDexLibraries = false
+        additionalParameters = [
+            "--multi-dex",
+            "--set-max-idx-number=48000"
+        ]
     }
 }
 

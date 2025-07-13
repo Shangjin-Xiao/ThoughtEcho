@@ -223,7 +223,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
           curve: Interval(
             startDelay,
             endTime,
-            curve: Curves.easeOutBack,
+            curve: Curves.easeOutCubic,
           ),
         ),
       );
@@ -276,10 +276,15 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
             return AnimatedBuilder(
               animation: _featureAnimations[index],
               builder: (context, child) {
+                // Clamp animation values to valid ranges
+                final animationValue = _featureAnimations[index].value;
+                final clampedOpacity = animationValue.clamp(0.0, 1.0);
+                final clampedScale = animationValue.clamp(0.0, double.infinity);
+
                 return Transform.scale(
-                  scale: _featureAnimations[index].value,
+                  scale: clampedScale,
                   child: Opacity(
-                    opacity: _featureAnimations[index].value,
+                    opacity: clampedOpacity,
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       child: _FeatureCard(

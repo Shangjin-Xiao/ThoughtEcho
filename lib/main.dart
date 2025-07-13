@@ -72,7 +72,13 @@ bool _isEmergencyMode = false;
 // 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
 
+// 全局应用状态管理
+GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
 Future<void> main() async {
+  // 设置Zone错误为致命错误，确保Zone一致性
+  BindingBase.debugZoneErrorsAreFatal = true;
+
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
@@ -352,10 +358,20 @@ Future<void> main() async {
             } else {
               // 引导已完成且数据库已迁移，正常初始化
               logInfo('数据库已迁移，执行常规初始化', source: 'BackgroundInit');
-              await _initializeDatabaseNormally(
-                databaseService,
-                unifiedLogService,
-              );
+              try {
+                await _initializeDatabaseNormally(
+                  databaseService,
+                  unifiedLogService,
+                );
+              } catch (e, stackTrace) {
+                logError(
+                  '常规数据库初始化失败: $e',
+                  error: e,
+                  stackTrace: stackTrace,
+                  source: 'BackgroundInit',
+                );
+                _isEmergencyMode = true;
+              }
             }
 
             // 初始化完成，更新状态
@@ -542,14 +558,29 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    // 标记为 async
-                    // 导航前检查 mounted 状态
-                    if (!context.mounted) return;
-                    await Navigator.pushReplacement(
-                      // 使用 await
-                      context,
-                      MaterialPageRoute(builder: (context) => const HomePage()),
-                    );
+                    // 尝试重新初始化数据库
+                    try {
+                      final databaseService = DatabaseService();
+                      await databaseService.initializeNewDatabase();
+
+                      if (!context.mounted) return;
+
+                      // 成功后导航到主页
+                      await Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HomePage()),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+
+                      // 如果重新初始化失败，显示错误信息
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('重新初始化失败: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('尝试重新启动应用'),
@@ -739,8 +770,26 @@ class EmergencyHomePage extends StatelessWidget {
 
   void restartApp() {
     // 重新启动应用的逻辑
-    // 在Flutter中不能真正地重启应用，所以这里只是重新运行main函数
-    main();
+    try {
+      // 清理全局状态
+      _isEmergencyMode = false;
+      _deferredErrors.clear();
+
+      // 重新创建导航键
+      _navigatorKey = GlobalKey<NavigatorState>();
+
+      // 重新运行main函数
+      main();
+    } catch (e) {
+      logDebug('重启应用失败: $e');
+      // 如果重启失败，尝试导航到主页
+      if (_navigatorKey.currentState != null) {
+        _navigatorKey.currentState!.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
+      }
+    }
   }
 }
 

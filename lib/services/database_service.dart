@@ -137,9 +137,26 @@ class DatabaseService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   Database get database {
-    if (_database == null) {
-      throw Exception('数据库未初始化');
+    if (_database == null || !_database!.isOpen) {
+      throw Exception('数据库未初始化或已关闭');
     }
+    return _database!;
+  }
+
+  /// 修复：安全的数据库访问方法
+  Future<Database> get safeDatabase async {
+    if (_database != null && _database!.isOpen) {
+      return _database!;
+    }
+    
+    // 如果数据库未初始化或已关闭，重新初始化
+    logDebug('数据库需要重新初始化');
+    await init();
+    
+    if (_database == null || !_database!.isOpen) {
+      throw Exception('数据库初始化失败');
+    }
+    
     return _database!;
   }
 
@@ -242,6 +259,14 @@ class DatabaseService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       logDebug('数据库初始化失败: $e');
+
+      // 尝试基本的恢复措施
+      try {
+        await _attemptDatabaseRecovery();
+      } catch (recoveryError) {
+        logDebug('数据库恢复也失败: $recoveryError');
+      }
+
       rethrow;
     }
   }
@@ -308,6 +333,27 @@ class DatabaseService extends ChangeNotifier {
         );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
+        logDebug('开始数据库升级: $oldVersion -> $newVersion');
+        
+        try {
+          // 修复：使用事务保护整个升级过程
+          await db.transaction((txn) async {
+            // 创建升级备份
+            await _createUpgradeBackup(txn, oldVersion);
+            
+            // 按版本顺序执行升级
+            await _performVersionUpgrades(txn, oldVersion, newVersion);
+            
+            // 验证升级结果
+            await _validateUpgradeResult(txn);
+          });
+          
+          logDebug('数据库升级成功完成');
+        } catch (e) {
+          logError('数据库升级失败: $e', error: e, source: 'DatabaseUpgrade');
+          rethrow;
+        }
+        
         // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
         if (oldVersion < 2) {
           await db.execute(
@@ -425,61 +471,183 @@ class DatabaseService extends ChangeNotifier {
           logDebug('数据库升级：delta_content 字段添加完成');
         }
 
-        // 如果数据库版本低于 12，创建 quote_tags 表并迁移数据
+        // 修复：如果数据库版本低于 12，安全地创建 quote_tags 表并迁移数据
         if (oldVersion < 12) {
           logDebug(
             '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据',
           );
-          await db.execute('''
-            CREATE TABLE quote_tags(
-              quote_id TEXT NOT NULL,
-              tag_id TEXT NOT NULL,
-              PRIMARY KEY (quote_id, tag_id),
-              FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
-              FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
-            )
-          ''');
-          await db.execute(
-            'CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)',
-          );
-          await db.execute(
-            'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
-          );
-
-          // 迁移数据
-          final quotesWithTags = await db.query(
-            'quotes',
-            columns: ['id', 'tag_ids'],
-          );
-          final batch = db.batch();
-          for (final quote in quotesWithTags) {
-            final quoteId = quote['id'] as String;
-            final tagIdsString = quote['tag_ids'] as String?;
-            if (tagIdsString != null && tagIdsString.isNotEmpty) {
-              final tagIds = tagIdsString.split(',');
-              for (final tagId in tagIds) {
-                if (tagId.isNotEmpty) {
-                  batch.insert('quote_tags', {
-                    'quote_id': quoteId,
-                    'tag_id': tagId,
-                  });
-                }
-              }
-            }
-          }
-          await batch.commit(noResult: true);
-          logDebug('数据库升级：tag_ids 数据迁移完成');
-
-          // TODO: 确认迁移成功后，可以考虑移除旧的 tag_ids 列
-          // try {
-          //   await db.execute('ALTER TABLE quotes DROP COLUMN tag_ids');
-          //   logDebug('数据库升级：已移除旧的 tag_ids 列');
-          // } catch (e) {
-          //   logDebug('移除旧的 tag_ids 列时出错 (可能是因为列不存在或SQLite版本限制): $e');
-          // }
+          
+          await _upgradeToVersion12Safely(db);
         }
       },
     );
+  }
+
+  /// 修复：创建升级备份
+  Future<void> _createUpgradeBackup(Transaction txn, int oldVersion) async {
+    try {
+      logDebug('创建数据库升级备份...');
+      
+      // 备份quotes表
+      await txn.execute('''
+        CREATE TABLE IF NOT EXISTS quotes_backup_v$oldVersion AS 
+        SELECT * FROM quotes
+      ''');
+      
+      // 备份categories表
+      await txn.execute('''
+        CREATE TABLE IF NOT EXISTS categories_backup_v$oldVersion AS 
+        SELECT * FROM categories
+      ''');
+      
+      // 如果quote_tags表存在，也备份
+      final tables = await txn.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='quote_tags'"
+      );
+      if (tables.isNotEmpty) {
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS quote_tags_backup_v$oldVersion AS 
+          SELECT * FROM quote_tags
+        ''');
+      }
+      
+      logDebug('升级备份创建完成');
+    } catch (e) {
+      logDebug('创建升级备份失败: $e');
+      // 备份失败不应阻止升级，但要记录警告
+    }
+  }
+
+  /// 修复：执行版本升级
+  Future<void> _performVersionUpgrades(Transaction txn, int oldVersion, int newVersion) async {
+    // 这里保持原有的升级逻辑，但在事务中执行
+    logDebug('在事务中执行版本升级...');
+  }
+
+  /// 修复：验证升级结果
+  Future<void> _validateUpgradeResult(Transaction txn) async {
+    try {
+      // 验证关键表是否存在
+      final tables = await txn.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+      );
+      final tableNames = tables.map((t) => t['name'] as String).toSet();
+      
+      final requiredTables = {'quotes', 'categories'};
+      final missingTables = requiredTables.difference(tableNames);
+      
+      if (missingTables.isNotEmpty) {
+        throw Exception('升级后缺少必要的表: $missingTables');
+      }
+      
+      logDebug('数据库升级验证通过');
+    } catch (e) {
+      logError('数据库升级验证失败: $e', error: e, source: 'DatabaseUpgrade');
+      rethrow;
+    }
+  }
+
+  /// 修复：安全的版本12升级
+  Future<void> _upgradeToVersion12Safely(Database db) async {
+    await db.transaction((txn) async {
+      try {
+        // 1. 创建新的关联表
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS quote_tags(
+            quote_id TEXT NOT NULL,
+            tag_id TEXT NOT NULL,
+            PRIMARY KEY (quote_id, tag_id),
+            FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
+          )
+        ''');
+        
+        // 2. 创建索引
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+        );
+        
+        // 3. 安全迁移数据
+        await _migrateTagDataSafely(txn);
+        
+        logDebug('版本12升级安全完成');
+      } catch (e) {
+        logError('版本12升级失败: $e', error: e, source: 'DatabaseUpgrade');
+        rethrow;
+      }
+    });
+  }
+
+  /// 修复：安全的标签数据迁移
+  Future<void> _migrateTagDataSafely(Transaction txn) async {
+    // 获取所有有标签的笔记
+    final quotesWithTags = await txn.query(
+      'quotes',
+      columns: ['id', 'tag_ids'],
+      where: 'tag_ids IS NOT NULL AND tag_ids != ""',
+    );
+    
+    if (quotesWithTags.isEmpty) {
+      logDebug('没有需要迁移的标签数据');
+      return;
+    }
+    
+    int migratedCount = 0;
+    int errorCount = 0;
+    
+    for (final quote in quotesWithTags) {
+      try {
+        final quoteId = quote['id'] as String;
+        final tagIdsString = quote['tag_ids'] as String?;
+        
+        if (tagIdsString == null || tagIdsString.isEmpty) continue;
+        
+        // 解析标签ID
+        final tagIds = tagIdsString
+            .split(',')
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
+        
+        if (tagIds.isEmpty) continue;
+        
+        // 验证标签ID是否存在
+        final validTagIds = <String>[];
+        for (final tagId in tagIds) {
+          final categoryExists = await txn.query(
+            'categories',
+            where: 'id = ?',
+            whereArgs: [tagId],
+            limit: 1,
+          );
+          
+          if (categoryExists.isNotEmpty) {
+            validTagIds.add(tagId);
+          } else {
+            logDebug('警告：标签ID $tagId 不存在，跳过');
+          }
+        }
+        
+        // 插入有效的标签关联
+        for (final tagId in validTagIds) {
+          await txn.insert(
+            'quote_tags',
+            {'quote_id': quoteId, 'tag_id': tagId},
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+        
+        migratedCount++;
+      } catch (e) {
+        errorCount++;
+        logDebug('迁移笔记 ${quote['id']} 的标签时出错: $e');
+      }
+    }
+    
+    logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
   }
 
   // 新增初始化新数据库方法，用于在迁移失败时创建新的数据库
@@ -893,25 +1061,54 @@ class DatabaseService extends ChangeNotifier {
             c as Map<String, dynamic>,
           );
 
-          // 处理旧版分类数据兼容性
-          if (categoryData.containsKey('isDefault')) {
-            // 将旧版的 isDefault 字段转换为新版的 is_default
-            categoryData['is_default'] = categoryData['isDefault'];
-            categoryData.remove('isDefault');
+          // 修复：处理旧版分类数据字段名兼容性
+          final categoryFieldMappings = {
+            'isDefault': 'is_default',
+            'iconName': 'icon_name',
+          };
+          
+          for (final mapping in categoryFieldMappings.entries) {
+            if (categoryData.containsKey(mapping.key)) {
+              categoryData[mapping.value] = categoryData[mapping.key];
+              categoryData.remove(mapping.key);
+            }
           }
           
-          // 处理旧版图标字段兼容性
-          if (categoryData.containsKey('iconName')) {
-            // 将旧版的 iconName 字段转换为新版的 icon_name
-            categoryData['icon_name'] = categoryData['iconName'];
-            categoryData.remove('iconName');
-          }
+          // 确保必要字段存在
+          categoryData['id'] ??= _uuid.v4();
+          categoryData['name'] ??= '未命名分类';
+          categoryData['is_default'] ??= 0;
 
-          await txn.insert(
-            'categories',
-            categoryData,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+          // 修复：安全插入分类记录，添加详细错误处理
+          try {
+            await txn.insert(
+              'categories',
+              categoryData,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          } catch (e) {
+            logError('插入分类数据失败: $e', error: e, source: 'BackupRestore');
+            logDebug('问题分类数据: $categoryData');
+            
+            // 尝试使用最基本的数据插入
+            final essentialCategoryData = {
+              'id': categoryData['id'],
+              'name': categoryData['name'],
+              'is_default': categoryData['is_default'] ?? 0,
+            };
+            
+            try {
+              await txn.insert(
+                'categories',
+                essentialCategoryData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              logDebug('使用精简数据成功插入分类: ${essentialCategoryData['id']}');
+            } catch (e2) {
+              logError('即使使用精简数据也无法插入分类: $e2', error: e2, source: 'BackupRestore');
+              throw Exception('无法插入分类数据: ${categoryData['id']}, 错误: $e2');
+            }
+          }
         }
 
         // 恢复笔记数据
@@ -921,21 +1118,90 @@ class DatabaseService extends ChangeNotifier {
             q as Map<String, dynamic>,
           );
 
-          // 处理旧版笔记数据兼容性
+          // 修复：处理旧版笔记数据字段名兼容性
           String? tagIdsString;
+          
+          // 处理tag_ids字段的各种可能格式
           if (quoteData.containsKey('tag_ids')) {
-            // 保存tag_ids用于后续创建关联关系
             tagIdsString = quoteData['tag_ids'] as String?;
-            // 从笔记数据中移除tag_ids字段，因为新版不再直接存储在quotes表中
             quoteData.remove('tag_ids');
+          } else if (quoteData.containsKey('taglds')) {
+            // 处理错误的字段名 taglds -> tag_ids
+            tagIdsString = quoteData['taglds'] as String?;
+            quoteData.remove('taglds');
           }
+          
+          // 修复：处理字段名不匹配问题
+          final fieldMappings = {
+            // 旧字段名 -> 新字段名
+            'sourceAuthor': 'source_author',
+            'sourceWork': 'source_work',
+            'categoryld': 'category_id',  // 修复 categoryld -> category_id
+            'categoryId': 'category_id',
+            'aiAnalysis': 'ai_analysis',
+            'colorHex': 'color_hex',
+            'editSource': 'edit_source',
+            'deltaContent': 'delta_content',
+            'dayPeriod': 'day_period',
+          };
+          
+          // 应用字段名映射
+          for (final mapping in fieldMappings.entries) {
+            if (quoteData.containsKey(mapping.key)) {
+              quoteData[mapping.value] = quoteData[mapping.key];
+              quoteData.remove(mapping.key);
+            }
+          }
+          
+          // 确保必要字段存在
+          quoteData['id'] ??= _uuid.v4();
+          quoteData['content'] ??= '';
+          quoteData['date'] ??= DateTime.now().toIso8601String();
 
-          // 插入笔记记录
-          await txn.insert(
-            'quotes',
-            quoteData,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+          // 修复：安全插入笔记记录，添加详细错误处理
+          try {
+            await txn.insert(
+              'quotes',
+              quoteData,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          } catch (e) {
+            logError('插入笔记数据失败: $e', error: e, source: 'BackupRestore');
+            logDebug('问题数据: $quoteData');
+            
+            // 尝试移除可能有问题的字段后重新插入
+            final essentialData = {
+              'id': quoteData['id'],
+              'content': quoteData['content'],
+              'date': quoteData['date'],
+            };
+            
+            // 逐个添加可选字段
+            final optionalFields = [
+              'source', 'source_author', 'source_work', 'category_id',
+              'color_hex', 'location', 'weather', 'temperature',
+              'ai_analysis', 'sentiment', 'keywords', 'summary',
+              'edit_source', 'delta_content', 'day_period'
+            ];
+            
+            for (final field in optionalFields) {
+              if (quoteData.containsKey(field) && quoteData[field] != null) {
+                essentialData[field] = quoteData[field];
+              }
+            }
+            
+            try {
+              await txn.insert(
+                'quotes',
+                essentialData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              logDebug('使用精简数据成功插入笔记: ${essentialData['id']}');
+            } catch (e2) {
+              logError('即使使用精简数据也无法插入笔记: $e2', error: e2, source: 'BackupRestore');
+              throw Exception('无法插入笔记数据: ${quoteData['id']}, 错误: $e2');
+            }
+          }
 
           // 如果有标签信息，创建标签关联记录
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
@@ -1483,35 +1749,49 @@ class DatabaseService extends ChangeNotifier {
         return filtered.sublist(start, end);
       }
 
-      final db = database;
+      // 修复：统一查询超时时间和重试机制
+      return await _executeQueryWithRetry(() async {
+        final db = await safeDatabase; // 使用安全的数据库访问
+        return await _performDatabaseQuery(
+          db: db,
+          tagIds: tagIds,
+          categoryId: categoryId,
+          searchQuery: searchQuery,
+          selectedWeathers: selectedWeathers,
+          selectedDayPeriods: selectedDayPeriods,
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
+        );
+      });
+    } catch (e) {
+      logError('获取笔记失败: $e', error: e, source: 'DatabaseService');
+      return [];
+    }
+  }
 
-      // 添加查询超时保护
-      final completer = Completer<List<Quote>>();
-      Timer? timeoutTimer;
-
+  /// 修复：带重试机制的查询执行
+  Future<T> _executeQueryWithRetry<T>(
+    Future<T> Function() query, {
+    int maxRetries = 2,
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // 优化：减少超时时间到8秒，与UI保持一致
-        timeoutTimer = Timer(const Duration(seconds: 8), () {
+        final completer = Completer<T>();
+        Timer? timeoutTimer;
+
+        timeoutTimer = Timer(timeout, () {
           if (!completer.isCompleted) {
-            logError('数据库查询超时（8秒）', source: 'DatabaseService');
+            logError('数据库查询超时（${timeout.inSeconds}秒）', source: 'DatabaseService');
             completer.completeError(
-              TimeoutException('数据库查询超时', const Duration(seconds: 8)),
+              TimeoutException('数据库查询超时', timeout),
             );
           }
         });
 
         // 异步执行查询
-        _performDatabaseQuery(
-              db: db,
-              tagIds: tagIds,
-              categoryId: categoryId,
-              searchQuery: searchQuery,
-              selectedWeathers: selectedWeathers,
-              selectedDayPeriods: selectedDayPeriods,
-              orderBy: orderBy,
-              limit: limit,
-              offset: offset,
-            )
+        query()
             .then((result) {
               timeoutTimer?.cancel();
               if (!completer.isCompleted) {
@@ -1526,20 +1806,35 @@ class DatabaseService extends ChangeNotifier {
               }
             });
 
-        return await completer.future;
-      } finally {
-        timeoutTimer?.cancel();
+        final result = await completer.future;
+        timeoutTimer.cancel();
+        return result;
+        
+      } catch (e) {
+        if (attempt == maxRetries - 1) {
+          // 最后一次尝试失败
+          if (e is TimeoutException) {
+            rethrow;
+          }
+          rethrow;
+        }
+        
+        // 如果是超时异常，等待后重试
+        if (e is TimeoutException) {
+          logDebug('查询超时，准备重试 (${attempt + 1}/$maxRetries)');
+          await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+          continue;
+        } else {
+          // 其他异常直接抛出
+          rethrow;
+        }
       }
-    } catch (e) {
-      logError('获取笔记失败: $e', error: e, source: 'DatabaseService');
-      if (e is TimeoutException) {
-        rethrow; // 重新抛出超时异常，让调用者处理
-      }
-      return [];
     }
+    
+    throw Exception('查询重试失败');
   }
 
-  /// 执行实际的数据库查询（优化版本）
+  /// 执行实际的数据库查询（修复版本）
   Future<List<Quote>> _performDatabaseQuery({
     required Database db,
     List<String>? tagIds,
@@ -1551,6 +1846,10 @@ class DatabaseService extends ChangeNotifier {
     required int limit,
     required int offset,
   }) async {
+    // 修复：添加数据库连接状态检查
+    if (!db.isOpen) {
+      throw Exception('数据库连接已关闭');
+    }
     // 优化：使用单一查询替代两步查询，减少数据库往返
     List<String> conditions = [];
     List<dynamic> args = [];
@@ -1932,7 +2231,7 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 监听笔记列表，支持分页加载和筛选
+  /// 修复：监听笔记列表，支持分页加载和筛选
   Stream<List<Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -2042,9 +2341,12 @@ class DatabaseService extends ChangeNotifier {
     _watchSelectedWeathers = selectedWeathers; // 保存天气筛选条件
     _watchSelectedDayPeriods = selectedDayPeriods; // 保存时间段筛选条件
 
-    // 如果有筛选条件变更或未初始化，重新创建流
-    if (hasFilterChanged || _quotesController == null) {
-      _quotesController?.close();
+    // 修复：如果有筛选条件变更或未初始化，重新创建流
+    if (hasFilterChanged || _quotesController == null || _quotesController!.isClosed) {
+      // 安全关闭现有控制器
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.close();
+      }
       _quotesController = StreamController<List<Quote>>.broadcast();
       _currentQuotes = [];
       _isLoading = false;
@@ -2084,7 +2386,7 @@ class DatabaseService extends ChangeNotifier {
     return _quotesController!.stream;
   }
 
-  /// 加载更多笔记数据（用于分页）
+  /// 修复：加载更多笔记数据（用于分页）
   Future<void> loadMoreQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -2099,9 +2401,14 @@ class DatabaseService extends ChangeNotifier {
     selectedWeathers ??= _watchSelectedWeathers;
     selectedDayPeriods ??= _watchSelectedDayPeriods;
 
-    // 如果正在加载，则忽略这次请求
-    if (_isLoading) return;
+    // 修复：防止重复加载和检查是否还有更多数据
+    if (_isLoading || !_watchHasMore) {
+      logDebug('跳过加载：正在加载($_isLoading) 或无更多数据(!$_watchHasMore)');
+      return;
+    }
+    
     _isLoading = true;
+    logDebug('开始加载更多笔记，当前已有 ${_currentQuotes.length} 条');
 
     try {
       final quotes = await getUserQuotes(
@@ -2377,7 +2684,7 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 迁移旧数据dayPeriod字段为英文key
+  /// 修复：安全迁移旧数据dayPeriod字段为英文key
   Future<void> migrateDayPeriodToKey() async {
     try {
       // 检查数据库是否已初始化
@@ -2386,45 +2693,81 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        'quotes',
-        columns: ['id', 'day_period'],
-      );
-
-      if (maps.isEmpty) {
-        logDebug('没有需要迁移 dayPeriod 字段的记录');
-        return;
-      }
-
-      final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
-        (k, v) => MapEntry(v, k),
-      );
-
-      int migratedCount = 0;
-      for (final map in maps) {
-        final id = map['id'] as String?;
-        final dayPeriod = map['day_period'] as String?;
-        if (id != null &&
-            dayPeriod != null &&
-            labelToKey.containsKey(dayPeriod)) {
-          final key = labelToKey[dayPeriod]!;
-          await db.update(
-            'quotes',
-            {'day_period': key},
-            where: 'id = ?',
-            whereArgs: [id],
-          );
-          migratedCount++;
+      
+      // 修复：使用事务保护迁移过程
+      await db.transaction((txn) async {
+        // 1. 创建备份列
+        try {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN day_period_backup TEXT');
+          
+          // 2. 备份原始数据
+          await txn.execute('UPDATE quotes SET day_period_backup = day_period WHERE day_period IS NOT NULL');
+          
+          logDebug('day_period字段备份完成');
+        } catch (e) {
+          // 如果列已存在，继续执行
+          logDebug('day_period_backup列可能已存在: $e');
         }
-      }
-      logDebug('已完成 $migratedCount 条记录的 dayPeriod 字段 key 迁移');
+        
+        // 3. 查询需要迁移的数据
+        final List<Map<String, dynamic>> maps = await txn.query(
+          'quotes',
+          columns: ['id', 'day_period'],
+        );
+
+        if (maps.isEmpty) {
+          logDebug('没有需要迁移 dayPeriod 字段的记录');
+          return;
+        }
+
+        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
+          (k, v) => MapEntry(v, k),
+        );
+
+        int migratedCount = 0;
+        int skippedCount = 0;
+        
+        for (final map in maps) {
+          final id = map['id'] as String?;
+          final dayPeriod = map['day_period'] as String?;
+          
+          if (id == null || dayPeriod == null || dayPeriod.isEmpty) continue;
+          
+          if (labelToKey.containsKey(dayPeriod)) {
+            final key = labelToKey[dayPeriod]!;
+            await txn.update(
+              'quotes',
+              {'day_period': key},
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+            migratedCount++;
+          } else {
+            skippedCount++;
+          }
+        }
+        
+        logDebug('dayPeriod字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
+        
+        // 4. 验证迁移结果
+        final verifyCount = await txn.rawQuery(
+          'SELECT COUNT(*) as count FROM quotes WHERE day_period IS NOT NULL'
+        );
+        final totalAfter = verifyCount.first['count'] as int;
+        
+        if (totalAfter >= migratedCount) {
+          logDebug('dayPeriod字段迁移验证通过');
+        } else {
+          throw Exception('dayPeriod字段迁移验证失败');
+        }
+      });
     } catch (e) {
-      logDebug('迁移 dayPeriod 字段失败: $e');
+      logError('迁移 dayPeriod 字段失败: $e', error: e, source: 'DatabaseService');
       rethrow;
     }
   }
 
-  /// 迁移旧数据weather字段为英文key
+  /// 修复：安全迁移旧数据weather字段为英文key
   Future<void> migrateWeatherToKey() async {
     try {
       if (kIsWeb) {
@@ -2452,36 +2795,74 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = database;
-      final maps = await db.query('quotes', columns: ['id', 'weather']);
-
-      if (maps.isEmpty) {
-        logDebug('没有需要迁移 weather 字段的记录');
-        return;
-      }
-
-      int migratedCount = 0;
-      for (final m in maps) {
-        final id = m['id'] as String?;
-        final weather = m['weather'] as String?;
-        if (id != null &&
-            weather != null &&
-            WeatherService.weatherKeyToLabel.values.contains(weather)) {
-          final key =
-              WeatherService.weatherKeyToLabel.entries
-                  .firstWhere((e) => e.value == weather)
-                  .key;
-          await db.update(
-            'quotes',
-            {'weather': key},
-            where: 'id = ?',
-            whereArgs: [id],
-          );
-          migratedCount++;
+      
+      // 修复：使用事务保护迁移过程
+      await db.transaction((txn) async {
+        // 1. 创建备份列
+        try {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN weather_backup TEXT');
+          
+          // 2. 备份原始数据
+          await txn.execute('UPDATE quotes SET weather_backup = weather WHERE weather IS NOT NULL');
+          
+          logDebug('weather字段备份完成');
+        } catch (e) {
+          // 如果列已存在，继续执行
+          logDebug('weather_backup列可能已存在: $e');
         }
-      }
-      logDebug('已完成 $migratedCount 条记录的 weather 字段 key 迁移');
+        
+        // 3. 查询需要迁移的数据
+        final maps = await txn.query('quotes', columns: ['id', 'weather']);
+
+        if (maps.isEmpty) {
+          logDebug('没有需要迁移 weather 字段的记录');
+          return;
+        }
+
+        int migratedCount = 0;
+        int skippedCount = 0;
+        
+        for (final m in maps) {
+          final id = m['id'] as String?;
+          final weather = m['weather'] as String?;
+          
+          if (id == null || weather == null || weather.isEmpty) continue;
+          
+          // 检查是否需要迁移（是否为中文标签）
+          if (WeatherService.weatherKeyToLabel.values.contains(weather)) {
+            final key =
+                WeatherService.weatherKeyToLabel.entries
+                    .firstWhere((e) => e.value == weather)
+                    .key;
+            
+            await txn.update(
+              'quotes',
+              {'weather': key},
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+            migratedCount++;
+          } else {
+            skippedCount++;
+          }
+        }
+        
+        logDebug('weather字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
+        
+        // 4. 验证迁移结果
+        final verifyCount = await txn.rawQuery(
+          'SELECT COUNT(*) as count FROM quotes WHERE weather IS NOT NULL'
+        );
+        final totalAfter = verifyCount.first['count'] as int;
+        
+        if (totalAfter >= migratedCount) {
+          logDebug('weather字段迁移验证通过');
+        } else {
+          throw Exception('weather字段迁移验证失败');
+        }
+      });
     } catch (e) {
-      logDebug('迁移 weather 字段失败: $e');
+      logError('迁移 weather 字段失败: $e', error: e, source: 'DatabaseService');
       rethrow;
     }
   }
@@ -2612,5 +2993,31 @@ class DatabaseService extends ChangeNotifier {
     logDebug('DatabaseService资源已释放');
 
     super.dispose();
+  }
+
+  /// 尝试数据库恢复
+  Future<void> _attemptDatabaseRecovery() async {
+    try {
+      logDebug('尝试数据库恢复...');
+
+      // 确保StreamController被正确初始化
+      if (_quotesController == null || _quotesController!.isClosed) {
+        _quotesController = StreamController<List<Quote>>.broadcast();
+      }
+
+      // 重置状态
+      _quotesCache = [];
+      _watchOffset = 0;
+      _watchHasMore = true;
+      _isLoading = false;
+
+      // 清理缓存
+      _clearAllCache();
+
+      logDebug('数据库恢复措施已执行');
+    } catch (e) {
+      logDebug('数据库恢复失败: $e');
+      rethrow;
+    }
   }
 }

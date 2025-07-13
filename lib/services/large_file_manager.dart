@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
+import 'stream_file_processor.dart';
 
 /// 内存不足错误类
 /// 
@@ -504,10 +504,10 @@ class LargeFileManager {
         await _checkMemoryPressure();
       }
     }
-    
+
     return results;
   }
-  
+
   /// 获取文件大小（安全方式）
   static Future<int> getFileSizeSecurely(String filePath) async {
     try {
@@ -519,6 +519,88 @@ class LargeFileManager {
     } catch (e) {
       logDebug('获取文件大小失败: $filePath, 错误: $e');
       return 0;
+    }
+  }
+
+  /// 使用流式处理器复制文件（新的推荐方法）
+  ///
+  /// [source] - 源文件路径
+  /// [target] - 目标文件路径
+  /// [onProgress] - 进度回调
+  /// [onMemoryPressure] - 内存压力回调
+  /// [cancelToken] - 取消令牌
+  static Future<void> streamCopyFile(
+    String source,
+    String target, {
+    Function(int current, int total)? onProgress,
+    Function(int pressureLevel)? onMemoryPressure,
+    CancelToken? cancelToken,
+  }) async {
+    final processor = StreamFileProcessor();
+    final streamCancelToken = StreamCancelToken();
+
+    try {
+      // 定期检查取消状态
+      Timer? cancelCheckTimer;
+      if (cancelToken != null) {
+        cancelCheckTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+          if (cancelToken.isCancelled) {
+            streamCancelToken.cancel();
+          }
+        });
+      }
+
+      await processor.streamCopyFile(
+        source,
+        target,
+        onProgress: onProgress,
+        onMemoryPressure: onMemoryPressure,
+        cancelToken: streamCancelToken,
+      );
+
+      cancelCheckTimer?.cancel();
+    } on StreamCancelledException {
+      throw const CancelledException();
+    }
+  }
+
+  /// 流式处理大文件
+  ///
+  /// [filePath] - 文件路径
+  /// [processor] - 数据处理函数
+  /// [onProgress] - 进度回调
+  /// [cancelToken] - 取消令牌
+  static Future<T> streamProcessFile<T>(
+    String filePath,
+    Future<T> Function(Stream<Uint8List> dataStream, int totalSize) processor, {
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    final streamProcessor = StreamFileProcessor();
+    final streamCancelToken = StreamCancelToken();
+
+    try {
+      // 定期检查取消状态
+      Timer? cancelCheckTimer;
+      if (cancelToken != null) {
+        cancelCheckTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+          if (cancelToken.isCancelled) {
+            streamCancelToken.cancel();
+          }
+        });
+      }
+
+      final result = await streamProcessor.streamProcessFile(
+        filePath,
+        processor,
+        onProgress: onProgress,
+        cancelToken: streamCancelToken,
+      );
+
+      cancelCheckTimer?.cancel();
+      return result;
+    } on StreamCancelledException {
+      throw const CancelledException();
     }
   }
   
