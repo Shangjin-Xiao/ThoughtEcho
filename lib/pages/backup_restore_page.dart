@@ -360,10 +360,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         );
 
         if (mounted) {
-          await Share.shareXFiles(
-            [XFile(backupPath)],
-            text: '心迹备份文件',
-            subject: fileName,
+          await SharePlus.instance.share(
+            ShareParams(
+              text: '心迹备份文件',
+              subject: fileName,
+              files: [XFile(backupPath)],
+            ),
           );
 
           _showSuccessSnackBar('备份文件已准备就绪，请通过分享保存');
@@ -384,10 +386,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         );
 
         if (mounted) {
-          await Share.shareXFiles(
-            [XFile(backupPath)],
-            text: '心迹备份文件',
-            subject: fileName,
+          await SharePlus.instance.share(
+            ShareParams(
+              text: '心迹备份文件',
+              subject: fileName,
+              files: [XFile(backupPath)],
+            ),
           );
 
           _showSuccessSnackBar('备份完成，请选择保存位置');

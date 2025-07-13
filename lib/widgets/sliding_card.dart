@@ -149,17 +149,16 @@ class _SlidingCardState extends State<SlidingCard>
                           AppTheme.cardRadius,
                         ),
                         boxShadow: currentShadow,
-                        color: theme.cardColor,
+                        color: theme.brightness == Brightness.light 
+                            ? Colors.white 
+                            : theme.colorScheme.surface,
                         // 微妙的边框效果（Material Design）
-                        border:
-                            _isHovered
-                                ? Border.all(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  width: 1,
-                                )
-                                : null,
+                        border: Border.all(
+                          color: _isHovered
+                              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                              : theme.colorScheme.outline.withValues(alpha: 0.08),
+                          width: 1,
+                        ),
                       ),
                       child: SingleChildScrollView(
                         child: Column(

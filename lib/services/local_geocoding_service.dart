@@ -56,9 +56,10 @@ class LocalGeocodingService {
 
       // 获取位置
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: accuracy,
-        timeLimit: timeout,
-        forceAndroidLocationManager: !highAccuracy,
+        locationSettings: LocationSettings(
+          accuracy: accuracy,
+          timeLimit: timeout,
+        ),
       );
 
       logDebug('成功获取位置: ${position.latitude}, ${position.longitude}');
@@ -104,7 +105,7 @@ class LocalGeocodingService {
         final placemarks = await geocoding.placemarkFromCoordinates(
           latitude,
           longitude,
-          localeIdentifier: 'zh_CN', // 尝试使用中文
+   // 尝试使用中文
         );
 
         if (placemarks.isNotEmpty) {

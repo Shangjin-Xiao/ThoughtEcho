@@ -952,6 +952,34 @@ class AIService extends ChangeNotifier {
     );
   }
 
+  /// 生成SVG卡片内容
+  /// 专门用于AI卡片生成服务的SVG生成方法
+  Future<String> generateSVG(String prompt) async {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+
+    return await _requestHelper.executeWithErrorHandling(
+      operation: () async {
+        await _validateSettings();
+        final currentProvider = await _getCurrentProviderWithApiKey();
+
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
+          systemPrompt: 'You are an expert SVG designer. Generate clean, valid SVG code based on the user\'s requirements. Only return the SVG code without any explanations or markdown formatting.',
+          userMessage: prompt,
+          provider: currentProvider,
+          temperature: 0.7, // 适中的创意性
+          maxTokens: 2000, // 足够生成完整的SVG
+        );
+
+        return _requestHelper.parseResponse(response);
+      },
+      context: 'SVG生成',
+    );
+  }
+
   // 向笔记提问
   Future<String> askQuestion(Quote quote, String question) async {
     // 使用异步验证确保API Key有效性

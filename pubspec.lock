@@ -21,10 +21,10 @@ packages:
     dependency: "direct main"
     description:
       name: archive
-      sha256: cb6a278ef2dbb298455e1a713bda08524a175630ec643a242c399c932a0a1f7d
+      sha256: "2fde1607386ab523f7a36bb3e7edb43bd58e6edaf2ffb29d8a6d578b297fdbbd"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.6.1"
+    version: "4.0.7"
   args:
     dependency: transitive
     description:
@@ -241,14 +241,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.1.2+11"
-  dev_test:
-    dependency: transitive
-    description:
-      name: dev_test
-      sha256: f6cf8e6c55a71ca9494641ef84fe014ae03e73f9fdfb2aa08fb14a2502b77a20
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.0.1"
   diff_match_patch:
     dependency: transitive
     description:
@@ -397,26 +389,26 @@ packages:
     dependency: "direct main"
     description:
       name: flex_color_picker
-      sha256: "5c846437069fb7afdd7ade6bf37e628a71d2ab0787095ddcb1253bf9345d5f3a"
+      sha256: "8f753a1a026a13ea5cc5eddbae3ceb886f2537569ab2e5208efb1e3bb5af72ff"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.4.1"
+    version: "3.7.1"
   flex_color_scheme:
     dependency: "direct main"
     description:
       name: flex_color_scheme
-      sha256: "32914024a4f404d90ff449f58d279191675b28e7c08824046baf06826e99d984"
+      sha256: "3344f8f6536c6ce0473b98e9f084ef80ca89024ad3b454f9c32cf840206f4387"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "7.3.1"
+    version: "8.2.0"
   flex_seed_scheme:
     dependency: transitive
     description:
       name: flex_seed_scheme
-      sha256: "4cee2f1d07259f77e8b36f4ec5f35499d19e74e17c7dce5b819554914082bc01"
+      sha256: b06d8b367b84cbf7ca5c5603c858fa5edae88486c4e4da79ac1044d73b6c62ec
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.5.0"
+    version: "3.5.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -671,6 +663,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  geoclue:
+    dependency: transitive
+    description:
+      name: geoclue
+      sha256: c2a998c77474fc57aa00c6baa2928e58f4b267649057a1c76738656e9dbd2a7f
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.1.1"
   geocode:
     dependency: "direct main"
     description:
@@ -683,26 +683,26 @@ packages:
     dependency: "direct main"
     description:
       name: geocoding
-      sha256: "790eea732b22a08dd36fc3761bcd29040461ac20ece4d165264a6c0b5338f115"
+      sha256: "606be036287842d779d7ec4e2f6c9435fc29bbbd3c6da6589710f981d8852895"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.2.2"
+    version: "4.0.0"
   geocoding_android:
     dependency: transitive
     description:
       name: geocoding_android
-      sha256: "1b13eca79b11c497c434678fed109c2be020b158cec7512c848c102bc7232603"
+      sha256: ba810da90d6633cbb82bbab630e5b4a3b7d23503263c00ae7f1ef0316dcae5b9
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.3.1"
+    version: "4.0.1"
   geocoding_ios:
     dependency: transitive
     description:
       name: geocoding_ios
-      sha256: "8a39bfb650af55209c42e564036a550b32d029e0733af01dc66c5afea50388d3"
+      sha256: "18ab1c8369e2b0dcb3a8ccc907319334f35ee8cf4cfef4d9c8e23b13c65cb825"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.3.0"
+    version: "3.1.0"
   geocoding_platform_interface:
     dependency: transitive
     description:
@@ -715,18 +715,18 @@ packages:
     dependency: "direct main"
     description:
       name: geolocator
-      sha256: "6cb9fb6e5928b58b9a84bdf85012d757fd07aab8215c5205337021c4999bad27"
+      sha256: "79939537046c9025be47ec645f35c8090ecadb6fe98eba146a0d25e8c1357516"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "11.1.0"
+    version: "14.0.2"
   geolocator_android:
     dependency: transitive
     description:
       name: geolocator_android
-      sha256: fcb1760a50d7500deca37c9a666785c047139b5f9ee15aa5469fae7dbbe3170d
+      sha256: "179c3cb66dfa674fc9ccbf2be872a02658724d1c067634e2c427cf6df7df901a"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "4.6.2"
+    version: "5.0.2"
   geolocator_apple:
     dependency: transitive
     description:
@@ -735,6 +735,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.3.13"
+  geolocator_linux:
+    dependency: transitive
+    description:
+      name: geolocator_linux
+      sha256: c4e966f0a7a87e70049eac7a2617f9e16fd4c585a26e4330bdfc3a71e6a721f3
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.2.3"
   geolocator_platform_interface:
     dependency: transitive
     description:
@@ -747,10 +755,10 @@ packages:
     dependency: transitive
     description:
       name: geolocator_web
-      sha256: "49d8f846ebeb5e2b6641fe477a7e97e5dd73f03cbfef3fd5c42177b7300fb0ed"
+      sha256: b1ae9bdfd90f861fde8fd4f209c37b953d65e92823cb73c7dee1fa021b06f172
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.0.0"
+    version: "4.1.3"
   geolocator_windows:
     dependency: transitive
     description:
@@ -767,6 +775,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.3"
+  gsettings:
+    dependency: transitive
+    description:
+      name: gsettings
+      sha256: "1b0ce661f5436d2db1e51f3c4295a49849f03d304003a7ba177d01e3a858249c"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.2.8"
   html:
     dependency: transitive
     description:
@@ -803,10 +819,18 @@ packages:
     dependency: "direct main"
     description:
       name: image
-      sha256: f31d52537dc417fdcde36088fdf11d191026fd5e4fae742491ebd40e5a8bea7d
+      sha256: "4e973fcf4caae1a4be2fa0a13157aa38a8f9cb049db6529aa00b4d71abc4d928"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "4.3.0"
+    version: "4.5.4"
+  image_gallery_saver:
+    dependency: "direct main"
+    description:
+      name: image_gallery_saver
+      sha256: "0aba74216a4d9b0561510cb968015d56b701ba1bd94aace26aacdd8ae5761816"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.0.3"
   image_picker:
     dependency: "direct main"
     description:
@@ -976,10 +1000,10 @@ packages:
     dependency: "direct main"
     description:
       name: lottie
-      sha256: a93542cc2d60a7057255405f62252533f8e8956e7e06754955669fd32fb4b216
+      sha256: c5fa04a80a620066c15cf19cc44773e19e9b38e989ff23ea32e5903ef1015950
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.7.0"
+    version: "3.3.1"
   markdown:
     dependency: transitive
     description:
@@ -1168,18 +1192,18 @@ packages:
     dependency: "direct main"
     description:
       name: permission_handler
-      sha256: "59adad729136f01ea9e35a48f5d1395e25cba6cea552249ddbe9cf950f5d7849"
+      sha256: bc917da36261b00137bbc8896bf1482169cd76f866282368948f032c8c1caae1
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "11.4.0"
+    version: "12.0.1"
   permission_handler_android:
     dependency: transitive
     description:
       name: permission_handler_android
-      sha256: d3971dcdd76182a0c198c096b5db2f0884b0d4196723d21a866fc4cdea057ebc
+      sha256: "1e3bc410ca1bf84662104b100eb126e066cb55791b7451307f9708d4007350e6"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "12.1.0"
+    version: "13.0.1"
   permission_handler_apple:
     dependency: transitive
     description:
@@ -1252,6 +1276,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.5.1"
+  posix:
+    dependency: transitive
+    description:
+      name: posix
+      sha256: "6323a5b0fa688b6a010df4905a56b00181479e6d10534cecfecede2aa55add61"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "6.0.3"
   process:
     dependency: transitive
     description:
@@ -1368,18 +1400,18 @@ packages:
     dependency: "direct main"
     description:
       name: share_plus
-      sha256: "3ef39599b00059db0990ca2e30fca0a29d8b37aae924d60063f8e0184cf20900"
+      sha256: b2961506569e28948d75ec346c28775bb111986bb69dc6a20754a457e3d97fa0
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "7.2.2"
+    version: "11.0.0"
   share_plus_platform_interface:
     dependency: transitive
     description:
       name: share_plus_platform_interface
-      sha256: "251eb156a8b5fa9ce033747d73535bf53911071f8d3b6f4f0b578505ce0d4496"
+      sha256: "1032d392bc5d2095a77447a805aa3f804d2ae6a4d5eef5e6ebb3bd94c1bc19ef"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.4.0"
+    version: "6.0.0"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -1549,10 +1581,10 @@ packages:
     dependency: "direct main"
     description:
       name: sqflite_common_ffi_web
-      sha256: eb8cd50fa1451e8fa5edf5860d68d504572afaf1e68079933f95e95bf273d445
+      sha256: "983cf7b33b16e6bc086c8e09f6a1fae69d34cdb167d7acaf64cbd3515942d4e6"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.3.6"
+    version: "1.0.0"
   sqflite_darwin:
     dependency: transitive
     description:

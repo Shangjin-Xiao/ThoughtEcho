@@ -441,7 +441,9 @@ class _InsightsPageState extends State<InsightsPage>
                         ),
                       );
                     },
-                  ),                      _isGenerating
+                  ),
+
+                  _isGenerating
                       ? const SizedBox(
                         width: 24,
                         height: 24,

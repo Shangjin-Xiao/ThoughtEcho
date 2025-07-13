@@ -276,6 +276,18 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 获取AI卡片生成功能是否启用
+  bool get aiCardGenerationEnabled {
+    return _appSettings.aiCardGenerationEnabled;
+  }
+
+  // 设置AI卡片生成功能是否启用
+  Future<void> setAICardGenerationEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(aiCardGenerationEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   /// 获取上次记录的版本号
   String? getAppVersion() {
     return _mmkv.getString(_lastVersionKey);

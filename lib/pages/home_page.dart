@@ -13,7 +13,7 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
-import 'insights_page.dart';
+import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
@@ -22,6 +22,12 @@ import '../services/settings_service.dart'; // Import SettingsService
 import '../utils/lottie_animation_manager.dart';
 import '../utils/app_logger.dart';
 import '../utils/daily_prompt_generator.dart';
+import '../services/ai_card_generation_service.dart';
+import '../widgets/svg_card_widget.dart';
+import '../models/generated_card.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -52,6 +58,9 @@ class _HomePageState extends State<HomePage>
       GlobalKey<NoteListViewState>();
   final GlobalKey<DailyQuoteViewState> _dailyQuoteViewKey =
       GlobalKey<DailyQuoteViewState>();
+
+  // AI卡片生成服务
+  AICardGenerationService? _aiCardService;
 
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
@@ -307,7 +316,13 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 保留didChangeDependencies以便将来可能需要监听其他依赖项的变化
+
+    // 初始化AI卡片生成服务
+    if (_aiCardService == null) {
+      final aiService = context.read<AIService>();
+      final settingsService = context.read<SettingsService>();
+      _aiCardService = AICardGenerationService(aiService, settingsService);
+    }
   }
 
   @override
@@ -504,6 +519,9 @@ class _HomePageState extends State<HomePage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Theme.of(context).colorScheme.surface,
       builder:
           (context) => AddNoteDialog(
             prefilledContent: prefilledContent,
@@ -563,6 +581,9 @@ class _HomePageState extends State<HomePage>
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        backgroundColor: Theme.of(context).brightness == Brightness.light 
+            ? Colors.white 
+            : Theme.of(context).colorScheme.surface,
         builder:
             (context) => AddNoteDialog(
               initialQuote: quote,
@@ -620,6 +641,107 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  // 生成AI卡片
+  void _generateAICard(Quote quote) async {
+    if (_aiCardService == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI卡片服务未初始化')),
+      );
+      return;
+    }
+
+    if (!_aiCardService!.isEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI卡片生成功能未启用')),
+      );
+      return;
+    }
+
+    // 显示加载对话框
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const CardGenerationLoadingDialog(),
+    );
+
+    try {
+      // 生成卡片
+      final card = await _aiCardService!.generateCard(note: quote);
+
+      // 关闭加载对话框
+      if (mounted) Navigator.of(context).pop();
+
+      // 显示卡片预览对话框
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => CardPreviewDialog(
+            card: card,
+            onShare: () => _shareCard(card),
+            onSave: () => _saveCard(card),
+          ),
+        );
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      if (mounted) Navigator.of(context).pop();
+
+      // 显示错误信息
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('生成卡片失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // 分享卡片
+  void _shareCard(GeneratedCard card) async {
+    try {
+      final imageBytes = await card.toImageBytes();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/card_${card.id}.png');
+      await file.writeAsBytes(imageBytes);
+
+      await SharePlus.instance.share(
+        ShareParams(
+          text: '来自ThoughtEcho的精美卡片',
+          files: [XFile(file.path)],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分享失败: $e')),
+        );
+      }
+    }
+  }
+
+  // 保存卡片
+  void _saveCard(GeneratedCard card) async {
+    try {
+      final filePath = await _aiCardService!.saveCardAsImage(card);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('卡片已保存到相册: $filePath'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e')),
+        );
+      }
+    }
+  }
+
   // 处理排序变更
   void _handleSortChanged(String sortType, bool sortAscending) {
     setState(() {
@@ -652,6 +774,9 @@ class _HomePageState extends State<HomePage>
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Theme.of(context).colorScheme.surface,
       appBar:
           _currentIndex == 1
               ? null // 记录页不需要标题栏
@@ -940,6 +1065,7 @@ class _HomePageState extends State<HomePage>
                 onEdit: _showEditQuoteDialog,
                 onDelete: _showDeleteConfirmDialog,
                 onAskAI: _showAIQuestionDialog,
+                onGenerateCard: _generateAICard,
                 isLoadingTags: _isLoadingTags, // 传递标签加载状态
                 selectedWeathers: _selectedWeathers,
                 selectedDayPeriods: _selectedDayPeriods,
@@ -953,7 +1079,7 @@ class _HomePageState extends State<HomePage>
             },
           ),
           // AI页
-          const InsightsPage(),
+          const AIFeaturesPage(),
           // 设置页
           const SettingsPage(),
         ],

@@ -5,6 +5,8 @@
 心迹（ThoughtEcho）是一款基于Flutter的本地优先笔记应用，专注于捕捉思维火花、整理个人思考，并通过AI技术提供内容分析和智能洞察。采用本地存储优先策略，确保用户数据隐私和离线可用性。
 
 **重要原则**：在响应用户进行代码更改时，请务必使用最佳实现，注意程序原有逻辑，不要引入重复代码，不要简单问题复杂化。优先使用项目现有的服务和工具类。请你不要生成冗长的项目总结文档
+
+**最新发展**：项目已支持多媒体笔记（图片、音频、视频）、AI卡片生成、大文件流式处理、智能内存管理等高级功能。
 ## 关键架构模式
 
 ### 平台适配策略
@@ -32,6 +34,19 @@ if (Platform.isWindows) {
 - `content`字段：存储纯文本（用于搜索和显示）
 - `deltaContent`字段：存储Quill Delta JSON（富文本格式）
 - `editSource`字段：标识编辑来源（`'fullscreen'`表示富文本编辑）
+
+### 多媒体文件管理架构
+项目实现了完整的多媒体文件管理系统：
+- **LargeFileManager**: 流式文件处理，支持大文件的内存安全操作
+- **StreamFileProcessor**: 分块文件处理，支持进度回调和取消操作
+- **MediaFileService**: 统一的媒体文件服务，支持图片、音频、视频
+- **IntelligentMemoryManager**: 智能内存管理，动态调整处理策略
+
+### 备份系统架构
+支持新旧版本兼容的备份系统：
+- **新版ZIP格式**: 包含媒体文件的完整备份（推荐）
+- **旧版JSON格式**: 纯数据备份，向后兼容
+- **流式处理**: 大文件分块处理，支持进度显示和中断恢复
 
 ## AI服务架构
 
@@ -63,6 +78,13 @@ Stream<String> streamAnalyzeContent(String content) {
   );
 }
 ```
+
+### AI卡片生成服务
+新增`AICardGenerationService`支持AI生成可视化卡片：
+- **智能风格选择**: AI根据内容自动选择合适的卡片风格
+- **SVG生成**: 使用AI生成可缩放的SVG格式卡片
+- **批量处理**: 支持为多条笔记批量生成特色卡片
+- **图片导出**: 支持将SVG卡片转换为图片保存到相册
 
 ## 核心开发模式
 
@@ -104,6 +126,24 @@ try {
 }
 ```
 
+### 大文件处理模式
+使用专门的`LargeFileManager`处理内存敏感操作：
+
+```dart
+// 大文件流式处理标准模式
+try {
+  await LargeFileManager.encodeJsonToFileStreaming(
+    data, outputFile,
+    onProgress: (current, total) => _updateProgress(current / total),
+  );
+} catch (e) {
+  if (e is OutOfMemoryError) {
+    // 内存不足时的专门处理
+    await _handleOutOfMemoryError();
+  }
+}
+```
+
 ## 数据模型设计
 
 ### Quote模型核心字段
@@ -140,6 +180,11 @@ class Quote {
 ### 网络适配
 `AINetworkManager`统一管理所有AI请求，支持多provider故障转移
 
+### 大文件处理工具
+- **LargeFileManager**: 流式JSON编解码，内存安全的大文件操作
+- **StreamFileProcessor**: 可中断的分块文件处理
+- **IntelligentMemoryManager**: 智能内存管理和优化策略
+
 ## 开发注意事项
 
 1. **平台检查**：始终使用`kIsWeb`和`Platform.isXxx`进行平台特定逻辑
@@ -148,6 +193,8 @@ class Quote {
 4. **API密钥**：永远不要在配置文件中存储API密钥，使用`APIKeyManager`
 5. **富文本**：新建富文本功能时使用`NoteFullEditorPage`而非简单文本框
 6. **流式AI**：AI功能优先使用流式响应提升用户体验
+7. **大文件处理**：使用`LargeFileManager`处理可能导致内存不足的操作
+8. **媒体文件**：使用`MediaFileService`统一处理图片、音频、视频文件
 
 ## 重要服务详解
 
@@ -167,6 +214,12 @@ class Quote {
 - **存储适配**：使用`SafeMMKV`包装类处理平台差异
 - **配置管理**：统一管理应用设置、AI配置、主题设置等
 - **数据持久化**：设置变更立即保存并通知监听者
+
+### MediaFileService
+- **多媒体支持**：统一处理图片、音频、视频文件
+- **内存优化**：大文件使用流式处理避免内存溢出
+- **缓存管理**：智能缓存策略提升性能
+- **格式支持**：支持多种主流媒体格式
 
 ## 常见开发任务
 
@@ -188,6 +241,12 @@ class Quote {
 3. 更新相关的条件导入和平台检查代码
 4. 测试平台特定功能（如文件选择、分享等）
 
+### 添加多媒体功能
+1. 使用`MediaFileService`进行文件管理
+2. 大文件必须使用`LargeFileManager`进行流式处理
+3. 在`Quote`模型中添加媒体文件字段
+4. 更新备份服务以包含媒体文件（ZIP格式）
+
 ## 测试与调试
 
 ### 日志系统
@@ -204,5 +263,10 @@ class Quote {
 - 支持数据备份和恢复功能
 - 紧急模式：数据库损坏时显示恢复界面
 - 提供数据库文件导出功能用于调试
+
+### 内存调试
+- `IntelligentMemoryManager`提供内存使用监控
+- `OutOfMemoryError`专门用于内存不足场景
+- 大文件操作会自动检测并处理内存压力
 
 这些指南涵盖了项目的核心架构、关键实现模式和常见开发场景，帮助AI代理快速理解项目结构并提供准确的代码建议。

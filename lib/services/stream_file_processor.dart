@@ -248,7 +248,7 @@ class StreamCancelToken {
   
   void throwIfCancelled() {
     if (_isCancelled) {
-      throw StreamCancelledException('操作已取消');
+      throw const StreamCancelledException('操作已取消');
     }
   }
 }

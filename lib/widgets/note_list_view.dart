@@ -28,6 +28,7 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onEdit;
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
+  final Function(Quote)? onGenerateCard;
   final bool isLoadingTags; // 新增标签加载状态参数
   final List<String> selectedWeathers; // 新增天气筛选参数
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
@@ -46,6 +47,7 @@ class NoteListView extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
+    this.onGenerateCard,
     this.isLoadingTags = false, // 默认为false
     this.selectedWeathers = const [],
     this.selectedDayPeriods = const [],
@@ -485,6 +487,9 @@ class NoteListViewState extends State<NoteListView> {
                   onEdit: () => widget.onEdit(quote),
                   onDelete: () => widget.onDelete(quote),
                   onAskAI: () => widget.onAskAI(quote),
+                  onGenerateCard: widget.onGenerateCard != null
+                      ? () => widget.onGenerateCard!(quote)
+                      : null,
                   tagBuilder: (tag) {
                     return Container(
                       padding: const EdgeInsets.symmetric(
@@ -724,6 +729,9 @@ class NoteListViewState extends State<NoteListView> {
                           showModalBottomSheet(
                             context: context,
                             isScrollControlled: true, // 允许更大的底部表单
+                            backgroundColor: Theme.of(context).brightness == Brightness.light 
+                                ? Colors.white 
+                                : Theme.of(context).colorScheme.surface,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(16),

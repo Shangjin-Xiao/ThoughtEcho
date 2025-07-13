@@ -1035,7 +1035,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: theme.brightness == Brightness.light 
+          ? Colors.white 
+          : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1573,6 +1575,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: theme.brightness == Brightness.light 
+          ? Colors.white 
+          : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(12), // 使用圆角

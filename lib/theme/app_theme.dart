@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import 'package:thoughtecho/utils/app_logger.dart';
-// Import color_utils
 
 class AppTheme with ChangeNotifier {
   static const String _customColorKey = 'custom_color';
@@ -287,18 +286,20 @@ class AppTheme with ChangeNotifier {
 
   // 创建亮色主题数据
   ThemeData createLightThemeData() {
-    return FlexThemeData.light(
+    final baseTheme = FlexThemeData.light(
       colorScheme: lightColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 7,
       subThemesData: const FlexSubThemesData(
         blendOnLevel: 10,
-        blendOnColors: false,
-        useTextTheme: true,
-        useM2StyleDividerInM3: false,
+        blendOnColors: true,  // 恢复旧版本默认值
+        useMaterial3Typography: true,  // 8.x 版本中 useTextTheme 已被重命名
+        useM2StyleDividerInM3: true,  // 恢复旧版本默认值
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
+        interactionEffects: true,  // 恢复旧版本默认值
+        tintedDisabledControls: true,  // 恢复旧版本默认值
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
         cardRadius: cardRadius,
@@ -314,21 +315,44 @@ class AppTheme with ChangeNotifier {
       tones: FlexTones.material(Brightness.light),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
+    
+    // 覆盖特定组件的颜色，使用固定的白色而不是动态颜色
+    return baseTheme.copyWith(
+      // 设置对话框背景为固定白色
+      dialogTheme: baseTheme.dialogTheme.copyWith(
+        backgroundColor: Colors.white,
+      ),
+      // 设置卡片背景为固定白色
+      cardTheme: baseTheme.cardTheme.copyWith(
+        color: Colors.white,
+      ),
+      // 设置底部表单背景为固定白色
+      bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
+        backgroundColor: Colors.white,
+      ),
+      // 设置抽屉背景为固定白色
+      drawerTheme: baseTheme.drawerTheme.copyWith(
+        backgroundColor: Colors.white,
+      ),
+    );
   }
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
-    return FlexThemeData.dark(
+    final baseTheme = FlexThemeData.dark(
       colorScheme: darkColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 10,
       subThemesData: const FlexSubThemesData(
         blendOnLevel: 15,
-        useTextTheme: true,
-        useM2StyleDividerInM3: false,
+        blendOnColors: true,  // 恢复旧版本默认值
+        useMaterial3Typography: true,  // 8.x 版本中 useTextTheme 已被重命名
+        useM2StyleDividerInM3: true,  // 恢复旧版本默认值
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
+        interactionEffects: true,  // 恢复旧版本默认值
+        tintedDisabledControls: true,  // 恢复旧版本默认值
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
         cardRadius: cardRadius,
@@ -343,6 +367,26 @@ class AppTheme with ChangeNotifier {
       keyColors: const FlexKeyColors(useSecondary: true, useTertiary: true),
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
+    );
+    
+    // 覆盖特定组件的颜色，使用固定的深色而不是动态颜色
+    return baseTheme.copyWith(
+      // 设置对话框背景为固定深灰色
+      dialogTheme: baseTheme.dialogTheme.copyWith(
+        backgroundColor: const Color(0xFF1E1E1E),
+      ),
+      // 设置卡片背景为固定深灰色
+      cardTheme: baseTheme.cardTheme.copyWith(
+        color: const Color(0xFF2D2D2D),
+      ),
+      // 设置底部表单背景为固定深灰色
+      bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
+        backgroundColor: const Color(0xFF2D2D2D),
+      ),
+      // 设置抽屉背景为固定深灰色
+      drawerTheme: baseTheme.drawerTheme.copyWith(
+        backgroundColor: const Color(0xFF1E1E1E),
+      ),
     );
   }
 }
