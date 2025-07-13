@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/generated_card.dart';
@@ -25,6 +26,12 @@ class SVGCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 在debug模式下打印SVG内容用于调试
+    if (kDebugMode) {
+      print('SVG渲染 - 内容长度: ${svgContent.length}');
+      print('SVG渲染 - 前100字符: ${svgContent.length > 100 ? svgContent.substring(0, 100) : svgContent}');
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -42,47 +49,91 @@ class SVGCardWidget extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: SvgPicture.string(
-            svgContent,
-            fit: fit,
-            placeholderBuilder: showLoadingIndicator
-                ? (context) => Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                : null,
-            errorBuilder: (context, error, stackTrace) {
-              return errorWidget ??
-                  Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'SVG渲染失败',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-            },
-          ),
+          child: _buildSVGWidget(),
         ),
       ),
     );
+  }
+
+  Widget _buildSVGWidget() {
+    try {
+      // 验证SVG内容
+      if (svgContent.trim().isEmpty) {
+        return _buildErrorWidget('SVG内容为空');
+      }
+
+      if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
+        return _buildErrorWidget('无效的SVG格式');
+      }
+
+      return SvgPicture.string(
+        svgContent,
+        fit: fit,
+        placeholderBuilder: showLoadingIndicator
+            ? (context) => Container(
+                color: Colors.grey[200],
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            : null,
+        errorBuilder: (context, error, stackTrace) {
+          if (kDebugMode) {
+            print('SVG渲染错误: $error');
+            print('SVG内容: $svgContent');
+            print('错误堆栈: $stackTrace');
+          }
+          return _buildErrorWidget('SVG渲染失败: ${error.toString()}');
+        },
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('SVG组件构建错误: $e');
+      }
+      return _buildErrorWidget('SVG组件错误: ${e.toString()}');
+    }
+  }
+
+  Widget _buildErrorWidget(String message) {
+    return errorWidget ??
+        Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'SVG渲染失败',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
   }
 }
 
