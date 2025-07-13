@@ -1081,7 +1081,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 validator: _validateApiKey,
               ),
               const SizedBox(height: 16),
-              TextField(
+              TextFormField(
                 controller: _modelController,
                 decoration: InputDecoration(
                   labelText: '模型名称',
