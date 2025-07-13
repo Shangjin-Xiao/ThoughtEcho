@@ -24,11 +24,12 @@ class EnhancedAILoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (context) => EnhancedAILoadingDialog(
-        message: message,
-        animationType: LottieAnimationType.aiThinking,
-        barrierDismissible: barrierDismissible,
-      ),
+      builder:
+          (context) => EnhancedAILoadingDialog(
+            message: message,
+            animationType: LottieAnimationType.aiThinking,
+            barrierDismissible: barrierDismissible,
+          ),
     );
   }
 
@@ -41,11 +42,12 @@ class EnhancedAILoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (context) => EnhancedAILoadingDialog(
-        message: message,
-        animationType: LottieAnimationType.modernLoading,
-        barrierDismissible: barrierDismissible,
-      ),
+      builder:
+          (context) => EnhancedAILoadingDialog(
+            message: message,
+            animationType: LottieAnimationType.modernLoading,
+            barrierDismissible: barrierDismissible,
+          ),
     );
   }
 
@@ -58,11 +60,12 @@ class EnhancedAILoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (context) => EnhancedAILoadingDialog(
-        message: message,
-        animationType: LottieAnimationType.aiThinking,
-        barrierDismissible: barrierDismissible,
-      ),
+      builder:
+          (context) => EnhancedAILoadingDialog(
+            message: message,
+            animationType: LottieAnimationType.aiThinking,
+            barrierDismissible: barrierDismissible,
+          ),
     );
   }
 
@@ -152,19 +155,20 @@ class EnhancedAIProgressDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (context) => EnhancedAIProgressDialog(
-        message: message,
-        progress: progress,
-        animationType: animationType,
-        barrierDismissible: barrierDismissible,
-      ),
+      builder:
+          (context) => EnhancedAIProgressDialog(
+            message: message,
+            progress: progress,
+            animationType: animationType,
+            barrierDismissible: barrierDismissible,
+          ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -185,12 +189,8 @@ class EnhancedAIProgressDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Lottie动画
-            EnhancedLottieAnimation(
-              type: animationType,
-              width: 80,
-              height: 80,
-            ),
-            
+            EnhancedLottieAnimation(type: animationType, width: 80, height: 80),
+
             if (message != null) ...[
               const SizedBox(height: 20),
               Text(
@@ -202,9 +202,9 @@ class EnhancedAIProgressDialog extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ],
-            
+
             const SizedBox(height: 20),
-            
+
             // 进度条
             SizedBox(
               width: 200,

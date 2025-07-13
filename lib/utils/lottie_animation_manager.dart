@@ -7,19 +7,27 @@ class LottieAnimationManager {
   static const String _basePath = 'assets/lottie/';
 
   static const Map<LottieAnimationType, String> _animationPaths = {
-    LottieAnimationType.loading: '${_basePath}custom_loading.json',          // 使用自定义加载动画
-    LottieAnimationType.modernLoading: '${_basePath}custom_loading.json',    // 使用自定义加载动画
-    LottieAnimationType.pulseLoading: '${_basePath}custom_loading.json',     // 使用自定义加载动画
-    LottieAnimationType.aiThinking: '${_basePath}custom_loading.json',      // AI加载用custom_loading
-    LottieAnimationType.searchLoading: '${_basePath}search_loading.json',   // 笔记搜索用search_loading
-    LottieAnimationType.customLoading: '${_basePath}custom_loading.json',   // 自定义加载
-    LottieAnimationType.weatherSearchLoading: '${_basePath}weather_search_loading.json', // 天气搜索专用
-    LottieAnimationType.notFound: '${_basePath}not_found.json',             // 搜索无结果用not_found
+    LottieAnimationType.loading: '${_basePath}custom_loading.json', // 使用自定义加载动画
+    LottieAnimationType.modernLoading:
+        '${_basePath}custom_loading.json', // 使用自定义加载动画
+    LottieAnimationType.pulseLoading:
+        '${_basePath}custom_loading.json', // 使用自定义加载动画
+    LottieAnimationType.aiThinking:
+        '${_basePath}custom_loading.json', // AI加载用custom_loading
+    LottieAnimationType.searchLoading:
+        '${_basePath}search_loading.json', // 笔记搜索用search_loading
+    LottieAnimationType.customLoading:
+        '${_basePath}custom_loading.json', // 自定义加载
+    LottieAnimationType.weatherSearchLoading:
+        '${_basePath}weather_search_loading.json', // 天气搜索专用
+    LottieAnimationType.notFound:
+        '${_basePath}not_found.json', // 搜索无结果用not_found
   };
 
   /// 获取动画资源路径
   static String getAnimationPath(LottieAnimationType type) {
-    return _animationPaths[type] ?? _animationPaths[LottieAnimationType.loading]!;
+    return _animationPaths[type] ??
+        _animationPaths[LottieAnimationType.loading]!;
   }
 
   /// 预加载动画资源
@@ -56,7 +64,7 @@ class LottieAnimationManager {
           repeat: true,
           reverse: false,
           autoPlay: true,
-          width: 360,  
+          width: 360,
           height: 360,
         );
       case LottieAnimationType.weatherSearchLoading:
@@ -64,7 +72,7 @@ class LottieAnimationManager {
           repeat: true,
           reverse: false,
           autoPlay: true,
-          width: 540,  
+          width: 540,
           height: 540,
         );
       case LottieAnimationType.notFound:
@@ -82,14 +90,14 @@ class LottieAnimationManager {
 
 /// Lottie动画类型枚举
 enum LottieAnimationType {
-  loading,         // 三点加载动画
-  modernLoading,   // 现代加载动画
-  pulseLoading,    // 脉冲加载动画
-  aiThinking,      // AI大脑思考动画
-  searchLoading,   // 搜索笔记专用加载动画
-  customLoading,   // 用户自定义加载动画
+  loading, // 三点加载动画
+  modernLoading, // 现代加载动画
+  pulseLoading, // 脉冲加载动画
+  aiThinking, // AI大脑思考动画
+  searchLoading, // 搜索笔记专用加载动画
+  customLoading, // 用户自定义加载动画
   weatherSearchLoading, // 天气搜索加载动画
-  notFound,        // 搜索无结果动画
+  notFound, // 搜索无结果动画
 }
 
 /// Lottie动画配置
@@ -140,7 +148,8 @@ class EnhancedLottieAnimation extends StatefulWidget {
   });
 
   @override
-  State<EnhancedLottieAnimation> createState() => _EnhancedLottieAnimationState();
+  State<EnhancedLottieAnimation> createState() =>
+      _EnhancedLottieAnimationState();
 }
 
 class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
@@ -152,7 +161,7 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
   void initState() {
     super.initState();
     final config = LottieAnimationManager.getAnimationConfig(widget.type);
-    
+
     _controller = AnimationController(
       duration: widget.duration ?? const Duration(seconds: 2),
       vsync: this,
@@ -190,7 +199,10 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
     }
 
     return Semantics(
-      label: widget.semanticLabel ?? config.semanticLabel ?? _getDefaultSemanticLabel(),
+      label:
+          widget.semanticLabel ??
+          config.semanticLabel ??
+          _getDefaultSemanticLabel(),
       child: SizedBox(
         width: finalWidth,
         height: finalHeight,

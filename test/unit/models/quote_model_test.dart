@@ -1,5 +1,6 @@
 /// Unit tests for Quote model
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 

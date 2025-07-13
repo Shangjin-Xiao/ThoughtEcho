@@ -568,7 +568,9 @@ class EmergencyRecoveryPage extends StatelessWidget {
                       // 成功后导航到主页
                       await Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const HomePage()),
+                        MaterialPageRoute(
+                          builder: (context) => const HomePage(),
+                        ),
                       );
                     } catch (e) {
                       if (!context.mounted) return;

@@ -33,8 +33,11 @@ class MediaOptimizationUtils {
       }
 
       // 检查文件大小，对于超大图片使用分块处理
-      if (fileSize > 100 * 1024 * 1024) { // 100MB以上
-        logDebug('图片文件过大 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)，跳过优化');
+      if (fileSize > 100 * 1024 * 1024) {
+        // 100MB以上
+        logDebug(
+          '图片文件过大 (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)，跳过优化',
+        );
         await file.copy(outputPath);
         return outputPath;
       }

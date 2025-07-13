@@ -3,7 +3,7 @@ import 'package:lottie/lottie.dart';
 import '../../config/lottie_config.dart';
 
 /// 通用Lottie动画组件
-/// 
+///
 /// 支持多种动画场景和自定义配置
 class LottieAnimationWidget extends StatefulWidget {
   final String? animationPath;
@@ -33,8 +33,10 @@ class LottieAnimationWidget extends StatefulWidget {
     this.color,
     this.speed = 1.0,
     this.autoPlay = true,
-  }) : assert(animationPath != null || scene != null,
-             '必须提供animationPath或scene参数');
+  }) : assert(
+         animationPath != null || scene != null,
+         '必须提供animationPath或scene参数',
+       );
 
   /// 快捷构造函数 - 使用预设场景
   const LottieAnimationWidget.scene(
@@ -95,16 +97,15 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   }
 
   void _setupController() {
-    _controller = widget.controller ??
-        AnimationController(
-          vsync: this,
-          duration: const Duration(seconds: 2),
-        );
+    _controller =
+        widget.controller ??
+        AnimationController(vsync: this, duration: const Duration(seconds: 2));
 
     // 设置播放速度
     if (widget.speed != null && widget.speed != 1.0) {
       _controller.duration = Duration(
-        milliseconds: (_controller.duration!.inMilliseconds / widget.speed!).round(),
+        milliseconds:
+            (_controller.duration!.inMilliseconds / widget.speed!).round(),
       );
     }
 
@@ -141,11 +142,8 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
           _controller.duration = composition.duration;
           widget.onLoaded?.call();
         },
-        options: widget.color != null 
-          ? LottieOptions(
-              enableMergePaths: true,
-            )
-          : null,
+        options:
+            widget.color != null ? LottieOptions(enableMergePaths: true) : null,
       ),
     );
   }

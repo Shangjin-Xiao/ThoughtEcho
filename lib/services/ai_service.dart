@@ -495,7 +495,7 @@ class AIService extends ChangeNotifier {
         );
 
         String result = _requestHelper.parseResponse(response);
-        
+
         // 验证返回内容是否为HTML格式
         if (!_isValidHtml(result)) {
           // 如果不是HTML格式，尝试包装或生成备用HTML
@@ -511,8 +511,8 @@ class AIService extends ChangeNotifier {
   // 验证是否为有效的HTML格式
   bool _isValidHtml(String content) {
     final trimmed = content.trim();
-    return trimmed.toLowerCase().startsWith('<!doctype html') || 
-           trimmed.toLowerCase().startsWith('<html');
+    return trimmed.toLowerCase().startsWith('<!doctype html') ||
+        trimmed.toLowerCase().startsWith('<html');
   }
 
   // 生成备用HTML报告
@@ -521,7 +521,7 @@ class AIService extends ChangeNotifier {
     final yearMatch = RegExp(r'年份：(\d{4})').firstMatch(prompt);
     final notesMatch = RegExp(r'总笔记数：(\d+)').firstMatch(prompt);
     final wordsMatch = RegExp(r'总字数：(\d+)').firstMatch(prompt);
-    
+
     final year = yearMatch?.group(1) ?? DateTime.now().year.toString();
     final totalNotes = notesMatch?.group(1) ?? '0';
     final totalWords = wordsMatch?.group(1) ?? '0';
@@ -967,7 +967,8 @@ class AIService extends ChangeNotifier {
 
         final response = await _requestHelper.makeRequestWithProvider(
           url: currentProvider.apiUrl,
-          systemPrompt: 'You are an expert SVG designer. Generate clean, valid SVG code based on the user\'s requirements. Only return the SVG code without any explanations or markdown formatting.',
+          systemPrompt:
+              'You are an expert SVG designer. Generate clean, valid SVG code based on the user\'s requirements. Only return the SVG code without any explanations or markdown formatting.',
           userMessage: prompt,
           provider: currentProvider,
           temperature: 0.7, // 适中的创意性

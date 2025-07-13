@@ -3,7 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'unified_media_import_dialog.dart';
 
 /// 统一的增强工具栏组件
-/// 
+///
 /// 整合了两个原有工具栏的优点：
 /// - 使用官方组件确保稳定性
 /// - 保留自定义功能的完整性
@@ -78,7 +78,8 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
             // 第三组：标题
             quill.QuillToolbarSelectHeaderStyleDropdownButton(
               controller: widget.controller,
-              options: const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
+              options:
+                  const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
             ),
             _buildDivider(),
 
@@ -193,7 +194,9 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
       width: 1,
       height: 24,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+      color: Theme.of(
+        context,
+      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
     );
   }
 
@@ -227,12 +230,13 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
   void _showUnifiedMediaDialog(String mediaType) {
     showDialog(
       context: context,
-      builder: (context) => UnifiedMediaImportDialog(
-        mediaType: mediaType,
-        onMediaImported: (String filePath) {
-          _insertMediaIntoEditor(filePath, mediaType);
-        },
-      ),
+      builder:
+          (context) => UnifiedMediaImportDialog(
+            mediaType: mediaType,
+            onMediaImported: (String filePath) {
+              _insertMediaIntoEditor(filePath, mediaType);
+            },
+          ),
     );
   }
 
@@ -263,12 +267,7 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
         case 'audio':
           // 创建自定义音频嵌入块
           final audioEmbed = quill.CustomBlockEmbed('audio', filePath);
-          widget.controller.replaceText(
-            index,
-            length,
-            audioEmbed,
-            null,
-          );
+          widget.controller.replaceText(index, length, audioEmbed, null);
           break;
       }
 

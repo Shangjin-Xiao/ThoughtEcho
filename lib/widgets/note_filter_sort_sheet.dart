@@ -206,9 +206,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   }) {
     return Card(
       elevation: 0,
-      color: theme.brightness == Brightness.light 
-          ? Colors.white 
-          : theme.colorScheme.surface,
+      color:
+          theme.brightness == Brightness.light
+              ? Colors.white
+              : theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -306,10 +307,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                       : (tagIcon is IconData) // Check if it's IconData
                       ? Icon(tagIcon, size: 16)
                       : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                  const SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    tag.name, 
+                    tag.name,
                     style: theme.textTheme.bodyMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -352,7 +353,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    label, 
+                    label,
                     style: theme.textTheme.bodyMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -399,7 +400,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    label, 
+                    label,
                     style: theme.textTheme.bodyMedium,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -39,7 +39,8 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: widget.theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              color: widget.theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.5),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(7),
                 topRight: Radius.circular(7),
@@ -53,7 +54,9 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: widget.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: widget.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                 ),
                 IconButton(

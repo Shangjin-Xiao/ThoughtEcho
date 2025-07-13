@@ -39,9 +39,7 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const AISettingsPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const AISettingsPage()),
               );
             },
           ),
@@ -49,23 +47,14 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(
-              icon: Icon(Icons.insights),
-              text: 'AI洞察',
-            ),
-            Tab(
-              icon: Icon(Icons.auto_awesome),
-              text: 'AI周期报告',
-            ),
+            Tab(icon: Icon(Icons.insights), text: 'AI洞察'),
+            Tab(icon: Icon(Icons.auto_awesome), text: 'AI周期报告'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          InsightsPage(),
-          AIPeriodicReportPage(),
-        ],
+        children: const [InsightsPage(), AIPeriodicReportPage()],
       ),
     );
   }
@@ -111,11 +100,7 @@ class AIFeatureCard extends StatelessWidget {
                       color: cardColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      icon,
-                      color: cardColor,
-                      size: 24,
-                    ),
+                    child: Icon(icon, color: cardColor, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

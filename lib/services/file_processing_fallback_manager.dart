@@ -6,35 +6,48 @@ import 'stream_file_processor.dart';
 import 'large_file_manager.dart';
 
 /// 文件处理降级策略管理器
-/// 
+///
 /// 实现多级降级处理策略，当内存不足时自动切换到更保守的处理模式
 class FileProcessingFallbackManager {
-  static final FileProcessingFallbackManager _instance = FileProcessingFallbackManager._internal();
+  static final FileProcessingFallbackManager _instance =
+      FileProcessingFallbackManager._internal();
   factory FileProcessingFallbackManager() => _instance;
   FileProcessingFallbackManager._internal();
 
   final IntelligentMemoryManager _memoryManager = IntelligentMemoryManager();
-  
+
   // 降级策略配置
   static const List<ProcessingLevel> processingLevels = [
-    ProcessingLevel.optimal,      // 最优性能
-    ProcessingLevel.balanced,     // 平衡模式
+    ProcessingLevel.optimal, // 最优性能
+    ProcessingLevel.balanced, // 平衡模式
     ProcessingLevel.conservative, // 保守模式
-    ProcessingLevel.minimal,      // 最小化模式
-    ProcessingLevel.emergency,    // 紧急模式
+    ProcessingLevel.minimal, // 最小化模式
+    ProcessingLevel.emergency, // 紧急模式
   ];
-  
+
   /// 初始化降级策略管理器
   Future<void> initialize() async {
     // 注册各种操作的自适应策略
-    _memoryManager.registerStrategy('file_copy', FileProcessingAdaptiveStrategy());
-    _memoryManager.registerStrategy('backup_import', BackupRestoreAdaptiveStrategy());
-    _memoryManager.registerStrategy('media_processing', MediaProcessingAdaptiveStrategy());
-    _memoryManager.registerStrategy('text_processing', TextProcessingAdaptiveStrategy());
-    
+    _memoryManager.registerStrategy(
+      'file_copy',
+      FileProcessingAdaptiveStrategy(),
+    );
+    _memoryManager.registerStrategy(
+      'backup_import',
+      BackupRestoreAdaptiveStrategy(),
+    );
+    _memoryManager.registerStrategy(
+      'media_processing',
+      MediaProcessingAdaptiveStrategy(),
+    );
+    _memoryManager.registerStrategy(
+      'text_processing',
+      TextProcessingAdaptiveStrategy(),
+    );
+
     logDebug('文件处理降级策略管理器已初始化');
   }
-  
+
   /// 执行文件复制操作（带降级策略）
   Future<void> copyFileWithFallback(
     String sourcePath,
@@ -44,7 +57,7 @@ class FileProcessingFallbackManager {
     StreamCancelToken? cancelToken,
   }) async {
     final fileSize = await File(sourcePath).length();
-    
+
     await _memoryManager.executeWithAdaptiveStrategy(
       'file_copy',
       (strategy) async {
@@ -65,7 +78,7 @@ class FileProcessingFallbackManager {
       },
     );
   }
-  
+
   /// 执行备份导入操作（带降级策略）
   Future<void> importBackupWithFallback(
     String backupPath, {
@@ -73,7 +86,7 @@ class FileProcessingFallbackManager {
     StreamCancelToken? cancelToken,
   }) async {
     final fileSize = await File(backupPath).length();
-    
+
     await _memoryManager.executeWithAdaptiveStrategy(
       'backup_import',
       (strategy) async {
@@ -85,13 +98,10 @@ class FileProcessingFallbackManager {
         );
       },
       dataSize: fileSize,
-      context: {
-        'operation': 'backup_import',
-        'backup_path': backupPath,
-      },
+      context: {'operation': 'backup_import', 'backup_path': backupPath},
     );
   }
-  
+
   /// 执行媒体文件处理（带降级策略）
   Future<String?> processMediaWithFallback(
     String sourcePath,
@@ -101,7 +111,7 @@ class FileProcessingFallbackManager {
     StreamCancelToken? cancelToken,
   }) async {
     final fileSize = await File(sourcePath).length();
-    
+
     return await _memoryManager.executeWithAdaptiveStrategy(
       'media_processing',
       (strategy) async {
@@ -122,7 +132,7 @@ class FileProcessingFallbackManager {
       },
     );
   }
-  
+
   /// 执行文本处理（带降级策略）
   Future<String> processTextWithFallback(
     String content, {
@@ -130,7 +140,7 @@ class FileProcessingFallbackManager {
     Map<String, dynamic>? options,
   }) async {
     final contentSize = content.length * 2; // 估算字节大小
-    
+
     return await _memoryManager.executeWithAdaptiveStrategy(
       'text_processing',
       (strategy) async {
@@ -148,7 +158,7 @@ class FileProcessingFallbackManager {
       },
     );
   }
-  
+
   /// 根据策略执行文件复制
   Future<void> _executeCopyWithStrategy(
     String sourcePath,
@@ -159,7 +169,7 @@ class FileProcessingFallbackManager {
     StreamCancelToken? cancelToken,
   }) async {
     onStatusUpdate?.call('使用策略: ${strategy.description}');
-    
+
     if (strategy.useStreaming) {
       // 使用流式处理
       final processor = StreamFileProcessor();
@@ -180,7 +190,7 @@ class FileProcessingFallbackManager {
       );
     }
   }
-  
+
   /// 根据策略执行备份导入
   Future<void> _executeBackupImportWithStrategy(
     String backupPath,
@@ -189,16 +199,26 @@ class FileProcessingFallbackManager {
     StreamCancelToken? cancelToken,
   }) async {
     logDebug('执行备份导入，策略: ${strategy.description}');
-    
+
     if (strategy.useStreaming) {
       // 使用流式导入
-      await _streamingBackupImport(backupPath, strategy, onProgress, cancelToken);
+      await _streamingBackupImport(
+        backupPath,
+        strategy,
+        onProgress,
+        cancelToken,
+      );
     } else {
       // 使用传统导入
-      await _traditionalBackupImport(backupPath, strategy, onProgress, cancelToken);
+      await _traditionalBackupImport(
+        backupPath,
+        strategy,
+        onProgress,
+        cancelToken,
+      );
     }
   }
-  
+
   /// 根据策略执行媒体处理
   Future<String?> _executeMediaProcessingWithStrategy(
     String sourcePath,
@@ -209,17 +229,23 @@ class FileProcessingFallbackManager {
     StreamCancelToken? cancelToken,
   }) async {
     logDebug('执行媒体处理，策略: ${strategy.description}');
-    
+
     // 根据策略选择处理方法
     if (strategy.name == 'minimal' || strategy.name == 'memory_conservative') {
       // 最小化处理：只复制文件，不进行转换
       return await _copyMediaFile(sourcePath, targetDirectory, onProgress);
     } else {
       // 正常处理：可能包含格式转换等
-      return await _processMediaFile(sourcePath, targetDirectory, strategy, mediaType, onProgress);
+      return await _processMediaFile(
+        sourcePath,
+        targetDirectory,
+        strategy,
+        mediaType,
+        onProgress,
+      );
     }
   }
-  
+
   /// 根据策略执行文本处理
   Future<String> _executeTextProcessingWithStrategy(
     String content,
@@ -228,7 +254,7 @@ class FileProcessingFallbackManager {
     Map<String, dynamic>? options,
   }) async {
     logDebug('执行文本处理，策略: ${strategy.description}');
-    
+
     if (strategy.name == 'minimal') {
       // 最小化处理：直接返回原内容
       return content;
@@ -240,7 +266,7 @@ class FileProcessingFallbackManager {
       return await _processTextDirect(content, operation, options);
     }
   }
-  
+
   /// 流式备份导入
   Future<void> _streamingBackupImport(
     String backupPath,
@@ -252,7 +278,7 @@ class FileProcessingFallbackManager {
     logDebug('使用流式备份导入');
     // 这里应该调用实际的流式导入方法
   }
-  
+
   /// 传统备份导入
   Future<void> _traditionalBackupImport(
     String backupPath,
@@ -264,23 +290,28 @@ class FileProcessingFallbackManager {
     logDebug('使用传统备份导入');
     // 这里应该调用实际的传统导入方法
   }
-  
+
   /// 复制媒体文件
   Future<String?> _copyMediaFile(
     String sourcePath,
     String targetDirectory,
     Function(double progress)? onProgress,
   ) async {
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${sourcePath.split('/').last}';
+    final fileName =
+        '${DateTime.now().millisecondsSinceEpoch}_${sourcePath.split('/').last}';
     final targetPath = '$targetDirectory/$fileName';
-    
-    await copyFileWithFallback(sourcePath, targetPath, onProgress: (current, total) {
-      onProgress?.call(current / total);
-    });
-    
+
+    await copyFileWithFallback(
+      sourcePath,
+      targetPath,
+      onProgress: (current, total) {
+        onProgress?.call(current / total);
+      },
+    );
+
     return targetPath;
   }
-  
+
   /// 处理媒体文件
   Future<String?> _processMediaFile(
     String sourcePath,
@@ -293,7 +324,7 @@ class FileProcessingFallbackManager {
     logDebug('处理媒体文件: $mediaType');
     return await _copyMediaFile(sourcePath, targetDirectory, onProgress);
   }
-  
+
   /// 在Isolate中处理文本
   Future<String> _processTextInIsolate(
     String content,
@@ -304,7 +335,7 @@ class FileProcessingFallbackManager {
     logDebug('在Isolate中处理文本');
     return content; // 暂时直接返回
   }
-  
+
   /// 直接处理文本
   Future<String> _processTextDirect(
     String content,
@@ -319,11 +350,11 @@ class FileProcessingFallbackManager {
 
 /// 处理级别
 enum ProcessingLevel {
-  optimal,      // 最优性能
-  balanced,     // 平衡模式
+  optimal, // 最优性能
+  balanced, // 平衡模式
   conservative, // 保守模式
-  minimal,      // 最小化模式
-  emergency,    // 紧急模式
+  minimal, // 最小化模式
+  emergency, // 紧急模式
 }
 
 /// 媒体处理自适应策略
@@ -331,15 +362,16 @@ class MediaProcessingAdaptiveStrategy implements AdaptiveStrategy {
   @override
   OperationStrategy getStrategy(MemoryContext context) {
     final dataSize = context.dataSize ?? 0;
-    
+
     if (context.isCriticalPressure) {
       return OperationStrategy.minimal();
     }
-    
-    if (context.isHighPressure || dataSize > 500 * 1024 * 1024) { // 500MB以上
+
+    if (context.isHighPressure || dataSize > 500 * 1024 * 1024) {
+      // 500MB以上
       return OperationStrategy.memoryConservative();
     }
-    
+
     return OperationStrategy.defaultStrategy();
   }
 }
@@ -349,17 +381,16 @@ class TextProcessingAdaptiveStrategy implements AdaptiveStrategy {
   @override
   OperationStrategy getStrategy(MemoryContext context) {
     final dataSize = context.dataSize ?? 0;
-    
+
     if (context.isCriticalPressure) {
       return OperationStrategy.minimal();
     }
-    
-    if (dataSize > 10 * 1024 * 1024) { // 10MB以上文本
-      return OperationStrategy.memoryConservative().copyWith(
-        useIsolate: true,
-      );
+
+    if (dataSize > 10 * 1024 * 1024) {
+      // 10MB以上文本
+      return OperationStrategy.memoryConservative().copyWith(useIsolate: true);
     }
-    
+
     return OperationStrategy.defaultStrategy();
   }
 }

@@ -126,7 +126,7 @@ class MediaFileService {
       }, operationName: '视频保存');
     } catch (e) {
       debugPrint('保存视频失败: $e');
-      
+
       // 提供更详细的错误信息
       String errorMessage;
       if (e is CancelledException) {
@@ -140,7 +140,7 @@ class MediaFileService {
       } else {
         errorMessage = '保存失败: ${e.toString()}';
       }
-      
+
       onStatusUpdate?.call(errorMessage);
       return null;
     }

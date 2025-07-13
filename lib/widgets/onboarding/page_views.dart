@@ -101,7 +101,9 @@ class _WelcomePageViewState extends State<WelcomePageView>
                       Text(
                         widget.pageData.description!,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -220,11 +222,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _animationController,
-          curve: Interval(
-            startDelay,
-            endTime,
-            curve: Curves.easeOutCubic,
-          ),
+          curve: Interval(startDelay, endTime, curve: Curves.easeOutCubic),
         ),
       );
     });
@@ -313,7 +311,9 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,19 +336,17 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
             ],
           ),
           const SizedBox(height: 12),
-          ...OnboardingConfig.quickTips
-              .map(
-                (tip) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    tip,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                    ),
-                  ),
+          ...OnboardingConfig.quickTips.map(
+            (tip) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                tip,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
-              )
-              ,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -433,7 +431,9 @@ class _FeatureCard extends StatelessWidget {
                             isHighlight
                                 ? theme.colorScheme.onPrimaryContainer
                                     .withValues(alpha: 0.8)
-                                : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                ),
                       ),
                     ),
                   ],

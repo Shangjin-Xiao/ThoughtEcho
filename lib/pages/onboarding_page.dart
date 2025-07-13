@@ -155,6 +155,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
     return _buildOnboardingView();
   }
+
   /// 加载视图
   Widget _buildLoadingView() {
     return Scaffold(
@@ -251,7 +252,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                       '心迹已成功更新到新版本\n数据已自动迁移，无需手动操作',
                       style: theme.textTheme.titleLarge,
                       textAlign: TextAlign.center,
-                    ),                    const SizedBox(height: 32),
+                    ),
+                    const SizedBox(height: 32),
                     if (_errorMessage == null)
                       const EnhancedLottieAnimation(
                         type: LottieAnimationType.pulseLoading,
@@ -450,7 +452,8 @@ class _OnboardingPageState extends State<OnboardingPage>
             if (OnboardingConfig.isLastPage(state.currentPageIndex))
               FilledButton.icon(
                 onPressed:
-                    state.isCompleting ? null : controller.completeOnboarding,                icon:
+                    state.isCompleting ? null : controller.completeOnboarding,
+                icon:
                     state.isCompleting
                         ? const SizedBox(
                           width: 18,

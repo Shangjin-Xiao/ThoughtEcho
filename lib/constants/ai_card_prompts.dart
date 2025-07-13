@@ -1,9 +1,7 @@
 /// AI卡片生成提示词常量
 class AICardPrompts {
   /// 随机风格海报提示词（移植自302_ai_card_generation项目）
-  static String randomStylePosterPrompt({
-    required String content,
-  }) {
+  static String randomStylePosterPrompt({required String content}) {
     return '''
 您是一位专业的平面设计师和SVG开发专家，在视觉美学和技术实现方面拥有高度的专业知识。你的最终作品将让观众惊叹不已，并被视为真正的艺术杰作。
 

@@ -1,5 +1,6 @@
 /// Basic unit tests for DatabaseService
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';
@@ -28,10 +29,7 @@ void main() {
     });
 
     test('should create NoteCategory model correctly', () {
-      final category = NoteCategory(
-        id: 'test-id',
-        name: '测试分类',
-      );
+      final category = NoteCategory(id: 'test-id', name: '测试分类');
 
       expect(category.id, equals('test-id'));
       expect(category.name, equals('测试分类'));

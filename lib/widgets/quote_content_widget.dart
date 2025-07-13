@@ -29,7 +29,7 @@ class QuoteContent extends StatelessWidget {
         // 解析富文本内容
         final document = quill.Document.fromJson(
           jsonDecode(quote.deltaContent!),
-        );        // 创建只读QuillController
+        ); // 创建只读QuillController
         final controller = quill.QuillController(
           document: document,
           selection: const TextSelection.collapsed(offset: 0),
@@ -60,13 +60,12 @@ class QuoteContent extends StatelessWidget {
         // 如果需要限制行数（折叠状态），使用ConstrainedBox包装
         if (!showFullContent && maxLines != null) {
           // 计算最大高度（每行大约24像素，根据实际字体大小调整）
-          final estimatedLineHeight = (style?.height ?? 1.5) * (style?.fontSize ?? 14);
+          final estimatedLineHeight =
+              (style?.height ?? 1.5) * (style?.fontSize ?? 14);
           final maxHeight = estimatedLineHeight * maxLines!;
-          
+
           return ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: maxHeight,
-            ),
+            constraints: BoxConstraints(maxHeight: maxHeight),
             child: ClipRect(
               child: Stack(
                 children: [
@@ -83,8 +82,12 @@ class QuoteContent extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Theme.of(context).colorScheme.surface.withValues(alpha: 0.0),
-                            Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                            Theme.of(
+                              context,
+                            ).colorScheme.surface.withValues(alpha: 0.0),
+                            Theme.of(
+                              context,
+                            ).colorScheme.surface.withValues(alpha: 0.8),
                             Theme.of(context).colorScheme.surface,
                           ],
                         ),

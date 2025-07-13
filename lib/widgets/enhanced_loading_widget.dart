@@ -62,24 +62,22 @@ class EnhancedLoadingWidget extends StatelessWidget {
        customMessage = null;
 
   /// EnhancedLoadingWidget.thinking 改为原生思考动画
-  const EnhancedLoadingWidget.thinking({
-    super.key,
-    this.message = 'AI正在思考...',
-  }) : animationType = LottieAnimationType.aiThinking,
-       size = 80,
-       textColor = null,
-       textStyle = null,
-       padding = const EdgeInsets.all(16),
-       showMessage = true,
-       customMessage = null;
+  const EnhancedLoadingWidget.thinking({super.key, this.message = 'AI正在思考...'})
+    : animationType = LottieAnimationType.aiThinking,
+      size = 80,
+      textColor = null,
+      textStyle = null,
+      padding = const EdgeInsets.all(16),
+      showMessage = true,
+      customMessage = null;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final effectiveTextColor = textColor ?? theme.colorScheme.onSurface;
-    final effectiveTextStyle = textStyle ?? theme.textTheme.bodyMedium?.copyWith(
-      color: effectiveTextColor,
-    );
+    final effectiveTextStyle =
+        textStyle ??
+        theme.textTheme.bodyMedium?.copyWith(color: effectiveTextColor);
     if (animationType == LottieAnimationType.aiThinking) {
       return Padding(
         padding: padding ?? EdgeInsets.zero,
@@ -94,11 +92,12 @@ class EnhancedLoadingWidget extends StatelessWidget {
             ),
             if (showMessage && (message != null || customMessage != null)) ...[
               const SizedBox(height: 16),
-              customMessage ?? Text(
-                message!,
-                style: effectiveTextStyle,
-                textAlign: TextAlign.center,
-              ),
+              customMessage ??
+                  Text(
+                    message!,
+                    style: effectiveTextStyle,
+                    textAlign: TextAlign.center,
+                  ),
             ],
           ],
         ),
@@ -113,7 +112,10 @@ class EnhancedLoadingWidget extends StatelessWidget {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
-              final s = (size ?? constraints.maxHeight * 0.5).clamp(80.0, 220.0);
+              final s = (size ?? constraints.maxHeight * 0.5).clamp(
+                80.0,
+                220.0,
+              );
               return EnhancedLottieAnimation(
                 type: animationType,
                 width: s,
@@ -124,11 +126,12 @@ class EnhancedLoadingWidget extends StatelessWidget {
           ),
           if (showMessage && (message != null || customMessage != null)) ...[
             const SizedBox(height: 16),
-            customMessage ?? Text(
-              message!,
-              style: effectiveTextStyle,
-              textAlign: TextAlign.center,
-            ),
+            customMessage ??
+                Text(
+                  message!,
+                  style: effectiveTextStyle,
+                  textAlign: TextAlign.center,
+                ),
           ],
         ],
       ),
@@ -216,14 +219,17 @@ class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveTextColor = widget.textColor ?? (widget.isSuccess
-        ? Colors.green
-        : theme.colorScheme.error);
-    final effectiveTextStyle = widget.textStyle ?? theme.textTheme.bodyLarge?.copyWith(
-      color: effectiveTextColor,
-      fontWeight: FontWeight.w500,
-    );
-    final icon = widget.isSuccess ? Icons.check_circle_rounded : Icons.error_rounded;
+    final effectiveTextColor =
+        widget.textColor ??
+        (widget.isSuccess ? Colors.green : theme.colorScheme.error);
+    final effectiveTextStyle =
+        widget.textStyle ??
+        theme.textTheme.bodyLarge?.copyWith(
+          color: effectiveTextColor,
+          fontWeight: FontWeight.w500,
+        );
+    final icon =
+        widget.isSuccess ? Icons.check_circle_rounded : Icons.error_rounded;
     return Padding(
       padding: widget.padding ?? const EdgeInsets.all(24),
       child: Column(
@@ -278,7 +284,11 @@ class EmptyStateWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_rounded, size: iconSize, color: theme.colorScheme.primary.withValues(alpha: 0.18)),
+          Icon(
+            Icons.inbox_rounded,
+            size: iconSize,
+            color: theme.colorScheme.primary.withValues(alpha: 0.18),
+          ),
           const SizedBox(height: 24),
           Text(
             title,
@@ -297,10 +307,7 @@ class EmptyStateWidget extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
-          if (action != null) ...[
-            const SizedBox(height: 24),
-            action!,
-          ],
+          if (action != null) ...[const SizedBox(height: 24), action!],
         ],
       ),
     );
@@ -329,11 +336,12 @@ class LoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (context) => LoadingDialog(
-        message: message,
-        animationType: animationType,
-        barrierDismissible: barrierDismissible,
-      ),
+      builder:
+          (context) => LoadingDialog(
+            message: message,
+            animationType: animationType,
+            barrierDismissible: barrierDismissible,
+          ),
     );
   }
 

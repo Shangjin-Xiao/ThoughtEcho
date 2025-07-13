@@ -3,27 +3,28 @@ import '../utils/device_memory_manager.dart';
 import '../utils/app_logger.dart';
 
 /// 智能内存压力管理器
-/// 
+///
 /// 提供智能的内存压力检测和响应系统，根据设备状态动态调整处理策略
 class IntelligentMemoryManager {
-  static final IntelligentMemoryManager _instance = IntelligentMemoryManager._internal();
+  static final IntelligentMemoryManager _instance =
+      IntelligentMemoryManager._internal();
   factory IntelligentMemoryManager() => _instance;
   IntelligentMemoryManager._internal();
 
   final DeviceMemoryManager _deviceMemoryManager = DeviceMemoryManager();
-  
+
   // 内存监控状态
   bool _isMonitoring = false;
   Timer? _monitoringTimer;
   StreamController<MemoryPressureEvent>? _pressureEventController;
-  
+
   // 内存压力历史记录
   final List<MemoryPressureRecord> _pressureHistory = [];
   static const int _maxHistorySize = 100;
-  
+
   // 自适应策略配置
   final Map<String, AdaptiveStrategy> _strategies = {};
-  
+
   /// 开始智能内存监控
   Future<void> startIntelligentMonitoring({
     Duration interval = const Duration(seconds: 3),
@@ -31,52 +32,60 @@ class IntelligentMemoryManager {
     if (_isMonitoring) {
       return;
     }
-    
+
     _isMonitoring = true;
-    _pressureEventController = StreamController<MemoryPressureEvent>.broadcast();
-    
+    _pressureEventController =
+        StreamController<MemoryPressureEvent>.broadcast();
+
     logDebug('开始智能内存监控');
-    
+
     // 启动原生内存监控
-    await _deviceMemoryManager.startMemoryMonitoring(intervalMs: interval.inMilliseconds);
-    
+    await _deviceMemoryManager.startMemoryMonitoring(
+      intervalMs: interval.inMilliseconds,
+    );
+
     // 启动智能分析定时器
-    _monitoringTimer = Timer.periodic(interval, (_) => _analyzeMemoryPressure());
-    
+    _monitoringTimer = Timer.periodic(
+      interval,
+      (_) => _analyzeMemoryPressure(),
+    );
+
     // 监听原生内存状态更新
     _deviceMemoryManager.memoryStatusStream?.listen((data) {
       _handleNativeMemoryUpdate(data);
     });
   }
-  
+
   /// 停止智能内存监控
   Future<void> stopIntelligentMonitoring() async {
     if (!_isMonitoring) {
       return;
     }
-    
+
     _isMonitoring = false;
     _monitoringTimer?.cancel();
     _monitoringTimer = null;
-    
+
     await _deviceMemoryManager.stopMemoryMonitoring();
     await _pressureEventController?.close();
     _pressureEventController = null;
-    
+
     logDebug('智能内存监控已停止');
   }
-  
+
   /// 获取内存压力事件流
-  Stream<MemoryPressureEvent>? get pressureEventStream => _pressureEventController?.stream;
-  
+  Stream<MemoryPressureEvent>? get pressureEventStream =>
+      _pressureEventController?.stream;
+
   /// 注册自适应策略
   void registerStrategy(String operationName, AdaptiveStrategy strategy) {
     _strategies[operationName] = strategy;
     logDebug('注册自适应策略: $operationName');
   }
-  
+
   /// 获取操作的最佳策略
-  Future<OperationStrategy> getOptimalStrategy(String operationName, {
+  Future<OperationStrategy> getOptimalStrategy(
+    String operationName, {
     int? dataSize,
     Map<String, dynamic>? context,
   }) async {
@@ -84,10 +93,10 @@ class IntelligentMemoryManager {
     if (strategy == null) {
       return OperationStrategy.defaultStrategy();
     }
-    
+
     final memoryPressure = await _deviceMemoryManager.getMemoryPressureLevel();
     final availableMemory = await _deviceMemoryManager.getAvailableMemory();
-    
+
     final memoryContext = MemoryContext(
       pressureLevel: memoryPressure,
       availableMemory: availableMemory,
@@ -95,10 +104,10 @@ class IntelligentMemoryManager {
       operationName: operationName,
       additionalContext: context ?? {},
     );
-    
+
     return strategy.getStrategy(memoryContext);
   }
-  
+
   /// 执行内存安全的操作
   Future<T> executeWithAdaptiveStrategy<T>(
     String operationName,
@@ -111,23 +120,23 @@ class IntelligentMemoryManager {
       dataSize: dataSize,
       context: context,
     );
-    
+
     logDebug('执行操作 $operationName，策略: ${strategy.description}');
-    
+
     try {
       // 执行前检查内存压力
       await _preExecutionCheck(strategy);
-      
+
       // 执行操作
       final result = await operation(strategy);
-      
+
       // 执行后清理
       await _postExecutionCleanup(strategy);
-      
+
       return result;
     } catch (e) {
       logDebug('操作 $operationName 执行失败: $e');
-      
+
       // 如果是内存相关错误，尝试降级策略
       if (_isMemoryRelatedError(e)) {
         final fallbackStrategy = strategy.getFallbackStrategy();
@@ -136,54 +145,59 @@ class IntelligentMemoryManager {
           return await operation(fallbackStrategy);
         }
       }
-      
+
       rethrow;
     }
   }
-  
+
   /// 分析内存压力趋势
   Future<void> _analyzeMemoryPressure() async {
     try {
-      final memoryPressure = await _deviceMemoryManager.getMemoryPressureLevel();
+      final memoryPressure =
+          await _deviceMemoryManager.getMemoryPressureLevel();
       final availableMemory = await _deviceMemoryManager.getAvailableMemory();
       final timestamp = DateTime.now();
-      
+
       // 记录压力历史
       final record = MemoryPressureRecord(
         timestamp: timestamp,
         pressureLevel: memoryPressure,
         availableMemory: availableMemory,
       );
-      
+
       _pressureHistory.add(record);
       if (_pressureHistory.length > _maxHistorySize) {
         _pressureHistory.removeAt(0);
       }
-      
+
       // 分析趋势
       final trend = _analyzePressureTrend();
-      
+
       // 如果检测到压力上升趋势，发出预警
       if (trend == PressureTrend.rising && memoryPressure >= 2) {
-        _emitPressureEvent(MemoryPressureEvent(
-          type: MemoryPressureEventType.warning,
-          currentPressure: memoryPressure,
-          trend: trend,
-          message: '检测到内存压力上升趋势',
-          timestamp: timestamp,
-        ));
+        _emitPressureEvent(
+          MemoryPressureEvent(
+            type: MemoryPressureEventType.warning,
+            currentPressure: memoryPressure,
+            trend: trend,
+            message: '检测到内存压力上升趋势',
+            timestamp: timestamp,
+          ),
+        );
       }
-      
+
       // 如果压力达到临界状态，发出紧急事件
       if (memoryPressure >= 3) {
-        _emitPressureEvent(MemoryPressureEvent(
-          type: MemoryPressureEventType.critical,
-          currentPressure: memoryPressure,
-          trend: trend,
-          message: '内存压力达到临界状态',
-          timestamp: timestamp,
-        ));
-        
+        _emitPressureEvent(
+          MemoryPressureEvent(
+            type: MemoryPressureEventType.critical,
+            currentPressure: memoryPressure,
+            trend: trend,
+            message: '内存压力达到临界状态',
+            timestamp: timestamp,
+          ),
+        );
+
         // 执行紧急内存清理
         await _emergencyMemoryCleanup();
       }
@@ -191,7 +205,7 @@ class IntelligentMemoryManager {
       logDebug('分析内存压力失败: $e');
     }
   }
-  
+
   /// 处理原生内存更新
   void _handleNativeMemoryUpdate(Map<String, dynamic> data) {
     final pressureLevel = data['pressureLevel'] as int? ?? 0;
@@ -199,27 +213,36 @@ class IntelligentMemoryManager {
     // 可以在这里添加更详细的原生内存数据处理逻辑
     logDebug('收到原生内存更新: 压力级别=$pressureLevel');
   }
-  
+
   /// 分析压力趋势
   PressureTrend _analyzePressureTrend() {
     if (_pressureHistory.length < 3) {
       return PressureTrend.stable;
     }
-    
-    final recent = _pressureHistory.length >= 5
-        ? _pressureHistory.skip(_pressureHistory.length - 5).toList()
-        : _pressureHistory.toList();
-    final avgRecent = recent.map((r) => r.pressureLevel).reduce((a, b) => a + b) / recent.length;
 
-    final older = _pressureHistory.length >= 10
-        ? _pressureHistory.skip(_pressureHistory.length - 10).take(5).toList()
-        : [];
+    final recent =
+        _pressureHistory.length >= 5
+            ? _pressureHistory.skip(_pressureHistory.length - 5).toList()
+            : _pressureHistory.toList();
+    final avgRecent =
+        recent.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
+        recent.length;
+
+    final older =
+        _pressureHistory.length >= 10
+            ? _pressureHistory
+                .skip(_pressureHistory.length - 10)
+                .take(5)
+                .toList()
+            : [];
     if (older.isEmpty) {
       return PressureTrend.stable;
     }
-    
-    final avgOlder = older.map((r) => r.pressureLevel).reduce((a, b) => a + b) / older.length;
-    
+
+    final avgOlder =
+        older.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
+        older.length;
+
     if (avgRecent > avgOlder + 0.5) {
       return PressureTrend.rising;
     } else if (avgRecent < avgOlder - 0.5) {
@@ -228,49 +251,50 @@ class IntelligentMemoryManager {
       return PressureTrend.stable;
     }
   }
-  
+
   /// 发出压力事件
   void _emitPressureEvent(MemoryPressureEvent event) {
     _pressureEventController?.add(event);
   }
-  
+
   /// 执行前检查
   Future<void> _preExecutionCheck(OperationStrategy strategy) async {
     if (strategy.requiresMemoryCheck) {
-      final memoryPressure = await _deviceMemoryManager.getMemoryPressureLevel();
+      final memoryPressure =
+          await _deviceMemoryManager.getMemoryPressureLevel();
       if (memoryPressure >= 3) {
         throw MemoryPressureException('内存压力过高，无法执行操作');
       }
     }
   }
-  
+
   /// 执行后清理
   Future<void> _postExecutionCleanup(OperationStrategy strategy) async {
     if (strategy.requiresCleanup) {
       await _deviceMemoryManager.forceGarbageCollection();
     }
   }
-  
+
   /// 紧急内存清理
   Future<void> _emergencyMemoryCleanup() async {
     logDebug('执行紧急内存清理');
-    
+
     // 强制垃圾回收
     await _deviceMemoryManager.forceGarbageCollection();
-    
+
     // 清理内存缓存
     _deviceMemoryManager.clearCache();
-    
+
     // 等待一段时间让系统回收内存
     await Future.delayed(const Duration(milliseconds: 500));
   }
-  
+
   /// 检查是否为内存相关错误
   bool _isMemoryRelatedError(dynamic error) {
     final errorString = error.toString().toLowerCase();
-    return errorString.contains('memory') || 
-           errorString.contains('oom') || 
-           errorString.contains('内存');
+    return errorString.contains('memory') ||
+        errorString.contains('oom') ||
+        errorString.contains('内存');
   }
 }
 
@@ -279,7 +303,7 @@ class MemoryPressureRecord {
   final DateTime timestamp;
   final int pressureLevel;
   final int availableMemory;
-  
+
   MemoryPressureRecord({
     required this.timestamp,
     required this.pressureLevel,
@@ -289,15 +313,15 @@ class MemoryPressureRecord {
 
 /// 压力趋势
 enum PressureTrend {
-  rising,   // 上升
-  falling,  // 下降
-  stable,   // 稳定
+  rising, // 上升
+  falling, // 下降
+  stable, // 稳定
 }
 
 /// 内存压力事件类型
 enum MemoryPressureEventType {
-  info,     // 信息
-  warning,  // 警告
+  info, // 信息
+  warning, // 警告
   critical, // 临界
 }
 
@@ -308,7 +332,7 @@ class MemoryPressureEvent {
   final PressureTrend trend;
   final String message;
   final DateTime timestamp;
-  
+
   MemoryPressureEvent({
     required this.type,
     required this.currentPressure,
@@ -387,10 +411,7 @@ class OperationStrategy {
 
   /// 默认策略
   factory OperationStrategy.defaultStrategy() {
-    return OperationStrategy(
-      name: 'default',
-      description: '默认策略',
-    );
+    return OperationStrategy(name: 'default', description: '默认策略');
   }
 
   /// 高性能策略
@@ -464,14 +485,16 @@ class FileProcessingAdaptiveStrategy implements AdaptiveStrategy {
     }
 
     // 大文件处理
-    if (dataSize > 100 * 1024 * 1024) { // 100MB以上
+    if (dataSize > 100 * 1024 * 1024) {
+      // 100MB以上
       return OperationStrategy.memoryConservative().copyWith(
         fallbackStrategy: OperationStrategy.minimal(),
       );
     }
 
     // 中等文件处理
-    if (dataSize > 10 * 1024 * 1024) { // 10MB以上
+    if (dataSize > 10 * 1024 * 1024) {
+      // 10MB以上
       return OperationStrategy.defaultStrategy().copyWith(
         fallbackStrategy: OperationStrategy.memoryConservative(),
       );

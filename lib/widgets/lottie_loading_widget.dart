@@ -19,15 +19,16 @@ class LottieLoadingWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
-      children: [        SizedBox(
+      children: [
+        SizedBox(
           width: size,
           height: size,
           child: Lottie.asset(
-            'assets/lottie/custom_loading.json',  // 使用自定义加载动画
+            'assets/lottie/custom_loading.json', // 使用自定义加载动画
             fit: BoxFit.contain,
             repeat: true,
             animate: true,
@@ -38,7 +39,9 @@ class LottieLoadingWidget extends StatelessWidget {
           Text(
             text!,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: textColor ?? theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color:
+                  textColor ??
+                  theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -53,18 +56,15 @@ class LottieLoadingButton extends StatelessWidget {
   final double size;
   final Color? color;
 
-  const LottieLoadingButton({
-    super.key,
-    this.size = 24,
-    this.color,
-  });
+  const LottieLoadingButton({super.key, this.size = 24, this.color});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
-      height: size,      child: Lottie.asset(
-        'assets/lottie/custom_loading.json',  // 使用自定义加载动画
+      height: size,
+      child: Lottie.asset(
+        'assets/lottie/custom_loading.json', // 使用自定义加载动画
         fit: BoxFit.contain,
         repeat: true,
         animate: true,
@@ -89,12 +89,15 @@ class LottieLoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: backgroundColor ?? 
-             theme.colorScheme.surface.withValues(alpha: blurBackground ? 0.8 : 1.0),
+      color:
+          backgroundColor ??
+          theme.colorScheme.surface.withValues(
+            alpha: blurBackground ? 0.8 : 1.0,
+          ),
       child: Center(
         child: LottieLoadingWidget(
           size: 120,

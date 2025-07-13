@@ -243,7 +243,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -260,7 +263,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: MarkdownBody(
@@ -343,11 +349,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -366,7 +368,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                     description,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                       height: 1.3,
                     ),
                   ),
@@ -376,7 +380,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ],
         ),
@@ -390,54 +396,54 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       // 显示选择对话框
       final choice = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(
-                Icons.auto_awesome,
-                color: Theme.of(context).colorScheme.primary,
-                size: 28,
+        builder:
+            (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(width: 12),
-              const Text('选择年度报告类型'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '请选择要生成的年度报告类型：',
-                style: TextStyle(fontSize: 16),
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('选择年度报告类型'),
+                ],
               ),
-              const SizedBox(height: 20),
-              _buildReportOption(
-                context,
-                icon: Icons.psychology,
-                title: 'AI 智能报告',
-                description: '基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表',
-                color: Colors.purple,
-                onTap: () => Navigator.pop(context, 'ai'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('请选择要生成的年度报告类型：', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 20),
+                  _buildReportOption(
+                    context,
+                    icon: Icons.psychology,
+                    title: 'AI 智能报告',
+                    description: '基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表',
+                    color: Colors.purple,
+                    onTap: () => Navigator.pop(context, 'ai'),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildReportOption(
+                    context,
+                    icon: Icons.dashboard,
+                    title: '原生 Flutter 报告',
+                    description: '使用Flutter原生组件生成的交互式报告，流畅的动画效果',
+                    color: Colors.blue,
+                    onTap: () => Navigator.pop(context, 'flutter'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildReportOption(
-                context,
-                icon: Icons.dashboard,
-                title: '原生 Flutter 报告',
-                description: '使用Flutter原生组件生成的交互式报告，流畅的动画效果',
-                color: Colors.blue,
-                onTap: () => Navigator.pop(context, 'flutter'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+              ],
             ),
-          ],
-        ),
       );
 
       if (choice == null) return;
@@ -450,7 +456,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       );
       final quotes = await databaseService.getUserQuotes();
       if (!mounted) return;
-      
+
       final currentYear = DateTime.now().year;
 
       final thisYearQuotes =
@@ -482,25 +488,31 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('正在生成AI年度报告...'),
-          ],
-        ),
-      ),
+      builder:
+          (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('正在生成AI年度报告...'),
+              ],
+            ),
+          ),
     );
 
     try {
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
       final aiService = Provider.of<AIService>(context, listen: false);
 
       // 读取HTML模板
       String htmlTemplate;
       try {
-        htmlTemplate = await rootBundle.loadString('assets/annual_report_ai_template.html');
+        htmlTemplate = await rootBundle.loadString(
+          'assets/annual_report_ai_template.html',
+        );
       } catch (e) {
         AppLogger.e('读取HTML模板失败', error: e);
         throw Exception('无法读取报告模板');
@@ -516,10 +528,11 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
       // 计算活跃天数
-      final uniqueDates = quotes.map((quote) {
-        final date = DateTime.parse(quote.date);
-        return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      }).toSet();
+      final uniqueDates =
+          quotes.map((quote) {
+            final date = DateTime.parse(quote.date);
+            return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          }).toSet();
       final activeDays = uniqueDates.length;
 
       // 获取分类统计（转换为分类名称）
@@ -527,9 +540,12 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       for (final quote in quotes) {
         if (quote.categoryId != null && quote.categoryId!.isNotEmpty) {
           try {
-            final category = await databaseService.getCategoryById(quote.categoryId!);
+            final category = await databaseService.getCategoryById(
+              quote.categoryId!,
+            );
             if (category != null) {
-              categoryCounts[category.name] = (categoryCounts[category.name] ?? 0) + 1;
+              categoryCounts[category.name] =
+                  (categoryCounts[category.name] ?? 0) + 1;
             }
           } catch (e) {
             // 忽略无效的分类ID
@@ -547,25 +563,64 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
 
       // 获取积极的笔记内容示例（避免消极内容）
       final positiveKeywords = [
-        '成长', '学习', '进步', '成功', '快乐', '感谢', '收获', '突破', '希望',
-        '开心', '满足', '充实', '美好', '温暖', '感动', '惊喜', '兴奋', '自豪',
-        '坚持', '努力', '奋斗', '梦想', '目标', '计划', '改变', '提升', '优秀'
+        '成长',
+        '学习',
+        '进步',
+        '成功',
+        '快乐',
+        '感谢',
+        '收获',
+        '突破',
+        '希望',
+        '开心',
+        '满足',
+        '充实',
+        '美好',
+        '温暖',
+        '感动',
+        '惊喜',
+        '兴奋',
+        '自豪',
+        '坚持',
+        '努力',
+        '奋斗',
+        '梦想',
+        '目标',
+        '计划',
+        '改变',
+        '提升',
+        '优秀',
       ];
 
-      final positiveQuotes = quotes
-          .where((quote) => positiveKeywords.any((keyword) => quote.content.contains(keyword)))
-          .take(8)
-          .toList();
+      final positiveQuotes =
+          quotes
+              .where(
+                (quote) => positiveKeywords.any(
+                  (keyword) => quote.content.contains(keyword),
+                ),
+              )
+              .take(8)
+              .toList();
 
       // 构建详细的数据摘要
-      final monthlyStatsText = List.generate(12, (i) => '${i + 1}月: ${monthlyStats[i + 1] ?? 0}篇').join('\n');
-      final positiveQuotesText = positiveQuotes.map((quote) => '- ${quote.content.length > 100 ? '${quote.content.substring(0, 100)}...' : quote.content}').join('\n');
-      final categoryText = categoryCounts.entries.take(10).map((e) => '${e.key}(${e.value}次)').join(', ');
+      final monthlyStatsText = List.generate(
+        12,
+        (i) => '${i + 1}月: ${monthlyStats[i + 1] ?? 0}篇',
+      ).join('\n');
+      final positiveQuotesText = positiveQuotes
+          .map(
+            (quote) =>
+                '- ${quote.content.length > 100 ? '${quote.content.substring(0, 100)}...' : quote.content}',
+          )
+          .join('\n');
+      final categoryText = categoryCounts.entries
+          .take(10)
+          .map((e) => '${e.key}(${e.value}次)')
+          .join(', ');
 
       // 尝试AI生成，如果失败则使用备用方案
       String result;
       try {
-
         final prompt = '''
 请基于以下数据生成一个完整的HTML年度报告。
 
@@ -604,8 +659,16 @@ $positiveQuotesText
         } else {
           // AI返回的不是HTML，使用备用方案
           result = await _generateFallbackReport(
-            htmlTemplate, quotes, year, activeDays, totalNotes,
-            totalWords, averageWordsPerNote, categoryCounts, monthlyStats, positiveQuotes
+            htmlTemplate,
+            quotes,
+            year,
+            activeDays,
+            totalNotes,
+            totalWords,
+            averageWordsPerNote,
+            categoryCounts,
+            monthlyStats,
+            positiveQuotes,
           );
 
           if (mounted) {
@@ -620,8 +683,16 @@ $positiveQuotesText
       } catch (aiError) {
         // AI调用失败，使用备用方案
         result = await _generateFallbackReport(
-          htmlTemplate, quotes, year, activeDays, totalNotes,
-          totalWords, averageWordsPerNote, categoryCounts, monthlyStats, positiveQuotes
+          htmlTemplate,
+          quotes,
+          year,
+          activeDays,
+          totalNotes,
+          totalWords,
+          averageWordsPerNote,
+          categoryCounts,
+          monthlyStats,
+          positiveQuotes,
         );
 
         if (mounted) {
@@ -641,7 +712,9 @@ $positiveQuotesText
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AIAnnualReportWebView(htmlContent: result, year: year),
+              builder:
+                  (context) =>
+                      AIAnnualReportWebView(htmlContent: result, year: year),
             ),
           );
         }
@@ -654,9 +727,9 @@ $positiveQuotesText
       }
       AppLogger.e('生成AI年度报告失败', error: e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成AI年度报告失败: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('生成AI年度报告失败: ${e.toString()}')));
       }
     }
   }
@@ -678,29 +751,55 @@ $positiveQuotesText
     final monthlyChart = List.generate(12, (i) {
       final month = i + 1;
       final count = monthlyStats[month] ?? 0;
-      final monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+      final monthNames = [
+        '1月',
+        '2月',
+        '3月',
+        '4月',
+        '5月',
+        '6月',
+        '7月',
+        '8月',
+        '9月',
+        '10月',
+        '11月',
+        '12月',
+      ];
       return '<div class="month-item"><div class="month-name">${monthNames[i]}</div><div class="month-count">$count</div></div>';
     }).join('\n');
 
     // 生成分类标签云HTML
-    final tagCloud = categoryCounts.entries.take(10).map((entry) {
-      final isPopular = entry.value > (totalNotes * 0.1);
-      return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
-    }).join('');
+    final tagCloud = categoryCounts.entries
+        .take(10)
+        .map((entry) {
+          final isPopular = entry.value > (totalNotes * 0.1);
+          return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
+        })
+        .join('');
 
     // 生成精选笔记HTML
-    final featuredQuotes = positiveQuotes.take(3).map((quote) {
-      final content = quote.content.length > 150 ? '${quote.content.substring(0, 150)}...' : quote.content;
-      final date = DateTime.parse(quote.date).toString().substring(0, 10);
-      return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
-    }).join('\n');
+    final featuredQuotes = positiveQuotes
+        .take(3)
+        .map((quote) {
+          final content =
+              quote.content.length > 150
+                  ? '${quote.content.substring(0, 150)}...'
+                  : quote.content;
+          final date = DateTime.parse(quote.date).toString().substring(0, 10);
+          return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
+        })
+        .join('\n');
 
     // 生成成就HTML
     final achievements = [
-      if (totalNotes >= 50) '<div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-title">记录达人</div><div class="achievement-desc">记录了$totalNotes条笔记</div></div>',
-      if (activeDays >= 30) '<div class="achievement"><div class="achievement-icon">📅</div><div class="achievement-title">坚持不懈</div><div class="achievement-desc">活跃记录$activeDays天</div></div>',
-      if (totalWords >= 10000) '<div class="achievement"><div class="achievement-icon">✍️</div><div class="achievement-title">文字创作者</div><div class="achievement-desc">累计写作$totalWords字</div></div>',
-      if (categoryCounts.isNotEmpty) '<div class="achievement"><div class="achievement-icon">🎯</div><div class="achievement-title">分类整理</div><div class="achievement-desc">使用了${categoryCounts.length}个分类</div></div>',
+      if (totalNotes >= 50)
+        '<div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-title">记录达人</div><div class="achievement-desc">记录了$totalNotes条笔记</div></div>',
+      if (activeDays >= 30)
+        '<div class="achievement"><div class="achievement-icon">📅</div><div class="achievement-title">坚持不懈</div><div class="achievement-desc">活跃记录$activeDays天</div></div>',
+      if (totalWords >= 10000)
+        '<div class="achievement"><div class="achievement-icon">✍️</div><div class="achievement-title">文字创作者</div><div class="achievement-desc">累计写作$totalWords字</div></div>',
+      if (categoryCounts.isNotEmpty)
+        '<div class="achievement"><div class="achievement-icon">🎯</div><div class="achievement-title">分类整理</div><div class="achievement-desc">使用了${categoryCounts.length}个分类</div></div>',
     ].join('\n');
 
     // 替换模板中的占位符
@@ -715,13 +814,22 @@ $positiveQuotesText
         .replaceAll('{{GROWTH_PERCENTAGE}}', '持续成长中')
         .replaceAll('{{MONTHLY_CHART}}', monthlyChart)
         .replaceAll('{{TAG_CLOUD}}', tagCloud)
-        .replaceAll('{{TAG_INSIGHT}}', '您在${categoryCounts.keys.take(3).join('、')}等方面记录较多，体现了丰富的思考维度。')
+        .replaceAll(
+          '{{TAG_INSIGHT}}',
+          '您在${categoryCounts.keys.take(3).join('、')}等方面记录较多，体现了丰富的思考维度。',
+        )
         .replaceAll('{{PEAK_TIME}}', '全天候')
         .replaceAll('{{PEAK_TIME_DESC}}', '您的记录时间分布均匀，体现了良好的记录习惯。')
-        .replaceAll('{{WRITING_HABITS}}', '您保持着规律的记录习惯，平均每篇笔记$averageWordsPerNote字，内容丰富且有深度。')
+        .replaceAll(
+          '{{WRITING_HABITS}}',
+          '您保持着规律的记录习惯，平均每篇笔记$averageWordsPerNote字，内容丰富且有深度。',
+        )
         .replaceAll('{{FEATURED_QUOTES}}', featuredQuotes)
         .replaceAll('{{ACHIEVEMENTS}}', achievements)
-        .replaceAll('{{FUTURE_SUGGESTIONS}}', '继续保持记录的好习惯，可以尝试在不同时间段记录，丰富内容的多样性。建议定期回顾过往记录，从中获得成长的启发。');
+        .replaceAll(
+          '{{FUTURE_SUGGESTIONS}}',
+          '继续保持记录的好习惯，可以尝试在不同时间段记录，丰富内容的多样性。建议定期回顾过往记录，从中获得成长的启发。',
+        );
   }
 
   /// 生成Flutter年度报告

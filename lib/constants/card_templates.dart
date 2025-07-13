@@ -8,8 +8,11 @@ class CardTemplates {
     String? author,
     String? date,
   }) {
-    final displayContent = content.length > 80 ? '${content.substring(0, 80)}...' : content;
-    final displayDate = date ?? '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
+    final displayContent =
+        content.length > 80 ? '${content.substring(0, 80)}...' : content;
+    final displayDate =
+        date ??
+        '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
     // 将长文本分行处理
     final lines = _splitTextIntoLines(displayContent, 20);
@@ -67,8 +70,11 @@ class CardTemplates {
     String? author,
     String? date,
   }) {
-    final displayContent = content.length > 60 ? '${content.substring(0, 60)}...' : content;
-    final displayDate = date ?? '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
+    final displayContent =
+        content.length > 60 ? '${content.substring(0, 60)}...' : content;
+    final displayDate =
+        date ??
+        '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final displayAuthor = author ?? '佚名';
 
     // 将引用内容分行
@@ -120,8 +126,11 @@ class CardTemplates {
     String? author,
     String? date,
   }) {
-    final displayContent = content.length > 80 ? '${content.substring(0, 80)}...' : content;
-    final displayDate = date ?? '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
+    final displayContent =
+        content.length > 80 ? '${content.substring(0, 80)}...' : content;
+    final displayDate =
+        date ??
+        '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
     // 将思考内容分行
     final lines = _splitTextIntoLines(displayContent, 20);
@@ -187,7 +196,11 @@ class CardTemplates {
       case CardType.quote:
         return quoteTemplate(content: content, author: author, date: date);
       case CardType.philosophical:
-        return philosophicalTemplate(content: content, author: author, date: date);
+        return philosophicalTemplate(
+          content: content,
+          author: author,
+          date: date,
+        );
     }
   }
 
@@ -216,13 +229,19 @@ class CardTemplates {
   }
 
   /// 生成多行文本的SVG元素
-  static String _generateTextLines(List<String> lines, double centerX, double startY, double fontSize, String color) {
+  static String _generateTextLines(
+    List<String> lines,
+    double centerX,
+    double startY,
+    double fontSize,
+    String color,
+  ) {
     final buffer = StringBuffer();
 
     for (int i = 0; i < lines.length; i++) {
       final y = startY + (i * (fontSize + 4));
       buffer.writeln(
-        '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="Arial, sans-serif" font-size="$fontSize">${lines[i]}</text>'
+        '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="Arial, sans-serif" font-size="$fontSize">${lines[i]}</text>',
       );
     }
 

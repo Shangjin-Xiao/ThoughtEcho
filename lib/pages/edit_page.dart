@@ -339,9 +339,10 @@ class EditPageState extends State<EditPage> {
     final weatherService = Provider.of<WeatherService>(context);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light 
-          ? Colors.white 
-          : Theme.of(context).colorScheme.surface,
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.light
+              ? Colors.white
+              : Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('编辑'),
         actions: [

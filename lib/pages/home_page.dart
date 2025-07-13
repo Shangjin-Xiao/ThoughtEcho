@@ -519,9 +519,10 @@ class _HomePageState extends State<HomePage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).brightness == Brightness.light 
-          ? Colors.white 
-          : Theme.of(context).colorScheme.surface,
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.light
+              ? Colors.white
+              : Theme.of(context).colorScheme.surface,
       builder:
           (context) => AddNoteDialog(
             prefilledContent: prefilledContent,
@@ -581,9 +582,10 @@ class _HomePageState extends State<HomePage>
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Theme.of(context).brightness == Brightness.light 
-            ? Colors.white 
-            : Theme.of(context).colorScheme.surface,
+        backgroundColor:
+            Theme.of(context).brightness == Brightness.light
+                ? Colors.white
+                : Theme.of(context).colorScheme.surface,
         builder:
             (context) => AddNoteDialog(
               initialQuote: quote,
@@ -644,16 +646,16 @@ class _HomePageState extends State<HomePage>
   // 生成AI卡片
   void _generateAICard(Quote quote) async {
     if (_aiCardService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('AI卡片服务未初始化')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('AI卡片服务未初始化')));
       return;
     }
 
     if (!_aiCardService!.isEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('AI卡片生成功能未启用')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('AI卡片生成功能未启用')));
       return;
     }
 
@@ -675,11 +677,12 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         showDialog(
           context: context,
-          builder: (context) => CardPreviewDialog(
-            card: card,
-            onShare: () => _shareCard(card),
-            onSave: () => _saveCard(card),
-          ),
+          builder:
+              (context) => CardPreviewDialog(
+                card: card,
+                onShare: () => _shareCard(card),
+                onSave: () => _saveCard(card),
+              ),
         );
       }
     } catch (e) {
@@ -689,10 +692,7 @@ class _HomePageState extends State<HomePage>
       // 显示错误信息
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('生成卡片失败: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('生成卡片失败: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -707,16 +707,13 @@ class _HomePageState extends State<HomePage>
       await file.writeAsBytes(imageBytes);
 
       await SharePlus.instance.share(
-        ShareParams(
-          text: '来自ThoughtEcho的精美卡片',
-          files: [XFile(file.path)],
-        ),
+        ShareParams(text: '来自ThoughtEcho的精美卡片', files: [XFile(file.path)]),
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('分享失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('分享失败: $e')));
       }
     }
   }
@@ -735,9 +732,9 @@ class _HomePageState extends State<HomePage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -774,21 +771,24 @@ class _HomePageState extends State<HomePage>
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light 
-          ? Colors.white 
-          : Theme.of(context).colorScheme.surface,
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.light
+              ? Colors.white
+              : Theme.of(context).colorScheme.surface,
       appBar:
           _currentIndex == 1
               ? null // 记录页不需要标题栏
               : AppBar(
                 title: const Text('心迹'),
-                actions: [                  // 显示标签加载状态
+                actions: [
+                  // 显示标签加载状态
                   if (_isLoadingTags && _currentIndex == 1)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8.0),
                       child: SizedBox(
                         width: 16,
-                        height: 16,                        child: EnhancedLottieAnimation(
+                        height: 16,
+                        child: EnhancedLottieAnimation(
                           type: LottieAnimationType.modernLoading,
                           width: 16,
                           height: 16,

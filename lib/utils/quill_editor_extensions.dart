@@ -12,7 +12,9 @@ class QuillEditorExtensions {
     final builders = FlutterQuillEmbeds.editorBuilders();
 
     // 移除官方的视频和音频构建器，使用我们自定义的实现
-    builders.removeWhere((builder) => builder.key == 'video' || builder.key == 'audio');
+    builders.removeWhere(
+      (builder) => builder.key == 'video' || builder.key == 'audio',
+    );
 
     // 添加自定义的视频和音频构建器
     builders.add(_CustomVideoEmbedBuilder());

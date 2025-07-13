@@ -293,13 +293,13 @@ class AppTheme with ChangeNotifier {
       blendLevel: 7,
       subThemesData: const FlexSubThemesData(
         blendOnLevel: 10,
-        blendOnColors: true,  // 恢复旧版本默认值
-        useMaterial3Typography: true,  // 8.x 版本中 useTextTheme 已被重命名
-        useM2StyleDividerInM3: true,  // 恢复旧版本默认值
+        blendOnColors: true, // 恢复旧版本默认值
+        useMaterial3Typography: true, // 8.x 版本中 useTextTheme 已被重命名
+        useM2StyleDividerInM3: true, // 恢复旧版本默认值
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        interactionEffects: true,  // 恢复旧版本默认值
-        tintedDisabledControls: true,  // 恢复旧版本默认值
+        interactionEffects: true, // 恢复旧版本默认值
+        tintedDisabledControls: true, // 恢复旧版本默认值
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
         cardRadius: cardRadius,
@@ -315,7 +315,7 @@ class AppTheme with ChangeNotifier {
       tones: FlexTones.material(Brightness.light),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
-    
+
     // 覆盖特定组件的颜色，使用固定的白色而不是动态颜色
     return baseTheme.copyWith(
       // 设置对话框背景为固定白色
@@ -323,9 +323,7 @@ class AppTheme with ChangeNotifier {
         backgroundColor: Colors.white,
       ),
       // 设置卡片背景为固定白色
-      cardTheme: baseTheme.cardTheme.copyWith(
-        color: Colors.white,
-      ),
+      cardTheme: baseTheme.cardTheme.copyWith(color: Colors.white),
       // 设置底部表单背景为固定白色
       bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
         backgroundColor: Colors.white,
@@ -346,13 +344,13 @@ class AppTheme with ChangeNotifier {
       blendLevel: 10,
       subThemesData: const FlexSubThemesData(
         blendOnLevel: 15,
-        blendOnColors: true,  // 恢复旧版本默认值
-        useMaterial3Typography: true,  // 8.x 版本中 useTextTheme 已被重命名
-        useM2StyleDividerInM3: true,  // 恢复旧版本默认值
+        blendOnColors: true, // 恢复旧版本默认值
+        useMaterial3Typography: true, // 8.x 版本中 useTextTheme 已被重命名
+        useM2StyleDividerInM3: true, // 恢复旧版本默认值
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        interactionEffects: true,  // 恢复旧版本默认值
-        tintedDisabledControls: true,  // 恢复旧版本默认值
+        interactionEffects: true, // 恢复旧版本默认值
+        tintedDisabledControls: true, // 恢复旧版本默认值
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
         cardRadius: cardRadius,
@@ -368,7 +366,7 @@ class AppTheme with ChangeNotifier {
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
-    
+
     // 覆盖特定组件的颜色，使用固定的深色而不是动态颜色
     return baseTheme.copyWith(
       // 设置对话框背景为固定深灰色
@@ -376,9 +374,7 @@ class AppTheme with ChangeNotifier {
         backgroundColor: const Color(0xFF1E1E1E),
       ),
       // 设置卡片背景为固定深灰色
-      cardTheme: baseTheme.cardTheme.copyWith(
-        color: const Color(0xFF2D2D2D),
-      ),
+      cardTheme: baseTheme.cardTheme.copyWith(color: const Color(0xFF2D2D2D)),
       // 设置底部表单背景为固定深灰色
       bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
         backgroundColor: const Color(0xFF2D2D2D),

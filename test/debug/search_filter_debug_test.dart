@@ -256,12 +256,14 @@ void main() {
     test('测试搜索功能修复验证', () async {
       // 添加测试数据
       final categories = await databaseService.getCategories();
-      await databaseService.addQuote(Quote(
-        id: 'search_test_1',
-        content: '这是一个搜索测试笔记',
-        date: DateTime.now().toIso8601String(),
-        tagIds: categories.isNotEmpty ? [categories.first.id] : [],
-      ));
+      await databaseService.addQuote(
+        Quote(
+          id: 'search_test_1',
+          content: '这是一个搜索测试笔记',
+          date: DateTime.now().toIso8601String(),
+          tagIds: categories.isNotEmpty ? [categories.first.id] : [],
+        ),
+      );
 
       final stopwatch = Stopwatch()..start();
 

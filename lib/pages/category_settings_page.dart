@@ -590,17 +590,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('分类删除成功')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('分类删除成功')));
           }
         } catch (e) {
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('删除分类失败：$e')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
           }
         }
       }
