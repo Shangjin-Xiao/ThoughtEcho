@@ -6,11 +6,11 @@ on:
       flutter_version:
         description: 'Flutter版本'
         required: false
-        default: '3.32.6'
+        default: '3.29.2'
         type: choice
         options:
-          - '3.32.6'
-          - '3.30.0'
+          - '3.29.2'
+          - '3.27.0'
           - 'latest'
       build_type:
         description: '构建类型'
@@ -33,7 +33,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: ${{ github.event.inputs.flutter_version || '3.32.6' }}
+        flutter-version: ${{ github.event.inputs.flutter_version || '3.29.2' }}
         channel: 'stable'
         cache: true
         
@@ -74,7 +74,7 @@ jobs:
         New-Item -ItemType Directory -Path "release_temp" -Force
         Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
         
-        $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.32.6' }}`n提交: ${{ github.sha }}"
+        $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}`n提交: ${{ github.sha }}"
         $versionText | Out-File -FilePath "release_temp/VERSION.txt" -Encoding UTF8
         
         "@echo off`necho 启动 ThoughtEcho...`nstart thoughtecho.exe" | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default

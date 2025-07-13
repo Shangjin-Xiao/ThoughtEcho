@@ -291,7 +291,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                       child: Text(
                         '数据概览',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: _tabController.index == 0 ? FontWeight.w600 : FontWeight.normal,
                           color: _tabController.index == 0 
                               ? Theme.of(context).colorScheme.primary
@@ -321,7 +321,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                       child: Text(
                         '精选卡片',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: _tabController.index == 1 ? FontWeight.w600 : FontWeight.normal,
                           color: _tabController.index == 1 
                               ? Theme.of(context).colorScheme.primary
@@ -351,7 +351,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                       child: Text(
                         'AI洞察',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: _tabController.index == 2 ? FontWeight.w600 : FontWeight.normal,
                           color: _tabController.index == 2 
                               ? Theme.of(context).colorScheme.primary
