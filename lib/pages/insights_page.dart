@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
 import '../services/ai_analysis_database_service.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
 import '../utils/lottie_animation_manager.dart';
@@ -415,24 +414,20 @@ class _InsightsPageState extends State<InsightsPage>
       body: SafeArea(
         child: Column(
           children: [
-            // 顶部标题和标签选择
+            // 顶部操作按钮
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
-                  Text(
-                    'AI 思维洞察',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
-                    ),
-                  ),
                   const Spacer(),
                   // 历史分析入口
                   IconButton(
-                    icon: const Icon(Icons.history),
+                    icon: const Icon(Icons.history, size: 20),
                     color: theme.primaryColor,
                     tooltip: '分析历史',
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -445,18 +440,20 @@ class _InsightsPageState extends State<InsightsPage>
 
                   _isGenerating
                       ? const SizedBox(
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         child: EnhancedLottieAnimation(
                           type: LottieAnimationType.aiThinking,
-                          width: 24,
-                          height: 24,
+                          width: 20,
+                          height: 20,
                         ),
                       )
                       : IconButton(
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh, size: 20),
                         color: theme.primaryColor,
                         tooltip: '重新生成',
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         onPressed:
                             _isGenerating || _currentInsightsText.isEmpty
                                 ? null
@@ -467,11 +464,18 @@ class _InsightsPageState extends State<InsightsPage>
             ),
 
             // 标签页选择器
-            TabBar(
-              controller: _tabController,
-              tabs: const [Tab(text: '分析模式'), Tab(text: '结果展示')],
-              labelColor: theme.primaryColor,
-              indicatorColor: theme.primaryColor,
+            SizedBox(
+              height: 40,
+              child: TabBar(
+                controller: _tabController,
+                tabs: const [Tab(text: '分析模式'), Tab(text: '结果展示')],
+                labelColor: theme.primaryColor,
+                indicatorColor: theme.primaryColor,
+                labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 14),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerHeight: 0,
+              ),
             ),
 
             // 标签页内容
@@ -703,16 +707,16 @@ class _InsightsPageState extends State<InsightsPage>
     final isSelected = _selectedAnalysisType == type['prompt'];
     final String key = type['prompt'];
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isSelected ? 4 : 1,
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: isSelected ? 2 : 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color:
               isSelected
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.outline,
-          width: isSelected ? 2 : 0.5,
+                  : theme.colorScheme.outline.withValues(alpha: 0.3),
+          width: isSelected ? 2 : 1,
         ),
       ),
       child: InkWell(
@@ -722,52 +726,49 @@ class _InsightsPageState extends State<InsightsPage>
             _showCustomPrompt = false;
           });
         },
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                ),
-                child: Icon(
-                  type['icon'] as IconData,
-                  color:
-                      isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSecondaryContainer,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _analysisTypeKeyToLabel[key] ?? key,
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color:
                             isSelected
                                 ? theme.primaryColor
-                                : theme.textTheme.titleMedium?.color,
+                                : theme.textTheme.titleSmall?.color,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(type['description'], style: theme.textTheme.bodySmall),
+                    const SizedBox(height: 2),
+                    Text(
+                      type['description'], 
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ),
+                    ),
                   ],
                 ),
               ),
               if (isSelected)
-                Icon(Icons.check_circle, color: theme.primaryColor),
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check, 
+                    color: theme.colorScheme.onPrimary,
+                    size: 14,
+                  ),
+                ),
             ],
           ),
         ),

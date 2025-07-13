@@ -62,8 +62,7 @@ class NoteListViewState extends State<NoteListView> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
   final Map<String, bool> _expandedItems = {};
-  // 添加固定的GlobalKey，避免重建时生成新Key
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  // 移除AnimatedList相关的Key，改用ListView.builder
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
@@ -133,7 +132,8 @@ class NoteListViewState extends State<NoteListView> {
               setState(() {
                 _quotes.clear();
                 _quotes.addAll(list);
-                _hasMore = list.length % _pageSize == 0;
+                // 修复：简化_hasMore逻辑，避免Web平台无限加载
+                _hasMore = list.length >= _pageSize;
                 _isLoading = false;
               });
 
@@ -280,8 +280,12 @@ class NoteListViewState extends State<NoteListView> {
               setState(() {
                 _quotes.clear();
                 _quotes.addAll(list);
-                _hasMore = list.length == _pageSize; // 判断是否还有更多
+
+                // 修复：简化_hasMore逻辑，与line 137保持一致
+                // 如果返回的数据量大于等于页面大小，说明可能还有更多数据
+                _hasMore = list.length >= _pageSize;
                 _isLoading = false; // 加载完成
+                logDebug('数据更新：${list.length}条，_hasMore=$_hasMore', source: 'NoteListView');
               });
 
               // 通知搜索控制器数据加载完成
@@ -380,9 +384,22 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Future<void> _loadMore() async {
-    if (!_hasMore) return;
+    // 防止重复加载
+    if (!_hasMore || _isLoading) {
+      logDebug('跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading', source: 'NoteListView');
+      return;
+    }
+
+    logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
     final db = Provider.of<DatabaseService>(context, listen: false);
     await db.loadMoreQuotes();
+
+    // 强制检查状态更新
+    if (mounted) {
+      setState(() {
+        _hasMore = db.hasMoreQuotes;
+      });
+    }
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
@@ -443,103 +460,89 @@ class NoteListViewState extends State<NoteListView> {
 
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
-        // 预加载逻辑：当用户滚动到距离底部20%的位置时，提前加载下一页
+        // 预加载逻辑：当用户滚动到距离底部较近的位置时，提前加载下一页
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
-          if (metrics.pixels >
-              metrics.maxScrollExtent - metrics.viewportDimension * 0.2) {
+          // 降低阈值，使其更容易触发（距离底部100像素或10%）
+          final threshold = metrics.maxScrollExtent - 100;
+          if (metrics.pixels > threshold && metrics.maxScrollExtent > 0) {
+            logDebug('滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}', source: 'NoteListView');
             _loadMore();
           }
         }
         return true;
       },
-      child: AnimatedList(
-        key: _listKey,
-        initialItemCount: _quotes.length + (_hasMore ? 1 : 0),
+      child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        scrollDirection: Axis.vertical,
-        itemBuilder: (context, index, animation) {
+        itemCount: _quotes.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
           if (index < _quotes.length) {
             final quote = _quotes[index];
             // 获取展开状态，如果不存在则默认为折叠状态
             final bool isExpanded = _expandedItems[quote.id] ?? false;
 
-            // 使用FadeTransition为新项目添加淡入效果
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: animation.drive(
-                  Tween<Offset>(
-                    begin: const Offset(0, 0.1), // 从下方微妙滑入
-                    end: Offset.zero,
-                  ).chain(CurveTween(curve: Curves.easeOutCubic)), // 更平滑的缓动
-                ),
-                child: QuoteItemWidget(
-                  quote: quote,
-                  tags: widget.tags,
-                  isExpanded: isExpanded,
-                  onToggleExpanded: (expanded) {
-                    setState(() {
-                      _expandedItems[quote.id!] = expanded;
-                    });
-                  },
-                  onEdit: () => widget.onEdit(quote),
-                  onDelete: () => widget.onDelete(quote),
-                  onAskAI: () => widget.onAskAI(quote),
-                  onGenerateCard:
-                      widget.onGenerateCard != null
-                          ? () => widget.onGenerateCard!(quote)
-                          : null,
-                  tagBuilder: (tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+            // 直接返回QuoteItemWidget，移除动画
+            return QuoteItemWidget(
+              quote: quote,
+              tags: widget.tags,
+              isExpanded: isExpanded,
+              onToggleExpanded: (expanded) {
+                setState(() {
+                  _expandedItems[quote.id!] = expanded;
+                });
+              },
+              onEdit: () => widget.onEdit(quote),
+              onDelete: () => widget.onDelete(quote),
+              onAskAI: () => widget.onAskAI(quote),
+              onGenerateCard:
+                  widget.onGenerateCard != null
+                      ? () => widget.onGenerateCard!(quote)
+                      : null,
+              tagBuilder: (tag) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.applyOpacity(
+                      0.1,
+                    ), // MODIFIED
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (IconUtils.isEmoji(tag.iconName)) ...[
+                        Text(
+                          IconUtils.getDisplayIcon(tag.iconName),
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(width: 4),
+                      ] else ...[
+                        Icon(
+                          IconUtils.getIconData(tag.iconName),
+                          size: 14,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        tag.name,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.applyOpacity(
-                          0.1,
-                        ), // MODIFIED
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (IconUtils.isEmoji(tag.iconName)) ...[
-                            Text(
-                              IconUtils.getDisplayIcon(tag.iconName),
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(width: 4),
-                          ] else ...[
-                            Icon(
-                              IconUtils.getIconData(tag.iconName),
-                              size: 14,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(
-                            tag.name,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
+                    ],
+                  ),
+                );
+              },
             );
           }
-          // 底部加载指示器，也使用动画淡入显示
-          return FadeTransition(
-            opacity: animation,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: AppLoadingView(size: 32),
-            ),
+          // 底部加载指示器
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: AppLoadingView(size: 32),
           );
         },
       ),

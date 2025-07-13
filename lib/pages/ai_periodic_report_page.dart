@@ -265,29 +265,120 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('AI ${_getPeriodName()}报告'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [Tab(text: '数据概览'), Tab(text: '精选卡片'), Tab(text: 'AI洞察')],
-        ),
-      ),
-      body: Column(
-        children: [
-          _buildTimeSelector(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDataOverview(),
-                _buildFeaturedCards(),
-                _buildInsights(),
-              ],
-            ),
+    return Column(
+      children: [
+        // 极简内部控制栏
+        Container(
+          height: 26,
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _tabController.animateTo(0),
+                  child: Container(
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: _tabController.index == 0 
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(13),
+                      border: _tabController.index == 0 
+                          ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1)
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '数据概览',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: _tabController.index == 0 ? FontWeight.w600 : FontWeight.normal,
+                          color: _tabController.index == 0 
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _tabController.animateTo(1),
+                  child: Container(
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: _tabController.index == 1 
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(13),
+                      border: _tabController.index == 1 
+                          ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1)
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '精选卡片',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: _tabController.index == 1 ? FontWeight.w600 : FontWeight.normal,
+                          color: _tabController.index == 1 
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _tabController.animateTo(2),
+                  child: Container(
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: _tabController.index == 2 
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(13),
+                      border: _tabController.index == 2 
+                          ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1)
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'AI洞察',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: _tabController.index == 2 ? FontWeight.w600 : FontWeight.normal,
+                          color: _tabController.index == 2 
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        // 时间选择器
+        _buildTimeSelector(),
+        // 内容区域
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildDataOverview(),
+              _buildFeaturedCards(),
+              _buildInsights(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

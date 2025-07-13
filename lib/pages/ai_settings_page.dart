@@ -19,6 +19,7 @@ class AISettingsPage extends StatefulWidget {
 }
 
 class _AISettingsPageState extends State<AISettingsPage> {
+  final _formKey = GlobalKey<FormState>(); // 添加表单Key
   final _apiUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
   final _modelController = TextEditingController();
@@ -278,50 +279,61 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       });
     } catch (e) {
-      logDebug('加载AI设置失败: $e');
+      logError('加载AI设置失败: $e', error: e, source: 'AISettingsPage._loadSettings');
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('加载AI设置失败: $e')));
+      
+      // 显示用户友好的错误信息
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.error, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('加载AI设置失败，请检查网络连接或重新启动应用'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: '重试',
+            textColor: Colors.white,
+            onPressed: () => _loadSettings(),
+          ),
+        ),
+      );
     }
   }
 
   Future<void> _saveSettings() async {
+    // 首先验证表单
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(child: Text('请修正表单中的错误后再保存')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final settingsService = Provider.of<SettingsService>(
       context,
       listen: false,
     );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    // 验证输入
-    if (_apiUrlController.text.trim().isEmpty) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('请输入API URL')),
-      );
-      return;
-    }
-
-    if (_apiKeyController.text.trim().isEmpty) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('请输入API Key')),
-      );
-      return;
-    }
-
-    // 验证最大令牌数
+    // 解析最大令牌数
     final maxTokensText = _maxTokensController.text.trim();
-    int maxTokens = 1000;
-    if (maxTokensText.isNotEmpty) {
-      final parsed = int.tryParse(maxTokensText);
-      if (parsed == null) {
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('最大令牌数必须是有效的整数')),
-        );
-        return;
-      }
-      maxTokens = parsed;
-    }
+    int maxTokens = int.parse(maxTokensText); // 现在可以安全解析，因为已通过验证
 
     try {
       // 创建新的provider
@@ -334,12 +346,32 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('新预设已创建并保存')),
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(child: Text('新预设已创建并保存成功')),
+            ],
+          ),
+          backgroundColor: Colors.green,
+        ),
       );
       FocusScope.of(context).unfocus();
     } catch (e) {
       if (!mounted) return;
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('保存设置失败: $e')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('保存设置失败: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -972,198 +1004,251 @@ class _AISettingsPageState extends State<AISettingsPage> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Provider选择器
-            _buildProviderSelector(),
+        child: Form(
+          key: _formKey, // 添加表单Key
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Provider选择器
+              _buildProviderSelector(),
 
-            DropdownButtonFormField<String>(
-              value: _selectedPreset,
-              isExpanded: true,
-              items:
-                  aiPresets.map((preset) {
-                    return DropdownMenuItem(
-                      value: preset['name'],
-                      child: Text(
-                        preset['name']!,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+              DropdownButtonFormField<String>(
+                value: _selectedPreset,
+                isExpanded: true,
+                items:
+                    aiPresets.map((preset) {
+                      return DropdownMenuItem(
+                        value: preset['name'],
+                        child: Text(
+                          preset['name']!,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _selectedPreset = value;
+                    final preset = aiPresets.firstWhere(
+                      (p) => p['name'] == value,
                     );
-                  }).toList(),
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _selectedPreset = value;
-                  final preset = aiPresets.firstWhere(
-                    (p) => p['name'] == value,
-                  );
-                  _apiUrlController.text = preset['apiUrl']!;
-                  _modelController.text = preset['model']!;
-                  // 保留当前的API Key，不要清空
-                  // _apiKeyController.text 保持不变
-                });
-                logDebug('切换预设到: $value, 保留现有API Key');
-              },
-              decoration: const InputDecoration(
-                labelText: '快速选择AI服务预设',
-                border: OutlineInputBorder(),
+                    _apiUrlController.text = preset['apiUrl']!;
+                    _modelController.text = preset['model']!;
+                    // 保留当前的API Key，不要清空
+                    // _apiKeyController.text 保持不变
+                  });
+                  logDebug('切换预设到: $value, 保留现有API Key');
+                },
+                decoration: const InputDecoration(
+                  labelText: '快速选择AI服务预设',
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text('选择或手动配置'),
               ),
-              hint: const Text('选择或手动配置'),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'API 设置 (${_currentProvider?.name ?? _selectedPreset ?? '自定义'})',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _apiUrlController,
-              decoration: const InputDecoration(
-                labelText: 'API URL',
-                hintText: '服务接口地址',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.link),
+              const SizedBox(height: 20),
+              Text(
+                'API 设置 (${_currentProvider?.name ?? _selectedPreset ?? '自定义'})',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              keyboardType: TextInputType.url,
-              onChanged:
-                  (_) => setState(() {
-                    _selectedPreset = null;
-                  }),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _apiKeyController,
-              decoration: const InputDecoration(
-                labelText: 'API Key',
-                hintText: '服务所需的密钥',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.key),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _apiUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'API URL',
+                  hintText: '服务接口地址',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.link),
+                ),
+                keyboardType: TextInputType.url,
+                onChanged:
+                    (_) => setState(() {
+                      _selectedPreset = null;
+                    }),
+                validator: _validateUrl,
               ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _modelController,
-              decoration: InputDecoration(
-                labelText: '模型名称',
-                hintText:
-                    _selectedPreset != null &&
-                            aiPresets
-                                .firstWhere(
-                                  (p) => p['name'] == _selectedPreset,
-                                )['model']!
-                                .isEmpty
-                        ? '请输入模型名称'
-                        : '使用默认模型或自定义',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.psychology),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _apiKeyController,
+                decoration: const InputDecoration(
+                  labelText: 'API Key',
+                  hintText: '服务所需的密钥',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.key),
+                ),
+                obscureText: true,
+                validator: _validateApiKey,
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _maxTokensController,
-              decoration: const InputDecoration(
-                labelText: '最大令牌数',
-                hintText: '例如: 2048',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.numbers),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _modelController,
+                decoration: InputDecoration(
+                  labelText: '模型名称',
+                  hintText:
+                      _selectedPreset != null &&
+                              aiPresets
+                                  .firstWhere(
+                                    (p) => p['name'] == _selectedPreset,
+                                  )['model']!
+                                  .isEmpty
+                          ? '请输入模型名称'
+                          : '使用默认模型或自定义',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.psychology),
+                ),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _hostOverrideController,
-              decoration: const InputDecoration(
-                labelText: '主机覆盖 (Host Override)',
-                hintText: '可选，用于代理设置',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.dns),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _maxTokensController,
+                decoration: const InputDecoration(
+                  labelText: '最大令牌数',
+                  hintText: '例如: 2048',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.numbers),
+                ),
+                keyboardType: TextInputType.number,
+                validator: _validateMaxTokens,
               ),
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    '温度固定为 0.7',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // AI卡片生成功能开关
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'AI卡片生成',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '启用后可以为笔记生成精美的分享卡片',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey[600]),
-                          ),
-                          const SizedBox(height: 12),
-                          Consumer<SettingsService>(
-                            builder: (context, settingsService, child) {
-                              return SwitchListTile(
-                                title: const Text('启用AI卡片生成'),
-                                subtitle: const Text('生成SVG格式的精美卡片用于分享'),
-                                value: settingsService.aiCardGenerationEnabled,
-                                onChanged: (value) {
-                                  settingsService.setAICardGenerationEnabled(
-                                    value,
-                                  );
-                                },
-                                contentPadding: EdgeInsets.zero,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _hostOverrideController,
+                decoration: const InputDecoration(
+                  labelText: '主机覆盖 (Host Override)',
+                  hintText: '可选，用于代理设置',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.dns),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      '温度固定为 0.7',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _saveSettings,
-                        icon: const Icon(Icons.add),
-                        label: const Text('创建新预设'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onPrimary,
+                    const SizedBox(height: 24),
+
+                    // AI卡片生成功能开关
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'AI卡片生成',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '启用后可以为笔记生成精美的分享卡片',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 12),
+                            Consumer<SettingsService>(
+                              builder: (context, settingsService, child) {
+                                return SwitchListTile(
+                                  title: const Text('启用AI卡片生成'),
+                                  subtitle: const Text('生成SVG格式的精美卡片用于分享'),
+                                  value: settingsService.aiCardGenerationEnabled,
+                                  onChanged: (value) {
+                                    settingsService.setAICardGenerationEnabled(
+                                      value,
+                                    );
+                                  },
+                                  contentPadding: EdgeInsets.zero,
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      OutlinedButton.icon(
-                        onPressed: _testConnection,
-                        icon: const Icon(Icons.network_check),
-                        label: const Text('测试连接'),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _saveSettings,
+                          icon: const Icon(Icons.add),
+                          label: const Text('创建新预设'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        OutlinedButton.icon(
+                          onPressed: _testConnection,
+                          icon: const Icon(Icons.network_check),
+                          label: const Text('测试连接'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
+  // 验证URL格式
+  String? _validateUrl(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'API URL不能为空';
+    }
+    
+    // 基本URL格式验证
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
+      return '请输入有效的HTTP/HTTPS URL';
+    }
+    
+    return null;
+  }
+  
+  // 验证API Key
+  String? _validateApiKey(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'API Key不能为空';
+    }
+    
+    if (value.length < 10) {
+      return 'API Key长度不足，请检查是否完整';
+    }
+    
+    return null;
+  }
+  
+  // 验证最大令牌数
+  String? _validateMaxTokens(String? value) {
+    if (value == null || value.isEmpty) {
+      return '最大令牌数不能为空';
+    }
+    
+    final intValue = int.tryParse(value);
+    if (intValue == null) {
+      return '请输入有效的数字';
+    }
+    
+    if (intValue < 1 || intValue > 100000) {
+      return '令牌数应在1-100000之间';
+    }
+    
+    return null;
+  }
+
 }
