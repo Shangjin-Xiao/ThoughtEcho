@@ -82,16 +82,26 @@ ${date != null ? '日期：$date' : ''}
 
 ##技术规格
 - 使用纯SVG格式确保无损缩放和最佳兼容性
-- 设置viewBox为"0 0 400 600"或类似比例
+- 必须设置viewBox="0 0 400 600"
+- 必须包含xmlns="http://www.w3.org/2000/svg"命名空间
 - 确保所有文本和关键视觉元素清晰可读
-- SVG元素总数不超过100，确保渲染效率
-- 避免使用实验性或低兼容性的SVG功能
+- SVG元素总数不超过50，确保渲染效率
+- 只使用基础SVG元素：rect, circle, ellipse, line, polyline, polygon, path, text, g
+- 避免使用外部字体，使用系统字体：Arial, sans-serif, serif
+- 避免使用filter、mask、clipPath等复杂特性
 
 ##输出要求
 - 只输出完整的SVG代码，不要包含任何其他内容
 - 不要包含markdown代码块标记
-- 确保代码有效并符合SVG标准
+- 不要包含任何解释或说明文字
+- 确保代码有效并符合SVG 1.1标准
 - 所有文本必须使用中文（装饰性文字可以使用英文/法文增加精致感）
+- SVG必须以<svg开头，以</svg>结尾
+
+示例格式：
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+  <!-- SVG内容 -->
+</svg>
 
 请直接输出SVG代码：
 ''';

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:uuid/uuid.dart';
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
@@ -76,12 +76,12 @@ class AICardGenerationService {
       final imageBytes = await card.toImageBytes();
 
       // 保存到相册
-      final result = await ImageGallerySaver.saveImage(
+      await Gal.putImageBytes(
         imageBytes,
         name: 'card_${card.id}',
       );
 
-      return result['filePath'] ?? result['uri'] ?? '';
+      return 'card_${card.id}';
     } catch (e) {
       throw Exception('保存图片失败: $e');
     }
@@ -91,12 +91,18 @@ class AICardGenerationService {
 
   /// 增强的SVG清理逻辑，确保只保留SVG代码
   String _cleanSVGContent(String response) {
+    if (kDebugMode) {
+      print('原始AI响应长度: ${response.length}');
+      print('原始AI响应前200字符: ${response.length > 200 ? response.substring(0, 200) : response}');
+    }
+
     String cleaned = response.trim();
 
-    // 移除常见的markdown标记
+    // 移除常见的markdown标记和说明文字
     cleaned = cleaned
         .replaceAll('```svg', '')
         .replaceAll('```xml', '')
+        .replaceAll('```html', '')
         .replaceAll('```', '')
         .replaceAll('`', '')
         .trim();
@@ -105,13 +111,20 @@ class AICardGenerationService {
     final lines = cleaned.split('\n');
     final svgLines = <String>[];
     bool inSvg = false;
+    bool foundSvgStart = false;
 
     for (final line in lines) {
       final trimmedLine = line.trim();
 
+      // 跳过空行和注释行（除非在SVG内部）
+      if (!inSvg && (trimmedLine.isEmpty || trimmedLine.startsWith('//'))) {
+        continue;
+      }
+
       // 检测SVG开始
       if (trimmedLine.startsWith('<svg')) {
         inSvg = true;
+        foundSvgStart = true;
         svgLines.add(line);
         continue;
       }
@@ -131,22 +144,69 @@ class AICardGenerationService {
     cleaned = svgLines.join('\n').trim();
 
     // 如果没有找到完整的SVG，尝试简单的字符串提取
-    if (!cleaned.contains('<svg') || !cleaned.contains('</svg>')) {
+    if (!foundSvgStart || !cleaned.contains('<svg') || !cleaned.contains('</svg>')) {
+      if (kDebugMode) {
+        print('未找到完整SVG，尝试字符串提取...');
+      }
+
       final svgStartIndex = response.indexOf('<svg');
       if (svgStartIndex >= 0) {
         final svgEndIndex = response.lastIndexOf('</svg>');
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
+          if (kDebugMode) {
+            print('字符串提取成功，SVG长度: ${cleaned.length}');
+          }
         }
       }
     }
 
-    // 验证SVG基本结构
-    if (!cleaned.contains('<svg') || !cleaned.contains('</svg>')) {
-      throw const AICardGenerationException('AI返回的内容不包含有效的SVG代码');
+    // 最终验证和清理
+    cleaned = _validateAndFixSVG(cleaned);
+
+    if (kDebugMode) {
+      print('清理后SVG长度: ${cleaned.length}');
+      print('清理后SVG前200字符: ${cleaned.length > 200 ? cleaned.substring(0, 200) : cleaned}');
     }
 
     return cleaned;
+  }
+
+  /// 验证和修复SVG代码
+  String _validateAndFixSVG(String svgContent) {
+    // 基本结构验证
+    if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
+      throw const AICardGenerationException('AI返回的内容不包含有效的SVG代码');
+    }
+
+    String fixed = svgContent;
+
+    // 确保SVG有正确的命名空间
+    if (!fixed.contains('xmlns="http://www.w3.org/2000/svg"')) {
+      fixed = fixed.replaceFirst('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    // 确保有viewBox或width/height
+    if (!fixed.contains('viewBox') && !fixed.contains('width=') && !fixed.contains('height=')) {
+      fixed = fixed.replaceFirst('<svg', '<svg viewBox="0 0 400 600"');
+    }
+
+    // 移除可能导致渲染问题的属性
+    fixed = fixed
+        .replaceAll(RegExp(r'style\s*=\s*"[^"]*font-family:[^"]*"'), '') // 移除可能不存在的字体
+        .replaceAll(RegExp(r'xmlns:xlink="[^"]*"'), '') // 移除xlink命名空间（可能不需要）
+        .trim();
+
+    // 验证是否为有效的XML结构（简单检查）
+    final openTags = RegExp(r'<(\w+)').allMatches(fixed).length;
+    final closeTags = RegExp(r'</(\w+)>').allMatches(fixed).length;
+    final selfClosingTags = RegExp(r'<\w+[^>]*/>').allMatches(fixed).length;
+
+    if (kDebugMode) {
+      print('SVG标签统计 - 开始标签: $openTags, 结束标签: $closeTags, 自闭合标签: $selfClosingTags');
+    }
+
+    return fixed;
   }
 
 
@@ -168,8 +228,6 @@ class AICardGenerationService {
       throw const AICardGenerationException('请先在设置中配置 API Key');
     }
 
-    // 直接使用AI服务的内部方法生成SVG
-    // 这里我们需要模拟generateInsights的逻辑，但使用自定义prompt
     try {
       // 获取当前provider
       final multiSettings = _settingsService.multiAISettings;
@@ -180,10 +238,72 @@ class AICardGenerationService {
       }
 
       // 使用专门的SVG生成方法
-      return await _aiService.generateSVG(prompt);
+      final svgContent = await _aiService.generateSVG(prompt);
+
+      // 验证生成的SVG是否有效
+      if (svgContent.trim().isEmpty) {
+        throw const AICardGenerationException('AI返回了空的SVG内容');
+      }
+
+      return svgContent;
     } catch (e) {
-      throw AICardGenerationException('生成SVG内容失败', e);
+      if (kDebugMode) {
+        print('AI SVG生成失败: $e，尝试使用备用方案');
+      }
+
+      // 如果AI生成失败，使用备用的简单SVG
+      return _generateFallbackSVG(prompt);
     }
+  }
+
+  /// 生成备用的简单SVG卡片
+  String _generateFallbackSVG(String prompt) {
+    // 从prompt中提取内容
+    final contentMatch = RegExp(r'待处理内容：\n(.+?)(?:\n|$)', dotAll: true).firstMatch(prompt);
+    final content = contentMatch?.group(1)?.trim() ?? '无法生成卡片内容';
+
+    // 限制内容长度
+    final displayContent = content.length > 100 ? '${content.substring(0, 100)}...' : content;
+
+    return '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="400" height="600" fill="url(#bg)" rx="20"/>
+
+  <!-- 装饰圆圈 -->
+  <circle cx="350" cy="50" r="30" fill="rgba(255,255,255,0.1)"/>
+  <circle cx="50" cy="550" r="40" fill="rgba(255,255,255,0.1)"/>
+
+  <!-- 标题区域 -->
+  <rect x="30" y="80" width="340" height="2" fill="rgba(255,255,255,0.8)"/>
+  <text x="200" y="120" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="bold">
+    ThoughtEcho
+  </text>
+
+  <!-- 内容区域 -->
+  <rect x="30" y="160" width="340" height="300" fill="rgba(255,255,255,0.9)" rx="15"/>
+
+  <!-- 内容文字 -->
+  <foreignObject x="50" y="180" width="300" height="260">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #333; padding: 20px; text-align: center;">
+      ${displayContent.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}
+    </div>
+  </foreignObject>
+
+  <!-- 底部装饰 -->
+  <rect x="30" y="520" width="340" height="2" fill="rgba(255,255,255,0.8)"/>
+  <text x="200" y="550" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12">
+    ${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日
+  </text>
+</svg>
+''';
   }
 
   /// 从SVG内容解析卡片类型
