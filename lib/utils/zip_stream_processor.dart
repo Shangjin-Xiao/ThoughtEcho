@@ -217,45 +217,48 @@ class ZipStreamProcessor {
 
     try {
       // 使用流式解压，避免一次性加载整个ZIP到内存
-      final zipFile = File(zipPath);
-      final bytes = await zipFile.readAsBytes();
-      final decoder = ZipDecoder();
+      final inputStream = InputFileStream(zipPath);
+      try {
+        final decoder = ZipDecoder();
 
-      // 使用新的流式解压API
-      final archive = decoder.decodeBytes(bytes);
+        // 使用流式解压API
+        final archive = decoder.decodeBuffer(inputStream);
 
-      final filesToProcess =
-          archive.files.where((file) => file.isFile).toList();
-      final totalFiles = filesToProcess.length;
-      sendPort.send(totalFiles); // 1. 发送总文件数
+        final filesToProcess =
+            archive.files.where((file) => file.isFile).toList();
+        final totalFiles = filesToProcess.length;
+        sendPort.send(totalFiles); // 1. 发送总文件数
 
-      int processedCount = 0;
-      for (final file in filesToProcess) {
-        final outputPath = '$extractPath/${file.name}';
-        final outputFile = File(outputPath);
+        int processedCount = 0;
+        for (final file in filesToProcess) {
+          final outputPath = '$extractPath/${file.name}';
+          final outputFile = File(outputPath);
 
-        // 确保目录存在
-        await outputFile.parent.create(recursive: true);
+          // 确保目录存在
+          await outputFile.parent.create(recursive: true);
 
-        // 流式写入文件
-        final outputStream = outputFile.openWrite();
-        try {
-          // 使用archive库的writeContent方法，它会自动处理大文件
-          file.writeContent(OutputFileStream(outputPath));
-        } catch (e) {
-          // 如果writeContent失败，尝试直接写入content
-          outputStream.add(file.content);
-        } finally {
-          await outputStream.close();
+          // 流式写入文件
+          final outputStream = outputFile.openWrite();
+          try {
+            // 使用archive库的writeContent方法，它会自动处理大文件
+            file.writeContent(OutputFileStream(outputPath));
+          } catch (e) {
+            // 如果writeContent失败，尝试直接写入content
+            outputStream.add(file.content);
+          } finally {
+            await outputStream.close();
+          }
+
+          processedCount++;
+          sendPort.send(processedCount); // 2. 发送当前进度
+
+          // 每处理5个文件，给系统一个喘息的机会
+          if (processedCount % 5 == 0) {
+            await Future.delayed(const Duration(milliseconds: 10));
+          }
         }
-
-        processedCount++;
-        sendPort.send(processedCount); // 2. 发送当前进度
-
-        // 每处理5个文件，给系统一个喘息的机会
-        if (processedCount % 5 == 0) {
-          await Future.delayed(const Duration(milliseconds: 10));
-        }
+      } finally {
+        await inputStream.close();
       }
 
       sendPort.send('done'); // 3. 发送完成信号
@@ -274,17 +277,18 @@ class ZipStreamProcessor {
         return false;
       }
 
-      // 读取ZIP文件内容
-      final bytes = await zipFile.readAsBytes();
+      final inputStream = InputFileStream(zipPath);
       try {
         final decoder = ZipDecoder();
-        final archive = decoder.decodeBytes(bytes);
+        final archive = decoder.decodeBuffer(inputStream);
 
         // 只检查文件头，不解压内容
         return archive.isNotEmpty;
       } catch (e) {
         logDebug('ZIP文件解码失败: $zipPath, 错误: $e');
         return false;
+      } finally {
+        await inputStream.close();
       }
     } catch (e) {
       logDebug('ZIP文件验证失败: $zipPath, 错误: $e');
@@ -304,9 +308,8 @@ class ZipStreamProcessor {
 
       final inputStream = InputFileStream(zipPath);
       try {
-        final decoder = ZipDecoder();
-        final bytes = await zipFile.readAsBytes();
-        final archive = decoder.decodeBytes(bytes);
+        // 流式解析 ZIP
+        final archive = ZipDecoder().decodeBuffer(inputStream);
 
         int totalUncompressedSize = 0;
         int fileCount = 0;
@@ -348,11 +351,8 @@ class ZipStreamProcessor {
 
       final inputStream = InputFileStream(zipPath);
       try {
-        final zipFile = File(zipPath);
-        final bytes = await zipFile.readAsBytes();
-        final decoder = ZipDecoder();
-        final archive = decoder.decodeBytes(bytes);
-
+        // 使用流式解码，避免一次性读入大文件
+        final archive = ZipDecoder().decodeBuffer(inputStream);
         for (final file in archive) {
           if (file.name == fileName) {
             return true;
@@ -385,9 +385,8 @@ class ZipStreamProcessor {
 
       final inputStream = InputFileStream(zipPath);
       try {
-        final bytes = await zipFile.readAsBytes();
-        final decoder = ZipDecoder();
-        final archive = decoder.decodeBytes(bytes);
+        // 使用流式解码
+        final archive = ZipDecoder().decodeBuffer(inputStream);
 
         for (final file in archive) {
           if (file.name == fileName) {
