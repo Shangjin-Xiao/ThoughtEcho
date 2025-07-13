@@ -494,8 +494,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     );
 
     try {
-      final aiService = Provider.of<AIService>(context, listen: false);
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final aiService = Provider.of<AIService>(context, listen: false);
 
       // 读取HTML模板
       String htmlTemplate;
@@ -559,11 +559,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
 
       // 构建详细的数据摘要
       final monthlyStatsText = List.generate(12, (i) => '${i + 1}月: ${monthlyStats[i + 1] ?? 0}篇').join('\n');
-      final positiveQuotesText = positiveQuotes.map((quote) => '- ${quote.content.length > 100 ? quote.content.substring(0, 100) + '...' : quote.content}').join('\n');
+      final positiveQuotesText = positiveQuotes.map((quote) => '- ${quote.content.length > 100 ? '${quote.content.substring(0, 100)}...' : quote.content}').join('\n');
       final categoryText = categoryCounts.entries.take(10).map((e) => '${e.key}(${e.value}次)').join(', ');
 
-      final dataStats = '''
-年度数据统计：
+      // 尝试AI生成，如果失败则使用备用方案
+      String result;
+      try {
+
+        final prompt = '''
+请基于以下数据生成一个完整的HTML年度报告。
+
+数据统计：
 - 年份：$year
 - 总笔记数：$totalNotes 篇
 - 总字数：$totalWords 字
@@ -577,100 +583,70 @@ $monthlyStatsText
 
 精选积极内容（${positiveQuotes.length}条）：
 $positiveQuotesText
+
+请生成一个包含以下元素的完整HTML年度报告：
+1. 精美的头部区域，显示年份和主要统计数据
+2. 月度笔记数量的可视化图表
+3. 分类标签云展示
+4. 精选笔记内容展示
+5. 成长洞察和总结
+6. 现代化的移动端适配样式
+
+请直接返回完整的HTML代码，不要包含任何解释文字。
 ''';
 
-      final prompt = '''
-你是心迹应用的专业年度报告生成助手。请基于用户的笔记数据，生成一份精美、温暖、有意义的年度总结报告。
+        final aiResult = await aiService.generateAnnualReportHTML(prompt);
 
-$dataStats
+        // 检查AI返回的内容是否为HTML
+        if (aiResult.trim().toLowerCase().startsWith('<!doctype') ||
+            aiResult.trim().toLowerCase().startsWith('<html')) {
+          result = aiResult;
+        } else {
+          // AI返回的不是HTML，使用备用方案
+          result = await _generateFallbackReport(
+            htmlTemplate, quotes, year, activeDays, totalNotes,
+            totalWords, averageWordsPerNote, categoryCounts, monthlyStats, positiveQuotes
+          );
 
-请使用以下HTML模板，将模板中的占位符替换为真实数据：
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('AI返回格式异常，已使用备用模板生成报告'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      } catch (aiError) {
+        // AI调用失败，使用备用方案
+        result = await _generateFallbackReport(
+          htmlTemplate, quotes, year, activeDays, totalNotes,
+          totalWords, averageWordsPerNote, categoryCounts, monthlyStats, positiveQuotes
+        );
 
-$htmlTemplate
-
-替换规则和示例：
-- {{YEAR}} → $year
-- {{ACTIVE_DAYS}} → $activeDays
-- {{TOTAL_NOTES}} → $totalNotes
-- {{TOTAL_TAGS}} → ${categoryCounts.length}
-- {{TOTAL_WORDS}} → $totalWords
-- {{AVERAGE_WORDS}} → $averageWordsPerNote
-- {{NEXT_YEAR}} → ${year + 1}
-- {{GROWTH_PERCENTAGE}} → 生成如"相比去年增长15%"的描述
-- {{MONTHLY_CHART}} → 生成如下格式的HTML:
-  <div class="month-item"><div class="month-name">1月</div><div class="month-count">5</div></div>
-- {{TAG_CLOUD}} → 生成如下格式的HTML:
-  <span class="tag">工作</span><span class="tag popular">学习</span>
-- {{TAG_INSIGHT}} → 生成基于分类使用情况的洞察文本
-- {{PEAK_TIME}} → 如"晚上 20:00-22:00"
-- {{PEAK_TIME_DESC}} → 如"您更喜欢在夜晚进行思考和记录"
-- {{WRITING_HABITS}} → 生成写作习惯分析文本
-- {{FEATURED_QUOTES}} → 生成如下格式的HTML:
-  <div class="quote-card"><div class="quote-content">笔记内容</div><div class="quote-date">2024-01-01</div></div>
-- {{ACHIEVEMENTS}} → 生成如下格式的HTML:
-  <div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-title">坚持记录</div><div class="achievement-desc">连续记录30天</div></div>
-- {{FUTURE_SUGGESTIONS}} → 生成未来建议文本
-
-重要要求：
-1. 必须返回完整的HTML代码，从<!DOCTYPE html>开始到</html>结束
-2. 不要返回JSON格式或其他格式
-3. 不要添加任何解释性文字，只返回HTML代码
-4. 确保所有占位符都被替换为实际内容
-5. 保持HTML的完整性和可读性
-6. 使用真实的数据进行替换
-
-请直接返回完整的HTML代码：
-''';
-
-      final result = await aiService.analyzeSource(prompt);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('AI服务异常，已使用备用模板生成报告'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
       if (!mounted) return;
       Navigator.pop(context); // 关闭加载对话框
 
       if (result.isNotEmpty) {
-        // 验证返回的内容是否为HTML格式
-        final trimmedResult = result.trim();
-        String finalHtmlContent = result;
-
-        if (!trimmedResult.toLowerCase().startsWith('<!doctype') &&
-            !trimmedResult.toLowerCase().startsWith('<html')) {
-          // 如果不是HTML格式，尝试使用模板生成
-          try {
-            finalHtmlContent = await _generateFallbackReport(
-              htmlTemplate, quotes, year, activeDays, totalNotes,
-              totalWords, averageWordsPerNote, categoryCounts, monthlyStats, positiveQuotes
-            );
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('AI返回格式异常，已使用备用模板生成报告'),
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
-          } catch (e) {
-            // 如果备用方案也失败，使用原始内容
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('AI返回的不是标准HTML格式，将显示原始内容'),
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
-          }
-        }
-
         if (mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AIAnnualReportWebView(htmlContent: finalHtmlContent, year: year),
+              builder: (context) => AIAnnualReportWebView(htmlContent: result, year: year),
             ),
           );
         }
       } else {
-        throw Exception('AI返回了空的报告内容');
+        throw Exception('生成报告失败');
       }
     } catch (e) {
       if (mounted) {
@@ -723,7 +699,7 @@ $htmlTemplate
     final achievements = [
       if (totalNotes >= 50) '<div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-title">记录达人</div><div class="achievement-desc">记录了$totalNotes条笔记</div></div>',
       if (activeDays >= 30) '<div class="achievement"><div class="achievement-icon">📅</div><div class="achievement-title">坚持不懈</div><div class="achievement-desc">活跃记录$activeDays天</div></div>',
-      if (totalWords >= 10000) '<div class="achievement"><div class="achievement-icon">✍️</div><div class="achievement-title">文字创作者</div><div class="achievement-desc">累计写作${totalWords}字</div></div>',
+      if (totalWords >= 10000) '<div class="achievement"><div class="achievement-icon">✍️</div><div class="achievement-title">文字创作者</div><div class="achievement-desc">累计写作$totalWords字</div></div>',
       if (categoryCounts.isNotEmpty) '<div class="achievement"><div class="achievement-icon">🎯</div><div class="achievement-title">分类整理</div><div class="achievement-desc">使用了${categoryCounts.length}个分类</div></div>',
     ].join('\n');
 

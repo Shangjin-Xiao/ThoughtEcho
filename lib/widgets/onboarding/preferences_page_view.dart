@@ -48,7 +48,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           curve: Interval(
             startDelay,
             endTime,
-            curve: Curves.easeOutBack,
+            curve: Curves.easeOutCubic,
           ),
         ),
       );
@@ -111,10 +111,15 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             return AnimatedBuilder(
               animation: _itemAnimations[index],
               builder: (context, child) {
+                // Clamp animation values to valid ranges
+                final animationValue = _itemAnimations[index].value;
+                final clampedOpacity = animationValue.clamp(0.0, 1.0);
+                final clampedScale = animationValue.clamp(0.0, double.infinity);
+
                 return Transform.scale(
-                  scale: _itemAnimations[index].value,
+                  scale: clampedScale,
                   child: Opacity(
-                    opacity: _itemAnimations[index].value,
+                    opacity: clampedOpacity,
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 20),
                       child: _buildPreferenceItem(preference, theme),

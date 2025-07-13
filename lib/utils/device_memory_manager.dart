@@ -1,12 +1,14 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'app_logger.dart';
 
 /// 设备内存管理器
-/// 
+///
 /// 提供设备内存检测、监控和优化建议
+/// 支持实时内存监控和压力管理
 class DeviceMemoryManager {
   static final DeviceMemoryManager _instance = DeviceMemoryManager._internal();
   factory DeviceMemoryManager() => _instance;
@@ -16,6 +18,14 @@ class DeviceMemoryManager {
   int? _totalMemory;
   DateTime? _lastCheck;
   static const Duration _cacheTimeout = Duration(seconds: 5);
+
+  // 内存监控相关
+  bool _isMonitoring = false;
+  StreamController<Map<String, dynamic>>? _memoryStatusController;
+
+  // 内存压力级别缓存
+  int _lastPressureLevel = 0;
+  DateTime? _lastPressureCheck;
 
   /// 获取设备总内存（字节）
   Future<int> getTotalMemory() async {
@@ -168,23 +178,26 @@ class DeviceMemoryManager {
     }
   }
 
-  /// 检查当前内存压力级别
-  Future<MemoryPressureLevel> getMemoryPressureLevel() async {
+  /// 检查当前内存压力级别（枚举版本）
+  Future<MemoryPressureLevel> getMemoryPressureLevelEnum() async {
     try {
-      final usageRatio = await getMemoryUsageRatio();
-      
-      if (usageRatio > 0.9) {
-        return MemoryPressureLevel.critical;
-      } else if (usageRatio > 0.8) {
-        return MemoryPressureLevel.high;
-      } else if (usageRatio > 0.6) {
-        return MemoryPressureLevel.medium;
-      } else {
-        return MemoryPressureLevel.low;
+      final level = await getMemoryPressureLevel();
+
+      switch (level) {
+        case 0:
+          return MemoryPressureLevel.low;
+        case 1:
+          return MemoryPressureLevel.medium;
+        case 2:
+          return MemoryPressureLevel.high;
+        case 3:
+          return MemoryPressureLevel.critical;
+        default:
+          return MemoryPressureLevel.medium;
       }
     } catch (e) {
-      logDebug('检查内存压力失败: $e');
-      return MemoryPressureLevel.medium;
+      logDebug('检查内存压力级别失败: $e');
+      return MemoryPressureLevel.medium; // 出错时返回中等压力
     }
   }
 
@@ -275,10 +288,150 @@ class DeviceMemoryManager {
     }
   }
 
+  /// 获取内存压力级别（增强版）
+  Future<int> getMemoryPressureLevel() async {
+    try {
+      // 检查缓存
+      if (_lastPressureCheck != null &&
+          DateTime.now().difference(_lastPressureCheck!) < const Duration(seconds: 2)) {
+        return _lastPressureLevel;
+      }
+
+      if (Platform.isAndroid) {
+        try {
+          const platform = MethodChannel('thoughtecho/memory_info');
+          final pressureLevel = await platform.invokeMethod('getMemoryPressureLevel');
+          _lastPressureLevel = pressureLevel ?? 1;
+          _lastPressureCheck = DateTime.now();
+          return _lastPressureLevel;
+        } catch (e) {
+          logDebug('获取原生内存压力级别失败: $e');
+        }
+      }
+
+      // 回退到计算方式
+      final usageRatio = await getMemoryUsageRatio();
+      int level;
+      if (usageRatio >= 0.95) {
+        level = 3; // 临界状态
+      } else if (usageRatio >= 0.85) {
+        level = 2; // 高压力
+      } else if (usageRatio >= 0.6) {
+        level = 1; // 中等压力
+      } else {
+        level = 0; // 正常状态
+      }
+
+      _lastPressureLevel = level;
+      _lastPressureCheck = DateTime.now();
+      return level;
+    } catch (e) {
+      logDebug('获取内存压力级别失败: $e');
+      return 1; // 出错时返回中等压力
+    }
+  }
+
+  /// 开始内存监控
+  Future<void> startMemoryMonitoring({int intervalMs = 5000}) async {
+    if (_isMonitoring) {
+      return;
+    }
+
+    try {
+      if (Platform.isAndroid) {
+        const platform = MethodChannel('thoughtecho/memory_info');
+
+        // 设置内存状态更新回调
+        platform.setMethodCallHandler((call) async {
+          if (call.method == 'onMemoryStatusUpdate') {
+            final data = Map<String, dynamic>.from(call.arguments);
+            _memoryStatusController?.add(data);
+          } else if (call.method == 'onMemoryMonitoringError') {
+            final error = call.arguments['error'] as String?;
+            logDebug('内存监控错误: $error');
+          }
+        });
+
+        // 启动原生监控
+        await platform.invokeMethod('startMemoryMonitoring', {
+          'intervalMs': intervalMs,
+        });
+
+        _isMonitoring = true;
+        logDebug('内存监控已启动');
+      }
+    } catch (e) {
+      logDebug('启动内存监控失败: $e');
+    }
+  }
+
+  /// 停止内存监控
+  Future<void> stopMemoryMonitoring() async {
+    if (!_isMonitoring) {
+      return;
+    }
+
+    try {
+      if (Platform.isAndroid) {
+        const platform = MethodChannel('thoughtecho/memory_info');
+        await platform.invokeMethod('stopMemoryMonitoring');
+      }
+
+      _isMonitoring = false;
+      await _memoryStatusController?.close();
+      _memoryStatusController = null;
+      logDebug('内存监控已停止');
+    } catch (e) {
+      logDebug('停止内存监控失败: $e');
+    }
+  }
+
+  /// 获取内存状态流
+  Stream<Map<String, dynamic>>? get memoryStatusStream {
+    _memoryStatusController ??= StreamController<Map<String, dynamic>>.broadcast();
+    return _memoryStatusController?.stream;
+  }
+
+  /// 强制垃圾回收
+  Future<void> forceGarbageCollection() async {
+    try {
+      if (Platform.isAndroid) {
+        const platform = MethodChannel('thoughtecho/memory_info');
+        await platform.invokeMethod('forceGarbageCollection');
+      } else {
+        // 回退到Dart的垃圾回收建议
+        await suggestGarbageCollection();
+      }
+      logDebug('已执行强制垃圾回收');
+    } catch (e) {
+      logDebug('强制垃圾回收失败: $e');
+    }
+  }
+
+  /// 获取详细内存信息
+  Future<Map<String, dynamic>> getDetailedMemoryInfo() async {
+    try {
+      if (Platform.isAndroid) {
+        const platform = MethodChannel('thoughtecho/memory_info');
+        final result = await platform.invokeMethod('getDetailedMemoryInfo');
+        return Map<String, dynamic>.from(result);
+      } else {
+        // 回退到基础信息
+        final basicInfo = await _getAndroidMemoryInfo();
+        return basicInfo;
+      }
+    } catch (e) {
+      logDebug('获取详细内存信息失败: $e');
+      return {};
+    }
+  }
+
   /// 清理内存缓存
   void clearCache() {
     _totalMemory = null;
     _lastCheck = null;
+    _lastPressureLevel = 0;
+    _lastPressureCheck = null;
   }
 }
 

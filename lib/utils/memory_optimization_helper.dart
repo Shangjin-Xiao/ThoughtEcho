@@ -18,9 +18,9 @@ class MemoryOptimizationHelper {
       final availableMemory = await _memoryManager.getAvailableMemory();
       
       // 根据内存压力和数据大小决定策略
-      if (memoryPressure == MemoryPressureLevel.critical) {
+      if (memoryPressure >= 3) { // 临界状态
         return ProcessingStrategy.minimal;
-      } else if (memoryPressure == MemoryPressureLevel.high) {
+      } else if (memoryPressure >= 2) { // 高压力
         return dataSize > 10 * 1024 * 1024 ? ProcessingStrategy.streaming : ProcessingStrategy.chunked;
       } else if (dataSize > availableMemory ~/ 4) {
         return ProcessingStrategy.streaming;
@@ -46,16 +46,17 @@ class MemoryOptimizationHelper {
       
       // 根据内存压力调整
       switch (memoryPressure) {
-        case MemoryPressureLevel.critical:
+        case 3: // 临界状态
           baseChunkSize = 8 * 1024; // 8KB
           break;
-        case MemoryPressureLevel.high:
+        case 2: // 高压力
           baseChunkSize = 16 * 1024; // 16KB
           break;
-        case MemoryPressureLevel.medium:
+        case 1: // 中等压力
           baseChunkSize = 32 * 1024; // 32KB
           break;
-        case MemoryPressureLevel.low:
+        case 0: // 正常状态
+        default:
           baseChunkSize = 128 * 1024; // 128KB
           break;
       }
@@ -84,8 +85,7 @@ class MemoryOptimizationHelper {
       final memoryPressure = await _memoryManager.getMemoryPressureLevel();
       
       // 高内存压力时避免使用Isolate
-      if (memoryPressure == MemoryPressureLevel.critical || 
-          memoryPressure == MemoryPressureLevel.high) {
+      if (memoryPressure >= 2) { // 高压力或临界状态
         return false;
       }
       
@@ -102,7 +102,7 @@ class MemoryOptimizationHelper {
     try {
       final memoryPressure = await _memoryManager.getMemoryPressureLevel();
       
-      if (memoryPressure.shouldPause) {
+      if (memoryPressure >= 3) { // 临界状态需要暂停
         logDebug('执行紧急内存优化...');
         
         // 清理缓存
@@ -126,12 +126,29 @@ class MemoryOptimizationHelper {
     try {
       final memoryPressure = await _memoryManager.getMemoryPressureLevel();
       
-      if (memoryPressure.shouldWarn) {
-        logDebug('内存压力警告: ${memoryPressure.description}');
+      if (memoryPressure >= 2) { // 高压力或临界状态需要警告
+        final description = _getPressureDescription(memoryPressure);
+        logDebug('内存压力警告: $description');
         await performOptimization();
       }
     } catch (e) {
       logDebug('内存监控失败: $e');
+    }
+  }
+
+  /// 获取内存压力描述
+  String _getPressureDescription(int pressureLevel) {
+    switch (pressureLevel) {
+      case 0:
+        return '内存充足';
+      case 1:
+        return '内存使用正常';
+      case 2:
+        return '内存使用较高';
+      case 3:
+        return '内存不足';
+      default:
+        return '内存状态未知';
     }
   }
 }

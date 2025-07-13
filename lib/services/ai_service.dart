@@ -75,15 +75,11 @@ class AIService extends ChangeNotifier {
 
         // 首先检查provider是否启用
         if (!currentProvider.isEnabled) {
-          logDebug('API Key检查 - 当前provider已禁用: ${currentProvider.name}');
           return false;
         }
 
         // 基本检查：provider存在且启用
         // 实际的API Key验证通过异步方法进行
-        logDebug(
-          'API Key检查 - Provider: ${currentProvider.name}, Enabled: ${currentProvider.isEnabled}',
-        );
         return true;
       }
 
@@ -91,9 +87,6 @@ class AIService extends ChangeNotifier {
       final availableProviders =
           multiSettings.providers.where((p) => p.isEnabled).toList();
 
-      logDebug(
-        'API Key检查 - 无当前provider，可用providers: ${availableProviders.length}',
-      );
       return availableProviders.isNotEmpty;
     } catch (e) {
       logDebug('检查API Key有效性失败: $e');
@@ -111,18 +104,12 @@ class AIService extends ChangeNotifier {
 
         // 检查provider是否启用
         if (!currentProvider.isEnabled) {
-          logDebug('异步API Key检查 - 当前provider已禁用: ${currentProvider.name}');
           return false;
         }
 
         // 从安全存储验证API密钥
         final hasValidKey = await _apiKeyManager.hasValidProviderApiKey(
           currentProvider.id,
-        );
-
-        logDebug(
-          '异步API Key检查 - Provider: ${currentProvider.name}, '
-          'HasValidKey: $hasValidKey, Enabled: ${currentProvider.isEnabled}',
         );
 
         return hasValidKey;
@@ -484,6 +471,296 @@ class AIService extends ChangeNotifier {
       },
       context: '分析来源',
     );
+  }
+
+  // 生成年度报告HTML
+  Future<String> generateAnnualReportHTML(String prompt) async {
+    // 使用异步验证确保API Key有效性
+    if (!await hasValidApiKeyAsync()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+
+    return await _requestHelper.executeWithErrorHandling(
+      operation: () async {
+        await _validateSettings();
+        final currentProvider = await _getCurrentProviderWithApiKey();
+
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
+          systemPrompt: AIPromptManager.annualReportPrompt,
+          userMessage: _buildEnhancedAnnualReportPrompt(prompt),
+          provider: currentProvider,
+          temperature: 0.3, // 使用较低的温度确保格式一致性
+          maxTokens: 4000, // 增加token限制以支持完整HTML
+        );
+
+        String result = _requestHelper.parseResponse(response);
+        
+        // 验证返回内容是否为HTML格式
+        if (!_isValidHtml(result)) {
+          // 如果不是HTML格式，尝试包装或生成备用HTML
+          result = _generateFallbackHtml(result, prompt);
+        }
+
+        return result;
+      },
+      context: '生成年度报告',
+    );
+  }
+
+  // 验证是否为有效的HTML格式
+  bool _isValidHtml(String content) {
+    final trimmed = content.trim();
+    return trimmed.toLowerCase().startsWith('<!doctype html') || 
+           trimmed.toLowerCase().startsWith('<html');
+  }
+
+  // 生成备用HTML报告
+  String _generateFallbackHtml(String content, String prompt) {
+    // 从prompt中提取数据
+    final yearMatch = RegExp(r'年份：(\d{4})').firstMatch(prompt);
+    final notesMatch = RegExp(r'总笔记数：(\d+)').firstMatch(prompt);
+    final wordsMatch = RegExp(r'总字数：(\d+)').firstMatch(prompt);
+    
+    final year = yearMatch?.group(1) ?? DateTime.now().year.toString();
+    final totalNotes = notesMatch?.group(1) ?? '0';
+    final totalWords = wordsMatch?.group(1) ?? '0';
+
+    return '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 $year 年度报告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 414px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+        }
+        .year {
+            font-size: 52px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            font-size: 20px;
+            opacity: 0.95;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+        }
+        .stat { text-align: center; flex: 1; }
+        .stat-number { font-size: 28px; font-weight: 700; display: block; }
+        .stat-label { font-size: 13px; opacity: 0.9; }
+        .content {
+            padding: 30px 25px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .ai-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #444;
+        }
+        .error-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            color: #856404;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .footer-logo {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="year">$year</div>
+            <div class="subtitle">✨ 我的思考轨迹 ✨</div>
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-number">$totalNotes</span>
+                    <div class="stat-label">📝 总笔记数</div>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">$totalWords</span>
+                    <div class="stat-label">✏️ 总字数</div>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">365</span>
+                    <div class="stat-label">📅 记录时光</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <div class="section-title">🎯 AI生成的年度总结</div>
+                <div class="ai-content">${content.replaceAll(RegExp(r'[{}"\[\]]'), '').trim()}</div>
+                
+                ${!content.toLowerCase().contains('html') ? '''
+                <div class="error-note">
+                    💡 提示：AI返回了文本格式的总结而非HTML报告。这可能是由于模型理解偏差导致的。
+                    建议您重新生成报告或联系开发者改进AI提示词。
+                </div>
+                ''' : ''}
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📈 数据回顾</div>
+                <div class="ai-content">
+今年，您在心迹中记录了 $totalNotes 条珍贵的思考，累计 $totalWords 个字的思想财富。
+
+每一条记录都是您成长路上的足迹，每一个文字都承载着您的思考与感悟。
+
+感谢您与心迹一起，记录下这一年的精彩时光！
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="footer-text">🙏 感谢你与心迹一起记录美好的 $year 年</div>
+            <div class="footer-text">🚀 继续在 ${int.parse(year) + 1} 年捕捉每一个珍贵的想法 ✨</div>
+            <div class="footer-logo">心迹 ThoughtEcho</div>
+        </div>
+    </div>
+</body>
+</html>''';
+  }
+
+  /// 构建年度报告的增强提示词
+  String _buildEnhancedAnnualReportPrompt(String userDataPrompt) {
+    return '''$userDataPrompt
+
+重要格式要求：
+你必须生成一个完整的HTML文档。以下是基本结构，请参考但不要直接复制，而是根据用户数据生成个性化内容：
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 2024 年度报告</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .year { font-size: 48px; font-weight: bold; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+        .section { padding: 30px 20px; border-bottom: 1px solid #eee; }
+        .section-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="year">2024</div>
+            <div>我的思考轨迹</div>
+            <div class="stats">
+                <div>📝 100篇</div>
+                <div>✏️ 5000字</div>
+                <div>📅 200天</div>
+            </div>
+        </div>
+        <div class="section">
+            <div class="section-title">📊 数据概览</div>
+            <p>根据真实数据生成内容...</p>
+        </div>
+        <div class="section">
+            <div class="section-title">✨ 精彩回顾</div>
+            <p>展示用户的积极内容...</p>
+        </div>
+        <div class="section">
+            <div class="section-title">🚀 未来展望</div>
+            <p>鼓励性的建议...</p>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+关键要求：
+1. 必须输出完整HTML，不要输出JSON、解释文字或代码块标记
+2. 用用户的真实数据替换示例数据
+3. 保持移动端友好的设计
+4. 使用温暖积极的语调
+5. 只展示正面积极的内容
+6. 确保HTML格式正确
+
+请直接输出HTML代码：''';
   }
 
   // 流式分析来源

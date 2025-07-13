@@ -89,7 +89,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   Text(
                     '正在处理报告...',
                     style: TextStyle(
-                      color: colorScheme.onSurface.withOpacity(0.7),
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -360,31 +360,67 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
   String _extractTextFromHtml(String content) {
     // 检查是否是JSON格式
     if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
-      return '''
-⚠️ 检测到技术性内容格式
+      // 尝试解析JSON以提供更友好的显示
+      try {
+        // 简单清理JSON格式的显示
+        String cleanJson = content
+            .replaceAll('"author":', '作者: ')
+            .replaceAll('"work":', '作品: ')
+            .replaceAll('"confidence":', '可信度: ')
+            .replaceAll('"explanation":', '说明: ')
+            .replaceAll(RegExp(r'[{}",]'), '')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+        
+        return '''
+⚠️ 检测到AI返回了JSON数据格式
 
-AI返回了JSON格式的数据而不是HTML报告。这可能是因为：
-• AI模型理解有误
-• 提示词需要优化
-• 数据格式转换问题
+这表明AI模型可能误解了请求，返回了数据分析结果而非HTML报告。
 
-建议：
-1. 重新生成报告
-2. 尝试使用原生Flutter报告
-3. 检查网络连接
+返回的内容：
+$cleanJson
 
-如需查看原始数据，请点击"在浏览器中查看"按钮。
+这个问题可能的原因：
+• AI混淆了年度报告生成和内容分析功能
+• 提示词需要进一步优化
+• 模型版本或配置问题
+
+建议解决方案：
+1. 重新生成报告（AI可能会修正错误）
+2. 检查AI设置中的模型配置
+3. 尝试使用原生Flutter报告功能
+4. 更新AI提示词配置
+
+如需技术支持，请保存此错误信息并联系开发者。
 ''';
+      } catch (e) {
+        return '''
+⚠️ 检测到异常数据格式
+
+AI返回了无法正常解析的JSON数据，这可能是由于：
+• 网络传输问题
+• AI服务异常
+• 数据格式错误
+
+原始内容：
+${content.length > 300 ? '${content.substring(0, 300)}...' : content}
+
+建议重新生成报告或使用原生报告功能。
+''';
+      }
     }
 
     // 检查是否包含HTML标签
     if (!content.contains('<html') && !content.contains('<!DOCTYPE')) {
       return '''
-📄 纯文本内容预览
+📄 AI生成的文本内容
 
-${content.length > 500 ? content.substring(0, 500) + '...' : content}
+${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 
-💡 提示：完整内容请在浏览器中查看
+💡 提示：AI返回了纯文本格式的总结而非HTML报告。
+这可能是因为模型理解了内容但没有按照HTML格式输出。
+
+完整内容可以在浏览器中查看，系统会自动包装为HTML格式。
 ''';
     }
 
@@ -409,18 +445,19 @@ ${content.length > 500 ? content.substring(0, 500) + '...' : content}
     });
 
     try {
-      // 创建临时HTML文件
-      final tempDir = await getTemporaryDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final htmlFile = File('${tempDir.path}/annual_report_${widget.year}_$timestamp.html');
+      try {
+        // 尝试创建临时HTML文件
+        final tempDir = await getTemporaryDirectory();
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final htmlFile = File('${tempDir.path}/annual_report_${widget.year}_$timestamp.html');
 
-      // 检查内容格式并处理
-      String contentToWrite = widget.htmlContent;
+        // 检查内容格式并处理
+        String contentToWrite = widget.htmlContent;
 
-      // 如果不是HTML格式，包装成HTML
-      if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
-          !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToWrite = '''
+        // 如果不是HTML格式，包装成HTML
+        if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
+            !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
+          contentToWrite = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -475,37 +512,57 @@ ${content.length > 500 ? content.substring(0, 500) + '...' : content}
 </body>
 </html>
 ''';
-      }
+        }
 
-      await htmlFile.writeAsString(contentToWrite);
+        await htmlFile.writeAsString(contentToWrite);
 
-      // 在浏览器中打开
-      final uri = Uri.file(htmlFile.path);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // 在浏览器中打开
+        final uri = Uri.file(htmlFile.path);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('报告已在浏览器中打开'),
+                  ],
+                ),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            );
+          }
+        } else {
+          throw '无法启动浏览器';
+        }
+      } catch (pathError) {
+        // 如果文件操作失败，复制内容到剪贴板作为备用方案
+        await Clipboard.setData(ClipboardData(text: widget.htmlContent));
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white),
+                  Icon(Icons.content_copy, color: Colors.white),
                   SizedBox(width: 8),
-                  Text('报告已在浏览器中打开'),
+                  Expanded(child: Text('无法创建临时文件，内容已复制到剪贴板')),
                 ],
               ),
               backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 3),
             ),
           );
         }
-      } else {
-        throw '无法启动浏览器';
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('无法打开浏览器: $e'),
+            content: Text('操作失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -527,13 +584,8 @@ ${content.length > 500 ? content.substring(0, 500) + '...' : content}
         _isLoading = true;
       });
 
-      // 创建临时HTML文件
-      final tempDir = await getTemporaryDirectory();
-      final htmlFile = File('${tempDir.path}/annual_report_${widget.year}.html');
-      await htmlFile.writeAsString(widget.htmlContent);
-
-      // 复制到剪贴板
-      await Clipboard.setData(ClipboardData(text: htmlFile.path));
+      // 复制HTML内容到剪贴板
+      await Clipboard.setData(ClipboardData(text: widget.htmlContent));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -542,7 +594,7 @@ ${content.length > 500 ? content.substring(0, 500) + '...' : content}
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Text('报告文件路径已复制到剪贴板'),
+                Text('报告内容已复制到剪贴板'),
               ],
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -576,62 +628,58 @@ ${content.length > 500 ? content.substring(0, 500) + '...' : content}
         _isLoading = true;
       });
 
-      // 获取文档目录
-      final appDir = await getApplicationDocumentsDirectory();
-      final reportsDir = Directory('${appDir.path}/annual_reports');
+      try {
+        // 尝试获取文档目录
+        final appDir = await getApplicationDocumentsDirectory();
+        final reportsDir = Directory('${appDir.path}/annual_reports');
 
-      // 确保目录存在
-      if (!await reportsDir.exists()) {
-        await reportsDir.create(recursive: true);
-      }
+        // 确保目录存在
+        if (!await reportsDir.exists()) {
+          await reportsDir.create(recursive: true);
+        }
 
-      // 创建文件名
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'annual_report_${widget.year}_$timestamp.html';
-      final reportFile = File('${reportsDir.path}/$fileName');
+        // 创建文件名
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = 'annual_report_${widget.year}_$timestamp.html';
+        final reportFile = File('${reportsDir.path}/$fileName');
 
-      // 保存文件
-      await reportFile.writeAsString(widget.htmlContent);
+        // 保存文件
+        await reportFile.writeAsString(widget.htmlContent);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('报告已保存'),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '保存位置: ${reportFile.path}',
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
-                ),
-              ],
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('报告已保存到本地文件')),
+                ],
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 3),
             ),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: '打开文件夹',
-              textColor: Colors.white,
-              onPressed: () async {
-                try {
-                  final uri = Uri.directory(reportsDir.path);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri);
-                  }
-                } catch (e) {
-                  // 忽略错误
-                }
-              },
+          );
+        }
+      } catch (pathError) {
+        // 如果路径操作失败，回退到剪贴板
+        await Clipboard.setData(ClipboardData(text: widget.htmlContent));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.content_copy, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('无法保存文件，内容已复制到剪贴板')),
+                ],
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 3),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

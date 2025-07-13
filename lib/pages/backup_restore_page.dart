@@ -517,7 +517,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       if (mounted) {
         String errorMessage = '无法完成数据还原：$e';
         
-        // 针对不同类型的错误提供更友好的提示
+        // 修复：针对不同类型的错误提供更友好的提示
         if (e.toString().contains('OutOfMemoryError') || 
             e.toString().contains('内存不足')) {
           errorMessage = '还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大';
@@ -533,6 +533,40 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         } else if (e.toString().contains('无效') || 
                    e.toString().contains('corrupt')) {
           errorMessage = '还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。';
+        } else if (e.toString().contains('has no column named')) {
+          // 修复：专门处理字段名不匹配的错误
+          final columnMatch = RegExp(r'has no column named (\w+)').firstMatch(e.toString());
+          final columnName = columnMatch?.group(1) ?? '未知字段';
+          
+          errorMessage = '''还原失败：备份文件格式不兼容
+
+问题：数据库中缺少字段 "$columnName"
+
+可能的原因：
+• 备份文件来自较旧版本的应用
+• 字段名格式发生了变化（如：sourceAuthor → source_author）
+• 备份文件中包含了当前版本不支持的字段
+
+解决方案：
+1. 确保使用最新版本的应用
+2. 如果备份来自旧版本，请尝试先升级应用再导入
+3. 如果问题持续，请联系开发者获取帮助
+
+技术详情：$e''';
+        } else if (e.toString().contains('SQLITE_ERROR')) {
+          errorMessage = '''还原失败：数据库操作错误
+
+这可能是由于：
+• 备份文件格式不正确
+• 数据库约束冲突
+• 字段类型不匹配
+
+建议：
+1. 检查备份文件是否完整
+2. 尝试重新导出备份文件
+3. 确保备份文件来自相同或兼容的应用版本
+
+技术详情：$e''';
         }
         
         _showErrorDialog('还原失败', errorMessage);

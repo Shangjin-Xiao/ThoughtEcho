@@ -68,7 +68,7 @@ class NoteListViewState extends State<NoteListView> {
   bool _isLoading = true;
   bool _hasMore = true;
   static const int _pageSize = 20;
-  late StreamSubscription<List<Quote>> _quotesSub;
+  StreamSubscription<List<Quote>>? _quotesSub;
 
   // 优化：添加防抖定时器
   Timer? _searchDebounceTimer;
@@ -97,9 +97,12 @@ class NoteListViewState extends State<NoteListView> {
     logDebug('搜索框焦点状态: ${_searchFocusNode.hasFocus}');
   }
 
-  /// 优化：将数据流初始化分离到独立方法
+  /// 修复：将数据流初始化分离到独立方法
   void _initializeDataStream() {
     if (!mounted) return; // 确保组件仍然挂载
+
+    // 修复：安全取消现有订阅
+    _quotesSub?.cancel();
 
     final db = Provider.of<DatabaseService>(context, listen: false);
     _quotesSub = db
@@ -226,9 +229,10 @@ class NoteListViewState extends State<NoteListView> {
     return true;
   }
 
-  // 优化：新增方法：更新数据库监听流（改进版本）
+  // 修复：新增方法：更新数据库监听流（改进版本）
   void _updateStreamSubscription() {
-    // 移除阻止更新的守卫条件，确保搜索和筛选能正常工作
+    if (!mounted) return; // 确保组件仍然挂载
+    
     logDebug('更新数据流订阅，当前加载状态: $_isLoading', source: 'NoteListView');
 
     setState(() {
@@ -237,11 +241,14 @@ class NoteListViewState extends State<NoteListView> {
       _quotes.clear(); // 清空当前列表
     });
 
-    // 使用更新条件的方式而不是重新订阅
     final db = Provider.of<DatabaseService>(context, listen: false);
 
-    // 取消现有订阅
-    _quotesSub.cancel();
+    // 修复：安全取消现有订阅
+    try {
+      _quotesSub?.cancel();
+    } catch (e) {
+      logDebug('取消订阅时出错: $e');
+    }
 
     // 创建新的订阅 - 优化：减少不必要的参数传递
     _quotesSub = db
@@ -340,12 +347,24 @@ class NoteListViewState extends State<NoteListView> {
 
   @override
   void dispose() {
-    _quotesSub.cancel();
+    // 修复：安全清理所有资源
+    try {
+      _quotesSub?.cancel();
+    } catch (e) {
+      logDebug('取消订阅时出错: $e');
+    }
+    
     _searchController.dispose();
+    
     // 安全地清理焦点节点和监听器
-    _searchFocusNode.removeListener(_onFocusChanged);
-    _searchFocusNode.dispose();
-    _searchDebounceTimer?.cancel(); // 优化：清理防抖定时器
+    try {
+      _searchFocusNode.removeListener(_onFocusChanged);
+      _searchFocusNode.dispose();
+    } catch (e) {
+      logDebug('清理焦点节点时出错: $e');
+    }
+    
+    _searchDebounceTimer?.cancel(); // 清理防抖定时器
     super.dispose();
   }
 
