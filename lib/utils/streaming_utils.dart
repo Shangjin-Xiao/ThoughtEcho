@@ -337,7 +337,6 @@ class StreamingUtils {
     StreamingCompleteCallback onComplete,
     StreamingErrorCallback onError,
   ) async {
-    String fullText = '';
     String currentChunk = '';
 
     try {
@@ -355,20 +354,21 @@ class StreamingUtils {
 
           if (line == 'data: [DONE]') {
             logDebug('流式响应完成');
-            onComplete(fullText);
+            onComplete('');
             return;
           }
 
           final content = _extractContentFromLine(line);
           if (content != null && content.isNotEmpty) {
-            fullText += content;
+            // 按块解码并立即回调，避免全量缓存
             onResponse(content);
           }
         }
       }
 
       logDebug('流式响应接收完毕');
-      onComplete(fullText);
+      // 流处理结束，只回调完成通知，不传递内容
+      onComplete('');
     } catch (e) {
       logDebug('处理流式响应时出错: $e');
       onError(Exception(e.toString()));
