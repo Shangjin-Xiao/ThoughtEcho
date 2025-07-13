@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/foundation.dart' show compute;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
@@ -11,6 +9,7 @@ import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
+import 'streaming_backup_processor.dart';
 
 /// 备份与恢复服务
 ///
@@ -209,13 +208,15 @@ class BackupService {
     );
   }
 
-  /// 执行受保护的导入操作（增强版）
+  /// 执行受保护的导入操作（流式处理版）
   Future<void> _performImportWithProtection(
     String filePath, {
     bool clearExisting = true,
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
+    logDebug('开始流式导入备份文件: $filePath');
+
     // 检查内存状态
     final memoryManager = DeviceMemoryManager();
     final memoryPressure = await memoryManager.getMemoryPressureLevel();
@@ -224,143 +225,109 @@ class BackupService {
       throw Exception('内存不足，无法执行导入操作。请关闭其他应用后重试。');
     }
 
-    // 处理旧版 JSON 备份文件
-    if (path.extension(filePath).toLowerCase() == '.json') {
-      logDebug('开始导入旧版JSON备份...');
-      return await _handleLegacyImportSafely(
-        filePath,
-        clearExisting: clearExisting,
-      );
+    // 获取备份文件信息
+    final backupInfo = await StreamingBackupProcessor.getBackupInfo(filePath);
+    logDebug('备份文件信息: $backupInfo');
+
+    // 验证备份文件
+    if (!await StreamingBackupProcessor.validateBackupFile(filePath)) {
+      throw Exception('备份文件损坏或格式不正确');
     }
 
-    // 处理新的 ZIP 备份文件 - 使用流式处理
-    await _handleZipImportSafely(
-      filePath,
-      clearExisting: clearExisting,
-      onProgress: onProgress,
-      cancelToken: cancelToken,
-    );
+    Map<String, dynamic> backupData;
+
+    // 根据文件类型使用相应的流式处理器
+    if (backupInfo['type'] == 'json') {
+      logDebug('使用流式JSON处理器...');
+      backupData = await StreamingBackupProcessor.parseJsonBackupStreaming(
+        filePath,
+        onStatusUpdate: (status) => logDebug('JSON处理状态: $status'),
+        shouldCancel: () => cancelToken?.isCancelled == true,
+      );
+    } else if (backupInfo['type'] == 'zip') {
+      logDebug('使用流式ZIP处理器...');
+      backupData = await StreamingBackupProcessor.processZipBackupStreaming(
+        filePath,
+        onStatusUpdate: (status) => logDebug('ZIP处理状态: $status'),
+        onProgress: onProgress,
+        shouldCancel: () => cancelToken?.isCancelled == true,
+      );
+    } else {
+      throw Exception('不支持的备份文件格式: ${backupInfo['type']}');
+    }
+
+    // 处理导入数据
+    await _processImportDataStreaming(backupData, clearExisting, cancelToken);
   }
 
-  /// 内存安全的ZIP导入处理
-  Future<void> _handleZipImportSafely(
-    String filePath, {
-    bool clearExisting = true,
-    Function(int current, int total)? onProgress,
+  /// 流式处理导入数据
+  Future<void> _processImportDataStreaming(
+    Map<String, dynamic> backupData,
+    bool clearExisting,
     CancelToken? cancelToken,
-  }) async {
-    final tempDir = await getTemporaryDirectory();
-    final importDir = Directory(
-      path.join(
-        tempDir.path,
-        'import_${DateTime.now().millisecondsSinceEpoch}',
-      ),
-    );
-
-    // 清理可能存在的旧目录
-    if (await importDir.exists()) {
-      await importDir.delete(recursive: true);
-    }
-    await importDir.create(recursive: true);
+  ) async {
+    logDebug('开始流式处理导入数据...');
 
     try {
       cancelToken?.throwIfCancelled();
 
-      // 1. 预检查备份文件和内存状态
-      await _preCheckBackupFile(filePath);
-
-      cancelToken?.throwIfCancelled();
-
-      // 2. 使用流式解压备份包
-      logDebug('开始流式解压备份文件...');
-      await _extractBackupSafely(
-        filePath,
-        importDir.path,
-        onProgress: (current, total) {
-          // 解压进度占总进度的50%
-          final extractProgress = (current / total * 50).round();
-          onProgress?.call(extractProgress, 100);
-        },
-        cancelToken: cancelToken,
-      );
-
-      cancelToken?.throwIfCancelled();
-
-      // 3. 恢复结构化数据
-      logDebug('开始恢复结构化数据...');
-      final jsonFile = File(path.join(importDir.path, _backupDataFile));
-
-      if (!await jsonFile.exists()) {
-        throw Exception('备份文件无效: 未找到 $_backupDataFile');
-      }
-
-      // 使用流式JSON解码
-      final backupData = await LargeFileManager.decodeJsonFromFileStreaming(
-        jsonFile,
-        onProgress: (current, total) {
-          // JSON解码进度占总进度的20%
-          final jsonProgress = (current / total * 20).round();
-          onProgress?.call(50 + jsonProgress, 100);
-        },
-      );
-
-      cancelToken?.throwIfCancelled();
-
-      await _restoreStructuredData(backupData, clearExisting: clearExisting);
-
-      // 4. 恢复媒体文件
-      logDebug('开始恢复媒体文件...');
-
-      // 清理现有媒体文件
+      // 如果选择清空，则先清空所有相关数据
       if (clearExisting) {
-        final existingMediaPaths =
-            await MediaFileService.getAllMediaFilePaths();
-        for (final mediaPath in existingMediaPaths) {
-          try {
-            await MediaFileService.deleteMediaFile(mediaPath);
-          } catch (e) {
-            logDebug('删除现有媒体文件失败: $mediaPath, 错误: $e');
-          }
+        logDebug('清空现有数据...');
+        await _databaseService.importDataFromMap({
+          'categories': [],
+          'quotes': [],
+        }, clearExisting: true);
+        await _aiAnalysisDbService.deleteAllAnalyses();
+      }
+
+      cancelToken?.throwIfCancelled();
+
+      // 恢复笔记数据
+      if (backupData.containsKey('notes')) {
+        logDebug('恢复笔记数据...');
+        var notesData = Map<String, dynamic>.from(backupData['notes']);
+
+        // 检查是否包含媒体文件
+        final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);
+        if (hasMediaFiles) {
+          notesData = await _convertMediaPathsInNotesForRestore(notesData);
         }
+
+        await _databaseService.importDataFromMap(
+          notesData,
+          clearExisting: false,
+        );
       }
 
-      // 从临时目录恢复到应用目录（使用增强的大文件处理）
-      final restoreSuccess = await MediaFileService.restoreMediaFiles(
-        importDir.path,
-        onProgress: (current, total) {
-          // 媒体文件恢复进度占总进度的30%
-          final mediaProgress = (current / total * 30).round();
-          onProgress?.call(70 + mediaProgress, 100);
-        },
-        cancelToken: cancelToken,
-      );
+      cancelToken?.throwIfCancelled();
 
-      if (!restoreSuccess) {
-        throw Exception('媒体文件恢复失败');
+      // 恢复设置（使用现有的方法）
+      if (backupData.containsKey('settings')) {
+        logDebug('恢复设置数据...');
+        await _settingsService.restoreAllSettingsFromBackup(
+          backupData['settings'] as Map<String, dynamic>,
+        );
       }
 
-      onProgress?.call(100, 100);
-      logDebug('数据导入完成');
-    } catch (e, s) {
-      if (e is CancelledException) {
-        logDebug('导入操作已取消');
-        rethrow;
+      cancelToken?.throwIfCancelled();
+
+      // 恢复AI分析数据（使用现有的方法）
+      if (backupData.containsKey('ai_analysis')) {
+        logDebug('恢复AI分析数据...');
+        await _aiAnalysisDbService.importAnalysesFromList(
+          (backupData['ai_analysis'] as List).cast<Map<String, dynamic>>(),
+        );
       }
 
-      AppLogger.e('数据导入失败', error: e, stackTrace: s, source: 'BackupService');
+      logDebug('流式导入数据完成');
+    } catch (e) {
+      logDebug('流式导入数据失败: $e');
       rethrow;
-    } finally {
-      // 清理临时解压目录
-      try {
-        if (await importDir.exists()) {
-          await importDir.delete(recursive: true);
-        }
-      } catch (cleanupError) {
-        logDebug('清理临时目录失败: $cleanupError');
-        // 清理失败不阻塞主流程
-      }
     }
   }
+
+
 
   /// 验证备份文件是否有效
   Future<bool> validateBackupFile(String filePath) async {
@@ -413,49 +380,7 @@ class BackupService {
     };
   }
 
-  /// 从Map中恢复结构化数据
-  Future<void> _restoreStructuredData(
-    Map<String, dynamic> backupData, {
-    bool clearExisting = true,
-  }) async {
-    // 如果选择清空，则先清空所有相关数据
-    if (clearExisting) {
-      await _databaseService.importDataFromMap({
-        'categories': [],
-        'quotes': [],
-      }, clearExisting: true);
-      await _aiAnalysisDbService.deleteAllAnalyses();
-    }
 
-    // 恢复笔记和分类
-    if (backupData.containsKey('notes')) {
-      Map<String, dynamic> notesData =
-          backupData['notes'] as Map<String, dynamic>;
-
-      // 检查是否包含媒体文件，如果是则转换路径
-      final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);
-      if (hasMediaFiles) {
-        notesData = await _convertMediaPathsInNotesForRestore(notesData);
-      }
-
-      await _databaseService.importDataFromMap(
-        notesData,
-        clearExisting: false, // 在这里总是false，因为上面已经处理过清空逻辑
-      );
-    }
-    // 恢复设置
-    if (backupData.containsKey('settings')) {
-      await _settingsService.restoreAllSettingsFromBackup(
-        backupData['settings'] as Map<String, dynamic>,
-      );
-    }
-    // 恢复AI分析历史
-    if (backupData.containsKey('ai_analysis')) {
-      await _aiAnalysisDbService.importAnalysesFromList(
-        (backupData['ai_analysis'] as List).cast<Map<String, dynamic>>(),
-      );
-    }
-  }
 
   /// 检查备份数据是否包含媒体文件
   Future<bool> _checkBackupHasMediaFiles(
@@ -748,98 +673,4 @@ class BackupService {
     logDebug('备用解压完成');
   }
 
-  /// 内存安全的旧版JSON导入
-  Future<void> _handleLegacyImportSafely(
-    String filePath, {
-    bool clearExisting = true,
-  }) async {
-    try {
-      final memoryManager = DeviceMemoryManager();
-      final fileSize = await File(filePath).length();
-
-      logDebug('开始导入旧版JSON备份，文件大小: ${(fileSize / 1024).toStringAsFixed(1)}KB');
-
-      // 检查内存压力
-      final memoryPressure = await memoryManager.getMemoryPressureLevel();
-
-      if (memoryPressure >= 3) {
-        throw Exception('内存不足，无法导入备份文件');
-      }
-
-      // 根据文件大小选择处理策略
-      if (fileSize > 50 * 1024 * 1024) {
-        // 50MB以上
-        await _handleLargeJsonImport(filePath, clearExisting);
-      } else if (fileSize > 10 * 1024 * 1024 || memoryPressure >= 2) {
-        // 10MB以上或高内存压力
-        await _handleMediumJsonImport(filePath, clearExisting);
-      } else {
-        await _handleSmallJsonImport(filePath, clearExisting);
-      }
-    } catch (e) {
-      logDebug('旧版JSON导入失败: $e');
-      rethrow;
-    }
-  }
-
-  /// 处理小型JSON导入
-  Future<void> _handleSmallJsonImport(
-    String filePath,
-    bool clearExisting,
-  ) async {
-    final content = await File(filePath).readAsString();
-    final data = jsonDecode(content);
-    await _processImportData(data, clearExisting);
-  }
-
-  /// 处理中型JSON导入
-  Future<void> _handleMediumJsonImport(
-    String filePath,
-    bool clearExisting,
-  ) async {
-    // 使用Isolate处理
-    final content = await File(filePath).readAsString();
-    final data = await compute(_parseJsonInIsolate, content);
-    await _processImportData(data, clearExisting);
-  }
-
-  /// 处理大型JSON导入
-  Future<void> _handleLargeJsonImport(
-    String filePath,
-    bool clearExisting,
-  ) async {
-    // 使用流式处理
-    await LargeFileManager.streamProcessFile(filePath, (
-      dataStream,
-      totalSize,
-    ) async {
-      final chunks = <String>[];
-      await for (final chunk in dataStream) {
-        chunks.add(String.fromCharCodes(chunk));
-      }
-      final content = chunks.join();
-      final data = await compute(_parseJsonInIsolate, content);
-      await _processImportData(data, clearExisting);
-      return true;
-    });
-  }
-
-  /// 在Isolate中解析JSON
-  static dynamic _parseJsonInIsolate(String jsonString) {
-    return jsonDecode(jsonString);
-  }
-
-  /// 处理导入数据
-  Future<void> _processImportData(dynamic data, bool clearExisting) async {
-    // 这里实现具体的数据导入逻辑
-    logDebug('开始处理导入数据');
-
-    if (clearExisting) {
-      // 清空现有数据的逻辑
-      logDebug('清空现有数据');
-    }
-
-    // 导入新数据的逻辑
-    logDebug('导入新数据');
-  }
 }
