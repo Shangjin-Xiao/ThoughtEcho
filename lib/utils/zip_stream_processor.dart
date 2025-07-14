@@ -265,7 +265,6 @@ class ZipStreamProcessor {
         return false;
       }
 
-      final zipFile = File(zipPath);
       final zipBytes = await zipFile.readAsBytes();
       
       final decoder = ZipDecoder();
@@ -297,7 +296,7 @@ class ZipStreamProcessor {
       final fileNames = <String>[];
 
       for (final file in archive) {
-        totalUncompressedSize += file.size.round();
+        totalUncompressedSize += (file.size as num).round();
         fileCount++;
         fileNames.add(file.name);
       }
@@ -310,7 +309,6 @@ class ZipStreamProcessor {
         fileCount: fileCount,
         fileNames: fileNames,
       );
-      }
     } catch (e) {
       logDebug('获取ZIP信息失败: $zipPath, 错误: $e');
       return null;

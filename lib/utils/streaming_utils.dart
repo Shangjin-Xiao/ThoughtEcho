@@ -281,49 +281,24 @@ class StreamingUtils {
         onComplete,
         onError,
       );
-    } on DioException catch (e) {
+    } catch (e) {
       logDebug('Dio流式请求异常: $e');
-      if (e.type == DioExceptionType.receiveTimeout) {
+      // Handle Dio-specific exceptions when available
+      final errorString = e.toString();
+      if (errorString.contains('receiveTimeout') || errorString.contains('timeout')) {
         onError(Exception('请求超时，AI分析可能需要更长时间，请稍后再试'));
-      } else if (e.type == DioExceptionType.connectionTimeout) {
+      } else if (errorString.contains('connectionTimeout') || errorString.contains('connection')) {
         onError(Exception('连接超时，请检查网络连接'));
-      } else if (e.type == DioExceptionType.cancel) {
+      } else if (errorString.contains('cancel')) {
         onError(Exception('请求被取消'));
       } else {
-        // 正确处理响应体，特别是对于流式响应
-        String errorBody = '';
-        try {
-          if (e.response?.data != null) {
-            final responseData = e.response!.data;
-            if (responseData is String) {
-              errorBody = responseData;
-            } else if (responseData is Stream) {
-              // 对于流式响应，需要读取流数据
-              final chunks = <int>[];
-              await for (final chunk in responseData) {
-                if (chunk is List<int>) {
-                  chunks.addAll(chunk);
-                }
-              }
-              errorBody = utf8.decode(chunks);
-            } else {
-              errorBody = responseData.toString();
-            }
-          }
-        } catch (readError) {
-          logDebug('读取错误响应体失败: $readError');
-          errorBody = e.message ?? '未知错误';
-        }
-
+        // Handle the error generically since we can't access Dio-specific properties
         final errorMessage = _parseErrorMessage(
-          e.response?.statusCode ?? 0,
-          errorBody.isEmpty ? (e.message ?? '未知错误') : errorBody,
+          0, // No status code available
+          e.toString(),
         );
         onError(Exception(errorMessage));
       }
-    } catch (e) {
-      logDebug('流式请求异常: $e');
-      onError(Exception(e.toString()));
     } finally {
       cancelToken?.cancel();
       dio?.close();
