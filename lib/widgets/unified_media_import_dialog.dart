@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
@@ -186,8 +187,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 使用内存保护的文件选择
-      final XFile? file = await lfm
-          .LargeFileManager.executeWithMemoryProtection<XFile?>(() async {
+      final FilePickerResult? result = await lfm
+          .LargeFileManager.executeWithMemoryProtection<FilePickerResult?>(() async {
         switch (widget.mediaType) {
           case 'image':
             return await StreamFileSelector.selectImageFile();
@@ -203,9 +204,14 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         }
       }, operationName: '选择${_getMediaTypeName(widget.mediaType)}文件');
 
-      if (file == null) {
+      if (result == null || result.files.isEmpty) {
         _resetState();
         return;
+      }
+
+      final file = result.files.first;
+      if (file.path == null) {
+        throw Exception('无法获取文件路径');
       }
 
       // 立即验证选择的文件
@@ -216,26 +222,28 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _progress = 0.1;
       });
 
+      final filePath = file.path!; // 我们已经在上面检查过了
+
       // 首先检查文件是否存在
-      final fileExists = await File(file.path).exists();
+      final fileExists = await File(filePath).exists();
       if (!fileExists) {
-        logDebug('文件不存在: ${file.path}');
-        throw Exception('选择的文件不存在或已被移动删除\n路径: ${file.path}');
+        logDebug('文件不存在: $filePath');
+        throw Exception('选择的文件不存在或已被移动删除\n路径: $filePath');
       }
 
       // 获取文件大小
       final fileSize = await lfm.LargeFileManager.getFileSizeSecurely(
-        file.path,
+        filePath,
       );
       if (fileSize == 0) {
-        logDebug('文件大小为0: ${file.path}');
-        throw Exception('选择的文件为空\n路径: ${file.path}');
+        logDebug('文件大小为0: $filePath');
+        throw Exception('选择的文件为空\n路径: $filePath');
       }
 
       logDebug('文件验证通过，大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
 
       // 检查文件扩展名是否支持
-      final extension = file.path.split('.').last.toLowerCase();
+      final extension = filePath.split('.').last.toLowerCase();
       final supportedExtensions = _getSupportedExtensions();
       if (!supportedExtensions.contains(extension)) {
         throw Exception(
@@ -249,9 +257,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 检查文件是否可以处理
-      final canProcess = await lfm.LargeFileManager.canProcessFile(file.path);
+      final canProcess = await lfm.LargeFileManager.canProcessFile(filePath);
       if (!canProcess) {
-        logDebug('文件无法处理: ${file.path}');
+        logDebug('文件无法处理: $filePath');
         throw Exception(
           '文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试',
         );
@@ -268,20 +276,20 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         switch (widget.mediaType) {
           case 'image':
             return await MediaFileService.saveImage(
-              file.path,
+              filePath,
               onProgress: _updateProgress,
               cancelToken: _cancelToken,
             );
           case 'video':
             return await MediaFileService.saveVideo(
-              file.path,
+              filePath,
               onProgress: _updateProgress,
               onStatusUpdate: _updateStatus,
               cancelToken: _cancelToken,
             );
           case 'audio':
             return await MediaFileService.saveAudio(
-              file.path,
+              filePath,
               onProgress: _updateProgress,
               cancelToken: _cancelToken,
             );
