@@ -22,14 +22,12 @@ class InsightsPage extends StatefulWidget {
   State<InsightsPage> createState() => _InsightsPageState();
 }
 
-class _InsightsPageState extends State<InsightsPage>
-    with SingleTickerProviderStateMixin {
+class _InsightsPageState extends State<InsightsPage> {
   bool _isLoading = false;
   Stream<String>?
   _insightsStream; // Used only to provide stream to StreamBuilder for connection state
-  String _currentInsightsText = ''; // Not used for display anymore
   bool _isGenerating = false; // 新增状态变量表示是否正在生成
-  late TabController _tabController;
+  bool _showAnalysisSelection = true; // 控制显示分析选择还是结果
   final TextEditingController _customPromptController = TextEditingController();
   bool _showCustomPrompt = false;
   late AIAnalysisDatabaseService _aiAnalysisDatabaseService;
@@ -98,13 +96,11 @@ class _InsightsPageState extends State<InsightsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _aiAnalysisDatabaseService = AIAnalysisDatabaseService();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _customPromptController.dispose();
     _insightsSubscription?.cancel(); // Cancel the subscription
     super.dispose();
@@ -234,7 +230,7 @@ class _InsightsPageState extends State<InsightsPage>
     setState(() {
       _isLoading = true;
       _isGenerating = true;
-      _currentInsightsText = ''; // Clear previous text (not used for display)
+      _accumulatedInsightsText = ''; // Clear accumulated text
       _accumulatedInsightsText = ''; // Clear accumulated text
       _insightsStream = null; // Clear previous stream to reset StreamBuilder
       _insightsSubscription?.cancel(); // Cancel previous subscription
@@ -278,7 +274,7 @@ class _InsightsPageState extends State<InsightsPage>
       setState(() {
         _insightsStream =
             insightsStream; // Set the new stream for StreamBuilder
-        _tabController.animateTo(1); // Switch to result tab
+        _showAnalysisSelection = false; // 切换到结果展示
       });
 
       // Listen to the stream and accumulate text manually
@@ -412,107 +408,85 @@ class _InsightsPageState extends State<InsightsPage>
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            // 顶部操作按钮
-            Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  // 历史分析入口
-                  IconButton(
-                    icon: const Icon(Icons.history, size: 20),
-                    color: theme.primaryColor,
-                    tooltip: '分析历史',
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AIAnalysisHistoryPage(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  _isGenerating
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: EnhancedLottieAnimation(
-                          type: LottieAnimationType.aiThinking,
-                          width: 20,
-                          height: 20,
-                        ),
-                      )
-                      : IconButton(
-                        icon: const Icon(Icons.refresh, size: 20),
-                        color: theme.primaryColor,
-                        tooltip: '重新生成',
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed:
-                            _isGenerating || _currentInsightsText.isEmpty
-                                ? null
-                                : _generateInsights, // 生成中或无内容时禁用
-                      ),
-                ],
-              ),
-            ),
-
-            // 标签页选择器
-            SizedBox(
-              height: 40,
-              child: TabBar(
-                controller: _tabController,
-                tabs: const [Tab(text: '分析模式'), Tab(text: '结果展示')],
-                labelColor: theme.primaryColor,
-                indicatorColor: theme.primaryColor,
-                labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(fontSize: 14),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerHeight: 0,
-              ),
-            ),
-
-            // 标签页内容
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // 第一个标签页：选择分析类型
-                  _buildAnalysisSelectionTab(theme),
-
-                  // 第二个标签页：显示分析结果
-                  _buildAnalysisResultTab(theme),
-                ],
-              ),
-            ),
-          ],
-        ),
+        child: _showAnalysisSelection 
+          ? _buildAnalysisSelectionView(theme)
+          : _buildAnalysisResultView(theme),
       ),
-      floatingActionButton:
-          _tabController.index == 0
-              ? FloatingActionButton.extended(
-                onPressed: _isLoading ? null : _generateInsights,
-                label: Text(_isLoading ? '分析中...' : '开始分析'),
-                icon:
-                    _isLoading
-                        ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: EnhancedLottieAnimation(
-                            type: LottieAnimationType.aiThinking,
-                            width: 18,
-                            height: 18,
-                          ),
-                        )
-                        : const Icon(Icons.auto_awesome),
-              )
-              : null,
+      floatingActionButton: _showAnalysisSelection
+          ? FloatingActionButton.extended(
+            onPressed: _isLoading ? null : _generateInsights,
+            label: Text(_isLoading ? '分析中...' : '开始分析'),
+            icon: _isLoading
+                ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: EnhancedLottieAnimation(
+                    type: LottieAnimationType.aiThinking,
+                    width: 18,
+                    height: 18,
+                  ),
+                )
+                : const Icon(Icons.auto_awesome),
+          )
+          : null,
+    );
+  }
+
+  Widget _buildAnalysisSelectionView(ThemeData theme) {
+    return _buildAnalysisSelectionTab(theme);
+  }
+
+  Widget _buildAnalysisResultView(ThemeData theme) {
+    return Column(
+      children: [
+        // 顶部操作按钮栏
+        Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              // 返回按钮
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _showAnalysisSelection = true;
+                    _accumulatedInsightsText = '';
+                    _isGenerating = false;
+                  });
+                },
+              ),
+              const Spacer(),
+              // 历史记录按钮
+              IconButton(
+                icon: const Icon(Icons.history),
+                color: theme.primaryColor,
+                tooltip: '分析历史',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AIAnalysisHistoryPage(),
+                    ),
+                  );
+                },
+              ),
+              // 重新生成按钮
+              if (!_isGenerating && _accumulatedInsightsText.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  color: theme.primaryColor,
+                  tooltip: '重新生成',
+                  onPressed: _generateInsights,
+                ),
+            ],
+          ),
+        ),
+        // 结果内容
+        Expanded(
+          child: _buildAnalysisResultTab(theme),
+        ),
+      ],
     );
   }
 

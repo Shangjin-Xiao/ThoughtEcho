@@ -309,16 +309,13 @@ Future<void> main() async {
             if (hasCompletedOnboarding && !hasMigrated) {
               logInfo('引导已完成但数据库迁移未完成，开始后台数据库迁移...', source: 'BackgroundInit');
               try {
-                // 初始化数据库，这通常是最耗时的操作
+                // 修复：数据库初始化已包含默认分类初始化，避免重复调用
                 await databaseService.init().timeout(
                   const Duration(seconds: 10),
                   onTimeout: () {
                     throw TimeoutException('数据库初始化超时');
                   },
                 );
-
-                // 初始化默认一言分类
-                await databaseService.initDefaultHitokotoCategories();
 
                 // 标记数据库迁移已完成
                 await settingsService.setDatabaseMigrationComplete(true);
@@ -996,9 +993,8 @@ Future<void> _initializeDatabaseNormally(
       },
     );
 
-    // 确保初始化默认一言分类，即使数据库已初始化
-    await databaseService.initDefaultHitokotoCategories();
-    logDebug('数据库服务及默认标签初始化完成');
+    // 修复：数据库初始化已包含默认分类初始化
+    logDebug('数据库服务初始化完成');
   } catch (e, stackTrace) {
     logDebug('数据库初始化失败: $e');
 

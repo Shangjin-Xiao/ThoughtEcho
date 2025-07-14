@@ -777,7 +777,23 @@ class _HomePageState extends State<HomePage>
               ? Colors.white
               : Theme.of(context).colorScheme.surface,
       appBar:
-          _currentIndex == 1
+          _currentIndex == 0
+              ? AppBar(
+                title: const Text('心迹'),
+                actions: [
+                  // 显示标签加载状态
+                  if (_isLoadingTags && _currentIndex == 1)
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                ],
+              )
+              : _currentIndex == 1
               ? null // 记录页不需要标题栏
               : AppBar(
                 toolbarHeight: 0,
