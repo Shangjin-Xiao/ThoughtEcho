@@ -49,7 +49,8 @@ class MediaFileService {
       final targetPath = path.join(imageDir.path, fileName);
 
       // 检查磁盘空间
-      if (!await StreamingFileProcessor.hasEnoughDiskSpace(targetPath, fileSize)) {
+      if (!await StreamingFileProcessor.hasEnoughDiskSpace(
+          targetPath, fileSize)) {
         throw Exception('磁盘空间不足');
       }
 
@@ -70,7 +71,8 @@ class MediaFileService {
       );
 
       // 验证文件完整性
-      if (!await StreamingFileProcessor.verifyFileCopy(sourcePath, targetPath)) {
+      if (!await StreamingFileProcessor.verifyFileCopy(
+          sourcePath, targetPath)) {
         throw Exception('文件复制验证失败');
       }
 
@@ -108,7 +110,8 @@ class MediaFileService {
       final targetPath = path.join(videoDir.path, fileName);
 
       // 检查磁盘空间
-      if (!await StreamingFileProcessor.hasEnoughDiskSpace(targetPath, fileSize)) {
+      if (!await StreamingFileProcessor.hasEnoughDiskSpace(
+          targetPath, fileSize)) {
         throw Exception('磁盘空间不足');
       }
 
@@ -132,7 +135,8 @@ class MediaFileService {
       );
 
       // 验证文件完整性
-      if (!await StreamingFileProcessor.verifyFileCopy(sourcePath, targetPath)) {
+      if (!await StreamingFileProcessor.verifyFileCopy(
+          sourcePath, targetPath)) {
         throw Exception('视频文件复制验证失败');
       }
 
@@ -184,7 +188,8 @@ class MediaFileService {
       final targetPath = path.join(audioDir.path, fileName);
 
       // 检查磁盘空间
-      if (!await StreamingFileProcessor.hasEnoughDiskSpace(targetPath, fileSize)) {
+      if (!await StreamingFileProcessor.hasEnoughDiskSpace(
+          targetPath, fileSize)) {
         throw Exception('磁盘空间不足');
       }
 
@@ -205,7 +210,8 @@ class MediaFileService {
       );
 
       // 验证文件完整性
-      if (!await StreamingFileProcessor.verifyFileCopy(sourcePath, targetPath)) {
+      if (!await StreamingFileProcessor.verifyFileCopy(
+          sourcePath, targetPath)) {
         throw Exception('音频文件复制验证失败');
       }
 

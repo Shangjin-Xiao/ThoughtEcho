@@ -165,17 +165,15 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             '从系统提取主题颜色',
                             style: TextStyle(
                               fontSize: 12,
-                              color:
-                                  Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
                       ),
                       Switch(
-                        value:
-                            appTheme.useDynamicColor &&
+                        value: appTheme.useDynamicColor &&
                             !appTheme.useCustomColor,
                         onChanged: (value) {
                           // 如果启用动态取色，需要禁用自定义主题色
@@ -185,12 +183,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           appTheme.setUseDynamicColor(value);
                         },
                         // 当使用自定义颜色时禁用此开关
-                        activeColor:
-                            appTheme.useCustomColor
-                                ? Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest
-                                : null,
+                        activeColor: appTheme.useCustomColor
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest
+                            : null,
                       ),
                     ],
                   ),
@@ -217,10 +214,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                               '已启用自定义主题色，动态取色功能已暂时禁用',
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onErrorContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onErrorContainer,
                               ),
                             ),
                           ),
@@ -336,17 +332,15 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               ),
           ],
         ),
-        child:
-            isSelected
-                ? Icon(
-                  Icons.check,
-                  color:
-                      ThemeData.estimateBrightnessForColor(color) ==
-                              Brightness.light
-                          ? Colors.black
-                          : Colors.white,
-                )
-                : null,
+        child: isSelected
+            ? Icon(
+                Icons.check,
+                color: ThemeData.estimateBrightnessForColor(color) ==
+                        Brightness.light
+                    ? Colors.black
+                    : Colors.white,
+              )
+            : null,
       ),
     );
   }

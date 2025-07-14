@@ -347,10 +347,9 @@ class LargeVideoHandler {
 
           // 计算本次读取的大小
           final remainingBytes = fileSize - copiedBytes;
-          final currentChunkSize =
-              remainingBytes < actualChunkSize
-                  ? remainingBytes
-                  : actualChunkSize;
+          final currentChunkSize = remainingBytes < actualChunkSize
+              ? remainingBytes
+              : actualChunkSize;
 
           // 读取数据块
           final buffer = Uint8List(currentChunkSize);

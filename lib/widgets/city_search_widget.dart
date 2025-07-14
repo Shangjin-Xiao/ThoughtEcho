@@ -135,22 +135,21 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                     Icons.search,
                     color: theme.colorScheme.primary,
                   ),
-                  suffixIcon:
-                      _searchController.text.isNotEmpty
-                          ? IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: theme.colorScheme.primary,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                                _isSearchActive = false;
-                              });
-                              locationService.clearSearchResults();
-                            },
-                          )
-                          : null,
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: theme.colorScheme.primary,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _isSearchActive = false;
+                            });
+                            locationService.clearSearchResults();
+                          },
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16.0),
                     borderSide: BorderSide(color: theme.colorScheme.primary),
@@ -183,10 +182,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12.0),
                   decoration: BoxDecoration(
-                    color:
-                        controller.errorMessage != null
-                            ? theme.colorScheme.errorContainer
-                            : theme.colorScheme.primaryContainer,
+                    color: controller.errorMessage != null
+                        ? theme.colorScheme.errorContainer
+                        : theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                   child: Row(
@@ -195,10 +193,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                         controller.errorMessage != null
                             ? Icons.error
                             : Icons.check_circle,
-                        color:
-                            controller.errorMessage != null
-                                ? theme.colorScheme.onErrorContainer
-                                : theme.colorScheme.onPrimaryContainer,
+                        color: controller.errorMessage != null
+                            ? theme.colorScheme.onErrorContainer
+                            : theme.colorScheme.onPrimaryContainer,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -206,10 +203,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                         child: Text(
                           controller.errorMessage ?? controller.successMessage!,
                           style: TextStyle(
-                            color:
-                                controller.errorMessage != null
-                                    ? theme.colorScheme.onErrorContainer
-                                    : theme.colorScheme.onPrimaryContainer,
+                            color: controller.errorMessage != null
+                                ? theme.colorScheme.onErrorContainer
+                                : theme.colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ),
@@ -228,18 +224,17 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ElevatedButton.icon(
-                  icon:
-                      controller.isLoading
-                          ? const SizedBox(
+                  icon: controller.isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: EnhancedLottieAnimation(
+                            type: LottieAnimationType.loading,
                             width: 16,
                             height: 16,
-                            child: EnhancedLottieAnimation(
-                              type: LottieAnimationType.loading,
-                              width: 16,
-                              height: 16,
-                            ),
-                          )
-                          : const Icon(Icons.my_location),
+                          ),
+                        )
+                      : const Icon(Icons.my_location),
                   label: const Text('使用当前位置'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
@@ -370,24 +365,23 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                 color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
             ),
-            trailing:
-                controller.isLoading
-                    ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: EnhancedLottieAnimation(
-                        type: LottieAnimationType.loading,
-                        width: 16,
-                        height: 16,
-                      ),
-                    )
-                    : Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+            trailing: controller.isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: EnhancedLottieAnimation(
+                      type: LottieAnimationType.loading,
+                      width: 16,
+                      height: 16,
                     ),
+                  )
+                : Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
             onTap: controller.isLoading ? null : () => _selectCity(city),
           ),
         );

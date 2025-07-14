@@ -45,17 +45,16 @@ class ChatSession {
       'noteTitle': noteTitle,
       'createdAt': createdAt.toIso8601String(),
       'lastActiveAt': lastActiveAt.toIso8601String(),
-      'messages':
-          messages
-              .map(
-                (m) => {
-                  'id': m.id,
-                  'content': m.content,
-                  'isUser': m.isUser,
-                  'timestamp': m.timestamp.toIso8601String(),
-                },
-              )
-              .toList(),
+      'messages': messages
+          .map(
+            (m) => {
+              'id': m.id,
+              'content': m.content,
+              'isUser': m.isUser,
+              'timestamp': m.timestamp.toIso8601String(),
+            },
+          )
+          .toList(),
       'isPinned': isPinned,
     };
   }
@@ -67,17 +66,16 @@ class ChatSession {
       noteTitle: json['noteTitle'],
       createdAt: DateTime.parse(json['createdAt']),
       lastActiveAt: DateTime.parse(json['lastActiveAt']),
-      messages:
-          (json['messages'] as List)
-              .map(
-                (m) => ChatMessage(
-                  id: m['id'],
-                  content: m['content'],
-                  isUser: m['isUser'],
-                  timestamp: DateTime.parse(m['timestamp']),
-                ),
-              )
-              .toList(),
+      messages: (json['messages'] as List)
+          .map(
+            (m) => ChatMessage(
+              id: m['id'],
+              content: m['content'],
+              isUser: m['isUser'],
+              timestamp: DateTime.parse(m['timestamp']),
+            ),
+          )
+          .toList(),
       isPinned: json['isPinned'] ?? false,
     );
   }

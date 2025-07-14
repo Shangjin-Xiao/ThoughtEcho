@@ -149,10 +149,9 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
                 author: _assistant,
                 createdAt: DateTime.now().millisecondsSinceEpoch,
                 id: const Uuid().v4(),
-                text:
-                    fullResponse.isNotEmpty
-                        ? fullResponse
-                        : '抱歉，我没能理解这个问题。请尝试换个方式问我。',
+                text: fullResponse.isNotEmpty
+                    ? fullResponse
+                    : '抱歉，我没能理解这个问题。请尝试换个方式问我。',
               );
             }
             _isResponding = false;
@@ -223,39 +222,38 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         ),
         messageWidthRatio: 0.8,
         typingIndicatorOptions: const TypingIndicatorOptions(typingUsers: []),
-        emptyState:
-            _messages.isEmpty
-                ? Container(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.chat_outlined,
-                        size: 64,
+        emptyState: _messages.isEmpty
+            ? Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.chat_outlined,
+                      size: 64,
+                      color: theme.colorScheme.outline,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '开始对话',
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         color: theme.colorScheme.outline,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '开始对话',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '问我关于这篇笔记的任何问题',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.outline,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '问我关于这篇笔记的任何问题',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      _buildQuickQuestionButtons(theme),
-                    ],
-                  ),
-                )
-                : null,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildQuickQuestionButtons(theme),
+                  ],
+                ),
+              )
+            : null,
       ),
     );
   }
@@ -284,66 +282,64 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
-      children:
-          smartSuggestions.map((question) {
-            return ActionChip(
-              label: Text(
-                question,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              backgroundColor: theme.colorScheme.surface,
-              side: BorderSide(
-                color: theme.colorScheme.outline.withValues(alpha: 0.3),
-              ),
-              onPressed: () {
-                _handleSendPressed(types.PartialText(text: question));
-              },
-            );
-          }).toList(),
+      children: smartSuggestions.map((question) {
+        return ActionChip(
+          label: Text(
+            question,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          backgroundColor: theme.colorScheme.surface,
+          side: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          ),
+          onPressed: () {
+            _handleSendPressed(types.PartialText(text: question));
+          },
+        );
+      }).toList(),
     );
   }
 
   void _showNoteInfo() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('笔记信息'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.quote.source != null) ...[
-                    Text('来源', style: Theme.of(context).textTheme.labelMedium),
-                    const SizedBox(height: 4),
-                    Text(widget.quote.source!),
-                    const SizedBox(height: 16),
-                  ],
-                  Text('创建时间', style: Theme.of(context).textTheme.labelMedium),
-                  const SizedBox(height: 4),
-                  Text(DateTime.parse(widget.quote.date).toString()),
-                  const SizedBox(height: 16),
-                  Text('内容', style: Theme.of(context).textTheme.labelMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.quote.content,
-                    maxLines: 10,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('关闭'),
+      builder: (context) => AlertDialog(
+        title: const Text('笔记信息'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.quote.source != null) ...[
+                Text('来源', style: Theme.of(context).textTheme.labelMedium),
+                const SizedBox(height: 4),
+                Text(widget.quote.source!),
+                const SizedBox(height: 16),
+              ],
+              Text('创建时间', style: Theme.of(context).textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(DateTime.parse(widget.quote.date).toString()),
+              const SizedBox(height: 16),
+              Text('内容', style: Theme.of(context).textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(
+                widget.quote.content,
+                maxLines: 10,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
     );
   }
 }

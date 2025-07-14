@@ -147,25 +147,23 @@ class WebLogStorage implements LogStorage {
     }
 
     if (searchText != null && searchText.isNotEmpty) {
-      logs =
-          logs
-              .where(
-                (log) => log.message.toLowerCase().contains(
+      logs = logs
+          .where(
+            (log) => log.message.toLowerCase().contains(
                   searchText.toLowerCase(),
                 ),
-              )
-              .toList();
+          )
+          .toList();
     }
 
     if (source != null && source.isNotEmpty) {
-      logs =
-          logs
-              .where(
-                (log) =>
-                    log.source != null &&
-                    log.source!.toLowerCase().contains(source.toLowerCase()),
-              )
-              .toList();
+      logs = logs
+          .where(
+            (log) =>
+                log.source != null &&
+                log.source!.toLowerCase().contains(source.toLowerCase()),
+          )
+          .toList();
     }
 
     if (startDate != null) {

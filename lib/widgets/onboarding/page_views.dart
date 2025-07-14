@@ -369,20 +369,19 @@ class _FeatureCard extends StatelessWidget {
       shadowColor:
           isHighlight ? theme.colorScheme.primary.withValues(alpha: 0.3) : null,
       child: Container(
-        decoration:
-            isHighlight
-                ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primaryContainer,
-                      theme.colorScheme.secondaryContainer,
-                    ],
-                  ),
-                )
-                : null,
+        decoration: isHighlight
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.colorScheme.primaryContainer,
+                    theme.colorScheme.secondaryContainer,
+                  ],
+                ),
+              )
+            : null,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -391,18 +390,16 @@ class _FeatureCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color:
-                      isHighlight
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.primaryContainer,
+                  color: isHighlight
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   feature.icon,
-                  color:
-                      isHighlight
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.primary,
+                  color: isHighlight
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.primary,
                   size: 24,
                 ),
               ),
@@ -417,23 +414,21 @@ class _FeatureCard extends StatelessWidget {
                       feature.title,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color:
-                            isHighlight
-                                ? theme.colorScheme.onPrimaryContainer
-                                : null,
+                        color: isHighlight
+                            ? theme.colorScheme.onPrimaryContainer
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       feature.description,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color:
-                            isHighlight
-                                ? theme.colorScheme.onPrimaryContainer
-                                    .withValues(alpha: 0.8)
-                                : theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                ),
+                        color: isHighlight
+                            ? theme.colorScheme.onPrimaryContainer
+                                .withValues(alpha: 0.8)
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.7,
+                              ),
                       ),
                     ),
                   ],

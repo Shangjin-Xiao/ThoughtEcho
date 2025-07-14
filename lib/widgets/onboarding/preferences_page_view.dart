@@ -153,8 +153,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value =
-        widget.state.getPreference<bool>(preference.key) ??
+    final value = widget.state.getPreference<bool>(preference.key) ??
         preference.defaultValue as bool;
 
     return Card(
@@ -190,24 +189,23 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
               if (mounted) {
                 showDialog(
                   context: context,
-                  builder:
-                      (context) => AlertDialog(
-                        title: const Text('位置服务未启用'),
-                        content: const Text('请在系统设置中启用位置服务'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('取消'),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              await Geolocator.openLocationSettings();
-                            },
-                            child: const Text('去设置'),
-                          ),
-                        ],
+                  builder: (context) => AlertDialog(
+                    title: const Text('位置服务未启用'),
+                    content: const Text('请在系统设置中启用位置服务'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('取消'),
                       ),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await Geolocator.openLocationSettings();
+                        },
+                        child: const Text('去设置'),
+                      ),
+                    ],
+                  ),
                 );
               }
               return; // 不更新状态
@@ -252,8 +250,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value =
-        widget.state.getPreference<int>(preference.key) ??
+    final value = widget.state.getPreference<int>(preference.key) ??
         preference.defaultValue as int;
     final options = preference.options ?? [];
 
@@ -288,17 +285,16 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   }
                 },
                 title: Text(option.label),
-                subtitle:
-                    option.description != null
-                        ? Text(
-                          option.description!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
+                subtitle: option.description != null
+                    ? Text(
+                        option.description!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
                           ),
-                        )
-                        : null,
+                        ),
+                      )
+                    : null,
                 contentPadding: EdgeInsets.zero,
                 activeColor: theme.colorScheme.primary,
               );
@@ -313,8 +309,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value =
-        widget.state.getPreference<String>(preference.key) ??
+    final value = widget.state.getPreference<String>(preference.key) ??
         preference.defaultValue as String;
     final selectedValues = value.split(',').where((v) => v.isNotEmpty).toSet();
     final options = preference.options ?? [];
@@ -347,9 +342,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      final allValues = options
-                          .map((o) => o.value as String)
-                          .join(',');
+                      final allValues =
+                          options.map((o) => o.value as String).join(',');
                       widget.onPreferenceChanged(preference.key, allValues);
                     },
                     icon: const Icon(Icons.select_all, size: 16),
@@ -364,10 +358,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   child: OutlinedButton.icon(
                     onPressed: () {
                       // 至少保留一个选项
-                      final firstValue =
-                          options.isNotEmpty
-                              ? options.first.value as String
-                              : '';
+                      final firstValue = options.isNotEmpty
+                          ? options.first.value as String
+                          : '';
                       widget.onPreferenceChanged(preference.key, firstValue);
                     },
                     icon: const Icon(Icons.clear_all, size: 16),
@@ -385,46 +378,44 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  options.map((option) {
-                    final isSelected = selectedValues.contains(
-                      option.value as String,
+              children: options.map((option) {
+                final isSelected = selectedValues.contains(
+                  option.value as String,
+                );
+                return FilterChip(
+                  label: Text(option.label),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    final newSelectedValues = Set<String>.from(
+                      selectedValues,
                     );
-                    return FilterChip(
-                      label: Text(option.label),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        final newSelectedValues = Set<String>.from(
-                          selectedValues,
+                    if (selected) {
+                      newSelectedValues.add(option.value as String);
+                    } else {
+                      newSelectedValues.remove(option.value as String);
+                      // 确保至少有一个选项被选中
+                      if (newSelectedValues.isEmpty && options.isNotEmpty) {
+                        newSelectedValues.add(
+                          options.first.value as String,
                         );
-                        if (selected) {
-                          newSelectedValues.add(option.value as String);
-                        } else {
-                          newSelectedValues.remove(option.value as String);
-                          // 确保至少有一个选项被选中
-                          if (newSelectedValues.isEmpty && options.isNotEmpty) {
-                            newSelectedValues.add(
-                              options.first.value as String,
-                            );
-                          }
-                        }
-                        widget.onPreferenceChanged(
-                          preference.key,
-                          newSelectedValues.join(','),
-                        );
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
-                      checkmarkColor: theme.colorScheme.primary,
-                      labelStyle: TextStyle(
-                        color:
-                            isSelected
-                                ? theme.colorScheme.onPrimaryContainer
-                                : theme.colorScheme.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
+                      }
+                    }
+                    widget.onPreferenceChanged(
+                      preference.key,
+                      newSelectedValues.join(','),
                     );
-                  }).toList(),
+                  },
+                  selectedColor: theme.colorScheme.primaryContainer,
+                  checkmarkColor: theme.colorScheme.primary,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? theme.colorScheme.onPrimaryContainer
+                        : theme.colorScheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),

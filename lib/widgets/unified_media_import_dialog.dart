@@ -187,8 +187,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 使用内存保护的文件选择
-      final FilePickerResult? result = await lfm
-          .LargeFileManager.executeWithMemoryProtection<FilePickerResult?>(() async {
+      final FilePickerResult? result = await lfm.LargeFileManager
+          .executeWithMemoryProtection<FilePickerResult?>(() async {
         switch (widget.mediaType) {
           case 'image':
             return await StreamFileSelector.selectImageFile();
@@ -271,8 +271,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 使用内存保护的文件保存
-      final String? savedPath = await lfm
-          .LargeFileManager.executeWithMemoryProtection<String?>(() async {
+      final String? savedPath =
+          await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
+              () async {
         switch (widget.mediaType) {
           case 'image':
             return await MediaFileService.saveImage(
@@ -364,8 +365,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 保存文件
-      final String? savedPath = await lfm
-          .LargeFileManager.executeWithMemoryProtection<String?>(() async {
+      final String? savedPath =
+          await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
+              () async {
         switch (widget.mediaType) {
           case 'image':
             return await MediaFileService.saveImage(file!.path);
@@ -403,29 +405,28 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
 
     final String? url = await showDialog<String>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('输入${_getMediaTypeName(widget.mediaType)}网址'),
-            content: TextField(
-              controller: urlController,
-              decoration: InputDecoration(
-                hintText: '请输入${_getMediaTypeName(widget.mediaType)}文件的网址',
-                border: const OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.url,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed:
-                    () => Navigator.of(context).pop(urlController.text.trim()),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text('输入${_getMediaTypeName(widget.mediaType)}网址'),
+        content: TextField(
+          controller: urlController,
+          decoration: InputDecoration(
+            hintText: '请输入${_getMediaTypeName(widget.mediaType)}文件的网址',
+            border: const OutlineInputBorder(),
           ),
+          keyboardType: TextInputType.url,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(urlController.text.trim()),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
 
     if (url == null || url.isEmpty) return;
@@ -439,8 +440,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 使用内存保护下载文件
-      final String? savedPath = await lfm
-          .LargeFileManager.executeWithMemoryProtection<String?>(() async {
+      final String? savedPath =
+          await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
+              () async {
         return await _downloadMediaFromUrl(url);
       }, operationName: '下载${_getMediaTypeName(widget.mediaType)}');
 

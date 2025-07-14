@@ -29,7 +29,7 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: Column(
         children: [
@@ -39,7 +39,8 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
               color: theme.colorScheme.surface,
               border: Border(
                 bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  color:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -51,9 +52,11 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
                 Tab(text: '周期报告'),
               ],
               labelColor: theme.primaryColor,
-              unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              unselectedLabelColor:
+                  theme.colorScheme.onSurface.withValues(alpha: 0.6),
               indicatorColor: theme.primaryColor,
-              labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              labelStyle:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               unselectedLabelStyle: const TextStyle(fontSize: 14),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerHeight: 0,

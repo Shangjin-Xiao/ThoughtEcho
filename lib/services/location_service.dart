@@ -68,9 +68,8 @@ class LocationService extends ChangeNotifier {
       if (_isLocationServiceEnabled) {
         logDebug('位置服务已启用');
         final permission = await Geolocator.checkPermission();
-        _hasLocationPermission =
-            (permission == LocationPermission.whileInUse ||
-                permission == LocationPermission.always);
+        _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always);
         logDebug('位置权限状态: $_hasLocationPermission');
 
         // 只在首次获取到权限时尝试获取位置
@@ -123,9 +122,8 @@ class LocationService extends ChangeNotifier {
         return false;
       }
 
-      _hasLocationPermission =
-          (permission == LocationPermission.whileInUse ||
-              permission == LocationPermission.always);
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always);
 
       notifyListeners();
       return _hasLocationPermission;
@@ -168,9 +166,8 @@ class LocationService extends ChangeNotifier {
     if (!_hasLocationPermission && !skipPermissionRequest) {
       // 检查权限，但不自动请求
       final permission = await Geolocator.checkPermission();
-      _hasLocationPermission =
-          (permission == LocationPermission.whileInUse ||
-              permission == LocationPermission.always);
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always);
 
       if (!_hasLocationPermission) {
         logDebug('位置权限不足，无法获取位置');
@@ -307,8 +304,7 @@ class LocationService extends ChangeNotifier {
           final address = data['address'];
           _country = address['country'];
           _province = address['state'] ?? address['province'];
-          _city =
-              address['city'] ??
+          _city = address['city'] ??
               address['county'] ??
               address['town'] ??
               address['village'];
@@ -468,51 +464,48 @@ class LocationService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        _searchResults =
-            data.map((item) {
-              // 提取地址信息
-              final address = item['address'] ?? {};
+        _searchResults = data.map((item) {
+          // 提取地址信息
+          final address = item['address'] ?? {};
 
-              // 更灵活地处理地点名称，支持城市、地区、国家等各种类型的地点
-              String placeName = item['name'] ?? '';
-              String cityName =
-                  address['city'] ??
-                  address['town'] ??
-                  address['village'] ??
-                  address['municipality'] ??
-                  placeName;
-              String country = address['country'] ?? '';
-              String state =
-                  address['state'] ??
-                  address['province'] ??
-                  address['county'] ??
-                  '';
+          // 更灵活地处理地点名称，支持城市、地区、国家等各种类型的地点
+          String placeName = item['name'] ?? '';
+          String cityName = address['city'] ??
+              address['town'] ??
+              address['village'] ??
+              address['municipality'] ??
+              placeName;
+          String country = address['country'] ?? '';
+          String state = address['state'] ??
+              address['province'] ??
+              address['county'] ??
+              '';
 
-              // 对于一些大城市，可能直接作为顶级地点返回，没有详细的address信息
-              if (address.isEmpty && placeName.isNotEmpty) {
-                cityName = placeName;
-              }
+          // 对于一些大城市，可能直接作为顶级地点返回，没有详细的address信息
+          if (address.isEmpty && placeName.isNotEmpty) {
+            cityName = placeName;
+          }
 
-              // 构建完整地址 - 国家, 省/州, 城市
-              final String fullName = [
-                country,
-                state,
-                cityName,
-              ].where((part) => part.isNotEmpty).join(', ');
+          // 构建完整地址 - 国家, 省/州, 城市
+          final String fullName = [
+            country,
+            state,
+            cityName,
+          ].where((part) => part.isNotEmpty).join(', ');
 
-              logDebug(
-                '搜索结果: $placeName, $cityName, $country, $state, 完整: $fullName',
-              );
+          logDebug(
+            '搜索结果: $placeName, $cityName, $country, $state, 完整: $fullName',
+          );
 
-              return CityInfo(
-                name: cityName,
-                fullName: fullName,
-                lat: double.parse(item['lat']),
-                lon: double.parse(item['lon']),
-                country: country,
-                province: state,
-              );
-            }).toList();
+          return CityInfo(
+            name: cityName,
+            fullName: fullName,
+            lat: double.parse(item['lat']),
+            lon: double.parse(item['lon']),
+            country: country,
+            province: state,
+          );
+        }).toList();
       } else {
         _searchResults = [];
         logDebug('搜索城市失败: ${response.statusCode}, ${response.body}');
@@ -551,12 +544,11 @@ class LocationService extends ChangeNotifier {
       _district = null;
 
       // 更新地址字符串
-      List<String> addressParts =
-          [
-            city.country,
-            city.province,
-            city.name,
-          ].where((part) => part.isNotEmpty).toList();
+      List<String> addressParts = [
+        city.country,
+        city.province,
+        city.name,
+      ].where((part) => part.isNotEmpty).toList();
       _currentAddress = addressParts.join(', ');
 
       // 验证经纬度的有效性

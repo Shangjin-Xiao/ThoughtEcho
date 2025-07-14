@@ -84,13 +84,12 @@ class SVGCardWidget extends StatelessWidget {
       return SvgPicture.string(
         svgContent,
         fit: fit,
-        placeholderBuilder:
-            showLoadingIndicator
-                ? (context) => Container(
+        placeholderBuilder: showLoadingIndicator
+            ? (context) => Container(
                   color: Colors.grey[200],
                   child: const Center(child: CircularProgressIndicator()),
                 )
-                : null,
+            : null,
         errorBuilder: (context, error, stackTrace) {
           if (kDebugMode) {
             print('SVG渲染错误: $error');
@@ -112,29 +111,61 @@ class SVGCardWidget extends StatelessWidget {
   Widget _buildErrorWidget(String message) {
     return errorWidget ??
         Container(
-          color: Colors.grey[200],
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            border: Border.all(color: Colors.grey[300]!, width: 1),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-                  const SizedBox(height: 8),
-                  const Text(
+                  Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 48,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
                     'SVG渲染失败',
                     style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '正在尝试使用备用模板...',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   if (kDebugMode) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      message,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      textAlign: TextAlign.center,
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        message.length > 100
+                            ? '${message.substring(0, 100)}...'
+                            : message,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 10,
+                          fontFamily: 'monospace',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ],
                 ],
@@ -146,18 +177,97 @@ class SVGCardWidget extends StatelessWidget {
 
   /// 构建回退SVG模板
   Widget _buildFallbackSVG() {
-    // 尝试从原始SVG内容中提取文本内容
-    String extractedContent = _extractContentFromSVG(svgContent);
-
-    // 生成回退SVG
-    final fallbackSVG = _generateFallbackSVGContent(extractedContent);
-
     try {
-      return SvgPicture.string(fallbackSVG, fit: fit);
+      // 尝试从原始SVG内容中提取文本内容
+      String extractedContent = _extractContentFromSVG(svgContent);
+
+      // 生成回退SVG
+      final fallbackSVG = _generateFallbackSVGContent(extractedContent);
+
+      if (kDebugMode) {
+        print('使用回退SVG模板，内容长度: ${fallbackSVG.length}');
+      }
+
+      return SvgPicture.string(
+        fallbackSVG,
+        fit: fit,
+        placeholderBuilder: showLoadingIndicator
+            ? (context) => Container(
+                  color: Colors.grey[100],
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text(
+                          '正在加载备用模板...',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+            : null,
+        errorBuilder: (context, error, stackTrace) {
+          if (kDebugMode) {
+            print('回退SVG也渲染失败: $error');
+          }
+          return _buildFinalErrorWidget();
+        },
+      );
     } catch (e) {
-      // 如果回退SVG也失败，则显示错误提示
-      return _buildErrorWidget('SVG渲染完全失败');
+      if (kDebugMode) {
+        print('构建回退SVG失败: $e');
+      }
+      return _buildFinalErrorWidget();
     }
+  }
+
+  /// 构建最终错误提示（当所有方案都失败时）
+  Widget _buildFinalErrorWidget() {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        border: Border.all(color: Colors.red[200]!, width: 2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Colors.red[400],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '卡片渲染失败',
+                style: TextStyle(
+                  color: Colors.red[700],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '请尝试重新生成卡片',
+                style: TextStyle(
+                  color: Colors.red[600],
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// 从SVG内容中提取文本
@@ -165,11 +275,10 @@ class SVGCardWidget extends StatelessWidget {
     try {
       // 尝试提取text标签中的内容
       final textMatches = RegExp(r'<text[^>]*>([^<]+)</text>').allMatches(svg);
-      final texts =
-          textMatches
-              .map((match) => match.group(1)?.trim() ?? '')
-              .where((text) => text.isNotEmpty)
-              .toList();
+      final texts = textMatches
+          .map((match) => match.group(1)?.trim() ?? '')
+          .where((text) => text.isNotEmpty)
+          .toList();
 
       if (texts.isNotEmpty) {
         return texts.first;

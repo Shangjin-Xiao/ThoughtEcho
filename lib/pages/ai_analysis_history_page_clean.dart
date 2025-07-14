@@ -76,8 +76,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     }
     return _analyses.where((analysis) {
       return analysis.content.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          ) ||
+                _searchQuery.toLowerCase(),
+              ) ||
           analysis.title.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
@@ -86,21 +86,20 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   Future<void> _deleteAnalysis(AIAnalysis analysis) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('确定要删除这条分析记录吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条分析记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -127,21 +126,20 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   Future<void> _deleteAllAnalyses() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('确定要删除所有分析记录吗？此操作不可恢复。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除所有分析记录吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -174,118 +172,115 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'AI分析详情',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'AI分析详情',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
                   ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '分析时间',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          analysis.createdAt,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '分析时间',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      analysis.createdAt,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          '分析内容',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            analysis.content,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'AI分析结果',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: MarkdownBody(
-                            data: analysis.title,
-                            styleSheet: MarkdownStyleSheet(
-                              p: Theme.of(context).textTheme.bodyMedium,
-                              h1: Theme.of(context).textTheme.titleLarge,
-                              h2: Theme.of(context).textTheme.titleMedium,
-                              h3: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '分析内容',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        analysis.content,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'AI分析结果',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: MarkdownBody(
+                        data: analysis.title,
+                        styleSheet: MarkdownStyleSheet(
+                          p: Theme.of(context).textTheme.bodyMedium,
+                          h1: Theme.of(context).textTheme.titleLarge,
+                          h2: Theme.of(context).textTheme.titleMedium,
+                          h3: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -396,54 +391,53 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       // 显示选择对话框
       final choice = await showDialog<String>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                color: Theme.of(context).colorScheme.primary,
+                size: 28,
               ),
-              title: Row(
-                children: [
-                  Icon(
-                    Icons.auto_awesome,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  const Text('选择年度报告类型'),
-                ],
+              const SizedBox(width: 12),
+              const Text('选择年度报告类型'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('请选择要生成的年度报告类型：', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 20),
+              _buildReportOption(
+                context,
+                icon: Icons.psychology,
+                title: 'AI 智能报告',
+                description: '基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表',
+                color: Colors.purple,
+                onTap: () => Navigator.pop(context, 'ai'),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('请选择要生成的年度报告类型：', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 20),
-                  _buildReportOption(
-                    context,
-                    icon: Icons.psychology,
-                    title: 'AI 智能报告',
-                    description: '基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表',
-                    color: Colors.purple,
-                    onTap: () => Navigator.pop(context, 'ai'),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildReportOption(
-                    context,
-                    icon: Icons.dashboard,
-                    title: '原生 Flutter 报告',
-                    description: '使用Flutter原生组件生成的交互式报告，流畅的动画效果',
-                    color: Colors.blue,
-                    onTap: () => Navigator.pop(context, 'flutter'),
-                  ),
-                ],
+              const SizedBox(height: 12),
+              _buildReportOption(
+                context,
+                icon: Icons.dashboard,
+                title: '原生 Flutter 报告',
+                description: '使用Flutter原生组件生成的交互式报告，流畅的动画效果',
+                color: Colors.blue,
+                onTap: () => Navigator.pop(context, 'flutter'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
-                ),
-              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
             ),
+          ],
+        ),
       );
 
       if (choice == null) return;
@@ -459,11 +453,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
 
       final currentYear = DateTime.now().year;
 
-      final thisYearQuotes =
-          quotes.where((quote) {
-            final quoteDate = DateTime.parse(quote.date);
-            return quoteDate.year == currentYear;
-          }).toList();
+      final thisYearQuotes = quotes.where((quote) {
+        final quoteDate = DateTime.parse(quote.date);
+        return quoteDate.year == currentYear;
+      }).toList();
 
       if (choice == 'ai') {
         await _generateAIAnnualReport(thisYearQuotes, currentYear);
@@ -488,16 +481,15 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => const AlertDialog(
-            content: Row(
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 16),
-                Text('正在生成AI年度报告...'),
-              ],
-            ),
-          ),
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在生成AI年度报告...'),
+          ],
+        ),
+      ),
     );
 
     try {
@@ -528,11 +520,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
       // 计算活跃天数
-      final uniqueDates =
-          quotes.map((quote) {
-            final date = DateTime.parse(quote.date);
-            return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-          }).toSet();
+      final uniqueDates = quotes.map((quote) {
+        final date = DateTime.parse(quote.date);
+        return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      }).toSet();
       final activeDays = uniqueDates.length;
 
       // 获取分类统计（转换为分类名称）
@@ -592,15 +583,14 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         '优秀',
       ];
 
-      final positiveQuotes =
-          quotes
-              .where(
-                (quote) => positiveKeywords.any(
-                  (keyword) => quote.content.contains(keyword),
-                ),
-              )
-              .take(8)
-              .toList();
+      final positiveQuotes = quotes
+          .where(
+            (quote) => positiveKeywords.any(
+              (keyword) => quote.content.contains(keyword),
+            ),
+          )
+          .take(8)
+          .toList();
 
       // 构建详细的数据摘要
       final monthlyStatsText = List.generate(
@@ -712,9 +702,8 @@ $positiveQuotesText
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) =>
-                      AIAnnualReportWebView(htmlContent: result, year: year),
+              builder: (context) =>
+                  AIAnnualReportWebView(htmlContent: result, year: year),
             ),
           );
         }
@@ -769,26 +758,19 @@ $positiveQuotesText
     }).join('\n');
 
     // 生成分类标签云HTML
-    final tagCloud = categoryCounts.entries
-        .take(10)
-        .map((entry) {
-          final isPopular = entry.value > (totalNotes * 0.1);
-          return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
-        })
-        .join('');
+    final tagCloud = categoryCounts.entries.take(10).map((entry) {
+      final isPopular = entry.value > (totalNotes * 0.1);
+      return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
+    }).join('');
 
     // 生成精选笔记HTML
-    final featuredQuotes = positiveQuotes
-        .take(3)
-        .map((quote) {
-          final content =
-              quote.content.length > 150
-                  ? '${quote.content.substring(0, 150)}...'
-                  : quote.content;
-          final date = DateTime.parse(quote.date).toString().substring(0, 10);
-          return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
-        })
-        .join('\n');
+    final featuredQuotes = positiveQuotes.take(3).map((quote) {
+      final content = quote.content.length > 150
+          ? '${quote.content.substring(0, 150)}...'
+          : quote.content;
+      final date = DateTime.parse(quote.date).toString().substring(0, 10);
+      return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
+    }).join('\n');
 
     // 生成成就HTML
     final achievements = [
@@ -867,19 +849,18 @@ $positiveQuotesText
                   _deleteAllAnalyses();
                 }
               },
-              itemBuilder:
-                  (context) => [
-                    const PopupMenuItem(
-                      value: 'delete_all',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_sweep),
-                          SizedBox(width: 8),
-                          Text('清空记录'),
-                        ],
-                      ),
-                    ),
-                  ],
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_sweep),
+                      SizedBox(width: 8),
+                      Text('清空记录'),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -894,19 +875,18 @@ $positiveQuotesText
                 decoration: InputDecoration(
                   hintText: '搜索分析记录...',
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon:
-                      _searchQuery.isNotEmpty
-                          ? IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                                _searchQuery = '';
-                              });
-                              _loadAnalyses();
-                            },
-                            icon: const Icon(Icons.clear),
-                          )
-                          : null,
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _searchQuery = '';
+                            });
+                            _loadAnalyses();
+                          },
+                          icon: const Icon(Icons.clear),
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                   ),
@@ -926,132 +906,128 @@ $positiveQuotesText
 
           // 内容区域
           Expanded(
-            child:
-                _isLoading
-                    ? const AppLoadingView()
-                    : filteredAnalyses.isEmpty
+            child: _isLoading
+                ? const AppLoadingView()
+                : filteredAnalyses.isEmpty
                     ? AppEmptyView(
-                      svgAsset: 'assets/empty/empty_state.svg',
-                      text:
-                          _analyses.isEmpty
-                              ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！'
-                              : '未找到匹配的记录\n尝试使用其他关键词搜索',
-                    )
+                        svgAsset: 'assets/empty/empty_state.svg',
+                        text: _analyses.isEmpty
+                            ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！'
+                            : '未找到匹配的记录\n尝试使用其他关键词搜索',
+                      )
                     : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: filteredAnalyses.length,
-                      itemBuilder: (context, index) {
-                        final analysis = filteredAnalyses[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.cardRadius,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () => _viewAnalysisDetails(analysis),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.cardRadius,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        _getAnalysisTypeIcon(
-                                          analysis.analysisType,
-                                        ),
-                                        size: 20,
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _getAnalysisTypeName(
-                                            analysis.analysisType,
-                                          ),
-                                          style:
-                                              Theme.of(
-                                                context,
-                                              ).textTheme.titleMedium,
-                                        ),
-                                      ),
-                                      Text(
-                                        analysis.createdAt,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      PopupMenuButton<String>(
-                                        onSelected: (value) {
-                                          if (value == 'delete') {
-                                            _deleteAnalysis(analysis);
-                                          }
-                                        },
-                                        itemBuilder:
-                                            (context) => [
-                                              const PopupMenuItem(
-                                                value: 'delete',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.delete,
-                                                      size: 16,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text('删除'),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    analysis.content,
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      analysis.title,
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredAnalyses.length,
+                        itemBuilder: (context, index) {
+                          final analysis = filteredAnalyses[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                            child: InkWell(
+                              onTap: () => _viewAnalysisDetails(analysis),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          _getAnalysisTypeIcon(
+                                            analysis.analysisType,
+                                          ),
+                                          size: 20,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _getAnalysisTypeName(
+                                              analysis.analysisType,
+                                            ),
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.titleMedium,
+                                          ),
+                                        ),
+                                        Text(
+                                          analysis.createdAt,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                        ),
+                                        PopupMenuButton<String>(
+                                          onSelected: (value) {
+                                            if (value == 'delete') {
+                                              _deleteAnalysis(analysis);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.delete,
+                                                    size: 16,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text('删除'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      analysis.content,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        analysis.title,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

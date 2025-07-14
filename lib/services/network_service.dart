@@ -106,10 +106,9 @@ class NetworkService {
           headers: headers,
           receiveTimeout:
               timeoutSeconds != null ? Duration(seconds: timeoutSeconds) : null,
-          responseType:
-              url.contains('hitokoto.cn')
-                  ? ResponseType.json
-                  : ResponseType.plain,
+          responseType: url.contains('hitokoto.cn')
+              ? ResponseType.json
+              : ResponseType.plain,
         ),
       );
 
@@ -253,10 +252,9 @@ class NetworkService {
         responseBody = dioResponse.data.toString();
       }
     } else {
-      responseBody =
-          dioResponse.data is String
-              ? dioResponse.data
-              : dioResponse.data.toString();
+      responseBody = dioResponse.data is String
+          ? dioResponse.data
+          : dioResponse.data.toString();
     }
 
     return HttpResponse(

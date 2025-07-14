@@ -123,8 +123,7 @@ class WeatherService extends ChangeNotifier {
     Duration timeout = const Duration(seconds: 10),
   }) async {
     try {
-      final url =
-          'https://api.open-meteo.com/v1/forecast'
+      final url = 'https://api.open-meteo.com/v1/forecast'
           '?latitude=$latitude'
           '&longitude=$longitude'
           '&current=temperature_2m,weather_code,wind_speed_10m'

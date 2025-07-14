@@ -119,10 +119,9 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     try {
       final newAnalysis = analysis.copyWith(
         id: analysis.id ?? _uuid.v4(),
-        createdAt:
-            analysis.createdAt.isNotEmpty
-                ? analysis.createdAt
-                : DateTime.now().toIso8601String(),
+        createdAt: analysis.createdAt.isNotEmpty
+            ? analysis.createdAt
+            : DateTime.now().toIso8601String(),
       );
 
       if (kIsWeb) {

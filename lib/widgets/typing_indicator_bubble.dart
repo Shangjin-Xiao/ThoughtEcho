@@ -118,10 +118,9 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
       animation: _animationController,
       builder: (context, child) {
         final delayedValue = (_animationController.value * 1000 - delay) / 1000;
-        final opacity =
-            (delayedValue >= 0 && delayedValue <= 1)
-                ? (1 - delayedValue).clamp(0.3, 1.0)
-                : 0.3;
+        final opacity = (delayedValue >= 0 && delayedValue <= 1)
+            ? (1 - delayedValue).clamp(0.3, 1.0)
+            : 0.3;
 
         return Container(
           width: 6,

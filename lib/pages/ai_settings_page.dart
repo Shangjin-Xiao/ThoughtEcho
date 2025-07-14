@@ -260,10 +260,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
           // 尝试匹配预设
           try {
-            _selectedPreset =
-                aiPresets.firstWhere(
-                  (p) => p['apiUrl'] == _apiUrlController.text,
-                )['name'];
+            _selectedPreset = aiPresets.firstWhere(
+              (p) => p['apiUrl'] == _apiUrlController.text,
+            )['name'];
           } catch (_) {
             _selectedPreset = null;
           }
@@ -279,10 +278,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       });
     } catch (e) {
-      logError('加载AI设置失败: $e', error: e, source: 'AISettingsPage._loadSettings');
+      logError('加载AI设置失败: $e',
+          error: e, source: 'AISettingsPage._loadSettings');
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;
-      
+
       // 显示用户友好的错误信息
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -488,17 +488,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder:
-            (context) => const AlertDialog(
-              content: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 16),
-                  Text('正在测试连接...'),
-                ],
-              ),
-            ),
+        builder: (context) => const AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('正在测试连接...'),
+            ],
+          ),
+        ),
       );
 
       // 测试当前provider或传统AI服务
@@ -640,40 +639,37 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     final result = await showDialog<String>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('重命名预设'),
-            content: TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: '预设名称',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed:
-                    () => Navigator.pop(context, nameController.text.trim()),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('重命名预设'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: '预设名称',
+            border: OutlineInputBorder(),
           ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, nameController.text.trim()),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
 
     if (result != null && result.isNotEmpty && result != provider.name) {
       // 更新provider名称
-      final updatedProviders =
-          _multiSettings.providers.map((p) {
-            if (p.id == provider.id) {
-              return p.copyWith(name: result);
-            }
-            return p;
-          }).toList();
+      final updatedProviders = _multiSettings.providers.map((p) {
+        if (p.id == provider.id) {
+          return p.copyWith(name: result);
+        }
+        return p;
+      }).toList();
 
       final updatedMultiSettings = _multiSettings.copyWith(
         providers: updatedProviders,
@@ -708,22 +704,21 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('删除预设'),
-            content: Text('确定要删除预设 "${provider.name}" 吗？此操作无法撤销。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('删除预设'),
+        content: Text('确定要删除预设 "${provider.name}" 吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -793,8 +788,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 Text(
                   'AI 服务商选择',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -826,7 +821,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         children: [
                           Text(
                             '当前: ${_currentProvider!.name}',
-                            style: Theme.of(context).textTheme.titleSmall
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
@@ -843,13 +840,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(
-                              color:
-                                  _apiKeyStatus.contains('有效')
+                                  color: _apiKeyStatus.contains('有效')
                                       ? Colors.green
                                       : _apiKeyStatus.contains('无效')
-                                      ? Colors.red
-                                      : Colors.orange,
-                            ),
+                                          ? Colors.red
+                                          : Colors.orange,
+                                ),
                           ),
                         ],
                       ),
@@ -857,16 +853,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     // API Key检查按钮
                     IconButton(
                       onPressed: _isCheckingApiKey ? null : _checkApiKeyStatus,
-                      icon:
-                          _isCheckingApiKey
-                              ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Icon(Icons.refresh),
+                      icon: _isCheckingApiKey
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.refresh),
                       tooltip: '检查API Key状态',
                     ),
                   ],
@@ -917,10 +912,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       isCurrent
                           ? Icons.radio_button_checked
                           : Icons.radio_button_unchecked,
-                      color:
-                          isCurrent
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
+                      color: isCurrent
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
                     ),
                     title: Text(provider.name),
                     subtitle: Column(
@@ -933,10 +927,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           Text(
                             _testResults[provider.id]!,
                             style: TextStyle(
-                              color:
-                                  _testResults[provider.id]!.contains('成功')
-                                      ? Colors.green
-                                      : Colors.red,
+                              color: _testResults[provider.id]!.contains('成功')
+                                  ? Colors.green
+                                  : Colors.red,
                             ),
                           ),
                       ],
@@ -1015,16 +1008,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
               DropdownButtonFormField<String>(
                 value: _selectedPreset,
                 isExpanded: true,
-                items:
-                    aiPresets.map((preset) {
-                      return DropdownMenuItem(
-                        value: preset['name'],
-                        child: Text(
-                          preset['name']!,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).toList(),
+                items: aiPresets.map((preset) {
+                  return DropdownMenuItem(
+                    value: preset['name'],
+                    child: Text(
+                      preset['name']!,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   if (value == null) return;
                   setState(() {
@@ -1062,10 +1054,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   prefixIcon: Icon(Icons.link),
                 ),
                 keyboardType: TextInputType.url,
-                onChanged:
-                    (_) => setState(() {
-                      _selectedPreset = null;
-                    }),
+                onChanged: (_) => setState(() {
+                  _selectedPreset = null;
+                }),
                 validator: _validateUrl,
               ),
               const SizedBox(height: 16),
@@ -1085,15 +1076,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 controller: _modelController,
                 decoration: InputDecoration(
                   labelText: '模型名称',
-                  hintText:
-                      _selectedPreset != null &&
-                              aiPresets
-                                  .firstWhere(
-                                    (p) => p['name'] == _selectedPreset,
-                                  )['model']!
-                                  .isEmpty
-                          ? '请输入模型名称'
-                          : '使用默认模型或自定义',
+                  hintText: _selectedPreset != null &&
+                          aiPresets
+                              .firstWhere(
+                                (p) => p['name'] == _selectedPreset,
+                              )['model']!
+                              .isEmpty
+                      ? '请输入模型名称'
+                      : '使用默认模型或自定义',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.psychology),
                 ),
@@ -1142,13 +1132,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           children: [
                             Text(
                               'AI卡片生成',
-                              style: Theme.of(context).textTheme.titleMedium
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               '启用后可以为笔记生成精美的分享卡片',
-                              style: Theme.of(context).textTheme.bodySmall
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
                                   ?.copyWith(color: Colors.grey[600]),
                             ),
                             const SizedBox(height: 12),
@@ -1157,7 +1151,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                                 return SwitchListTile(
                                   title: const Text('启用AI卡片生成'),
                                   subtitle: const Text('生成SVG格式的精美卡片用于分享'),
-                                  value: settingsService.aiCardGenerationEnabled,
+                                  value:
+                                      settingsService.aiCardGenerationEnabled,
                                   onChanged: (value) {
                                     settingsService.setAICardGenerationEnabled(
                                       value,
@@ -1210,45 +1205,44 @@ class _AISettingsPageState extends State<AISettingsPage> {
     if (value == null || value.isEmpty) {
       return 'API URL不能为空';
     }
-    
+
     // 基本URL格式验证
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
       return '请输入有效的HTTP/HTTPS URL';
     }
-    
+
     return null;
   }
-  
+
   // 验证API Key
   String? _validateApiKey(String? value) {
     if (value == null || value.isEmpty) {
       return 'API Key不能为空';
     }
-    
+
     if (value.length < 10) {
       return 'API Key长度不足，请检查是否完整';
     }
-    
+
     return null;
   }
-  
+
   // 验证最大令牌数
   String? _validateMaxTokens(String? value) {
     if (value == null || value.isEmpty) {
       return '最大令牌数不能为空';
     }
-    
+
     final intValue = int.tryParse(value);
     if (intValue == null) {
       return '请输入有效的数字';
     }
-    
+
     if (intValue < 1 || intValue > 100000) {
       return '令牌数应在1-100000之间';
     }
-    
+
     return null;
   }
-
 }

@@ -130,10 +130,9 @@ class LicensePage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed:
-              () => _launchUrl(
-                'https://flutter.dev/docs/development/packages-and-plugins/using-packages',
-              ),
+          onPressed: () => _launchUrl(
+            'https://flutter.dev/docs/development/packages-and-plugins/using-packages',
+          ),
           icon: const Icon(Icons.open_in_new),
           label: const Text('查看完整依赖列表'),
         ),

@@ -222,10 +222,9 @@ class EnhancedProgressManager {
       progress.averageSpeed = (progress.currentSize / elapsed) * 1000;
 
       // 计算瞬时速度 (使用最近1秒的数据)
-      final recentSamples =
-          progress.speedSamples.where((sample) {
-            return now.difference(sample.timestamp).inSeconds <= 1;
-          }).toList();
+      final recentSamples = progress.speedSamples.where((sample) {
+        return now.difference(sample.timestamp).inSeconds <= 1;
+      }).toList();
 
       if (recentSamples.isNotEmpty) {
         final totalBytes = recentSamples.fold<int>(

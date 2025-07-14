@@ -115,10 +115,9 @@ class ClipboardService extends ChangeNotifier {
       logDebug('从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串: $matchedSubstring');
 
       // 如果提取到了元数据，从原始内容中移除匹配的子串
-      final displayContent =
-          (matchedSubstring != null)
-              ? content.replaceFirst(matchedSubstring, '').trim()
-              : content;
+      final displayContent = (matchedSubstring != null)
+          ? content.replaceFirst(matchedSubstring, '').trim()
+          : content;
 
       // 返回提取的信息
       return {
@@ -272,62 +271,61 @@ class ClipboardService extends ChangeNotifier {
     OverlayEntry? overlayEntry;
 
     overlayEntry = OverlayEntry(
-      builder:
-          (context) => Positioned(
-            // 放置在屏幕上方合适位置
-            top: MediaQuery.of(context).size.height * 0.15,
-            left: 0,
-            right: 0,
-            child: Material(
-              color: Colors.transparent,
-              child: GestureDetector(
-                onTap: () async {
-                  overlayEntry?.remove();
-                  if (context.mounted) {
-                    _openEditPage(context, content, author, source);
-                  }
-                },
-                child: Center(
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.dialogRadius,
-                      ),
-                      boxShadow: AppTheme.defaultShadow,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.content_paste,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        const Flexible(
-                          child: Text(
-                            '发现剪贴板内容，点击添加为笔记',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+      builder: (context) => Positioned(
+        // 放置在屏幕上方合适位置
+        top: MediaQuery.of(context).size.height * 0.15,
+        left: 0,
+        right: 0,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () async {
+              overlayEntry?.remove();
+              if (context.mounted) {
+                _openEditPage(context, content, author, source);
+              }
+            },
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 320),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(
+                    AppTheme.dialogRadius,
                   ),
+                  boxShadow: AppTheme.defaultShadow,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.content_paste,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    const Flexible(
+                      child: Text(
+                        '发现剪贴板内容，点击添加为笔记',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
     );
 
     // 添加到Overlay
@@ -364,25 +362,23 @@ class ClipboardService extends ChangeNotifier {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor:
-            Theme.of(context).brightness == Brightness.light
-                ? Colors.white
-                : Theme.of(context).colorScheme.surface,
-        builder:
-            (context) => AddNoteDialog(
-              prefilledContent: content,
-              prefilledAuthor: author,
-              prefilledWork: source,
-              tags: tags,
-              onSave: (quote) {
-                // 可以在这里添加保存后的回调
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('笔记已保存')));
-                }
-              },
-            ),
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? Colors.white
+            : Theme.of(context).colorScheme.surface,
+        builder: (context) => AddNoteDialog(
+          prefilledContent: content,
+          prefilledAuthor: author,
+          prefilledWork: source,
+          tags: tags,
+          onSave: (quote) {
+            // 可以在这里添加保存后的回调
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('笔记已保存')));
+            }
+          },
+        ),
       );
     } catch (e) {
       logDebug('打开编辑页面失败: $e');

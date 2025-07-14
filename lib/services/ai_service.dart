@@ -22,7 +22,7 @@ class AIService extends ChangeNotifier {
   final AIRequestHelper _requestHelper = AIRequestHelper();
 
   AIService({required SettingsService settingsService})
-    : _settingsService = settingsService;
+      : _settingsService = settingsService;
 
   Future<void> _validateSettings() async {
     try {
@@ -214,22 +214,19 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
           userMessage: userMessage,
           provider: currentProvider,
-          onData:
-              (text) => _requestHelper.handleStreamResponse(
-                controller: controller,
-                chunk: text,
-              ),
-          onComplete:
-              (fullText) => _requestHelper.handleStreamComplete(
-                controller: controller,
-                fullText: fullText,
-              ),
-          onError:
-              (error) => _requestHelper.handleStreamError(
-                controller: controller,
-                error: error,
-                context: '流式笔记分析',
-              ),
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式笔记分析',
+          ),
         );
       },
       context: '流式笔记分析',
@@ -271,12 +268,12 @@ class AIService extends ChangeNotifier {
           logDebug('API Key有效，使用AI生成每日提示');
 
           // 获取包含环境信息的系统提示词
-          final systemPromptWithContext = _promptManager
-              .getDailyPromptSystemPromptWithContext(
-                city: city,
-                weather: weather,
-                temperature: temperature,
-              );
+          final systemPromptWithContext =
+              _promptManager.getDailyPromptSystemPromptWithContext(
+            city: city,
+            weather: weather,
+            temperature: temperature,
+          );
 
           final userMessage = _promptManager.buildDailyPromptUserMessage(
             city: city,
@@ -289,22 +286,19 @@ class AIService extends ChangeNotifier {
             systemPrompt: systemPromptWithContext,
             userMessage: userMessage,
             provider: currentProvider,
-            onData:
-                (text) => _requestHelper.handleStreamResponse(
-                  controller: controller,
-                  chunk: text,
-                ),
-            onComplete:
-                (fullText) => _requestHelper.handleStreamComplete(
-                  controller: controller,
-                  fullText: fullText,
-                ),
-            onError:
-                (error) => _requestHelper.handleStreamError(
-                  controller: controller,
-                  error: error,
-                  context: 'AI生成每日提示',
-                ),
+            onData: (text) => _requestHelper.handleStreamResponse(
+              controller: controller,
+              chunk: text,
+            ),
+            onComplete: (fullText) => _requestHelper.handleStreamComplete(
+              controller: controller,
+              fullText: fullText,
+            ),
+            onError: (error) => _requestHelper.handleStreamError(
+              controller: controller,
+              error: error,
+              context: 'AI生成每日提示',
+            ),
             temperature: 1.0, // 可以调整温度以获得更有创意的提示
             maxTokens: 100, // 限制提示的长度
           );
@@ -420,22 +414,19 @@ class AIService extends ChangeNotifier {
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           provider: currentProvider,
-          onData:
-              (text) => _requestHelper.handleStreamResponse(
-                controller: controller,
-                chunk: text,
-              ),
-          onComplete:
-              (fullText) => _requestHelper.handleStreamComplete(
-                controller: controller,
-                fullText: fullText,
-              ),
-          onError:
-              (error) => _requestHelper.handleStreamError(
-                controller: controller,
-                error: error,
-                context: '流式生成洞察',
-              ),
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式生成洞察',
+          ),
           maxTokens: 2500,
         );
       },
@@ -784,22 +775,19 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
           userMessage: userMessage,
           provider: currentProvider,
-          onData:
-              (text) => _requestHelper.handleStreamResponse(
-                controller: controller,
-                chunk: text,
-              ),
-          onComplete:
-              (fullText) => _requestHelper.handleStreamComplete(
-                controller: controller,
-                fullText: fullText,
-              ),
-          onError:
-              (error) => _requestHelper.handleStreamError(
-                controller: controller,
-                error: error,
-                context: '流式分析来源',
-              ),
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式分析来源',
+          ),
           temperature: 0.4, // 使用较低的温度确保格式一致性
           maxTokens: 500,
         );
@@ -854,22 +842,19 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.textPolishPrompt,
           userMessage: userMessage,
           provider: currentProvider,
-          onData:
-              (text) => _requestHelper.handleStreamResponse(
-                controller: controller,
-                chunk: text,
-              ),
-          onComplete:
-              (fullText) => _requestHelper.handleStreamComplete(
-                controller: controller,
-                fullText: fullText,
-              ),
-          onError:
-              (error) => _requestHelper.handleStreamError(
-                controller: controller,
-                error: error,
-                context: '流式润色文本',
-              ),
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式润色文本',
+          ),
           maxTokens: 1000,
         );
       },
@@ -928,22 +913,19 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.textContinuationPrompt,
           userMessage: userMessage,
           provider: currentProvider,
-          onData:
-              (text) => _requestHelper.handleStreamResponse(
-                controller: controller,
-                chunk: text,
-              ),
-          onComplete:
-              (fullText) => _requestHelper.handleStreamComplete(
-                controller: controller,
-                fullText: fullText,
-              ),
-          onError:
-              (error) => _requestHelper.handleStreamError(
-                controller: controller,
-                error: error,
-                context: '流式续写文本',
-              ),
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式续写文本',
+          ),
           temperature: 0.8, // 使用较高的温度以增加创意性
           maxTokens: 1000,
         );
@@ -1049,22 +1031,19 @@ class AIService extends ChangeNotifier {
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
           provider: currentProvider,
-          onData:
-              (text) => _requestHelper.handleStreamResponse(
-                controller: controller,
-                chunk: text,
-              ),
-          onComplete:
-              (fullText) => _requestHelper.handleStreamComplete(
-                controller: controller,
-                fullText: fullText,
-              ),
-          onError:
-              (error) => _requestHelper.handleStreamError(
-                controller: controller,
-                error: error,
-                context: '流式问答',
-              ),
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式问答',
+          ),
           temperature: 0.5,
           maxTokens: 1000,
         );

@@ -57,50 +57,48 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   onPressed: () {
                     _showIconSelector(context);
                   },
-                  icon:
-                      _selectedIconName != null
-                          ? Icon(IconUtils.getIconData(_selectedIconName))
-                          : const Icon(Icons.add_circle_outline),
+                  icon: _selectedIconName != null
+                      ? Icon(IconUtils.getIconData(_selectedIconName))
+                      : const Icon(Icons.add_circle_outline),
                   tooltip: '选择图标',
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed:
-                      _isLoading
-                          ? null
-                          : () async {
-                            if (_categoryController.text.isEmpty) return;
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          if (_categoryController.text.isEmpty) return;
 
-                            setState(() => _isLoading = true);
-                            try {
-                              if (!context.mounted) return;
-                              await context.read<DatabaseService>().addCategory(
-                                _categoryController.text,
-                                iconName: _selectedIconName,
+                          setState(() => _isLoading = true);
+                          try {
+                            if (!context.mounted) return;
+                            await context.read<DatabaseService>().addCategory(
+                                  _categoryController.text,
+                                  iconName: _selectedIconName,
+                                );
+                            if (!mounted) return;
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('分类添加成功')),
                               );
-                              if (!mounted) return;
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('分类添加成功')),
-                                );
-                              }
-                              _categoryController.clear();
-                              setState(() {
-                                _selectedIconName = null;
-                              });
-                            } catch (e) {
-                              if (!mounted) return;
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('添加分类失败：$e')),
-                                );
-                              }
-                            } finally {
-                              if (mounted) {
-                                setState(() => _isLoading = false);
-                              }
                             }
-                          },
+                            _categoryController.clear();
+                            setState(() {
+                              _selectedIconName = null;
+                            });
+                          } catch (e) {
+                            if (!mounted) return;
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('添加分类失败：$e')),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isLoading = false);
+                            }
+                          }
+                        },
                   child: const Text('添加'),
                 ),
               ],
@@ -155,314 +153,288 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder: (context, setState) {
-              // 获取emoji分类
-              final emojiCategories = IconUtils.getCategorizedEmojis();
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          // 获取emoji分类
+          final emojiCategories = IconUtils.getCategorizedEmojis();
 
-              // 过滤emoji
-              Map<String, List<String>> filteredEmojis = {};
-              if (searchQuery.isEmpty) {
-                filteredEmojis = emojiCategories;
-              } else {
-                // 简单过滤，实际应用中可能需要更复杂的过滤逻辑
-                emojiCategories.forEach((category, emojis) {
-                  filteredEmojis[category] = emojis;
-                });
-              }
+          // 过滤emoji
+          Map<String, List<String>> filteredEmojis = {};
+          if (searchQuery.isEmpty) {
+            filteredEmojis = emojiCategories;
+          } else {
+            // 简单过滤，实际应用中可能需要更复杂的过滤逻辑
+            emojiCategories.forEach((category, emojis) {
+              filteredEmojis[category] = emojis;
+            });
+          }
 
-              // Material图标列表，仅在搜索为空时显示
-              final materialIcons = IconUtils.categoryIcons.entries.toList();
+          // Material图标列表，仅在搜索为空时显示
+          final materialIcons = IconUtils.categoryIcons.entries.toList();
 
-              return AlertDialog(
-                title: const Text('选择图标'),
-                content: SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8,
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  child: Column(
-                    children: [
-                      // 搜索框和自定义emoji输入
-                      TextField(
-                        controller: emojiSearchController,
-                        decoration: InputDecoration(
-                          hintText: '直接输入表情符号...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon:
-                              emojiSearchController.text.isNotEmpty
-                                  ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      emojiSearchController.clear();
-                                      setState(() => searchQuery = '');
-                                    },
-                                  )
-                                  : null,
-                          border: const OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          setState(() => searchQuery = value);
-                        },
-                      ),
-                      const SizedBox(height: 8),
+          return AlertDialog(
+            title: const Text('选择图标'),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.8,
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Column(
+                children: [
+                  // 搜索框和自定义emoji输入
+                  TextField(
+                    controller: emojiSearchController,
+                    decoration: InputDecoration(
+                      hintText: '直接输入表情符号...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: emojiSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                emojiSearchController.clear();
+                                setState(() => searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() => searchQuery = value);
+                    },
+                  ),
+                  const SizedBox(height: 8),
 
-                      // 显示用户输入的emoji (如果是单个字符)
-                      if (emojiSearchController.text.isNotEmpty &&
-                          emojiSearchController.text.characters.length == 1)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Row(
-                            children: [
-                              Text(
-                                '使用 "${emojiSearchController.text}" 作为图标',
-                                style: const TextStyle(color: Colors.blue),
-                              ),
-                              const Spacer(),
-                              ElevatedButton(
-                                child: const Text('选择'),
-                                onPressed: () {
-                                  setState(
-                                    () =>
-                                        _selectedIconName =
-                                            emojiSearchController.text,
-                                  );
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
+                  // 显示用户输入的emoji (如果是单个字符)
+                  if (emojiSearchController.text.isNotEmpty &&
+                      emojiSearchController.text.characters.length == 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            '使用 "${emojiSearchController.text}" 作为图标',
+                            style: const TextStyle(color: Colors.blue),
                           ),
-                        ),
+                          const Spacer(),
+                          ElevatedButton(
+                            child: const Text('选择'),
+                            onPressed: () {
+                              setState(
+                                () => _selectedIconName =
+                                    emojiSearchController.text,
+                              );
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
 
-                      const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-                      // emoji分类和系统图标列表
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              // emoji分类列表
-                              ...filteredEmojis.entries.map((entry) {
-                                final category = entry.key;
-                                final emojis = entry.value;
+                  // emoji分类和系统图标列表
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          // emoji分类列表
+                          ...filteredEmojis.entries.map((entry) {
+                            final category = entry.key;
+                            final emojis = entry.value;
 
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // 分类标题
-                                    ListTile(
-                                      title: Text(
-                                        category,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      trailing: Icon(
-                                        expandedCategories[category] ?? false
-                                            ? Icons.expand_less
-                                            : Icons.expand_more,
-                                      ),
-                                      onTap: () {
-                                        setState(() {
-                                          expandedCategories[category] =
-                                              !(expandedCategories[category] ??
-                                                  false);
-                                        });
-                                      },
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 分类标题
+                                ListTile(
+                                  title: Text(
+                                    category,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-
-                                    // 分类内的emoji
-                                    if (expandedCategories[category] ?? false)
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8.0,
-                                        ),
-                                        child: Wrap(
-                                          spacing: 12,
-                                          runSpacing: 12,
-                                          children:
-                                              emojis.map((emoji) {
-                                                final isSelected =
-                                                    _selectedIconName == emoji;
-                                                return InkWell(
-                                                  onTap: () {
-                                                    setState(
-                                                      () =>
-                                                          _selectedIconName =
-                                                              emoji,
-                                                    );
-                                                    Navigator.of(context).pop();
-                                                  },
-                                                  child: Container(
-                                                    width: 48,
-                                                    height: 48,
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          isSelected
-                                                              ? Theme.of(
-                                                                    context,
-                                                                  )
-                                                                  .colorScheme
-                                                                  .primaryContainer
-                                                              : Colors
-                                                                  .transparent,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            AppTheme.cardRadius,
-                                                          ),
-                                                      border: Border.all(
-                                                        color:
-                                                            isSelected
-                                                                ? Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .primary
-                                                                : Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .outline,
-                                                        width:
-                                                            isSelected ? 2 : 1,
-                                                      ),
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        emoji,
-                                                        style: const TextStyle(
-                                                          fontSize: 24,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              }).toList(),
-                                        ),
-                                      ),
-
-                                    const Divider(),
-                                  ],
-                                );
-                              }),
-
-                              // 系统图标部分
-                              ListTile(
-                                title: const Text(
-                                  '系统图标',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                trailing: Icon(
-                                  expandedCategories['系统图标'] ?? false
-                                      ? Icons.expand_less
-                                      : Icons.expand_more,
-                                ),
-                                onTap: () {
-                                  setState(() {
-                                    expandedCategories['系统图标'] =
-                                        !(expandedCategories['系统图标'] ?? false);
-                                  });
-                                },
-                              ),
-
-                              if (expandedCategories['系统图标'] ?? false)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
                                   ),
-                                  child: Wrap(
-                                    spacing: 4,
-                                    runSpacing: 8,
-                                    children:
-                                        materialIcons.map((entry) {
-                                          final iconName = entry.key;
-                                          final iconData = entry.value;
-                                          final isSelected =
-                                              _selectedIconName == iconName;
+                                  trailing: Icon(
+                                    expandedCategories[category] ?? false
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                  ),
+                                  onTap: () {
+                                    setState(() {
+                                      expandedCategories[category] =
+                                          !(expandedCategories[category] ??
+                                              false);
+                                    });
+                                  },
+                                ),
 
-                                          return SizedBox(
-                                            width: 70,
-                                            height: 70,
-                                            child: InkWell(
-                                              onTap: () {
-                                                setState(
-                                                  () =>
-                                                      _selectedIconName =
-                                                          iconName,
-                                                );
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          isSelected
-                                                              ? Theme.of(
-                                                                    context,
-                                                                  )
-                                                                  .colorScheme
-                                                                  .primaryContainer
-                                                              : Colors
-                                                                  .transparent,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            AppTheme.cardRadius,
-                                                          ),
-                                                      border: Border.all(
-                                                        color:
-                                                            isSelected
-                                                                ? Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .primary
-                                                                : Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .outline,
-                                                      ),
-                                                    ),
-                                                    child: Icon(iconData),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    iconName,
-                                                    style: const TextStyle(
-                                                      fontSize: 10,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    maxLines: 1,
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ],
+                                // 分类内的emoji
+                                if (expandedCategories[category] ?? false)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                    ),
+                                    child: Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: emojis.map((emoji) {
+                                        final isSelected =
+                                            _selectedIconName == emoji;
+                                        return InkWell(
+                                          onTap: () {
+                                            setState(
+                                              () => _selectedIconName = emoji,
+                                            );
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: Container(
+                                            width: 48,
+                                            height: 48,
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? Theme.of(
+                                                      context,
+                                                    )
+                                                      .colorScheme
+                                                      .primaryContainer
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                AppTheme.cardRadius,
+                                              ),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary
+                                                    : Theme.of(
+                                                        context,
+                                                      ).colorScheme.outline,
+                                                width: isSelected ? 2 : 1,
                                               ),
                                             ),
-                                          );
-                                        }).toList(),
+                                            child: Center(
+                                              child: Text(
+                                                emoji,
+                                                style: const TextStyle(
+                                                  fontSize: 24,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
                                   ),
-                                ),
-                            ],
+
+                                const Divider(),
+                              ],
+                            );
+                          }),
+
+                          // 系统图标部分
+                          ListTile(
+                            title: const Text(
+                              '系统图标',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            trailing: Icon(
+                              expandedCategories['系统图标'] ?? false
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                            ),
+                            onTap: () {
+                              setState(() {
+                                expandedCategories['系统图标'] =
+                                    !(expandedCategories['系统图标'] ?? false);
+                              });
+                            },
                           ),
-                        ),
+
+                          if (expandedCategories['系统图标'] ?? false)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                              ),
+                              child: Wrap(
+                                spacing: 4,
+                                runSpacing: 8,
+                                children: materialIcons.map((entry) {
+                                  final iconName = entry.key;
+                                  final iconData = entry.value;
+                                  final isSelected =
+                                      _selectedIconName == iconName;
+
+                                  return SizedBox(
+                                    width: 70,
+                                    height: 70,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(
+                                          () => _selectedIconName = iconName,
+                                        );
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? Theme.of(
+                                                      context,
+                                                    )
+                                                      .colorScheme
+                                                      .primaryContainer
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                AppTheme.cardRadius,
+                                              ),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary
+                                                    : Theme.of(
+                                                        context,
+                                                      ).colorScheme.outline,
+                                              ),
+                                            ),
+                                            child: Icon(iconData),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            iconName,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('取消'),
+                    ),
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -492,9 +464,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                       if (!context.mounted) return;
                       final icon = await showDialog<String>(
                         context: currentContext,
-                        builder:
-                            (iconDialogContext) =>
-                                _IconSelectorDialog(initialIcon: selectedIcon),
+                        builder: (iconDialogContext) =>
+                            _IconSelectorDialog(initialIcon: selectedIcon),
                       );
                       if (icon != null && mounted) {
                         setState(() => selectedIcon = icon);
@@ -566,21 +537,20 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   void _deleteCategory(BuildContext context, NoteCategory category) {
     showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: Text('确定要删除分类"${category.name}"吗？相关联的笔记将保留，但不再关联此分类。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除分类"${category.name}"吗？相关联的笔记将保留，但不再关联此分类。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     ).then((confirmed) async {
       if (confirmed == true && mounted && context.mounted) {
         try {
@@ -661,16 +631,15 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
               decoration: InputDecoration(
                 hintText: '直接输入表情符号...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon:
-                    _emojiSearchController.text.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _emojiSearchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                        : null,
+                suffixIcon: _emojiSearchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _emojiSearchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
                 border: const OutlineInputBorder(),
               ),
               onChanged: (value) {
@@ -736,45 +705,42 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                               child: Wrap(
                                 spacing: 12,
                                 runSpacing: 12,
-                                children:
-                                    emojis.map((emoji) {
-                                      final isSelected = _selectedIcon == emoji;
-                                      return InkWell(
-                                        onTap: () {
-                                          Navigator.of(context).pop(emoji);
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                isSelected
-                                                    ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
-                                                    : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color:
-                                                  isSelected
-                                                      ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                      : Theme.of(
-                                                        context,
-                                                      ).colorScheme.outline,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            emoji,
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                            ),
-                                          ),
+                                children: emojis.map((emoji) {
+                                  final isSelected = _selectedIcon == emoji;
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).pop(emoji);
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primaryContainer
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(
+                                          8,
                                         ),
-                                      );
-                                    }).toList(),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                              : Theme.of(
+                                                  context,
+                                                ).colorScheme.outline,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        emoji,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ),
                         ],
@@ -803,53 +769,49 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                         child: Wrap(
                           spacing: 4,
                           runSpacing: 8,
-                          children:
-                              materialIcons.map((entry) {
-                                final iconName = entry.key;
-                                final iconData = entry.value;
-                                final isSelected = _selectedIcon == iconName;
-                                return SizedBox(
-                                  width: 70,
-                                  height: 70,
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.of(context).pop(iconName);
-                                    },
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                isSelected
-                                                    ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
-                                                    : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color:
-                                                  isSelected
-                                                      ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                      : Theme.of(
-                                                        context,
-                                                      ).colorScheme.outline,
-                                            ),
-                                          ),
-                                          child: Icon(iconData),
+                          children: materialIcons.map((entry) {
+                            final iconName = entry.key;
+                            final iconData = entry.value;
+                            final isSelected = _selectedIcon == iconName;
+                            return SizedBox(
+                              width: 70,
+                              height: 70,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop(iconName);
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primaryContainer
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(
+                                          8,
                                         ),
-                                        const SizedBox(height: 4),
-                                      ],
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                              : Theme.of(
+                                                  context,
+                                                ).colorScheme.outline,
+                                        ),
+                                      ),
+                                      child: Icon(iconData),
                                     ),
-                                  ),
-                                );
-                              }).toList(),
+                                    const SizedBox(height: 4),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                   ],

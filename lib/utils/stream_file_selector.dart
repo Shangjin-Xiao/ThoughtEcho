@@ -27,7 +27,10 @@ class StreamFileSelector {
 
       FilePickerResult? result;
 
-      if (kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      if (kIsWeb ||
+          Platform.isWindows ||
+          Platform.isLinux ||
+          Platform.isMacOS) {
         // 桌面端使用 file_selector
         const typeGroup = desktop_selector.XTypeGroup(
           label: 'videos',
@@ -74,7 +77,8 @@ class StreamFileSelector {
               );
 
               // 对于超大文件，给出警告但不阻止
-              if (fileSize > 500 * 1024 * 1024) { // 500MB
+              if (fileSize > 500 * 1024 * 1024) {
+                // 500MB
                 logDebug('警告：检测到超大文件，将使用流式处理');
               }
             }
@@ -98,7 +102,10 @@ class StreamFileSelector {
 
       FilePickerResult? result;
 
-      if (kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      if (kIsWeb ||
+          Platform.isWindows ||
+          Platform.isLinux ||
+          Platform.isMacOS) {
         // 桌面端使用 file_selector
         const typeGroup = desktop_selector.XTypeGroup(
           label: 'images',
@@ -145,7 +152,8 @@ class StreamFileSelector {
               );
 
               // 对于超大图片文件，给出警告
-              if (fileSize > 50 * 1024 * 1024) { // 50MB
+              if (fileSize > 50 * 1024 * 1024) {
+                // 50MB
                 logDebug('警告：检测到超大图片文件，将使用流式处理');
               }
             }
@@ -172,7 +180,10 @@ class StreamFileSelector {
 
       FilePickerResult? result;
 
-      if (kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      if (kIsWeb ||
+          Platform.isWindows ||
+          Platform.isLinux ||
+          Platform.isMacOS) {
         // 桌面端使用 file_selector
         final typeGroups = <desktop_selector.XTypeGroup>[];
         if (extensions != null && extensions.isNotEmpty) {
@@ -237,7 +248,8 @@ class StreamFileSelector {
               );
 
               // 对于超大文件，给出警告
-              if (fileSize > 100 * 1024 * 1024) { // 100MB
+              if (fileSize > 100 * 1024 * 1024) {
+                // 100MB
                 logDebug('警告：检测到超大文件，将使用流式处理');
               }
             }
@@ -271,15 +283,13 @@ class StreamFileSelector {
     if (!_useNativeSelector) return false;
 
     try {
-      final result = await _channel
-          .invokeMethod('isAvailable')
-          .timeout(
-            const Duration(seconds: 2),
-            onTimeout: () {
-              logDebug('原生文件选择器检查超时');
-              return false;
-            },
-          );
+      final result = await _channel.invokeMethod('isAvailable').timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          logDebug('原生文件选择器检查超时');
+          return false;
+        },
+      );
       return result == true;
     } catch (e) {
       logDebug('检查原生文件选择器可用性失败: $e');

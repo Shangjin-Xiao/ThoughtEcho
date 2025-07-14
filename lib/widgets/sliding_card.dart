@@ -149,20 +149,18 @@ class _SlidingCardState extends State<SlidingCard>
                           AppTheme.cardRadius,
                         ),
                         boxShadow: currentShadow,
-                        color:
-                            theme.brightness == Brightness.light
-                                ? Colors.white
-                                : theme.colorScheme.surface,
+                        color: theme.brightness == Brightness.light
+                            ? Colors.white
+                            : theme.colorScheme.surface,
                         // 微妙的边框效果（Material Design）
                         border: Border.all(
-                          color:
-                              _isHovered
-                                  ? theme.colorScheme.primary.withValues(
-                                    alpha: 0.12,
-                                  )
-                                  : theme.colorScheme.outline.withValues(
-                                    alpha: 0.08,
-                                  ),
+                          color: _isHovered
+                              ? theme.colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                )
+                              : theme.colorScheme.outline.withValues(
+                                  alpha: 0.08,
+                                ),
                           width: 1,
                         ),
                       ),
@@ -176,22 +174,20 @@ class _SlidingCardState extends State<SlidingCard>
                               duration: const Duration(milliseconds: 200),
                               padding: EdgeInsets.all(_isHovered ? 4 : 0),
                               decoration: BoxDecoration(
-                                color:
-                                    _isHovered
-                                        ? theme.colorScheme.primary.withValues(
-                                          alpha: 0.08,
-                                        )
-                                        : Colors.transparent,
+                                color: _isHovered
+                                    ? theme.colorScheme.primary.withValues(
+                                        alpha: 0.08,
+                                      )
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: Icon(
                                 Icons.format_quote,
                                 size: 40,
-                                color:
-                                    _isHovered
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.7),
+                                color: _isHovered
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
                               ),
                             ),
                             const SizedBox(height: 16),

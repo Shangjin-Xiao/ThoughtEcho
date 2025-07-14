@@ -313,21 +313,20 @@ class AIRequestHelper {
         'analysisType': analysisType,
         'analysisStyle': analysisStyle,
       },
-      'quotes':
-          quotes.map((quote) {
-            return {
-              'id': quote.id,
-              'content': quote.content,
-              'date': quote.date,
-              'source': quote.source,
-              'sourceAuthor': quote.sourceAuthor,
-              'tagIds': quote.tagIds,
-              'categoryId': quote.categoryId,
-              'location': quote.location,
-              'weather': quote.weather,
-              'temperature': quote.temperature,
-            };
-          }).toList(),
+      'quotes': quotes.map((quote) {
+        return {
+          'id': quote.id,
+          'content': quote.content,
+          'date': quote.date,
+          'source': quote.source,
+          'sourceAuthor': quote.sourceAuthor,
+          'tagIds': quote.tagIds,
+          'categoryId': quote.categoryId,
+          'location': quote.location,
+          'weather': quote.weather,
+          'temperature': quote.temperature,
+        };
+      }).toList(),
     };
   }
 

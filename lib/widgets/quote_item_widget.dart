@@ -136,14 +136,13 @@ class QuoteItemWidget extends StatelessWidget {
 
     // Determine the background color of the card
     // If the quote has a color, use it, otherwise use fixed color based on theme
-    final Color cardColor =
-        quote.colorHex != null && quote.colorHex!.isNotEmpty
-            ? Color(
-              int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
-            ) // Ensure alpha for hex string
-            : (theme.brightness == Brightness.light
-                ? Colors.white
-                : const Color(0xFF2D2D2D));
+    final Color cardColor = quote.colorHex != null && quote.colorHex!.isNotEmpty
+        ? Color(
+            int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
+          ) // Ensure alpha for hex string
+        : (theme.brightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF2D2D2D));
 
     // Determine the text color based on the card color
 
@@ -162,18 +161,16 @@ class QuoteItemWidget extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: AppTheme.defaultShadow,
-        gradient:
-            quote.colorHex != null && quote.colorHex!.isNotEmpty
-                ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [cardColor, cardColor.withValues(alpha: 0.95)],
-                )
-                : null,
-        color:
-            quote.colorHex == null || quote.colorHex!.isEmpty
-                ? cardColor
-                : null,
+        gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [cardColor, cardColor.withValues(alpha: 0.95)],
+              )
+            : null,
+        color: quote.colorHex == null || quote.colorHex!.isEmpty
+            ? cardColor
+            : null,
       ),
       child: Padding(
         padding: const EdgeInsets.all(12), // 减少内边距从16到12
@@ -252,9 +249,9 @@ class QuoteItemWidget extends StatelessWidget {
               child: QuoteContent(
                 quote: quote,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  height: 1.5,
-                ),
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.5,
+                    ),
                 maxLines: isExpanded ? null : 3,
                 showFullContent: isExpanded,
               ),
@@ -318,34 +315,31 @@ class QuoteItemWidget extends StatelessWidget {
                       child: Wrap(
                         spacing: 6.0, // 标签之间的水平间距
                         runSpacing: 4.0, // 行与行之间的垂直间距
-                        children:
-                            quote.tagIds.map((tagId) {
-                              final tag = tags.firstWhere(
-                                (t) => t.id == tagId,
-                                orElse:
-                                    () => NoteCategory(id: tagId, name: '未知标签'),
-                              );
-                              return tagBuilder != null
-                                  ? tagBuilder!(tag)
-                                  : Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
+                        children: quote.tagIds.map((tagId) {
+                          final tag = tags.firstWhere(
+                            (t) => t.id == tagId,
+                            orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                          );
+                          return tagBuilder != null
+                              ? tagBuilder!(tag)
+                              : Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary
+                                        .applyOpacity(0.1), // MODIFIED
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    tag.name,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.primary,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .applyOpacity(0.1), // MODIFIED
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      tag.name,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                    ),
-                                  );
-                            }).toList(),
+                                  ),
+                                );
+                        }).toList(),
                       ),
                     ),
                   ],
@@ -411,64 +405,63 @@ class QuoteItemWidget extends StatelessWidget {
                         onDelete();
                       }
                     },
-                    itemBuilder:
-                        (context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.edit,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('编辑笔记'),
-                              ],
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.edit,
+                              color: theme.colorScheme.primary,
                             ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'ask',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.question_answer,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('向AI提问'),
-                              ],
+                            const SizedBox(width: 8),
+                            const Text('编辑笔记'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'ask',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.question_answer,
+                              color: theme.colorScheme.primary,
                             ),
+                            const SizedBox(width: 8),
+                            const Text('向AI提问'),
+                          ],
+                        ),
+                      ),
+                      if (onGenerateCard != null)
+                        PopupMenuItem<String>(
+                          value: 'generate_card',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('生成卡片分享'),
+                            ],
                           ),
-                          if (onGenerateCard != null)
-                            PopupMenuItem<String>(
-                              value: 'generate_card',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text('生成卡片分享'),
-                                ],
+                        ),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(
+                              '删除笔记',
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
                               ),
                             ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.delete, color: Colors.red),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '删除笔记',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.error,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

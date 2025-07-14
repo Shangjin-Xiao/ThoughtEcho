@@ -64,10 +64,9 @@ class ErrorRecoveryManager {
       try {
         _progressManager.updateProgress(
           operationId,
-          status:
-              attemptCount == 0
-                  ? '执行中...'
-                  : '重试中... ($attemptCount/$maxRetries)',
+          status: attemptCount == 0
+              ? '执行中...'
+              : '重试中... ($attemptCount/$maxRetries)',
         );
 
         final result = await operation();

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../services/svg_to_image_service.dart';
 
 /// 卡片类型枚举
 enum CardType {
@@ -28,41 +29,21 @@ class GeneratedCard {
   });
 
   /// 转换为可分享的图片字节数组
-  Future<Uint8List> toImageBytes() async {
-    try {
-      // TODO: 实现SVG到图片的转换
-      // 目前返回一个简单的占位符图片
-      // 在实际使用中，这个方法需要使用flutter_svg的正确API
-
-      // 创建一个简单的画布来生成占位符图片
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      final paint = Paint()..color = const Color(0xFFE0E0E0);
-
-      // 绘制背景
-      canvas.drawRect(const Rect.fromLTWH(0, 0, 400, 600), paint);
-
-      // 绘制文本（简化版）
-      final textPainter = TextPainter(
-        text: const TextSpan(
-          text: 'AI生成的卡片\n(图片转换功能开发中)',
-          style: TextStyle(color: Color(0xFF666666), fontSize: 16),
-        ),
-        textDirection: ui.TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, const Offset(50, 280));
-
-      final picture = recorder.endRecording();
-      final image = await picture.toImage(400, 600);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-
-      picture.dispose();
-
-      return byteData!.buffer.asUint8List();
-    } catch (e) {
-      throw Exception('转换图片失败: $e');
-    }
+  Future<Uint8List> toImageBytes({
+    int width = 400,
+    int height = 600,
+    ui.ImageByteFormat format = ui.ImageByteFormat.png,
+    Color backgroundColor = Colors.white,
+    bool maintainAspectRatio = true,
+  }) async {
+    return await SvgToImageService.convertSvgToImage(
+      svgContent,
+      width: width,
+      height: height,
+      format: format,
+      backgroundColor: backgroundColor,
+      maintainAspectRatio: maintainAspectRatio,
+    );
   }
 
   /// 从JSON创建对象

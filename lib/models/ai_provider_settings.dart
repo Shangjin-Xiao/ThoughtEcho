@@ -52,10 +52,9 @@ class AIProviderSettings implements AIConfig {
       // apiKey: map['apiKey'] ?? '', // 不从配置文件读取，而是从加密存储读取
       apiUrl: map['apiUrl'] ?? '',
       model: map['model'] ?? '',
-      temperature:
-          map['temperature'] != null
-              ? (map['temperature'] as num).toDouble()
-              : 0.7,
+      temperature: map['temperature'] != null
+          ? (map['temperature'] as num).toDouble()
+          : 0.7,
       maxTokens:
           map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
       hostOverride: map['hostOverride'],

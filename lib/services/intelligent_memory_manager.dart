@@ -220,27 +220,21 @@ class IntelligentMemoryManager {
       return PressureTrend.stable;
     }
 
-    final recent =
-        _pressureHistory.length >= 5
-            ? _pressureHistory.skip(_pressureHistory.length - 5).toList()
-            : _pressureHistory.toList();
+    final recent = _pressureHistory.length >= 5
+        ? _pressureHistory.skip(_pressureHistory.length - 5).toList()
+        : _pressureHistory.toList();
     final avgRecent =
         recent.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
-        recent.length;
+            recent.length;
 
-    final older =
-        _pressureHistory.length >= 10
-            ? _pressureHistory
-                .skip(_pressureHistory.length - 10)
-                .take(5)
-                .toList()
-            : [];
+    final older = _pressureHistory.length >= 10
+        ? _pressureHistory.skip(_pressureHistory.length - 10).take(5).toList()
+        : [];
     if (older.isEmpty) {
       return PressureTrend.stable;
     }
 
-    final avgOlder =
-        older.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
+    final avgOlder = older.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
         older.length;
 
     if (avgRecent > avgOlder + 0.5) {

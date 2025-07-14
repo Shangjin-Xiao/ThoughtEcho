@@ -31,10 +31,9 @@ class AISettings {
       apiKey: map['apiKey'] ?? '',
       apiUrl: map['apiUrl'] ?? '',
       model: map['model'] ?? '',
-      temperature:
-          map['temperature'] != null
-              ? (map['temperature'] as num).toDouble()
-              : 0.7,
+      temperature: map['temperature'] != null
+          ? (map['temperature'] as num).toDouble()
+          : 0.7,
       maxTokens:
           map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
       hostOverride: map['hostOverride'],
@@ -42,12 +41,12 @@ class AISettings {
   }
 
   factory AISettings.defaultSettings() => AISettings(
-    apiKey: '',
-    apiUrl: '',
-    model: '',
-    temperature: 0.7,
-    maxTokens: 1000,
-  );
+        apiKey: '',
+        apiUrl: '',
+        model: '',
+        temperature: 0.7,
+        maxTokens: 1000,
+      );
 
   AISettings copyWith({
     String? apiKey,

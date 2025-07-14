@@ -72,15 +72,14 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
     return AlertDialog(
       title: Text(widget.title),
       content: SingleChildScrollView(
-        child:
-            widget.isMarkdown
-                ? MarkdownBody(
-                  data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-                  selectable: true,
-                )
-                : SelectableText(
-                  _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
-                ),
+        child: widget.isMarkdown
+            ? MarkdownBody(
+                data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                selectable: true,
+              )
+            : SelectableText(
+                _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+              ),
       ),
       actions: [
         TextButton(

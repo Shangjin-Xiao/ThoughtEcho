@@ -597,13 +597,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 自定义颜色选择器
   Future<void> _showCustomColorPicker(BuildContext context) async {
-    final Color initialColor =
-        _selectedColorHex != null
-            ? Color(
-              int.parse(_selectedColorHex!.substring(1), radix: 16) |
-                  0xFF000000,
-            )
-            : Colors.transparent;
+    final Color initialColor = _selectedColorHex != null
+        ? Color(
+            int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
+          )
+        : Colors.transparent;
 
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
@@ -637,226 +635,212 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     final Color? result = await showDialog<Color>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('选择卡片颜色'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 预设颜色网格
-                  Container(
-                    width: 280,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 8),
-                          child: Text(
-                            '预设颜色',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+      builder: (context) => AlertDialog(
+        title: const Text('选择卡片颜色'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 预设颜色网格
+              Container(
+                width: 280,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 8),
+                      child: Text(
+                        '预设颜色',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          alignment: WrapAlignment.start,
-                          children:
-                              presetColors.map((color) {
-                                String? colorHex;
-                                if (color != Colors.transparent) {
-                                  colorHex =
-                                      '#${color.toARGB32().toRadixString(16).substring(2)}';
-                                }
-
-                                final bool isSelected =
-                                    color == Colors.transparent
-                                        ? _selectedColorHex == null
-                                        : _selectedColorHex == colorHex;
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.of(context).pop(color);
-                                  },
-                                  child: Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: color,
-                                      borderRadius: BorderRadius.circular(21),
-                                      border: Border.all(
-                                        color:
-                                            isSelected
-                                                ? colorScheme.primary
-                                                : color == Colors.transparent
-                                                ? Colors.grey.applyOpacity(
-                                                  0.5,
-                                                ) // MODIFIED
-                                                : Colors.transparent,
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.applyOpacity(
-                                            0.05,
-                                          ), // MODIFIED
-                                          spreadRadius: 1,
-                                          blurRadius: 3,
-                                          offset: const Offset(0, 1),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child:
-                                          isSelected
-                                              ? Icon(
-                                                Icons.check_circle,
-                                                color:
-                                                    color ==
-                                                                Colors
-                                                                    .transparent ||
-                                                            color.computeLuminance() >
-                                                                0.7
-                                                        ? colorScheme.primary
-                                                        : Colors.white,
-                                                size: 24,
-                                              )
-                                              : color == Colors.transparent
-                                              ? const Icon(
-                                                Icons.block,
-                                                color: Colors.grey,
-                                                size: 18,
-                                              )
-                                              : null,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // 高级颜色选择按钮
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.color_lens),
-                    label: const Text('自定义颜色'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      Navigator.pop(context); // 关闭当前对话框
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.start,
+                      children: presetColors.map((color) {
+                        String? colorHex;
+                        if (color != Colors.transparent) {
+                          colorHex =
+                              '#${color.toARGB32().toRadixString(16).substring(2)}';
+                        }
 
-                      // 打开高级颜色选择器
-                      final Color? advancedColor = await showDialog<Color>(
-                        context: context,
-                        builder:
-                            (context) => AlertDialog(
-                              title: const Text('自定义颜色'),
-                              content: SingleChildScrollView(
-                                child: ColorPicker(
-                                  color:
-                                      initialColor != Colors.transparent
-                                          ? initialColor
-                                          : const Color(0xFFE1F5FE), // 默认蓝色
-                                  onColorChanged: (color) {},
-                                  width: 40,
-                                  height: 40,
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  borderRadius: 20,
-                                  wheelDiameter: 200,
-                                  enableShadesSelection: true,
-                                  pickersEnabled: const {
-                                    ColorPickerType.primary: true,
-                                    ColorPickerType.accent: false,
-                                    ColorPickerType.wheel: true,
-                                  },
-                                ),
+                        final bool isSelected = color == Colors.transparent
+                            ? _selectedColorHex == null
+                            : _selectedColorHex == colorHex;
+
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop(color);
+                          },
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(21),
+                              border: Border.all(
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : color == Colors.transparent
+                                        ? Colors.grey.applyOpacity(
+                                            0.5,
+                                          ) // MODIFIED
+                                        : Colors.transparent,
+                                width: 2,
                               ),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('取消'),
-                                ),
-                                FilledButton(
-                                  onPressed:
-                                      () => Navigator.of(
-                                        context,
-                                      ).pop(initialColor),
-                                  child: const Text('选择'),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.applyOpacity(
+                                    0.05,
+                                  ), // MODIFIED
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
                                 ),
                               ],
                             ),
-                      );
+                            child: Center(
+                              child: isSelected
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: color == Colors.transparent ||
+                                              color.computeLuminance() > 0.7
+                                          ? colorScheme.primary
+                                          : Colors.white,
+                                      size: 24,
+                                    )
+                                  : color == Colors.transparent
+                                      ? const Icon(
+                                          Icons.block,
+                                          color: Colors.grey,
+                                          size: 18,
+                                        )
+                                      : null,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
 
-                      if (advancedColor != null && mounted) {
-                        // 更新颜色状态并立即触发重建，强制刷新整个页面
+              const SizedBox(height: 16),
+
+              // 高级颜色选择按钮
+              OutlinedButton.icon(
+                icon: const Icon(Icons.color_lens),
+                label: const Text('自定义颜色'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  Navigator.pop(context); // 关闭当前对话框
+
+                  // 打开高级颜色选择器
+                  final Color? advancedColor = await showDialog<Color>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('自定义颜色'),
+                      content: SingleChildScrollView(
+                        child: ColorPicker(
+                          color: initialColor != Colors.transparent
+                              ? initialColor
+                              : const Color(0xFFE1F5FE), // 默认蓝色
+                          onColorChanged: (color) {},
+                          width: 40,
+                          height: 40,
+                          spacing: 10,
+                          runSpacing: 10,
+                          borderRadius: 20,
+                          wheelDiameter: 200,
+                          enableShadesSelection: true,
+                          pickersEnabled: const {
+                            ColorPickerType.primary: true,
+                            ColorPickerType.accent: false,
+                            ColorPickerType.wheel: true,
+                          },
+                        ),
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(
+                            context,
+                          ).pop(initialColor),
+                          child: const Text('选择'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (advancedColor != null && mounted) {
+                    // 更新颜色状态并立即触发重建，强制刷新整个页面
+                    setState(() {
+                      _selectedColorHex = advancedColor == Colors.transparent
+                          ? null
+                          : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}';
+                    });
+
+                    // 使用单独的延迟setState确保UI完全刷新
+                    Future.microtask(() {
+                      if (mounted) {
                         setState(() {
-                          _selectedColorHex =
-                              advancedColor == Colors.transparent
-                                  ? null
-                                  : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}';
-                        });
-
-                        // 使用单独的延迟setState确保UI完全刷新
-                        Future.microtask(() {
-                          if (mounted) {
-                            setState(() {
-                              // 空setState强制完整重建界面
-                            });
-                          }
-                        });
-
-                        // 额外调用一次setState让卡片指示条能立即更新
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) {
-                            setState(() {});
-                          }
+                          // 空setState强制完整重建界面
                         });
                       }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
+                    });
+
+                    // 额外调用一次setState让卡片指示条能立即更新
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    });
+                  }
+                },
               ),
             ],
-            actionsPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
           ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+        ],
+        actionsPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
     );
 
     if (result != null) {
       // 更新颜色状态并立即触发重建，强制刷新整个页面
       setState(() {
-        _selectedColorHex =
-            result == Colors.transparent
-                ? null
-                : '#${result.toARGB32().toRadixString(16).substring(2)}';
+        _selectedColorHex = result == Colors.transparent
+            ? null
+            : '#${result.toARGB32().toRadixString(16).substring(2)}';
       });
 
       // 使用单独的延迟setState确保UI完全刷新
@@ -1012,10 +996,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   focusNode: FocusNode(),
                   config: quill.QuillEditorConfig(
                     // 添加扩展的嵌入构建器
-                    embedBuilders:
-                        kIsWeb
-                            ? FlutterQuillEmbeds.editorWebBuilders()
-                            : QuillEditorExtensions.getEmbedBuilders(),
+                    embedBuilders: kIsWeb
+                        ? FlutterQuillEmbeds.editorWebBuilders()
+                        : QuillEditorExtensions.getEmbedBuilders(),
                     // 启用全屏编辑的相关配置
                     placeholder: '开始编写你的想法...',
                     padding: const EdgeInsets.all(16),
@@ -1045,10 +1028,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor:
-          theme.brightness == Brightness.light
-              ? Colors.white
-              : theme.colorScheme.surface,
+      backgroundColor: theme.brightness == Brightness.light
+          ? Colors.white
+          : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1069,11 +1051,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurfaceVariant
-                              .applyOpacity(
-                                // MODIFIED
-                                0.4,
-                              ),
+                          color:
+                              theme.colorScheme.onSurfaceVariant.applyOpacity(
+                            // MODIFIED
+                            0.4,
+                          ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1220,48 +1202,44 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     child: Wrap(
                                       spacing: 8.0,
                                       runSpacing: 8.0,
-                                      children:
-                                          widget.allTags!.map((tag) {
-                                            final selected = _selectedTagIds
-                                                .contains(tag.id);
-                                            return FilterChip(
-                                              selected: selected,
-                                              label: Text(tag.name),
-                                              avatar:
-                                                  _isEmoji(tag.iconName)
-                                                      ? Text(
-                                                        _getDisplayIcon(
-                                                          tag.iconName,
-                                                        ),
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                        ),
-                                                      )
-                                                      : Icon(
-                                                        _getIconData(
-                                                          tag.iconName,
-                                                        ),
-                                                        size: 16,
-                                                      ),
-                                              onSelected: (bool value) {
-                                                setState(() {
-                                                  if (value) {
-                                                    _selectedTagIds.add(tag.id);
-                                                  } else {
-                                                    _selectedTagIds.remove(
-                                                      tag.id,
-                                                    );
-                                                  }
-                                                });
-                                              },
-                                              selectedColor:
-                                                  theme
-                                                      .colorScheme
-                                                      .primaryContainer,
-                                              checkmarkColor:
-                                                  theme.colorScheme.primary,
-                                            );
-                                          }).toList(),
+                                      children: widget.allTags!.map((tag) {
+                                        final selected =
+                                            _selectedTagIds.contains(tag.id);
+                                        return FilterChip(
+                                          selected: selected,
+                                          label: Text(tag.name),
+                                          avatar: _isEmoji(tag.iconName)
+                                              ? Text(
+                                                  _getDisplayIcon(
+                                                    tag.iconName,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  _getIconData(
+                                                    tag.iconName,
+                                                  ),
+                                                  size: 16,
+                                                ),
+                                          onSelected: (bool value) {
+                                            setState(() {
+                                              if (value) {
+                                                _selectedTagIds.add(tag.id);
+                                              } else {
+                                                _selectedTagIds.remove(
+                                                  tag.id,
+                                                );
+                                              }
+                                            });
+                                          },
+                                          selectedColor: theme
+                                              .colorScheme.primaryContainer,
+                                          checkmarkColor:
+                                              theme.colorScheme.primary,
+                                        );
+                                      }).toList(),
                                     ),
                                   ),
                                 ),
@@ -1292,28 +1270,26 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   Wrap(
                                     spacing: 8.0,
                                     runSpacing: 4.0,
-                                    children:
-                                        _selectedTagIds.map((tagId) {
-                                          final tag = widget.allTags!.firstWhere(
-                                            (t) => t.id == tagId,
-                                            orElse:
-                                                () => NoteCategory(
-                                                  id: tagId,
-                                                  name:
-                                                      '未知标签(ID:${tagId.substring(0, min(4, tagId.length))}...)',
-                                                  iconName: 'help_outline',
-                                                ),
-                                          );
-                                          return Chip(
-                                            label: Text(tag.name),
-                                            avatar: _buildTagIcon(tag),
-                                            onDeleted: () {
-                                              setState(() {
-                                                _selectedTagIds.remove(tagId);
-                                              });
-                                            },
-                                          );
-                                        }).toList(),
+                                    children: _selectedTagIds.map((tagId) {
+                                      final tag = widget.allTags!.firstWhere(
+                                        (t) => t.id == tagId,
+                                        orElse: () => NoteCategory(
+                                          id: tagId,
+                                          name:
+                                              '未知标签(ID:${tagId.substring(0, min(4, tagId.length))}...)',
+                                          iconName: 'help_outline',
+                                        ),
+                                      );
+                                      return Chip(
+                                        label: Text(tag.name),
+                                        avatar: _buildTagIcon(tag),
+                                        onDeleted: () {
+                                          setState(() {
+                                            _selectedTagIds.remove(tagId);
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
                                   ),
                                 ],
                               ),
@@ -1350,34 +1326,31 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color:
-                                      _selectedColorHex != null
-                                          ? Color(
-                                            int.parse(
-                                                  _selectedColorHex!.substring(
-                                                    1,
-                                                  ),
-                                                  radix: 16,
-                                                ) |
-                                                0xFF000000,
-                                          )
-                                          : Colors.transparent,
+                                  color: _selectedColorHex != null
+                                      ? Color(
+                                          int.parse(
+                                                _selectedColorHex!.substring(
+                                                  1,
+                                                ),
+                                                radix: 16,
+                                              ) |
+                                              0xFF000000,
+                                        )
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color:
-                                        _selectedColorHex == null
-                                            ? theme.colorScheme.outline
-                                            : Colors.transparent,
+                                    color: _selectedColorHex == null
+                                        ? theme.colorScheme.outline
+                                        : Colors.transparent,
                                   ),
                                 ),
-                                child:
-                                    _selectedColorHex == null
-                                        ? Icon(
-                                          Icons.block,
-                                          size: 16,
-                                          color: theme.colorScheme.outline,
-                                        )
-                                        : null,
+                                child: _selectedColorHex == null
+                                    ? Icon(
+                                        Icons.block,
+                                        size: 16,
+                                        color: theme.colorScheme.outline,
+                                      )
+                                    : null,
                               ),
                               trailing: const Icon(
                                 Icons.arrow_forward_ios,
@@ -1416,10 +1389,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               FilterChip(
                                 avatar: Icon(
                                   Icons.location_on,
-                                  color:
-                                      _showLocation
-                                          ? theme.colorScheme.primary
-                                          : Colors.grey,
+                                  color: _showLocation
+                                      ? theme.colorScheme.primary
+                                      : Colors.grey,
                                   size: 18,
                                 ),
                                 label: const Text('位置'),
@@ -1443,10 +1415,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   _weather != null
                                       ? _getWeatherIcon(_weather!)
                                       : Icons.cloud,
-                                  color:
-                                      _showWeather
-                                          ? theme.colorScheme.primary
-                                          : Colors.grey,
+                                  color: _showWeather
+                                      ? theme.colorScheme.primary
+                                      : Colors.grey,
                                   size: 18,
                                 ),
                                 label: const Text('天气'),
@@ -1586,10 +1557,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor:
-          theme.brightness == Brightness.light
-              ? Colors.white
-              : theme.colorScheme.surface,
+      backgroundColor: theme.brightness == Brightness.light
+          ? Colors.white
+          : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(12), // 使用圆角

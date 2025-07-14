@@ -298,10 +298,9 @@ class LargeFileManager {
 
           // 计算本次应该读取的字节数
           final remainingBytes = totalSize - copiedBytes;
-          final currentChunkSize =
-              remainingBytes < adjustedChunkSize
-                  ? remainingBytes
-                  : adjustedChunkSize;
+          final currentChunkSize = remainingBytes < adjustedChunkSize
+              ? remainingBytes
+              : adjustedChunkSize;
 
           // 读取一个块
           final buffer = Uint8List(currentChunkSize);

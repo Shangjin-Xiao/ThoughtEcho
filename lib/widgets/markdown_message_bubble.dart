@@ -33,10 +33,9 @@ class MarkdownMessageBubble extends StatelessWidget {
           onLongPress: () => _showMessageOptions(context),
           child: Container(
             decoration: BoxDecoration(
-              color:
-                  isCurrentUser
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.surface,
+              color: isCurrentUser
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -98,10 +97,9 @@ class MarkdownMessageBubble extends StatelessWidget {
                   ),
                   style: TextStyle(
                     fontSize: 11,
-                    color:
-                        isCurrentUser
-                            ? theme.colorScheme.onPrimary.withValues(alpha: 0.7)
-                            : theme.colorScheme.outline,
+                    color: isCurrentUser
+                        ? theme.colorScheme.onPrimary.withValues(alpha: 0.7)
+                        : theme.colorScheme.outline,
                   ),
                 ),
               ],
@@ -140,43 +138,42 @@ class MarkdownMessageBubble extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder:
-          (context) => SafeArea(
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.copy),
-                  title: const Text('复制消息'),
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: message.text));
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('消息已复制到剪贴板'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                ),
-                if (!isCurrentUser) ...[
-                  ListTile(
-                    leading: const Icon(Icons.share),
-                    title: const Text('分享消息'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      // 这里可以添加分享功能
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('分享功能开发中'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('复制消息'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: message.text));
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('消息已复制到剪贴板'),
+                    duration: Duration(seconds: 1),
                   ),
-                ],
-              ],
+                );
+              },
             ),
-          ),
+            if (!isCurrentUser) ...[
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('分享消息'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // 这里可以添加分享功能
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('分享功能开发中'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

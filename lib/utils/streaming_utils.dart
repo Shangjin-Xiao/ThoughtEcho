@@ -453,10 +453,9 @@ class StreamingUtils {
           errorMessage += '：服务器过载，请稍后重试';
         } else if (errorBody.isNotEmpty) {
           // 截取错误信息的前100个字符
-          final truncatedError =
-              errorBody.length > 100
-                  ? '${errorBody.substring(0, 100)}...'
-                  : errorBody;
+          final truncatedError = errorBody.length > 100
+              ? '${errorBody.substring(0, 100)}...'
+              : errorBody;
           errorMessage += '：$truncatedError';
         }
       }
@@ -490,13 +489,12 @@ class StreamingUtils {
         fixedData[key] = value; // 字符串保持不变
       } else if (value is List) {
         // 递归处理列表
-        fixedData[key] =
-            value.map((item) {
-              if (item is Map<String, dynamic>) {
-                return _fixDataTypes(item);
-              }
-              return item;
-            }).toList();
+        fixedData[key] = value.map((item) {
+          if (item is Map<String, dynamic>) {
+            return _fixDataTypes(item);
+          }
+          return item;
+        }).toList();
       } else if (value is Map<String, dynamic>) {
         // 递归处理嵌套Map
         fixedData[key] = _fixDataTypes(value);

@@ -39,14 +39,13 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _runDiagnostics,
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Text('运行诊断'),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('运行诊断'),
             ),
             const SizedBox(height: 24),
             if (_diagnosticResult.isNotEmpty) ...[
