@@ -723,7 +723,7 @@ class _HomePageState extends State<HomePage>
 
       final tempDir = await getTemporaryDirectory();
       final fileName =
-          'ThoughtEcho_Card_${DateTime.now().millisecondsSinceEpoch}.png';
+          '心迹_Card_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(imageBytes);
 
@@ -731,7 +731,7 @@ class _HomePageState extends State<HomePage>
       await SharePlus.instance.share(
         ShareParams(
           text:
-              '来自ThoughtEcho的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
+              '来自心迹的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
           files: [XFile(file.path)],
         ),
       );

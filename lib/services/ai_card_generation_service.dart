@@ -21,15 +21,11 @@ class AICardGenerationService {
     String? customStyle,
   }) async {
     try {
-      // 1. 首先尝试AI智能生成SVG
-      final prompt = AICardPrompts.intelligentCardPrompt(
-        content: note.content,
-        author: note.sourceAuthor,
-        date: _formatDate(note.date),
-      );
+      // 1. 智能选择最适合的提示词
+      final prompt = _selectBestPrompt(note, customStyle);
 
       if (kDebugMode) {
-        print('开始AI生成SVG卡片...');
+        print('开始AI生成SVG卡片，内容长度: ${note.content.length}');
       }
 
       // 2. 调用AI生成SVG
@@ -278,7 +274,7 @@ class AICardGenerationService {
 
       // 生成文件名
       final fileName = customName ??
-          'ThoughtEcho_Card_${DateTime.now().millisecondsSinceEpoch}';
+          '心迹_Card_${DateTime.now().millisecondsSinceEpoch}';
 
       // 保存到相册
       await Gal.putImageBytes(imageBytes, name: fileName);
@@ -312,7 +308,7 @@ class AICardGenerationService {
           width: width,
           height: height,
           customName:
-              'ThoughtEcho_Card_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
+              '心迹_Card_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
         );
         savedFiles.add(fileName);
 
@@ -343,6 +339,64 @@ class AICardGenerationService {
   bool get isEnabled {
     // 从设置服务中获取AI卡片生成开关状态
     return _settingsService.aiCardGenerationEnabled;
+  }
+
+  /// 智能选择最适合的提示词
+  String _selectBestPrompt(Quote note, String? customStyle) {
+    // 分析内容特征
+    final content = note.content.toLowerCase();
+    final hasAuthor = note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
+
+    // 如果指定了自定义风格，使用对应的提示词
+    if (customStyle != null) {
+      switch (customStyle) {
+        case 'creative':
+          return AICardPrompts.randomStylePosterPrompt(content: note.content);
+        case 'intelligent':
+          return AICardPrompts.intelligentCardPrompt(
+            content: note.content,
+            author: note.sourceAuthor,
+            date: _formatDate(note.date),
+          );
+        case 'visual':
+          return AICardPrompts.contentAwareVisualPrompt(content: note.content);
+      }
+    }
+
+    // 根据内容特征智能选择提示词
+
+    // 1. 检查是否为技术/学习内容
+    final techKeywords = ['代码', '编程', '算法', '技术', '开发', '学习', '知识', '方法', '原理'];
+    if (techKeywords.any((keyword) => content.contains(keyword))) {
+      return AICardPrompts.contentAwareVisualPrompt(content: note.content);
+    }
+
+    // 2. 检查是否为情感/生活内容
+    final emotionalKeywords = ['感受', '心情', '生活', '感悟', '体验', '回忆', '梦想', '希望'];
+    if (emotionalKeywords.any((keyword) => content.contains(keyword))) {
+      return AICardPrompts.contentAwareVisualPrompt(content: note.content);
+    }
+
+    // 3. 检查是否为引用/名言
+    if (hasAuthor || content.contains('说') || content.contains('曰') || content.contains('"')) {
+      return AICardPrompts.intelligentCardPrompt(
+        content: note.content,
+        author: note.sourceAuthor,
+        date: _formatDate(note.date),
+      );
+    }
+
+    // 4. 检查内容长度，长内容使用创意海报风格
+    if (note.content.length > 100) {
+      return AICardPrompts.randomStylePosterPrompt(content: note.content);
+    }
+
+    // 5. 默认使用智能卡片提示词
+    return AICardPrompts.intelligentCardPrompt(
+      content: note.content,
+      author: note.sourceAuthor,
+      date: _formatDate(note.date),
+    );
   }
 
   /// 验证SVG基本结构

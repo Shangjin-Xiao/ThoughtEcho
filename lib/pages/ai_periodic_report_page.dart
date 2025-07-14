@@ -1029,7 +1029,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
 
       final tempDir = await getTemporaryDirectory();
       final fileName =
-          'ThoughtEcho_Report_Card_${DateTime.now().millisecondsSinceEpoch}.png';
+          '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(imageBytes);
 
@@ -1037,7 +1037,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
       await SharePlus.instance.share(
         ShareParams(
           text:
-              '来自ThoughtEcho周期报告的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
+              '来自心迹周期报告的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
           files: [XFile(file.path)],
         ),
       );
@@ -1112,7 +1112,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
         width: 800,
         height: 1200,
         customName:
-            'ThoughtEcho_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
+            '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       if (mounted) {

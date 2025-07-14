@@ -41,19 +41,24 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="33%"><b>✍️ 笔记管理</b><br>创建、编辑、查看和删除笔记</td>
-      <td align="center" width="33%"><b>🏷️ 标签系统</b><br>便捷地分类与检索笔记</td>
-      <td align="center" width="33%"><b>🎨 个性化主题</b><br>浅色/深色模式与自定义颜色</td>
+      <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本编辑、图片、音频、视频</td>
+      <td align="center" width="33%"><b>🏷️ 智能标签系统</b><br>便捷地分类与检索笔记</td>
+      <td align="center" width="33%"><b>🎨 个性化主题</b><br>Material 3设计，自定义颜色</td>
     </tr>
     <tr>
-      <td align="center"><b>💬 一言集成</b><br>展示精选句子，类型可筛选</td>
-      <td align="center"><b>💾 数据备份与恢复</b><br>保护你的宝贵想法</td>
-      <td align="center"><b>✨ AI 洞察</b><br>智能分析笔记内容 (开发中)</td>
+      <td align="center"><b>🤖 多AI服务商支持</b><br>OpenAI、Anthropic、DeepSeek等</td>
+      <td align="center"><b>🎯 AI卡片生成</b><br>将笔记转换为精美分享卡片</td>
+      <td align="center"><b>� 多平台同步</b><br>Windows、Android、iOS、Web</td>
     </tr>
     <tr>
-      <td align="center"><b>🔍 自然语言搜索</b><br>智能搜索笔记内容 (规划中)</td>
-      <td align="center"><b>📊 数据报告</b><br>周/月/年度笔记统计 (规划中)</td>
-      <td align="center"><b>更多功能</b><br>持续开发中...</td>
+      <td align="center"><b>�💾 智能备份系统</b><br>ZIP格式完整备份，支持大文件流式处理</td>
+      <td align="center"><b>🧠 智能内存管理</b><br>大文件流式处理，防止内存溢出</td>
+      <td align="center"><b>📊 AI洞察分析</b><br>智能分析笔记内容与模式</td>
+    </tr>
+    <tr>
+      <td align="center"><b>� 一言集成</b><br>展示精选句子，类型可筛选</td>
+      <td align="center"><b>🌍 位置记录</b><br>自动获取地理位置和天气信息</td>
+      <td align="center"><b>🔍 全文搜索</b><br>快速搜索笔记内容</td>
     </tr>
   </table>
 </div>
@@ -73,19 +78,35 @@
   <table>
     <tr>
       <td align="center"><b>框架</b></td>
-      <td>Flutter (Dart)</td>
+      <td>Flutter (Dart) - 跨平台UI框架</td>
     </tr>
     <tr>
       <td align="center"><b>状态管理</b></td>
-      <td>provider, get_it</td>
+      <td>provider, get_it - 依赖注入与状态管理</td>
     </tr>
     <tr>
       <td align="center"><b>本地数据库</b></td>
-      <td>sqflite</td>
+      <td>sqflite (移动端), sqflite_common_ffi (桌面端)</td>
     </tr>
     <tr>
-      <td align="center"><b>核心依赖</b></td>
-      <td>file_picker, path_provider, permission_handler, flutter_colorpicker, share_plus, flutter_local_notifications</td>
+      <td align="center"><b>富文本编辑</b></td>
+      <td>flutter_quill - 支持富文本、图片、音视频</td>
+    </tr>
+    <tr>
+      <td align="center"><b>AI集成</b></td>
+      <td>多provider架构 - OpenAI、Anthropic、DeepSeek等</td>
+    </tr>
+    <tr>
+      <td align="center"><b>存储优化</b></td>
+      <td>MMKV (高性能), flutter_secure_storage (安全存储)</td>
+    </tr>
+    <tr>
+      <td align="center"><b>多媒体处理</b></td>
+      <td>大文件流式处理、智能内存管理、媒体压缩优化</td>
+    </tr>
+    <tr>
+      <td align="center"><b>平台适配</b></td>
+      <td>Windows、Android、iOS、Web全平台支持</td>
     </tr>
   </table>
 </div>
@@ -122,37 +143,43 @@
   <table>
     <tr>
       <th>已完成 ✅</th>
-      <th>近期 (Q2 2024) 🚧</th>
-      <th>中期 (Q3 2024) 📅</th>
+      <th>进行中 (2024 Q4) 🚧</th>
+      <th>计划中 (2025 Q1) 📅</th>
       <th>长期规划 💡</th>
     </tr>
     <tr>
       <td>
-        • 剪贴板智能检测与快速添加<br>
-        • 用户引导流程和教程<br>
-        • 全屏沉浸式编辑器<br>
-        • Material 3 现代化界面<br>
-        • 数据库性能优化<br>
-        • 基础标签和分类系统
+        • 富文本编辑器与多媒体支持<br>
+        • 多AI服务商架构<br>
+        • AI卡片生成功能<br>
+        • 大文件流式处理<br>
+        • 智能内存管理<br>
+        • ZIP格式完整备份<br>
+        • Material 3现代化界面<br>
+        • 多平台数据库适配<br>
+        • 位置与天气记录<br>
+        • 剪贴板智能检测
       </td>
       <td>
-        • 每日一言推送通知<br>
-        • 支持插入本地图片
+        • AI年度报告生成<br>
+        • 笔记内容智能分析<br>
+        • 性能优化与稳定性提升<br>
+        • 用户体验改进
       </td>
       <td>
-        • 富文本编辑与预览<br>
-        • AI分析功能增强<br>
-        • 高级数据可视化<br>
-        • 自然语言搜索笔记<br>
-        • 周/月/年度笔记报告
+        • 自然语言搜索增强<br>
+        • AI聊天对话功能<br>
+        • 地图选点添加位置<br>
+        • 笔记分类管理优化<br>
+        • 高级搜索功能
       </td>
       <td>
-        • UI、功能高度自定义<br>
         • 离线AI分析能力<br>
         • 多设备实时同步<br>
-        • 地图选点添加位置<br>
+        • 高级数据可视化<br>
         • 桌面端独立应用<br>
-        • 高级数据分析与洞察
+        • 更多AI集成服务<br>
+        • 数据导出与迁移工具
       </td>
     </tr>
   </table>
@@ -182,19 +209,24 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="33%"><b>✍️ Note Management</b><br>Create, edit, view, and delete notes</td>
-      <td align="center" width="33%"><b>🏷️ Tag System</b><br>Organize and retrieve notes easily</td>
-      <td align="center" width="33%"><b>🎨 Personalized Themes</b><br>Light/dark modes & custom colors</td>
+      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Support for rich text, images, audio, video</td>
+      <td align="center" width="33%"><b>🏷️ Smart Tag System</b><br>Organize and retrieve notes easily</td>
+      <td align="center" width="33%"><b>🎨 Personalized Themes</b><br>Material 3 design with custom colors</td>
     </tr>
     <tr>
-      <td align="center"><b>💬 Hitokoto Integration</b><br>Display quotes with type filtering</td>
-      <td align="center"><b>💾 Data Backup & Restore</b><br>Protect your valuable ideas</td>
-      <td align="center"><b>✨ AI Insights</b><br>Smart note analysis (WIP)</td>
+      <td align="center"><b>🤖 Multi-AI Provider Support</b><br>OpenAI, Anthropic, DeepSeek, and more</td>
+      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes to beautiful shareable cards</td>
+      <td align="center"><b>📱 Cross-Platform Sync</b><br>Windows, Android, iOS, Web</td>
     </tr>
     <tr>
-      <td align="center"><b>🔍 Natural Language Search</b><br>Intelligently search note content (Planned)</td>
-      <td align="center"><b>📊 Data Reports</b><br>Weekly/Monthly/Annual statistics (Planned)</td>
-      <td align="center"><b>More Features</b><br>Continuously developing...</td>
+      <td align="center"><b>💾 Smart Backup System</b><br>ZIP format complete backup with streaming</td>
+      <td align="center"><b>🧠 Intelligent Memory Management</b><br>Large file streaming to prevent OOM</td>
+      <td align="center"><b>📊 AI Insights Analysis</b><br>Smart analysis of note content & patterns</td>
+    </tr>
+    <tr>
+      <td align="center"><b>� Hitokoto Integration</b><br>Display quotes with type filtering</td>
+      <td align="center"><b>🌍 Location Recording</b><br>Auto-capture location and weather info</td>
+      <td align="center"><b>🔍 Full-Text Search</b><br>Quick search through note content</td>
     </tr>
   </table>
 </div>
@@ -214,19 +246,35 @@
   <table>
     <tr>
       <td align="center"><b>Framework</b></td>
-      <td>Flutter (Dart)</td>
+      <td>Flutter (Dart) - Cross-platform UI framework</td>
     </tr>
     <tr>
       <td align="center"><b>State Management</b></td>
-      <td>provider, get_it</td>
+      <td>provider, get_it - Dependency injection & state management</td>
     </tr>
     <tr>
       <td align="center"><b>Local Database</b></td>
-      <td>sqflite</td>
+      <td>sqflite (mobile), sqflite_common_ffi (desktop)</td>
     </tr>
     <tr>
-      <td align="center"><b>Core Dependencies</b></td>
-      <td>file_picker, path_provider, permission_handler, flutter_colorpicker, share_plus, flutter_local_notifications</td>
+      <td align="center"><b>Rich Text Editor</b></td>
+      <td>flutter_quill - Rich text with images, audio, video</td>
+    </tr>
+    <tr>
+      <td align="center"><b>AI Integration</b></td>
+      <td>Multi-provider architecture - OpenAI, Anthropic, DeepSeek</td>
+    </tr>
+    <tr>
+      <td align="center"><b>Storage Optimization</b></td>
+      <td>MMKV (high performance), flutter_secure_storage (secure)</td>
+    </tr>
+    <tr>
+      <td align="center"><b>Media Processing</b></td>
+      <td>Large file streaming, smart memory management, media optimization</td>
+    </tr>
+    <tr>
+      <td align="center"><b>Platform Support</b></td>
+      <td>Windows, Android, iOS, Web full platform support</td>
     </tr>
   </table>
 </div>
@@ -262,31 +310,44 @@
 <div align="center">
   <table>
     <tr>
-      <th>Near Term (Q2 2024) 🚧</th>
-      <th>Mid Term (Q3 2024) 📅</th>
+      <th>Completed ✅</th>
+      <th>In Progress (2024 Q4) 🚧</th>
+      <th>Planned (2025 Q1) 📅</th>
       <th>Long Term 💡</th>
     </tr>
     <tr>
       <td>
-        • New user onboarding flow<br>
-        • Smart clipboard detection<br>
-        • Daily Hitokoto notifications<br>
-        • Database performance optimization<br>
-        • Bug fixes & stability
+        • Rich text editor with multimedia<br>
+        • Multi-AI provider architecture<br>
+        • AI card generation feature<br>
+        • Large file streaming processing<br>
+        • Intelligent memory management<br>
+        • ZIP format complete backup<br>
+        • Material 3 modern interface<br>
+        • Multi-platform database adapter<br>
+        • Location & weather recording<br>
+        • Smart clipboard detection
       </td>
       <td>
-        • Markdown editing & preview<br>
-        • Image & file support<br>
-        • AI feature enhancement<br>
-        • Deep UI customization<br>
-        • Natural language note search<br>
-        • Weekly/Monthly/Annual reports
+        • AI annual report generation<br>
+        • Smart note content analysis<br>
+        • Performance optimization<br>
+        • User experience improvements
       </td>
       <td>
-        • Local AI analysis<br>
-        • Code refactoring<br>
-        • Cloud sync (to be evaluated)<br>
-        • Advanced data analysis & insights
+        • Enhanced natural language search<br>
+        • AI chat conversation feature<br>
+        • Map location selection<br>
+        • Note categorization optimization<br>
+        • Advanced search features
+      </td>
+      <td>
+        • Offline AI analysis capability<br>
+        • Multi-device real-time sync<br>
+        • Advanced data visualization<br>
+        • Standalone desktop app<br>
+        • More AI service integrations<br>
+        • Data export & migration tools
       </td>
     </tr>
   </table>
