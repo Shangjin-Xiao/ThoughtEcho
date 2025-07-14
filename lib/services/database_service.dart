@@ -131,6 +131,24 @@ class DatabaseService extends ChangeNotifier {
     _countCacheTimestamps.clear();
   }
 
+  /// 修复：安全地通知笔记流订阅者
+  void _safeNotifyQuotesStream() {
+    if (_quotesController != null && !_quotesController!.isClosed) {
+      // 创建去重的副本
+      final uniqueQuotes = <Quote>[];
+      final seenIds = <String>{};
+
+      for (final quote in _currentQuotes) {
+        if (quote.id != null && !seenIds.contains(quote.id)) {
+          seenIds.add(quote.id!);
+          uniqueQuotes.add(quote);
+        }
+      }
+
+      _quotesController!.add(List.from(uniqueQuotes));
+    }
+  }
+
   // 添加存储天气筛选条件的变量
   List<String>? _watchSelectedWeathers;
 
@@ -171,6 +189,12 @@ class DatabaseService extends ChangeNotifier {
   }
 
   Future<void> init() async {
+    // 修复：添加严格的重复初始化检查
+    if (_isInitialized) {
+      logDebug('数据库已初始化，跳过重复初始化');
+      return;
+    }
+
     if (kIsWeb) {
       // Web平台特定的初始化
       logDebug('在Web平台初始化内存存储');
@@ -209,8 +233,10 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    if (_database != null) {
-      _isInitialized = true; // 如果数据库已经存在，标记为已初始化
+    // 修复：更严格的数据库初始化检查
+    if (_database != null && _database!.isOpen) {
+      logDebug('数据库已存在且打开，跳过重复初始化');
+      _isInitialized = true;
       return;
     }
 
@@ -712,28 +738,33 @@ class DatabaseService extends ChangeNotifier {
   /// 在初始化时预加载笔记数据
   Future<void> _prefetchInitialQuotes() async {
     try {
-      // 将当前查询状态重置为默认值
+      // 修复：重置状态，但不依赖流控制器
       _currentQuotes = [];
       _watchHasMore = true;
       _isLoading = false;
+      _watchOffset = 0;
 
-      // 使用loadMoreQuotes加载第一页数据
-      await loadMoreQuotes(tagIds: null, categoryId: null, searchQuery: null);
+      // 修复：直接查询数据库而不是使用loadMoreQuotes，避免依赖流控制器
+      final quotes = await getUserQuotes(
+        tagIds: null,
+        categoryId: null,
+        offset: 0,
+        limit: _watchLimit,
+        orderBy: 'date DESC',
+        searchQuery: null,
+        selectedWeathers: null,
+        selectedDayPeriods: null,
+      );
 
-      // 通知初始化完成
-      if (_currentQuotes.isEmpty) {
-        logDebug('数据库中没有笔记数据');
-        // 确保流控制器发出空列表而不是等待数据
-        if (_quotesController != null && !_quotesController!.isClosed) {
-          _quotesController!.add([]);
-        }
-      }
+      _currentQuotes = quotes;
+      _watchHasMore = quotes.length >= _watchLimit;
+
+      logDebug('预加载完成，获取到 ${quotes.length} 条笔记');
     } catch (e) {
       logDebug('预加载笔记时出错: $e');
-      // 即使出错也要发出空列表，避免UI一直等待
-      if (_quotesController != null && !_quotesController!.isClosed) {
-        _quotesController!.add([]);
-      }
+      // 确保状态一致
+      _currentQuotes = [];
+      _watchHasMore = false;
     }
   }
 
@@ -1666,11 +1697,8 @@ class DatabaseService extends ChangeNotifier {
       // 优化：数据变更后清空缓存
       _clearAllCache();
 
-      // 直接添加到当前列表并通知
-      _currentQuotes.insert(0, quote); // 假设最新笔记显示在顶部
-      if (_quotesController != null && !_quotesController!.isClosed) {
-        _quotesController!.add(List.from(_currentQuotes));
-      }
+      // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
+      _refreshQuotesStream();
       notifyListeners(); // 通知其他监听者（如Homepage的FAB）
     } catch (e) {
       logDebug('保存笔记到数据库时出错: $e');
@@ -2424,11 +2452,17 @@ class DatabaseService extends ChangeNotifier {
         _quotesController!.close();
       }
       _quotesController = StreamController<List<Quote>>.broadcast();
+
+      // 修复：在重置状态时确保原子性操作，避免竞态条件
       _currentQuotes = [];
       _isLoading = false;
+      _watchHasMore = true; // 重置分页状态
+
+      // 修复：使用同步方式立即发送空列表，然后异步加载数据
+      _quotesController!.add([]);
 
       // 在新的异步上下文中执行初始化
-      Future(() async {
+      Future.microtask(() async {
         try {
           // 优化：移除重复的数据迁移检查，这些已在初始化阶段完成
 
@@ -2509,26 +2543,30 @@ class DatabaseService extends ChangeNotifier {
         _watchHasMore = false;
         logDebug('没有更多笔记数据，设置_watchHasMore=false');
       } else {
-        _currentQuotes.addAll(quotes);
+        // 修复：添加去重逻辑，防止重复数据
+        final existingIds = _currentQuotes.map((q) => q.id).toSet();
+        final newQuotes = quotes.where((q) => !existingIds.contains(q.id)).toList();
+
+        if (newQuotes.isNotEmpty) {
+          _currentQuotes.addAll(newQuotes);
+          logDebug('本次加载${quotes.length}条，去重后添加${newQuotes.length}条，总计${_currentQuotes.length}条');
+        } else {
+          logDebug('本次加载${quotes.length}条，但全部为重复数据，已过滤');
+        }
 
         // 简化：统一的_watchHasMore判断逻辑
         _watchHasMore = quotes.length >= _watchLimit;
-        logDebug('本次加载${quotes.length}条，限制$_watchLimit条，_watchHasMore=$_watchHasMore，总计${_currentQuotes.length}条');
       }
 
       // 通知状态变化
       notifyListeners();
 
-      // 通知订阅者
-      if (_quotesController != null && !_quotesController!.isClosed) {
-        _quotesController!.add(List.from(_currentQuotes));
-      }
+      // 修复：使用安全的方式通知订阅者
+      _safeNotifyQuotesStream();
     } catch (e) {
       logError('加载更多笔记失败: $e', error: e, source: 'DatabaseService');
       // 确保即使出错也通知UI，避免无限加载状态
-      if (_quotesController != null && !_quotesController!.isClosed) {
-        _quotesController!.add(List.from(_currentQuotes));
-      }
+      _safeNotifyQuotesStream();
 
       // 如果是超时错误，重新抛出让UI处理
       if (e is TimeoutException) {
