@@ -24,9 +24,9 @@ class BackupService {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
-  }) : _databaseService = databaseService,
-       _settingsService = settingsService,
-       _aiAnalysisDbService = aiAnalysisDbService;
+  })  : _databaseService = databaseService,
+        _settingsService = settingsService,
+        _aiAnalysisDbService = aiAnalysisDbService;
 
   static const String _backupDataFile = 'backup_data.json';
   static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
@@ -75,8 +75,7 @@ class BackupService {
   }) async {
     final tempDir = await getTemporaryDirectory();
     final backupId = DateTime.now().millisecondsSinceEpoch;
-    final archivePath =
-        customPath ??
+    final archivePath = customPath ??
         path.join(tempDir.path, 'thoughtecho_backup_$backupId.zip');
 
     File? jsonFile;
@@ -327,8 +326,6 @@ class BackupService {
     }
   }
 
-
-
   /// 验证备份文件是否有效
   Future<bool> validateBackupFile(String filePath) async {
     try {
@@ -380,8 +377,6 @@ class BackupService {
     };
   }
 
-
-
   /// 检查备份数据是否包含媒体文件
   Future<bool> _checkBackupHasMediaFiles(
     Map<String, dynamic> backupData,
@@ -417,9 +412,9 @@ class BackupService {
             } else {
               final deltaJson =
                   await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                    deltaContent,
-                    encode: false,
-                  );
+                deltaContent,
+                encode: false,
+              );
               final convertedDelta = _convertDeltaMediaPaths(
                 deltaJson,
                 appPath,
@@ -427,9 +422,9 @@ class BackupService {
               );
               quote['deltaContent'] =
                   await LargeFileManager.processLargeJson<String>(
-                    convertedDelta,
-                    encode: true,
-                  );
+                convertedDelta,
+                encode: true,
+              );
             }
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
@@ -470,9 +465,9 @@ class BackupService {
             } else {
               final deltaJson =
                   await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                    deltaContent,
-                    encode: false,
-                  );
+                deltaContent,
+                encode: false,
+              );
               final convertedDelta = _convertDeltaMediaPaths(
                 deltaJson,
                 appPath,
@@ -480,9 +475,9 @@ class BackupService {
               );
               quote['deltaContent'] =
                   await LargeFileManager.processLargeJson<String>(
-                    convertedDelta,
-                    encode: true,
-                  );
+                convertedDelta,
+                encode: true,
+              );
             }
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
@@ -594,7 +589,4 @@ class BackupService {
       return originalPath; // 如果转换失败，返回原路径
     }
   }
-
-
-
 }

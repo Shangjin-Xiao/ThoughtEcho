@@ -49,10 +49,9 @@ class LocalGeocodingService {
       // 根据精度要求设置参数
       final accuracy =
           highAccuracy ? LocationAccuracy.high : LocationAccuracy.reduced;
-      final timeout =
-          highAccuracy
-              ? const Duration(seconds: 10)
-              : const Duration(seconds: 5);
+      final timeout = highAccuracy
+          ? const Duration(seconds: 10)
+          : const Duration(seconds: 5);
 
       // 获取位置
       final position = await Geolocator.getCurrentPosition(
@@ -252,21 +251,21 @@ class LocalGeocodingService {
 
       // 如果缓存太大，移除最老的条目
       if (cacheData.length > 100) {
-        final sortedKeys =
-            cacheData.keys.toList()..sort((a, b) {
-              try {
-                final timeA = DateTime.parse(
-                  (cacheData[a] as Map<String, dynamic>)['timestamp'] as String,
-                );
-                final timeB = DateTime.parse(
-                  (cacheData[b] as Map<String, dynamic>)['timestamp'] as String,
-                );
-                return timeA.compareTo(timeB);
-              } catch (e) {
-                // 处理解析时间戳可能出现的错误
-                return 0;
-              }
-            });
+        final sortedKeys = cacheData.keys.toList()
+          ..sort((a, b) {
+            try {
+              final timeA = DateTime.parse(
+                (cacheData[a] as Map<String, dynamic>)['timestamp'] as String,
+              );
+              final timeB = DateTime.parse(
+                (cacheData[b] as Map<String, dynamic>)['timestamp'] as String,
+              );
+              return timeA.compareTo(timeB);
+            } catch (e) {
+              // 处理解析时间戳可能出现的错误
+              return 0;
+            }
+          });
 
         // 移除最老的20%条目
         final removeCount = (cacheData.length * 0.2).round();

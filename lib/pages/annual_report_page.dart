@@ -54,11 +54,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   void _calculateStats() {
-    final yearQuotes =
-        widget.quotes.where((quote) {
-          final quoteDate = DateTime.parse(quote.date);
-          return quoteDate.year == widget.year;
-        }).toList();
+    final yearQuotes = widget.quotes.where((quote) {
+      final quoteDate = DateTime.parse(quote.date);
+      return quoteDate.year == widget.year;
+    }).toList();
 
     _stats = AnnualStats.fromQuotes(yearQuotes, widget.year);
   }
@@ -79,14 +78,14 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
       _pageController
           .nextPage(
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOutCubic,
-          )
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      )
           .then((_) {
-            setState(() {
-              _isAnimating = false;
-            });
-          });
+        setState(() {
+          _isAnimating = false;
+        });
+      });
     }
   }
 
@@ -106,18 +105,17 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors:
-                    isDark
-                        ? [
-                          const Color(0xFF1A1A2E),
-                          const Color(0xFF16213E),
-                          const Color(0xFF0F0F23),
-                        ]
-                        : [
-                          const Color(0xFFE3F2FD),
-                          const Color(0xFFF3E5F5),
-                          const Color(0xFFE8F5E8),
-                        ],
+                colors: isDark
+                    ? [
+                        const Color(0xFF1A1A2E),
+                        const Color(0xFF16213E),
+                        const Color(0xFF0F0F23),
+                      ]
+                    : [
+                        const Color(0xFFE3F2FD),
+                        const Color(0xFFF3E5F5),
+                        const Color(0xFFE8F5E8),
+                      ],
               ),
             ),
           ),
@@ -192,12 +190,11 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     height: 8,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
-                      color:
-                          _currentPage == index
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.primary.withValues(
-                                alpha: 0.3,
-                              ),
+                      color: _currentPage == index
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.primary.withValues(
+                              alpha: 0.3,
+                            ),
                     ),
                   );
                 }),
@@ -353,9 +350,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     color: const Color(0xFF6366F1),
                     delay: 0.0,
                   ),
-
                   const SizedBox(height: 20),
-
                   _buildStatCard(
                     icon: Icons.sentiment_satisfied_alt,
                     title: '写作天数',
@@ -364,9 +359,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     color: const Color(0xFF10B981),
                     delay: 0.1,
                   ),
-
                   const SizedBox(height: 20),
-
                   _buildStatCard(
                     icon: Icons.trending_up,
                     title: '最长连续',
@@ -375,9 +368,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     color: const Color(0xFFF59E0B),
                     delay: 0.2,
                   ),
-
                   const SizedBox(height: 20),
-
                   _buildStatCard(
                     icon: Icons.local_offer,
                     title: '使用标签',
@@ -413,10 +404,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             // 最活跃时间段
             _buildHabitCard(
               title: '最活跃时间',
-              content:
-                  _stats.mostActiveHour != null
-                      ? '${_stats.mostActiveHour}:00 - ${_stats.mostActiveHour! + 1}:00'
-                      : '暂无数据',
+              content: _stats.mostActiveHour != null
+                  ? '${_stats.mostActiveHour}:00 - ${_stats.mostActiveHour! + 1}:00'
+                  : '暂无数据',
               icon: Icons.schedule,
               color: const Color(0xFF8B5CF6),
             ),
@@ -468,17 +458,13 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               '标签分析',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 40),
-
             if (_stats.topTags.isNotEmpty) ...[
               const Text(
                 '最常用的标签',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
-
               const SizedBox(height: 20),
-
               Expanded(
                 child: ListView.builder(
                   itemCount: _stats.topTags.length.clamp(0, 5),
@@ -515,9 +501,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                               ),
                             ),
                           ),
-
                           const SizedBox(width: 16),
-
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -592,9 +576,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               '时间轴',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 40),
-
             Expanded(
               child: ListView.builder(
                 itemCount: _stats.monthlyStats.length,
@@ -626,7 +608,6 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             ),
                           ),
                         ),
-
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,10 +631,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                         widthFactor: percentage,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color:
-                                                Theme.of(
-                                                  context,
-                                                ).colorScheme.primary,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                             borderRadius: BorderRadius.circular(
                                               4,
                                             ),
@@ -699,9 +679,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               '深度洞察',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 40),
-
             Expanded(
               child: Column(
                 children: [
@@ -711,18 +689,14 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     content: _getThinkingDensityText(),
                     color: const Color(0xFF7C3AED),
                   ),
-
                   const SizedBox(height: 20),
-
                   _buildInsightCard(
                     icon: Icons.auto_awesome,
                     title: '成长轨迹',
                     content: _getGrowthText(),
                     color: const Color(0xFFF97316),
                   ),
-
                   const SizedBox(height: 20),
-
                   _buildInsightCard(
                     icon: Icons.timeline,
                     title: '写作节奏',
@@ -749,17 +723,13 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             size: 80,
             color: Theme.of(context).colorScheme.primary,
           ),
-
           const SizedBox(height: 32),
-
           const Text(
             '感谢你的坚持',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 16),
-
           Text(
             '每一个想法都值得被记录\n每一次记录都是成长的足迹',
             style: TextStyle(
@@ -771,9 +741,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             ),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 40),
-
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
@@ -828,9 +796,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               ),
               child: Icon(icon, color: color, size: 28),
             ),
-
             const SizedBox(width: 20),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -905,9 +871,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             ),
             child: Icon(icon, color: color, size: 24),
           ),
-
           const SizedBox(width: 16),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,9 +929,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 ),
                 child: Icon(icon, color: color, size: 24),
               ),
-
               const SizedBox(width: 16),
-
               Text(
                 title,
                 style: const TextStyle(
@@ -977,9 +939,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           Text(
             content,
             style: TextStyle(
@@ -1106,11 +1066,10 @@ class AnnualStats {
         .reduce((a, b) => a > b ? a : b);
 
     // 计算活跃天数
-    final activeDates =
-        quotes.map((quote) {
-          final date = DateTime.parse(quote.date);
-          return DateTime(date.year, date.month, date.day);
-        }).toSet();
+    final activeDates = quotes.map((quote) {
+      final date = DateTime.parse(quote.date);
+      return DateTime(date.year, date.month, date.day);
+    }).toSet();
     final activeDays = activeDates.length;
 
     // 计算最长连续天数
@@ -1139,11 +1098,10 @@ class AnnualStats {
       }
     }
 
-    final topTags =
-        tagCounts.entries
-            .map((e) => TagStat(name: e.key, count: e.value))
-            .toList()
-          ..sort((a, b) => b.count.compareTo(a.count));
+    final topTags = tagCounts.entries
+        .map((e) => TagStat(name: e.key, count: e.value))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
 
     // 计算时间统计
     final hourCounts = <int, int>{};
@@ -1155,18 +1113,16 @@ class AnnualStats {
       weekdayCounts[date.weekday] = (weekdayCounts[date.weekday] ?? 0) + 1;
     }
 
-    final mostActiveHour =
-        hourCounts.entries.isNotEmpty
-            ? hourCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key
-            : null;
+    final mostActiveHour = hourCounts.entries.isNotEmpty
+        ? hourCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key
+        : null;
 
     final weekdayNames = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
-    final mostActiveWeekday =
-        weekdayCounts.entries.isNotEmpty
-            ? weekdayNames[weekdayCounts.entries
-                .reduce((a, b) => a.value > b.value ? a : b)
-                .key]
-            : null;
+    final mostActiveWeekday = weekdayCounts.entries.isNotEmpty
+        ? weekdayNames[weekdayCounts.entries
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key]
+        : null;
 
     // 计算月度统计
     final monthlyCounts = <int, int>{};

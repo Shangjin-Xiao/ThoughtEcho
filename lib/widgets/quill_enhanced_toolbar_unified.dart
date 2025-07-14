@@ -78,8 +78,8 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
             // 第三组：标题
             quill.QuillToolbarSelectHeaderStyleDropdownButton(
               controller: widget.controller,
-              options:
-                  const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
+              options: const quill
+                  .QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
             ),
             _buildDivider(),
 
@@ -230,13 +230,12 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
   void _showUnifiedMediaDialog(String mediaType) {
     showDialog(
       context: context,
-      builder:
-          (context) => UnifiedMediaImportDialog(
-            mediaType: mediaType,
-            onMediaImported: (String filePath) {
-              _insertMediaIntoEditor(filePath, mediaType);
-            },
-          ),
+      builder: (context) => UnifiedMediaImportDialog(
+        mediaType: mediaType,
+        onMediaImported: (String filePath) {
+          _insertMediaIntoEditor(filePath, mediaType);
+        },
+      ),
     );
   }
 

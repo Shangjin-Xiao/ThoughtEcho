@@ -68,10 +68,9 @@ class HttpUtils {
         responseBody = dioResponse.data.toString();
       }
     } else {
-      responseBody =
-          dioResponse.data is String
-              ? dioResponse.data
-              : dioResponse.data.toString();
+      responseBody = dioResponse.data is String
+          ? dioResponse.data
+          : dioResponse.data.toString();
     }
 
     return HttpResponse(
@@ -99,10 +98,9 @@ class HttpUtils {
           receiveTimeout:
               timeoutSeconds != null ? Duration(seconds: timeoutSeconds) : null,
           // 对一言API使用JSON响应类型，让Dio自动解析
-          responseType:
-              url.contains('hitokoto.cn')
-                  ? ResponseType.json
-                  : ResponseType.plain,
+          responseType: url.contains('hitokoto.cn')
+              ? ResponseType.json
+              : ResponseType.plain,
         ),
       );
 

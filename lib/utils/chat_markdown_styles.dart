@@ -12,10 +12,9 @@ class ChatMarkdownStyleSheet {
     final baseColor = colorScheme.onSurface;
 
     // 代码块背景色
-    final codeBlockBg =
-        isDarkMode
-            ? colorScheme.surface.withValues(alpha: 0.8)
-            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
+    final codeBlockBg = isDarkMode
+        ? colorScheme.surface.withValues(alpha: 0.8)
+        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
 
     // 引用块颜色
     final blockquoteBg = colorScheme.primary.withValues(alpha: 0.08);

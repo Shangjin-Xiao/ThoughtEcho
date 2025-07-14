@@ -140,14 +140,13 @@ class AICardGenerationService {
     String cleaned = response.trim();
 
     // 移除常见的markdown标记和说明文字
-    cleaned =
-        cleaned
-            .replaceAll('```svg', '')
-            .replaceAll('```xml', '')
-            .replaceAll('```html', '')
-            .replaceAll('```', '')
-            .replaceAll('`', '')
-            .trim();
+    cleaned = cleaned
+        .replaceAll('```svg', '')
+        .replaceAll('```xml', '')
+        .replaceAll('```html', '')
+        .replaceAll('```', '')
+        .replaceAll('`', '')
+        .trim();
 
     // 移除可能的说明文字（在SVG前后）
     final lines = cleaned.split('\n');
@@ -206,23 +205,16 @@ class AICardGenerationService {
     }
 
     // 验证SVG基本结构
-    if (!cleaned.contains('<svg') || !cleaned.contains('</svg>')) {
+    if (!_isValidSVGStructure(cleaned)) {
       throw const AICardGenerationException('AI返回的内容不包含有效的SVG代码');
     }
 
-    // 确保SVG有正确的命名空间
-    if (!cleaned.contains('xmlns="http://www.w3.org/2000/svg"')) {
-      cleaned = cleaned.replaceFirst(
-        '<svg',
-        '<svg xmlns="http://www.w3.org/2000/svg"',
-      );
-    }
+    // 标准化SVG属性
+    cleaned = _normalizeSVGAttributes(cleaned);
 
-    // 确保有viewBox或width/height
-    if (!cleaned.contains('viewBox') &&
-        !cleaned.contains('width=') &&
-        !cleaned.contains('height=')) {
-      cleaned = cleaned.replaceFirst('<svg', '<svg viewBox="0 0 400 600"');
+    // 验证SVG内容安全性
+    if (!_isSafeSVGContent(cleaned)) {
+      throw const AICardGenerationException('SVG内容包含不安全的元素');
     }
 
     if (kDebugMode) {
@@ -267,18 +259,74 @@ class AICardGenerationService {
   }
 
   /// 保存卡片为图片
-  Future<String> saveCardAsImage(GeneratedCard card) async {
+  Future<String> saveCardAsImage(
+    GeneratedCard card, {
+    int width = 400,
+    int height = 600,
+    String? customName,
+  }) async {
     try {
+      if (kDebugMode) {
+        print('开始保存卡片图片: ${card.id}');
+      }
+
       // 使用卡片的toImageBytes方法获取图片数据
-      final imageBytes = await card.toImageBytes();
+      final imageBytes = await card.toImageBytes(
+        width: width,
+        height: height,
+      );
+
+      // 生成文件名
+      final fileName = customName ??
+          'ThoughtEcho_Card_${DateTime.now().millisecondsSinceEpoch}';
 
       // 保存到相册
-      await Gal.putImageBytes(imageBytes, name: 'card_${card.id}');
+      await Gal.putImageBytes(imageBytes, name: fileName);
 
-      return 'card_${card.id}';
+      if (kDebugMode) {
+        print('卡片图片保存成功: $fileName');
+      }
+
+      return fileName;
     } catch (e) {
+      if (kDebugMode) {
+        print('保存卡片图片失败: $e');
+      }
       throw Exception('保存图片失败: $e');
     }
+  }
+
+  /// 批量保存卡片为图片
+  Future<List<String>> saveMultipleCardsAsImages(
+    List<GeneratedCard> cards, {
+    int width = 400,
+    int height = 600,
+    Function(int current, int total)? onProgress,
+  }) async {
+    final savedFiles = <String>[];
+
+    for (int i = 0; i < cards.length; i++) {
+      try {
+        final fileName = await saveCardAsImage(
+          cards[i],
+          width: width,
+          height: height,
+          customName:
+              'ThoughtEcho_Card_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
+        );
+        savedFiles.add(fileName);
+
+        onProgress?.call(i + 1, cards.length);
+      } catch (e) {
+        if (kDebugMode) {
+          print('批量保存第${i + 1}张卡片失败: $e');
+        }
+        // 继续处理其他卡片
+        savedFiles.add(''); // 添加空字符串表示失败
+      }
+    }
+
+    return savedFiles;
   }
 
   /// 格式化日期
@@ -295,5 +343,83 @@ class AICardGenerationService {
   bool get isEnabled {
     // 从设置服务中获取AI卡片生成开关状态
     return _settingsService.aiCardGenerationEnabled;
+  }
+
+  /// 验证SVG基本结构
+  bool _isValidSVGStructure(String svgContent) {
+    if (svgContent.trim().isEmpty) return false;
+
+    // 基本结构检查
+    if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
+      return false;
+    }
+
+    // 检查标签是否正确闭合（简单检查）
+    final openTags = '<svg'.allMatches(svgContent).length;
+    final closeTags = '</svg>'.allMatches(svgContent).length;
+    if (openTags != closeTags) {
+      return false;
+    }
+
+    // 检查是否有基本的SVG内容
+    if (svgContent.length < 50) {
+      // 太短的SVG可能无效
+      return false;
+    }
+
+    return true;
+  }
+
+  /// 标准化SVG属性
+  String _normalizeSVGAttributes(String svgContent) {
+    String normalized = svgContent;
+
+    // 确保SVG有正确的命名空间
+    if (!normalized.contains('xmlns="http://www.w3.org/2000/svg"')) {
+      normalized = normalized.replaceFirst(
+        '<svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"',
+      );
+    }
+
+    // 确保有viewBox或width/height属性
+    if (!normalized.contains('viewBox') &&
+        !normalized.contains('width=') &&
+        !normalized.contains('height=')) {
+      normalized = normalized.replaceFirst(
+        '<svg',
+        '<svg width="400" height="600" viewBox="0 0 400 600"',
+      );
+    }
+
+    return normalized;
+  }
+
+  /// 验证SVG内容安全性
+  bool _isSafeSVGContent(String svgContent) {
+    // 检查是否包含潜在危险的元素
+    final dangerousElements = [
+      '<script',
+      '<iframe',
+      '<object',
+      '<embed',
+      'javascript:',
+      'data:text/html',
+      'onload=',
+      'onclick=',
+      'onerror=',
+    ];
+
+    final lowerContent = svgContent.toLowerCase();
+    for (final dangerous in dangerousElements) {
+      if (lowerContent.contains(dangerous)) {
+        if (kDebugMode) {
+          print('发现不安全的SVG元素: $dangerous');
+        }
+        return false;
+      }
+    }
+
+    return true;
   }
 }

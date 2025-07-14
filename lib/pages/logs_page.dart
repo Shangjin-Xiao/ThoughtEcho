@@ -375,8 +375,7 @@ class _LogsPageState extends State<LogsPage> {
 
   // 构建过滤器横幅
   Widget _buildFiltersBanner() {
-    final hasFilters =
-        _filterLevel != null ||
+    final hasFilters = _filterLevel != null ||
         (_filterSource != null && _filterSource!.isNotEmpty) ||
         (_searchQuery != null && _searchQuery!.isNotEmpty);
 
@@ -517,19 +516,18 @@ class _LogsPageState extends State<LogsPage> {
                   border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(8.0)),
                   ),
-                  suffixIcon:
-                      _searchQuery != null && _searchQuery!.isNotEmpty
-                          ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = null;
-                              });
-                              _refreshLogs();
-                            },
-                          )
-                          : null,
+                  suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = null;
+                            });
+                            _refreshLogs();
+                          },
+                        )
+                      : null,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -568,176 +566,168 @@ class _LogsPageState extends State<LogsPage> {
 
                   return RefreshIndicator(
                     onRefresh: _refreshLogs,
-                    child:
-                        allLogs.isEmpty
-                            ? const AppEmptyView(
-                              svgAsset: 'assets/empty/empty_logs.svg',
-                              text: '暂无日志',
-                            )
-                            : ListView.separated(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.all(8.0),
-                              itemCount:
-                                  allLogs.length +
-                                  (_isLoadingMore ? 1 : 0) +
-                                  (_hasMoreLogs ? 1 : 0),
-                              separatorBuilder: (context, index) {
-                                // 确保分隔符仅用于列表项之间，不包括加载指示器
-                                if (index >= allLogs.length - 1) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Divider(
-                                  height: 1,
-                                  color: Theme.of(
-                                    context,
-                                  ).dividerColor.applyOpacity(0.5),
-                                ); // Use applyOpacity
-                              },
-                              itemBuilder: (context, index) {
-                                // 加载更多指示器
-                                if (_isLoadingMore && index == allLogs.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: AppLoadingView(),
-                                  );
-                                }
-
-                                // 加载更多按钮
-                                if (_hasMoreLogs &&
-                                    !_isLoadingMore &&
-                                    index == allLogs.length) {
-                                  return TextButton(
-                                    onPressed: _loadMoreLogs,
-                                    child: const Text('加载更多日志'),
-                                  );
-                                }
-
-                                // 确保index在有效范围内
-                                if (index >= allLogs.length) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                // 正常日志项
-                                final log = allLogs[index];
-                                final logColor = _getLogLevelColor(
-                                  log.level,
-                                  theme,
+                    child: allLogs.isEmpty
+                        ? const AppEmptyView(
+                            svgAsset: 'assets/empty/empty_logs.svg',
+                            text: '暂无日志',
+                          )
+                        : ListView.separated(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(8.0),
+                            itemCount: allLogs.length +
+                                (_isLoadingMore ? 1 : 0) +
+                                (_hasMoreLogs ? 1 : 0),
+                            separatorBuilder: (context, index) {
+                              // 确保分隔符仅用于列表项之间，不包括加载指示器
+                              if (index >= allLogs.length - 1) {
+                                return const SizedBox.shrink();
+                              }
+                              return Divider(
+                                height: 1,
+                                color: Theme.of(
+                                  context,
+                                ).dividerColor.applyOpacity(0.5),
+                              ); // Use applyOpacity
+                            },
+                            itemBuilder: (context, index) {
+                              // 加载更多指示器
+                              if (_isLoadingMore && index == allLogs.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: AppLoadingView(),
                                 );
+                              }
 
-                                return InkWell(
-                                  onTap: () => _showLogDetails(log),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8.0,
-                                      horizontal: 4.0,
+                              // 加载更多按钮
+                              if (_hasMoreLogs &&
+                                  !_isLoadingMore &&
+                                  index == allLogs.length) {
+                                return TextButton(
+                                  onPressed: _loadMoreLogs,
+                                  child: const Text('加载更多日志'),
+                                );
+                              }
+
+                              // 确保index在有效范围内
+                              if (index >= allLogs.length) {
+                                return const SizedBox.shrink();
+                              }
+
+                              // 正常日志项
+                              final log = allLogs[index];
+                              final logColor = _getLogLevelColor(
+                                log.level,
+                                theme,
+                              );
+
+                              return InkWell(
+                                onTap: () => _showLogDetails(log),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                    horizontal: 4.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.cardRadius,
                                     ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(
-                                        AppTheme.cardRadius,
-                                      ),
-                                      border: Border.all(
-                                        color: theme.colorScheme.outline,
-                                      ),
+                                    border: Border.all(
+                                      color: theme.colorScheme.outline,
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // 日志头部（时间和级别）
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              _getLogLevelIcon(log.level),
-                                              size: 16,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // 日志头部（时间和级别）
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            _getLogLevelIcon(log.level),
+                                            size: 16,
+                                            color: logColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            log.level.name.toUpperCase(),
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
                                               color: logColor,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              log.level.name.toUpperCase(),
-                                              style: theme.textTheme.labelSmall
-                                                  ?.copyWith(
-                                                    color: logColor,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            if (log.source != null &&
-                                                log.source!.isNotEmpty)
-                                              Expanded(
-                                                child: Text(
-                                                  '[${log.source}]',
-                                                  style: theme
-                                                      .textTheme
-                                                      .labelSmall
-                                                      ?.copyWith(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .applyOpacity(
-                                                              0.7,
-                                                            ), // Use applyOpacity
-                                                      ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (log.source != null &&
+                                              log.source!.isNotEmpty)
+                                            Expanded(
+                                              child: Text(
+                                                '[${log.source}]',
+                                                style: theme
+                                                    .textTheme.labelSmall
+                                                    ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme.onSurface
+                                                      .applyOpacity(
+                                                    0.7,
+                                                  ), // Use applyOpacity
                                                 ),
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                            Text(
-                                              TimeUtils.formatLogTimestamp(
-                                                log.timestamp,
-                                              ),
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .onSurface
-                                                        .applyOpacity(
-                                                          0.5,
-                                                        ), // Use applyOpacity
-                                                    fontSize: 10,
-                                                  ),
                                             ),
-                                          ],
-                                        ),
+                                          Text(
+                                            TimeUtils.formatLogTimestamp(
+                                              log.timestamp,
+                                            ),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .applyOpacity(
+                                                0.5,
+                                              ), // Use applyOpacity
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
 
-                                        // 日志消息
+                                      // 日志消息
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4.0,
+                                          left: 20.0,
+                                        ),
+                                        child: Text(
+                                          log.message,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(height: 1.2),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+
+                                      // 错误指示器（如果有）
+                                      if (log.error != null &&
+                                          log.error!.isNotEmpty)
                                         Padding(
                                           padding: const EdgeInsets.only(
                                             top: 4.0,
                                             left: 20.0,
                                           ),
                                           child: Text(
-                                            log.message,
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(height: 1.2),
-                                            maxLines: 3,
-                                            overflow: TextOverflow.ellipsis,
+                                            '包含错误信息',
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                              color: theme.colorScheme.error,
+                                              fontStyle: FontStyle.italic,
+                                            ),
                                           ),
                                         ),
-
-                                        // 错误指示器（如果有）
-                                        if (log.error != null &&
-                                            log.error!.isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 4.0,
-                                              left: 20.0,
-                                            ),
-                                            child: Text(
-                                              '包含错误信息',
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        theme.colorScheme.error,
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
+                                    ],
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
+                          ),
                   );
                 },
               ),
@@ -872,32 +862,31 @@ class _LogsPageState extends State<LogsPage> {
                     Wrap(
                       spacing: 8.0,
                       runSpacing: 8.0,
-                      children:
-                          UnifiedLogLevel.values
-                              .where(
-                                (level) => level != UnifiedLogLevel.none,
-                              ) // 排除"不记录"选项
-                              .map(
-                                (level) => FilterChip(
-                                  label: Text(level.name.toUpperCase()),
-                                  selected: tempFilterLevel == level,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      tempFilterLevel = selected ? level : null;
-                                    });
-                                  },
-                                  avatar: Icon(
-                                    _getLogLevelIcon(level),
-                                    color: _getLogLevelColor(level, theme),
-                                    size: 18,
-                                  ),
-                                  backgroundColor:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  selectedColor:
-                                      theme.colorScheme.secondaryContainer,
-                                ),
-                              )
-                              .toList(),
+                      children: UnifiedLogLevel.values
+                          .where(
+                            (level) => level != UnifiedLogLevel.none,
+                          ) // 排除"不记录"选项
+                          .map(
+                            (level) => FilterChip(
+                              label: Text(level.name.toUpperCase()),
+                              selected: tempFilterLevel == level,
+                              onSelected: (selected) {
+                                setState(() {
+                                  tempFilterLevel = selected ? level : null;
+                                });
+                              },
+                              avatar: Icon(
+                                _getLogLevelIcon(level),
+                                color: _getLogLevelColor(level, theme),
+                                size: 18,
+                              ),
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
+                              selectedColor:
+                                  theme.colorScheme.secondaryContainer,
+                            ),
+                          )
+                          .toList(),
                     ),
 
                     const SizedBox(height: 24),
@@ -968,75 +957,73 @@ class _LogsPageState extends State<LogsPage> {
   void _showClearLogsDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('清除日志'),
-            content: const Text('您想清除哪些日志？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () {
-                  final logService = Provider.of<UnifiedLogService>(
-                    context,
-                    listen: false,
-                  );
-                  logService.clearMemoryLogs();
-
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('内存中的日志已清除')));
-                },
-                child: const Text('仅清除内存日志'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  // 在异步操作前获取所需的 context 相关服务和对象
-                  final navigator = Navigator.of(context);
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  final logService = Provider.of<UnifiedLogService>(
-                    context,
-                    listen: false,
-                  );
-
-                  navigator.pop();
-
-                  // 显示加载指示器
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder:
-                        (dialogContext) =>
-                            const Center(child: CircularProgressIndicator()),
-                  );
-
-                  try {
-                    await logService.clearAllLogs();
-                    if (!mounted) return;
-                    navigator.pop(); // 关闭加载指示器
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(content: Text('所有日志记录已清除')),
-                    );
-                    setState(() {
-                      _historyLogs.clear();
-                      _currentPage = 0;
-                      _hasMoreLogs = true;
-                    });
-                  } catch (e) {
-                    if (!mounted) return;
-                    navigator.pop(); // 关闭加载指示器
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('清除日志失败: $e')),
-                    );
-                  }
-                },
-                child: const Text('清除全部日志'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('清除日志'),
+        content: const Text('您想清除哪些日志？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () {
+              final logService = Provider.of<UnifiedLogService>(
+                context,
+                listen: false,
+              );
+              logService.clearMemoryLogs();
+
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('内存中的日志已清除')));
+            },
+            child: const Text('仅清除内存日志'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              // 在异步操作前获取所需的 context 相关服务和对象
+              final navigator = Navigator.of(context);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              final logService = Provider.of<UnifiedLogService>(
+                context,
+                listen: false,
+              );
+
+              navigator.pop();
+
+              // 显示加载指示器
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (dialogContext) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
+
+              try {
+                await logService.clearAllLogs();
+                if (!mounted) return;
+                navigator.pop(); // 关闭加载指示器
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(content: Text('所有日志记录已清除')),
+                );
+                setState(() {
+                  _historyLogs.clear();
+                  _currentPage = 0;
+                  _hasMoreLogs = true;
+                });
+              } catch (e) {
+                if (!mounted) return;
+                navigator.pop(); // 关闭加载指示器
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(content: Text('清除日志失败: $e')),
+                );
+              }
+            },
+            child: const Text('清除全部日志'),
+          ),
+        ],
+      ),
     );
   }
 }

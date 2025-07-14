@@ -77,13 +77,12 @@ class SVGTestHelper {
     String cleaned = svgContent.trim();
 
     // 移除markdown标记
-    cleaned =
-        cleaned
-            .replaceAll('```svg', '')
-            .replaceAll('```xml', '')
-            .replaceAll('```', '')
-            .replaceAll('`', '')
-            .trim();
+    cleaned = cleaned
+        .replaceAll('```svg', '')
+        .replaceAll('```xml', '')
+        .replaceAll('```', '')
+        .replaceAll('`', '')
+        .trim();
 
     // 确保有xmlns
     if (!cleaned.contains('xmlns="http://www.w3.org/2000/svg"')) {

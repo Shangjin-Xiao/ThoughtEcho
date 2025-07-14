@@ -29,16 +29,14 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           routes: {
-            '/':
-                (context) => Scaffold(
+            '/': (context) => Scaffold(
                   appBar: AppBar(title: const Text('Home')),
                   body: ElevatedButton(
                     onPressed: () => Navigator.pushNamed(context, '/second'),
                     child: const Text('Go to Second'),
                   ),
                 ),
-            '/second':
-                (context) => Scaffold(
+            '/second': (context) => Scaffold(
                   appBar: AppBar(title: const Text('Second')),
                   body: const Text('Second Page'),
                 ),

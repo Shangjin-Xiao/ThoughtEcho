@@ -208,32 +208,26 @@ Future<void> main() async {
               // 提供初始化状态
               ValueListenableProvider<bool>.value(value: servicesInitialized),
               ChangeNotifierProxyProvider<SettingsService, AIService>(
-                create:
-                    (context) => AIService(
-                      settingsService: context.read<SettingsService>(),
-                    ),
-                update:
-                    (context, settings, previous) =>
-                        previous ?? AIService(settingsService: settings),
+                create: (context) => AIService(
+                  settingsService: context.read<SettingsService>(),
+                ),
+                update: (context, settings, previous) =>
+                    previous ?? AIService(settingsService: settings),
               ),
-              ProxyProvider3<
-                DatabaseService,
-                SettingsService,
-                AIAnalysisDatabaseService,
-                BackupService
-              >(
-                update:
-                    (
-                      context,
-                      dbService,
-                      settingsService,
-                      aiService,
-                      previous,
-                    ) => BackupService(
-                      databaseService: dbService,
-                      settingsService: settingsService,
-                      aiAnalysisDbService: aiService,
-                    ),
+              ProxyProvider3<DatabaseService, SettingsService,
+                  AIAnalysisDatabaseService, BackupService>(
+                update: (
+                  context,
+                  dbService,
+                  settingsService,
+                  aiService,
+                  previous,
+                ) =>
+                    BackupService(
+                  databaseService: dbService,
+                  settingsService: settingsService,
+                  aiAnalysisDbService: aiService,
+                ),
               ),
             ],
             child: Builder(
@@ -284,13 +278,12 @@ Future<void> main() async {
 
             // 初始化clipboardService
             await clipboardService.init().timeout(
-              const Duration(seconds: 3),
-              onTimeout:
-                  () => logWarning(
+                  const Duration(seconds: 3),
+                  onTimeout: () => logWarning(
                     '剪贴板服务初始化超时，将继续后续初始化',
                     source: 'BackgroundInit',
                   ),
-            );
+                );
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
@@ -470,16 +463,16 @@ class MyApp extends StatelessWidget {
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,
           debugShowCheckedModeBanner: false,
-          home:
-              showUpdateReady
-                  ? const OnboardingPage(showUpdateReady: true)
-                  : !hasCompletedOnboarding
+          home: showUpdateReady
+              ? const OnboardingPage(showUpdateReady: true)
+              : !hasCompletedOnboarding
                   ? const OnboardingPage() // 使用新的引导页面
                   : isEmergencyMode
-                  ? const EmergencyRecoveryPage()
-                  : HomePage(
-                    initialPage: settingsService.appSettings.defaultStartPage,
-                  ),
+                      ? const EmergencyRecoveryPage()
+                      : HomePage(
+                          initialPage:
+                              settingsService.appSettings.defaultStartPage,
+                        ),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -887,10 +880,9 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   child: Text(
                     _statusMessage!,
                     style: TextStyle(
-                      color:
-                          _hasError
-                              ? Colors.red.shade900
-                              : Colors.green.shade900,
+                      color: _hasError
+                          ? Colors.red.shade900
+                          : Colors.green.shade900,
                     ),
                   ),
                 ),

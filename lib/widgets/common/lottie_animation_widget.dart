@@ -34,9 +34,9 @@ class LottieAnimationWidget extends StatefulWidget {
     this.speed = 1.0,
     this.autoPlay = true,
   }) : assert(
-         animationPath != null || scene != null,
-         '必须提供animationPath或scene参数',
-       );
+          animationPath != null || scene != null,
+          '必须提供animationPath或scene参数',
+        );
 
   /// 快捷构造函数 - 使用预设场景
   const LottieAnimationWidget.scene(
@@ -53,19 +53,19 @@ class LottieAnimationWidget extends StatefulWidget {
     double speed = 1.0,
     bool autoPlay = true,
   }) : this(
-         key: key,
-         scene: scene,
-         width: width,
-         height: height,
-         repeat: repeat,
-         fit: fit,
-         controller: controller,
-         onLoaded: onLoaded,
-         onCompleted: onCompleted,
-         color: color,
-         speed: speed,
-         autoPlay: autoPlay,
-       );
+          key: key,
+          scene: scene,
+          width: width,
+          height: height,
+          repeat: repeat,
+          fit: fit,
+          controller: controller,
+          onLoaded: onLoaded,
+          onCompleted: onCompleted,
+          color: color,
+          speed: speed,
+          autoPlay: autoPlay,
+        );
 
   @override
   State<LottieAnimationWidget> createState() => _LottieAnimationWidgetState();
@@ -97,8 +97,7 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   }
 
   void _setupController() {
-    _controller =
-        widget.controller ??
+    _controller = widget.controller ??
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
 
     // 设置播放速度

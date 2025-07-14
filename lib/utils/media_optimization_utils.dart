@@ -180,17 +180,13 @@ class MediaOptimizationUtils {
     try {
       // 简单的内存检查：文件大小不应超过可用内存的1/3
       // 这是一个保守的估算
-      final isMobile =
-          !kIsWeb &&
+      final isMobile = !kIsWeb &&
           (defaultTargetPlatform == TargetPlatform.android ||
               defaultTargetPlatform == TargetPlatform.iOS);
 
-      final conservativeLimit =
-          isMobile
-              ? 20 *
-                  1024 *
-                  1024 // 移动端20MB
-              : 50 * 1024 * 1024; // 桌面端50MB
+      final conservativeLimit = isMobile
+          ? 20 * 1024 * 1024 // 移动端20MB
+          : 50 * 1024 * 1024; // 桌面端50MB
 
       return fileSize <= conservativeLimit;
     } catch (e) {
@@ -200,8 +196,7 @@ class MediaOptimizationUtils {
 
   /// 获取平台推荐的最大图片尺寸
   static int _getMaxDimensionForPlatform() {
-    final isMobile =
-        !kIsWeb &&
+    final isMobile = !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
 

@@ -210,7 +210,8 @@ class DatabaseService extends ChangeNotifier {
             aiAnalysis: '这是第${i + 1}条Web平台示例笔记的AI分析',
           );
           _memoryStore.add(quote);
-          logDebug('生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}');
+          logDebug(
+              '生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}');
         }
         logDebug('Web平台已生成${_memoryStore.length}条示例数据');
       }
@@ -645,12 +646,11 @@ class DatabaseService extends ChangeNotifier {
         if (tagIdsString == null || tagIdsString.isEmpty) continue;
 
         // 解析标签ID
-        final tagIds =
-            tagIdsString
-                .split(',')
-                .map((id) => id.trim())
-                .where((id) => id.isNotEmpty)
-                .toList();
+        final tagIds = tagIdsString
+            .split(',')
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
 
         if (tagIds.isEmpty) continue;
 
@@ -673,10 +673,13 @@ class DatabaseService extends ChangeNotifier {
 
         // 插入有效的标签关联
         for (final tagId in validTagIds) {
-          await txn.insert('quote_tags', {
-            'quote_id': quoteId,
-            'tag_id': tagId,
-          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+          await txn.insert(
+              'quote_tags',
+              {
+                'quote_id': quoteId,
+                'tag_id': tagId,
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore);
         }
 
         migratedCount++;
@@ -854,11 +857,10 @@ class DatabaseService extends ChangeNotifier {
         'categories',
         columns: ['name', 'id'],
       );
-      final existingNamesLower =
-          existingCategories
-              .map((row) => (row['name'] as String?)?.toLowerCase())
-              .where((name) => name != null)
-              .toSet();
+      final existingNamesLower = existingCategories
+          .map((row) => (row['name'] as String?)?.toLowerCase())
+          .where((name) => name != null)
+          .toSet();
 
       // 同时创建ID到名称的映射，用于检查默认ID是否已被其它名称使用
       final existingIdToName = {
@@ -867,13 +869,12 @@ class DatabaseService extends ChangeNotifier {
       };
 
       // 2. 筛选出数据库中尚不存在的默认分类
-      final categoriesToAdd =
-          defaultCategories
-              .where(
-                (category) =>
-                    !existingNamesLower.contains(category.name.toLowerCase()),
-              )
-              .toList();
+      final categoriesToAdd = defaultCategories
+          .where(
+            (category) =>
+                !existingNamesLower.contains(category.name.toLowerCase()),
+          )
+          .toList();
 
       // 3. 检查默认ID是否已被其他名称使用，如果是，需要更新名称
       final idsToUpdate = <String, String>{};
@@ -906,12 +907,15 @@ class DatabaseService extends ChangeNotifier {
         if (idsToUpdate.containsKey(category.id)) {
           continue;
         }
-        batch.insert('categories', {
-          'id': category.id,
-          'name': category.name,
-          'is_default': category.isDefault ? 1 : 0,
-          'icon_name': category.iconName,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        batch.insert(
+            'categories',
+            {
+              'id': category.id,
+              'name': category.name,
+              'is_default': category.isDefault ? 1 : 0,
+              'icon_name': category.iconName,
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore);
         logDebug('添加默认一言分类: ${category.name}');
       }
 
@@ -1269,9 +1273,8 @@ class DatabaseService extends ChangeNotifier {
           // 如果有标签信息，创建标签关联记录
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
-            final tagIds = tagIdsString
-                .split(',')
-                .where((id) => id.trim().isNotEmpty);
+            final tagIds =
+                tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
 
             for (final tagId in tagIds) {
               await txn.insert(
@@ -1745,47 +1748,41 @@ class DatabaseService extends ChangeNotifier {
         // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
         if (tagIds != null && tagIds.isNotEmpty) {
-          filtered =
-              filtered
-                  .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
-                  .toList();
+          filtered = filtered
+              .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+              .toList();
         }
         if (categoryId != null && categoryId.isNotEmpty) {
           filtered = filtered.where((q) => q.categoryId == categoryId).toList();
         }
         if (searchQuery != null && searchQuery.isNotEmpty) {
           final query = searchQuery.toLowerCase();
-          filtered =
-              filtered
-                  .where(
-                    (q) =>
-                        q.content.toLowerCase().contains(query) ||
-                        (q.source?.toLowerCase().contains(query) ?? false) ||
-                        (q.sourceAuthor?.toLowerCase().contains(query) ??
-                            false) ||
-                        (q.sourceWork?.toLowerCase().contains(query) ?? false),
-                  )
-                  .toList();
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.content.toLowerCase().contains(query) ||
+                    (q.source?.toLowerCase().contains(query) ?? false) ||
+                    (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+                    (q.sourceWork?.toLowerCase().contains(query) ?? false),
+              )
+              .toList();
         }
         if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-          filtered =
-              filtered
-                  .where(
-                    (q) =>
-                        q.weather != null &&
-                        selectedWeathers.contains(q.weather),
-                  )
-                  .toList();
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.weather != null && selectedWeathers.contains(q.weather),
+              )
+              .toList();
         }
         if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-          filtered =
-              filtered
-                  .where(
-                    (q) =>
-                        q.dayPeriod != null &&
-                        selectedDayPeriods.contains(q.dayPeriod),
-                  )
-                  .toList();
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.dayPeriod != null &&
+                    selectedDayPeriods.contains(q.dayPeriod),
+              )
+              .toList();
         }
 
         // 排序
@@ -1807,7 +1804,8 @@ class DatabaseService extends ChangeNotifier {
         final start = offset.clamp(0, filtered.length);
         final end = (offset + limit).clamp(0, filtered.length);
 
-        logDebug('Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end');
+        logDebug(
+            'Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end');
 
         // 如果起始位置已经超出数据范围，直接返回空列表
         if (start >= filtered.length) {
@@ -1863,24 +1861,22 @@ class DatabaseService extends ChangeNotifier {
         });
 
         // 异步执行查询
-        query()
-            .then((result) {
-              timeoutTimer?.cancel();
-              if (!completer.isCompleted) {
-                completer.complete(result);
-              }
-            })
-            .catchError((error) {
-              timeoutTimer?.cancel();
-              if (!completer.isCompleted) {
-                logError(
-                  '数据库查询失败: $error',
-                  error: error,
-                  source: 'DatabaseService',
-                );
-                completer.completeError(error);
-              }
-            });
+        query().then((result) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            completer.complete(result);
+          }
+        }).catchError((error) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            logError(
+              '数据库查询失败: $error',
+              error: error,
+              source: 'DatabaseService',
+            );
+            completer.completeError(error);
+          }
+        });
 
         final result = await completer.future;
         timeoutTimer.cancel();
@@ -1958,9 +1954,8 @@ class DatabaseService extends ChangeNotifier {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders = selectedDayPeriods
-          .map((_) => '?')
-          .join(',');
+      final dayPeriodPlaceholders =
+          selectedDayPeriods.map((_) => '?').join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -2038,10 +2033,9 @@ class DatabaseService extends ChangeNotifier {
       var filtered = _memoryStore;
 
       if (tagIds != null && tagIds.isNotEmpty) {
-        filtered =
-            filtered
-                .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
-                .toList();
+        filtered = filtered
+            .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+            .toList();
       }
 
       if (categoryId != null && categoryId.isNotEmpty) {
@@ -2050,38 +2044,33 @@ class DatabaseService extends ChangeNotifier {
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
         final query = searchQuery.toLowerCase();
-        filtered =
-            filtered
-                .where(
-                  (q) =>
-                      q.content.toLowerCase().contains(query) ||
-                      (q.source?.toLowerCase().contains(query) ?? false) ||
-                      (q.sourceAuthor?.toLowerCase().contains(query) ??
-                          false) ||
-                      (q.sourceWork?.toLowerCase().contains(query) ?? false),
-                )
-                .toList();
+        filtered = filtered
+            .where(
+              (q) =>
+                  q.content.toLowerCase().contains(query) ||
+                  (q.source?.toLowerCase().contains(query) ?? false) ||
+                  (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+                  (q.sourceWork?.toLowerCase().contains(query) ?? false),
+            )
+            .toList();
       }
 
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-        filtered =
-            filtered
-                .where(
-                  (q) =>
-                      q.weather != null && selectedWeathers.contains(q.weather),
-                )
-                .toList();
+        filtered = filtered
+            .where(
+              (q) => q.weather != null && selectedWeathers.contains(q.weather),
+            )
+            .toList();
       }
 
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        filtered =
-            filtered
-                .where(
-                  (q) =>
-                      q.dayPeriod != null &&
-                      selectedDayPeriods.contains(q.dayPeriod),
-                )
-                .toList();
+        filtered = filtered
+            .where(
+              (q) =>
+                  q.dayPeriod != null &&
+                  selectedDayPeriods.contains(q.dayPeriod),
+            )
+            .toList();
       }
 
       return filtered.length;
@@ -2115,9 +2104,8 @@ class DatabaseService extends ChangeNotifier {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders = selectedDayPeriods
-            .map((_) => '?')
-            .join(',');
+        final dayPeriodPlaceholders =
+            selectedDayPeriods.map((_) => '?').join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
@@ -2518,7 +2506,8 @@ class DatabaseService extends ChangeNotifier {
     }
 
     _isLoading = true;
-    logDebug('开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit');
+    logDebug(
+        '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit');
 
     try {
       final quotes = await getUserQuotes(
@@ -2545,11 +2534,13 @@ class DatabaseService extends ChangeNotifier {
       } else {
         // 修复：添加去重逻辑，防止重复数据
         final existingIds = _currentQuotes.map((q) => q.id).toSet();
-        final newQuotes = quotes.where((q) => !existingIds.contains(q.id)).toList();
+        final newQuotes =
+            quotes.where((q) => !existingIds.contains(q.id)).toList();
 
         if (newQuotes.isNotEmpty) {
           _currentQuotes.addAll(newQuotes);
-          logDebug('本次加载${quotes.length}条，去重后添加${newQuotes.length}条，总计${_currentQuotes.length}条');
+          logDebug(
+              '本次加载${quotes.length}条，去重后添加${newQuotes.length}条，总计${_currentQuotes.length}条');
         } else {
           logDebug('本次加载${quotes.length}条，但全部为重复数据，已过滤');
         }
@@ -2901,10 +2892,9 @@ class DatabaseService extends ChangeNotifier {
           final q = _memoryStore[i];
           if (q.weather != null &&
               WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
-            final key =
-                WeatherService.weatherKeyToLabel.entries
-                    .firstWhere((e) => e.value == q.weather)
-                    .key;
+            final key = WeatherService.weatherKeyToLabel.entries
+                .firstWhere((e) => e.value == q.weather)
+                .key;
             _memoryStore[i] = q.copyWith(weather: key);
             migratedCount++;
           }
@@ -2959,10 +2949,9 @@ class DatabaseService extends ChangeNotifier {
 
           // 检查是否需要迁移（是否为中文标签）
           if (WeatherService.weatherKeyToLabel.values.contains(weather)) {
-            final key =
-                WeatherService.weatherKeyToLabel.entries
-                    .firstWhere((e) => e.value == weather)
-                    .key;
+            final key = WeatherService.weatherKeyToLabel.entries
+                .firstWhere((e) => e.value == weather)
+                .key;
 
             await txn.update(
               'quotes',

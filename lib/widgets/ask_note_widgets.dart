@@ -25,11 +25,10 @@ class QuickAskNoteButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder:
-                (context) => NoteQAChatPage(
-                  quote: quote,
-                  initialQuestion: initialQuestion,
-                ),
+            builder: (context) => NoteQAChatPage(
+              quote: quote,
+              initialQuestion: initialQuestion,
+            ),
           ),
         );
       },
@@ -54,11 +53,10 @@ class AskNoteFloatingButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder:
-                (context) => NoteQAChatPage(
-                  quote: quote,
-                  initialQuestion: initialQuestion,
-                ),
+            builder: (context) => NoteQAChatPage(
+              quote: quote,
+              initialQuestion: initialQuestion,
+            ),
           ),
         );
       },
@@ -86,11 +84,10 @@ class AskNoteListTile extends StatelessWidget {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder:
-                (context) => NoteQAChatPage(
-                  quote: quote,
-                  initialQuestion: initialQuestion,
-                ),
+            builder: (context) => NoteQAChatPage(
+              quote: quote,
+              initialQuestion: initialQuestion,
+            ),
           ),
         );
       },

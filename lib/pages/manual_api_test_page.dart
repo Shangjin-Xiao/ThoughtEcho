@@ -74,14 +74,13 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _testApiKey,
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Text('测试API密钥'),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('测试API密钥'),
             ),
             const SizedBox(height: 24),
             if (_testResult.isNotEmpty) ...[

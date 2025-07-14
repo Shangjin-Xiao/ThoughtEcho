@@ -676,65 +676,70 @@ class UnifiedLogService with ChangeNotifier {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.verbose,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.verbose,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void debug(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.debug,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.debug,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void info(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.info,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.info,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void warning(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.warning,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.warning,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void error(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.error,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.error,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   /// 获取日志统计摘要
   Map<String, dynamic> getLogSummary() {
@@ -794,10 +799,9 @@ class UnifiedLogService with ChangeNotifier {
             UnifiedLogLevel.error,
             errorMap['message'] as String? ?? '未知错误',
             error: errorMap['error'],
-            stackTrace:
-                errorMap['stackTrace'] != null
-                    ? StackTrace.fromString(errorMap['stackTrace'].toString())
-                    : null,
+            stackTrace: errorMap['stackTrace'] != null
+                ? StackTrace.fromString(errorMap['stackTrace'].toString())
+                : null,
             source: errorMap['source'] as String? ?? 'unknown',
           );
         }
@@ -841,9 +845,8 @@ class UnifiedLogService with ChangeNotifier {
 
   /// 获取排名前5的日志来源
   List<Map<String, dynamic>> _getTopLogSources() {
-    final entries =
-        _sourceStats.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+    final entries = _sourceStats.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return entries
         .take(5)

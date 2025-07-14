@@ -32,10 +32,9 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor:
-          theme.brightness == Brightness.light
-              ? Colors.white
-              : theme.colorScheme.surface,
+      backgroundColor: theme.brightness == Brightness.light
+          ? Colors.white
+          : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppTheme.dialogRadius),
@@ -394,14 +393,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       id: '',
       content: widget.contentController.text,
       date: DateTime.now().toIso8601String(),
-      sourceAuthor:
-          widget.authorController.text.trim().isNotEmpty
-              ? widget.authorController.text.trim()
-              : null,
-      sourceWork:
-          widget.workController.text.trim().isNotEmpty
-              ? widget.workController.text.trim()
-              : null,
+      sourceAuthor: widget.authorController.text.trim().isNotEmpty
+          ? widget.authorController.text.trim()
+          : null,
+      sourceWork: widget.workController.text.trim().isNotEmpty
+          ? widget.workController.text.trim()
+          : null,
     );
 
     // 导航到聊天页面

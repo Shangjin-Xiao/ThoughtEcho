@@ -17,8 +17,7 @@ class NoteFilterSortSheet extends StatefulWidget {
     bool sortAscending,
     List<String> selectedWeathers,
     List<String> selectedDayPeriods,
-  )
-  onApply;
+  ) onApply;
 
   const NoteFilterSortSheet({
     super.key,
@@ -63,14 +62,12 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     _tempSelectedTagIds = List.from(widget.selectedTagIds);
     _tempSortType = widget.sortType;
     _tempSortAscending = widget.sortAscending;
-    _tempSelectedWeathers =
-        widget.selectedWeathers != null
-            ? List.from(widget.selectedWeathers!)
-            : <String>[];
-    _tempSelectedDayPeriods =
-        widget.selectedDayPeriods != null
-            ? List.from(widget.selectedDayPeriods!)
-            : <String>[];
+    _tempSelectedWeathers = widget.selectedWeathers != null
+        ? List.from(widget.selectedWeathers!)
+        : <String>[];
+    _tempSelectedDayPeriods = widget.selectedDayPeriods != null
+        ? List.from(widget.selectedDayPeriods!)
+        : <String>[];
 
     // 性能优化：预计算常用数据和缓存映射
     _weatherCategories = WeatherService.filterCategoryToLabel.keys.toList();
@@ -173,19 +170,18 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   FilledButton(
-                    onPressed:
-                        _hasChanges()
-                            ? () {
-                              widget.onApply(
-                                _tempSelectedTagIds,
-                                _tempSortType,
-                                _tempSortAscending,
-                                _tempSelectedWeathers,
-                                _tempSelectedDayPeriods,
-                              );
-                              Navigator.pop(context);
-                            }
-                            : null, // 优化：如果没有变化则禁用按钮
+                    onPressed: _hasChanges()
+                        ? () {
+                            widget.onApply(
+                              _tempSelectedTagIds,
+                              _tempSortType,
+                              _tempSortAscending,
+                              _tempSelectedWeathers,
+                              _tempSelectedDayPeriods,
+                            );
+                            Navigator.pop(context);
+                          }
+                        : null, // 优化：如果没有变化则禁用按钮
                     child: const Text('应用'),
                   ),
                 ],
@@ -206,10 +202,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   }) {
     return Card(
       elevation: 0,
-      color:
-          theme.brightness == Brightness.light
-              ? Colors.white
-              : theme.colorScheme.surface,
+      color: theme.brightness == Brightness.light
+          ? Colors.white
+          : theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -283,141 +278,138 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       );
     }
 
-    final chips =
-        widget.allTags.map((tag) {
-          final isSelected = _tempSelectedTagIds.contains(tag.id);
-          // Use IconUtils to get the icon
-          final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-          final dynamic tagIcon = IconUtils.getIconData(
-            tag.iconName,
-          ); // getIconData handles null/empty and returns default
+    final chips = widget.allTags.map((tag) {
+      final isSelected = _tempSelectedTagIds.contains(tag.id);
+      // Use IconUtils to get the icon
+      final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+      final dynamic tagIcon = IconUtils.getIconData(
+        tag.iconName,
+      ); // getIconData handles null/empty and returns default
 
-          return FilterChip(
-            selected: isSelected,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                  isEmoji
-                      ? Text(
-                        tag.iconName!,
-                        style: const TextStyle(fontSize: 16),
-                      )
-                      // Use the IconData from IconUtils
-                      : (tagIcon is IconData) // Check if it's IconData
+      return FilterChip(
+        selected: isSelected,
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (tag.iconName != null && tag.iconName!.isNotEmpty)
+              isEmoji
+                  ? Text(
+                      tag.iconName!,
+                      style: const TextStyle(fontSize: 16),
+                    )
+                  // Use the IconData from IconUtils
+                  : (tagIcon is IconData) // Check if it's IconData
                       ? Icon(tagIcon, size: 16)
-                      : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    tag.name,
-                    style: theme.textTheme.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+                      : const SizedBox
+                          .shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                tag.name,
+                style: theme.textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            onSelected: (selected) {
-              setState(() {
-                if (selected) {
-                  _tempSelectedTagIds.add(tag.id);
-                } else {
-                  _tempSelectedTagIds.remove(tag.id);
-                }
-              });
-            },
-          );
-        }).toList();
+          ],
+        ),
+        onSelected: (selected) {
+          setState(() {
+            if (selected) {
+              _tempSelectedTagIds.add(tag.id);
+            } else {
+              _tempSelectedTagIds.remove(tag.id);
+            }
+          });
+        },
+      );
+    }).toList();
 
     return _buildHorizontalScrollableFilter(children: chips, theme: theme);
   }
 
   /// 构建天气筛选器
   Widget _buildWeatherFilter(ThemeData theme) {
-    final chips =
-        _weatherCategories.map((filterCategory) {
-          final isSelected = _tempSelectedWeathers.any(
-            (selectedWeather) => WeatherService.getWeatherKeysByFilterCategory(
-              filterCategory,
-            ).contains(selectedWeather),
-          );
-          // 使用预缓存的图标和标签，提升性能
-          final icon = _weatherIconCache[filterCategory]!;
-          final label = _weatherLabelCache[filterCategory]!;
-          return FilterChip(
-            selected: isSelected,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 16),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: theme.textTheme.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+    final chips = _weatherCategories.map((filterCategory) {
+      final isSelected = _tempSelectedWeathers.any(
+        (selectedWeather) => WeatherService.getWeatherKeysByFilterCategory(
+          filterCategory,
+        ).contains(selectedWeather),
+      );
+      // 使用预缓存的图标和标签，提升性能
+      final icon = _weatherIconCache[filterCategory]!;
+      final label = _weatherLabelCache[filterCategory]!;
+      return FilterChip(
+        selected: isSelected,
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            onSelected: (selected) {
-              setState(() {
-                final categoryKeys =
-                    WeatherService.getWeatherKeysByFilterCategory(
-                      filterCategory,
-                    );
-                if (selected) {
-                  // 添加该分类下的所有天气key
-                  _tempSelectedWeathers.addAll(categoryKeys);
-                } else {
-                  // 移除该分类下的所有天气key
-                  _tempSelectedWeathers.removeWhere(
-                    (weather) => categoryKeys.contains(weather),
-                  );
-                }
-              });
-            },
-          );
-        }).toList();
+          ],
+        ),
+        onSelected: (selected) {
+          setState(() {
+            final categoryKeys = WeatherService.getWeatherKeysByFilterCategory(
+              filterCategory,
+            );
+            if (selected) {
+              // 添加该分类下的所有天气key
+              _tempSelectedWeathers.addAll(categoryKeys);
+            } else {
+              // 移除该分类下的所有天气key
+              _tempSelectedWeathers.removeWhere(
+                (weather) => categoryKeys.contains(weather),
+              );
+            }
+          });
+        },
+      );
+    }).toList();
 
     return _buildHorizontalScrollableFilter(children: chips, theme: theme);
   }
 
   /// 构建时间段筛选器
   Widget _buildDayPeriodFilter(ThemeData theme) {
-    final chips =
-        _dayPeriodKeys.map((periodKey) {
-          final isSelected = _tempSelectedDayPeriods.contains(periodKey);
-          // 使用预缓存的图标和标签，提升性能
-          final icon = _dayPeriodIconCache[periodKey]!;
-          final label = _dayPeriodLabelCache[periodKey]!;
-          return FilterChip(
-            selected: isSelected,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 16),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: theme.textTheme.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+    final chips = _dayPeriodKeys.map((periodKey) {
+      final isSelected = _tempSelectedDayPeriods.contains(periodKey);
+      // 使用预缓存的图标和标签，提升性能
+      final icon = _dayPeriodIconCache[periodKey]!;
+      final label = _dayPeriodLabelCache[periodKey]!;
+      return FilterChip(
+        selected: isSelected,
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            onSelected: (selected) {
-              setState(() {
-                if (selected) {
-                  _tempSelectedDayPeriods.add(periodKey);
-                } else {
-                  _tempSelectedDayPeriods.remove(periodKey);
-                }
-              });
-            },
-          );
-        }).toList();
+          ],
+        ),
+        onSelected: (selected) {
+          setState(() {
+            if (selected) {
+              _tempSelectedDayPeriods.add(periodKey);
+            } else {
+              _tempSelectedDayPeriods.remove(periodKey);
+            }
+          });
+        },
+      );
+    }).toList();
 
     return _buildHorizontalScrollableFilter(children: chips, theme: theme);
   }

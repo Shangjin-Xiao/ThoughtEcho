@@ -34,12 +34,12 @@ class AppSettings {
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
-    hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
-    clipboardMonitoringEnabled: false,
-    defaultStartPage: 0,
-    hasCompletedOnboarding: false,
-    aiCardGenerationEnabled: true,
-  );
+        hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+        clipboardMonitoringEnabled: false,
+        defaultStartPage: 0,
+        hasCompletedOnboarding: false,
+        aiCardGenerationEnabled: true,
+      );
 
   AppSettings copyWith({
     String? hitokotoType,

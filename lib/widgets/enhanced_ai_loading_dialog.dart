@@ -24,12 +24,11 @@ class EnhancedAILoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder:
-          (context) => EnhancedAILoadingDialog(
-            message: message,
-            animationType: LottieAnimationType.aiThinking,
-            barrierDismissible: barrierDismissible,
-          ),
+      builder: (context) => EnhancedAILoadingDialog(
+        message: message,
+        animationType: LottieAnimationType.aiThinking,
+        barrierDismissible: barrierDismissible,
+      ),
     );
   }
 
@@ -42,12 +41,11 @@ class EnhancedAILoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder:
-          (context) => EnhancedAILoadingDialog(
-            message: message,
-            animationType: LottieAnimationType.modernLoading,
-            barrierDismissible: barrierDismissible,
-          ),
+      builder: (context) => EnhancedAILoadingDialog(
+        message: message,
+        animationType: LottieAnimationType.modernLoading,
+        barrierDismissible: barrierDismissible,
+      ),
     );
   }
 
@@ -60,12 +58,11 @@ class EnhancedAILoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder:
-          (context) => EnhancedAILoadingDialog(
-            message: message,
-            animationType: LottieAnimationType.aiThinking,
-            barrierDismissible: barrierDismissible,
-          ),
+      builder: (context) => EnhancedAILoadingDialog(
+        message: message,
+        animationType: LottieAnimationType.aiThinking,
+        barrierDismissible: barrierDismissible,
+      ),
     );
   }
 
@@ -155,13 +152,12 @@ class EnhancedAIProgressDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder:
-          (context) => EnhancedAIProgressDialog(
-            message: message,
-            progress: progress,
-            animationType: animationType,
-            barrierDismissible: barrierDismissible,
-          ),
+      builder: (context) => EnhancedAIProgressDialog(
+        message: message,
+        progress: progress,
+        animationType: animationType,
+        barrierDismissible: barrierDismissible,
+      ),
     );
   }
 

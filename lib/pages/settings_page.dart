@@ -89,33 +89,32 @@ class _SettingsPageState extends State<SettingsPage> {
 
     showDialog(
       context: context,
-      builder:
-          (dialogContext) => ChangeNotifierProvider.value(
-            value: weatherController,
-            child: Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.7,
-                width: MediaQuery.of(context).size.width * 0.9,
-                padding: const EdgeInsets.all(8.0),
-                child: CitySearchWidget(
-                  weatherController: weatherController,
-                  initialCity: locationService.city,
-                  onSuccess: () {
-                    // 刷新设置页面的状态
-                    if (mounted) {
-                      setState(() {
-                        _locationController.text =
-                            locationService.getFormattedLocation();
-                      });
-                    }
-                  },
-                ),
-              ),
+      builder: (dialogContext) => ChangeNotifierProvider.value(
+        value: weatherController,
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            width: MediaQuery.of(context).size.width * 0.9,
+            padding: const EdgeInsets.all(8.0),
+            child: CitySearchWidget(
+              weatherController: weatherController,
+              initialCity: locationService.city,
+              onSuccess: () {
+                // 刷新设置页面的状态
+                if (mounted) {
+                  setState(() {
+                    _locationController.text =
+                        locationService.getFormattedLocation();
+                  });
+                }
+              },
             ),
           ),
+        ),
+      ),
     ).then((_) {
       // 对话框关闭后，释放控制器
       weatherController.dispose();
@@ -144,39 +143,38 @@ class _SettingsPageState extends State<SettingsPage> {
                 _testAIAnnualReport();
               }
             },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'native',
-                    child: Row(
-                      children: [
-                        Icon(Icons.analytics_outlined),
-                        SizedBox(width: 8),
-                        Text('年度报告'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'ai',
-                    child: Row(
-                      children: [
-                        Icon(Icons.auto_awesome),
-                        SizedBox(width: 8),
-                        Text('AI 年度总结'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'test',
-                    child: Row(
-                      children: [
-                        Icon(Icons.bug_report),
-                        SizedBox(width: 8),
-                        Text('测试AI报告'),
-                      ],
-                    ),
-                  ),
-                ],
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'native',
+                child: Row(
+                  children: [
+                    Icon(Icons.analytics_outlined),
+                    SizedBox(width: 8),
+                    Text('年度报告'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'ai',
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome),
+                    SizedBox(width: 8),
+                    Text('AI 年度总结'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'test',
+                child: Row(
+                  children: [
+                    Icon(Icons.bug_report),
+                    SizedBox(width: 8),
+                    Text('测试AI报告'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -209,15 +207,13 @@ class _SettingsPageState extends State<SettingsPage> {
                         : '未获得位置权限',
                     style: TextStyle(
                       fontSize: 12,
-                      color:
-                          locationService.hasLocationPermission &&
-                                  locationService.isLocationServiceEnabled
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.error,
+                      color: locationService.hasLocationPermission &&
+                              locationService.isLocationServiceEnabled
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.error,
                     ),
                   ),
-                  value:
-                      locationService.hasLocationPermission &&
+                  value: locationService.hasLocationPermission &&
                       locationService.isLocationServiceEnabled,
                   onChanged: (value) async {
                     if (value) {
@@ -241,31 +237,30 @@ class _SettingsPageState extends State<SettingsPage> {
                               context; // Capture context before async gap
                           showDialog(
                             context: currentContext,
-                            builder:
-                                (context) => AlertDialog(
-                                  title: const Text('请启用位置服务'),
-                                  content: const Text(
-                                    '心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed:
-                                          () => Navigator.pop(currentContext),
-                                      child: const Text('取消'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        if (!currentContext.mounted) {
-                                          return; // Check mounted before pop
-                                        }
-                                        Navigator.pop(currentContext);
-                                        await Geolocator.openLocationSettings();
-                                        if (!mounted) return; // Add this check
-                                      },
-                                      child: const Text('去设置'),
-                                    ),
-                                  ],
+                            builder: (context) => AlertDialog(
+                              title: const Text('请启用位置服务'),
+                              content: const Text(
+                                '心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(currentContext),
+                                  child: const Text('取消'),
                                 ),
+                                TextButton(
+                                  onPressed: () async {
+                                    if (!currentContext.mounted) {
+                                      return; // Check mounted before pop
+                                    }
+                                    Navigator.pop(currentContext);
+                                    await Geolocator.openLocationSettings();
+                                    if (!mounted) return; // Add this check
+                                  },
+                                  child: const Text('去设置'),
+                                ),
+                              ],
+                            ),
                           );
                         }
                         return;
@@ -366,34 +361,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (locationService.currentAddress != null)
                   weatherService.isLoading
                       ? const ListTile(
-                        leading: SizedBox(
-                          width: 24, // 与 Icon 大小一致
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        title: Text('正在加载天气...'),
-                      )
+                          leading: SizedBox(
+                            width: 24, // 与 Icon 大小一致
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          title: Text('正在加载天气...'),
+                        )
                       : ListTile(
-                        title: const Text('当前天气'),
-                        subtitle: Text(
-                          (weatherService.currentWeather == null &&
-                                  weatherService.temperature == null)
-                              ? '点击右侧按钮刷新天气'
-                              : (weatherService.currentWeather == '天气数据获取失败'
-                                  ? '天气获取失败' // 直接显示错误信息
-                                  : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        leading: Icon(
-                          weatherService.getWeatherIconData(),
-                        ), // 图标会根据错误状态变化
-                        trailing: IconButton(
-                          icon: const Icon(Icons.refresh),
-                          tooltip: '刷新天气',
-                          onPressed:
-                              weatherService.isLoading
-                                  ? null
-                                  : () async {
+                          title: const Text('当前天气'),
+                          subtitle: Text(
+                            (weatherService.currentWeather == null &&
+                                    weatherService.temperature == null)
+                                ? '点击右侧按钮刷新天气'
+                                : (weatherService.currentWeather == '天气数据获取失败'
+                                    ? '天气获取失败' // 直接显示错误信息
+                                    : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          leading: Icon(
+                            weatherService.getWeatherIconData(),
+                          ), // 图标会根据错误状态变化
+                          trailing: IconButton(
+                            icon: const Icon(Icons.refresh),
+                            tooltip: '刷新天气',
+                            onPressed: weatherService.isLoading
+                                ? null
+                                : () async {
                                     // 正在加载时禁用按钮
                                     final position =
                                         locationService.currentPosition;
@@ -433,9 +427,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                       );
                                     }
                                   },
+                          ),
+                          onTap: null,
                         ),
-                        onTap: null,
-                      ),
 
                 // 添加天气数据来源信息
                 Padding(
@@ -662,8 +656,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder:
-                                    (context) => const license.LicensePage(),
+                                builder: (context) =>
+                                    const license.LicensePage(),
                               ),
                             );
                           },
@@ -754,49 +748,48 @@ class _SettingsPageState extends State<SettingsPage> {
       onTap: () {
         showDialog(
           context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('选择默认启动页面'),
-                content: StatefulBuilder(
-                  builder: (context, setState) {
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        RadioListTile<int>(
-                          title: const Text('首页（每日一言）'),
-                          value: 0,
-                          groupValue: currentValue,
-                          onChanged: (value) {
-                            if (value != null) {
-                              settingsService.updateAppSettings(
-                                settingsService.appSettings.copyWith(
-                                  defaultStartPage: value,
-                                ),
-                              );
-                              Navigator.pop(context);
-                            }
-                          },
-                        ),
-                        RadioListTile<int>(
-                          title: const Text('记录（笔记列表）'),
-                          value: 1,
-                          groupValue: currentValue,
-                          onChanged: (value) {
-                            if (value != null) {
-                              settingsService.updateAppSettings(
-                                settingsService.appSettings.copyWith(
-                                  defaultStartPage: value,
-                                ),
-                              );
-                              Navigator.pop(context);
-                            }
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+          builder: (context) => AlertDialog(
+            title: const Text('选择默认启动页面'),
+            content: StatefulBuilder(
+              builder: (context, setState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<int>(
+                      title: const Text('首页（每日一言）'),
+                      value: 0,
+                      groupValue: currentValue,
+                      onChanged: (value) {
+                        if (value != null) {
+                          settingsService.updateAppSettings(
+                            settingsService.appSettings.copyWith(
+                              defaultStartPage: value,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    RadioListTile<int>(
+                      title: const Text('记录（笔记列表）'),
+                      value: 1,
+                      groupValue: currentValue,
+                      onChanged: (value) {
+                        if (value != null) {
+                          settingsService.updateAppSettings(
+                            settingsService.appSettings.copyWith(
+                              defaultStartPage: value,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         );
       },
     );
@@ -812,19 +805,17 @@ class _SettingsPageState extends State<SettingsPage> {
       final quotes = await databaseService.getUserQuotes();
       final currentYear = DateTime.now().year;
 
-      final thisYearQuotes =
-          quotes.where((quote) {
-            final quoteDate = DateTime.parse(quote.date);
-            return quoteDate.year == currentYear;
-          }).toList();
+      final thisYearQuotes = quotes.where((quote) {
+        final quoteDate = DateTime.parse(quote.date);
+        return quoteDate.year == currentYear;
+      }).toList();
 
       if (mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) =>
-                    AnnualReportPage(year: currentYear, quotes: thisYearQuotes),
+            builder: (context) =>
+                AnnualReportPage(year: currentYear, quotes: thisYearQuotes),
           ),
         );
       }
@@ -848,27 +839,25 @@ class _SettingsPageState extends State<SettingsPage> {
       final quotes = await databaseService.getUserQuotes();
       final currentYear = DateTime.now().year;
 
-      final thisYearQuotes =
-          quotes.where((quote) {
-            final quoteDate = DateTime.parse(quote.date);
-            return quoteDate.year == currentYear;
-          }).toList();
+      final thisYearQuotes = quotes.where((quote) {
+        final quoteDate = DateTime.parse(quote.date);
+        return quoteDate.year == currentYear;
+      }).toList();
 
       if (mounted) {
         // 显示加载对话框
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder:
-              (context) => const AlertDialog(
-                content: Row(
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(width: 16),
-                    Text('正在生成AI年度报告...'),
-                  ],
-                ),
-              ),
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('正在生成AI年度报告...'),
+              ],
+            ),
+          ),
         );
 
         try {
@@ -960,10 +949,9 @@ class _SettingsPageState extends State<SettingsPage> {
             }
           }
 
-          final peakTime =
-              timePeriods.entries
-                  .reduce((a, b) => a.value > b.value ? a : b)
-                  .key;
+          final peakTime = timePeriods.entries
+              .reduce((a, b) => a.value > b.value ? a : b)
+              .key;
 
           final prompt = '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
 
@@ -1011,7 +999,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             // 检查返回内容的格式
             final isHtml =
                 result.trim().toLowerCase().startsWith('<!doctype') ||
-                result.trim().toLowerCase().startsWith('<html');
+                    result.trim().toLowerCase().startsWith('<html');
             final isJson =
                 result.trim().startsWith('{') || result.trim().startsWith('[');
 
@@ -1024,11 +1012,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder:
-                    (context) => AIAnnualReportWebView(
-                      htmlContent: result,
-                      year: currentYear,
-                    ),
+                builder: (context) => AIAnnualReportWebView(
+                  htmlContent: result,
+                  year: currentYear,
+                ),
               ),
             );
           } else {
@@ -1083,16 +1070,15 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder:
-            (context) => const AlertDialog(
-              content: Row(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 16),
-                  Text('正在测试AI年度报告...'),
-                ],
-              ),
-            ),
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('正在测试AI年度报告...'),
+            ],
+          ),
+        ),
       );
 
       try {
@@ -1157,12 +1143,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         if (mounted && result.isNotEmpty) {
           // 详细检查返回内容
           final trimmed = result.trim();
-          final isHtml =
-              trimmed.toLowerCase().startsWith('<!doctype') ||
+          final isHtml = trimmed.toLowerCase().startsWith('<!doctype') ||
               trimmed.toLowerCase().startsWith('<html');
           final isJson = trimmed.startsWith('{') || trimmed.startsWith('[');
-          final containsHtmlTags =
-              trimmed.contains('<html') ||
+          final containsHtmlTags = trimmed.contains('<html') ||
               trimmed.contains('<body') ||
               trimmed.contains('<div');
 
@@ -1178,60 +1162,58 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
           // 显示结果对话框
           showDialog(
             context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: const Text('测试结果'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('内容长度：${result.length}字符'),
-                      Text('HTML格式：${isHtml ? '✅' : '❌'}'),
-                      Text('JSON格式：${isJson ? '⚠️' : '✅'}'),
-                      Text('包含HTML标签：${containsHtmlTags ? '✅' : '❌'}'),
-                      const SizedBox(height: 10),
-                      const Text('前100字符：'),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          trimmed.length > 100
-                              ? '${trimmed.substring(0, 100)}...'
-                              : trimmed,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
+            builder: (context) => AlertDialog(
+              title: const Text('测试结果'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('内容长度：${result.length}字符'),
+                  Text('HTML格式：${isHtml ? '✅' : '❌'}'),
+                  Text('JSON格式：${isJson ? '⚠️' : '✅'}'),
+                  Text('包含HTML标签：${containsHtmlTags ? '✅' : '❌'}'),
+                  const SizedBox(height: 10),
+                  const Text('前100字符：'),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      trimmed.length > 100
+                          ? '${trimmed.substring(0, 100)}...'
+                          : trimmed,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('关闭'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AIAnnualReportWebView(
+                          htmlContent: result,
+                          year: 2024,
                         ),
                       ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('关闭'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => AIAnnualReportWebView(
-                                  htmlContent: result,
-                                  year: 2024,
-                                ),
-                          ),
-                        );
-                      },
-                      child: const Text('查看报告'),
-                    ),
-                  ],
+                    );
+                  },
+                  child: const Text('查看报告'),
                 ),
+              ],
+            ),
           );
         } else {
           AppLogger.w('AI返回了空内容');

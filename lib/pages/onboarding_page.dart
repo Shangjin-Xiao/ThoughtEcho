@@ -439,10 +439,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                   height: state.currentPageIndex == index ? 12 : 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color:
-                        state.currentPageIndex == index
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.primary.withValues(alpha: 0.3),
+                    color: state.currentPageIndex == index
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.primary.withValues(alpha: 0.3),
                   ),
                 );
               }),
@@ -453,18 +452,17 @@ class _OnboardingPageState extends State<OnboardingPage>
               FilledButton.icon(
                 onPressed:
                     state.isCompleting ? null : controller.completeOnboarding,
-                icon:
-                    state.isCompleting
-                        ? const SizedBox(
+                icon: state.isCompleting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: EnhancedLottieAnimation(
+                          type: LottieAnimationType.loading,
                           width: 18,
                           height: 18,
-                          child: EnhancedLottieAnimation(
-                            type: LottieAnimationType.loading,
-                            width: 18,
-                            height: 18,
-                          ),
-                        )
-                        : const Icon(Icons.check),
+                        ),
+                      )
+                    : const Icon(Icons.check),
                 label: Text(state.isCompleting ? '请稍候...' : '开始使用'),
               )
             else
@@ -485,10 +483,9 @@ class _OnboardingPageState extends State<OnboardingPage>
       top: 20,
       right: 20,
       child: TextButton.icon(
-        onPressed:
-            controller.state.isCompleting
-                ? null
-                : () => _showSkipDialog(controller),
+        onPressed: controller.state.isCompleting
+            ? null
+            : () => _showSkipDialog(controller),
         icon: const Icon(Icons.skip_next),
         label: const Text('跳过'),
       ),
@@ -499,24 +496,23 @@ class _OnboardingPageState extends State<OnboardingPage>
   void _showSkipDialog(OnboardingController controller) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('跳过引导'),
-            content: const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  controller.skipOnboarding().then((_) => _navigateToHome());
-                },
-                child: const Text('确定跳过'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('跳过引导'),
+        content: const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.skipOnboarding().then((_) => _navigateToHome());
+            },
+            child: const Text('确定跳过'),
+          ),
+        ],
+      ),
     );
   }
 

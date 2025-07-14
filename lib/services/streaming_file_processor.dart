@@ -28,10 +28,10 @@ class StreamingFileProcessor {
   }) async {
     RandomAccessFile? sourceFile;
     RandomAccessFile? targetFile;
-    
+
     try {
       onStatusUpdate?.call('正在准备文件复制...');
-      
+
       // 检查源文件
       final source = File(sourcePath);
       if (!await source.exists()) {
@@ -39,7 +39,8 @@ class StreamingFileProcessor {
       }
 
       final totalSize = await source.length();
-      logDebug('开始流式复制文件，大小: ${(totalSize / 1024 / 1024).toStringAsFixed(2)}MB');
+      logDebug(
+          '开始流式复制文件，大小: ${(totalSize / 1024 / 1024).toStringAsFixed(2)}MB');
 
       // 确保目标目录存在
       final target = File(targetPath);
@@ -66,7 +67,8 @@ class StreamingFileProcessor {
 
         // 计算本次读取的大小
         final remainingBytes = totalSize - copiedBytes;
-        final bytesToRead = remainingBytes < chunkSize ? remainingBytes : chunkSize;
+        final bytesToRead =
+            remainingBytes < chunkSize ? remainingBytes : chunkSize;
 
         // 读取数据块
         final bytesRead = await sourceFile.readInto(buffer, 0, bytesToRead);
@@ -90,7 +92,6 @@ class StreamingFileProcessor {
 
       onStatusUpdate?.call('文件复制完成');
       logDebug('文件复制完成: ${(copiedBytes / 1024 / 1024).toStringAsFixed(2)}MB');
-
     } catch (e) {
       logDebug('流式文件复制失败: $e');
       // 清理不完整的目标文件
@@ -127,7 +128,7 @@ class StreamingFileProcessor {
     final stream = file.openRead();
     await for (final chunk in stream) {
       yield String.fromCharCodes(chunk);
-      
+
       // 短暂休息，避免内存压力
       await Future.delayed(const Duration(microseconds: 100));
     }
@@ -165,7 +166,8 @@ class StreamingFileProcessor {
   }
 
   /// 验证文件完整性
-  static Future<bool> verifyFileCopy(String sourcePath, String targetPath) async {
+  static Future<bool> verifyFileCopy(
+      String sourcePath, String targetPath) async {
     try {
       final sourceFile = File(sourcePath);
       final targetFile = File(targetPath);
@@ -197,7 +199,8 @@ class StreamingFileProcessor {
   }
 
   /// 检查磁盘空间是否足够
-  static Future<bool> hasEnoughDiskSpace(String targetPath, int requiredSize) async {
+  static Future<bool> hasEnoughDiskSpace(
+      String targetPath, int requiredSize) async {
     try {
       // 这里可以添加磁盘空间检查逻辑
       // 目前简单返回true，实际项目中应该实现真正的磁盘空间检查

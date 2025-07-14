@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage>
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
   StreamSubscription<String>?
-  _promptSubscription; // Stream subscription for daily prompt
+      _promptSubscription; // Stream subscription for daily prompt
   bool _isGeneratingDailyPrompt = false; // Loading state for daily prompt
   // 获取每日提示的方法
   Future<void> _fetchDailyPrompt({bool initialLoad = false}) async {
@@ -146,10 +146,10 @@ class _HomePageState extends State<HomePage>
             // 生成本地提示作为降级
             final fallbackPrompt =
                 DailyPromptGenerator.generatePromptBasedOnContext(
-                  city: city,
-                  weather: weather,
-                  temperature: temperature,
-                );
+              city: city,
+              weather: weather,
+              temperature: temperature,
+            );
 
             setState(() {
               _accumulatedPromptText = fallbackPrompt;
@@ -181,10 +181,10 @@ class _HomePageState extends State<HomePage>
 
         final fallbackPrompt =
             DailyPromptGenerator.generatePromptBasedOnContext(
-              city: locationService.city,
-              weather: weatherService.currentWeather,
-              temperature: weatherService.temperature,
-            );
+          city: locationService.city,
+          weather: weatherService.currentWeather,
+          temperature: weatherService.temperature,
+        );
 
         setState(() {
           _accumulatedPromptText = fallbackPrompt;
@@ -469,16 +469,16 @@ class _HomePageState extends State<HomePage>
 
         final position = await locationService
             .getCurrentLocation(
-              highAccuracy: false, // 使用低精度模式，更快
-              skipPermissionRequest: true,
-            )
+          highAccuracy: false, // 使用低精度模式，更快
+          skipPermissionRequest: true,
+        )
             .timeout(
-              const Duration(seconds: 8), // 设置超时
-              onTimeout: () {
-                logDebug('位置获取超时');
-                return null;
-              },
-            );
+          const Duration(seconds: 8), // 设置超时
+          onTimeout: () {
+            logDebug('位置获取超时');
+            return null;
+          },
+        );
 
         if (!mounted) return;
 
@@ -520,26 +520,24 @@ class _HomePageState extends State<HomePage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor:
-          Theme.of(context).brightness == Brightness.light
-              ? Colors.white
-              : Theme.of(context).colorScheme.surface,
-      builder:
-          (context) => AddNoteDialog(
-            prefilledContent: prefilledContent,
-            prefilledAuthor: prefilledAuthor,
-            prefilledWork: prefilledWork,
-            hitokotoData: hitokotoData,
-            tags: _tags,
-            onSave: (_) {
-              // 笔记保存后刷新标签列表
-              _loadTags();
-              // 新增：强制刷新NoteListView
-              if (_noteListViewKey.currentState != null) {
-                _noteListViewKey.currentState!.resetAndLoad();
-              }
-            },
-          ),
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? Colors.white
+          : Theme.of(context).colorScheme.surface,
+      builder: (context) => AddNoteDialog(
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
+        tags: _tags,
+        onSave: (_) {
+          // 笔记保存后刷新标签列表
+          _loadTags();
+          // 新增：强制刷新NoteListView
+          if (_noteListViewKey.currentState != null) {
+            _noteListViewKey.currentState!.resetAndLoad();
+          }
+        },
+      ),
     );
   }
 
@@ -552,12 +550,11 @@ class _HomePageState extends State<HomePage>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => NoteFullEditorPage(
-                  initialContent: quote.content,
-                  initialQuote: quote,
-                  allTags: _tags,
-                ),
+            builder: (context) => NoteFullEditorPage(
+              initialContent: quote.content,
+              initialQuote: quote,
+              allTags: _tags,
+            ),
           ),
         );
       } catch (e) {
@@ -583,19 +580,17 @@ class _HomePageState extends State<HomePage>
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor:
-            Theme.of(context).brightness == Brightness.light
-                ? Colors.white
-                : Theme.of(context).colorScheme.surface,
-        builder:
-            (context) => AddNoteDialog(
-              initialQuote: quote,
-              tags: _tags,
-              onSave: (_) {
-                // 笔记更新后刷新标签列表
-                _loadTags();
-              },
-            ),
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? Colors.white
+            : Theme.of(context).colorScheme.surface,
+        builder: (context) => AddNoteDialog(
+          initialQuote: quote,
+          tags: _tags,
+          onSave: (_) {
+            // 笔记更新后刷新标签列表
+            _loadTags();
+          },
+        ),
       );
     }
   }
@@ -604,36 +599,35 @@ class _HomePageState extends State<HomePage>
   void _showDeleteConfirmDialog(Quote quote) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('删除笔记'),
-            content: const Text('确定要删除这条笔记吗？此操作无法撤销。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: () {
-                  final db = Provider.of<DatabaseService>(
-                    context,
-                    listen: false,
-                  );
-                  db.deleteQuote(quote.id!);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('笔记已删除'),
-                      duration: Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('删除笔记'),
+        content: const Text('确定要删除这条笔记吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () {
+              final db = Provider.of<DatabaseService>(
+                context,
+                listen: false,
+              );
+              db.deleteQuote(quote.id!);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('笔记已删除'),
+                  duration: Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -678,12 +672,11 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         showDialog(
           context: context,
-          builder:
-              (context) => CardPreviewDialog(
-                card: card,
-                onShare: () => _shareCard(card),
-                onSave: () => _saveCard(card),
-              ),
+          builder: (context) => CardPreviewDialog(
+            card: card,
+            onShare: () => _shareCard(card),
+            onSave: () => _saveCard(card),
+          ),
         );
       }
     } catch (e) {
@@ -702,19 +695,80 @@ class _HomePageState extends State<HomePage>
   // 分享卡片
   void _shareCard(GeneratedCard card) async {
     try {
-      final imageBytes = await card.toImageBytes();
+      // 显示加载指示器
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 16),
+                Text('正在生成分享图片...'),
+              ],
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      // 生成高质量图片
+      final imageBytes = await card.toImageBytes(
+        width: 800, // 更高分辨率用于分享
+        height: 1200,
+      );
+
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/card_${card.id}.png');
+      final fileName =
+          'ThoughtEcho_Card_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(imageBytes);
 
+      // 分享文件
       await SharePlus.instance.share(
-        ShareParams(text: '来自ThoughtEcho的精美卡片', files: [XFile(file.path)]),
+        ShareParams(
+          text:
+              '来自ThoughtEcho的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
+          files: [XFile(file.path)],
+        ),
       );
+
+      // 显示成功提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('卡片分享成功'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('分享失败: $e')));
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('分享失败: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -722,20 +776,72 @@ class _HomePageState extends State<HomePage>
   // 保存卡片
   void _saveCard(GeneratedCard card) async {
     try {
-      final filePath = await _aiCardService!.saveCardAsImage(card);
+      // 显示加载指示器
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 16),
+                Text('正在保存卡片到相册...'),
+              ],
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      // 保存高质量图片
+      final filePath = await _aiCardService!.saveCardAsImage(
+        card,
+        width: 800, // 更高分辨率
+        height: 1200,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('卡片已保存到相册: $filePath'),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('卡片已保存到相册: $filePath')),
+              ],
+            ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: '查看',
+              textColor: Colors.white,
+              onPressed: () {
+                // 这里可以添加打开相册的逻辑
+              },
+            ),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('保存失败: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -755,164 +861,128 @@ class _HomePageState extends State<HomePage>
     final theme = Theme.of(context);
     final aiService =
         context.watch<AIService>(); // Watch AIService for key changes
-    final settingsService =
-        context
-            .watch<
-              SettingsService
-            >(); // Watch SettingsService for settings changes
+    final settingsService = context
+        .watch<SettingsService>(); // Watch SettingsService for settings changes
 
     // 直接用context.watch<bool>()获取服务初始化状态
     final bool servicesInitialized = context.watch<bool>();
 
     // Determine if AI is configured (including checking for valid API Key)
-    final bool isAiConfigured =
-        aiService.hasValidApiKey() &&
+    final bool isAiConfigured = aiService.hasValidApiKey() &&
         settingsService.aiSettings.apiUrl.isNotEmpty &&
         settingsService.aiSettings.model.isNotEmpty;
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
     return Scaffold(
-      backgroundColor:
-          Theme.of(context).brightness == Brightness.light
-              ? Colors.white
-              : Theme.of(context).colorScheme.surface,
-      appBar:
-          _currentIndex == 0
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? Colors.white
+          : Theme.of(context).colorScheme.surface,
+      appBar: _currentIndex == 1
+          ? null // 记录页不需要标题栏
+          : _currentIndex == 0
               ? AppBar(
-                title: const Text('心迹'),
-                actions: [
-                  // 显示标签加载状态
-                  if (_isLoadingTags && _currentIndex == 1)
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                ],
-              )
-              : _currentIndex == 1
-              ? null // 记录页不需要标题栏
-              : AppBar(
-                toolbarHeight: 0,
-                actions: [
-                  // 显示标签加载状态
-                  if (_isLoadingTags && _currentIndex == 1)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: EnhancedLottieAnimation(
-                          type: LottieAnimationType.modernLoading,
-                          width: 16,
-                          height: 16,
-                          semanticLabel: '加载标签',
-                        ),
-                      ),
-                    ),
-
-                  // 显示服务初始化状态指示器
-                  if (!servicesInitialized)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: EnhancedLottieAnimation(
-                          type: LottieAnimationType.pulseLoading,
+                  title: const Text('心迹'),
+                  actions: [
+                    // 显示服务初始化状态指示器
+                    if (!servicesInitialized)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: SizedBox(
                           width: 20,
                           height: 20,
-                          semanticLabel: '初始化服务',
-                        ),
-                      ),
-                    ),
-
-                  // 显示位置和天气信息
-                  if (_currentIndex == 0 &&
-                      locationService.city != null &&
-                      !locationService.city!.contains("Throttled!") &&
-                      weatherService.currentWeather != null &&
-                      locationService.hasLocationPermission)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.cardRadius,
+                          child: EnhancedLottieAnimation(
+                            type: LottieAnimationType.pulseLoading,
+                            width: 20,
+                            height: 20,
+                            semanticLabel: '初始化服务',
                           ),
-                          boxShadow: AppTheme.defaultShadow,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color:
-                                  Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              locationService.getDisplayLocation(),
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '|',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer.withAlpha(128),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              weatherService.getWeatherIconData(),
-                              size: 18,
-                              color:
-                                  Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
-                              '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    ),
-                ],
-              ),
+
+                    // 显示位置和天气信息
+                    if (locationService.city != null &&
+                        !locationService.city!.contains("Throttled!") &&
+                        weatherService.currentWeather != null &&
+                        locationService.hasLocationPermission)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.cardRadius,
+                            ),
+                            boxShadow: AppTheme.defaultShadow,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                locationService.getDisplayLocation(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '|',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer
+                                          .withAlpha(128),
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                weatherService.getWeatherIconData(),
+                                size: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
+                                '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                )
+              : AppBar(toolbarHeight: 0),
       body: IndexedStack(
         index: _currentIndex,
         children: [
@@ -942,11 +1012,11 @@ class _HomePageState extends State<HomePage>
                               onAddQuote:
                                   (content, author, work, hitokotoData) =>
                                       _showAddQuoteDialog(
-                                        prefilledContent: content,
-                                        prefilledAuthor: author,
-                                        prefilledWork: work,
-                                        hitokotoData: hitokotoData,
-                                      ),
+                                prefilledContent: content,
+                                prefilledAuthor: author,
+                                prefilledWork: work,
+                                hitokotoData: hitokotoData,
+                              ),
                             ),
                           ),
                         ),
@@ -987,12 +1057,12 @@ class _HomePageState extends State<HomePage>
                                   const SizedBox(width: 6),
                                   Text(
                                     '今日思考',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: screenWidth > 600 ? 16 : 15,
-                                        ),
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: screenWidth > 600 ? 16 : 15,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1002,54 +1072,51 @@ class _HomePageState extends State<HomePage>
                               _isGeneratingDailyPrompt &&
                                       _accumulatedPromptText.isEmpty
                                   ? Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: theme.colorScheme.primary,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: theme.colorScheme.primary,
+                                          ),
                                         ),
-                                      ),
-                                      SizedBox(height: isSmallScreen ? 4 : 6),
-                                      Text(
-                                        isAiConfigured
-                                            ? '正在加载今日思考...'
-                                            : '正在获取默认提示...',
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withAlpha(160),
-                                              fontSize:
-                                                  screenWidth > 600 ? 13 : 12,
-                                            ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  )
+                                        SizedBox(height: isSmallScreen ? 4 : 6),
+                                        Text(
+                                          isAiConfigured
+                                              ? '正在加载今日思考...'
+                                              : '正在获取默认提示...',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: theme.colorScheme.onSurface
+                                                .withAlpha(160),
+                                            fontSize:
+                                                screenWidth > 600 ? 13 : 12,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    )
                                   : Text(
-                                    _accumulatedPromptText.isNotEmpty
-                                        ? _accumulatedPromptText.trim()
-                                        : (isAiConfigured
-                                            ? '等待今日思考...'
-                                            : '暂无今日思考'),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      height: 1.4,
-                                      fontSize: screenWidth > 600 ? 15 : 14,
-                                      color:
-                                          _accumulatedPromptText.isNotEmpty
-                                              ? theme
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.color
-                                              : theme.colorScheme.onSurface
-                                                  .withAlpha(120),
+                                      _accumulatedPromptText.isNotEmpty
+                                          ? _accumulatedPromptText.trim()
+                                          : (isAiConfigured
+                                              ? '等待今日思考...'
+                                              : '暂无今日思考'),
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        height: 1.4,
+                                        fontSize: screenWidth > 600 ? 15 : 14,
+                                        color: _accumulatedPromptText.isNotEmpty
+                                            ? theme.textTheme.bodyMedium?.color
+                                            : theme.colorScheme.onSurface
+                                                .withAlpha(120),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 3, // 限制最大行数
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 3, // 限制最大行数
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
                             ],
                           ),
                         ),

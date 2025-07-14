@@ -17,27 +17,22 @@ class AnnualReportDemoPage extends StatelessWidget {
               '年度报告功能演示',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 16),
-
             const Text(
               '这是一个年度报告功能的演示页面\n实际使用时将从数据库读取真实的笔记数据',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
-
             const SizedBox(height: 40),
-
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => AnnualReportPage(
-                          year: 2024,
-                          quotes: _generateSampleData(),
-                        ),
+                    builder: (context) => AnnualReportPage(
+                      year: 2024,
+                      quotes: _generateSampleData(),
+                    ),
                   ),
                 );
               },
@@ -55,19 +50,16 @@ class AnnualReportDemoPage extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
-
             const SizedBox(height: 16),
-
             OutlinedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => const AnnualReportPage(
-                          year: 2024,
-                          quotes: [], // 空数据演示
-                        ),
+                    builder: (context) => const AnnualReportPage(
+                      year: 2024,
+                      quotes: [], // 空数据演示
+                    ),
                   ),
                 );
               },

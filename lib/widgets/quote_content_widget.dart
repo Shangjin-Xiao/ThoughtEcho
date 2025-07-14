@@ -46,10 +46,9 @@ class QuoteContent extends StatelessWidget {
             enableSelectionToolbar: false,
             showCursor: false,
             // 添加扩展的嵌入构建器以支持图片、视频等
-            embedBuilders:
-                kIsWeb
-                    ? FlutterQuillEmbeds.editorWebBuilders()
-                    : QuillEditorExtensions.getEmbedBuilders(),
+            embedBuilders: kIsWeb
+                ? FlutterQuillEmbeds.editorWebBuilders()
+                : QuillEditorExtensions.getEmbedBuilders(),
             // 内边距设置为0，让外层Container控制间距
             padding: EdgeInsets.zero,
             expands: false,

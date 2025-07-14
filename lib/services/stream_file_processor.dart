@@ -245,9 +245,9 @@ class StreamFileProcessor {
     switch (pressureLevel) {
       case 2: // 高压力
         return (currentChunkSize * 0.5).toInt().clamp(
-          _minChunkSize,
-          _maxChunkSize,
-        );
+              _minChunkSize,
+              _maxChunkSize,
+            );
       case 3: // 临界状态
         return _minChunkSize;
       default:

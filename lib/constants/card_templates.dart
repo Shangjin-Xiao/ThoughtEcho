@@ -10,8 +10,7 @@ class CardTemplates {
   }) {
     // 使用智能内容处理，保持知识内容的完整性
     final displayContent = _processDisplayContent(content, maxLength: 160);
-    final displayDate =
-        date ??
+    final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
     // 将长文本分行处理，增加每行字符数以适应更多内容
@@ -69,8 +68,7 @@ class CardTemplates {
   }) {
     // 使用智能内容处理，保持引用的完整性
     final displayContent = _processDisplayContent(content, maxLength: 120);
-    final displayDate =
-        date ??
+    final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
     // 将引用内容分行，增加每行字符数以适应更多内容
@@ -121,8 +119,7 @@ class CardTemplates {
   }) {
     // 使用智能内容处理，保持哲学思考的完整性
     final displayContent = _processDisplayContent(content, maxLength: 180);
-    final displayDate =
-        date ??
+    final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
 
     // 将思考内容分行，增加每行字符数以适应更多内容
@@ -200,7 +197,7 @@ class CardTemplates {
     for (final word in words) {
       // 检查添加这个单词后是否会超过限制
       final potentialLine = currentLine.isEmpty ? word : '$currentLine $word';
-      
+
       if (potentialLine.length <= maxCharsPerLine) {
         currentLine = potentialLine;
       } else {
@@ -250,13 +247,14 @@ class CardTemplates {
     if (content.length <= maxLength) {
       return content;
     }
-    
+
     // 尝试在单词边界截断
     final truncated = content.substring(0, maxLength);
     final lastSpaceIndex = truncated.lastIndexOf(' ');
-    
+
     // 如果找到空格，在该处截断；否则在字符限制处截断
-    if (lastSpaceIndex > maxLength * 0.7) { // 确保不会截断太多
+    if (lastSpaceIndex > maxLength * 0.7) {
+      // 确保不会截断太多
       return '${truncated.substring(0, lastSpaceIndex)}...';
     } else {
       return '$truncated...';

@@ -165,41 +165,39 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   void _showDeleteDialog(AIAnalysis analysis) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('删除确认'),
-            content: const Text('确定要删除这条分析记录吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _deleteAnalysis(analysis);
-                },
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('删除确认'),
+        content: const Text('确定要删除这条分析记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteAnalysis(analysis);
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
   }
 
   void _showAnalysisDetail(AIAnalysis analysis) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(analysis.analysisType),
-            content: SingleChildScrollView(child: Text(analysis.content)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(analysis.analysisType),
+        content: SingleChildScrollView(child: Text(analysis.content)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
           ),
+        ],
+      ),
     );
   }
 }

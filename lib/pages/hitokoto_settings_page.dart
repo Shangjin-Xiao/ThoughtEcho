@@ -251,32 +251,31 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      children:
-                          ApiService.hitokotoTypes.entries.map((entry) {
-                            final isSelected = _selectedTypes.contains(
-                              entry.key,
-                            );
-                            return _buildTypeChip(
-                              context: context,
-                              type: entry.key,
-                              label: entry.value,
-                              isSelected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedTypes.add(entry.key);
-                                  } else {
-                                    _selectedTypes.remove(entry.key);
-                                    // 确保至少选择一种类型
-                                    if (_selectedTypes.isEmpty) {
-                                      _selectedTypes.add('a');
-                                    }
-                                  }
-                                });
-                                _saveSelectedTypes();
-                              },
-                            );
-                          }).toList(),
+                      children: ApiService.hitokotoTypes.entries.map((entry) {
+                        final isSelected = _selectedTypes.contains(
+                          entry.key,
+                        );
+                        return _buildTypeChip(
+                          context: context,
+                          type: entry.key,
+                          label: entry.value,
+                          isSelected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedTypes.add(entry.key);
+                              } else {
+                                _selectedTypes.remove(entry.key);
+                                // 确保至少选择一种类型
+                                if (_selectedTypes.isEmpty) {
+                                  _selectedTypes.add('a');
+                                }
+                              }
+                            });
+                            _saveSelectedTypes();
+                          },
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
@@ -354,19 +353,17 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
               Icon(
                 icon,
                 size: 18,
-                color:
-                    isPrimary
-                        ? colorScheme.onPrimary
-                        : colorScheme.onSurfaceVariant,
+                color: isPrimary
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color:
-                      isPrimary
-                          ? colorScheme.onPrimary
-                          : colorScheme.onSurfaceVariant,
+                  color: isPrimary
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -391,14 +388,13 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       label: Text(label),
       selected: isSelected,
       showCheckmark: false,
-      avatar:
-          isSelected
-              ? Icon(
-                Icons.check_rounded,
-                size: 16,
-                color: colorScheme.onPrimary,
-              )
-              : null,
+      avatar: isSelected
+          ? Icon(
+              Icons.check_rounded,
+              size: 16,
+              color: colorScheme.onPrimary,
+            )
+          : null,
       labelStyle: TextStyle(
         color:
             isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
@@ -408,10 +404,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       backgroundColor: colorScheme.surface,
       selectedColor: colorScheme.primary,
       side: BorderSide(
-        color:
-            isSelected
-                ? colorScheme.primary
-                : colorScheme.outline.withAlpha(80),
+        color: isSelected
+            ? colorScheme.primary
+            : colorScheme.outline.withAlpha(80),
         width: 1,
       ),
       elevation: isSelected ? 2 : 0,

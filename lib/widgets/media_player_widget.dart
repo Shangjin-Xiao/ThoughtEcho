@@ -162,19 +162,18 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         ),
         hideControlsTimer: const Duration(seconds: 3),
         // 添加自定义操作
-        additionalOptions:
-            (context) => [
-              OptionItem(
-                onTap: (context) => _shareVideo(),
-                iconData: Icons.share,
-                title: '分享视频',
-              ),
-              OptionItem(
-                onTap: (context) => _showVideoInfo(),
-                iconData: Icons.info,
-                title: '视频信息',
-              ),
-            ],
+        additionalOptions: (context) => [
+          OptionItem(
+            onTap: (context) => _shareVideo(),
+            iconData: Icons.share,
+            title: '分享视频',
+          ),
+          OptionItem(
+            onTap: (context) => _showVideoInfo(),
+            iconData: Icons.info,
+            title: '视频信息',
+          ),
+        ],
       );
 
       setState(() {});
@@ -390,28 +389,27 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           ),
         ),
         child: Center(
-          child:
-              _isInitializing
-                  ? _buildVideoLoadingState() // 复用加载动画
-                  : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.play_circle_outline,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.primary,
+          child: _isInitializing
+              ? _buildVideoLoadingState() // 复用加载动画
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.play_circle_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '点击播放视频',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '点击播放视频',
-                        style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -533,18 +531,18 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     Text(
                       _getFileName(widget.filePath),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                            fontWeight: FontWeight.w500,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       _formatDuration(_duration),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                     ),
                   ],
                 ),
@@ -559,29 +557,28 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 onSelected: (value) => _handleAudioMenuAction(value),
-                itemBuilder:
-                    (context) => [
-                      const PopupMenuItem(
-                        value: 'share',
-                        child: Row(
-                          children: [
-                            Icon(Icons.share),
-                            SizedBox(width: 8),
-                            Text('分享音频'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'info',
-                        child: Row(
-                          children: [
-                            Icon(Icons.info),
-                            SizedBox(width: 8),
-                            Text('文件信息'),
-                          ],
-                        ),
-                      ),
-                    ],
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'share',
+                    child: Row(
+                      children: [
+                        Icon(Icons.share),
+                        SizedBox(width: 8),
+                        Text('分享音频'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'info',
+                    child: Row(
+                      children: [
+                        Icon(Icons.info),
+                        SizedBox(width: 8),
+                        Text('文件信息'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -621,9 +618,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   child: Slider(
                     value: _position.inMilliseconds.toDouble(),
                     max: _duration.inMilliseconds.toDouble().clamp(
-                      1.0,
-                      double.infinity,
-                    ),
+                          1.0,
+                          double.infinity,
+                        ),
                     onChanged: _onAudioSeek,
                     activeColor: Theme.of(context).colorScheme.primary,
                     inactiveColor: Theme.of(
@@ -713,35 +710,34 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('视频信息'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow('文件名', _getFileName(widget.filePath)),
-                _buildInfoRow(
-                  '时长',
-                  _formatDuration(_videoController!.value.duration),
-                ),
-                _buildInfoRow(
-                  '分辨率',
-                  '${_videoController!.value.size.width.toInt()}x${_videoController!.value.size.height.toInt()}',
-                ),
-                _buildInfoRow(
-                  '长宽比',
-                  _videoController!.value.aspectRatio.toStringAsFixed(2),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: const Text('视频信息'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('文件名', _getFileName(widget.filePath)),
+            _buildInfoRow(
+              '时长',
+              _formatDuration(_videoController!.value.duration),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('确定'),
-              ),
-            ],
+            _buildInfoRow(
+              '分辨率',
+              '${_videoController!.value.size.width.toInt()}x${_videoController!.value.size.height.toInt()}',
+            ),
+            _buildInfoRow(
+              '长宽比',
+              _videoController!.value.aspectRatio.toStringAsFixed(2),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
           ),
+        ],
+      ),
     );
   }
 
@@ -761,25 +757,24 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   void _showAudioInfo() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('音频信息'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow('文件名', _getFileName(widget.filePath)),
-                _buildInfoRow('时长', _formatDuration(_duration)),
-                _buildInfoRow('路径', widget.filePath),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('音频信息'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('文件名', _getFileName(widget.filePath)),
+            _buildInfoRow('时长', _formatDuration(_duration)),
+            _buildInfoRow('路径', widget.filePath),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
           ),
+        ],
+      ),
     );
   }
 

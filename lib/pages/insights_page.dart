@@ -25,7 +25,7 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage> {
   bool _isLoading = false;
   Stream<String>?
-  _insightsStream; // Used only to provide stream to StreamBuilder for connection state
+      _insightsStream; // Used only to provide stream to StreamBuilder for connection state
   bool _isGenerating = false; // 新增状态变量表示是否正在生成
   bool _showAnalysisSelection = true; // 控制显示分析选择还是结果
   final TextEditingController _customPromptController = TextEditingController();
@@ -34,7 +34,7 @@ class _InsightsPageState extends State<InsightsPage> {
   String _accumulatedInsightsText =
       ''; // Added state variable for accumulated insights text
   StreamSubscription<String>?
-  _insightsSubscription; // Stream subscription for manual accumulation
+      _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
   final List<Map<String, dynamic>> _analysisTypes = [
@@ -96,7 +96,11 @@ class _InsightsPageState extends State<InsightsPage> {
   @override
   void initState() {
     super.initState();
-    _aiAnalysisDatabaseService = AIAnalysisDatabaseService();
+    // 从Provider获取AIAnalysisDatabaseService实例，确保正确初始化
+    _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
+      context,
+      listen: false,
+    );
   }
 
   @override
@@ -351,10 +355,7 @@ class _InsightsPageState extends State<InsightsPage> {
               _isGenerating = false; // Stop generating state on done
             });
 
-            // 自动保存分析结果
-            if (_accumulatedInsightsText.isNotEmpty) {
-              _saveAnalysis(_accumulatedInsightsText);
-            }
+            // 移除自动保存，让用户手动选择是否保存
           }
         },
         cancelOnError: true, // Cancel subscription if an error occurs
@@ -408,26 +409,26 @@ class _InsightsPageState extends State<InsightsPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: _showAnalysisSelection 
-          ? _buildAnalysisSelectionView(theme)
-          : _buildAnalysisResultView(theme),
+        child: _showAnalysisSelection
+            ? _buildAnalysisSelectionView(theme)
+            : _buildAnalysisResultView(theme),
       ),
       floatingActionButton: _showAnalysisSelection
           ? FloatingActionButton.extended(
-            onPressed: _isLoading ? null : _generateInsights,
-            label: Text(_isLoading ? '分析中...' : '开始分析'),
-            icon: _isLoading
-                ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: EnhancedLottieAnimation(
-                    type: LottieAnimationType.aiThinking,
-                    width: 18,
-                    height: 18,
-                  ),
-                )
-                : const Icon(Icons.auto_awesome),
-          )
+              onPressed: _isLoading ? null : _generateInsights,
+              label: Text(_isLoading ? '分析中...' : '开始分析'),
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: EnhancedLottieAnimation(
+                        type: LottieAnimationType.aiThinking,
+                        width: 18,
+                        height: 18,
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome),
+            )
           : null,
     );
   }
@@ -523,32 +524,30 @@ class _InsightsPageState extends State<InsightsPage> {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  _analysisStyles.map((style) {
-                    final isSelected = _selectedAnalysisStyle == style['style'];
-                    final String key = style['style'];
-                    return ChoiceChip(
-                      label: Text(_analysisStyleKeyToLabel[key] ?? key),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _selectedAnalysisStyle = key;
-                          });
-                        }
-                      },
-                      selectedColor: theme.colorScheme.primaryContainer,
-                      labelStyle: TextStyle(
-                        color:
-                            isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      tooltip: style['description'],
-                    );
-                  }).toList(),
+              children: _analysisStyles.map((style) {
+                final isSelected = _selectedAnalysisStyle == style['style'];
+                final String key = style['style'];
+                return ChoiceChip(
+                  label: Text(_analysisStyleKeyToLabel[key] ?? key),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedAnalysisStyle = key;
+                      });
+                    }
+                  },
+                  selectedColor: theme.colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  tooltip: style['description'],
+                );
+              }).toList(),
             ),
           ),
 
@@ -597,6 +596,28 @@ class _InsightsPageState extends State<InsightsPage> {
           ],
 
           const SizedBox(height: 24),
+
+          // 历史记录栏
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: Icon(
+                Icons.history,
+                color: theme.primaryColor,
+              ),
+              title: const Text('分析历史记录'),
+              subtitle: const Text('查看之前的AI分析结果'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AIAnalysisHistoryPage(),
+                  ),
+                );
+              },
+            ),
+          ),
 
           // 提示说明
           Container(
@@ -686,10 +707,9 @@ class _InsightsPageState extends State<InsightsPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color:
-              isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outline.withValues(alpha: 0.3),
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outline.withValues(alpha: 0.3),
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -713,17 +733,17 @@ class _InsightsPageState extends State<InsightsPage> {
                       _analysisTypeKeyToLabel[key] ?? key,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color:
-                            isSelected
-                                ? theme.primaryColor
-                                : theme.textTheme.titleSmall?.color,
+                        color: isSelected
+                            ? theme.primaryColor
+                            : theme.textTheme.titleSmall?.color,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      type['description'], 
+                      type['description'],
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                        color: theme.textTheme.bodySmall?.color
+                            ?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -738,7 +758,7 @@ class _InsightsPageState extends State<InsightsPage> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.check, 
+                    Icons.check,
                     color: theme.colorScheme.onPrimary,
                     size: 14,
                   ),

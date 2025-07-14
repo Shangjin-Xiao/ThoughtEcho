@@ -30,12 +30,12 @@ class EnhancedLoadingWidget extends StatelessWidget {
     super.key,
     this.animationType = LottieAnimationType.customLoading,
     this.size = 60,
-  }) : message = null,
-       textColor = null,
-       textStyle = null,
-       padding = null,
-       showMessage = false,
-       customMessage = null;
+  })  : message = null,
+        textColor = null,
+        textStyle = null,
+        padding = null,
+        showMessage = false,
+        customMessage = null;
 
   /// 创建全屏加载页面
   const EnhancedLoadingWidget.fullScreen({
@@ -44,39 +44,38 @@ class EnhancedLoadingWidget extends StatelessWidget {
     this.animationType = LottieAnimationType.pulseLoading,
     this.textColor,
     this.textStyle,
-  }) : size = 120,
-       padding = const EdgeInsets.all(24),
-       showMessage = true,
-       customMessage = null;
+  })  : size = 120,
+        padding = const EdgeInsets.all(24),
+        showMessage = true,
+        customMessage = null;
 
   /// 创建对话框加载组件
   const EnhancedLoadingWidget.dialog({
     super.key,
     this.message = '请稍候...',
     this.animationType = LottieAnimationType.customLoading,
-  }) : size = 80,
-       textColor = null,
-       textStyle = null,
-       padding = const EdgeInsets.all(24),
-       showMessage = true,
-       customMessage = null;
+  })  : size = 80,
+        textColor = null,
+        textStyle = null,
+        padding = const EdgeInsets.all(24),
+        showMessage = true,
+        customMessage = null;
 
   /// EnhancedLoadingWidget.thinking 改为原生思考动画
   const EnhancedLoadingWidget.thinking({super.key, this.message = 'AI正在思考...'})
-    : animationType = LottieAnimationType.aiThinking,
-      size = 80,
-      textColor = null,
-      textStyle = null,
-      padding = const EdgeInsets.all(16),
-      showMessage = true,
-      customMessage = null;
+      : animationType = LottieAnimationType.aiThinking,
+        size = 80,
+        textColor = null,
+        textStyle = null,
+        padding = const EdgeInsets.all(16),
+        showMessage = true,
+        customMessage = null;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final effectiveTextColor = textColor ?? theme.colorScheme.onSurface;
-    final effectiveTextStyle =
-        textStyle ??
+    final effectiveTextStyle = textStyle ??
         theme.textTheme.bodyMedium?.copyWith(color: effectiveTextColor);
     if (animationType == LottieAnimationType.aiThinking) {
       return Padding(
@@ -219,11 +218,9 @@ class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveTextColor =
-        widget.textColor ??
+    final effectiveTextColor = widget.textColor ??
         (widget.isSuccess ? Colors.green : theme.colorScheme.error);
-    final effectiveTextStyle =
-        widget.textStyle ??
+    final effectiveTextStyle = widget.textStyle ??
         theme.textTheme.bodyLarge?.copyWith(
           color: effectiveTextColor,
           fontWeight: FontWeight.w500,
@@ -336,12 +333,11 @@ class LoadingDialog extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder:
-          (context) => LoadingDialog(
-            message: message,
-            animationType: animationType,
-            barrierDismissible: barrierDismissible,
-          ),
+      builder: (context) => LoadingDialog(
+        message: message,
+        animationType: animationType,
+        barrierDismissible: barrierDismissible,
+      ),
     );
   }
 

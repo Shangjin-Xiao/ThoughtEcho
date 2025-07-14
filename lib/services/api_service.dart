@@ -50,9 +50,9 @@ class ApiService {
       final response = await NetworkService.instance
           .get(apiUrl, timeoutSeconds: _timeoutSeconds)
           .catchError((error) {
-            logDebug('一言API请求错误: $error');
-            throw error;
-          });
+        logDebug('一言API请求错误: $error');
+        throw error;
+      });
 
       if (response.statusCode == 200) {
         try {

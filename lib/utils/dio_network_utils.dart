@@ -718,10 +718,9 @@ class RetryInterceptor extends Interceptor {
     final retryCount = extra['retryCount'] ?? 0;
 
     if (retryCount < retries && _shouldRetry(err)) {
-      final delay =
-          retryDelays.length > retryCount
-              ? retryDelays[retryCount]
-              : retryDelays.last;
+      final delay = retryDelays.length > retryCount
+          ? retryDelays[retryCount]
+          : retryDelays.last;
 
       logPrint?.call(
         '重试请求 ${retryCount + 1}/$retries，延迟${delay.inSeconds}秒: ${err.message}',

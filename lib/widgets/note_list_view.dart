@@ -108,84 +108,78 @@ class NoteListViewState extends State<NoteListView> {
     final db = Provider.of<DatabaseService>(context, listen: false);
     _quotesSub = db
         .watchQuotes(
-          tagIds:
-              widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-          limit: _pageSize,
-          orderBy:
-              widget.sortType == 'time'
-                  ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-                  : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-          searchQuery:
-              widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-          selectedWeathers:
-              widget.selectedWeathers.isNotEmpty
-                  ? widget.selectedWeathers
-                  : null,
-          selectedDayPeriods:
-              widget.selectedDayPeriods.isNotEmpty
-                  ? widget.selectedDayPeriods
-                  : null,
-        )
+      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+      limit: _pageSize,
+      orderBy: widget.sortType == 'time'
+          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+          : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      selectedWeathers:
+          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
+      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+          ? widget.selectedDayPeriods
+          : null,
+    )
         .listen(
-          (list) {
-            if (mounted) {
-              setState(() {
-                _quotes.clear();
-                _quotes.addAll(list);
-                // 修复：简化_hasMore逻辑，避免Web平台无限加载
-                _hasMore = list.length >= _pageSize;
-                _isLoading = false;
-              });
+      (list) {
+        if (mounted) {
+          setState(() {
+            _quotes.clear();
+            _quotes.addAll(list);
+            // 修复：简化_hasMore逻辑，避免Web平台无限加载
+            _hasMore = list.length >= _pageSize;
+            _isLoading = false;
+          });
 
-              // 通知搜索控制器数据加载完成
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.setSearchState(false);
-              } catch (e) {
-                logDebug('更新搜索控制器状态失败: $e');
-              }
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
+          // 通知搜索控制器数据加载完成
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.setSearchState(false);
+          } catch (e) {
+            logDebug('更新搜索控制器状态失败: $e');
+          }
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
 
-              // 重置搜索控制器状态
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.resetSearchState();
-              } catch (e) {
-                logDebug('重置搜索控制器状态失败: $e');
-              }
+          // 重置搜索控制器状态
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.resetSearchState();
+          } catch (e) {
+            logDebug('重置搜索控制器状态失败: $e');
+          }
 
-              logError('加载笔记失败: $error', error: error, source: 'NoteListView');
+          logError('加载笔记失败: $error', error: error, source: 'NoteListView');
 
-              // 显示错误提示
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
-                  ),
-                  duration: const Duration(seconds: 3),
-                  backgroundColor: Colors.red,
-                  action: SnackBarAction(
-                    label: '重试',
-                    textColor: Colors.white,
-                    onPressed: () => _updateStreamSubscription(),
-                  ),
-                ),
-              );
-            }
-          },
-        );
+          // 显示错误提示
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
+              ),
+              duration: const Duration(seconds: 3),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: '重试',
+                textColor: Colors.white,
+                onPressed: () => _updateStreamSubscription(),
+              ),
+            ),
+          );
+        }
+      },
+    );
     // 加载第一页
     _loadMore();
   }
@@ -255,86 +249,81 @@ class NoteListViewState extends State<NoteListView> {
     // 创建新的订阅 - 优化：减少不必要的参数传递
     _quotesSub = db
         .watchQuotes(
-          tagIds:
-              widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-          limit: _pageSize, // 初始加载限制
-          orderBy:
-              widget.sortType == 'time'
-                  ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-                  : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-          searchQuery:
-              widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-          selectedWeathers:
-              widget.selectedWeathers.isNotEmpty
-                  ? widget.selectedWeathers
-                  : null,
-          selectedDayPeriods:
-              widget.selectedDayPeriods.isNotEmpty
-                  ? widget.selectedDayPeriods
-                  : null,
-        )
+      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+      limit: _pageSize, // 初始加载限制
+      orderBy: widget.sortType == 'time'
+          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+          : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      selectedWeathers:
+          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
+      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+          ? widget.selectedDayPeriods
+          : null,
+    )
         .listen(
-          (list) {
-            if (mounted) {
-              // 确保组件仍然挂载
-              setState(() {
-                _quotes.clear();
-                _quotes.addAll(list);
+      (list) {
+        if (mounted) {
+          // 确保组件仍然挂载
+          setState(() {
+            _quotes.clear();
+            _quotes.addAll(list);
 
-                // 修复：简化_hasMore逻辑，与line 137保持一致
-                // 如果返回的数据量大于等于页面大小，说明可能还有更多数据
-                _hasMore = list.length >= _pageSize;
-                _isLoading = false; // 加载完成
-                logDebug('数据更新：${list.length}条，_hasMore=$_hasMore', source: 'NoteListView');
-              });
+            // 修复：简化_hasMore逻辑，与line 137保持一致
+            // 如果返回的数据量大于等于页面大小，说明可能还有更多数据
+            _hasMore = list.length >= _pageSize;
+            _isLoading = false; // 加载完成
+            logDebug('数据更新：${list.length}条，_hasMore=$_hasMore',
+                source: 'NoteListView');
+          });
 
-              // 通知搜索控制器数据加载完成
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.setSearchState(false);
-              } catch (e) {
-                logDebug('更新搜索控制器状态失败: $e');
-              }
+          // 通知搜索控制器数据加载完成
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.setSearchState(false);
+          } catch (e) {
+            logDebug('更新搜索控制器状态失败: $e');
+          }
 
-              logDebug(
-                '数据流更新完成，加载了 ${list.length} 条记录',
-                source: 'NoteListView',
-              );
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false; // 出错时停止加载
-              });
+          logDebug(
+            '数据流更新完成，加载了 ${list.length} 条记录',
+            source: 'NoteListView',
+          );
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false; // 出错时停止加载
+          });
 
-              // 重置搜索控制器状态
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.resetSearchState();
-              } catch (e) {
-                logDebug('重置搜索控制器状态失败: $e');
-              }
+          // 重置搜索控制器状态
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.resetSearchState();
+          } catch (e) {
+            logDebug('重置搜索控制器状态失败: $e');
+          }
 
-              logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+          logError('数据流加载失败: $error', error: error, source: 'NoteListView');
 
-              // 优化：更友好的错误提示
-              String errorMessage = '加载笔记失败';
-              if (error.toString().contains('TimeoutException')) {
-                errorMessage = '查询超时，请重试';
-              } else if (error.toString().contains('DatabaseException')) {
-                errorMessage = '数据库查询出错';
-              }
-              _showErrorSnackBar(errorMessage);
-            }
-          },
-        );
+          // 优化：更友好的错误提示
+          String errorMessage = '加载笔记失败';
+          if (error.toString().contains('TimeoutException')) {
+            errorMessage = '查询超时，请重试';
+          } else if (error.toString().contains('DatabaseException')) {
+            errorMessage = '数据库查询出错';
+          }
+          _showErrorSnackBar(errorMessage);
+        }
+      },
+    );
   }
 
   /// 优化：显示错误提示的统一方法
@@ -386,7 +375,8 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> _loadMore() async {
     // 防止重复加载
     if (!_hasMore || _isLoading) {
-      logDebug('跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading', source: 'NoteListView');
+      logDebug('跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading',
+          source: 'NoteListView');
       return;
     }
 
@@ -466,7 +456,9 @@ class NoteListViewState extends State<NoteListView> {
           // 降低阈值，使其更容易触发（距离底部100像素或10%）
           final threshold = metrics.maxScrollExtent - 100;
           if (metrics.pixels > threshold && metrics.maxScrollExtent > 0) {
-            logDebug('滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}', source: 'NoteListView');
+            logDebug(
+                '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
+                source: 'NoteListView');
             _loadMore();
           }
         }
@@ -494,10 +486,9 @@ class NoteListViewState extends State<NoteListView> {
               onEdit: () => widget.onEdit(quote),
               onDelete: () => widget.onDelete(quote),
               onAskAI: () => widget.onAskAI(quote),
-              onGenerateCard:
-                  widget.onGenerateCard != null
-                      ? () => widget.onGenerateCard!(quote)
-                      : null,
+              onGenerateCard: widget.onGenerateCard != null
+                  ? () => widget.onGenerateCard!(quote)
+                  : null,
               tagBuilder: (tag) {
                 return Container(
                   padding: const EdgeInsets.symmetric(
@@ -695,22 +686,20 @@ class NoteListViewState extends State<NoteListView> {
                           focusNode: _searchFocusNode, // 使用管理的焦点节点
                           decoration: InputDecoration(
                             hintText: '搜索笔记...',
-                            prefixIcon:
-                                searchController.isSearching
-                                    ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: Padding(
-                                        padding: EdgeInsets.all(12.0),
-                                        child: EnhancedLottieAnimation(
-                                          type:
-                                              LottieAnimationType.searchLoading,
-                                          width: 16,
-                                          height: 16,
-                                        ),
+                            prefixIcon: searchController.isSearching
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: EnhancedLottieAnimation(
+                                        type: LottieAnimationType.searchLoading,
+                                        width: 16,
+                                        height: 16,
                                       ),
-                                    )
-                                    : const Icon(Icons.search),
+                                    ),
+                                  )
+                                : const Icon(Icons.search),
                             contentPadding: EdgeInsets.symmetric(
                               vertical: constraints.maxWidth < 600 ? 8.0 : 12.0,
                             ),
@@ -744,35 +733,34 @@ class NoteListViewState extends State<NoteListView> {
                                 top: Radius.circular(16),
                               ),
                             ),
-                            builder:
-                                (context) => NoteFilterSortSheet(
-                                  allTags: widget.tags,
-                                  selectedTagIds: widget.selectedTagIds,
-                                  sortType: widget.sortType,
-                                  sortAscending: widget.sortAscending,
-                                  selectedWeathers: widget.selectedWeathers,
-                                  selectedDayPeriods:
-                                      widget.selectedDayPeriods, // 传递时间段筛选状态
-                                  onApply: (
-                                    tagIds,
-                                    sortType,
-                                    sortAscending,
-                                    selectedWeathers,
-                                    selectedDayPeriods, // 接收时间段筛选结果
-                                  ) {
-                                    widget.onTagSelectionChanged(tagIds);
-                                    widget.onSortChanged(
-                                      sortType,
-                                      sortAscending,
-                                    );
-                                    widget.onFilterChanged(
-                                      selectedWeathers,
-                                      selectedDayPeriods,
-                                    );
-                                    // 在状态更新后，立即触发数据库流的更新
-                                    _updateStreamSubscription();
-                                  },
-                                ),
+                            builder: (context) => NoteFilterSortSheet(
+                              allTags: widget.tags,
+                              selectedTagIds: widget.selectedTagIds,
+                              sortType: widget.sortType,
+                              sortAscending: widget.sortAscending,
+                              selectedWeathers: widget.selectedWeathers,
+                              selectedDayPeriods:
+                                  widget.selectedDayPeriods, // 传递时间段筛选状态
+                              onApply: (
+                                tagIds,
+                                sortType,
+                                sortAscending,
+                                selectedWeathers,
+                                selectedDayPeriods, // 接收时间段筛选结果
+                              ) {
+                                widget.onTagSelectionChanged(tagIds);
+                                widget.onSortChanged(
+                                  sortType,
+                                  sortAscending,
+                                );
+                                widget.onFilterChanged(
+                                  selectedWeathers,
+                                  selectedDayPeriods,
+                                );
+                                // 在状态更新后，立即触发数据库流的更新
+                                _updateStreamSubscription();
+                              },
+                            ),
                           );
                         },
                       ),
@@ -785,185 +773,178 @@ class NoteListViewState extends State<NoteListView> {
                         widget.selectedDayPeriods.isNotEmpty ||
                         widget.selectedTagIds.isNotEmpty)
                     ? Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 8.0,
-                      ),
-                      width: double.infinity,
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.filter_alt,
-                            size: 16,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '已选择筛选条件',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 8.0,
+                        ),
+                        width: double.infinity,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.filter_alt,
+                              size: 16,
+                              color: theme.colorScheme.primary,
                             ),
-                          ),
-                          const Spacer(),
-                          if (widget.selectedTagIds.isNotEmpty ||
-                              widget.selectedWeathers.isNotEmpty ||
-                              widget.selectedDayPeriods.isNotEmpty)
-                            TextButton(
-                              onPressed: () {
-                                widget.onTagSelectionChanged([]);
-                                widget.onFilterChanged([], []);
-                                _updateStreamSubscription();
-                              },
-                              child: const Text('清除全部'),
+                            const SizedBox(width: 8),
+                            Text(
+                              '已选择筛选条件',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                        ],
-                      ),
-                    )
+                            const Spacer(),
+                            if (widget.selectedTagIds.isNotEmpty ||
+                                widget.selectedWeathers.isNotEmpty ||
+                                widget.selectedDayPeriods.isNotEmpty)
+                              TextButton(
+                                onPressed: () {
+                                  widget.onTagSelectionChanged([]);
+                                  widget.onFilterChanged([], []);
+                                  _updateStreamSubscription();
+                                },
+                                child: const Text('清除全部'),
+                              ),
+                          ],
+                        ),
+                      )
                     : const SizedBox.shrink(),
 
                 // 标签筛选器
                 widget.selectedTagIds.isNotEmpty
                     ? Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 8.0,
-                      ),
-                      width: double.infinity,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            widget.selectedTagIds.map((tagId) {
-                              final tag = widget.tags.firstWhere(
-                                (tag) => tag.id == tagId,
-                                orElse:
-                                    () => NoteCategory(id: tagId, name: '未知标签'),
-                              );
-                              return Chip(
-                                label: Text(tag.name),
-                                onDeleted: () {
-                                  final newSelectedTags = List<String>.from(
-                                    widget.selectedTagIds,
-                                  )..remove(tagId);
-                                  widget.onTagSelectionChanged(newSelectedTags);
-                                },
-                                backgroundColor: theme.colorScheme.primary
-                                    .applyOpacity(0.1), // MODIFIED
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              );
-                            }).toList(),
-                      ),
-                    )
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 8.0,
+                        ),
+                        width: double.infinity,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.selectedTagIds.map((tagId) {
+                            final tag = widget.tags.firstWhere(
+                              (tag) => tag.id == tagId,
+                              orElse: () =>
+                                  NoteCategory(id: tagId, name: '未知标签'),
+                            );
+                            return Chip(
+                              label: Text(tag.name),
+                              onDeleted: () {
+                                final newSelectedTags = List<String>.from(
+                                  widget.selectedTagIds,
+                                )..remove(tagId);
+                                widget.onTagSelectionChanged(newSelectedTags);
+                              },
+                              backgroundColor: theme.colorScheme.primary
+                                  .applyOpacity(0.1), // MODIFIED
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      )
                     : const SizedBox.shrink(),
 
                 // 天气筛选器
                 widget.selectedWeathers.isNotEmpty
                     ? Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 4.0,
-                      ),
-                      width: double.infinity,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            widget.selectedWeathers.map((weatherKey) {
-                              // 找到对应的天气分类
-                              String? categoryKey;
-                              for (final entry
-                                  in WeatherService
-                                      .filterCategoryToLabel
-                                      .entries) {
-                                final categoryWeathers =
-                                    WeatherService.getWeatherKeysByFilterCategory(
-                                      entry.key,
-                                    );
-                                if (categoryWeathers.contains(weatherKey)) {
-                                  categoryKey = entry.key;
-                                  break;
-                                }
-                              }
-
-                              final weatherLabel =
-                                  WeatherService
-                                      .weatherKeyToLabel[weatherKey] ??
-                                  weatherKey;
-                              final weatherIcon =
-                                  categoryKey != null
-                                      ? WeatherService.getFilterCategoryIcon(
-                                        categoryKey,
-                                      )
-                                      : Icons.wb_sunny;
-
-                              return Chip(
-                                avatar: Icon(weatherIcon, size: 16),
-                                label: Text(weatherLabel),
-                                onDeleted: () {
-                                  final newWeathers = List<String>.from(
-                                    widget.selectedWeathers,
-                                  )..remove(weatherKey);
-                                  widget.onFilterChanged(
-                                    newWeathers,
-                                    widget.selectedDayPeriods,
-                                  );
-                                  _updateStreamSubscription();
-                                },
-                                backgroundColor: theme.colorScheme.secondary
-                                    .applyOpacity(0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 4.0,
+                        ),
+                        width: double.infinity,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.selectedWeathers.map((weatherKey) {
+                            // 找到对应的天气分类
+                            String? categoryKey;
+                            for (final entry in WeatherService
+                                .filterCategoryToLabel.entries) {
+                              final categoryWeathers =
+                                  WeatherService.getWeatherKeysByFilterCategory(
+                                entry.key,
                               );
-                            }).toList(),
-                      ),
-                    )
+                              if (categoryWeathers.contains(weatherKey)) {
+                                categoryKey = entry.key;
+                                break;
+                              }
+                            }
+
+                            final weatherLabel =
+                                WeatherService.weatherKeyToLabel[weatherKey] ??
+                                    weatherKey;
+                            final weatherIcon = categoryKey != null
+                                ? WeatherService.getFilterCategoryIcon(
+                                    categoryKey,
+                                  )
+                                : Icons.wb_sunny;
+
+                            return Chip(
+                              avatar: Icon(weatherIcon, size: 16),
+                              label: Text(weatherLabel),
+                              onDeleted: () {
+                                final newWeathers = List<String>.from(
+                                  widget.selectedWeathers,
+                                )..remove(weatherKey);
+                                widget.onFilterChanged(
+                                  newWeathers,
+                                  widget.selectedDayPeriods,
+                                );
+                                _updateStreamSubscription();
+                              },
+                              backgroundColor:
+                                  theme.colorScheme.secondary.applyOpacity(0.1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      )
                     : const SizedBox.shrink(),
 
                 // 时间段筛选器
                 widget.selectedDayPeriods.isNotEmpty
                     ? Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 4.0,
-                      ),
-                      width: double.infinity,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            widget.selectedDayPeriods.map((periodKey) {
-                              final periodLabel = TimeUtils.getDayPeriodLabel(
-                                periodKey,
-                              );
-                              final periodIcon =
-                                  TimeUtils.getDayPeriodIconByKey(periodKey);
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 4.0,
+                        ),
+                        width: double.infinity,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.selectedDayPeriods.map((periodKey) {
+                            final periodLabel = TimeUtils.getDayPeriodLabel(
+                              periodKey,
+                            );
+                            final periodIcon =
+                                TimeUtils.getDayPeriodIconByKey(periodKey);
 
-                              return Chip(
-                                avatar: Icon(periodIcon, size: 16),
-                                label: Text(periodLabel),
-                                onDeleted: () {
-                                  final newDayPeriods = List<String>.from(
-                                    widget.selectedDayPeriods,
-                                  )..remove(periodKey);
-                                  widget.onFilterChanged(
-                                    widget.selectedWeathers,
-                                    newDayPeriods,
-                                  );
-                                  _updateStreamSubscription();
-                                },
-                                backgroundColor: theme.colorScheme.tertiary
-                                    .applyOpacity(0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              );
-                            }).toList(),
-                      ),
-                    )
+                            return Chip(
+                              avatar: Icon(periodIcon, size: 16),
+                              label: Text(periodLabel),
+                              onDeleted: () {
+                                final newDayPeriods = List<String>.from(
+                                  widget.selectedDayPeriods,
+                                )..remove(periodKey);
+                                widget.onFilterChanged(
+                                  widget.selectedWeathers,
+                                  newDayPeriods,
+                                );
+                                _updateStreamSubscription();
+                              },
+                              backgroundColor:
+                                  theme.colorScheme.tertiary.applyOpacity(0.1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      )
                     : const SizedBox.shrink(),
 
                 // 笔记列表

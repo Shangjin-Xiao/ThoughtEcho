@@ -241,14 +241,12 @@ class EditPageState extends State<EditPage> {
       id: widget.quote.id,
       content: content,
       date: DateTime.now().toIso8601String(),
-      sourceAuthor:
-          _authorController.text.trim().isEmpty
-              ? null
-              : _authorController.text.trim(),
-      sourceWork:
-          _workController.text.trim().isEmpty
-              ? null
-              : _workController.text.trim(),
+      sourceAuthor: _authorController.text.trim().isEmpty
+          ? null
+          : _authorController.text.trim(),
+      sourceWork: _workController.text.trim().isEmpty
+          ? null
+          : _workController.text.trim(),
       location: _includeLocation ? _location : null,
       weather: _includeWeather ? _weather : null,
       temperature: _includeWeather ? _temperature : null,
@@ -277,14 +275,12 @@ class EditPageState extends State<EditPage> {
           // 创建包含当前编辑状态的更新后的Quote对象
           final updatedQuote = widget.quote.copyWith(
             content: _contentController.text,
-            sourceAuthor:
-                _authorController.text.trim().isEmpty
-                    ? null
-                    : _authorController.text.trim(),
-            sourceWork:
-                _workController.text.trim().isEmpty
-                    ? null
-                    : _workController.text.trim(),
+            sourceAuthor: _authorController.text.trim().isEmpty
+                ? null
+                : _authorController.text.trim(),
+            sourceWork: _workController.text.trim().isEmpty
+                ? null
+                : _workController.text.trim(),
             tagIds: _tagIds,
             colorHex: _colorHex,
             location: _includeLocation ? _location : null,
@@ -296,27 +292,26 @@ class EditPageState extends State<EditPage> {
           // 关闭当前页面并打开全屏编辑器，传递更新后的Quote对象
           Navigator.of(context)
               .pushReplacement(
-                MaterialPageRoute(
-                  builder:
-                      (context) => NoteFullEditorPage(
-                        initialContent: _contentController.text,
-                        initialQuote: updatedQuote, // 传递包含当前编辑状态的Quote对象
-                        allTags: allTags, // 传递所有标签
-                      ),
-                ),
-              )
+            MaterialPageRoute(
+              builder: (context) => NoteFullEditorPage(
+                initialContent: _contentController.text,
+                initialQuote: updatedQuote, // 传递包含当前编辑状态的Quote对象
+                allTags: allTags, // 传递所有标签
+              ),
+            ),
+          )
               .catchError((error) {
-                // 如果导航失败，显示错误
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('无法打开全屏编辑器: $error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-                return false;
-              });
+            // 如果导航失败，显示错误
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('无法打开全屏编辑器: $error'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return false;
+          });
         }
       } catch (e) {
         if (mounted) {
@@ -339,10 +334,9 @@ class EditPageState extends State<EditPage> {
     final weatherService = Provider.of<WeatherService>(context);
 
     return Scaffold(
-      backgroundColor:
-          Theme.of(context).brightness == Brightness.light
-              ? Colors.white
-              : Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? Colors.white
+          : Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('编辑'),
         actions: [
@@ -438,7 +432,9 @@ class EditPageState extends State<EditPage> {
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
-                          color: Theme.of(context).colorScheme.onSurface
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
                               .applyOpacity(0.6), // Use applyOpacity
                         ),
                       );
@@ -475,12 +471,11 @@ class EditPageState extends State<EditPage> {
                                   ? Icons.location_on
                                   : Icons.location_off,
                               size: 20,
-                              color:
-                                  _includeLocation
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.applyOpacity(
+                              color: _includeLocation
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.applyOpacity(
                                         0.5,
                                       ), // Use applyOpacity
                             ),
@@ -495,14 +490,13 @@ class EditPageState extends State<EditPage> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
-                                      color:
-                                          _includeLocation
-                                              ? Theme.of(
-                                                context,
-                                              ).colorScheme.primary
-                                              : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
+                                      color: _includeLocation
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
                                     ),
                                   ),
                                   if (_includeLocation && _location != null)
@@ -513,8 +507,8 @@ class EditPageState extends State<EditPage> {
                                         color: Theme.of(
                                           context,
                                         ).colorScheme.onSurface.applyOpacity(
-                                          0.6,
-                                        ), // Use applyOpacity
+                                              0.6,
+                                            ), // Use applyOpacity
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -562,12 +556,11 @@ class EditPageState extends State<EditPage> {
                                   ? weatherService.getWeatherIconData()
                                   : Icons.cloud_off,
                               size: 20,
-                              color:
-                                  _includeWeather
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.applyOpacity(
+                              color: _includeWeather
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.applyOpacity(
                                         0.5,
                                       ), // Use applyOpacity
                             ),
@@ -582,14 +575,13 @@ class EditPageState extends State<EditPage> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
-                                      color:
-                                          _includeWeather
-                                              ? Theme.of(
-                                                context,
-                                              ).colorScheme.primary
-                                              : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
+                                      color: _includeWeather
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
                                     ),
                                   ),
                                   if (_includeWeather && _weather != null)
@@ -600,8 +592,8 @@ class EditPageState extends State<EditPage> {
                                         color: Theme.of(
                                           context,
                                         ).colorScheme.onSurface.applyOpacity(
-                                          0.6,
-                                        ), // Use applyOpacity
+                                              0.6,
+                                            ), // Use applyOpacity
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -627,29 +619,28 @@ class EditPageState extends State<EditPage> {
                     listen: false,
                   );
                   final settings = settingsService.aiSettings;
-                  final bool apiConfigured =
-                      settings.apiKey.isNotEmpty &&
+                  final bool apiConfigured = settings.apiKey.isNotEmpty &&
                       settings.apiUrl.isNotEmpty &&
                       settings.model.isNotEmpty;
 
                   return apiConfigured
                       ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('AI 分析:'),
-                          _aiAnalysis.isEmpty
-                              ? const Text('暂无分析')
-                              : MarkdownBody(
-                                data: _aiAnalysis,
-                                selectable: true,
-                                styleSheet: MarkdownStyleSheet.fromTheme(
-                                  Theme.of(context),
-                                ).copyWith(
-                                  p: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                        ],
-                      )
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('AI 分析:'),
+                            _aiAnalysis.isEmpty
+                                ? const Text('暂无分析')
+                                : MarkdownBody(
+                                    data: _aiAnalysis,
+                                    selectable: true,
+                                    styleSheet: MarkdownStyleSheet.fromTheme(
+                                      Theme.of(context),
+                                    ).copyWith(
+                                      p: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ),
+                          ],
+                        )
                       : const SizedBox.shrink(); // 如果API未配置，则不显示AI分析部分
                 },
               ),
@@ -688,28 +679,26 @@ class EditPageState extends State<EditPage> {
             Wrap(
               spacing: 8.0,
               runSpacing: 8.0,
-              children:
-                  tags.map((tag) {
-                    final isSelected = _tagIds.contains(tag.id);
+              children: tags.map((tag) {
+                final isSelected = _tagIds.contains(tag.id);
 
-                    return FilterChip(
-                      selected: isSelected,
-                      label: Text(tag.name),
-                      avatar: _buildTagIcon(tag),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _tagIds.add(tag.id);
-                          } else {
-                            _tagIds.remove(tag.id);
-                          }
-                        });
-                      },
-                      selectedColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      checkmarkColor: Theme.of(context).colorScheme.primary,
-                    );
-                  }).toList(),
+                return FilterChip(
+                  selected: isSelected,
+                  label: Text(tag.name),
+                  avatar: _buildTagIcon(tag),
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _tagIds.add(tag.id);
+                      } else {
+                        _tagIds.remove(tag.id);
+                      }
+                    });
+                  },
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  checkmarkColor: Theme.of(context).colorScheme.primary,
+                );
+              }).toList(),
             ),
           ],
         );

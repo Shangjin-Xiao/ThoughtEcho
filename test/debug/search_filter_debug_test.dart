@@ -49,10 +49,9 @@ void main() {
         Quote(
           id: 'test2',
           content: '第二条笔记用于测试筛选功能',
-          date:
-              DateTime.now()
-                  .subtract(const Duration(hours: 1))
-                  .toIso8601String(),
+          date: DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
           tagIds: [categories.last.id],
           weather: 'cloudy',
           dayPeriod: 'afternoon',
@@ -60,10 +59,9 @@ void main() {
         Quote(
           id: 'test3',
           content: '第三条笔记包含多个标签',
-          date:
-              DateTime.now()
-                  .subtract(const Duration(hours: 2))
-                  .toIso8601String(),
+          date: DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
           tagIds: [categories.first.id, categories.last.id],
           weather: 'sunny',
           dayPeriod: 'evening',
@@ -200,10 +198,9 @@ void main() {
           id: 'bulk_test_$i',
           content: '批量测试数据 $i 用于性能测试 包含各种关键词 搜索 筛选 测试',
           date: DateTime.now().subtract(Duration(minutes: i)).toIso8601String(),
-          tagIds:
-              categories.isNotEmpty
-                  ? [categories[i % categories.length].id]
-                  : [],
+          tagIds: categories.isNotEmpty
+              ? [categories[i % categories.length].id]
+              : [],
           weather: ['sunny', 'cloudy', 'rainy'][i % 3],
           dayPeriod: ['morning', 'afternoon', 'evening', 'night'][i % 4],
         );
@@ -308,10 +305,9 @@ void main() {
         }
 
         // 检查quote_tags表的索引
-        final quoteTagsIndexes =
-            indexes
-                .where((idx) => idx['name'].toString().contains('quote_tags'))
-                .toList();
+        final quoteTagsIndexes = indexes
+            .where((idx) => idx['name'].toString().contains('quote_tags'))
+            .toList();
 
         if (quoteTagsIndexes.isEmpty) {
           print('⚠️ 警告：quote_tags表可能缺少索引，这会导致标签查询变慢');
