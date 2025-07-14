@@ -8,6 +8,8 @@ enum CardType {
   knowledge, // 知识卡片
   quote, // 引用卡片
   philosophical, // 哲学卡片
+  minimalist, // 简约卡片（新增）
+  gradient, // 渐变卡片（新增）
 }
 
 /// AI生成的卡片模型

@@ -332,17 +332,9 @@ class SVGCardWidget extends StatelessWidget {
   <!-- 内容区域 -->
   <rect x="30" y="220" width="340" height="280" fill="rgba(255,255,255,0.9)" rx="15"/>
 
-  <!-- 内容文字 -->
-  <text x="200" y="260" text-anchor="middle" fill="#333" font-family="Arial, sans-serif" font-size="14" font-weight="bold">
-    原始内容：
-  </text>
-
-  <!-- 分割线 -->
-  <line x1="50" y1="280" x2="350" y2="280" stroke="#ddd" stroke-width="1"/>
-
-  <!-- 提取的内容 -->
-  <foreignObject x="50" y="300" width="300" height="180">
-    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #555; padding: 10px; text-align: center; word-wrap: break-word;">
+  <!-- 笔记内容（无标签） -->
+  <foreignObject x="50" y="240" width="300" height="240">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #333; padding: 20px; text-align: center; word-wrap: break-word;">
       ${displayContent.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}
     </div>
   </foreignObject>
@@ -352,9 +344,9 @@ class SVGCardWidget extends StatelessWidget {
     请尝试重新生成或检查AI配置
   </text>
 
-  <!-- ThoughtEcho标识 -->
+  <!-- 心迹标识 -->
   <text x="200" y="570" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="10">
-    ThoughtEcho - 备用模板
+    心迹 - 备用模板
   </text>
 </svg>
 ''';

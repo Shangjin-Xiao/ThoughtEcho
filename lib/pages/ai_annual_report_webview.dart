@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 class AIAnnualReportWebView extends StatefulWidget {
   final String htmlContent;
@@ -308,7 +309,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           child: FilledButton.icon(
             onPressed: _openInBrowser,
             icon: const Icon(Icons.open_in_browser),
-            label: const Text('在浏览器中查看完整报告'),
+            label: const Text('用浏览器打开完整报告'),
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
@@ -443,21 +444,13 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
     });
 
     try {
-      try {
-        // 尝试创建临时HTML文件
-        final tempDir = await getTemporaryDirectory();
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final htmlFile = File(
-          '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
-        );
+      // 检查内容格式并处理
+      String contentToWrite = widget.htmlContent;
 
-        // 检查内容格式并处理
-        String contentToWrite = widget.htmlContent;
-
-        // 如果不是HTML格式，包装成HTML
-        if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
-            !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-          contentToWrite = '''
+      // 如果不是HTML格式，包装成HTML
+      if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
+          !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
+        contentToWrite = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -512,11 +505,84 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 </body>
 </html>
 ''';
+      }
+
+      // 方法1：尝试使用Data URI在浏览器中直接打开
+      try {
+        // 对于较小的HTML内容，使用Data URI
+        if (contentToWrite.length < 8000) { // 限制Data URI长度避免问题
+          final encodedHtml = Uri.encodeComponent(contentToWrite);
+          final dataUri = Uri.parse('data:text/html;charset=utf-8,$encodedHtml');
+          
+          if (await canLaunchUrl(dataUri)) {
+            await launchUrl(dataUri, mode: LaunchMode.externalApplication);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('报告已在浏览器中打开'),
+                    ],
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+              );
+            }
+            return; // 成功打开，直接返回
+          }
         }
+      } catch (dataUriError) {
+        // Data URI失败，继续尝试其他方法
+      }
+
+      // 方法2：尝试使用分享功能，让用户选择浏览器打开
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final htmlFile = File(
+          '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
+        );
+
+        await htmlFile.writeAsString(contentToWrite);        // 使用分享功能，用户可以选择浏览器打开
+        await Share.shareXFiles(
+          [XFile(htmlFile.path)],
+          text: '心迹${widget.year}年度报告 - 在浏览器中打开查看完整内容',
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.share, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('请选择浏览器打开HTML文件查看完整报告')),
+                ],
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return; // 成功分享，直接返回
+      } catch (shareError) {
+        // 分享失败，继续尝试其他方法
+      }
+
+      // 方法3：尝试文件URL方式（主要为桌面端）
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final htmlFile = File(
+          '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
+        );
 
         await htmlFile.writeAsString(contentToWrite);
 
-        // 在浏览器中打开
+        // 在桌面端或某些设备上可能可以直接打开文件URL
         final uri = Uri.file(htmlFile.path);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -535,29 +601,19 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               ),
             );
           }
-        } else {
-          throw '无法启动浏览器';
+          return; // 成功打开，直接返回
         }
-      } catch (pathError) {
-        // 如果文件操作失败，复制内容到剪贴板作为备用方案
-        await Clipboard.setData(ClipboardData(text: widget.htmlContent));
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.content_copy, color: Colors.white),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('无法创建临时文件，内容已复制到剪贴板')),
-                ],
-              ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+      } catch (urlError) {
+        // URL方式也失败
       }
+
+      // 方法4：最后的备用方案 - 复制内容到剪贴板并提供指导
+      await Clipboard.setData(ClipboardData(text: contentToWrite));
+
+      if (mounted) {
+        _showCopyInstructions();
+      }
+
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -574,6 +630,60 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         });
       }
     }
+  }
+
+  void _showCopyInstructions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('如何在浏览器中查看'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('HTML报告内容已复制到剪贴板。请按以下步骤操作：'),
+            SizedBox(height: 16),
+            Text('📱 手机端：', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('1. 打开浏览器（Chrome/Safari等）'),
+            Text('2. 新建空白页面或新标签页'),
+            Text('3. 在地址栏输入：data:text/html,'),
+            Text('4. 粘贴复制的内容'),
+            Text('5. 回车查看报告'),
+            SizedBox(height: 12),
+            Text('💻 电脑端：', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('1. 新建文本文件，粘贴内容'),
+            Text('2. 将文件保存为 .html 格式'),
+            Text('3. 双击文件在浏览器中打开'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('知道了'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Clipboard.setData(const ClipboardData(text: 'data:text/html,'));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('地址栏前缀已复制，请在浏览器中粘贴后再粘贴HTML内容'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            },
+            child: const Text('复制前缀'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _shareReport() async {
