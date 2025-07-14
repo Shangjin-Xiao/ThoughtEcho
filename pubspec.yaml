@@ -25,7 +25,8 @@ dependencies:
   flutter_markdown: ^0.7.1
   intl: 0.19.0
   url_launcher: ^6.2.4
-  file_selector: ^1.0.2 # 使用Flutter官方维护的文件选择器插件
+  file_picker: ^8.1.2 # 更安全的文件选择器，支持 withData: false 参数
+  file_selector: ^1.0.2 # 保留用于桌面端
   share_plus: ^11.0.0 # 用于分享文件
   flex_color_scheme: ^8.2.0
   geolocator: ^14.0.2

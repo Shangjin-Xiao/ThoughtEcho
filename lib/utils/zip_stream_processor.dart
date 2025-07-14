@@ -217,12 +217,14 @@ class ZipStreamProcessor {
 
     try {
       // 使用流式解压，避免一次性加载整个ZIP到内存
-      final inputStream = InputFileStream(zipPath);
       try {
         final decoder = ZipDecoder();
 
+        // 读取ZIP文件为字节数组
+        final zipFile = File(zipPath);
+        final bytes = await zipFile.readAsBytes();
         // 使用流式解压API
-        final archive = decoder.decodeBuffer(inputStream);
+        final archive = decoder.decodeBytes(bytes);
 
         final filesToProcess =
             archive.files.where((file) => file.isFile).toList();
@@ -257,8 +259,9 @@ class ZipStreamProcessor {
             await Future.delayed(const Duration(milliseconds: 10));
           }
         }
-      } finally {
-        await inputStream.close();
+      } catch (e) {
+        sendPort.send('解压失败: $e');
+        rethrow;
       }
 
       sendPort.send('done'); // 3. 发送完成信号
@@ -277,18 +280,18 @@ class ZipStreamProcessor {
         return false;
       }
 
-      final inputStream = InputFileStream(zipPath);
       try {
         final decoder = ZipDecoder();
-        final archive = decoder.decodeBuffer(inputStream);
+        // 读取ZIP文件为字节数组
+        final zipFile = File(zipPath);
+        final bytes = await zipFile.readAsBytes();
+        final archive = decoder.decodeBytes(bytes);
 
         // 只检查文件头，不解压内容
         return archive.isNotEmpty;
       } catch (e) {
         logDebug('ZIP文件解码失败: $zipPath, 错误: $e');
         return false;
-      } finally {
-        await inputStream.close();
       }
     } catch (e) {
       logDebug('ZIP文件验证失败: $zipPath, 错误: $e');
@@ -306,17 +309,18 @@ class ZipStreamProcessor {
         return null;
       }
 
-      final inputStream = InputFileStream(zipPath);
       try {
         // 流式解析 ZIP
-        final archive = ZipDecoder().decodeBuffer(inputStream);
+        final zipFile = File(zipPath);
+        final bytes = await zipFile.readAsBytes();
+        final archive = ZipDecoder().decodeBytes(bytes);
 
         int totalUncompressedSize = 0;
         int fileCount = 0;
         final fileNames = <String>[];
 
         for (final file in archive) {
-          totalUncompressedSize += file.size.toInt();
+          totalUncompressedSize += file.size;
           fileCount++;
           fileNames.add(file.name);
         }
@@ -329,8 +333,9 @@ class ZipStreamProcessor {
           fileCount: fileCount,
           fileNames: fileNames,
         );
-      } finally {
-        await inputStream.close();
+      } catch (e) {
+        logDebug('ZIP信息获取失败: $zipPath, 错误: $e');
+        return null;
       }
     } catch (e) {
       logDebug('获取ZIP信息失败: $zipPath, 错误: $e');
@@ -349,10 +354,11 @@ class ZipStreamProcessor {
         return false;
       }
 
-      final inputStream = InputFileStream(zipPath);
       try {
         // 使用流式解码，避免一次性读入大文件
-        final archive = ZipDecoder().decodeBuffer(inputStream);
+        final zipFile = File(zipPath);
+        final bytes = await zipFile.readAsBytes();
+        final archive = ZipDecoder().decodeBytes(bytes);
         for (final file in archive) {
           if (file.name == fileName) {
             return true;
@@ -360,8 +366,9 @@ class ZipStreamProcessor {
         }
 
         return false;
-      } finally {
-        await inputStream.close();
+      } catch (e) {
+        logDebug('检查ZIP文件失败: $zipPath, 错误: $e');
+        return false;
       }
     } catch (e) {
       logDebug('检查ZIP文件内容失败: $zipPath, 错误: $e');
@@ -383,10 +390,11 @@ class ZipStreamProcessor {
         return null;
       }
 
-      final inputStream = InputFileStream(zipPath);
       try {
         // 使用流式解码
-        final archive = ZipDecoder().decodeBuffer(inputStream);
+        final zipFile = File(zipPath);
+        final bytes = await zipFile.readAsBytes();
+        final archive = ZipDecoder().decodeBytes(bytes);
 
         for (final file in archive) {
           if (file.name == fileName) {
@@ -408,8 +416,9 @@ class ZipStreamProcessor {
         }
 
         return null;
-      } finally {
-        await inputStream.close();
+      } catch (e) {
+        logDebug('从ZIP提取文件失败: $fileName, 错误: $e');
+        return null;
       }
     } catch (e) {
       logDebug('从ZIP提取文件到内存失败: $fileName, 错误: $e');

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -463,11 +464,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
     try {
       // 选择备份文件
-      final XFile? file = await StreamFileSelector.selectFile(
+      final FilePickerResult? result = await StreamFileSelector.selectFile(
         extensions: ['zip', 'json'],
         description: 'Backup Files',
       );
-      if (file == null || !mounted) return;
+      if (result == null || result.files.isEmpty || !mounted) return;
+
+      final file = result.files.first;
+      if (file.path == null) {
+        _showErrorDialog('选择文件失败', '无法获取文件路径，请重新选择');
+        return;
+      }
 
       setState(() {
         _isLoading = true;
@@ -476,7 +483,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final backupService = Provider.of<BackupService>(context, listen: false);
 
       // 验证备份文件
-      final isValid = await backupService.validateBackupFile(file.path);
+      final isValid = await backupService.validateBackupFile(file.path!);
       if (!isValid) {
         if (mounted) {
           _showErrorDialog('无效的备份文件', '所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。');
@@ -492,7 +499,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
       // 执行还原
       await backupService.importData(
-        file.path,
+        file.path!,
         clearExisting: true,
         onProgress: (current, total) {
           if (mounted) {
