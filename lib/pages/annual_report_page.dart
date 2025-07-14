@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/quote_model.dart';
+import '../services/database_service.dart';
+import '../utils/color_utils.dart';
 
 class AnnualReportPage extends StatefulWidget {
   final int year;
@@ -23,7 +26,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   bool _isAnimating = false;
 
   // 数据统计
-  late AnnualStats _stats;
+  AnnualStats? _stats;
 
   @override
   void initState() {
@@ -53,13 +56,52 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     super.dispose();
   }
 
-  void _calculateStats() {
+  void _calculateStats() async {
     final yearQuotes = widget.quotes.where((quote) {
       final quoteDate = DateTime.parse(quote.date);
       return quoteDate.year == widget.year;
     }).toList();
 
-    _stats = AnnualStats.fromQuotes(yearQuotes, widget.year);
+    final stats = AnnualStats.fromQuotes(yearQuotes, widget.year);
+
+    // 解析标签名称
+    final resolvedStats = await _resolveTagNames(stats);
+
+    if (mounted) {
+      setState(() {
+        _stats = resolvedStats;
+      });
+    }
+  }
+
+  Future<AnnualStats> _resolveTagNames(AnnualStats stats) async {
+    try {
+      final databaseService = context.read<DatabaseService>();
+      final allCategories = await databaseService.getCategories();
+      final tagIdToName = {for (var category in allCategories) category.id: category.name};
+
+      final resolvedTopTags = stats.topTags.map((tagStat) {
+        final resolvedName = tagIdToName[tagStat.name] ?? tagStat.name;
+        return TagStat(name: resolvedName, count: tagStat.count);
+      }).toList();
+
+      return AnnualStats(
+        year: stats.year,
+        totalNotes: stats.totalNotes,
+        activeDays: stats.activeDays,
+        longestStreak: stats.longestStreak,
+        totalTags: stats.totalTags,
+        averageWordsPerNote: stats.averageWordsPerNote,
+        longestNoteWords: stats.longestNoteWords,
+        mostActiveHour: stats.mostActiveHour,
+        mostActiveWeekday: stats.mostActiveWeekday,
+        topTags: resolvedTopTags,
+        monthlyStats: stats.monthlyStats,
+      );
+    } catch (e) {
+      // 如果解析失败，返回原始统计数据
+      return stats;
+    }
   }
 
   void _startAnimations() {
@@ -93,6 +135,16 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // 如果统计数据还未加载完成，显示加载界面
+    if (_stats == null) {
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor:
@@ -192,9 +244,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       borderRadius: BorderRadius.circular(4),
                       color: _currentPage == index
                           ? theme.colorScheme.primary
-                          : theme.colorScheme.primary.withValues(
-                              alpha: 0.3,
-                            ),
+                          : ColorUtils.withOpacitySafe(theme.colorScheme.primary, 0.3),
                     ),
                   );
                 }),
@@ -283,9 +333,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   'ThoughtEcho Annual Report',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: ColorUtils.withOpacitySafe(
+                      Theme.of(context).colorScheme.onSurface, 0.7),
                     height: 1.4,
                   ),
                 ),
@@ -345,7 +394,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   _buildStatCard(
                     icon: Icons.edit_note,
                     title: '总共记录',
-                    value: '${_stats.totalNotes}',
+                    value: '${_stats!.totalNotes}',
                     subtitle: '篇笔记',
                     color: const Color(0xFF6366F1),
                     delay: 0.0,
@@ -354,7 +403,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   _buildStatCard(
                     icon: Icons.sentiment_satisfied_alt,
                     title: '写作天数',
-                    value: '${_stats.activeDays}',
+                    value: '${_stats!.activeDays}',
                     subtitle: '天',
                     color: const Color(0xFF10B981),
                     delay: 0.1,
@@ -363,7 +412,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   _buildStatCard(
                     icon: Icons.trending_up,
                     title: '最长连续',
-                    value: '${_stats.longestStreak}',
+                    value: '${_stats!.longestStreak}',
                     subtitle: '天',
                     color: const Color(0xFFF59E0B),
                     delay: 0.2,
@@ -372,7 +421,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   _buildStatCard(
                     icon: Icons.local_offer,
                     title: '使用标签',
-                    value: '${_stats.totalTags}',
+                    value: '${_stats!.totalTags}',
                     subtitle: '个',
                     color: const Color(0xFFEF4444),
                     delay: 0.3,
@@ -404,8 +453,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             // 最活跃时间段
             _buildHabitCard(
               title: '最活跃时间',
-              content: _stats.mostActiveHour != null
-                  ? '${_stats.mostActiveHour}:00 - ${_stats.mostActiveHour! + 1}:00'
+              content: _stats!.mostActiveHour != null
+                  ? '${_stats!.mostActiveHour}:00 - ${_stats!.mostActiveHour! + 1}:00'
                   : '暂无数据',
               icon: Icons.schedule,
               color: const Color(0xFF8B5CF6),
@@ -416,7 +465,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             // 最喜欢的日子
             _buildHabitCard(
               title: '最喜欢的日子',
-              content: _stats.mostActiveWeekday ?? '暂无数据',
+              content: _stats!.mostActiveWeekday ?? '暂无数据',
               icon: Icons.today,
               color: const Color(0xFF06B6D4),
             ),
@@ -426,7 +475,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             // 平均字数
             _buildHabitCard(
               title: '平均每篇字数',
-              content: '${_stats.averageWordsPerNote.toInt()} 字',
+              content: '${_stats!.averageWordsPerNote.toInt()} 字',
               icon: Icons.text_fields,
               color: const Color(0xFFEC4899),
             ),
@@ -436,7 +485,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             // 最长笔记
             _buildHabitCard(
               title: '最长的一篇',
-              content: '${_stats.longestNoteWords} 字',
+              content: '${_stats!.longestNoteWords} 字',
               icon: Icons.article,
               color: const Color(0xFF84CC16),
             ),
@@ -459,7 +508,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
-            if (_stats.topTags.isNotEmpty) ...[
+            if (_stats!.topTags.isNotEmpty) ...[
               const Text(
                 '最常用的标签',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -467,10 +516,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               const SizedBox(height: 20),
               Expanded(
                 child: ListView.builder(
-                  itemCount: _stats.topTags.length.clamp(0, 5),
+                  itemCount: _stats!.topTags.length.clamp(0, 5),
                   itemBuilder: (context, index) {
-                    final tag = _stats.topTags[index];
-                    final percentage = (tag.count / _stats.totalNotes * 100);
+                    final tag = _stats!.topTags[index];
+                    final percentage = (tag.count / _stats!.totalNotes * 100);
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -518,10 +567,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                   '使用了 ${tag.count} 次 (${percentage.toStringAsFixed(1)}%)',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
+                                    color: ColorUtils.withOpacitySafe(
+                                        Theme.of(context).colorScheme.onSurface, 0.7),
                                   ),
                                 ),
                               ],
@@ -540,18 +587,16 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     Icon(
                       Icons.label_outline,
                       size: 80,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.3),
+                      color: ColorUtils.withOpacitySafe(
+                        Theme.of(context).colorScheme.onSurface, 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       '还没有使用过标签',
                       style: TextStyle(
                         fontSize: 18,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: ColorUtils.withOpacitySafe(
+                          Theme.of(context).colorScheme.onSurface, 0.7),
                       ),
                     ),
                   ],
@@ -579,10 +624,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             const SizedBox(height: 40),
             Expanded(
               child: ListView.builder(
-                itemCount: _stats.monthlyStats.length,
+                itemCount: _stats!.monthlyStats.length,
                 itemBuilder: (context, index) {
-                  final month = _stats.monthlyStats[index];
-                  final maxCount = _stats.monthlyStats
+                  final month = _stats!.monthlyStats[index];
+                  final maxCount = _stats!.monthlyStats
                       .map((m) => m.count)
                       .reduce((a, b) => a > b ? a : b);
                   final percentage =
@@ -620,10 +665,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                     child: Container(
                                       height: 8,
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withValues(alpha: 0.1),
+                                        color: ColorUtils.withOpacitySafe(
+                                            Theme.of(context).colorScheme.primary, 0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: FractionallySizedBox(
@@ -734,9 +777,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             '每一个想法都值得被记录\n每一次记录都是成长的足迹',
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: ColorUtils.withOpacitySafe(
+                Theme.of(context).colorScheme.onSurface, 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -791,7 +833,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: ColorUtils.withOpacitySafe(color, 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(icon, color: color, size: 28),
@@ -805,9 +847,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     title,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: ColorUtils.withOpacitySafe(
+                        Theme.of(context).colorScheme.onSurface, 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -829,9 +870,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           subtitle,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: ColorUtils.withOpacitySafe(
+                              Theme.of(context).colorScheme.onSurface, 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -866,7 +906,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: ColorUtils.withOpacitySafe(color, 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -880,9 +920,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   title,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: ColorUtils.withOpacitySafe(
+                      Theme.of(context).colorScheme.onSurface, 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -924,7 +963,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: ColorUtils.withOpacitySafe(color, 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -944,9 +983,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             content,
             style: TextStyle(
               fontSize: 15,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: ColorUtils.withOpacitySafe(
+                Theme.of(context).colorScheme.onSurface, 0.8),
               height: 1.5,
             ),
           ),
@@ -967,9 +1005,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   String _getThinkingDensityText() {
-    if (_stats.averageWordsPerNote > 200) {
+    if (_stats!.averageWordsPerNote > 200) {
       return '你喜欢深度思考，每篇笔记都很详细。这样的习惯帮助你更好地整理思路。';
-    } else if (_stats.averageWordsPerNote > 100) {
+    } else if (_stats!.averageWordsPerNote > 100) {
       return '你的思考简洁而有力，善于抓住要点。这是很好的总结能力。';
     } else {
       return '你习惯记录简短的想法，这样能快速捕捉灵感，是很好的记录习惯。';
@@ -977,7 +1015,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   String _getGrowthText() {
-    final months = _stats.monthlyStats;
+    final months = _stats!.monthlyStats;
     if (months.length >= 2) {
       final lastMonth = months.last.count;
       final firstMonth = months.first.count;
@@ -994,9 +1032,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   String _getWritingRhythmText() {
-    if (_stats.longestStreak >= 7) {
-      return '你有很好的写作节奏，最长连续记录了${_stats.longestStreak}天！坚持就是力量。';
-    } else if (_stats.longestStreak >= 3) {
+    if (_stats!.longestStreak >= 7) {
+      return '你有很好的写作节奏，最长连续记录了${_stats!.longestStreak}天！坚持就是力量。';
+    } else if (_stats!.longestStreak >= 3) {
       return '你已经建立了不错的记录习惯，继续保持这个节奏。';
     } else {
       return '记录更多是一个习惯，可以尝试每天记录一些小想法。';
