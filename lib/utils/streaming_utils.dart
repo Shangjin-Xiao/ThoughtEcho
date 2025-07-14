@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
-import 'package:thoughtecho/utils/app_logger.dart';
+import 'app_logger.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
