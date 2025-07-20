@@ -45,7 +45,7 @@ class StreamingBackupProcessor {
     bool Function()? shouldCancel,
   ) async {
     final stream = file.openRead();
-    final buffer = StringBuffer();
+    final buffer = <int>[];
     int processedBytes = 0;
     final totalSize = await file.length();
 
@@ -54,7 +54,8 @@ class StreamingBackupProcessor {
         throw Exception('操作已取消');
       }
 
-      buffer.write(String.fromCharCodes(chunk));
+      // 修复：收集字节而不是直接转换为字符
+      buffer.addAll(chunk);
       processedBytes += chunk.length;
 
       // 定期更新状态
@@ -71,7 +72,9 @@ class StreamingBackupProcessor {
     onStatusUpdate?.call('正在解析JSON数据...');
 
     try {
-      return json.decode(buffer.toString()) as Map<String, dynamic>;
+      // 修复：使用UTF-8解码避免中文乱码
+      final jsonString = utf8.decode(buffer);
+      return json.decode(jsonString) as Map<String, dynamic>;
     } catch (e) {
       throw Exception('JSON解析失败: $e');
     }
@@ -120,8 +123,9 @@ class StreamingBackupProcessor {
 
     onStatusUpdate?.call('正在解析备份数据...');
 
-    // 解析JSON数据
-    final jsonString = String.fromCharCodes(dataFile.content as List<int>);
+    // 解析JSON数据 - 修复：使用UTF-8解码避免中文乱码
+    final jsonBytes = dataFile.content as List<int>;
+    final jsonString = utf8.decode(jsonBytes);
     return json.decode(jsonString) as Map<String, dynamic>;
   }
 

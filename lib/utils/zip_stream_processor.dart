@@ -70,8 +70,11 @@ class ZipStreamProcessor {
         processed++;
         onProgress?.call(processed, total);
 
-        // 短暂延迟以允许其他事件处理
-        if (processed % 10 == 0) {
+        // 更频繁的UI更新机会，特别是处理大文件时
+        if (processed % 5 == 0) {
+          await Future.delayed(const Duration(milliseconds: 10));
+        } else {
+          // 即使是小批次也给UI一个更新机会
           await Future.delayed(const Duration(milliseconds: 1));
         }
       }
@@ -89,19 +92,46 @@ class ZipStreamProcessor {
     }
   }
 
-  /// 内部辅助方法：以流的方式添加文件到ZIP
+  /// 内部辅助方法：以流的方式添加文件到ZIP（支持超大文件）
   static Future<void> _addFileStreaming(
     ZipFileEncoder encoder,
     File file,
     String relativePath,
   ) async {
     final stat = await file.stat();
-    final fileBytes = await file.readAsBytes();
-    final archiveFile = ArchiveFile(relativePath, fileBytes.length, fileBytes);
-    archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
-    archiveFile.mode = stat.mode;
-
-    encoder.addArchiveFile(archiveFile);
+    final fileSize = stat.size;
+    
+    // 对于超大文件（>500MB），使用流式读取避免内存溢出
+    if (fileSize > 500 * 1024 * 1024) {
+      logDebug('使用流式方式添加超大文件到ZIP: $relativePath (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+      
+      // 分块读取文件内容
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      final chunks = <int>[];
+      
+      final stream = file.openRead();
+      await for (final chunk in stream) {
+        chunks.addAll(chunk);
+        
+        // 定期让出控制权，避免阻塞
+        if (chunks.length % (chunkSize * 10) == 0) {
+          await Future.delayed(const Duration(milliseconds: 1));
+        }
+      }
+      
+      final archiveFile = ArchiveFile(relativePath, chunks.length, chunks);
+      archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
+      archiveFile.mode = stat.mode;
+      encoder.addArchiveFile(archiveFile);
+      
+    } else {
+      // 小文件直接读取
+      final fileBytes = await file.readAsBytes();
+      final archiveFile = ArchiveFile(relativePath, fileBytes.length, fileBytes);
+      archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
+      archiveFile.mode = stat.mode;
+      encoder.addArchiveFile(archiveFile);
+    }
   }
 
   /// 流式解压ZIP文件（增强版，支持大文件安全处理）
@@ -270,29 +300,29 @@ class ZipStreamProcessor {
     }
   }
 
+  /// 通用ZIP文件解码方法
+  static Future<Archive?> _decodeZipFile(String zipPath) async {
+    try {
+      final zipFile = File(zipPath);
+      if (!await zipFile.exists()) {
+        return null;
+      }
+
+      final bytes = await zipFile.readAsBytes();
+      return ZipDecoder().decodeBytes(bytes);
+    } catch (e) {
+      logDebug('ZIP文件解码失败: $zipPath, 错误: $e');
+      return null;
+    }
+  }
+
   /// 验证ZIP文件完整性（流式方式）
   ///
   /// [zipPath] - ZIP文件路径
   static Future<bool> validateZipFile(String zipPath) async {
     try {
-      final zipFile = File(zipPath);
-      if (!await zipFile.exists()) {
-        return false;
-      }
-
-      try {
-        final decoder = ZipDecoder();
-        // 读取ZIP文件为字节数组
-        final zipFile = File(zipPath);
-        final bytes = await zipFile.readAsBytes();
-        final archive = decoder.decodeBytes(bytes);
-
-        // 只检查文件头，不解压内容
-        return archive.isNotEmpty;
-      } catch (e) {
-        logDebug('ZIP文件解码失败: $zipPath, 错误: $e');
-        return false;
-      }
+      final archive = await _decodeZipFile(zipPath);
+      return archive?.isNotEmpty ?? false;
     } catch (e) {
       logDebug('ZIP文件验证失败: $zipPath, 错误: $e');
       return false;

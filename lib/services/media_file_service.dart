@@ -284,26 +284,79 @@ class MediaFileService {
     }
   }
 
-  /// 获取所有媒体文件路径（用于备份）
-  static Future<List<String>> getAllMediaFilePaths() async {
+  /// 获取所有媒体文件路径（用于备份）- 优化版，避免阻塞主线程
+  static Future<List<String>> getAllMediaFilePaths({
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
     try {
       final List<String> allPaths = [];
       final appDir = await getApplicationDocumentsDirectory();
       final mediaDir = Directory(path.join(appDir.path, _mediaFolder));
 
-      if (await mediaDir.exists()) {
-        await for (final entity in mediaDir.list(recursive: true)) {
-          if (entity is File) {
-            allPaths.add(entity.path);
-          }
+      if (!await mediaDir.exists()) {
+        return [];
+      }
+
+      logDebug('开始收集媒体文件路径: ${mediaDir.path}');
+
+      // 先收集所有文件实体，避免在遍历过程中阻塞
+      final List<FileSystemEntity> allEntities = [];
+      
+      await for (final entity in mediaDir.list(recursive: true)) {
+        cancelToken?.throwIfCancelled();
+        
+        if (entity is File) {
+          allEntities.add(entity);
+        }
+        
+        // 每收集100个实体就让UI有机会更新
+        if (allEntities.length % 100 == 0) {
+          await Future.delayed(const Duration(milliseconds: 5));
         }
       }
 
+      logDebug('发现 ${allEntities.length} 个媒体文件');
+
+      // 分批处理文件路径，避免一次性处理太多
+      const batchSize = 50;
+      int processedCount = 0;
+      final totalCount = allEntities.length;
+
+      for (int i = 0; i < allEntities.length; i += batchSize) {
+        cancelToken?.throwIfCancelled();
+        
+        final batch = allEntities.skip(i).take(batchSize);
+        
+        for (final entity in batch) {
+          try {
+            // 检查文件是否仍然存在（可能在遍历过程中被删除）
+            if (await entity.exists()) {
+              allPaths.add(entity.path);
+            }
+            processedCount++;
+          } catch (e) {
+            logDebug('检查媒体文件失败，跳过: ${entity.path}, 错误: $e');
+            processedCount++;
+          }
+        }
+
+        // 更新进度
+        onProgress?.call(processedCount, totalCount);
+        
+        // 让UI有机会更新
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+
+      logDebug('成功收集 ${allPaths.length} 个有效媒体文件路径');
       return allPaths;
     } catch (e) {
-      if (kDebugMode) {
-        print('获取媒体文件路径失败: $e');
+      if (e is CancelledException) {
+        logDebug('媒体文件路径收集已取消');
+        rethrow;
       }
+      
+      logDebug('获取媒体文件路径失败: $e');
       return [];
     }
   }

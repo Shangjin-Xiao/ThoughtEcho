@@ -103,10 +103,65 @@ class _InsightsPageState extends State<InsightsPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // 在didChangeDependencies中安全地获取AIAnalysisDatabaseService实例
-    _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
-      context,
-      listen: false,
-    );
+    if (_aiAnalysisDatabaseService == null) {
+      _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
+        context,
+        listen: false,
+      );
+      logDebug('AIAnalysisDatabaseService已初始化');
+
+      // 测试数据库连接
+      _testDatabaseConnection();
+    }
+  }
+
+  /// 测试数据库连接
+  Future<void> _testDatabaseConnection() async {
+    try {
+      if (_aiAnalysisDatabaseService != null) {
+        await _aiAnalysisDatabaseService!.database;
+        logDebug('AI分析数据库连接测试成功');
+
+        // 测试获取所有分析
+        final analyses = await _aiAnalysisDatabaseService!.getAllAnalyses();
+        logDebug('当前已保存的AI分析数量: ${analyses.length}');
+
+        // 测试保存一个简单的分析
+        await _testSaveAnalysis();
+      }
+    } catch (e) {
+      logDebug('AI分析数据库连接测试失败: $e');
+    }
+  }
+
+  /// 测试保存分析功能
+  Future<void> _testSaveAnalysis() async {
+    try {
+      final testAnalysis = AIAnalysis(
+        title: '测试分析',
+        content: '这是一个测试分析，用于验证保存功能是否正常工作。',
+        analysisType: 'comprehensive',
+        analysisStyle: 'professional',
+        createdAt: DateTime.now().toIso8601String(),
+        quoteCount: 0,
+      );
+
+      final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(testAnalysis);
+      logDebug('测试保存成功，ID: ${savedAnalysis.id}');
+
+      // 验证保存
+      final verifyAnalysis = await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
+      if (verifyAnalysis != null) {
+        logDebug('测试验证成功');
+        // 删除测试数据
+        await _aiAnalysisDatabaseService!.deleteAnalysis(savedAnalysis.id!);
+        logDebug('测试数据已清理');
+      } else {
+        logDebug('测试验证失败');
+      }
+    } catch (e) {
+      logDebug('测试保存分析失败: $e');
+    }
   }
 
   @override
@@ -156,8 +211,26 @@ class _InsightsPageState extends State<InsightsPage> {
       if (_aiAnalysisDatabaseService == null) {
         throw Exception('AI分析数据库服务未初始化');
       }
+
+      // 测试数据库连接
+      try {
+        await _aiAnalysisDatabaseService!.database;
+        logDebug('数据库连接测试成功');
+      } catch (dbError) {
+        logDebug('数据库连接测试失败: $dbError');
+        throw Exception('数据库连接失败: $dbError');
+      }
+
       final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(analysis);
       logDebug('AI分析保存成功，ID: ${savedAnalysis.id}');
+
+      // 验证保存结果
+      final verifyAnalysis = await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
+      if (verifyAnalysis != null) {
+        logDebug('保存验证成功，标题: ${verifyAnalysis.title}');
+      } else {
+        logDebug('保存验证失败，无法找到刚保存的分析');
+      }
 
       if (!mounted) return;
 
