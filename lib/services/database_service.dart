@@ -60,11 +60,12 @@ class DatabaseService extends ChangeNotifier {
   bool _watchHasMore = true;
   String? _watchSearchQuery;
 
-  // 优化：查询缓存，减少重复数据库查询
+  /// 修复：优化查询缓存，实现更好的LRU机制
   final Map<String, List<Quote>> _filterCache = {};
   final Map<String, DateTime> _cacheTimestamps = {}; // 缓存时间戳
-  final int _maxCacheEntries = 20; // 增加缓存容量
-  final Duration _cacheExpiration = const Duration(minutes: 3); // 调整缓存过期时间
+  final Map<String, DateTime> _cacheAccessTimes = {}; // 缓存访问时间，用于LRU
+  final int _maxCacheEntries = 30; // 增加缓存容量
+  final Duration _cacheExpiration = const Duration(minutes: 5); // 调整缓存过期时间
 
   // 优化：查询结果缓存
   final Map<String, int> _countCache = {}; // 计数查询缓存
@@ -160,6 +161,11 @@ class DatabaseService extends ChangeNotifier {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
+  // 添加并发访问控制
+  Completer<void>? _initCompleter;
+  bool _isInitializing = false;
+  final _databaseLock = <String, Completer<void>>{};
+
   Database get database {
     if (_database == null || !_database!.isOpen) {
       throw Exception('数据库未初始化或已关闭');
@@ -167,8 +173,13 @@ class DatabaseService extends ChangeNotifier {
     return _database!;
   }
 
-  /// 修复：安全的数据库访问方法
+  /// 修复：安全的数据库访问方法，增加并发控制
   Future<Database> get safeDatabase async {
+    // 如果正在初始化，等待初始化完成
+    if (_isInitializing && _initCompleter != null) {
+      await _initCompleter!.future;
+    }
+
     if (_database != null && _database!.isOpen) {
       return _database!;
     }
@@ -184,17 +195,49 @@ class DatabaseService extends ChangeNotifier {
     return _database!;
   }
 
+  /// 修复：带锁的数据库操作执行器
+  Future<T> _executeWithLock<T>(String lockKey, Future<T> Function() operation) async {
+    // 如果已有相同操作在执行，等待其完成
+    if (_databaseLock.containsKey(lockKey)) {
+      await _databaseLock[lockKey]!.future;
+    }
+
+    final completer = Completer<void>();
+    _databaseLock[lockKey] = completer;
+
+    try {
+      final result = await operation();
+      completer.complete();
+      _databaseLock.remove(lockKey);
+      return result;
+    } catch (e) {
+      completer.completeError(e);
+      _databaseLock.remove(lockKey);
+      rethrow;
+    }
+  }
+
   /// Test method to set a test database instance
   static void setTestDatabase(Database testDb) {
     _database = testDb;
   }
 
+  /// 修复：初始化数据库，增加并发控制
   Future<void> init() async {
     // 修复：添加严格的重复初始化检查
     if (_isInitialized) {
       logDebug('数据库已初始化，跳过重复初始化');
       return;
     }
+
+    // 防止并发初始化
+    if (_isInitializing && _initCompleter != null) {
+      await _initCompleter!.future;
+      return;
+    }
+
+    _isInitializing = true;
+    _initCompleter = Completer<void>();
 
     if (kIsWeb) {
       // Web平台特定的初始化
@@ -293,9 +336,17 @@ class DatabaseService extends ChangeNotifier {
       await _prefetchInitialQuotes();
 
       _isInitialized = true; // 数据库初始化完成
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
       notifyListeners();
     } catch (e) {
       logDebug('数据库初始化失败: $e');
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.completeError(e);
+      }
 
       // 尝试基本的恢复措施
       try {
@@ -346,11 +397,33 @@ class DatabaseService extends ChangeNotifier {
           )
         ''');
 
-        // 创建索引以加速常用查询
+        /// 修复：创建优化的索引以加速常用查询
+        // 基础索引
         await db.execute(
           'CREATE INDEX idx_quotes_category_id ON quotes(category_id)',
         );
         await db.execute('CREATE INDEX idx_quotes_date ON quotes(date)');
+
+        // 复合索引优化复杂查询
+        await db.execute(
+          'CREATE INDEX idx_quotes_date_category ON quotes(date DESC, category_id)',
+        );
+        await db.execute(
+          'CREATE INDEX idx_quotes_category_date ON quotes(category_id, date DESC)',
+        );
+
+        // 搜索优化索引
+        await db.execute(
+          'CREATE INDEX idx_quotes_content_fts ON quotes(content)',
+        );
+
+        // 天气和时间段查询索引
+        await db.execute(
+          'CREATE INDEX idx_quotes_weather ON quotes(weather)',
+        );
+        await db.execute(
+          'CREATE INDEX idx_quotes_day_period ON quotes(day_period)',
+        );
 
         // 创建新的 quote_tags 关联表
         await db.execute('''
@@ -362,11 +435,17 @@ class DatabaseService extends ChangeNotifier {
             FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
           )
         ''');
+
+        /// 修复：优化quote_tags表的索引
         await db.execute(
           'CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)',
         );
         await db.execute(
           'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
+        );
+        // 复合索引优化JOIN查询
+        await db.execute(
+          'CREATE INDEX idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
         );
 
         // 创建媒体文件引用表
@@ -1655,15 +1734,17 @@ class DatabaseService extends ChangeNotifier {
     _categoriesController.add(categories);
   }
 
-  /// 添加一条引用（笔记）
+  /// 修复：添加一条引用（笔记），增加并发控制
   Future<void> addQuote(Quote quote) async {
     if (kIsWeb) {
       _memoryStore.add(quote);
       notifyListeners();
       return;
     }
-    try {
-      final db = database;
+
+    return _executeWithLock('addQuote_${quote.id}', () async {
+      try {
+        final db = await safeDatabase;
       await db.transaction((txn) async {
         final id = quote.id ?? _uuid.v4();
         final quoteMap = quote.toJson();
@@ -1699,13 +1780,15 @@ class DatabaseService extends ChangeNotifier {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
 
-        // 插入标签关联
+        // 修复：插入标签关联，避免事务嵌套
         if (quote.tagIds.isNotEmpty) {
-          final batch = txn.batch();
           for (final tagId in quote.tagIds) {
-            batch.insert('quote_tags', {'quote_id': id, 'tag_id': tagId});
+            await txn.insert(
+              'quote_tags',
+              {'quote_id': id, 'tag_id': tagId},
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
           }
-          await batch.commit(noResult: true);
         }
       });
 
@@ -1714,16 +1797,17 @@ class DatabaseService extends ChangeNotifier {
       // 同步媒体文件引用
       await MediaReferenceService.syncQuoteMediaReferences(quote);
 
-      // 优化：数据变更后清空缓存
-      _clearAllCache();
+        // 优化：数据变更后清空缓存
+        _clearAllCache();
 
-      // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
-      _refreshQuotesStream();
-      notifyListeners(); // 通知其他监听者（如Homepage的FAB）
-    } catch (e) {
-      logDebug('保存笔记到数据库时出错: $e');
-      rethrow; // 重新抛出异常，让调用者处理
-    }
+        // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
+        _refreshQuotesStream();
+        notifyListeners(); // 通知其他监听者（如Homepage的FAB）
+      } catch (e) {
+        logDebug('保存笔记到数据库时出错: $e');
+        rethrow; // 重新抛出异常，让调用者处理
+      }
+    });
   }
 
   // 在增删改后刷新分页流数据
@@ -2025,13 +2109,35 @@ class DatabaseService extends ChangeNotifier {
 
     logDebug('执行优化查询: $query\n参数: $args');
 
-    // 添加查询性能监控
+    /// 修复：增强查询性能监控和慢查询检测
     final stopwatch = Stopwatch()..start();
     final maps = await db.rawQuery(query, args);
     stopwatch.stop();
 
+    final queryTime = stopwatch.elapsedMilliseconds;
+
+    // 慢查询检测和警告
+    if (queryTime > 1000) {
+      logDebug('⚠️ 慢查询检测: 查询耗时 ${queryTime}ms，超过1秒阈值');
+      logDebug('慢查询SQL: $query');
+      logDebug('查询参数: $args');
+
+      // 可选：记录查询执行计划用于优化
+      try {
+        final plan = await db.rawQuery('EXPLAIN QUERY PLAN $query', args);
+        logDebug('查询执行计划:');
+        for (final step in plan) {
+          logDebug('  ${step['detail']}');
+        }
+      } catch (e) {
+        logDebug('获取查询执行计划失败: $e');
+      }
+    } else if (queryTime > 500) {
+      logDebug('⚠️ 查询性能警告: 耗时 ${queryTime}ms，建议优化');
+    }
+
     logDebug(
-      '查询完成，耗时: ${stopwatch.elapsedMilliseconds}ms，结果数量: ${maps.length}',
+      '查询完成，耗时: ${queryTime}ms，结果数量: ${maps.length}',
     );
 
     return maps.map((m) => Quote.fromJson(m)).toList();
@@ -2668,19 +2774,21 @@ class DatabaseService extends ChangeNotifier {
     return result;
   }
 
-  /// 优化：更智能的缓存管理
+  /// 修复：更智能的LRU缓存管理
   void _addToCache(String cacheKey, List<Quote> quotes, int offset) {
+    final now = DateTime.now();
+
     if (!_filterCache.containsKey(cacheKey)) {
-      // 如果缓存已满，使用LRU策略移除最旧的条目
+      // 如果缓存已满，使用真正的LRU策略移除最久未访问的条目
       if (_filterCache.length >= _maxCacheEntries) {
-        // 优化：简单的LRU实现，移除第一个元素
-        final keys = _filterCache.keys.toList();
-        final oldestKey = keys.first;
-        _filterCache.remove(oldestKey);
-        logDebug('缓存已满，移除最旧的缓存条目: $oldestKey');
+        _evictLRUCache();
       }
       _filterCache[cacheKey] = [];
     }
+
+    // 更新缓存时间戳
+    _cacheTimestamps[cacheKey] = now;
+    _cacheAccessTimes[cacheKey] = now;
 
     // 如果是第一页，则清空缓存重新开始
     if (offset == 0) {
@@ -2692,6 +2800,29 @@ class DatabaseService extends ChangeNotifier {
       logDebug(
         '追加缓存数据，新增 ${quotes.length} 条，总计 ${_filterCache[cacheKey]!.length} 条',
       );
+    }
+  }
+
+  /// 修复：实现真正的LRU缓存淘汰策略
+  void _evictLRUCache() {
+    if (_cacheAccessTimes.isEmpty) return;
+
+    // 找到最久未访问的缓存条目
+    String? lruKey;
+    DateTime? oldestAccess;
+
+    for (final entry in _cacheAccessTimes.entries) {
+      if (oldestAccess == null || entry.value.isBefore(oldestAccess)) {
+        oldestAccess = entry.value;
+        lruKey = entry.key;
+      }
+    }
+
+    if (lruKey != null) {
+      _filterCache.remove(lruKey);
+      _cacheTimestamps.remove(lruKey);
+      _cacheAccessTimes.remove(lruKey);
+      logDebug('LRU缓存淘汰，移除缓存条目: $lruKey');
     }
   }
 

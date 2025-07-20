@@ -116,25 +116,71 @@ class SettingsService extends ChangeNotifier {
     }
   }
 
-  // 加载应用设置
+  /// 修复：加载应用设置，增加数据验证和迁移安全性
   void _loadAppSettings() {
-    final String? appSettingsJson =
-        _mmkv.getString(_appSettingsKey) ?? _prefs.getString(_appSettingsKey);
+    try {
+      final String? appSettingsJson =
+          _mmkv.getString(_appSettingsKey) ?? _prefs.getString(_appSettingsKey);
 
-    if (appSettingsJson != null) {
-      _appSettings = AppSettings.fromJson(json.decode(appSettingsJson));
+      if (appSettingsJson != null) {
+        try {
+          final jsonData = json.decode(appSettingsJson);
+          _appSettings = AppSettings.fromJson(jsonData);
 
-      // 确保一言类型不为空，如果为空则设置为默认全选
-      if (_appSettings.hitokotoType.isEmpty) {
+          // 验证设置的完整性
+          if (!_validateAppSettings(_appSettings)) {
+            logDebug('应用设置验证失败，重置为默认设置');
+            _appSettings = AppSettings.defaultSettings();
+            _saveAppSettings();
+          } else {
+            // 确保一言类型不为空，如果为空则设置为默认全选
+            if (_appSettings.hitokotoType.isEmpty) {
+              _appSettings = AppSettings.defaultSettings();
+              _saveAppSettings();
+              logDebug('检测到一言类型为空，已重置为默认全选值');
+            }
+          }
+        } catch (e) {
+          logDebug('解析应用设置JSON失败: $e，使用默认设置');
+          _appSettings = AppSettings.defaultSettings();
+          _saveAppSettings();
+        }
+      } else {
         _appSettings = AppSettings.defaultSettings();
-        _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-        logDebug('检测到一言类型为空，已重置为默认全选值');
+        _saveAppSettings();
+        logDebug('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
       }
-    } else {
+    } catch (e) {
+      logDebug('加载应用设置失败: $e，使用默认设置');
       _appSettings = AppSettings.defaultSettings();
-      // 首次启动时保存默认设置到存储
+    }
+  }
+
+  /// 修复：验证应用设置的完整性
+  bool _validateAppSettings(AppSettings settings) {
+    try {
+      // 验证必要字段
+      if (settings.hitokotoType.isEmpty) return false;
+
+      // 验证默认起始页面值
+      if (settings.defaultStartPage < 0 || settings.defaultStartPage > 2) {
+        return false;
+      }
+
+      // 验证其他关键设置
+      return true;
+    } catch (e) {
+      logDebug('验证应用设置时出错: $e');
+      return false;
+    }
+  }
+
+  /// 修复：安全保存应用设置
+  void _saveAppSettings() {
+    try {
       _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-      logDebug('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
+    } catch (e) {
+      logDebug('保存应用设置失败: $e');
     }
   }
 
