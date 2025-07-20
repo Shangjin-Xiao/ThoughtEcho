@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'image_cache_service.dart';
+import '../utils/app_logger.dart';
 
 /// SVG到图片转换服务
 class SvgToImageService {
@@ -18,6 +19,15 @@ class SvgToImageService {
     bool useCache = true,
   }) async {
     try {
+      // 验证输入参数
+      if (width <= 0 || height <= 0) {
+        throw ArgumentError('图片尺寸必须大于0');
+      }
+      
+      if (width > 4000 || height > 4000) {
+        logError('图片尺寸过大: ${width}x$height，可能导致内存问题', source: 'SvgToImageService');
+      }
+
       // 生成缓存键
       final cacheKey = useCache
           ? ImageCacheService.generateCacheKey(
@@ -60,9 +70,7 @@ class SvgToImageService {
 
       return imageBytes;
     } catch (e) {
-      if (kDebugMode) {
-        print('SVG转换失败: $e');
-      }
+      logError('SVG转换失败: $e', error: e, source: 'SvgToImageService');
       // 生成错误提示图片
       return await _generateErrorImage(width, height, format, e.toString());
     }
@@ -242,22 +250,55 @@ class SvgToImageService {
   static void _drawGradientBackground(Canvas canvas, String svgContent, int width, int height) {
     // 检查是否包含linearGradient
     if (svgContent.contains('linearGradient')) {
-      // 简化的渐变解析
+      // 解析linearGradient定义
+      final gradientColors = _parseLinearGradient(svgContent);
+      
       final gradientPaint = Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFFDB2777)],
+          colors: gradientColors.isNotEmpty 
+              ? gradientColors 
+              : [const Color(0xFF4F46E5), const Color(0xFF7C3AED), const Color(0xFFDB2777)],
         ).createShader(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
 
       canvas.drawRect(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()), gradientPaint);
     }
   }
 
+  /// 解析SVG中的linearGradient定义
+  static List<Color> _parseLinearGradient(String svgContent) {
+    final colors = <Color>[];
+    
+    try {
+      // 匹配linearGradient标签内容
+      final gradientRegex = RegExp(r'<linearGradient[^>]*>(.*?)</linearGradient>', dotAll: true);
+      final gradientMatch = gradientRegex.firstMatch(svgContent);
+      
+      if (gradientMatch != null) {
+        final gradientContent = gradientMatch.group(1) ?? '';
+        
+        // 匹配stop元素
+        final stopRegex = RegExp(r'<stop[^>]*stop-color="([^"]*)"[^>]*(?:stop-opacity="([^"]*)")?');
+        final stopMatches = stopRegex.allMatches(gradientContent);
+        
+        for (final stopMatch in stopMatches) {
+          final stopColor = _parseColor(stopMatch.group(1) ?? '#000000');
+          final stopOpacity = double.tryParse(stopMatch.group(2) ?? '1.0') ?? 1.0;
+          colors.add(stopColor.withValues(alpha: stopOpacity));
+        }
+      }
+    } catch (e) {
+      logError('解析linearGradient失败: $e', error: e, source: 'SvgToImageService');
+    }
+    
+    return colors;
+  }
+
   /// 绘制基本形状
   static void _drawBasicShapes(Canvas canvas, String svgContent, int width, int height) {
     // 解析并绘制圆形
-    final circleRegex = RegExp(r'<circle[^>]*cx="([^"]*)"[^>]*cy="([^"]*)"[^>]*r="([^"]*)"[^>]*fill="([^"]*)"');
+    final circleRegex = RegExp(r'<circle[^>]*cx="([^"]*)"[^>]*cy="([^"]*)"[^>]*r="([^"]*)"[^>]*fill="([^"]*)"(?:[^>]*fill-opacity="([^"]*)")?');
     final circleMatches = circleRegex.allMatches(svgContent);
 
     for (final match in circleMatches) {
@@ -266,16 +307,17 @@ class SvgToImageService {
         final cy = double.parse(match.group(2) ?? '0');
         final r = double.parse(match.group(3) ?? '0');
         final fillColor = _parseColor(match.group(4) ?? '#000000');
+        final fillOpacity = double.tryParse(match.group(5) ?? '1.0') ?? 1.0;
 
-        final paint = Paint()..color = fillColor;
+        final paint = Paint()..color = fillColor.withValues(alpha: fillOpacity);
         canvas.drawCircle(Offset(cx, cy), r, paint);
       } catch (e) {
-        // 忽略解析错误
+        logError('解析圆形元素失败: $e', error: e, source: 'SvgToImageService');
       }
     }
 
     // 解析并绘制矩形
-    final rectRegex = RegExp(r'<rect[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*fill="([^"]*)"');
+    final rectRegex = RegExp(r'<rect[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*fill="([^"]*)"(?:[^>]*fill-opacity="([^"]*)")?(?:[^>]*rx="([^"]*)")?(?:[^>]*ry="([^"]*)")?');
     final rectMatches = rectRegex.allMatches(svgContent);
 
     for (final match in rectMatches) {
@@ -285,11 +327,39 @@ class SvgToImageService {
         final w = double.parse(match.group(3) ?? '0');
         final h = double.parse(match.group(4) ?? '0');
         final fillColor = _parseColor(match.group(5) ?? '#000000');
+        final fillOpacity = double.tryParse(match.group(6) ?? '1.0') ?? 1.0;
+        final rx = double.tryParse(match.group(7) ?? '0') ?? 0;
+        final ry = double.tryParse(match.group(8) ?? '0') ?? 0;
 
-        final paint = Paint()..color = fillColor;
-        canvas.drawRect(Rect.fromLTWH(x, y, w, h), paint);
+        final paint = Paint()..color = fillColor.withValues(alpha: fillOpacity);
+        
+        if (rx > 0 || ry > 0) {
+          // 绘制圆角矩形，正确处理不同的rx和ry值
+          final rect = Rect.fromLTWH(x, y, w, h);
+          final radiusX = rx > 0 ? rx : 0.0;
+          final radiusY = ry > 0 ? ry : 0.0;
+          
+          if (radiusX == radiusY) {
+            // 统一圆角
+            final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radiusX));
+            canvas.drawRRect(rrect, paint);
+          } else {
+            // 不同的rx和ry值，使用椭圆圆角
+            final rrect = RRect.fromRectAndCorners(
+              rect,
+              topLeft: Radius.elliptical(radiusX, radiusY),
+              topRight: Radius.elliptical(radiusX, radiusY),
+              bottomLeft: Radius.elliptical(radiusX, radiusY),
+              bottomRight: Radius.elliptical(radiusX, radiusY),
+            );
+            canvas.drawRRect(rrect, paint);
+          }
+        } else {
+          // 绘制普通矩形
+          canvas.drawRect(Rect.fromLTWH(x, y, w, h), paint);
+        }
       } catch (e) {
-        // 忽略解析错误
+        logError('解析矩形元素失败: $e', error: e, source: 'SvgToImageService');
       }
     }
   }
@@ -318,9 +388,10 @@ class SvgToImageService {
         );
 
         textPainter.layout();
-        textPainter.paint(canvas, Offset(x, y - textPainter.height));
+        // 修复：SVG的y坐标是基线位置，直接使用y坐标而非减去高度
+        textPainter.paint(canvas, Offset(x, y));
       } catch (e) {
-        // 忽略解析错误
+        logError('解析文本元素失败: $e', error: e, source: 'SvgToImageService');
       }
     }
   }

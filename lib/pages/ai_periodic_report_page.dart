@@ -33,8 +33,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   List<GeneratedCard> _featuredCards = [];
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;
-  bool _isGeneratingInsights = false;
-  String _insights = '';
 
   // 服务
   AICardGenerationService? _aiCardService;
@@ -42,7 +40,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadPeriodData();
   }
 
@@ -82,17 +80,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _isLoadingData = false;
       });
 
-      // 自动生成内容时，先检查是否已经有内容
-      if (filteredQuotes.isNotEmpty &&
-          _aiCardService != null &&
-          _featuredCards.isEmpty) {
-        _generateFeaturedCards();
-      }
+      // 移除自动生成逻辑，改为用户手动触发
 
-      // 自动生成洞察时，先检查是否已经有内容
-      if (_insights.isEmpty) {
-        _generateInsights();
-      }
+
     } catch (e) {
       setState(() {
         _isLoadingData = false;
@@ -206,60 +196,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     return selected;
   }
 
-  /// 生成AI洞察
-  Future<void> _generateInsights() async {
-    if (_isGeneratingInsights) return;
 
-    if (_periodQuotes.isEmpty) {
-      setState(() {
-        _insights = '本${_getPeriodName()}暂无笔记记录。';
-      });
-      return;
-    }
-
-    setState(() {
-      _isGeneratingInsights = true;
-    });
-
-    try {
-      final aiService = context.read<AIService>();
-
-      final prompt = '''
-请分析用户在${_getPeriodName()}的笔记记录，生成简洁的洞察报告：
-
-笔记数量：${_periodQuotes.length}条
-时间范围：${_getDateRangeText()}
-
-笔记内容摘要：
-${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.substring(0, 100)}...' : q.content}').join('\n')}
-
-请生成200字以内的洞察分析，包括：
-1. 记录习惯分析
-2. 内容主题总结
-3. 积极的鼓励建议
-
-保持温暖积极的语调。
-''';
-
-      final result = await aiService.polishText(prompt);
-
-      setState(() {
-        _insights = result;
-        _isGeneratingInsights = false;
-      });
-    } catch (e) {
-      setState(() {
-        _insights = '暂时无法生成洞察分析，请稍后再试。';
-        _isGeneratingInsights = false;
-      });
-      AppLogger.e('生成AI洞察失败', error: e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成洞察失败: $e')),
-        );
-      }
-    }
-  }
 
   String _getPeriodName() {
     switch (_selectedPeriod) {
@@ -307,7 +244,6 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
             children: [
               _buildTabItem(0, '数据概览', Icons.analytics_outlined),
               _buildTabItem(1, '精选卡片', Icons.auto_awesome_outlined),
-              _buildTabItem(2, 'AI洞察', Icons.insights),
             ],
           ),
         ),
@@ -320,7 +256,6 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
             children: [
               _buildDataOverview(),
               _buildFeaturedCards(),
-              _buildInsights(),
             ],
           ),
         ),
@@ -475,7 +410,6 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                 _selectedPeriod = selection.first;
                 // 切换时间范围时，重置生成的内容
                 _featuredCards = [];
-                _insights = '';
               });
               _loadPeriodData();
             },
@@ -502,7 +436,6 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
         _selectedDate = picked;
         // 切换日期时，重置生成的内容
         _featuredCards = [];
-        _insights = '';
       });
       _loadPeriodData();
     }
@@ -942,8 +875,19 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
                   ),
               textAlign: TextAlign.center,
             ),
-            if (_aiCardService?.isEnabled != true) ...[
-              const SizedBox(height: 24),
+            const SizedBox(height: 24),
+            if (_aiCardService?.isEnabled == true) ...[
+              // AI服务已启用，显示生成卡片按钮
+              FilledButton.icon(
+                onPressed: _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('生成卡片'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ] else ...[
+              // AI服务未启用，显示前往设置按钮
               OutlinedButton.icon(
                 onPressed: () {
                   // 跳转到设置页面
@@ -1152,262 +1096,7 @@ ${_periodQuotes.take(5).map((q) => '- ${q.content.length > 100 ? '${q.content.su
     }
   }
 
-  /// 构建AI洞察
-  Widget _buildInsights() {
-    if (_isLoadingData) {
-      return const Center(child: CircularProgressIndicator());
-    }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 标题栏优化
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.insights,
-                  color: Theme.of(context).colorScheme.onTertiaryContainer,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'AI洞察分析',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    Text(
-                      '基于您的笔记内容生成的智能分析',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_isGeneratingInsights)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  child: const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              else if (_insights.isNotEmpty && _periodQuotes.isNotEmpty)
-                FilledButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _insights = '';
-                    });
-                    _generateInsights();
-                  },
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('重新生成'),
-                  style: FilledButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // 洞察内容卡片
-          if (_insights.isEmpty && _isGeneratingInsights)
-            _buildInsightsLoadingCard()
-          else if (_insights.isEmpty && _periodQuotes.isEmpty)
-            _buildInsightsEmptyState()
-          else if (_insights.isNotEmpty)
-            _buildInsightsContentCard()
-          else
-            _buildInsightsGenerateButton(),
-        ],
-      ),
-    );
-  }
-
-  /// 构建洞察加载卡片
-  Widget _buildInsightsLoadingCard() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              '正在分析您的笔记内容...',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'AI正在深度理解您的思考模式',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建洞察内容卡片
-  Widget _buildInsightsContentCard() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.lightbulb_outline,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '智能洞察',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _insights,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.6,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '由 AI 智能生成',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建洞察空状态
-  Widget _buildInsightsEmptyState() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.note_alt_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '本${_getPeriodName()}暂无笔记记录',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '记录一些思考和感悟，AI将为您提供智能洞察',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建洞察生成按钮
-  Widget _buildInsightsGenerateButton() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.insights,
-                size: 32,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '生成AI洞察分析',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'AI将深度分析您的笔记内容，提供个性化洞察',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _generateInsights,
-              icon: const Icon(Icons.auto_awesome, size: 18),
-              label: const Text('生成洞察'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
+
+

@@ -5,6 +5,7 @@ import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
 import '../constants/card_templates.dart';
+import '../utils/app_logger.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
 
@@ -76,19 +77,57 @@ class AICardGenerationService {
   Future<List<GeneratedCard>> generateFeaturedCards(
     List<Quote> notes, {
     int maxCards = 6,
+    Function(int current, int total, String? error)? onProgress,
   }) async {
     final cards = <GeneratedCard>[];
+    final errors = <String>[];
+    final notesToProcess = notes.take(maxCards).toList();
 
-    for (final note in notes.take(maxCards)) {
+    for (int i = 0; i < notesToProcess.length; i++) {
+      final note = notesToProcess[i];
+      
       try {
+        if (kDebugMode) {
+          print('正在生成第${i + 1}/${notesToProcess.length}张卡片...');
+        }
+
         final card = await generateCard(note: note);
         cards.add(card);
-      } catch (e) {
-        if (kDebugMode) {
-          print('生成卡片失败: ${note.id}, 错误: $e');
+
+        // 报告进度
+        onProgress?.call(i + 1, notesToProcess.length, null);
+
+        // 添加延迟避免API调用过于频繁
+        if (i < notesToProcess.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 500));
         }
+      } catch (e) {
+        final errorMsg = '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
+        errors.add(errorMsg);
+        
+        if (kDebugMode) {
+          print(errorMsg);
+        }
+
+        // 报告错误进度
+        onProgress?.call(i + 1, notesToProcess.length, e.toString());
+
+        // 如果失败卡片太多，停止生成
+        if (errors.length > maxCards ~/ 2) {
+          logError('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
+          break;
+        }
+        
         continue; // 跳过失败的卡片，继续生成其他卡片
       }
+    }
+
+    if (cards.isEmpty && errors.isNotEmpty) {
+      throw AICardGenerationException('批量生成完全失败: ${errors.join('; ')}');
+    }
+
+    if (kDebugMode) {
+      print('批量生成完成: 成功${cards.length}张，失败${errors.length}张');
     }
 
     return cards;
@@ -266,15 +305,31 @@ class AICardGenerationService {
         print('开始保存卡片图片: ${card.id}');
       }
 
+      // 验证输入参数
+      if (width <= 0 || height <= 0) {
+        throw ArgumentError('图片尺寸必须大于0');
+      }
+      
+      if (width > 4000 || height > 4000) {
+        throw ArgumentError('图片尺寸过大，最大支持4000x4000');
+      }
+
+      // 检查相册权限
+      if (!await _checkGalleryPermission()) {
+        throw Exception('没有相册访问权限，请在设置中开启权限');
+      }
+
       // 使用卡片的toImageBytes方法获取图片数据
       final imageBytes = await card.toImageBytes(
         width: width,
         height: height,
       );
 
-      // 生成文件名
-      final fileName = customName ??
-          '心迹_Card_${DateTime.now().millisecondsSinceEpoch}';
+      // 生成唯一文件名，避免重复
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = customName != null 
+          ? '${customName}_$timestamp'
+          : '心迹_Card_$timestamp';
 
       // 保存到相册
       await Gal.putImageBytes(imageBytes, name: fileName);
@@ -288,7 +343,26 @@ class AICardGenerationService {
       if (kDebugMode) {
         print('保存卡片图片失败: $e');
       }
-      throw Exception('保存图片失败: $e');
+      rethrow; // 重新抛出异常让上层处理
+    }
+  }
+
+  /// 检查相册权限
+  Future<bool> _checkGalleryPermission() async {
+    try {
+      // 尝试检查权限状态
+      final hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        // 请求权限
+        final hasAccessAfterRequest = await Gal.requestAccess();
+        return hasAccessAfterRequest;
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('检查相册权限失败: $e');
+      }
+      return false;
     }
   }
 
