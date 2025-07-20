@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
@@ -86,21 +88,21 @@ void main() {
         testSvg,
         400,
         600,
-        ImageByteFormat.png,
+        ui.ImageByteFormat.png,
       );
 
       final key2 = ImageCacheService.generateCacheKey(
         testSvg,
         400,
         600,
-        ImageByteFormat.png,
+        ui.ImageByteFormat.png,
       );
 
       final key3 = ImageCacheService.generateCacheKey(
         testSvg,
         800,
         1200,
-        ImageByteFormat.png,
+        ui.ImageByteFormat.png,
       );
 
       expect(key1, equals(key2));

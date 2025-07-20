@@ -142,8 +142,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 生成精选卡片
   Future<void> _generateFeaturedCards() async {
-    if (_aiCardService == null || _periodQuotes.isEmpty || _isGeneratingCards)
+    if (_aiCardService == null || _periodQuotes.isEmpty || _isGeneratingCards) {
       return;
+    }
 
     setState(() {
       _isGeneratingCards = true;
