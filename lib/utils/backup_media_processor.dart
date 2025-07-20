@@ -257,9 +257,11 @@ class BackupMediaProcessor {
     }
   }
 
-  /// 分析媒体文件（快速版本，只检查前100个文件来估算）
-  static Future<Map<String, dynamic>> _analyzeMediaFiles(
-      List<String> filePaths) async {
+  /// 通用的媒体文件分析方法
+  static Future<Map<String, dynamic>> _analyzeMediaFilesCommon(
+      List<String> filePaths, {
+      int? maxSampleSize,
+    }) async {
     int totalFiles = 0;
     int totalSize = 0;
     int largeFiles = 0; // >100MB
@@ -268,12 +270,14 @@ class BackupMediaProcessor {
 
     const largeFileThreshold = 100 * 1024 * 1024; // 100MB
     const hugeFileThreshold = 1024 * 1024 * 1024; // 1GB
-    const maxSampleSize = 100; // 最多检查100个文件来快速估算
 
     try {
-      final sampleFiles = filePaths.take(maxSampleSize).toList();
+      // 确定要分析的文件列表
+      final filesToAnalyze = maxSampleSize != null
+          ? filePaths.take(maxSampleSize).toList()
+          : filePaths;
 
-      for (final filePath in sampleFiles) {
+      for (final filePath in filesToAnalyze) {
         try {
           final file = File(filePath);
           if (await file.exists()) {
@@ -296,8 +300,8 @@ class BackupMediaProcessor {
         }
       }
 
-      // 如果采样数量少于总数，按比例估算
-      if (totalFiles > 0 && filePaths.length > maxSampleSize) {
+      // 如果是采样模式且采样数量少于总数，按比例估算
+      if (maxSampleSize != null && totalFiles > 0 && filePaths.length > maxSampleSize) {
         final scaleFactor = filePaths.length / totalFiles;
         totalSize = (totalSize * scaleFactor).round();
         largeFiles = (largeFiles * scaleFactor).round();
@@ -305,7 +309,7 @@ class BackupMediaProcessor {
       }
 
       return {
-        'totalFiles': filePaths.length,
+        'totalFiles': maxSampleSize != null ? filePaths.length : totalFiles,
         'totalSize': totalSize,
         'totalSizeMB': (totalSize / 1024 / 1024).toStringAsFixed(1),
         'largeFiles': largeFiles,
@@ -316,7 +320,7 @@ class BackupMediaProcessor {
     } catch (e) {
       logDebug('分析媒体文件失败: $e');
       return {
-        'totalFiles': filePaths.length,
+        'totalFiles': maxSampleSize != null ? filePaths.length : 0,
         'totalSize': 0,
         'totalSizeMB': '0.0',
         'largeFiles': 0,
@@ -325,6 +329,13 @@ class BackupMediaProcessor {
         'sampledFiles': 0,
       };
     }
+  }
+
+  /// 分析媒体文件（快速版本，只检查前100个文件来估算）
+  static Future<Map<String, dynamic>> _analyzeMediaFiles(
+      List<String> filePaths) async {
+    const maxSampleSize = 100; // 最多检查100个文件来快速估算
+    return await _analyzeMediaFilesCommon(filePaths, maxSampleSize: maxSampleSize);
   }
 
   /// 根据文件统计计算最优批次大小
@@ -352,47 +363,11 @@ class BackupMediaProcessor {
   /// 获取媒体文件统计信息（完整版本）
   static Future<Map<String, dynamic>> getMediaFilesStats(
       List<String> filePaths) async {
-    int totalFiles = 0;
-    int totalSize = 0;
-    int largeFiles = 0; // >100MB
-    int hugeFiles = 0; // >1GB
-    final Map<String, int> typeCount = {};
-
-    const largeFileThreshold = 100 * 1024 * 1024; // 100MB
-    const hugeFileThreshold = 1024 * 1024 * 1024; // 1GB
-
     try {
-      for (final filePath in filePaths) {
-        try {
-          final file = File(filePath);
-          if (await file.exists()) {
-            final size = await file.length();
-            totalSize += size;
-            totalFiles++;
-
-            if (size > hugeFileThreshold) {
-              hugeFiles++;
-            } else if (size > largeFileThreshold) {
-              largeFiles++;
-            }
-
-            // 统计文件类型
-            final extension = path.extension(filePath).toLowerCase();
-            typeCount[extension] = (typeCount[extension] ?? 0) + 1;
-          }
-        } catch (e) {
-          // 忽略单个文件的错误
-        }
-      }
-
-      return {
-        'totalFiles': totalFiles,
-        'totalSize': totalSize,
-        'totalSizeMB': (totalSize / 1024 / 1024).toStringAsFixed(1),
-        'largeFiles': largeFiles,
-        'hugeFiles': hugeFiles,
-        'typeCount': typeCount,
-      };
+      final result = await _analyzeMediaFilesCommon(filePaths);
+      // 移除 sampledFiles 字段，因为完整版本不需要这个字段
+      result.remove('sampledFiles');
+      return result;
     } catch (e) {
       logDebug('获取媒体文件统计失败: $e');
       return {
