@@ -1,9 +1,10 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/mmkv_service.dart
+import 'dart:async';
 import 'dart:convert';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 import '../utils/app_logger.dart';
 
-/// MMKV存储服务，替代SharedPreferences以提高性能和可靠性
+/// 修复：MMKV存储服务，增加并发控制和错误恢复
 class MMKVService {
   static final MMKVService _instance = MMKVService._internal();
 
@@ -11,46 +12,82 @@ class MMKVService {
 
   SafeMMKV? _storage; // 使用我们的安全包装类
   bool _isInitialized = false;
+  bool _isInitializing = false;
+  Completer<void>? _initCompleter;
 
   MMKVService._internal();
 
-  /// 初始化MMKV存储
+  /// 修复：初始化MMKV存储，增加并发控制
   Future<void> init() async {
     if (_isInitialized) return;
+
+    // 防止并发初始化
+    if (_isInitializing) {
+      await _initCompleter?.future;
+      return;
+    }
+
+    _isInitializing = true;
+    _initCompleter = Completer<void>();
 
     try {
       _storage = SafeMMKV(); // 使用安全包装类
       await _storage!.initialize(); // 初始化存储
       logDebug('MMKV已初始化，使用安全包装');
       _isInitialized = true;
+      _isInitializing = false;
+      _initCompleter!.complete();
     } catch (e) {
+      _isInitializing = false;
+      _initCompleter!.completeError(e);
       logDebug('初始化MMKV失败: $e');
       rethrow;
     }
   }
 
-  /// 确保MMKV已初始化
-  void _ensureInitialized() {
+  /// 修复：确保MMKV已初始化，支持自动初始化
+  Future<void> _ensureInitialized() async {
     if (!_isInitialized) {
-      throw StateError('MMKV尚未初始化，请先调用init()方法');
+      await init();
     }
   }
 
-  /// 存储字符串值
+  /// 修复：带重试机制的操作执行器
+  Future<T> _executeWithRetry<T>(
+    Future<T> Function() operation, {
+    int maxRetries = 3,
+    Duration delay = const Duration(milliseconds: 100),
+  }) async {
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (e) {
+        if (attempt == maxRetries - 1) {
+          logDebug('MMKV操作失败，已重试$maxRetries次: $e');
+          rethrow;
+        }
+        logDebug('MMKV操作失败，第${attempt + 1}次重试: $e');
+        await Future.delayed(delay * (attempt + 1));
+      }
+    }
+    throw Exception('操作重试失败');
+  }
+
+  /// 修复：存储字符串值，增加重试机制
   Future<bool> setString(String key, String value) async {
-    _ensureInitialized();
-    try {
+    await _ensureInitialized();
+    return _executeWithRetry(() async {
       return await _storage!.setString(key, value);
-    } catch (e) {
-      logDebug('MMKV保存字符串失败: $e');
-      return false;
-    }
+    });
   }
 
-  /// 获取字符串值
+  /// 修复：获取字符串值，增加错误恢复
   String? getString(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized) {
+        logDebug('MMKV未初始化，无法获取字符串值');
+        return null;
+      }
       return _storage!.getString(key);
     } catch (e) {
       logDebug('MMKV获取字符串失败: $e');

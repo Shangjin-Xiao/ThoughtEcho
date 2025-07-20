@@ -2,6 +2,7 @@
 // 这个文件提供了一个安全的 MMKV 包装，避免直接使用 FFI 接口
 // 主要目的是解决 MMKV 在某些设备上的兼容性问题，特别是32位ARM设备
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
@@ -32,11 +33,16 @@ class SafeMMKV {
     // 如果已经初始化，则直接返回，避免重复初始化
     if (_initialized) return;
 
-    // 简单的锁机制，避免并发初始化
+    /// 修复：改进的锁机制，避免并发初始化和死锁
     if (_initializing) {
-      // 如果已经有其他线程在初始化，等待它完成
-      while (_initializing && !_initialized) {
+      // 如果已经有其他线程在初始化，等待它完成，最多等待10秒
+      int waitCount = 0;
+      while (_initializing && !_initialized && waitCount < 200) {
         await Future.delayed(const Duration(milliseconds: 50));
+        waitCount++;
+      }
+      if (_initializing && !_initialized) {
+        throw TimeoutException('SafeMMKV初始化超时', const Duration(seconds: 10));
       }
       return;
     }
