@@ -5,7 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
-import '../services/media_file_service.dart';
+import '../services/temporary_media_service.dart';
 import '../utils/stream_file_selector.dart';
 import '../services/large_file_manager.dart' as lfm;
 import '../utils/app_logger.dart';
@@ -276,20 +276,20 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
               () async {
         switch (widget.mediaType) {
           case 'image':
-            return await MediaFileService.saveImage(
+            return await TemporaryMediaService.saveImageToTemporary(
               filePath,
               onProgress: _updateProgress,
               cancelToken: _cancelToken,
             );
           case 'video':
-            return await MediaFileService.saveVideo(
+            return await TemporaryMediaService.saveVideoToTemporary(
               filePath,
               onProgress: _updateProgress,
               onStatusUpdate: _updateStatus,
               cancelToken: _cancelToken,
             );
           case 'audio':
-            return await MediaFileService.saveAudio(
+            return await TemporaryMediaService.saveAudioToTemporary(
               filePath,
               onProgress: _updateProgress,
               cancelToken: _cancelToken,
@@ -370,9 +370,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
               () async {
         switch (widget.mediaType) {
           case 'image':
-            return await MediaFileService.saveImage(file!.path);
+            return await TemporaryMediaService.saveImageToTemporary(file!.path);
           case 'video':
-            return await MediaFileService.saveVideo(file!.path);
+            return await TemporaryMediaService.saveVideoToTemporary(file!.path);
           default:
             throw Exception('不支持的媒体类型');
         }
@@ -650,14 +650,14 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         String? savedPath;
         switch (widget.mediaType) {
           case 'image':
-            savedPath = await MediaFileService.saveImage(
+            savedPath = await TemporaryMediaService.saveImageToTemporary(
               tempFile.path,
               onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
               cancelToken: _cancelToken,
             );
             break;
           case 'video':
-            savedPath = await MediaFileService.saveVideo(
+            savedPath = await TemporaryMediaService.saveVideoToTemporary(
               tempFile.path,
               onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
               onStatusUpdate: _updateStatus,
@@ -665,7 +665,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
             );
             break;
           case 'audio':
-            savedPath = await MediaFileService.saveAudio(
+            savedPath = await TemporaryMediaService.saveAudioToTemporary(
               tempFile.path,
               onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
               cancelToken: _cancelToken,

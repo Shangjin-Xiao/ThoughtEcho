@@ -16,6 +16,7 @@ import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/app_logger.dart';
 import 'large_file_manager.dart';
+import 'media_reference_service.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
@@ -311,7 +312,7 @@ class DatabaseService extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 12, // 版本号升级至12，以支持quote_tags关联表
+      version: 13, // 版本号升级至13，以支持媒体文件引用管理
       onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -367,6 +368,9 @@ class DatabaseService extends ChangeNotifier {
         await db.execute(
           'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
         );
+
+        // 创建媒体文件引用表
+        await MediaReferenceService.initializeTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         logDebug('开始数据库升级: $oldVersion -> $newVersion');
@@ -514,6 +518,16 @@ class DatabaseService extends ChangeNotifier {
           );
 
           await _upgradeToVersion12Safely(db);
+        }
+
+        // 如果数据库版本低于 13，创建媒体文件引用表
+        if (oldVersion < 13) {
+          logDebug(
+            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建媒体文件引用表',
+          );
+
+          await MediaReferenceService.initializeTable(db);
+          logDebug('数据库升级：媒体文件引用表创建完成');
         }
       },
     );
@@ -1697,6 +1711,9 @@ class DatabaseService extends ChangeNotifier {
 
       logDebug('笔记已成功保存到数据库，ID: ${quote.id}');
 
+      // 同步媒体文件引用
+      await MediaReferenceService.syncQuoteMediaReferences(quote);
+
       // 优化：数据变更后清空缓存
       _clearAllCache();
 
@@ -2020,6 +2037,22 @@ class DatabaseService extends ChangeNotifier {
     return maps.map((m) => Quote.fromJson(m)).toList();
   }
 
+  /// 获取所有笔记（用于媒体引用迁移）
+  Future<List<Quote>> getAllQuotes() async {
+    if (kIsWeb) {
+      return List.from(_memoryStore);
+    }
+
+    try {
+      final db = database;
+      final List<Map<String, dynamic>> maps = await db.query('quotes');
+      return maps.map((m) => Quote.fromJson(m)).toList();
+    } catch (e) {
+      logDebug('获取所有笔记失败: $e');
+      return [];
+    }
+  }
+
   /// 获取笔记总数，用于分页
   Future<int> getQuotesCount({
     List<String>? tagIds,
@@ -2165,12 +2198,36 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
     final db = database;
+
+    // 先获取笔记引用的媒体文件列表
+    final referencedFiles = await MediaReferenceService.getReferencedFiles(id);
+
     await db.transaction((txn) async {
       // 由于设置了 ON DELETE CASCADE，quote_tags 表中的相关条目会自动删除
       // 但为了明确起见，我们也可以手动删除
       // await txn.delete('quote_tags', where: 'quote_id = ?', whereArgs: [id]);
       await txn.delete('quotes', where: 'id = ?', whereArgs: [id]);
     });
+
+    // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
+    await MediaReferenceService.removeAllReferencesForQuote(id);
+
+    // 检查并清理孤儿媒体文件
+    for (final filePath in referencedFiles) {
+      final refCount = await MediaReferenceService.getReferenceCount(filePath);
+      if (refCount == 0) {
+        try {
+          final file = File(filePath);
+          if (await file.exists()) {
+            await file.delete();
+            logDebug('已清理孤儿媒体文件: $filePath');
+          }
+        } catch (e) {
+          logDebug('清理孤儿媒体文件失败: $filePath, 错误: $e');
+        }
+      }
+    }
+
     // 直接从内存中移除并通知
     _currentQuotes.removeWhere((quote) => quote.id == id);
     if (_quotesController != null && !_quotesController!.isClosed) {
@@ -2250,6 +2307,9 @@ class DatabaseService extends ChangeNotifier {
       });
 
       logDebug('笔记已成功更新，ID: ${quote.id}');
+
+      // 同步媒体文件引用
+      await MediaReferenceService.syncQuoteMediaReferences(quote);
 
       // 更新内存中的笔记列表
       final index = _currentQuotes.indexWhere((q) => q.id == quote.id);

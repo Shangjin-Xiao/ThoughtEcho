@@ -422,7 +422,7 @@ class _ActionButton extends StatelessWidget {
 }
 
 /// 卡片预览对话框
-class CardPreviewDialog extends StatelessWidget {
+class CardPreviewDialog extends StatefulWidget {
   final GeneratedCard card;
   final VoidCallback? onShare;
   final VoidCallback? onSave;
@@ -435,45 +435,127 @@ class CardPreviewDialog extends StatelessWidget {
   });
 
   @override
+  State<CardPreviewDialog> createState() => _CardPreviewDialogState();
+}
+
+class _CardPreviewDialogState extends State<CardPreviewDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutBack,
+    ));
+    
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+    
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 关闭按钮
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
-              ),
-            ),
-            // 卡片内容
-            Flexible(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Opacity(
+              opacity: _opacityAnimation.value,
               child: Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: GeneratedCardWidget(
-                    card: card,
-                    onShare: onShare,
-                    onSave: onSave,
-                    width: 350,
-                    height: 500,
-                  ),
+                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 关闭按钮
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                          tooltip: '关闭',
+                        ),
+                      ),
+                    ),
+                    // 卡片内容
+                    Flexible(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 标题
+                              Text(
+                                '精选卡片',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // 卡片
+                              GeneratedCardWidget(
+                                card: widget.card,
+                                onShare: widget.onShare,
+                                onSave: widget.onSave,
+                                width: 300,
+                                height: 400,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

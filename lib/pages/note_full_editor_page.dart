@@ -23,6 +23,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
+import '../services/temporary_media_service.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -432,6 +433,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final db = Provider.of<DatabaseService>(context, listen: false);
 
     logDebug('开始保存笔记内容...');
+
+    // 处理临时媒体文件，将其移动到永久目录
+    await _processTemporaryMediaFiles();
 
     // 获取纯文本内容
     String plainTextContent = '';
@@ -1967,8 +1971,132 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
   }
 
+  /// 处理临时媒体文件，将其移动到永久目录
+  Future<void> _processTemporaryMediaFiles() async {
+    try {
+      logDebug('开始处理临时媒体文件...');
+
+      // 获取当前文档的Delta内容
+      final deltaData = _controller.document.toDelta().toJson();
+
+      // 遍历Delta内容，查找临时媒体文件
+      for (final op in deltaData) {
+        if (op.containsKey('insert')) {
+          final insert = op['insert'];
+          if (insert is Map) {
+            // 处理图片
+            if (insert.containsKey('image')) {
+              final imagePath = insert['image'] as String?;
+              if (imagePath != null && await TemporaryMediaService.isTemporaryFile(imagePath)) {
+                final permanentPath = await TemporaryMediaService.moveToPermament(imagePath);
+                if (permanentPath != null) {
+                  insert['image'] = permanentPath;
+                  logDebug('临时图片已移动: $imagePath -> $permanentPath');
+                }
+              }
+            }
+
+            // 处理视频
+            if (insert.containsKey('video')) {
+              final videoPath = insert['video'] as String?;
+              if (videoPath != null && await TemporaryMediaService.isTemporaryFile(videoPath)) {
+                final permanentPath = await TemporaryMediaService.moveToPermament(videoPath);
+                if (permanentPath != null) {
+                  insert['video'] = permanentPath;
+                  logDebug('临时视频已移动: $videoPath -> $permanentPath');
+                }
+              }
+            }
+
+            // 处理自定义嵌入（如音频）
+            if (insert.containsKey('custom')) {
+              final custom = insert['custom'];
+              if (custom is Map && custom.containsKey('audio')) {
+                final audioPath = custom['audio'] as String?;
+                if (audioPath != null && await TemporaryMediaService.isTemporaryFile(audioPath)) {
+                  final permanentPath = await TemporaryMediaService.moveToPermament(audioPath);
+                  if (permanentPath != null) {
+                    custom['audio'] = permanentPath;
+                    logDebug('临时音频已移动: $audioPath -> $permanentPath');
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 更新编辑器内容
+      final newDocument = quill.Document.fromJson(deltaData);
+      _controller.document = newDocument;
+
+      logDebug('临时媒体文件处理完成');
+    } catch (e) {
+      logDebug('处理临时媒体文件失败: $e');
+    }
+  }
+
+  /// 清理临时文件
+  Future<void> _cleanupTemporaryFiles() async {
+    try {
+      logDebug('开始清理临时文件...');
+
+      // 获取当前文档的Delta内容
+      final deltaData = _controller.document.toDelta().toJson();
+
+      // 收集所有临时文件路径
+      final tempFiles = <String>[];
+
+      for (final op in deltaData) {
+        if (op.containsKey('insert')) {
+          final insert = op['insert'];
+          if (insert is Map) {
+            // 检查图片
+            if (insert.containsKey('image')) {
+              final imagePath = insert['image'] as String?;
+              if (imagePath != null && await TemporaryMediaService.isTemporaryFile(imagePath)) {
+                tempFiles.add(imagePath);
+              }
+            }
+
+            // 检查视频
+            if (insert.containsKey('video')) {
+              final videoPath = insert['video'] as String?;
+              if (videoPath != null && await TemporaryMediaService.isTemporaryFile(videoPath)) {
+                tempFiles.add(videoPath);
+              }
+            }
+
+            // 检查音频
+            if (insert.containsKey('custom')) {
+              final custom = insert['custom'];
+              if (custom is Map && custom.containsKey('audio')) {
+                final audioPath = custom['audio'] as String?;
+                if (audioPath != null && await TemporaryMediaService.isTemporaryFile(audioPath)) {
+                  tempFiles.add(audioPath);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 清理临时文件
+      for (final tempFile in tempFiles) {
+        await TemporaryMediaService.cleanupTemporaryFile(tempFile);
+      }
+
+      logDebug('临时文件清理完成，共清理 ${tempFiles.length} 个文件');
+    } catch (e) {
+      logDebug('清理临时文件失败: $e');
+    }
+  }
+
   @override
   void dispose() {
+    // 异步清理未保存的临时文件
+    _cleanupTemporaryFiles();
+
     // 释放QuillController
     _controller.dispose();
 

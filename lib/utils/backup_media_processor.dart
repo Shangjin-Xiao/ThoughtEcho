@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:async';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import '../services/large_file_manager.dart';
-import '../services/media_file_service.dart';
+import '../services/large_file_manager.dart' as lfm;
+import '../services/media_reference_service.dart';
 import 'app_logger.dart';
 
 /// 备份媒体处理器
@@ -21,7 +21,7 @@ class BackupMediaProcessor {
     required bool includeMediaFiles,
     Function(int current, int total)? onProgress,
     Function(String status)? onStatusUpdate,
-    CancelToken? cancelToken,
+    lfm.CancelToken? cancelToken,
   }) async {
     final filesToZip = <String, String>{};
 
@@ -33,17 +33,18 @@ class BackupMediaProcessor {
       logDebug('开始智能收集媒体文件...');
       onStatusUpdate?.call('正在扫描媒体文件...');
 
-      // 使用优化后的媒体文件收集
-      final mediaFiles = await MediaFileService.getAllMediaFilePaths(
-        onProgress: (current, total) {
-          // 文件收集进度占总进度的30%
-          if (total > 0) {
-            final collectProgress = (current / total * 30).round();
-            onProgress?.call(collectProgress, 100);
-          }
-        },
-        cancelToken: cancelToken,
-      );
+      // 使用媒体引用服务获取被引用的媒体文件
+      final referencedFiles = await _getReferencedMediaFiles();
+
+      // 如果没有被引用的媒体文件，直接返回
+      if (referencedFiles.isEmpty) {
+        logDebug('没有发现被引用的媒体文件');
+        onStatusUpdate?.call('没有发现被引用的媒体文件');
+        onProgress?.call(100, 100);
+        return filesToZip;
+      }
+
+      final mediaFiles = referencedFiles;
 
       if (mediaFiles.isEmpty) {
         logDebug('没有发现媒体文件');
@@ -72,7 +73,7 @@ class BackupMediaProcessor {
 
       // 根据文件大小调整处理策略
       final batchSize = _calculateOptimalBatchSize(fileStats);
-      int processedFiles = 0;
+      double processedFiles = 0;
       final totalFiles = mediaFiles.length;
 
       onStatusUpdate?.call('正在处理媒体文件 (0/$totalFiles)...');
@@ -116,7 +117,7 @@ class BackupMediaProcessor {
       onProgress?.call(100, 100);
       return filesToZip;
     } catch (e) {
-      if (e is CancelledException) {
+      if (e is lfm.CancelledException) {
         logDebug('媒体文件收集已取消');
         onStatusUpdate?.call('媒体文件收集已取消');
         rethrow;
@@ -133,7 +134,7 @@ class BackupMediaProcessor {
   static Future<Map<String, String>> _processBatchFiles(
     List<String> filePaths,
     String appDirPath,
-    CancelToken? cancelToken,
+    lfm.CancelToken? cancelToken,
   ) async {
     final results = <String, String>{};
 
@@ -216,7 +217,7 @@ class BackupMediaProcessor {
   static Future<void> _checkMemoryPressure() async {
     try {
       // 触发垃圾回收建议
-      await LargeFileManager.emergencyMemoryCleanup();
+      await lfm.LargeFileManager.emergencyMemoryCleanup();
     } catch (e) {
       logDebug('内存压力检查失败: $e');
     }
@@ -403,5 +404,58 @@ class BackupMediaProcessor {
         'typeCount': <String, int>{},
       };
     }
+  }
+
+  /// 获取所有被引用的媒体文件路径
+  static Future<List<String>> _getReferencedMediaFiles() async {
+    try {
+      logDebug('开始获取被引用的媒体文件...');
+
+      // 获取媒体引用统计信息
+      final stats = await MediaReferenceService.getMediaReferenceStats();
+      logDebug('媒体引用统计: $stats');
+
+      // 获取所有媒体文件
+      final allMediaFiles = await _getAllMediaFiles();
+      final referencedFiles = <String>[];
+
+      // 检查每个文件的引用计数
+      for (final filePath in allMediaFiles) {
+        final refCount = await MediaReferenceService.getReferenceCount(filePath);
+        if (refCount > 0) {
+          referencedFiles.add(filePath);
+        }
+      }
+
+      logDebug('找到 ${referencedFiles.length} 个被引用的媒体文件');
+      return referencedFiles;
+    } catch (e) {
+      logDebug('获取被引用媒体文件失败: $e');
+      return [];
+    }
+  }
+
+  /// 获取所有媒体文件路径
+  static Future<List<String>> _getAllMediaFiles() async {
+    final mediaFiles = <String>[];
+
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final mediaDir = Directory(path.join(appDir.path, 'media'));
+
+      if (!await mediaDir.exists()) {
+        return mediaFiles;
+      }
+
+      await for (final entity in mediaDir.list(recursive: true)) {
+        if (entity is File) {
+          mediaFiles.add(entity.path);
+        }
+      }
+    } catch (e) {
+      logDebug('获取所有媒体文件失败: $e');
+    }
+
+    return mediaFiles;
   }
 }
