@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -33,6 +34,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   List<GeneratedCard> _featuredCards = [];
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;
+  int? _selectedCardIndex;
 
   // 服务
   AICardGenerationService? _aiCardService;
@@ -41,7 +43,17 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _loadPeriodData();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      // 切换tab时清除选中状态
+      setState(() {
+        _selectedCardIndex = null;
+      });
+    }
   }
 
   @override
@@ -58,6 +70,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -410,6 +423,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 _selectedPeriod = selection.first;
                 // 切换时间范围时，重置生成的内容
                 _featuredCards = [];
+                _selectedCardIndex = null;
               });
               _loadPeriodData();
             },
@@ -436,6 +450,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _selectedDate = picked;
         // 切换日期时，重置生成的内容
         _featuredCards = [];
+        _selectedCardIndex = null;
       });
       _loadPeriodData();
     }
@@ -777,13 +792,34 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                           ),
                     ),
                     if (_featuredCards.isNotEmpty)
-                      Text(
-                        '共 ${_featuredCards.length} 张卡片',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                      Row(
+                        children: [
+                          Text(
+                            '共 ${_featuredCards.length} 张卡片',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                          if (_selectedCardIndex != null) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '已选中第${_selectedCardIndex! + 1}张',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
                             ),
+                          ],
+                        ],
                       ),
                   ],
                 ),
@@ -916,13 +952,45 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       itemCount: _featuredCards.length,
       itemBuilder: (context, index) {
         final card = _featuredCards[index];
+        final isSelected = _selectedCardIndex == index;
+        
         return AnimatedContainer(
           duration: Duration(milliseconds: 200 + (index * 50)),
           curve: Curves.easeOutCubic,
-          child: GeneratedCardWidget(
-            card: card,
-            showActions: false,
-            onTap: () => _showCardDetail(card),
+          child: Hero(
+            tag: 'card_${card.id}_$index',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _showCardDetail(card),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected 
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          )
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected 
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                            : Colors.black.withValues(alpha: 0.1),
+                        blurRadius: isSelected ? 12 : 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: GeneratedCardWidget(
+                    card: card,
+                    showActions: false,
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -931,14 +999,30 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 显示卡片详情
   void _showCardDetail(GeneratedCard card) {
+    // 添加触觉反馈
+    HapticFeedback.lightImpact();
+    
+    // 设置选中状态
+    final cardIndex = _featuredCards.indexOf(card);
+    setState(() {
+      _selectedCardIndex = cardIndex;
+    });
+    
     showDialog(
       context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       builder: (context) => CardPreviewDialog(
         card: card,
         onShare: () => _shareCard(card),
         onSave: () => _saveCard(card),
       ),
-    );
+    ).then((_) {
+      // 对话框关闭后清除选中状态
+      setState(() {
+        _selectedCardIndex = null;
+      });
+    });
   }
 
   /// 分享卡片

@@ -27,6 +27,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
 import 'theme/app_theme.dart';
@@ -389,6 +390,15 @@ Future<void> main() async {
                 );
                 _isEmergencyMode = true;
               }
+            }
+
+            // 初始化媒体清理服务
+            try {
+              await MediaCleanupService.initialize();
+              logInfo('媒体清理服务初始化完成', source: 'BackgroundInit');
+            } catch (e) {
+              logError('媒体清理服务初始化失败: $e', error: e, source: 'BackgroundInit');
+              // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
 
             // 初始化完成，更新状态
