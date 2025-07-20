@@ -2,7 +2,19 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'image_cache_service.dart';
-import '../utils/app_logger.dart';
+
+/// 日志记录函数
+void logError(String message, {Object? error, String? source}) {
+  if (kDebugMode) {
+    final timestamp = DateTime.now().toString();
+    print('时间: $timestamp');
+    print('级别: ERROR');
+    if (source != null) print('来源: $source');
+    print('消息: $message');
+    if (error != null) print('错误: $error');
+    print('---');
+  }
+}
 
 /// SVG到图片转换服务
 class SvgToImageService {
@@ -366,33 +378,114 @@ class SvgToImageService {
 
   /// 绘制文本内容
   static void _drawTextContent(Canvas canvas, String svgContent, int width, int height) {
-    // 解析并绘制文本
-    final textRegex = RegExp(r'<text[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*[^>]*>([^<]*)</text>');
+    // 更精确的文本元素解析
+    final textRegex = RegExp(r'<text[^>]*>([^<]*)</text>', multiLine: true, dotAll: true);
     final textMatches = textRegex.allMatches(svgContent);
 
     for (final match in textMatches) {
       try {
-        final x = double.parse(match.group(1) ?? '0');
-        final y = double.parse(match.group(2) ?? '0');
-        final text = match.group(3) ?? '';
+        final fullTextElement = match.group(0) ?? '';
+        final textContent = match.group(1) ?? '';
+
+        if (textContent.trim().isEmpty) continue;
+
+        // 解析文本属性
+        final attributes = _parseTextAttributes(fullTextElement);
+
+        final textStyle = TextStyle(
+          color: attributes['fill'] != null ? _parseColor(attributes['fill']!) : Colors.black,
+          fontSize: attributes['font-size'] != null ? _parseFontSize(attributes['font-size']!) : 14.0,
+          fontWeight: attributes['font-weight'] != null ? _parseFontWeight(attributes['font-weight']!) : FontWeight.normal,
+          fontStyle: attributes['font-style'] == 'italic' ? FontStyle.italic : FontStyle.normal,
+        );
 
         final textPainter = TextPainter(
           text: TextSpan(
-            text: text,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 14,
-            ),
+            text: textContent.trim(),
+            style: textStyle,
           ),
           textDirection: ui.TextDirection.ltr,
+          textAlign: attributes['text-anchor'] == 'middle' ? TextAlign.center :
+                    attributes['text-anchor'] == 'end' ? TextAlign.right : TextAlign.left,
         );
 
         textPainter.layout();
-        // 修复：SVG的y坐标是基线位置，直接使用y坐标而非减去高度
+
+        // 计算绘制位置
+        double x = attributes['x'] != null ? double.tryParse(attributes['x']!) ?? 0 : 0;
+        double y = attributes['y'] != null ? double.tryParse(attributes['y']!) ?? 0 : 0;
+
+        // 处理text-anchor对齐
+        if (attributes['text-anchor'] == 'middle') {
+          x -= textPainter.width / 2;
+        } else if (attributes['text-anchor'] == 'end') {
+          x -= textPainter.width;
+        }
+
+        // SVG的y坐标是基线位置，需要调整到顶部
+        y -= textPainter.height * 0.8; // 近似基线调整
+
         textPainter.paint(canvas, Offset(x, y));
       } catch (e) {
-        logError('解析文本元素失败: $e', error: e, source: 'SvgToImageService');
+        if (kDebugMode) {
+          print('解析文本元素失败: $e');
+        }
       }
+    }
+  }
+
+  /// 解析文本属性
+  static Map<String, String> _parseTextAttributes(String textElement) {
+    final attributes = <String, String>{};
+
+    // 解析各种属性
+    final attributePatterns = {
+      'x': RegExp(r'x="([^"]*)"'),
+      'y': RegExp(r'y="([^"]*)"'),
+      'fill': RegExp(r'fill="([^"]*)"'),
+      'font-size': RegExp(r'font-size="([^"]*)"'),
+      'font-weight': RegExp(r'font-weight="([^"]*)"'),
+      'font-style': RegExp(r'font-style="([^"]*)"'),
+      'text-anchor': RegExp(r'text-anchor="([^"]*)"'),
+      'font-family': RegExp(r'font-family="([^"]*)"'),
+    };
+
+    for (final entry in attributePatterns.entries) {
+      final match = entry.value.firstMatch(textElement);
+      if (match != null) {
+        attributes[entry.key] = match.group(1) ?? '';
+      }
+    }
+
+    return attributes;
+  }
+
+  /// 解析字体大小
+  static double _parseFontSize(String fontSizeStr) {
+    try {
+      // 移除单位（px, pt, em等）
+      final numericPart = fontSizeStr.replaceAll(RegExp(r'[^0-9.]'), '');
+      return double.tryParse(numericPart) ?? 14.0;
+    } catch (e) {
+      return 14.0;
+    }
+  }
+
+  /// 解析字体粗细
+  static FontWeight _parseFontWeight(String fontWeightStr) {
+    switch (fontWeightStr.toLowerCase()) {
+      case 'bold':
+      case '700':
+      case '800':
+      case '900':
+        return FontWeight.bold;
+      case '500':
+      case '600':
+        return FontWeight.w600;
+      case 'normal':
+      case '400':
+      default:
+        return FontWeight.normal;
     }
   }
 
