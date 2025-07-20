@@ -378,14 +378,13 @@ class SvgToImageService {
 
   /// 绘制文本内容
   static void _drawTextContent(Canvas canvas, String svgContent, int width, int height) {
-    // 更精确的文本元素解析
-    final textRegex = RegExp(r'<text[^>]*>([^<]*)</text>', multiLine: true, dotAll: true);
-    final textMatches = textRegex.allMatches(svgContent);
+    // 使用更强大的文本元素解析，支持嵌套标签
+    final textElements = _extractTextElements(svgContent);
 
-    for (final match in textMatches) {
+    for (final textElement in textElements) {
       try {
-        final fullTextElement = match.group(0) ?? '';
-        final textContent = match.group(1) ?? '';
+        final fullTextElement = textElement['element'] as String;
+        final textContent = textElement['content'] as String;
 
         if (textContent.trim().isEmpty) continue;
 
@@ -434,6 +433,60 @@ class SvgToImageService {
     }
   }
 
+  /// 提取文本元素，支持嵌套标签如<tspan>
+  static List<Map<String, String>> _extractTextElements(String svgContent) {
+    final textElements = <Map<String, String>>[];
+
+    // 使用更强大的正则表达式来匹配text元素，包括嵌套内容
+    final textRegex = RegExp(r'<text[^>]*>(.*?)</text>', multiLine: true, dotAll: true);
+    final textMatches = textRegex.allMatches(svgContent);
+
+    for (final match in textMatches) {
+      final fullElement = match.group(0) ?? '';
+      final innerContent = match.group(1) ?? '';
+
+      // 提取所有文本内容，包括嵌套的tspan等标签
+      final textContent = _extractAllTextContent(innerContent);
+
+      if (textContent.trim().isNotEmpty) {
+        textElements.add({
+          'element': fullElement,
+          'content': textContent,
+        });
+      }
+    }
+
+    return textElements;
+  }
+
+  /// 提取所有文本内容，包括嵌套标签内的文本
+  static String _extractAllTextContent(String content) {
+    // 移除所有HTML/XML标签，保留文本内容
+    String textContent = content;
+
+    // 处理常见的XML实体
+    final entities = {
+      '&lt;': '<',
+      '&gt;': '>',
+      '&amp;': '&',
+      '&quot;': '"',
+      '&apos;': "'",
+      '&#39;': "'",
+    };
+
+    for (final entry in entities.entries) {
+      textContent = textContent.replaceAll(entry.key, entry.value);
+    }
+
+    // 移除所有标签，保留文本内容
+    textContent = textContent.replaceAll(RegExp(r'<[^>]*>'), '');
+
+    // 清理多余的空白字符
+    textContent = textContent.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    return textContent;
+  }
+
   /// 解析文本属性
   static Map<String, String> _parseTextAttributes(String textElement) {
     final attributes = <String, String>{};
@@ -460,12 +513,45 @@ class SvgToImageService {
     return attributes;
   }
 
-  /// 解析字体大小
+  /// 解析字体大小，支持不同单位
   static double _parseFontSize(String fontSizeStr) {
     try {
-      // 移除单位（px, pt, em等）
-      final numericPart = fontSizeStr.replaceAll(RegExp(r'[^0-9.]'), '');
-      return double.tryParse(numericPart) ?? 14.0;
+      final trimmed = fontSizeStr.trim().toLowerCase();
+
+      // 处理纯数字（默认为px）
+      final numericMatch = RegExp(r'^(\d+(?:\.\d+)?)$').firstMatch(trimmed);
+      if (numericMatch != null) {
+        return double.tryParse(numericMatch.group(1)!) ?? 14.0;
+      }
+
+      // 处理带单位的值
+      final unitMatch = RegExp(r'^(\d+(?:\.\d+)?)(px|pt|em|rem|%)?$').firstMatch(trimmed);
+      if (unitMatch != null) {
+        final value = double.tryParse(unitMatch.group(1)!) ?? 14.0;
+        final unit = unitMatch.group(2) ?? 'px';
+
+        switch (unit) {
+          case 'px':
+            return value;
+          case 'pt':
+            // 1pt = 1.333px (approximately)
+            return value * 1.333;
+          case 'em':
+            // 1em = 16px (default browser font size)
+            return value * 16.0;
+          case 'rem':
+            // 1rem = 16px (root em, same as em for our purposes)
+            return value * 16.0;
+          case '%':
+            // 100% = 16px (default), so 1% = 0.16px
+            return value * 0.16;
+          default:
+            return value;
+        }
+      }
+
+      // 如果无法解析，返回默认值
+      return 14.0;
     } catch (e) {
       return 14.0;
     }
