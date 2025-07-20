@@ -83,8 +83,10 @@ Stream<String> streamAnalyzeContent(String content) {
 新增`AICardGenerationService`支持AI生成可视化卡片：
 - **智能风格选择**: AI根据内容自动选择合适的卡片风格
 - **SVG生成**: 使用AI生成可缩放的SVG格式卡片
-- **批量处理**: 支持为多条笔记批量生成特色卡片
-- **图片导出**: 支持将SVG卡片转换为图片保存到相册
+- **批量处理**: 支持为多条笔记批量生成特色卡片，包含进度回调和错误处理
+- **图片导出**: 支持将SVG卡片转换为图片保存到相册，包含权限检查和文件名冲突处理
+- **错误恢复**: 完善的异常处理和降级方案，AI生成失败时自动使用预设模板
+- **性能优化**: SVG转图片支持缓存机制，避免重复转换相同内容
 
 ## 核心开发模式
 
@@ -180,10 +182,14 @@ class Quote {
 ### 网络适配
 `AINetworkManager`统一管理所有AI请求，支持多provider故障转移
 
-### 大文件处理工具
-- **LargeFileManager**: 流式JSON编解码，内存安全的大文件操作
-- **StreamFileProcessor**: 可中断的分块文件处理
-- **IntelligentMemoryManager**: 智能内存管理和优化策略
+### SVG到图片转换服务
+- **SvgToImageService**: 流式SVG解析和Canvas渲染，支持复杂SVG元素
+- **智能缓存**: 自动缓存转换结果，避免重复计算
+- **错误处理**: 完善的错误日志记录和回退机制
+- **属性支持**: 支持fill-opacity、rx/ry圆角等SVG高级属性
+- **渐变解析**: 动态解析SVG中的linearGradient定义
+- **文本渲染**: 正确处理SVG文本基线位置
+- **性能优化**: 输入参数验证，防止过大尺寸导致内存问题
 
 ## 开发注意事项
 

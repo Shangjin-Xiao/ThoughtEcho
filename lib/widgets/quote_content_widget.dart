@@ -21,6 +21,34 @@ class QuoteContent extends StatelessWidget {
     this.showFullContent = false,
   });
 
+  /// 判断富文本内容是否需要折叠
+  bool _needsExpansionForRichText(String deltaContent) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        int lineCount = 0;
+        int totalLength = 0;
+        for (var op in decoded) {
+          if (op is Map && op['insert'] != null) {
+            final String insert = op['insert'].toString();
+            // 每个\n算一行，且最后一段如果不是\n结尾也算一行
+            final lines = insert.split('\n');
+            lineCount += lines.length - 1;
+            if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
+            totalLength += insert.length;
+          }
+        }
+        // 超过3行或内容长度超过150字符时需要折叠
+        return lineCount > 3 || totalLength > 150;
+      }
+    } catch (_) {
+      // 富文本解析失败，回退到纯文本判断
+      final int lineCount = 1 + '\n'.allMatches(quote.content).length;
+      return lineCount > 3 || quote.content.length > 150;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     // 如果有富文本内容且来源是全屏编辑器，使用QuillEditor显示富文本
@@ -56,8 +84,9 @@ class QuoteContent extends StatelessWidget {
           ),
         );
 
-        // 如果需要限制行数（折叠状态），使用ConstrainedBox包装
-        if (!showFullContent && maxLines != null) {
+        // 只有当内容确实需要折叠且处于折叠状态时，才应用高度限制
+        final bool needsExpansion = _needsExpansionForRichText(quote.deltaContent!);
+        if (!showFullContent && maxLines != null && needsExpansion) {
           // 计算最大高度（每行大约24像素，根据实际字体大小调整）
           final estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
@@ -66,35 +95,7 @@ class QuoteContent extends StatelessWidget {
           return ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: ClipRect(
-              child: Stack(
-                children: [
-                  richTextEditor,
-                  // 如果是折叠状态，在底部添加渐变遮罩
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: estimatedLineHeight,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Theme.of(
-                              context,
-                            ).colorScheme.surface.withValues(alpha: 0.0),
-                            Theme.of(
-                              context,
-                            ).colorScheme.surface.withValues(alpha: 0.8),
-                            Theme.of(context).colorScheme.surface,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: richTextEditor,
             ),
           );
         }
@@ -114,11 +115,15 @@ class QuoteContent extends StatelessWidget {
     }
 
     // 使用普通文本显示
+    // 判断普通文本是否需要折叠
+    final int lineCount = 1 + '\n'.allMatches(quote.content).length;
+    final bool needsExpansion = lineCount > 3 || quote.content.length > 150;
+    
     return Text(
       quote.content,
       style: style,
-      maxLines: showFullContent ? null : maxLines,
-      overflow: showFullContent ? TextOverflow.visible : TextOverflow.ellipsis,
+      maxLines: showFullContent ? null : (needsExpansion ? maxLines : null),
+      overflow: showFullContent ? TextOverflow.visible : (needsExpansion ? TextOverflow.ellipsis : TextOverflow.visible),
     );
   }
 }

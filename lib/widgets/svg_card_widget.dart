@@ -26,25 +26,9 @@ class SVGCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 在debug模式下打印SVG内容用于调试
-    if (kDebugMode) {
-      print('SVG渲染 - 内容长度: ${svgContent.length}');
-      print(
-        'SVG渲染 - 前100字符: ${svgContent.length > 100 ? svgContent.substring(0, 100) : svgContent}',
-      );
-
-      // 检查SVG内容的关键元素
-      final hasViewBox = svgContent.contains('viewBox');
-      final hasXmlns = svgContent.contains('xmlns');
-      final hasForeignObject = svgContent.contains('foreignObject');
-      final hasEmoji = RegExp(
-        r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]',
-        unicode: true,
-      ).hasMatch(svgContent);
-
-      print(
-        'SVG检查 - viewBox: $hasViewBox, xmlns: $hasXmlns, foreignObject: $hasForeignObject, emoji: $hasEmoji',
-      );
+    // 只在debug模式且SVG内容有问题时才打印详细信息
+    if (kDebugMode && svgContent.length < 100) {
+      print('SVG渲染 - 内容可能过短: ${svgContent.length}字符');
     }
 
     return GestureDetector(

@@ -102,17 +102,20 @@ class StreamingBackupProcessor {
     // 解压ZIP
     final archive = ZipDecoder().decodeBytes(bytes);
 
-    // 查找数据文件
+    // 查找数据文件 - 修复：使用正确的文件名
     ArchiveFile? dataFile;
+    logDebug('ZIP文件包含的文件列表:');
     for (final file in archive) {
-      if (file.name == 'data.json') {
+      logDebug('  - ${file.name} (${file.size} bytes)');
+      if (file.name == 'backup_data.json' || file.name == 'data.json') {
         dataFile = file;
+        logDebug('找到数据文件: ${file.name}');
         break;
       }
     }
 
     if (dataFile == null) {
-      throw Exception('备份文件中未找到数据文件');
+      throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
     }
 
     onStatusUpdate?.call('正在解析备份数据...');
@@ -168,27 +171,35 @@ class StreamingBackupProcessor {
 
   /// 检查备份文件类型
   static Future<String> detectBackupType(String filePath) async {
+    logDebug('检测备份文件类型: $filePath');
     final file = File(filePath);
     if (!await file.exists()) {
       throw Exception('文件不存在: $filePath');
     }
 
     final extension = filePath.toLowerCase().split('.').last;
+    logDebug('文件扩展名: $extension');
     if (extension == 'zip') {
+      logDebug('根据扩展名识别为ZIP文件');
       return 'zip';
     } else if (extension == 'json') {
+      logDebug('根据扩展名识别为JSON文件');
       return 'json';
     } else {
       // 尝试读取文件头判断
+      logDebug('扩展名未知，尝试读取文件头判断...');
       final bytes = await file.openRead(0, 4).first;
       if (bytes.length >= 4) {
+        logDebug('文件头字节: ${bytes.map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' ')}');
         // ZIP文件魔数: PK (0x504B)
         if (bytes[0] == 0x50 && bytes[1] == 0x4B) {
+          logDebug('根据文件头识别为ZIP文件');
           return 'zip';
         }
         // JSON文件通常以 { 或 [ 开始
         final firstChar = String.fromCharCode(bytes[0]);
         if (firstChar == '{' || firstChar == '[') {
+          logDebug('根据文件头识别为JSON文件');
           return 'json';
         }
       }
@@ -200,18 +211,25 @@ class StreamingBackupProcessor {
   /// 验证备份文件完整性
   static Future<bool> validateBackupFile(String filePath) async {
     try {
+      logDebug('开始验证备份文件: $filePath');
       final type = await detectBackupType(filePath);
+      logDebug('检测到备份文件类型: $type');
 
       if (type == 'json') {
         // 验证JSON文件
+        logDebug('验证JSON备份文件...');
         await parseJsonBackupStreaming(filePath);
+        logDebug('JSON备份文件验证成功');
         return true;
       } else if (type == 'zip') {
         // 验证ZIP文件
+        logDebug('验证ZIP备份文件...');
         await processZipBackupStreaming(filePath);
+        logDebug('ZIP备份文件验证成功');
         return true;
       }
 
+      logDebug('不支持的备份文件类型: $type');
       return false;
     } catch (e) {
       logDebug('备份文件验证失败: $e');

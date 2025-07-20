@@ -30,7 +30,7 @@ class _InsightsPageState extends State<InsightsPage> {
   bool _showAnalysisSelection = true; // 控制显示分析选择还是结果
   final TextEditingController _customPromptController = TextEditingController();
   bool _showCustomPrompt = false;
-  late AIAnalysisDatabaseService _aiAnalysisDatabaseService;
+  AIAnalysisDatabaseService? _aiAnalysisDatabaseService;
   String _accumulatedInsightsText =
       ''; // Added state variable for accumulated insights text
   StreamSubscription<String>?
@@ -96,7 +96,13 @@ class _InsightsPageState extends State<InsightsPage> {
   @override
   void initState() {
     super.initState();
-    // 从Provider获取AIAnalysisDatabaseService实例，确保正确初始化
+    // 延迟初始化AIAnalysisDatabaseService，避免在initState中使用context
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在didChangeDependencies中安全地获取AIAnalysisDatabaseService实例
     _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
       context,
       listen: false,
@@ -112,9 +118,27 @@ class _InsightsPageState extends State<InsightsPage> {
 
   /// 将当前分析结果保存为AI分析记录
   Future<void> _saveAnalysis(String content) async {
-    if (content.isEmpty) return;
+    if (content.isEmpty) {
+      logDebug('保存分析失败：内容为空');
+      return;
+    }
 
     try {
+      logDebug('开始保存AI分析，内容长度: ${content.length}');
+
+      // 确保AIAnalysisDatabaseService已初始化
+      if (_aiAnalysisDatabaseService == null) {
+        logDebug('AIAnalysisDatabaseService未初始化，尝试重新获取');
+        _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
+          context,
+          listen: false,
+        );
+      }
+
+      // 获取笔记数量
+      final quoteCount = await context.read<DatabaseService>().getQuotesCount();
+      logDebug('当前笔记数量: $quoteCount');
+
       // 创建一个新的AI分析对象
       final analysis = AIAnalysis(
         title: _getAnalysisTitle(), // 使用当前选择的分析类型作为标题
@@ -123,11 +147,17 @@ class _InsightsPageState extends State<InsightsPage> {
         analysisStyle: _selectedAnalysisStyle,
         customPrompt: _showCustomPrompt ? _customPromptController.text : null,
         createdAt: DateTime.now().toIso8601String(),
-        quoteCount: await context.read<DatabaseService>().getQuotesCount(),
+        quoteCount: quoteCount,
       );
 
+      logDebug('创建AI分析对象: ${analysis.title}, 类型: ${analysis.analysisType}');
+
       // 保存到数据库
-      await _aiAnalysisDatabaseService.saveAnalysis(analysis);
+      if (_aiAnalysisDatabaseService == null) {
+        throw Exception('AI分析数据库服务未初始化');
+      }
+      final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(analysis);
+      logDebug('AI分析保存成功，ID: ${savedAnalysis.id}');
 
       if (!mounted) return;
 
@@ -149,13 +179,21 @@ class _InsightsPageState extends State<InsightsPage> {
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logDebug('保存AI分析失败: $e');
+      logDebug('堆栈跟踪: $stackTrace');
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('保存分析失败: $e'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: '重试',
+            textColor: Colors.white,
+            onPressed: () => _saveAnalysis(content),
+          ),
         ),
       );
     }
