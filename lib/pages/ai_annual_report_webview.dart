@@ -513,7 +513,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         if (contentToWrite.length < 8000) { // 限制Data URI长度避免问题
           final encodedHtml = Uri.encodeComponent(contentToWrite);
           final dataUri = Uri.parse('data:text/html;charset=utf-8,$encodedHtml');
-          
+
           if (await canLaunchUrl(dataUri)) {
             await launchUrl(dataUri, mode: LaunchMode.externalApplication);
 
@@ -538,7 +538,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         // Data URI失败，继续尝试其他方法
       }
 
-      // 方法2：尝试使用分享功能，让用户选择浏览器打开
+      // 方法2：尝试文件URL方式（优先用于桌面端和支持的移动端）
       try {
         final tempDir = await getTemporaryDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -548,45 +548,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 
         await htmlFile.writeAsString(contentToWrite);
 
-        // 使用分享功能，用户可以选择浏览器打开
-        await SharePlus.instance.share(
-          ShareParams(
-            text: '心迹${widget.year}年度报告 - 在浏览器中打开查看完整内容',
-            files: [XFile(htmlFile.path)],
-          ),
-        );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.share, color: Colors.white),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('请选择浏览器打开HTML文件查看完整报告')),
-                ],
-              ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-        return; // 成功分享，直接返回
-      } catch (shareError) {
-        // 分享失败，继续尝试其他方法
-      }
-
-      // 方法3：尝试文件URL方式（主要为桌面端）
-      try {
-        final tempDir = await getTemporaryDirectory();
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final htmlFile = File(
-          '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
-        );
-
-        await htmlFile.writeAsString(contentToWrite);
-
-        // 在桌面端或某些设备上可能可以直接打开文件URL
+        // 尝试直接打开文件URL
         final uri = Uri.file(htmlFile.path);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -608,7 +570,17 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           return; // 成功打开，直接返回
         }
       } catch (urlError) {
-        // URL方式也失败
+        // URL方式失败，继续尝试其他方法
+      }
+
+      // 方法3：移动端专用 - 尝试使用HTTP服务器方式
+      if (Platform.isAndroid || Platform.isIOS) {
+        try {
+          await _openInBrowserViaTempServer(contentToWrite);
+          return;
+        } catch (serverError) {
+          // 服务器方式失败，继续尝试其他方法
+        }
       }
 
       // 方法4：最后的备用方案 - 复制内容到剪贴板并提供指导
@@ -634,6 +606,159 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         });
       }
     }
+  }
+
+  /// 移动端专用：通过临时HTTP服务器在浏览器中打开HTML内容
+  Future<void> _openInBrowserViaTempServer(String htmlContent) async {
+    try {
+      // 创建临时文件
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final htmlFile = File(
+        '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
+      );
+
+      await htmlFile.writeAsString(htmlContent);
+
+      // 尝试使用不同的LaunchMode来打开文件
+      final uri = Uri.file(htmlFile.path);
+
+      // 首先尝试platformDefault模式
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.platformDefault);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('报告已在浏览器中打开'),
+                  ],
+                ),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            );
+          }
+          return;
+        }
+      } catch (e) {
+        // platformDefault失败，尝试其他方式
+      }
+
+      // 如果直接打开失败，显示用户指导
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.info, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('无法直接打开浏览器，请使用分享功能选择浏览器打开')),
+              ],
+            ),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: '分享',
+              textColor: Colors.white,
+              onPressed: () => _shareReportFile(htmlFile.path),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      throw Exception('临时服务器方式失败: $e');
+    }
+  }
+
+  /// 分享报告文件
+  Future<void> _shareReportFile(String filePath) async {
+    try {
+      // 使用系统分享功能，让用户选择浏览器打开
+      if (Platform.isAndroid) {
+        // Android: 尝试使用Intent直接打开HTML文件
+        final uri = Uri.parse('file://$filePath');
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          // 如果无法直接打开，提示用户手动操作
+          _showManualOpenInstructions(filePath);
+        }
+      } else if (Platform.isIOS) {
+        // iOS: 提示用户手动操作
+        _showManualOpenInstructions(filePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('分享失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 显示手动打开指导
+  void _showManualOpenInstructions(String filePath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('在浏览器中打开'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('报告文件已保存，请按以下步骤在浏览器中打开：'),
+            const SizedBox(height: 16),
+            const Text('1. 打开手机的文件管理器'),
+            const Text('2. 导航到以下路径：'),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: SelectableText(
+                filePath,
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+              ),
+            ),
+            const Text('3. 点击HTML文件'),
+            const Text('4. 选择浏览器打开'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('知道了'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // 复制文件路径到剪贴板
+              Clipboard.setData(ClipboardData(text: filePath));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('文件路径已复制到剪贴板')),
+              );
+            },
+            child: const Text('复制路径'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showCopyInstructions() {
@@ -698,8 +823,75 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         _isLoading = true;
       });
 
-      // 复制HTML内容到剪贴板
-      await Clipboard.setData(ClipboardData(text: widget.htmlContent));
+      // 创建临时HTML文件用于分享
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final htmlFile = File(
+        '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
+      );
+
+      // 准备HTML内容
+      String contentToShare = widget.htmlContent;
+      if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
+          !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
+        contentToShare = '''
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心迹 ${widget.year} 年度报告</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>心迹 ${widget.year} 年度报告</h1>
+            <p>生成时间: ${DateTime.now().toString().substring(0, 19)}</p>
+        </div>
+        <div class="content">${widget.htmlContent}</div>
+    </div>
+</body>
+</html>
+''';
+      }
+
+      await htmlFile.writeAsString(contentToShare);
+
+      // 使用系统分享功能
+      await SharePlus.instance.share(
+        ShareParams(
+          text: '心迹${widget.year}年度报告',
+          subject: '心迹${widget.year}年度报告',
+          files: [XFile(htmlFile.path)],
+        ),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -708,11 +900,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Text('报告内容已复制到剪贴板'),
+                Text('报告已分享'),
               ],
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
