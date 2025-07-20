@@ -41,19 +41,60 @@ class LargeFileManager {
       logDebug('开始流式JSON编码到文件: ${outputFile.path}');
       await outputFile.parent.create(recursive: true);
 
-      // 使用Isolate进行编码，避免阻塞主线程
-      final jsonString = await compute(_encodeJsonInIsolate, data);
+      onProgress?.call(0, 100);
 
-      // 流式写入文件
+      // 估算数据大小来决定处理策略
+      final estimatedSize = _estimateJsonSize(data);
+      logDebug('估算JSON大小: ${(estimatedSize / 1024 / 1024).toStringAsFixed(1)}MB');
+
+      String jsonString;
+      
+      if (estimatedSize > 50 * 1024 * 1024) { // 50MB以上使用Isolate
+        logDebug('使用Isolate进行大JSON编码');
+        onProgress?.call(10, 100);
+        
+        // 使用Isolate进行编码，避免阻塞主线程
+        jsonString = await compute(_encodeJsonInIsolate, data);
+        onProgress?.call(70, 100);
+      } else {
+        logDebug('使用主线程进行小JSON编码');
+        onProgress?.call(10, 100);
+        
+        // 小数据直接编码，但分批处理以避免阻塞
+        jsonString = jsonEncode(data);
+        onProgress?.call(70, 100);
+      }
+
+      // 流式写入文件，分块写入避免内存峰值
       final sink = outputFile.openWrite();
       try {
-        sink.write(jsonString);
+        const chunkSize = 64 * 1024; // 64KB chunks
+        final totalLength = jsonString.length;
+        
+        for (int i = 0; i < totalLength; i += chunkSize) {
+          final end = (i + chunkSize < totalLength) ? i + chunkSize : totalLength;
+          final chunk = jsonString.substring(i, end);
+          sink.write(chunk);
+          
+          // 定期刷新和更新进度
+          if (i % (chunkSize * 10) == 0) {
+            await sink.flush();
+            final progress = 70 + ((i / totalLength) * 25).round();
+            onProgress?.call(progress, 100);
+            
+            // 让UI有机会更新
+            await Future.delayed(const Duration(milliseconds: 1));
+          }
+        }
+        
         await sink.flush();
+        onProgress?.call(95, 100);
         logDebug('流式JSON编码完成');
       } finally {
         await sink.close();
       }
-      onProgress?.call(1, 1);
+      
+      onProgress?.call(100, 100);
     } catch (e, s) {
       AppLogger.e(
         '流式JSON编码失败',
@@ -111,7 +152,9 @@ class LargeFileManager {
         chunks.add(chunk);
       }
 
-      final content = String.fromCharCodes(chunks.expand((chunk) => chunk));
+      // 修复：使用UTF-8解码避免中文乱码
+      final allBytes = chunks.expand((chunk) => chunk).toList();
+      final content = utf8.decode(allBytes);
       return jsonDecode(content) as Map<String, dynamic>;
     } else {
       // 小文件直接读取

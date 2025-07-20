@@ -360,26 +360,6 @@ class CardTemplates {
     return lines.take(8).toList(); // 最多8行
   }
 
-  /// 生成多行文本的SVG元素（传统版本）
-  static String _generateTextLines(
-    List<String> lines,
-    double centerX,
-    double startY,
-    double fontSize,
-    String color,
-  ) {
-    final buffer = StringBuffer();
-
-    for (int i = 0; i < lines.length; i++) {
-      final y = startY + (i * (fontSize + 4));
-      buffer.writeln(
-        '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="Arial, sans-serif" font-size="$fontSize">${lines[i]}</text>',
-      );
-    }
-
-    return buffer.toString();
-  }
-
   /// 生成现代化多行文本的SVG元素
   static String _generateModernTextLines(
     List<String> lines,

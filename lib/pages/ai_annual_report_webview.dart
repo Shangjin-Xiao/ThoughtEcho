@@ -546,10 +546,14 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
         );
 
-        await htmlFile.writeAsString(contentToWrite);        // 使用分享功能，用户可以选择浏览器打开
-        await Share.shareXFiles(
-          [XFile(htmlFile.path)],
-          text: '心迹${widget.year}年度报告 - 在浏览器中打开查看完整内容',
+        await htmlFile.writeAsString(contentToWrite);
+
+        // 使用分享功能，用户可以选择浏览器打开
+        await SharePlus.instance.share(
+          ShareParams(
+            text: '心迹${widget.year}年度报告 - 在浏览器中打开查看完整内容',
+            files: [XFile(htmlFile.path)],
+          ),
         );
 
         if (mounted) {

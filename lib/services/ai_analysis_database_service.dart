@@ -34,6 +34,17 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
   AIAnalysisDatabaseService._internal();
 
+  /// 显式初始化数据库
+  Future<void> init() async {
+    try {
+      await database; // 触发数据库初始化
+      AppLogger.i('AI分析数据库初始化成功', source: 'AIAnalysisDB');
+    } catch (e) {
+      AppLogger.e('AI分析数据库初始化失败: $e', error: e, source: 'AIAnalysisDB');
+      rethrow;
+    }
+  }
+
   /// 初始化数据库
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -117,6 +128,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 保存AI分析结果
   Future<AIAnalysis> saveAnalysis(AIAnalysis analysis) async {
     try {
+      AppLogger.i('开始保存AI分析: ${analysis.title}', source: 'AIAnalysisDB');
+
       final newAnalysis = analysis.copyWith(
         id: analysis.id ?? _uuid.v4(),
         createdAt: analysis.createdAt.isNotEmpty
@@ -124,33 +137,46 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
             : DateTime.now().toIso8601String(),
       );
 
+      AppLogger.i('准备保存的分析ID: ${newAnalysis.id}', source: 'AIAnalysisDB');
+
       if (kIsWeb) {
         // Web平台使用内存存储
+        AppLogger.i('使用Web内存存储', source: 'AIAnalysisDB');
         final existingIndex = _memoryStore.indexWhere(
           (item) => item.id == newAnalysis.id,
         );
         if (existingIndex >= 0) {
           _memoryStore[existingIndex] = newAnalysis;
+          AppLogger.i('更新现有分析记录', source: 'AIAnalysisDB');
         } else {
           _memoryStore.add(newAnalysis);
+          AppLogger.i('添加新分析记录到内存', source: 'AIAnalysisDB');
         }
       } else {
         // 非Web平台使用SQLite
+        AppLogger.i('使用SQLite数据库存储', source: 'AIAnalysisDB');
         final db = await database;
+        AppLogger.i('数据库连接成功', source: 'AIAnalysisDB');
+
+        final jsonData = newAnalysis.toJson();
+        AppLogger.i('转换为JSON: $jsonData', source: 'AIAnalysisDB');
+
         await db.insert(
           'ai_analyses',
-          newAnalysis.toJson(),
+          jsonData,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
+        AppLogger.i('数据库插入成功', source: 'AIAnalysisDB');
       }
 
       // 通知监听器数据已更新
       notifyListeners();
       _notifyAnalysesChanged();
 
+      AppLogger.i('AI分析保存完成: ${newAnalysis.id}', source: 'AIAnalysisDB');
       return newAnalysis;
-    } catch (e) {
-      AppLogger.e('保存AI分析失败: $e', error: e, source: 'AIAnalysisDB');
+    } catch (e, stackTrace) {
+      AppLogger.e('保存AI分析失败: $e', error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
       rethrow;
     }
   }
@@ -158,23 +184,33 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 获取所有AI分析结果
   Future<List<AIAnalysis>> getAllAnalyses() async {
     try {
+      AppLogger.i('开始获取所有AI分析', source: 'AIAnalysisDB');
+
       if (kIsWeb) {
         // Web平台使用内存存储
+        AppLogger.i('从内存存储获取，数量: ${_memoryStore.length}', source: 'AIAnalysisDB');
         return List.from(_memoryStore);
       } else {
         // 非Web平台使用SQLite
         final db = await database;
+        AppLogger.i('数据库连接成功，开始查询', source: 'AIAnalysisDB');
+
         final List<Map<String, dynamic>> maps = await db.query(
           'ai_analyses',
           orderBy: 'created_at DESC',
         );
 
-        return List.generate(maps.length, (i) {
+        AppLogger.i('查询到 ${maps.length} 条记录', source: 'AIAnalysisDB');
+
+        final analyses = List.generate(maps.length, (i) {
           return AIAnalysis.fromJson(maps[i]);
         });
+
+        AppLogger.i('成功转换为 ${analyses.length} 个分析对象', source: 'AIAnalysisDB');
+        return analyses;
       }
-    } catch (e) {
-      AppLogger.e('获取AI分析列表失败: $e', error: e, source: 'AIAnalysisDB');
+    } catch (e, stackTrace) {
+      AppLogger.e('获取AI分析列表失败: $e', error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
       return [];
     }
   }

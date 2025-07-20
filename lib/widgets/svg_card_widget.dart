@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/generated_card.dart';
+import '../utils/app_logger.dart';
 
 /// SVG卡片渲染组件
 class SVGCardWidget extends StatelessWidget {
@@ -28,7 +29,7 @@ class SVGCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // 只在debug模式且SVG内容有问题时才打印详细信息
     if (kDebugMode && svgContent.length < 100) {
-      print('SVG渲染 - 内容可能过短: ${svgContent.length}字符');
+      logDebug('SVG渲染 - 内容可能过短: ${svgContent.length}字符', source: 'SVGCardWidget');
     }
 
     return GestureDetector(

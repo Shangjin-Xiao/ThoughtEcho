@@ -331,7 +331,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
     setState(() {
       _isLoading = true;
+      _progress = 0.0;
+      _progressText = '准备开始备份...';
     });
+
+    // 创建取消令牌
+    _cancelToken = CancelToken();
 
     try {
       final backupService = Provider.of<BackupService>(context, listen: false);
@@ -350,7 +355,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             if (mounted) {
               setState(() {
                 _progress = (current / total * 100).toDouble();
-                _progressText = '正在创建备份... $current/$total';
+                
+                // 根据进度阶段显示不同的状态文本
+                if (current < 15) {
+                  _progressText = '正在收集数据...';
+                } else if (current < 30) {
+                  _progressText = '正在处理笔记数据...';
+                } else if (current < 60) {
+                  _progressText = '正在处理媒体文件...';
+                } else if (current < 95) {
+                  _progressText = '正在创建备份文件...';
+                } else {
+                  _progressText = '正在验证备份文件...';
+                }
               });
             }
           },
@@ -376,7 +393,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             if (mounted) {
               setState(() {
                 _progress = (current / total * 100).toDouble();
-                _progressText = '正在创建备份... $current/$total';
+                
+                // 根据进度阶段显示不同的状态文本
+                if (current < 15) {
+                  _progressText = '正在收集数据...';
+                } else if (current < 30) {
+                  _progressText = '正在处理笔记数据...';
+                } else if (current < 60) {
+                  _progressText = '正在处理媒体文件...';
+                } else if (current < 95) {
+                  _progressText = '正在创建备份文件...';
+                } else {
+                  _progressText = '正在验证备份文件...';
+                }
               });
             }
           },
@@ -414,7 +443,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               if (mounted) {
                 setState(() {
                   _progress = (current / total * 100).toDouble();
-                  _progressText = '正在创建备份... $current/$total';
+                  
+                  // 根据进度阶段显示不同的状态文本
+                  if (current < 15) {
+                    _progressText = '正在收集数据...';
+                  } else if (current < 30) {
+                    _progressText = '正在处理笔记数据...';
+                  } else if (current < 60) {
+                    _progressText = '正在处理媒体文件...';
+                  } else if (current < 95) {
+                    _progressText = '正在创建备份文件...';
+                  } else {
+                    _progressText = '正在验证备份文件...';
+                  }
                 });
               }
             },

@@ -51,7 +51,7 @@
       <td align="center"><b>� 多平台同步</b><br>Windows、Android、iOS、Web</td>
     </tr>
     <tr>
-      <td align="center"><b>�💾 智能备份系统</b><br>ZIP格式完整备份，支持大文件流式处理</td>
+      <td align="center"><b>💾 智能备份系统</b><br>ZIP格式完整备份，支持大文件流式处理和操作取消</td>
       <td align="center"><b>🧠 智能内存管理</b><br>大文件流式处理，防止内存溢出</td>
       <td align="center"><b>📊 AI洞察分析</b><br>智能分析笔记内容与模式</td>
     </tr>

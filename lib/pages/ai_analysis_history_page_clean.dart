@@ -23,7 +23,7 @@ class AIAnalysisHistoryPage extends StatefulWidget {
 }
 
 class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
-  late AIAnalysisDatabaseService _aiAnalysisDatabaseService;
+  AIAnalysisDatabaseService? _aiAnalysisDatabaseService;
   List<AIAnalysis> _analyses = [];
   bool _isLoading = true;
   String _searchQuery = '';
@@ -32,11 +32,21 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
-      context,
-      listen: false,
-    );
-    _loadAnalyses();
+    // 延迟初始化AIAnalysisDatabaseService，避免在initState中使用context
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在didChangeDependencies中安全地获取AIAnalysisDatabaseService实例
+    if (_aiAnalysisDatabaseService == null) {
+      _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
+        context,
+        listen: false,
+      );
+      AppLogger.i('AI分析历史页面：数据库服务已初始化', source: 'AIAnalysisHistory');
+      _loadAnalyses();
+    }
   }
 
   @override
@@ -47,12 +57,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
 
   /// 加载AI分析历史记录
   Future<void> _loadAnalyses() async {
+    if (_aiAnalysisDatabaseService == null) {
+      AppLogger.e('AI分析数据库服务未初始化');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final analyses = await _aiAnalysisDatabaseService.getAllAnalyses();
+      final analyses = await _aiAnalysisDatabaseService!.getAllAnalyses();
       if (mounted) {
         setState(() {
           _analyses = analyses;
@@ -103,8 +118,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     );
 
     if (confirmed == true) {
+      if (_aiAnalysisDatabaseService == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('服务未初始化，删除失败')));
+        }
+        return;
+      }
+
       try {
-        await _aiAnalysisDatabaseService.deleteAnalysis(analysis.id!);
+        await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
         _loadAnalyses();
         if (mounted) {
           ScaffoldMessenger.of(
@@ -143,10 +167,19 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     );
 
     if (confirmed == true) {
+      if (_aiAnalysisDatabaseService == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('服务未初始化，删除失败')));
+        }
+        return;
+      }
+
       try {
         for (final analysis in _analyses) {
           if (analysis.id != null) {
-            await _aiAnalysisDatabaseService.deleteAnalysis(analysis.id!);
+            await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
           }
         }
         _loadAnalyses();
@@ -837,6 +870,11 @@ $positiveQuotesText
       appBar: AppBar(
         title: const Text('AI分析历史'),
         actions: [
+          IconButton(
+            onPressed: _loadAnalyses,
+            icon: const Icon(Icons.refresh),
+            tooltip: '刷新',
+          ),
           IconButton(
             onPressed: _generateAnnualReport,
             icon: const Icon(Icons.analytics),

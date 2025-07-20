@@ -310,6 +310,15 @@ Future<void> main() async {
                   },
                 );
 
+                // 初始化AI分析数据库
+                try {
+                  await aiAnalysisDbService.init();
+                  logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
+                } catch (aiDbError) {
+                  logError('AI分析数据库初始化失败: $aiDbError', error: aiDbError, source: 'BackgroundInit');
+                  // AI分析数据库初始化失败不影响主要功能，继续执行
+                }
+
                 // 标记数据库迁移已完成
                 await settingsService.setDatabaseMigrationComplete(true);
 
@@ -325,6 +334,15 @@ Future<void> main() async {
                 // 在紧急情况下尝试初始化新数据库
                 try {
                   await databaseService.initializeNewDatabase();
+
+                  // 尝试初始化AI分析数据库
+                  try {
+                    await aiAnalysisDbService.init();
+                    logInfo('紧急恢复：AI分析数据库初始化完成', source: 'BackgroundInit');
+                  } catch (aiDbError) {
+                    logError('紧急恢复：AI分析数据库初始化失败: $aiDbError', error: aiDbError, source: 'BackgroundInit');
+                  }
+
                   await settingsService.setDatabaseMigrationComplete(true);
                   logInfo('后台初始化新数据库成功', source: 'BackgroundInit');
                 } catch (newDbError) {
@@ -348,6 +366,15 @@ Future<void> main() async {
             } else {
               // 引导已完成且数据库已迁移，正常初始化
               logInfo('数据库已迁移，执行常规初始化', source: 'BackgroundInit');
+
+              // 初始化AI分析数据库
+              try {
+                await aiAnalysisDbService.init();
+                logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
+              } catch (aiDbError) {
+                logError('AI分析数据库初始化失败: $aiDbError', error: aiDbError, source: 'BackgroundInit');
+                // AI分析数据库初始化失败不影响主要功能，继续执行
+              }
               try {
                 await _initializeDatabaseNormally(
                   databaseService,

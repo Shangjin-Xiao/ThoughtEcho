@@ -3,7 +3,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/media_file_service.dart';
+import 'package:thoughtecho/utils/backup_media_processor.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
@@ -85,24 +85,35 @@ class BackupService {
 
       // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
       logDebug('开始收集结构化数据...');
+      onProgress?.call(5, 100); // 更新进度
+      
+      // 让UI有机会更新
+      await Future.delayed(const Duration(milliseconds: 50));
+      
       final backupData = await _gatherStructuredData(includeMediaFiles);
 
       cancelToken?.throwIfCancelled();
+      onProgress?.call(15, 100); // 更新进度
 
       // 2. 使用流式JSON写入避免大JSON一次性加载到内存
       jsonFile = File(path.join(tempDir.path, _backupDataFile));
       logDebug('开始流式写入JSON数据...');
 
+      // 让UI有机会更新
+      await Future.delayed(const Duration(milliseconds: 50));
+
       await LargeFileManager.encodeJsonToFileStreaming(
         backupData,
         jsonFile,
         onProgress: (current, total) {
-          // JSON写入进度占总进度的20%
-          onProgress?.call((current * 0.2).round(), 100);
+          // JSON写入进度占总进度的15%
+          final jsonProgress = (current * 15).round();
+          onProgress?.call(15 + jsonProgress, 100);
         },
       );
 
       cancelToken?.throwIfCancelled();
+      onProgress?.call(30, 100); // 更新进度
 
       // 3. 准备ZIP文件列表
       final filesToZip = <String, String>{};
@@ -110,46 +121,50 @@ class BackupService {
       // 添加JSON文件
       filesToZip[_backupDataFile] = jsonFile.path;
 
-      // 4. (可选) 收集媒体文件
-      if (includeMediaFiles) {
-        logDebug('开始收集媒体文件...');
-        final mediaFiles = await MediaFileService.getAllMediaFilePaths();
-        final appDir = await getApplicationDocumentsDirectory();
-
-        for (final filePath in mediaFiles) {
-          cancelToken?.throwIfCancelled();
-
-          try {
-            // 检查文件是否可以处理
-            if (await LargeFileManager.canProcessFile(filePath)) {
-              final relativePath = path.relative(filePath, from: appDir.path);
-              filesToZip[relativePath] = filePath;
-            } else {
-              logDebug('跳过无法处理的媒体文件: $filePath');
-            }
-          } catch (e) {
-            logDebug('检查媒体文件失败，跳过: $filePath, 错误: $e');
-          }
-        }
-      }
+      // 4. (可选) 收集媒体文件 - 使用优化的媒体处理器
+      final mediaFilesMap = await BackupMediaProcessor.collectMediaFilesForBackup(
+        includeMediaFiles: includeMediaFiles,
+        onProgress: (current, total) {
+          // 媒体文件收集进度占总进度的25% (35% - 60%)
+          final mediaProgress = (current / 100 * 25).round();
+          onProgress?.call(35 + mediaProgress, 100);
+        },
+        onStatusUpdate: (status) {
+          logDebug('媒体处理状态: $status');
+        },
+        cancelToken: cancelToken,
+      );
+      
+      // 将媒体文件添加到ZIP列表
+      filesToZip.addAll(mediaFilesMap);
+      
+      logDebug('准备备份 ${filesToZip.length} 个文件 (包含 ${mediaFilesMap.length} 个媒体文件)');
 
       cancelToken?.throwIfCancelled();
+      onProgress?.call(60, 100); // 更新进度
 
       // 5. 使用流式ZIP创建
       logDebug('开始创建ZIP文件，包含 ${filesToZip.length} 个文件...');
+
+      // 让UI有机会更新
+      await Future.delayed(const Duration(milliseconds: 50));
 
       await ZipStreamProcessor.createZipStreaming(
         archivePath,
         filesToZip,
         onProgress: (current, total) {
-          // ZIP创建进度占总进度的80%
-          final zipProgress = (current / total * 80).round();
-          onProgress?.call(20 + zipProgress, 100);
+          // ZIP创建进度占总进度的35%
+          final zipProgress = (current / total * 35).round();
+          onProgress?.call(60 + zipProgress, 100);
         },
         cancelToken: cancelToken,
       );
 
+      onProgress?.call(95, 100); // 更新进度
       logDebug('数据导出成功，路径: $archivePath');
+
+      // 让UI有机会更新
+      await Future.delayed(const Duration(milliseconds: 50));
 
       // 验证生成的ZIP文件
       final isValid = await ZipStreamProcessor.validateZipFile(archivePath);
@@ -157,6 +172,7 @@ class BackupService {
         throw Exception('生成的备份文件验证失败');
       }
 
+      onProgress?.call(100, 100); // 完成
       return archivePath;
     } catch (e, s) {
       // 清理可能创建的不完整文件
