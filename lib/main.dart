@@ -30,7 +30,6 @@ import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
-import 'utils/device_compatibility_manager.dart';
 import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
@@ -148,10 +147,6 @@ Future<void> main() async {
         // 初始化轻量级且必须的服务
         final mmkvService = MMKVService();
         await mmkvService.init();
-
-        // 初始化设备兼容性管理器（在其他服务之前）
-        logInfo('初始化设备兼容性管理器...', source: 'Main');
-        await DeviceCompatibilityManager.instance.applyCompatibilitySettings();
 
         // 初始化网络服务
         await NetworkService.instance.init();
