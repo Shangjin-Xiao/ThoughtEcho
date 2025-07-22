@@ -33,13 +33,16 @@ class EditPageState extends State<EditPage> {
   late List<String> _tagIds;
   late String? _colorHex;
   late AiDialogHelper _aiDialogHelper;
-
   // 添加位置和天气相关变量
   bool _includeLocation = false;
   bool _includeWeather = false;
   String? _location;
   String? _weather;
   String? _temperature;
+
+  // 标签搜索控制器
+  final TextEditingController _tagSearchController = TextEditingController();
+  String _tagSearchQuery = '';
 
   @override
   void initState() {
@@ -128,12 +131,12 @@ class EditPageState extends State<EditPage> {
 
     return result;
   }
-
   @override
   void dispose() {
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
+    _tagSearchController.dispose();
     super.dispose();
   }
 
@@ -654,7 +657,6 @@ class EditPageState extends State<EditPage> {
       ),
     );
   }
-
   // 构建标签选择器
   Widget _buildTagSelector() {
     return FutureBuilder<List<NoteCategory>>(
@@ -669,37 +671,62 @@ class EditPageState extends State<EditPage> {
           return const Text('暂无标签，请先在设置中创建标签');
         }
 
-        final tags = snapshot.data!;
+        final allTags = snapshot.data!;
+        // 过滤标签：根据搜索关键词过滤
+        final filteredTags = allTags.where((tag) {
+          return _tagSearchQuery.isEmpty || 
+                 tag.name.toLowerCase().contains(_tagSearchQuery.toLowerCase());
+        }).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('标签:'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: tags.map((tag) {
-                final isSelected = _tagIds.contains(tag.id);
-
-                return FilterChip(
-                  selected: isSelected,
-                  label: Text(tag.name),
-                  avatar: _buildTagIcon(tag),
-                  onSelected: (selected) {
-                    setState(() {
-                      if (selected) {
-                        _tagIds.add(tag.id);
-                      } else {
-                        _tagIds.remove(tag.id);
-                      }
-                    });
-                  },
-                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                  checkmarkColor: Theme.of(context).colorScheme.primary,
-                );
-              }).toList(),
+            // 添加搜索框
+            TextField(
+              controller: _tagSearchController,
+              decoration: const InputDecoration(
+                hintText: '搜索标签...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _tagSearchQuery = value;
+                });
+              },
             ),
+            const SizedBox(height: 12),
+            // 显示搜索结果
+            if (filteredTags.isEmpty && _tagSearchQuery.isNotEmpty)
+              const Text('未找到匹配的标签', style: TextStyle(color: Colors.grey))
+            else
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: filteredTags.map((tag) {
+                  final isSelected = _tagIds.contains(tag.id);
+
+                  return FilterChip(
+                    selected: isSelected,
+                    label: Text(tag.name),
+                    avatar: _buildTagIcon(tag),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _tagIds.add(tag.id);
+                        } else {
+                          _tagIds.remove(tag.id);
+                        }
+                      });
+                    },
+                    selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                    checkmarkColor: Theme.of(context).colorScheme.primary,
+                  );
+                }).toList(),
+              ),
           ],
         );
       },

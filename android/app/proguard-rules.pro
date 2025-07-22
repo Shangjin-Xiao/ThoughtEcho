@@ -80,3 +80,25 @@
 -keep class android.database.sqlite.** { *; }
 -keep class net.sqlcipher.** { *; }  # 如果使用了 SQLCipher，也需要排除
 -keep class com.sqlite.** { *; } # 某些SQLite库的包名
+
+# 32位设备兼容性规则
+-keep class com.shangjin.thoughtecho.MainActivity { *; }
+-keep class com.shangjin.thoughtecho.MemoryInfoPlugin { *; }
+-keep class com.shangjin.thoughtecho.StreamFileSelector { *; }
+
+# 保留JNI相关方法和类，确保32位设备上的native库正常工作
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# 保留Flutter平台通道相关类
+-keep class io.flutter.plugin.common.** { *; }
+-keep class io.flutter.plugin.platform.** { *; }
+
+# MMKV库兼容性
+-keep class com.tencent.mmkv.** { *; }
+-dontwarn com.tencent.mmkv.**
+
+# 32位设备内存优化
+-dontoptimize
+-dontpreverify

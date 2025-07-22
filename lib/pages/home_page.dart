@@ -281,7 +281,6 @@ class _HomePageState extends State<HomePage>
       // 不抛出异常，让调用方继续执行
     }
   }
-
   @override
   void initState() {
     super.initState();
@@ -290,13 +289,8 @@ class _HomePageState extends State<HomePage>
     // 使用传入的初始页面参数
     _currentIndex = widget.initialPage;
 
-    // 初始化时标记为加载中
-    setState(() {
-      _isLoadingTags = true;
-    });
-
-    // 加载标签数据
-    _loadTags();
+    // 预先加载标签数据，确保点击加号按钮时数据已准备好
+    _preloadTags();
 
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
@@ -413,6 +407,26 @@ class _HomePageState extends State<HomePage>
         setState(() {
           _isLoadingTags = false;
         });
+      }    }
+  }
+
+  // 预加载标签数据，确保AddNoteDialog打开时数据已准备好
+  Future<void> _preloadTags() async {
+    setState(() {
+      _isLoadingTags = true;
+    });
+    
+    try {
+      // 使用Future.microtask避免阻塞UI初始化
+      await Future.microtask(() async {
+        await _loadTags();
+      });
+    } catch (e) {
+      logDebug('预加载标签失败: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingTags = false;
+        });
       }
     }
   }
@@ -509,36 +523,52 @@ class _HomePageState extends State<HomePage>
       // 不抛出异常，让调用方继续执行
     }
   }
-
-  // 显示添加笔记对话框
+  // 显示添加笔记对话框（优化性能）
   void _showAddQuoteDialog({
     String? prefilledContent,
     String? prefilledAuthor,
     String? prefilledWork,
     dynamic hitokotoData,
   }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? Colors.white
-          : Theme.of(context).colorScheme.surface,
-      builder: (context) => AddNoteDialog(
-        prefilledContent: prefilledContent,
-        prefilledAuthor: prefilledAuthor,
-        prefilledWork: prefilledWork,
-        hitokotoData: hitokotoData,
-        tags: _tags,
-        onSave: (_) {
-          // 笔记保存后刷新标签列表
-          _loadTags();
-          // 新增：强制刷新NoteListView
-          if (_noteListViewKey.currentState != null) {
-            _noteListViewKey.currentState!.resetAndLoad();
-          }
-        },
-      ),
-    );
+    // 确保标签数据已经加载
+    if (_isLoadingTags) {
+      logDebug('标签仍在加载中，稍后再试');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('正在加载数据，请稍后再试'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    // 使用延迟显示，确保动画流畅
+    Future.microtask(() {
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Theme.of(context).brightness == Brightness.light
+              ? Colors.white
+              : Theme.of(context).colorScheme.surface,
+          builder: (context) => AddNoteDialog(
+            prefilledContent: prefilledContent,
+            prefilledAuthor: prefilledAuthor,
+            prefilledWork: prefilledWork,
+            hitokotoData: hitokotoData,
+            tags: _tags, // 使用预加载的标签数据
+            onSave: (_) {
+              // 笔记保存后刷新标签列表
+              _loadTags();
+              // 新增：强制刷新NoteListView
+              if (_noteListViewKey.currentState != null) {
+                _noteListViewKey.currentState!.resetAndLoad();
+              }
+            },
+          ),
+        );
+      }
+    });
   }
 
   // 显示编辑笔记对话框

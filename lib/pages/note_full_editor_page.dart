@@ -48,10 +48,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   String? _selectedColorHex;
   String? _location;
   String? _weather;
-  String? _temperature;
-  // 分离位置和天气控制
+  String? _temperature;  // 分离位置和天气控制
   bool _showLocation = false;
   bool _showWeather = false;
+
+  // 标签搜索控制器和过滤状态
+  final TextEditingController _tagSearchController = TextEditingController();
+  String _tagSearchQuery = '';
 
   @override
   void initState() {
@@ -1180,9 +1183,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 16,
                                 16,
                               ),
-                              children: [
-                                // 搜索框
+                              children: [                                // 搜索框
                                 TextField(
+                                  controller: _tagSearchController,
                                   decoration: const InputDecoration(
                                     hintText: '搜索标签...',
                                     prefixIcon: Icon(Icons.search),
@@ -1193,57 +1196,77 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     ),
                                   ),
                                   onChanged: (value) {
-                                    // 可以添加标签搜索逻辑
+                                    setState(() {
+                                      _tagSearchQuery = value.toLowerCase();
+                                    });
                                   },
                                 ),
-                                const SizedBox(height: 8),
-                                // 标签列表
+                                const SizedBox(height: 8),                                // 标签列表
                                 Container(
                                   constraints: const BoxConstraints(
                                     maxHeight: 200,
                                   ),
                                   child: SingleChildScrollView(
-                                    child: Wrap(
-                                      spacing: 8.0,
-                                      runSpacing: 8.0,
-                                      children: widget.allTags!.map((tag) {
-                                        final selected =
-                                            _selectedTagIds.contains(tag.id);
-                                        return FilterChip(
-                                          selected: selected,
-                                          label: Text(tag.name),
-                                          avatar: _isEmoji(tag.iconName)
-                                              ? Text(
-                                                  _getDisplayIcon(
-                                                    tag.iconName,
-                                                  ),
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                  ),
-                                                )
-                                              : Icon(
-                                                  _getIconData(
-                                                    tag.iconName,
-                                                  ),
-                                                  size: 16,
-                                                ),
-                                          onSelected: (bool value) {
-                                            setState(() {
-                                              if (value) {
-                                                _selectedTagIds.add(tag.id);
-                                              } else {
-                                                _selectedTagIds.remove(
-                                                  tag.id,
-                                                );
-                                              }
-                                            });
-                                          },
-                                          selectedColor: theme
-                                              .colorScheme.primaryContainer,
-                                          checkmarkColor:
-                                              theme.colorScheme.primary,
+                                    child: Builder(
+                                      builder: (context) {
+                                        // 过滤标签
+                                        final filteredTags = widget.allTags!.where((tag) {
+                                          return _tagSearchQuery.isEmpty || 
+                                                 tag.name.toLowerCase().contains(_tagSearchQuery);
+                                        }).toList();
+
+                                        if (filteredTags.isEmpty) {
+                                          return const Center(
+                                            child: Padding(
+                                              padding: EdgeInsets.all(16.0),
+                                              child: Text('没有找到匹配的标签'),
+                                            ),
+                                          );
+                                        }
+
+                                        return Wrap(
+                                          spacing: 8.0,
+                                          runSpacing: 8.0,
+                                          children: filteredTags.map((tag) {
+                                            final selected =
+                                                _selectedTagIds.contains(tag.id);
+                                            return FilterChip(
+                                              selected: selected,
+                                              label: Text(tag.name),
+                                              avatar: _isEmoji(tag.iconName)
+                                                  ? Text(
+                                                      _getDisplayIcon(
+                                                        tag.iconName,
+                                                      ),
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                      ),
+                                                    )
+                                                  : Icon(
+                                                      _getIconData(
+                                                        tag.iconName,
+                                                      ),
+                                                      size: 16,
+                                                    ),
+                                              onSelected: (bool value) {
+                                                setState(() {
+                                                  if (value) {
+                                                    _selectedTagIds.add(tag.id);
+                                                  } else {
+                                                    _selectedTagIds.remove(
+                                                      tag.id,
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                              selectedColor: theme
+                                                  .colorScheme.primaryContainer,
+                                              checkmarkColor:
+                                                  theme.colorScheme.primary,
+                                            );
+                                          }).toList(),
                                         );
-                                      }).toList(),
+                                      },
                                     ),
                                   ),
                                 ),
@@ -2091,7 +2114,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       logDebug('清理临时文件失败: $e');
     }
   }
-
   @override
   void dispose() {
     // 异步清理未保存的临时文件
@@ -2103,6 +2125,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 释放TextEditingController
     _authorController.dispose();
     _workController.dispose();
+    _tagSearchController.dispose();
 
     super.dispose();
   }
