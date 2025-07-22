@@ -36,12 +36,12 @@ android {
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '1.8'
     }
 
     sourceSets {
@@ -122,31 +122,15 @@ android {
         }
     }
 
-    // 打包优化 - 针对32位设备优化
+    // 打包优化
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libjsc.so'
-        pickFirst '**/libflutter.so'
-        pickFirst '**/libapp.so'
-        
-        // 32位和64位库共存
-        pickFirst '**/arm64-v8a/libc++_shared.so'
-        pickFirst '**/armeabi-v7a/libc++_shared.so'
-        pickFirst '**/x86/libc++_shared.so'
-        pickFirst '**/x86_64/libc++_shared.so'
-        
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/LICENSE.txt'
         exclude 'META-INF/NOTICE'
         exclude 'META-INF/NOTICE.txt'
-        exclude 'META-INF/AL2.0'
-        exclude 'META-INF/LGPL2.1'
-        
-        // 确保原生库正确打包
-        jniLibs {
-            useLegacyPackaging = true
-        }
     }
 }
 
@@ -156,5 +140,5 @@ flutter {
 
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'com.tencent:mmkv:1.3.8' // 更新到最新版本，更好的32位设备支持
+    implementation 'com.tencent:mmkv:1.3.0'
 }

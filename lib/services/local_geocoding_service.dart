@@ -55,10 +55,8 @@ class LocalGeocodingService {
 
       // 获取位置
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(
-          accuracy: accuracy,
-          timeLimit: timeout,
-        ),
+        desiredAccuracy: accuracy,
+        timeLimit: timeout,
       );
 
       logDebug('成功获取位置: ${position.latitude}, ${position.longitude}');

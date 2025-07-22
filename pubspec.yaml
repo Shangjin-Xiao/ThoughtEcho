@@ -26,13 +26,13 @@ dependencies:
   intl: 0.19.0
   url_launcher: ^6.3.2
   file_picker: ^8.1.5 # 更安全的文件选择器，支持 withData: false 参数
-  file_selector: ^1.0.4 # 保留用于桌面端
+  file_selector: ^1.0.3 # 保留用于桌面端
   share_plus: ^11.0.0 # 用于分享文件
   flex_color_scheme: ^8.2.0
-  geolocator: ^14.2.4
-  permission_handler: ^12.0.2
+  geolocator: ^10.0.0
+  permission_handler: ^11.0.0
   flutter_secure_storage: ^9.2.4
-  geocoding: ^4.1.0 # 使用系统提供的地理编码功能
+  geocoding: ^3.0.0 # 使用系统提供的地理编码功能
   geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
   mmkv: ^2.2.2 # 最新版本，我们有回退机制处理32位设备
   ffi: ^2.1.4 # 显式添加FFI依赖，确保与最新的Dart兼容
