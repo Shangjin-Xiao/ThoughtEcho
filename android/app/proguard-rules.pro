@@ -99,6 +99,17 @@
 -keep class com.tencent.mmkv.** { *; }
 -dontwarn com.tencent.mmkv.**
 
+# 加强32位设备兼容性
+-keep class com.shangjin.thoughtecho.ThoughtEchoApplication { *; }
+-keepclassmembers class com.shangjin.thoughtecho.ThoughtEchoApplication {
+    private boolean is64BitDevice();
+}
+
 # 32位设备内存优化
 -dontoptimize
 -dontpreverify
+
+# 确保Flutter Engine在32位设备上正常工作
+-keep class io.flutter.** { *; }
+-keep class io.flutter.embedding.engine.** { *; }
+-keep class io.flutter.embedding.android.** { *; }

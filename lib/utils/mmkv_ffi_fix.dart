@@ -134,8 +134,17 @@ class SafeMMKV {
       String arch = Platform.operatingSystemVersion.toLowerCase();
       if (arch.contains('64')) return 'arm64';
 
-      // 最后使用dart:io的内置属性
-      return Platform.version.toLowerCase();
+      // 使用更可靠的架构检测方法
+      if (Platform.isAndroid) {
+        // 对于Android，尝试检测Dart VM信息
+        final vmInfo = Platform.environment['ANDROID_CPU_ABI'] ?? '';
+        if (vmInfo.isNotEmpty) {
+          return vmInfo.toLowerCase();
+        }
+      }
+      
+      // 回退到默认假设
+      return 'unknown';
     } catch (e) {
       logDebug('获取平台架构失败: $e');
       return ''; // 返回空字符串，让调用者判断为32位设备

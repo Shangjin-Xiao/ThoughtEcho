@@ -25,7 +25,7 @@ jobs:
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.2'
+          flutter-version: '3.29.3'
           channel: 'stable'
           cache: true
       
@@ -74,9 +74,26 @@ jobs:
           echo "gradle.properties内容:"
           cat android/gradle.properties
           
-          # 构建APK，明确指定32位和64位架构
+          # 先构建单独的32位APK以验证兼容性
+          echo "构建32位ARM APK..."
           flutter build apk --release \
-            --target-platform=android-arm,android-arm64 \
+            --target-platform=android-arm \
+            --build-number=${{ github.run_number }} \
+            --build-name=${{ github.event.inputs.version_name }} \
+            --no-shrink \
+            --no-obfuscate \
+            --android-skip-build-dependency-validation
+          
+          # 重命名32位APK
+          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release-arm32.apk
+            echo "32位ARM APK构建成功"
+          fi
+          
+          # 构建通用APK，包含32位和64位架构
+          echo "构建通用APK（包含所有架构）..."
+          flutter build apk --release \
+            --target-platform=android-arm,android-arm64,android-x86,android-x64 \
             --build-number=${{ github.run_number }} \
             --build-name=${{ github.event.inputs.version_name }} \
             --no-shrink \
@@ -87,5 +104,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release-signed
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-release-arm32.apk
           retention-days: 30

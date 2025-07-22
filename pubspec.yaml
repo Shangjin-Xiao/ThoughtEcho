@@ -14,28 +14,28 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.6
   provider: ^6.1.2
-  sqflite: ^2.3.2
-  sqflite_common_ffi: ^2.3.2
-  sqlite3_flutter_libs: ^0.5.18
-  path: ^1.8.3
-  path_provider: ^2.1.2
-  dio: ^5.4.0
-  uuid: ^4.3.3
-  shared_preferences: ^2.5.2
+  sqflite: ^2.4.2
+  sqflite_common_ffi: ^2.3.4
+  sqlite3_flutter_libs: ^0.5.25
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  dio: ^5.8.0
+  uuid: ^4.5.1
+  shared_preferences: ^2.5.3
   flutter_markdown: ^0.7.1
   intl: 0.19.0
-  url_launcher: ^6.2.4
-  file_picker: ^8.1.2 # 更安全的文件选择器，支持 withData: false 参数
-  file_selector: ^1.0.2 # 保留用于桌面端
+  url_launcher: ^6.3.2
+  file_picker: ^8.1.5 # 更安全的文件选择器，支持 withData: false 参数
+  file_selector: ^1.0.4 # 保留用于桌面端
   share_plus: ^11.0.0 # 用于分享文件
   flex_color_scheme: ^8.2.0
-  geolocator: ^14.0.2
-  permission_handler: ^12.0.1
-  flutter_secure_storage: ^9.0.0
-  geocoding: ^4.0.0 # 使用系统提供的地理编码功能
+  geolocator: ^14.2.4
+  permission_handler: ^12.0.2
+  flutter_secure_storage: ^9.2.4
+  geocoding: ^4.1.0 # 使用系统提供的地理编码功能
   geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
-  mmkv: ^2.2.1 # 恢复到2.x版本，我们有回退机制处理32位设备
-  ffi: ^2.1.0 # 显式添加FFI依赖，确保与最新的Dart兼容
+  mmkv: ^2.2.2 # 最新版本，我们有回退机制处理32位设备
+  ffi: ^2.1.4 # 显式添加FFI依赖，确保与最新的Dart兼容
   sqflite_common_ffi_web: ^1.0.0
   flex_color_picker: ^3.4.1
   lottie: ^3.3.1
