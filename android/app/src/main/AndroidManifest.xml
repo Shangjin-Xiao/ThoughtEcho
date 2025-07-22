@@ -2,25 +2,33 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:label="心迹"
-        android:name="${applicationName}"
+        android:name=".ThoughtEchoApplication"
         android:icon="@mipmap/ic_launcher"
         android:largeHeap="true"
         android:hardwareAccelerated="false"
-        android:vmSafeMode="false"
+        android:vmSafeMode="true"
         android:allowBackup="true"
         android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="true"> <!-- 优化内存和性能配置 -->
+        android:usesCleartextTraffic="true"
+        android:extractNativeLibs="true"
+        android:supportsRtl="true"> <!-- 32位设备兼容性和性能优化配置 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:windowSoftInputMode="adjustResize">
-            <!-- 设置为false将在32位设备上使用软件渲染，而不是硬件加速 -->
+            android:windowSoftInputMode="adjustResize"
+            android:hardwareAccelerated="false">
+            <!-- 32位设备兼容性配置 -->
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
+              />
+            <!-- Flutter引擎配置 -->
+            <meta-data
+              android:name="io.flutter.embedding.android.SplashScreenDrawable"
+              android:resource="@drawable/launch_background"
               />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -30,6 +38,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- ARM32 binder64设备特殊配置 -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableSoftwareRendering"
+            android:value="true" />
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
     </application>
     <!-- 网络权限 -->
     <uses-permission android:name="android.permission.INTERNET"/>
