@@ -8,7 +8,7 @@ import '../widgets/app_loading_view.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../models/ai_analysis_model.dart';
 import '../models/quote_model.dart';
-import 'ai_analysis_history_page.dart';
+import 'ai_analysis_history_page_clean.dart';
 import 'ai_settings_page.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
