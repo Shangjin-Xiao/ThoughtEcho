@@ -63,19 +63,11 @@ android {
             'hardwareAccelerated': 'false'
         ]
 
-        // ARM32 binder64特殊配置
-        packagingOptions {
-            jniLibs {
-                useLegacyPackaging = true
-            }
-        }
 
-        // NDK配置 - ARM32 binder64设备特殊支持
+
+        // NDK配置 - 恢复原始配置以避免兼容性问题
         ndk {
-            // 针对ARM32 binder64设备，只保留32位ARM架构
-            abiFilters 'armeabi-v7a'
-            // 确保32位库的正确加载
-            debugSymbolLevel 'SYMBOL_TABLE'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
 
         // 内存和性能优化
@@ -130,20 +122,15 @@ android {
         }
     }
 
-    // 打包优化 - 32位设备兼容性
+    // 打包优化
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libjsc.so'
-        pickFirst '**/libflutter.so'
-        pickFirst '**/libapp.so'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/LICENSE.txt'
         exclude 'META-INF/NOTICE'
         exclude 'META-INF/NOTICE.txt'
-        // 确保32位库的正确打包
-        doNotStrip '*/armeabi-v7a/*.so'
-        doNotStrip '*/x86/*.so'
     }
 }
 

@@ -38,13 +38,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- ARM32 binder64设备特殊配置 -->
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableSoftwareRendering"
-            android:value="true" />
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
+
     </application>
     <!-- 网络权限 -->
     <uses-permission android:name="android.permission.INTERNET"/>
