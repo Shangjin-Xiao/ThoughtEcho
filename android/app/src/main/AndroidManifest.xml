@@ -5,21 +5,20 @@
         android:name=".ThoughtEchoApplication"
         android:icon="@mipmap/ic_launcher"
         android:largeHeap="true"
-        android:hardwareAccelerated="false"
+        android:hardwareAccelerated="true"
         android:vmSafeMode="true"
         android:allowBackup="true"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
         android:extractNativeLibs="true"
-        android:supportsRtl="true"> <!-- 32位设备兼容性和性能优化配置 -->
+        android:supportsRtl="true"> <!-- 保持64位设备性能，动态处理32位设备 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:windowSoftInputMode="adjustResize"
-            android:hardwareAccelerated="false">
+            android:windowSoftInputMode="adjustResize">
             <!-- 32位设备兼容性配置 -->
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
