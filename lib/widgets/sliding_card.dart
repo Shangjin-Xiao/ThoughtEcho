@@ -90,10 +90,25 @@ class _SlidingCardState extends State<SlidingCard>
     });
     _hoverController.reverse();
   }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // 根据屏幕高度动态调整内边距
+    double getResponsivePadding() {
+      if (screenHeight < 550) {
+        return 12.0; // 极小屏设备
+      } else if (screenHeight < 600) {
+        return 16.0; // 小屏设备
+      } else if (screenHeight < 700) {
+        return 20.0; // 中屏设备
+      } else {
+        return 24.0; // 大屏设备
+      }
+    }
+
+    final cardPadding = getResponsivePadding();
 
     return AnimatedBuilder(
       animation: Listenable.merge([_controller, _hoverController]),
@@ -129,20 +144,18 @@ class _SlidingCardState extends State<SlidingCard>
                       details.primaryVelocity! < 0 &&
                       widget.onSlideComplete != null) {
                     widget.onSlideComplete!();
-                  }
-                },
+                  }                },
                 child: Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(cardPadding), // 使用动态padding
                   child: Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                     ),
                     shadowColor: Colors.transparent,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                    child: AnimatedContainer(                      duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOutCubic,
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(cardPadding), // 使用动态padding
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(
