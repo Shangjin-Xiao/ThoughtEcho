@@ -27,8 +27,13 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // 立即显示窗口，不等待Flutter引擎渲染
+  this->Show();
+
+  // 设置回调以确保Flutter引擎准备就绪后进行优化
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+    // Flutter引擎已准备就绪，可以进行进一步优化
+    // 例如：调整窗口属性、启用硬件加速等
   });
 
   // Flutter can complete the first frame before the "show window" callback is

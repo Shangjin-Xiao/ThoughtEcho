@@ -242,14 +242,8 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    logDebug('初始化数据库...');
-
-    try {
-      // 仅在 Windows 平台下使用 FFI，其它平台（如 Android）直接使用 sqflite 默认实现
-      if (Platform.isWindows) {
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-      }
+    logDebug('初始化数据库...');    try {
+      // FFI初始化已在main.dart中统一处理，这里不再重复初始化
       // 获取数据库存储路径，由 main.dart 已设置好路径
       final dbPath = await getDatabasesPath();
       final oldPath = join(dbPath, 'mind_trace.db');
@@ -705,18 +699,12 @@ class DatabaseService extends ChangeNotifier {
 
     logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
   }
-
   // 新增初始化新数据库方法，用于在迁移失败时创建新的数据库
   Future<void> initializeNewDatabase() async {
     if (_isInitialized) return;
 
     try {
-      // 确保数据库目录存在
-      if (Platform.isWindows) {
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-      }
-
+      // FFI初始化已在main.dart中统一处理，这里不再重复初始化
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'thoughtecho.db');
 

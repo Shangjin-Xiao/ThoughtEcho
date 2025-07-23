@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/streaming_backup_processor.dart';
-import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:archive/archive.dart';
@@ -33,7 +32,7 @@ void main() {
 
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试类型检测
       final type = await StreamingBackupProcessor.detectBackupType(zipPath);
@@ -80,7 +79,7 @@ void main() {
 
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
       final isValid =
@@ -117,7 +116,7 @@ void main() {
 
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
       final isValid =
@@ -136,7 +135,7 @@ void main() {
 
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
       final isValid =
@@ -167,7 +166,7 @@ void main() {
 
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
       final isValid =

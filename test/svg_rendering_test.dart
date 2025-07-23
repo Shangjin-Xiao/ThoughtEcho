@@ -128,7 +128,7 @@ void main() {
       expect(stopwatch.elapsedMilliseconds, lessThan(5000));
 
       if (stopwatch.elapsedMilliseconds > 1000) {
-        print('警告: SVG渲染耗时 ${stopwatch.elapsedMilliseconds}ms');
+        // Warning: SVG渲染耗时 ${stopwatch.elapsedMilliseconds}ms
       }
     });
 

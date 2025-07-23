@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
+import 'dart:io';
 import '../services/network_service.dart';
 // import '../utils/dio_network_utils.dart'; // 导入dio网络工具
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
@@ -57,11 +58,18 @@ class LocationService extends ChangeNotifier {
   String? get province => _province;
   String? get city => _city;
   String? get district => _district;
-
   // 初始化位置服务
   Future<void> init() async {
     logDebug('开始初始化位置服务');
     try {
+      // Windows平台简化位置服务初始化
+      if (!kIsWeb && Platform.isWindows) {
+        logDebug('Windows平台：跳过位置服务初始化');
+        _isLocationServiceEnabled = false;
+        _hasLocationPermission = false;
+        notifyListeners();
+        return;
+      }
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
 
       // 只在位置服务启用时检查权限
