@@ -101,20 +101,20 @@ GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   // Windows平台优化：避免错误处理导致的启动卡死
-  BindingBase.debugZoneErrorsAreFatal = Platform.isWindows ? false : true;
+  BindingBase.debugZoneErrorsAreFatal = (!kIsWeb && Platform.isWindows) ? false : true;
 
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
       // Windows平台启动监控 - 最优先启动
-      if (Platform.isWindows) {
+      if (!kIsWeb && Platform.isWindows) {
         await StartupMonitorService.startMonitoring();
         await StartupMonitorService.recordStep('Flutter绑定初始化完成');
       }
 
       // Windows平台启动调试服务 - 异步初始化，不阻塞主流程
-      if (Platform.isWindows) {
+      if (!kIsWeb && Platform.isWindows) {
         // 异步初始化调试服务，不等待完成
         Future.microtask(() async {
           try {
@@ -128,17 +128,15 @@ Future<void> main() async {
             logError('调试服务初始化失败: $e', error: e, source: 'DebugService');
           }
         });
-      }
-
-      // 初始化日志系统
+      }      // 初始化日志系统
       AppLogger.initialize();
 
-      if (Platform.isWindows) {
+      if (!kIsWeb && Platform.isWindows) {
         await StartupMonitorService.recordStep('日志系统初始化完成');
       }// 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
       PlatformDispatcher.instance.onError = (error, stack) {
         // Windows平台使用简化的错误处理，避免复杂操作导致卡死
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           logError(
             '捕获到平台分发器错误: $error',
             error: error,
@@ -152,13 +150,11 @@ Future<void> main() async {
             source: 'PlatformDispatcher',
           );
           logError('堆栈: $stack', source: 'PlatformDispatcher');
-        }
-
-        // 捕获到错误后再记录到日志系统
+        }        // 捕获到错误后再记录到日志系统
         _deferredErrors.add({
           'message': '平台分发器错误',
           'error': error,
-          'stackTrace': Platform.isWindows ? null : stack, // Windows平台不记录堆栈
+          'stackTrace': (!kIsWeb && Platform.isWindows) ? null : stack, // Windows平台不记录堆栈
           'source': 'PlatformDispatcher',
         });
 
@@ -170,7 +166,7 @@ Future<void> main() async {
         }
 
         // 在Windows平台简化错误处理，避免复杂的Provider查找导致卡死
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           logError(
             'Flutter异常: ${details.exceptionAsString()}',
             error: details.exception,
@@ -207,39 +203,39 @@ Future<void> main() async {
         }
       };      try {
         // 先初始化必要的平台特定的数据库配置
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('开始初始化数据库平台');
         }
         await initializeDatabasePlatform();
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('数据库平台初始化完成');
         }
 
         // 初始化轻量级且必须的服务
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('开始初始化MMKV服务');
         }
         final mmkvService = MMKVService();
         await mmkvService.init();
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('MMKV服务初始化完成');
         }
 
         // 初始化网络服务
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('开始初始化网络服务');
         }
         await NetworkService.instance.init();
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('网络服务初始化完成');
         }
 
         // 初始化设置服务
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('开始初始化设置服务');
         }
         final settingsService = await SettingsService.create();
-        if (Platform.isWindows) {
+        if (!kIsWeb && Platform.isWindows) {
           await WindowsStartupDebugService.recordInitStep('设置服务初始化完成');
         }
         // 自动获取应用版本号
@@ -322,7 +318,7 @@ Future<void> main() async {
             ],
             child: Builder(
               builder: (context) {                // Windows平台简化延迟错误处理，避免卡死
-                if (_deferredErrors.isNotEmpty && !Platform.isWindows) {
+                if (_deferredErrors.isNotEmpty && !(!kIsWeb && Platform.isWindows)) {
                   final logService = Provider.of<UnifiedLogService>(
                     context,
                     listen: false,
@@ -346,10 +342,8 @@ Future<void> main() async {
               },
             ),
           ),
-        );
-
-        // Windows平台记录UI显示完成并停止启动监控
-        if (Platform.isWindows) {
+        );        // Windows平台记录UI显示完成并停止启动监控
+        if (!kIsWeb && Platform.isWindows) {
           await StartupMonitorService.recordStep('UI显示完成');
           // 延迟停止监控，确保后台初始化也被记录
           Future.delayed(const Duration(seconds: 5), () async {
@@ -368,7 +362,7 @@ Future<void> main() async {
           }
         });        // 首屏UI显示后，异步初始化其他服务
         // Windows平台减少延迟，优先显示UI
-        final initDelay = Platform.isWindows
+        final initDelay = (!kIsWeb && Platform.isWindows)
             ? const Duration(milliseconds: 100) // 减少Windows延迟
             : TimeoutConstants.uiInitDelayDefault;
         Future.delayed(initDelay, () async {
@@ -376,12 +370,12 @@ Future<void> main() async {
             logInfo('UI已显示，正在后台初始化服务...', source: 'BackgroundInit');
 
             // Windows平台缩短超时时间，避免长时间等待
-            final timeoutDuration = Platform.isWindows
+            final timeoutDuration = (!kIsWeb && Platform.isWindows)
                 ? TimeoutConstants.clipboardInitTimeoutWindows
                 : TimeoutConstants.clipboardInitTimeoutDefault;
 
             // Windows平台异步初始化剪贴板服务，避免阻塞
-            if (Platform.isWindows) {
+            if (!kIsWeb && Platform.isWindows) {
               // 异步初始化，不等待完成
               Future.microtask(() async {
                 try {
