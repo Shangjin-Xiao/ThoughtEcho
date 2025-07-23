@@ -34,7 +34,7 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   geocoding: ^4.0.0 # 使用系统提供的地理编码功能
   geocode: ^1.0.3 # 轻量级地理编码包，可配合系统功能使用
-  mmkv: ^2.2.1 # 恢复到2.x版本，我们有回退机制处理32位设备
+  mmkv: ^1.3.9 # 使用1.3.x版本以支持32位设备
   ffi: ^2.1.0 # 显式添加FFI依赖，确保与最新的Dart兼容
   sqflite_common_ffi_web: ^1.0.0
   flex_color_picker: ^3.4.1
