@@ -388,141 +388,7 @@ class DatabaseService extends ChangeNotifier {
           rethrow;
         }
 
-        // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
-        if (oldVersion < 2) {
-          await db.execute(
-            'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""',
-          );
-        }
-        // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
-        if (oldVersion < 3) {
-          await db.execute('ALTER TABLE categories ADD COLUMN icon_name TEXT');
-        }
-        // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
-        if (oldVersion < 4) {
-          await db.execute(
-            'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""',
-          );
-        }
 
-        // 如果数据库版本低于 5，添加 quotes 表中的 source 字段
-        if (oldVersion < 5) {
-          await db.execute('ALTER TABLE quotes ADD COLUMN source TEXT');
-        }
-
-        // 如果数据库版本低于 6，添加 quotes 表中的 color_hex 字段
-        if (oldVersion < 6) {
-          await db.execute('ALTER TABLE quotes ADD COLUMN color_hex TEXT');
-        }
-
-        // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
-        if (oldVersion < 7) {
-          await db.execute('ALTER TABLE quotes ADD COLUMN source_author TEXT');
-          await db.execute('ALTER TABLE quotes ADD COLUMN source_work TEXT');
-
-          // 将现有的 source 字段数据拆分到新字段中
-          final quotes = await db.query(
-            'quotes',
-            where: 'source IS NOT NULL AND source != ""',
-          );
-          for (final quote in quotes) {
-            final String? source = quote['source'] as String?;
-            if (source != null && source.isNotEmpty) {
-              String? author;
-              String? work;
-
-              // 尝试分析现有source格式，提取author和work
-              if (source.contains('——') && source.contains('「')) {
-                // 格式为"作者——「作品」"
-                final parts = source.split('——');
-                if (parts.length > 1) {
-                  author = parts[0].trim();
-                  final workMatch = RegExp(r'「(.+?)」').firstMatch(parts[1]);
-                  if (workMatch != null) {
-                    work = workMatch.group(1);
-                  }
-                }
-              } else if (source.contains('——')) {
-                // 格式为"作者——作品"
-                final parts = source.split('——');
-                if (parts.length > 1) {
-                  author = parts[0].trim();
-                  work = parts[1].trim();
-                }
-              }
-
-              // 更新数据库条目
-              await db.update(
-                'quotes',
-                {'source_author': author, 'source_work': work},
-                where: 'id = ?',
-                whereArgs: [quote['id']],
-              );
-            }
-          }
-        }
-
-        // 如果数据库版本低于 8，添加位置和天气相关字段
-        if (oldVersion < 8) {
-          logDebug(
-            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段',
-          );
-          await db.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
-          await db.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
-          await db.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
-          logDebug('数据库升级：location, weather, temperature 字段添加完成');
-        }
-
-        // 如果数据库版本低于 9，添加索引以提高查询性能
-        if (oldVersion < 9) {
-          logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
-          await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
-          );
-          await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
-          );
-          await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
-          );
-          logDebug('数据库升级：索引添加完成');
-        }
-
-        // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
-        if (oldVersion < 10) {
-          logDebug(
-            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion���添加 edit_source 字段',
-          );
-          await db.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
-          logDebug('数据库升级：edit_source 字段添加完成');
-        }
-        // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
-        if (oldVersion < 11) {
-          logDebug(
-            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
-          );
-          await db.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
-          logDebug('数据库升级：delta_content 字段添加完成');
-        }
-
-        // 修复：如果数据库版本低于 12，安全地创建 quote_tags 表并迁移数据
-        if (oldVersion < 12) {
-          logDebug(
-            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据',
-          );
-
-          await _upgradeToVersion12Safely(db);
-        }
-
-        // 如果数据库版本低于 13，创建媒体文件引用表
-        if (oldVersion < 13) {
-          logDebug(
-            '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建媒体文件引用表',
-          );
-
-          await MediaReferenceService.initializeTable(db);
-          logDebug('数据库升级：媒体文件引用表创建完成');
-        }
       },
     );
   }
@@ -568,8 +434,148 @@ class DatabaseService extends ChangeNotifier {
     int oldVersion,
     int newVersion,
   ) async {
-    // 这里保持原有的升级逻辑，但在事务中执行
     logDebug('在事务中执行版本升级...');
+
+    // 如果数据库版本低于 2，添加 tag_ids 字段（以前可能不存在，但在本版本中创建表时已包含）
+    if (oldVersion < 2) {
+      await txn.execute(
+        'ALTER TABLE quotes ADD COLUMN tag_ids TEXT DEFAULT ""',
+      );
+    }
+    // 如果数据库版本低于 3，添加 categories 表中的 icon_name 字段（在本版本中创建表时已包含）
+    if (oldVersion < 3) {
+      await txn.execute('ALTER TABLE categories ADD COLUMN icon_name TEXT');
+    }
+    // 如果数据库版本低于 4，添加 quotes 表中的 category_id 字段
+    if (oldVersion < 4) {
+      await txn.execute(
+        'ALTER TABLE quotes ADD COLUMN category_id TEXT DEFAULT ""',
+      );
+    }
+
+    // 如果数据库版本低于 5，添加 quotes 表中的 source 字段
+    if (oldVersion < 5) {
+      await txn.execute('ALTER TABLE quotes ADD COLUMN source TEXT');
+    }
+
+    // 如果数据库版本低于 6，添加 quotes 表中的 color_hex 字段
+    if (oldVersion < 6) {
+      await txn.execute('ALTER TABLE quotes ADD COLUMN color_hex TEXT');
+    }
+
+    // 如果数据库版本低于 7，添加 quotes 表中的 source_author 和 source_work 字段
+    if (oldVersion < 7) {
+      await txn.execute('ALTER TABLE quotes ADD COLUMN source_author TEXT');
+      await txn.execute('ALTER TABLE quotes ADD COLUMN source_work TEXT');
+
+      // 将现有的 source 字段数据拆分到新字段中
+      final quotes = await txn.query(
+        'quotes',
+        where: 'source IS NOT NULL AND source != ""',
+      );
+
+      for (final quote in quotes) {
+        final source = quote['source'] as String?;
+        if (source != null && source.isNotEmpty) {
+          String? sourceAuthor;
+          String? sourceWork;
+
+          // 尝试解析 source 字段
+          if (source.contains('《') && source.contains('》')) {
+            // 格式：作者《作品》
+            final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
+            if (workMatch != null) {
+              sourceWork = workMatch.group(1);
+              sourceAuthor = source.replaceAll(RegExp(r'《.+?》'), '').trim();
+              if (sourceAuthor.isEmpty) sourceAuthor = null;
+            }
+          } else if (source.contains(' - ')) {
+            // 格式：作者 - 作品
+            final parts = source.split(' - ');
+            if (parts.length >= 2) {
+              sourceAuthor = parts[0].trim();
+              sourceWork = parts.sublist(1).join(' - ').trim();
+            }
+          } else {
+            // 默认作为作者
+            sourceAuthor = source.trim();
+          }
+
+          // 更新记录
+          await txn.update(
+            'quotes',
+            {
+              'source_author': sourceAuthor,
+              'source_work': sourceWork,
+            },
+            where: 'id = ?',
+            whereArgs: [quote['id']],
+          );
+        }
+      }
+    }
+
+    // 如果数据库版本低于 8，添加位置和天气相关字段
+    if (oldVersion < 8) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 location, weather, temperature 字段',
+      );
+      await txn.execute('ALTER TABLE quotes ADD COLUMN location TEXT');
+      await txn.execute('ALTER TABLE quotes ADD COLUMN weather TEXT');
+      await txn.execute('ALTER TABLE quotes ADD COLUMN temperature TEXT');
+      logDebug('数据库升级：location, weather, temperature 字段添加完成');
+    }
+
+    // 如果数据库版本低于 9，添加索引以提高查询性能
+    if (oldVersion < 9) {
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加索引');
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
+      );
+      logDebug('数据库升级：索引添加完成');
+    }
+
+    // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
+    if (oldVersion < 10) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段',
+      );
+      await txn.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
+      logDebug('数据库升级：edit_source 字段添加完成');
+    }
+    // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
+    if (oldVersion < 11) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
+      );
+      await txn.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
+      logDebug('数据库升级：delta_content 字段添加完成');
+    }
+
+    // 修复：如果数据库版本低于 12，安全地创建 quote_tags 表并迁移数据
+    if (oldVersion < 12) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据',
+      );
+
+      await _upgradeToVersion12SafelyInTransaction(txn);
+    }
+
+    // 如果数据库版本低于 13，创建媒体文件引用表
+    if (oldVersion < 13) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建媒体文件引用表',
+      );
+
+      await _initializeMediaReferenceTableInTransaction(txn);
+      logDebug('数据库升级：媒体文件引用表创建完成');
+    }
   }
 
   /// 修复：验证升级结果
@@ -698,6 +704,65 @@ class DatabaseService extends ChangeNotifier {
     }
 
     logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
+  }
+
+  /// 修复：在事务中安全地执行版本12升级
+  Future<void> _upgradeToVersion12SafelyInTransaction(Transaction txn) async {
+    try {
+      // 1. 创建新的关联表
+      await txn.execute('''
+        CREATE TABLE IF NOT EXISTS quote_tags(
+          quote_id TEXT NOT NULL,
+          tag_id TEXT NOT NULL,
+          PRIMARY KEY (quote_id, tag_id),
+          FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
+          FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
+        )
+      ''');
+
+      // 2. 创建索引
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+      );
+
+      // 3. 安全迁移数据
+      await _migrateTagDataSafely(txn);
+
+      logDebug('版本12升级在事务中安全完成');
+    } catch (e) {
+      logError('版本12升级失败: $e', error: e, source: 'DatabaseUpgrade');
+      rethrow;
+    }
+  }
+
+  /// 修复：在事务中初始化媒体引用表
+  Future<void> _initializeMediaReferenceTableInTransaction(Transaction txn) async {
+    await txn.execute('''
+      CREATE TABLE IF NOT EXISTS media_references (
+        id TEXT PRIMARY KEY,
+        file_path TEXT NOT NULL,
+        quote_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE,
+        UNIQUE(file_path, quote_id)
+      )
+    ''');
+
+    // 创建索引以提高查询性能
+    await txn.execute('''
+      CREATE INDEX IF NOT EXISTS idx_media_references_file_path
+      ON media_references (file_path)
+    ''');
+
+    await txn.execute('''
+      CREATE INDEX IF NOT EXISTS idx_media_references_quote_id
+      ON media_references (quote_id)
+    ''');
+
+    logDebug('媒体引用表在事务中初始化完成');
   }
   // 新增初始化新数据库方法，用于在迁移失败时创建新的数据库
   Future<void> initializeNewDatabase() async {

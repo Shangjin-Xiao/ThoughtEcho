@@ -5,9 +5,27 @@ echo =================================
 echo.
 
 echo 1. 清理之前的调试文件...
-if exist "%USERPROFILE%\Desktop\ThoughtEcho_*" (
-    del /q "%USERPROFILE%\Desktop\ThoughtEcho_*"
-    echo 已清理桌面调试文件
+:: 更具体的文件删除模式，避免误删其他文件
+if exist "%USERPROFILE%\Desktop\ThoughtEcho_启动日志_*.txt" (
+    del /q "%USERPROFILE%\Desktop\ThoughtEcho_启动日志_*.txt" 2>nul
+    if %errorlevel% equ 0 (
+        echo ✓ 已清理桌面启动日志文件
+    ) else (
+        echo ✗ 清理启动日志文件失败
+    )
+) else (
+    echo - 未找到需要清理的启动日志文件
+)
+
+if exist "%USERPROFILE%\Desktop\ThoughtEcho_崩溃报告_*.txt" (
+    del /q "%USERPROFILE%\Desktop\ThoughtEcho_崩溃报告_*.txt" 2>nul
+    if %errorlevel% equ 0 (
+        echo ✓ 已清理桌面崩溃报告文件
+    ) else (
+        echo ✗ 清理崩溃报告文件失败
+    )
+) else (
+    echo - 未找到需要清理的崩溃报告文件
 )
 
 echo.
