@@ -111,27 +111,70 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
 
     return result;
   }
-
   // 公开刷新方法，供父组件调用
   Future<void> refreshQuote() async {
     await _loadDailyQuote();
   }
 
+  // 响应式字体大小计算
+  double _getResponsiveFontSize(double screenWidth, double screenHeight) {
+    if (screenHeight < 550) {
+      // 极小屏设备
+      return screenWidth > 600 ? 26 : (screenWidth > 400 ? 18 : 16);
+    } else if (screenHeight < 600) {
+      // 小屏设备
+      return screenWidth > 600 ? 28 : (screenWidth > 400 ? 20 : 18);
+    } else {
+      // 普通屏幕
+      return screenWidth > 600 ? 30 : (screenWidth > 400 ? 22 : 20);
+    }
+  }
+
+  // 响应式行数限制
+  int? _getResponsiveMaxLines(double screenWidth, double screenHeight) {
+    if (screenWidth > 600) {
+      return null; // 大屏设备不限制行数
+    }
+    
+    if (screenHeight < 550) {
+      return 3; // 极小屏设备最多3行
+    } else if (screenHeight < 600) {
+      return 4; // 小屏设备最多4行
+    } else {
+      return 5; // 中等屏幕最多5行
+    }
+  }
+
+  // 响应式来源字体大小
+  double _getResponsiveSourceFontSize(double screenWidth, double screenHeight) {
+    if (screenHeight < 550) {
+      return screenWidth > 600 ? 12 : 10;
+    } else if (screenHeight < 600) {
+      return screenWidth > 600 ? 13 : 11;
+    } else {
+      return screenWidth > 600 ? 14 : 12;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // 更精细的屏幕尺寸判断
+    final isSmallScreen = screenHeight < 600;
+    final isVerySmallScreen = screenHeight < 550;
 
     return Container(
       // 去掉固定高度，让容器适应父组件的尺寸
       width: double.infinity,
       margin: EdgeInsets.symmetric(
         horizontal: screenWidth > 600 ? 10.0 : 2.0, // 调整外边距使总间距与今日思考一致
-        vertical: 16.0,
-      ),
-      child: SlidingCard(
+        vertical: isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
+      ),      child: SlidingCard(
+        // 传递screenHeight给SlidingCard以动态调整内边距
         child: Padding(
-          padding: EdgeInsets.zero, // 移除内边距，依靠SlidingCard的24px padding提供间距
+          padding: EdgeInsets.zero, // 移除内边距，依靠SlidingCard的动态padding提供间距
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -163,13 +206,15 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                       child: Text(
                         dailyQuote['content'],
                         style: theme.textTheme.headlineSmall?.copyWith(
-                          fontSize: screenWidth > 600 ? 30 : 24, // 再次增大字体
-                          height: 1.5, // 增加行高，提升可读性
-                          fontWeight: FontWeight.w500, // 稍微加粗
+                          fontSize: _getResponsiveFontSize(screenWidth, screenHeight),
+                          height: isVerySmallScreen ? 1.3 : 1.4, // 极小屏幕进一步减少行高
+                          fontWeight: FontWeight.w500,
                         ),
                         textAlign: TextAlign.center,
-                        // 去掉行数限制，让文字完全展示
-                        overflow: TextOverflow.visible,
+                        maxLines: _getResponsiveMaxLines(screenWidth, screenHeight),
+                        overflow: screenWidth > 600 
+                            ? TextOverflow.visible 
+                            : TextOverflow.ellipsis, // 小屏设备使用省略号
                       ),
                     ),
                     if (dailyQuote['from_who'] != null &&
@@ -177,7 +222,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                         dailyQuote['from'] != null &&
                             dailyQuote['from'].isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 12.0),
+                        padding: EdgeInsets.only(top: isVerySmallScreen ? 8.0 : 12.0), // 动态调整间距
                         child: Text(
                           formatHitokotoSource(
                             dailyQuote['from_who'],
@@ -185,7 +230,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                           ),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontStyle: FontStyle.italic,
-                            fontSize: screenWidth > 600 ? 14 : 12,
+                            fontSize: _getResponsiveSourceFontSize(screenWidth, screenHeight),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
