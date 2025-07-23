@@ -27,8 +27,6 @@ void main() {
           chunks.add(chunk);
         }
 
-
-
         // Test the callback signatures work as expected
         onResponse('test');
         onComplete('');

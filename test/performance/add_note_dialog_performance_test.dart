@@ -37,9 +37,12 @@ void main() {
     Widget createTestApp(Widget child) {
       return MultiProvider(
         providers: [
-          ChangeNotifierProvider<LocationService>.value(value: mockLocationService),
-          ChangeNotifierProvider<WeatherService>.value(value: mockWeatherService),
-          ChangeNotifierProvider<DatabaseService>.value(value: mockDatabaseService),
+          ChangeNotifierProvider<LocationService>.value(
+              value: mockLocationService),
+          ChangeNotifierProvider<WeatherService>.value(
+              value: mockWeatherService),
+          ChangeNotifierProvider<DatabaseService>.value(
+              value: mockDatabaseService),
         ],
         child: MaterialApp(
           home: Scaffold(body: child),
@@ -79,7 +82,8 @@ void main() {
     testWidgets('搜索功能应该正常工作', (WidgetTester tester) async {
       // 简化测试：验证搜索逻辑
       const searchQuery = '标签 1';
-      final filteredTags = mockTags.where((tag) => tag.name.contains(searchQuery)).toList();
+      final filteredTags =
+          mockTags.where((tag) => tag.name.contains(searchQuery)).toList();
 
       // 应该找到"标签 1", "标签 10", "标签 11"等
       expect(filteredTags.length, greaterThan(0));

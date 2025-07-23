@@ -45,6 +45,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       rethrow;
     }
   }
+
   /// 初始化数据库
   Future<Database> get database async {
     if (_database != null) return _database!;
