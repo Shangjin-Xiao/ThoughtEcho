@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:async';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
@@ -64,6 +65,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 标签搜索控制器
   final TextEditingController _tagSearchController = TextEditingController();
 
+  // 性能优化：缓存Provider引用，避免重复查找
+  LocationService? _cachedLocationService;
+  WeatherService? _cachedWeatherService;
+
+  // 搜索防抖和过滤缓存
+  Timer? _searchDebounceTimer;
+  List<NoteCategory> _filteredTags = [];
+  String _lastSearchQuery = '';
+
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
     'a': DatabaseService.defaultCategoryIdAnime, // 动画
@@ -97,6 +107,23 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       text: widget.initialQuote?.sourceWork ?? widget.prefilledWork ?? '',
     );
 
+    // 初始化过滤结果
+    _filteredTags = widget.tags;
+    _lastSearchQuery = '';
+
+    // 延迟初始化服务缓存，避免在构建过程中查找Provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _cachedLocationService =
+            Provider.of<LocationService>(context, listen: false);
+        _cachedWeatherService =
+            Provider.of<WeatherService>(context, listen: false);
+      }
+    });
+
+    // 添加搜索防抖监听器
+    _tagSearchController.addListener(_onSearchChanged);
+
     // 如果是编辑已有笔记
     if (widget.initialQuote != null) {
       _aiSummary = widget.initialQuote!.aiAnalysis;
@@ -128,8 +155,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _authorController,
           _workController,
         );
-      }    }
-    
+      }
+    }
+
     // 延迟执行重量级操作，避免阻塞UI构建
     if (widget.hitokotoData != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -137,14 +165,44 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       });
     }
   }
+
+  // 搜索变化处理 - 使用防抖优化
+  void _onSearchChanged() {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      final query = _tagSearchController.text.toLowerCase();
+      if (query != _lastSearchQuery) {
+        _lastSearchQuery = query;
+        _updateFilteredTags(query);
+      }
+    });
+  }
+
+  // 更新过滤标签
+  void _updateFilteredTags(String query) {
+    if (!mounted) return;
+
+    setState(() {
+      if (query.isEmpty) {
+        _filteredTags = widget.tags;
+      } else {
+        _filteredTags = widget.tags.where((tag) {
+          return tag.name.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
     _tagSearchController.dispose();
     super.dispose();
   }
+
   // 添加默认的一言相关标签（异步执行，不阻塞UI）
   Future<void> _addDefaultHitokotoTags() async {
     try {
@@ -392,13 +450,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // 使用 Provider.of<DatabaseService>(context, listen: true)
-    // 这样UI会在数据库变化时自动更新
-    // 移除未使用的数据库服务变量
-    final locationService = Provider.of<LocationService>(context);
-    final weatherService = Provider.of<WeatherService>(context);
 
-    // 位置和天气信息
+    // 优化：使用缓存的服务或延迟获取
+    final locationService = _cachedLocationService ??
+        Provider.of<LocationService>(context, listen: false);
+    final weatherService = _cachedWeatherService ??
+        Provider.of<WeatherService>(context, listen: false);
+
+    // 位置和天气信息 - 只在需要时获取
     String? location = locationService.getFormattedLocation();
     String? weather = weatherService.currentWeather;
     String? temperature = weatherService.temperature;
@@ -421,14 +480,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               children: [
                 TextField(
                   controller: _contentController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: '写下你的感悟...',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.edit),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 16,
-                    ).copyWith(right: 48),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.edit),
+                    contentPadding: EdgeInsets.fromLTRB(16, 16, 48, 16),
                   ),
                   maxLines: 3,
                   autofocus: true,
@@ -734,7 +790,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 ),
                 const SizedBox(width: 8),
               ],
-            ),            // 标签选择区域
+            ), // 标签选择区域
             const SizedBox(height: 16),
             _buildTagSelectionSection(widget.tags),
 
@@ -1143,7 +1199,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
-    );    if (result != null) {
+    );
+    if (result != null) {
       setState(() {
         _selectedColorHex = result == Colors.transparent
             ? null
@@ -1152,17 +1209,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
-  // 构建标签选择区域
+  // 优化的标签选择区域
   Widget _buildTagSelectionSection(List<NoteCategory> tags) {
     if (tags.isEmpty) {
       return const Center(child: Text('暂无可用标签，请先添加标签'));
     }
-
-    // 过滤标签
-    String searchQuery = _tagSearchController.text.toLowerCase();
-    List<NoteCategory> filteredTags = tags.where((tag) {
-      return searchQuery.isEmpty || tag.name.toLowerCase().contains(searchQuery);
-    }).toList();
 
     return ExpansionTile(
       title: Text(
@@ -1188,23 +1239,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               horizontal: 12.0,
             ),
           ),
-          onChanged: (value) {
-            setState(() {}); // 触发过滤重建
-          },
+          // 移除onChanged，现在使用监听器和防抖
         ),
         const SizedBox(height: 8),
-        // 标签列表
+        // 标签列表 - 使用缓存的过滤结果
         Container(
           constraints: const BoxConstraints(maxHeight: 200),
-          child: filteredTags.isEmpty
+          child: _filteredTags.isEmpty
               ? const Center(
                   child: Text('没有找到匹配的标签'),
                 )
               : ListView.builder(
                   shrinkWrap: true,
-                  itemCount: filteredTags.length,
+                  itemCount: _filteredTags.length,
                   itemBuilder: (context, index) {
-                    final tag = filteredTags[index];
+                    final tag = _filteredTags[index];
                     final isSelected = _selectedTagIds.contains(tag.id);
                     return CheckboxListTile(
                       title: Row(
@@ -1243,7 +1292,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         ),
       ],
     );
-  }  // 渲染已选标签的Widget，直接使用传入的标签数据
+  } // 渲染已选标签的Widget，直接使用传入的标签数据
+
   Widget _buildSelectedTags(ThemeData theme) {
     if (_selectedTagIds.isEmpty) {
       return const SizedBox.shrink();
