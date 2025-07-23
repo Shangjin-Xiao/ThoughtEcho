@@ -86,22 +86,14 @@ jobs:
         New-Item -ItemType Directory -Path "release_temp" -Force
         Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
         
-        # 创建版本信息文件 (Create version info file)
-        $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}`n提交: ${{ github.sha }}`n`n使用说明:`n1. 解压到任意文件夹`n2. 双击 thoughtecho.exe 启动应用`n3. 如遇问题请查看 logs 文件夹下的日志文件`n`n注意事项:`n- 首次启动可能需要等待数秒`n- 确保系统已安装Visual C++ Redistributable`n- 建议在解压后将整个文件夹添加到杀毒软件白名单"
-        $versionText | Out-File -FilePath "release_temp/VERSION_INFO.txt" -Encoding UTF8
-        # Also create Chinese version for compatibility
-        $versionText | Out-File -FilePath "release_temp/版本信息.txt" -Encoding UTF8
-
-        # 创建启动脚本 (Create launch script)
-        "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause" | Out-File -FilePath "release_temp/LAUNCH_APP.bat" -Encoding Default
-        # Also create Chinese version for compatibility
-        "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause" | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
+        $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}`n提交: ${{ github.sha }}"
+        $versionText | Out-File -FilePath "release_temp/VERSION.txt" -Encoding UTF8
         
-        # 压缩文件
+        "@echo off`necho 启动 ThoughtEcho...`nstart thoughtecho.exe" | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
+        
         Compress-Archive -Path "release_temp/*" -DestinationPath $archiveName -Force
         
         echo "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
-        Write-Output "创建发布包: $archiveName"
       id: archive
       
     - name: Upload build artifacts

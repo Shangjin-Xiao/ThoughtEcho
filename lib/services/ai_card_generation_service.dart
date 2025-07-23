@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:gal/gal.dart';
+import 'dart:io';
 import 'package:uuid/uuid.dart';
+// 条件导入：只在移动端使用gal插件
+import 'package:gal/gal.dart' if (dart.library.html) 'dart:html' if (dart.library.ffi) 'dart:ffi' as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -330,10 +332,13 @@ class AICardGenerationService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = customName != null
           ? '${customName}_$timestamp'
-          : '心迹_Card_$timestamp';
-
-      // 保存到相册
-      await Gal.putImageBytes(imageBytes, name: fileName);
+          : '心迹_Card_$timestamp';      // 保存到相册（仅移动端）
+      if (!kIsWeb && Platform.isAndroid || Platform.isIOS) {
+        await gal.Gal.putImageBytes(imageBytes, name: fileName);
+      } else {
+        // 桌面端或Web端的替代方案
+        throw Exception('桌面端暂不支持直接保存到相册，建议使用分享功能');
+      }
 
       if (kDebugMode) {
         print('卡片图片保存成功: $fileName');
@@ -346,19 +351,29 @@ class AICardGenerationService {
       }
       rethrow; // 重新抛出异常让上层处理
     }
+  }  /// 检查当前平台是否支持相册功能
+  bool _isPlatformSupported() {
+    // gal插件只支持Android和iOS平台
+    return !kIsWeb && (Platform.isAndroid || Platform.isIOS);
   }
 
   /// 检查相册权限
   Future<bool> _checkGalleryPermission() async {
-    try {
-      // 尝试检查权限状态
-      final hasAccess = await Gal.hasAccess();
-      if (!hasAccess) {
-        // 请求权限
-        final hasAccessAfterRequest = await Gal.requestAccess();
-        return hasAccessAfterRequest;
+    // 检查平台支持
+    if (!_isPlatformSupported()) {
+      return false;
+    }    try {
+      // 仅在移动端检查权限
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        final hasAccess = await gal.Gal.hasAccess();
+        if (!hasAccess) {
+          // 请求权限
+          final hasAccessAfterRequest = await gal.Gal.requestAccess();
+          return hasAccessAfterRequest;
+        }
+        return true;
       }
-      return true;
+      return false; // 桌面端不支持
     } catch (e) {
       if (kDebugMode) {
         print('检查相册权限失败: $e');

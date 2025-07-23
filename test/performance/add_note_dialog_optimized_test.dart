@@ -80,7 +80,7 @@ void main() {
       expect(duration.inMilliseconds, lessThan(300),
           reason: '对话框打开时间仍然过长: ${duration.inMilliseconds}ms');
 
-      print('✓ 优化后对话框打开耗时: ${duration.inMilliseconds}ms');
+      // Test output: 优化后对话框打开耗时: ${duration.inMilliseconds}ms
     });
 
     testWidgets('标签搜索应该快速响应，无明显卡顿', (WidgetTester tester) async {
@@ -127,7 +127,7 @@ void main() {
       expect(duration.inMilliseconds, lessThan(100),
           reason: '标签搜索时间过长: ${duration.inMilliseconds}ms');
 
-      print('✓ 标签搜索耗时: ${duration.inMilliseconds}ms');
+      // Test output: 标签搜索耗时: ${duration.inMilliseconds}ms
     });
   });
 }

@@ -28,18 +28,41 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
+import 'package:thoughtecho/services/debug_service.dart';
+import 'package:thoughtecho/services/startup_monitor_service.dart';
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
+import 'utils/database_platform_init.dart';
 import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/backup_restore_page.dart';
 
+// 超时时间常量 (Timeout constants)
+class TimeoutConstants {
+  // 剪贴板服务初始化超时时间
+  static const Duration clipboardInitTimeoutWindows = Duration(seconds: 2);
+  static const Duration clipboardInitTimeoutDefault = Duration(seconds: 3);
+
+  // 数据库初始化超时时间
+  static const Duration databaseInitTimeoutWindows = Duration(seconds: 5);
+  static const Duration databaseInitTimeoutDefault = Duration(seconds: 10);
+
+  // UI初始化延迟时间
+  static const Duration uiInitDelayWindows = Duration(milliseconds: 1000);
+  static const Duration uiInitDelayDefault = Duration(milliseconds: 0);
+}
+
+// 全局标志，确保FFI只初始化一次
+bool _ffiInitialized = false;
+
 Future<void> initializeDatabasePlatform() async {
   if (!kIsWeb) {
-    if (Platform.isWindows) {
+    if (Platform.isWindows && !_ffiInitialized) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
+      _ffiInitialized = true;
+      logInfo('Windows FFI数据库工厂已初始化', source: 'DatabaseInit');
     }
 
     try {
@@ -77,42 +100,86 @@ final List<Map<String, dynamic>> _deferredErrors = [];
 GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-  // 设置Zone错误为致命错误，确保Zone一致性
-  BindingBase.debugZoneErrorsAreFatal = true;
+  // Windows平台优化：避免错误处理导致的启动卡死
+  BindingBase.debugZoneErrorsAreFatal = Platform.isWindows ? false : true;
 
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
+      // Windows平台启动监控 - 最优先启动
+      if (Platform.isWindows) {
+        await StartupMonitorService.startMonitoring();
+        await StartupMonitorService.recordStep('Flutter绑定初始化完成');
+      }
+
+      // Windows平台启动调试服务 - 异步初始化，不阻塞主流程
+      if (Platform.isWindows) {
+        // 异步初始化调试服务，不等待完成
+        Future.microtask(() async {
+          try {
+            await WindowsStartupDebugService.initialize();
+            await WindowsStartupDebugService.recordInitStep('调试服务已启动');
+            await WindowsStartupDebugService.createStartupGuide();
+            await WindowsStartupDebugService.recordFFIInfo();
+            await WindowsStartupDebugService.checkWindowsRuntime();
+          } catch (e) {
+            // 静默处理调试服务错误，不影响主流程
+            logError('调试服务初始化失败: $e', error: e, source: 'DebugService');
+          }
+        });
+      }
+
       // 初始化日志系统
       AppLogger.initialize();
 
-      // 全局记录未捕获的异步错误
+      if (Platform.isWindows) {
+        await StartupMonitorService.recordStep('日志系统初始化完成');
+      }// 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
       PlatformDispatcher.instance.onError = (error, stack) {
-        logError(
-          '捕获到平台分发器错误: $error',
-          error: error,
-          stackTrace: stack,
-          source: 'PlatformDispatcher',
-        );
-        logError('堆栈: $stack', source: 'PlatformDispatcher');
+        // Windows平台使用简化的错误处理，避免复杂操作导致卡死
+        if (Platform.isWindows) {
+          logError(
+            '捕获到平台分发器错误: $error',
+            error: error,
+            source: 'PlatformDispatcher',
+          );
+        } else {
+          logError(
+            '捕获到平台分发器错误: $error',
+            error: error,
+            stackTrace: stack,
+            source: 'PlatformDispatcher',
+          );
+          logError('堆栈: $stack', source: 'PlatformDispatcher');
+        }
 
         // 捕获到错误后再记录到日志系统
         _deferredErrors.add({
           'message': '平台分发器错误',
           'error': error,
-          'stackTrace': stack,
+          'stackTrace': Platform.isWindows ? null : stack, // Windows平台不记录堆栈
           'source': 'PlatformDispatcher',
         });
 
         return true; // 返回true表示错误已处理
-      };
-
-      // 捕获Flutter框架异常并写入日志服务
+      };      // 捕获Flutter框架异常并写入日志服务 - Windows平台简化
       FlutterError.onError = (FlutterErrorDetails details) {
-        FlutterError.dumpErrorToConsole(details);
+        if (kDebugMode) {
+          FlutterError.dumpErrorToConsole(details);
+        }
 
-        // 尝试获取LogService实例
+        // 在Windows平台简化错误处理，避免复杂的Provider查找导致卡死
+        if (Platform.isWindows) {
+          logError(
+            'Flutter异常: ${details.exceptionAsString()}',
+            error: details.exception,
+            source: 'FlutterError',
+          );
+          return;
+        }
+
+        // 非Windows平台保持原有逻辑
         final context = navigatorKey.currentContext;
         try {
           if (context != null) {
@@ -138,21 +205,43 @@ Future<void> main() async {
         } catch (e) {
           logError('记录Flutter异常时出错: $e', error: e, source: 'FlutterError');
         }
-      };
-
-      try {
+      };      try {
         // 先初始化必要的平台特定的数据库配置
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('开始初始化数据库平台');
+        }
         await initializeDatabasePlatform();
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('数据库平台初始化完成');
+        }
 
         // 初始化轻量级且必须的服务
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('开始初始化MMKV服务');
+        }
         final mmkvService = MMKVService();
         await mmkvService.init();
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('MMKV服务初始化完成');
+        }
 
         // 初始化网络服务
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('开始初始化网络服务');
+        }
         await NetworkService.instance.init();
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('网络服务初始化完成');
+        }
 
         // 初始化设置服务
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('开始初始化设置服务');
+        }
         final settingsService = await SettingsService.create();
+        if (Platform.isWindows) {
+          await WindowsStartupDebugService.recordInitStep('设置服务初始化完成');
+        }
         // 自动获取应用版本号
         final packageInfo = await PackageInfo.fromPlatform();
         final String currentVersion = packageInfo.version;
@@ -232,9 +321,8 @@ Future<void> main() async {
               ),
             ],
             child: Builder(
-              builder: (context) {
-                // 启动后上报延迟错误
-                if (_deferredErrors.isNotEmpty) {
+              builder: (context) {                // Windows平台简化延迟错误处理，避免卡死
+                if (_deferredErrors.isNotEmpty && !Platform.isWindows) {
                   final logService = Provider.of<UnifiedLogService>(
                     context,
                     listen: false,
@@ -260,6 +348,15 @@ Future<void> main() async {
           ),
         );
 
+        // Windows平台记录UI显示完成并停止启动监控
+        if (Platform.isWindows) {
+          await StartupMonitorService.recordStep('UI显示完成');
+          // 延迟停止监控，确保后台初始化也被记录
+          Future.delayed(const Duration(seconds: 5), () async {
+            await StartupMonitorService.stopMonitoring();
+          });
+        }
+
         // 简单预初始化位置服务（异步执行，不阻塞UI）
         Future.microtask(() async {
           try {
@@ -269,22 +366,50 @@ Future<void> main() async {
           } catch (e) {
             logDebug('预初始化位置服务失败: $e');
           }
-        });
-
-        // 首屏UI显示后，异步初始化其他服务
-        // 使用microtask确保在UI渲染后执行
-        Future.microtask(() async {
+        });        // 首屏UI显示后，异步初始化其他服务
+        // Windows平台减少延迟，优先显示UI
+        final initDelay = Platform.isWindows
+            ? const Duration(milliseconds: 100) // 减少Windows延迟
+            : TimeoutConstants.uiInitDelayDefault;
+        Future.delayed(initDelay, () async {
           try {
             logInfo('UI已显示，正在后台初始化服务...', source: 'BackgroundInit');
 
-            // 初始化clipboardService
-            await clipboardService.init().timeout(
-                  const Duration(seconds: 3),
+            // Windows平台缩短超时时间，避免长时间等待
+            final timeoutDuration = Platform.isWindows
+                ? TimeoutConstants.clipboardInitTimeoutWindows
+                : TimeoutConstants.clipboardInitTimeoutDefault;
+
+            // Windows平台异步初始化剪贴板服务，避免阻塞
+            if (Platform.isWindows) {
+              // 异步初始化，不等待完成
+              Future.microtask(() async {
+                try {
+                  await clipboardService.init().timeout(
+                    timeoutDuration,
+                    onTimeout: () => logWarning(
+                      '剪贴板服务初始化超时',
+                      source: 'BackgroundInit',
+                    ),
+                  );
+                } catch (e) {
+                  logWarning('剪贴板服务初始化失败: $e', source: 'BackgroundInit');
+                }
+              });
+            } else {
+              // 非Windows平台保持原有逻辑
+              try {
+                await clipboardService.init().timeout(
+                  timeoutDuration,
                   onTimeout: () => logWarning(
                     '剪贴板服务初始化超时，将继续后续初始化',
                     source: 'BackgroundInit',
                   ),
                 );
+              } catch (e) {
+                logWarning('剪贴板服务初始化失败: $e', source: 'BackgroundInit');
+              }
+            }
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
@@ -301,21 +426,38 @@ Future<void> main() async {
 
             // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
             if (hasCompletedOnboarding && !hasMigrated) {
-              logInfo('引导已完成但数据库迁移未完成，开始后台数据库迁移...', source: 'BackgroundInit');
-              try {
-                // 修复：数据库初始化已包含默认分类初始化，避免重复调用
+              logInfo('引导已完成但数据库迁移未完成，开始后台数据库迁移...', source: 'BackgroundInit');              try {                // Windows平台缩短数据库初始化超时时间
+                final dbTimeoutDuration = Platform.isWindows
+                    ? TimeoutConstants.databaseInitTimeoutWindows
+                    : TimeoutConstants.databaseInitTimeoutDefault;
+
+                if (Platform.isWindows) {
+                  await WindowsStartupDebugService.recordInitStep('开始初始化主数据库');
+                }
                 await databaseService.init().timeout(
-                  const Duration(seconds: 10),
+                  dbTimeoutDuration,
                   onTimeout: () {
                     throw TimeoutException('数据库初始化超时');
                   },
                 );
+                if (Platform.isWindows) {
+                  await WindowsStartupDebugService.recordInitStep('主数据库初始化完成');
+                }
 
                 // 初始化AI分析数据库
                 try {
+                  if (Platform.isWindows) {
+                    await WindowsStartupDebugService.recordInitStep('开始初始化AI分析数据库');
+                  }
                   await aiAnalysisDbService.init();
+                  if (Platform.isWindows) {
+                    await WindowsStartupDebugService.recordInitStep('AI分析数据库初始化完成');
+                  }
                   logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
                 } catch (aiDbError) {
+                  if (Platform.isWindows) {
+                    await WindowsStartupDebugService.recordInitStep('AI分析数据库初始化失败', details: aiDbError.toString(), success: false);
+                  }
                   logError('AI分析数据库初始化失败: $aiDbError',
                       error: aiDbError, source: 'BackgroundInit');
                   // AI分析数据库初始化失败不影响主要功能，继续执行
@@ -324,8 +466,10 @@ Future<void> main() async {
                 // 标记数据库迁移已完成
                 await settingsService.setDatabaseMigrationComplete(true);
 
-                logInfo('后台数据库迁移完成', source: 'BackgroundInit');
-              } catch (e, stackTrace) {
+                logInfo('后台数据库迁移完成', source: 'BackgroundInit');              } catch (e, stackTrace) {                if (Platform.isWindows) {
+                  await WindowsStartupDebugService.recordCrash(e.toString(), stackTrace, context: '后台数据库迁移失败');
+                  await WindowsStartupDebugService.flushLogs(); // 确保崩溃信息立即写入磁盘
+                }
                 logError(
                   '后台数据库迁移失败: $e',
                   error: e,
@@ -335,6 +479,9 @@ Future<void> main() async {
 
                 // 在紧急情况下尝试初始化新数据库
                 try {
+                  if (Platform.isWindows) {
+                    await WindowsStartupDebugService.recordInitStep('尝试紧急恢复：初始化新数据库');
+                  }
                   await databaseService.initializeNewDatabase();
 
                   // 尝试初始化AI分析数据库
@@ -438,12 +585,28 @@ Future<void> main() async {
 
         // 如果初始化失败，直接运行一个简单的错误应用
         _isEmergencyMode = true;
+        // Windows平台记录启动失败
+        if (Platform.isWindows) {
+          await StartupMonitorService.recordStep('应用启动失败', data: {
+            'error': e.toString(),
+            'emergency_mode': true,
+          });
+        }
+
         runApp(
           EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()),
         );
       }
-    },
-    (error, stackTrace) {
+    },    (error, stackTrace) {
+      // Windows平台立即记录崩溃信息
+      if (Platform.isWindows) {
+        try {
+          WindowsStartupDebugService.recordCrash(error.toString(), stackTrace, context: '全局未捕获异常');
+        } catch (_) {
+          // 静默处理调试记录失败
+        }
+      }
+      
       logError(
         '未捕获的异常: $error',
         error: error,

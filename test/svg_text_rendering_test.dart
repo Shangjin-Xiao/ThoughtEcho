@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
 
@@ -23,7 +21,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('基本文本渲染图片大小: ${imageBytes.length} bytes');
+      // Test output: 基本文本渲染图片大小: ${imageBytes.length} bytes
     });
 
     test('复杂字体属性文本', () async {
@@ -47,7 +45,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('复杂字体属性文本图片大小: ${imageBytes.length} bytes');
+      // Test output: 复杂字体属性文本图片大小: ${imageBytes.length} bytes
     });
 
     test('中文文本渲染', () async {
@@ -76,7 +74,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('中文文本渲染图片大小: ${imageBytes.length} bytes');
+      // Test output: 中文文本渲染图片大小: ${imageBytes.length} bytes
     });
 
     test('实际卡片模板文本渲染', () async {
@@ -128,7 +126,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('实际卡片模板文本渲染图片大小: ${imageBytes.length} bytes');
+      // Test output: 实际卡片模板文本渲染图片大小: ${imageBytes.length} bytes
     });
 
     test('特殊字符和符号文本', () async {
@@ -151,7 +149,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('特殊字符文本渲染图片大小: ${imageBytes.length} bytes');
+      // Test output: 特殊字符文本渲染图片大小: ${imageBytes.length} bytes
     });
 
     test('长文本处理', () async {
@@ -173,7 +171,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('长文本处理图片大小: ${imageBytes.length} bytes');
+      // Test output: 长文本处理图片大小: ${imageBytes.length} bytes
     });
 
     test('错误文本属性处理', () async {
@@ -197,7 +195,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('错误文本属性处理图片大小: ${imageBytes.length} bytes');
+      // Test output: 错误文本属性处理图片大小: ${imageBytes.length} bytes
     });
   });
 }

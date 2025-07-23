@@ -88,7 +88,7 @@ void main() {
 
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试解析
       final result =
@@ -122,8 +122,7 @@ void main() {
       await jsonFile.writeAsString(json.encode(testData), encoding: utf8);
 
       // 验证文件大小
-      final fileSize = await jsonFile.length();
-      print('测试文件大小: ${(fileSize / 1024).toStringAsFixed(1)}KB');
+      // Test output: 测试文件大小: ${(fileSize / 1024).toStringAsFixed(1)}KB
 
       // 测试解析
       final result =

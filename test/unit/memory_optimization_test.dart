@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/utils/streaming_utils.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 
 void main() {
@@ -11,10 +9,8 @@ void main() {
       // and the complete callback does not receive the full text
 
       final chunks = <String>[];
-      String? completeText;
 
       // Mock stream data
-      final testData = ['chunk1', 'chunk2', 'chunk3'];
 
       // We cannot easily test the private _processStreamResponseDio method directly,
       // but we can verify the behavior through the public interface
@@ -23,7 +19,6 @@ void main() {
       expect(() {
         // The onComplete callback should accept empty string now
         void onComplete(String fullText) {
-          completeText = fullText;
           // Should be empty string now, not accumulated text
           expect(fullText.isEmpty, isTrue);
         }
@@ -32,9 +27,7 @@ void main() {
           chunks.add(chunk);
         }
 
-        void onError(dynamic error) {
-          fail('Should not have error: $error');
-        }
+
 
         // Test the callback signatures work as expected
         onResponse('test');
@@ -54,7 +47,7 @@ void main() {
 
       try {
         // Create a minimal test ZIP file (this would need a real ZIP in practice)
-        final zipFile = File(zipPath);
+
         // For this test, we just verify the method can handle non-existent files
         final result =
             await ZipStreamProcessor.containsFile(zipPath, 'test.txt');
