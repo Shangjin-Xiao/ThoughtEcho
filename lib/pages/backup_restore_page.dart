@@ -355,7 +355,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             if (mounted) {
               setState(() {
                 _progress = (current / total * 100).toDouble();
-                
+
                 // 根据进度阶段显示不同的状态文本
                 if (current < 15) {
                   _progressText = '正在收集数据...';
@@ -393,7 +393,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             if (mounted) {
               setState(() {
                 _progress = (current / total * 100).toDouble();
-                
+
                 // 根据进度阶段显示不同的状态文本
                 if (current < 15) {
                   _progressText = '正在收集数据...';
@@ -443,7 +443,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               if (mounted) {
                 setState(() {
                   _progress = (current / total * 100).toDouble();
-                  
+
                   // 根据进度阶段显示不同的状态文本
                   if (current < 15) {
                     _progressText = '正在收集数据...';

@@ -23,13 +23,14 @@ void main() {
       // 创建一个简单的ZIP文件
       final zipPath = '${tempDir.path}/test_backup.zip';
       final archive = Archive();
-      
+
       // 添加一个测试文件
       final testData = {'test': 'data'};
       final jsonContent = json.encode(testData);
-      final file = ArchiveFile('backup_data.json', jsonContent.length, jsonContent.codeUnits);
+      final file = ArchiveFile(
+          'backup_data.json', jsonContent.length, jsonContent.codeUnits);
       archive.addFile(file);
-      
+
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
       await File(zipPath).writeAsBytes(zipData!);
@@ -54,7 +55,7 @@ void main() {
       // 创建一个包含backup_data.json的ZIP文件
       final zipPath = '${tempDir.path}/valid_backup.zip';
       final archive = Archive();
-      
+
       // 创建有效的备份数据结构
       final backupData = {
         'version': '1.2.0',
@@ -71,17 +72,19 @@ void main() {
         'settings': {},
         'ai_analysis': [],
       };
-      
+
       final jsonContent = json.encode(backupData);
-      final file = ArchiveFile('backup_data.json', jsonContent.length, jsonContent.codeUnits);
+      final file = ArchiveFile(
+          'backup_data.json', jsonContent.length, jsonContent.codeUnits);
       archive.addFile(file);
-      
+
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
       await File(zipPath).writeAsBytes(zipData!);
 
       // 测试验证
-      final isValid = await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid =
+          await StreamingBackupProcessor.validateBackupFile(zipPath);
       expect(isValid, isTrue);
     });
 
@@ -89,7 +92,7 @@ void main() {
       // 创建一个包含data.json的ZIP文件（旧格式）
       final zipPath = '${tempDir.path}/legacy_backup.zip';
       final archive = Archive();
-      
+
       // 创建有效的备份数据结构
       final backupData = {
         'version': '1.2.0',
@@ -106,17 +109,19 @@ void main() {
         'settings': {},
         'ai_analysis': [],
       };
-      
+
       final jsonContent = json.encode(backupData);
-      final file = ArchiveFile('data.json', jsonContent.length, jsonContent.codeUnits);
+      final file =
+          ArchiveFile('data.json', jsonContent.length, jsonContent.codeUnits);
       archive.addFile(file);
-      
+
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
       await File(zipPath).writeAsBytes(zipData!);
 
       // 测试验证
-      final isValid = await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid =
+          await StreamingBackupProcessor.validateBackupFile(zipPath);
       expect(isValid, isTrue);
     });
 
@@ -124,17 +129,18 @@ void main() {
       // 创建一个不包含数据文件的ZIP文件
       final zipPath = '${tempDir.path}/invalid_backup.zip';
       final archive = Archive();
-      
+
       // 添加一个无关的文件
       final file = ArchiveFile('other_file.txt', 4, 'test'.codeUnits);
       archive.addFile(file);
-      
+
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
       await File(zipPath).writeAsBytes(zipData!);
 
       // 测试验证
-      final isValid = await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid =
+          await StreamingBackupProcessor.validateBackupFile(zipPath);
       expect(isValid, isFalse);
     });
 
@@ -142,7 +148,7 @@ void main() {
       // 创建一个包含多个文件的ZIP文件
       final zipPath = '${tempDir.path}/multi_file_backup.zip';
       final archive = Archive();
-      
+
       // 添加多个文件
       final files = [
         'backup_data.json',
@@ -150,21 +156,22 @@ void main() {
         'media/image2.png',
         'other_file.txt',
       ];
-      
+
       for (final fileName in files) {
-        final content = fileName == 'backup_data.json' 
-          ? json.encode({'test': 'data'})
-          : 'test content';
+        final content = fileName == 'backup_data.json'
+            ? json.encode({'test': 'data'})
+            : 'test content';
         final file = ArchiveFile(fileName, content.length, content.codeUnits);
         archive.addFile(file);
       }
-      
+
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
       await File(zipPath).writeAsBytes(zipData!);
 
       // 测试验证
-      final isValid = await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid =
+          await StreamingBackupProcessor.validateBackupFile(zipPath);
       expect(isValid, isTrue);
     });
   });

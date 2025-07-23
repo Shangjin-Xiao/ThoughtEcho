@@ -355,7 +355,8 @@ class CardTemplates {
       int chunk = (text.length / maxLines).ceil();
       List<String> result = [];
       for (int i = 0; i < text.length; i += chunk) {
-        result.add(text.substring(i, (i + chunk > text.length) ? text.length : i + chunk));
+        result.add(text.substring(
+            i, (i + chunk > text.length) ? text.length : i + chunk));
       }
       return result.take(maxLines).toList();
     }
