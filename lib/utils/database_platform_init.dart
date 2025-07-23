@@ -35,6 +35,7 @@ class DatabasePlatformInit {
   static bool get isInitialized => _isInitialized;
   
   /// 重置初始化状态（仅用于测试）
+  @visibleForTesting
   static void resetForTesting() {
     _isInitialized = false;
   }

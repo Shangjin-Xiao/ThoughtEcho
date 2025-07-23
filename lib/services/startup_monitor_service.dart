@@ -10,6 +10,7 @@ import '../utils/app_logger.dart';
 /// 监控应用启动过程，检测CPU和内存使用情况，帮助诊断启动问题
 class StartupMonitorService {
   static const String _monitorLogFileName = 'startup_monitor.log';
+  static const int _maxPerformanceDataSize = 1000; // 限制性能数据最大条数
   static bool _isMonitoring = false;
   static File? _monitorLogFile;
   static Timer? _monitorTimer;
@@ -110,6 +111,11 @@ class StartupMonitorService {
       };
       
       _performanceData.add(logEntry);
+
+      // 限制性能数据大小，防止内存泄漏
+      if (_performanceData.length > _maxPerformanceDataSize) {
+        _performanceData.removeAt(0); // 移除最旧的条目
+      }
       
       if (_monitorLogFile != null) {
         final logLine = '${logEntry['timestamp']} [$event] ${data.toString()}\n';
@@ -148,31 +154,67 @@ class StartupMonitorService {
   static Future<Map<String, dynamic>> _getMemoryUsage() async {
     try {
       if (Platform.isWindows) {
-        // Windows平台使用tasklist命令获取内存使用
+        // 尝试使用更可靠的wmic命令获取内存使用
+        try {
+          final wmicResult = await Process.run('wmic', [
+            'process',
+            'where',
+            'ProcessId=$pid',
+            'get',
+            'WorkingSetSize',
+            '/format:value'
+          ]);
+
+          if (wmicResult.exitCode == 0) {
+            final output = wmicResult.stdout.toString();
+            final match = RegExp(r'WorkingSetSize=(\d+)').firstMatch(output);
+            if (match != null) {
+              final memoryBytes = int.tryParse(match.group(1)!) ?? 0;
+              final memoryMB = (memoryBytes / (1024 * 1024)).round();
+              return {'memory_mb': memoryMB};
+            }
+          }
+        } catch (wmicError) {
+          logDebug('WMIC命令获取内存失败，尝试tasklist: $wmicError');
+        }
+
+        // 备用方案：使用改进的tasklist命令解析
         final result = await Process.run('tasklist', [
           '/FI', 'PID eq $pid',
           '/FO', 'CSV',
           '/NH'
         ]);
-        
+
         if (result.exitCode == 0) {
-          final output = result.stdout.toString();
-          final lines = output.split('\n');
-          if (lines.isNotEmpty) {
-            final parts = lines[0].split(',');
-            if (parts.length >= 5) {
-              final memoryStr = parts[4].replaceAll('"', '').replaceAll(',', '').replaceAll(' K', '');
-              final memoryKB = int.tryParse(memoryStr) ?? 0;
-              return {'memory_mb': (memoryKB / 1024).round()};
+          final output = result.stdout.toString().trim();
+          if (output.isNotEmpty) {
+            // 更健壮的CSV解析，处理不同语言环境
+            final lines = output.split('\n');
+            for (final line in lines) {
+              if (line.trim().isNotEmpty) {
+                // 使用正则表达式提取内存值，避免依赖CSV格式
+                final memoryMatch = RegExp(r'[\d,]+\s*K').firstMatch(line);
+                if (memoryMatch != null) {
+                  final memoryStr = memoryMatch.group(0)!
+                      .replaceAll(RegExp(r'[^\d]'), ''); // 只保留数字
+                  final memoryKB = int.tryParse(memoryStr) ?? 0;
+                  if (memoryKB > 0) {
+                    return {'memory_mb': (memoryKB / 1024).round()};
+                  }
+                }
+              }
             }
           }
+        } else {
+          logDebug('tasklist命令执行失败，退出码: ${result.exitCode}，错误: ${result.stderr}');
         }
       }
     } catch (e) {
-      // 静默处理内存获取错误
+      logDebug('获取内存使用情况失败: $e');
     }
-    
-    return {'memory_mb': 0};
+
+    logDebug('无法获取内存使用情况，返回未知状态');
+    return {'memory_mb': -1}; // 返回-1表示获取失败，而不是0
   }
   
   /// 设置启动超时检测

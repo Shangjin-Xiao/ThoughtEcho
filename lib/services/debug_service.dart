@@ -15,6 +15,7 @@ class WindowsStartupDebugService {
   
   static bool _isInitialized = false;
   static File? _debugLogFile;
+  static File? _desktopLogFile;
   static final List<String> _initSteps = [];
   static final Map<String, dynamic> _debugInfo = {};
 
@@ -91,8 +92,6 @@ class WindowsStartupDebugService {
       // 静默处理桌面日志创建失败
     }
   }
-
-  static File? _desktopLogFile;
 
   /// 记录初始化步骤
   static Future<void> recordInitStep(String step, {String? details, bool success = true}) async {
