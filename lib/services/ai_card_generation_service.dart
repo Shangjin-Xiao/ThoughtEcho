@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
-// 条件导入：只在移动端使用gal插件
-import 'package:gal/gal.dart' if (dart.library.html) 'dart:html' if (dart.library.ffi) 'dart:ffi' as gal;
+// 条件导入：Web平台使用stub实现，其他平台使用gal
+import '../utils/stub_implementations.dart' if (dart.library.io) 'package:gal/gal.dart' as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
