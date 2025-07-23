@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ARM32设备专用配置 -->
+    
+    <!-- 禁用硬件加速相关的布尔值 -->
+    <bool name="enable_hardware_acceleration">false</bool>
+    <bool name="enable_gpu_rendering">false</bool>
+    <bool name="enable_vulkan">false</bool>
+    <bool name="enable_impeller">false</bool>
+    
+    <!-- ARM32设备性能优化配置 -->
+    <integer name="max_texture_size">1024</integer>
+    <integer name="render_thread_priority">-10</integer>
+    
+    <!-- 内存限制配置 -->
+    <integer name="heap_size_mb">128</integer>
+    <integer name="heap_growth_limit_mb">96</integer>
+    
+</resources>

@@ -16,13 +16,16 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 只对ARM32设备禁用硬件加速，保持64位设备性能
+        // ARM32设备在Application层已经设置了系统属性
+        // 这里再次确保窗口级别的硬件加速被禁用
         if (isArm32Device()) {
-            Log.i("MainActivity", "检测到ARM32设备，禁用硬件加速以避免崩溃")
+            Log.i("MainActivity", "ARM32设备：确保窗口级硬件加速被禁用")
             try {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
+                // 强制设置软件渲染
+                window.setFlags(0, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
             } catch (e: Exception) {
-                Log.w("MainActivity", "无法禁用硬件加速: ${e.message}")
+                Log.w("MainActivity", "无法设置窗口渲染模式: ${e.message}")
             }
         }
 
