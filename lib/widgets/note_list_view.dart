@@ -915,8 +915,8 @@ class NoteListViewState extends State<NoteListView> {
                     children: widget.selectedWeathers.map((weatherKey) {
                       // 找到对应的天气分类
                       String? categoryKey;
-                      for (final entry in WeatherService
-                          .filterCategoryToLabel.entries) {
+                      for (final entry
+                          in WeatherService.filterCategoryToLabel.entries) {
                         final categoryWeathers =
                             WeatherService.getWeatherKeysByFilterCategory(
                           entry.key,
@@ -963,7 +963,8 @@ class NoteListViewState extends State<NoteListView> {
                     icon: Icons.schedule_outlined,
                     color: theme.colorScheme.tertiary,
                     children: widget.selectedDayPeriods.map((periodKey) {
-                      final periodLabel = TimeUtils.getDayPeriodLabel(periodKey);
+                      final periodLabel =
+                          TimeUtils.getDayPeriodLabel(periodKey);
                       final periodIcon =
                           TimeUtils.getDayPeriodIconByKey(periodKey);
 

@@ -4,7 +4,7 @@ import 'package:thoughtecho/widgets/add_note_dialog.dart';
 import 'package:thoughtecho/models/note_category.dart';
 
 /// 添加笔记对话框性能测试
-/// 
+///
 /// 测试点击加号按钮弹出笔记编辑框的性能
 void main() {
   group('AddNoteDialog Performance Tests', () {
@@ -12,11 +12,13 @@ void main() {
 
     setUp(() {
       // 模拟大量标签数据来测试性能
-      mockTags = List.generate(100, (index) => NoteCategory(
-        id: 'tag_$index',
-        name: '标签 $index',
-        iconName: index % 2 == 0 ? '😀' : 'star',
-      ));
+      mockTags = List.generate(
+          100,
+          (index) => NoteCategory(
+                id: 'tag_$index',
+                name: '标签 $index',
+                iconName: index % 2 == 0 ? '😀' : 'star',
+              ));
     });
 
     testWidgets('对话框应该快速渲染，无明显掉帧', (WidgetTester tester) async {

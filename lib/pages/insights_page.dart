@@ -146,11 +146,13 @@ class _InsightsPageState extends State<InsightsPage> {
         quoteCount: 0,
       );
 
-      final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(testAnalysis);
+      final savedAnalysis =
+          await _aiAnalysisDatabaseService!.saveAnalysis(testAnalysis);
       logDebug('测试保存成功，ID: ${savedAnalysis.id}');
 
       // 验证保存
-      final verifyAnalysis = await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
+      final verifyAnalysis =
+          await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
       if (verifyAnalysis != null) {
         logDebug('测试验证成功');
         // 删除测试数据
@@ -221,11 +223,13 @@ class _InsightsPageState extends State<InsightsPage> {
         throw Exception('数据库连接失败: $dbError');
       }
 
-      final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(analysis);
+      final savedAnalysis =
+          await _aiAnalysisDatabaseService!.saveAnalysis(analysis);
       logDebug('AI分析保存成功，ID: ${savedAnalysis.id}');
 
       // 验证保存结果
-      final verifyAnalysis = await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
+      final verifyAnalysis =
+          await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
       if (verifyAnalysis != null) {
         logDebug('保存验证成功，标题: ${verifyAnalysis.title}');
       } else {

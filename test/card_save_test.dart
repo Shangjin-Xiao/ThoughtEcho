@@ -145,7 +145,7 @@ void main() {
 
     test('批量卡片转换性能测试', () async {
       final cards = <GeneratedCard>[];
-      
+
       // 创建多个卡片
       for (int i = 0; i < 3; i++) {
         final svgContent = CardTemplates.knowledgeTemplate(

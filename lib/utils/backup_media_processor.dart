@@ -259,9 +259,9 @@ class BackupMediaProcessor {
 
   /// 通用的媒体文件分析方法
   static Future<Map<String, dynamic>> _analyzeMediaFilesCommon(
-      List<String> filePaths, {
-      int? maxSampleSize,
-    }) async {
+    List<String> filePaths, {
+    int? maxSampleSize,
+  }) async {
     int totalFiles = 0;
     int totalSize = 0;
     int largeFiles = 0; // >100MB
@@ -301,7 +301,9 @@ class BackupMediaProcessor {
       }
 
       // 如果是采样模式且采样数量少于总数，按比例估算
-      if (maxSampleSize != null && totalFiles > 0 && filePaths.length > maxSampleSize) {
+      if (maxSampleSize != null &&
+          totalFiles > 0 &&
+          filePaths.length > maxSampleSize) {
         final scaleFactor = filePaths.length / totalFiles;
         totalSize = (totalSize * scaleFactor).round();
         largeFiles = (largeFiles * scaleFactor).round();
@@ -335,7 +337,8 @@ class BackupMediaProcessor {
   static Future<Map<String, dynamic>> _analyzeMediaFiles(
       List<String> filePaths) async {
     const maxSampleSize = 100; // 最多检查100个文件来快速估算
-    return await _analyzeMediaFilesCommon(filePaths, maxSampleSize: maxSampleSize);
+    return await _analyzeMediaFilesCommon(filePaths,
+        maxSampleSize: maxSampleSize);
   }
 
   /// 根据文件统计计算最优批次大小
@@ -396,7 +399,8 @@ class BackupMediaProcessor {
 
       // 检查每个文件的引用计数
       for (final filePath in allMediaFiles) {
-        final refCount = await MediaReferenceService.getReferenceCount(filePath);
+        final refCount =
+            await MediaReferenceService.getReferenceCount(filePath);
         if (refCount > 0) {
           referencedFiles.add(filePath);
         }

@@ -86,10 +86,10 @@ class BackupService {
       // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
       logDebug('开始收集结构化数据...');
       onProgress?.call(5, 100); // 更新进度
-      
+
       // 让UI有机会更新
       await Future.delayed(const Duration(milliseconds: 50));
-      
+
       final backupData = await _gatherStructuredData(includeMediaFiles);
 
       cancelToken?.throwIfCancelled();
@@ -122,7 +122,8 @@ class BackupService {
       filesToZip[_backupDataFile] = jsonFile.path;
 
       // 4. (可选) 收集媒体文件 - 使用优化的媒体处理器
-      final mediaFilesMap = await BackupMediaProcessor.collectMediaFilesForBackup(
+      final mediaFilesMap =
+          await BackupMediaProcessor.collectMediaFilesForBackup(
         includeMediaFiles: includeMediaFiles,
         onProgress: (current, total) {
           // 媒体文件收集进度占总进度的25% (35% - 60%)
@@ -134,11 +135,12 @@ class BackupService {
         },
         cancelToken: cancelToken,
       );
-      
+
       // 将媒体文件添加到ZIP列表
       filesToZip.addAll(mediaFilesMap);
-      
-      logDebug('准备备份 ${filesToZip.length} 个文件 (包含 ${mediaFilesMap.length} 个媒体文件)');
+
+      logDebug(
+          '准备备份 ${filesToZip.length} 个文件 (包含 ${mediaFilesMap.length} 个媒体文件)');
 
       cancelToken?.throwIfCancelled();
       onProgress?.call(60, 100); // 更新进度

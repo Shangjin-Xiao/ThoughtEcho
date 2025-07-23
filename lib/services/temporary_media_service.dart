@@ -6,7 +6,7 @@ import '../services/streaming_file_processor.dart';
 import '../services/large_file_manager.dart' as lfm;
 
 /// 临时媒体文件管理服务
-/// 
+///
 /// 负责管理编辑过程中的临时媒体文件，包括：
 /// - 导入时存储到临时目录
 /// - 保存笔记时移动到永久目录
@@ -17,20 +17,21 @@ class TemporaryMediaService {
   static const String _tempImagesFolder = 'temp_images';
   static const String _tempVideosFolder = 'temp_videos';
   static const String _tempAudiosFolder = 'temp_audios';
-  
+
   // 临时文件过期时间（24小时）
   static const Duration _tempFileExpiration = Duration(hours: 24);
-  
+
   /// 获取临时媒体文件目录
   static Future<Directory> _getTempMediaDirectory(String subfolder) async {
     final appDir = await getApplicationDocumentsDirectory();
-    final tempDir = Directory(path.join(appDir.path, _tempMediaFolder, subfolder));
+    final tempDir =
+        Directory(path.join(appDir.path, _tempMediaFolder, subfolder));
     if (!await tempDir.exists()) {
       await tempDir.create(recursive: true);
     }
     return tempDir;
   }
-  
+
   /// 获取永久媒体文件目录
   static Future<Directory> _getPermanentMediaDirectory(String subfolder) async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -40,7 +41,7 @@ class TemporaryMediaService {
     }
     return mediaDir;
   }
-  
+
   /// 保存图片到临时目录
   static Future<String?> saveImageToTemporary(
     String sourcePath, {
@@ -54,7 +55,7 @@ class TemporaryMediaService {
       cancelToken: cancelToken,
     );
   }
-  
+
   /// 保存视频到临时目录
   static Future<String?> saveVideoToTemporary(
     String sourcePath, {
@@ -70,7 +71,7 @@ class TemporaryMediaService {
       cancelToken: cancelToken,
     );
   }
-  
+
   /// 保存音频到临时目录
   static Future<String?> saveAudioToTemporary(
     String sourcePath, {
@@ -84,7 +85,7 @@ class TemporaryMediaService {
       cancelToken: cancelToken,
     );
   }
-  
+
   /// 通用的临时文件保存方法
   static Future<String?> _saveToTemporary(
     String sourcePath,
@@ -95,27 +96,29 @@ class TemporaryMediaService {
   }) async {
     try {
       logDebug('开始保存文件到临时目录: $sourcePath');
-      
+
       // 检查源文件
       final sourceFile = File(sourcePath);
       if (!await sourceFile.exists()) {
         throw Exception('源文件不存在: $sourcePath');
       }
-      
+
       final fileSize = await sourceFile.length();
       logDebug('文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
-      
+
       final tempDir = await _getTempMediaDirectory(subfolder);
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
       final targetPath = path.join(tempDir.path, fileName);
-      
+
       // 检查磁盘空间
-      if (!await StreamingFileProcessor.hasEnoughDiskSpace(targetPath, fileSize)) {
+      if (!await StreamingFileProcessor.hasEnoughDiskSpace(
+          targetPath, fileSize)) {
         throw Exception('磁盘空间不足');
       }
-      
+
       onStatusUpdate?.call('正在保存到临时目录...');
-      
+
       // 使用流式处理器复制文件
       await StreamingFileProcessor.copyFileStreaming(
         sourcePath,
@@ -132,12 +135,13 @@ class TemporaryMediaService {
         },
         shouldCancel: () => cancelToken?.isCancelled == true,
       );
-      
+
       // 验证文件完整性
-      if (!await StreamingFileProcessor.verifyFileCopy(sourcePath, targetPath)) {
+      if (!await StreamingFileProcessor.verifyFileCopy(
+          sourcePath, targetPath)) {
         throw Exception('临时文件复制验证失败');
       }
-      
+
       logDebug('文件已保存到临时目录: $targetPath');
       return targetPath;
     } catch (e) {
@@ -145,7 +149,7 @@ class TemporaryMediaService {
       return null;
     }
   }
-  
+
   /// 将临时文件移动到永久目录
   static Future<String?> moveToPermament(
     String tempPath, {
@@ -154,44 +158,49 @@ class TemporaryMediaService {
   }) async {
     try {
       logDebug('开始移动临时文件到永久目录: $tempPath');
-      
+
       final tempFile = File(tempPath);
       if (!await tempFile.exists()) {
         throw Exception('临时文件不存在: $tempPath');
       }
-      
+
       // 确定文件类型和目标目录
       final extension = path.extension(tempPath).toLowerCase();
       String permanentSubfolder;
-      
-      if ({'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}.contains(extension)) {
+
+      if ({'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+          .contains(extension)) {
         permanentSubfolder = 'images';
-      } else if ({'.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'}.contains(extension)) {
+      } else if ({'.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'}
+          .contains(extension)) {
         permanentSubfolder = 'videos';
-      } else if ({'.mp3', '.wav', '.aac', '.flac', '.ogg'}.contains(extension)) {
+      } else if ({'.mp3', '.wav', '.aac', '.flac', '.ogg'}
+          .contains(extension)) {
         permanentSubfolder = 'audios';
       } else {
         throw Exception('不支持的文件类型: $extension');
       }
-      
-      final permanentDir = await _getPermanentMediaDirectory(permanentSubfolder);
+
+      final permanentDir =
+          await _getPermanentMediaDirectory(permanentSubfolder);
       final fileName = path.basename(tempPath);
       final permanentPath = path.join(permanentDir.path, fileName);
-      
+
       // 检查目标文件是否已存在
       if (await File(permanentPath).exists()) {
         logDebug('永久文件已存在，直接删除临时文件: $permanentPath');
         await tempFile.delete();
         return permanentPath;
       }
-      
+
       final fileSize = await tempFile.length();
-      
+
       // 检查磁盘空间
-      if (!await StreamingFileProcessor.hasEnoughDiskSpace(permanentPath, fileSize)) {
+      if (!await StreamingFileProcessor.hasEnoughDiskSpace(
+          permanentPath, fileSize)) {
         throw Exception('磁盘空间不足');
       }
-      
+
       // 使用流式处理器移动文件
       await StreamingFileProcessor.copyFileStreaming(
         tempPath,
@@ -207,15 +216,16 @@ class TemporaryMediaService {
         },
         shouldCancel: () => cancelToken?.isCancelled == true,
       );
-      
+
       // 验证文件完整性
-      if (!await StreamingFileProcessor.verifyFileCopy(tempPath, permanentPath)) {
+      if (!await StreamingFileProcessor.verifyFileCopy(
+          tempPath, permanentPath)) {
         throw Exception('文件移动验证失败');
       }
-      
+
       // 删除临时文件
       await tempFile.delete();
-      
+
       logDebug('文件已移动到永久目录: $permanentPath');
       return permanentPath;
     } catch (e) {
@@ -223,7 +233,7 @@ class TemporaryMediaService {
       return null;
     }
   }
-  
+
   /// 清理指定的临时文件
   static Future<bool> cleanupTemporaryFile(String tempPath) async {
     try {
@@ -239,27 +249,27 @@ class TemporaryMediaService {
       return false;
     }
   }
-  
+
   /// 清理所有过期的临时文件
   static Future<int> cleanupExpiredTemporaryFiles() async {
     int cleanedCount = 0;
-    
+
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final tempMediaDir = Directory(path.join(appDir.path, _tempMediaFolder));
-      
+
       if (!await tempMediaDir.exists()) {
         return 0;
       }
-      
+
       final now = DateTime.now();
-      
+
       await for (final entity in tempMediaDir.list(recursive: true)) {
         if (entity is File) {
           try {
             final stat = await entity.stat();
             final age = now.difference(stat.modified);
-            
+
             if (age > _tempFileExpiration) {
               await entity.delete();
               cleanedCount++;
@@ -270,27 +280,27 @@ class TemporaryMediaService {
           }
         }
       }
-      
+
       logDebug('清理完成，共清理 $cleanedCount 个过期临时文件');
     } catch (e) {
       logDebug('清理过期临时文件失败: $e');
     }
-    
+
     return cleanedCount;
   }
-  
+
   /// 清理所有临时文件（强制清理）
   static Future<int> cleanupAllTemporaryFiles() async {
     int cleanedCount = 0;
-    
+
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final tempMediaDir = Directory(path.join(appDir.path, _tempMediaFolder));
-      
+
       if (!await tempMediaDir.exists()) {
         return 0;
       }
-      
+
       await for (final entity in tempMediaDir.list(recursive: true)) {
         if (entity is File) {
           try {
@@ -302,15 +312,15 @@ class TemporaryMediaService {
           }
         }
       }
-      
+
       logDebug('强制清理完成，共清理 $cleanedCount 个临时文件');
     } catch (e) {
       logDebug('强制清理临时文件失败: $e');
     }
-    
+
     return cleanedCount;
   }
-  
+
   /// 检查文件是否为临时文件
   static Future<bool> isTemporaryFile(String filePath) async {
     try {
@@ -321,17 +331,17 @@ class TemporaryMediaService {
       return false;
     }
   }
-  
+
   /// 获取临时文件的统计信息
   static Future<Map<String, dynamic>> getTemporaryFilesStats() async {
     int totalFiles = 0;
     int totalSize = 0;
     int expiredFiles = 0;
-    
+
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final tempMediaDir = Directory(path.join(appDir.path, _tempMediaFolder));
-      
+
       if (!await tempMediaDir.exists()) {
         return {
           'totalFiles': 0,
@@ -340,16 +350,16 @@ class TemporaryMediaService {
           'totalSizeMB': 0.0,
         };
       }
-      
+
       final now = DateTime.now();
-      
+
       await for (final entity in tempMediaDir.list(recursive: true)) {
         if (entity is File) {
           try {
             final stat = await entity.stat();
             totalFiles++;
             totalSize += stat.size;
-            
+
             final age = now.difference(stat.modified);
             if (age > _tempFileExpiration) {
               expiredFiles++;
@@ -362,7 +372,7 @@ class TemporaryMediaService {
     } catch (e) {
       logDebug('获取临时文件统计信息失败: $e');
     }
-    
+
     return {
       'totalFiles': totalFiles,
       'totalSize': totalSize,

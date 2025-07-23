@@ -85,7 +85,8 @@ class QuoteContent extends StatelessWidget {
         );
 
         // 只有当内容确实需要折叠且处于折叠状态时，才应用高度限制
-        final bool needsExpansion = _needsExpansionForRichText(quote.deltaContent!);
+        final bool needsExpansion =
+            _needsExpansionForRichText(quote.deltaContent!);
         if (!showFullContent && maxLines != null && needsExpansion) {
           // 计算最大高度（每行大约24像素，根据实际字体大小调整）
           final estimatedLineHeight =
@@ -118,12 +119,14 @@ class QuoteContent extends StatelessWidget {
     // 判断普通文本是否需要折叠
     final int lineCount = 1 + '\n'.allMatches(quote.content).length;
     final bool needsExpansion = lineCount > 3 || quote.content.length > 150;
-    
+
     return Text(
       quote.content,
       style: style,
       maxLines: showFullContent ? null : (needsExpansion ? maxLines : null),
-      overflow: showFullContent ? TextOverflow.visible : (needsExpansion ? TextOverflow.ellipsis : TextOverflow.visible),
+      overflow: showFullContent
+          ? TextOverflow.visible
+          : (needsExpansion ? TextOverflow.ellipsis : TextOverflow.visible),
     );
   }
 }

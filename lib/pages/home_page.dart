@@ -281,6 +281,7 @@ class _HomePageState extends State<HomePage>
       // 不抛出异常，让调用方继续执行
     }
   }
+
   @override
   void initState() {
     super.initState();
@@ -407,7 +408,8 @@ class _HomePageState extends State<HomePage>
         setState(() {
           _isLoadingTags = false;
         });
-      }    }
+      }
+    }
   }
 
   // 预加载标签数据，确保AddNoteDialog打开时数据已准备好
@@ -415,7 +417,7 @@ class _HomePageState extends State<HomePage>
     setState(() {
       _isLoadingTags = true;
     });
-    
+
     try {
       // 使用Future.microtask避免阻塞UI初始化
       await Future.microtask(() async {
@@ -523,6 +525,7 @@ class _HomePageState extends State<HomePage>
       // 不抛出异常，让调用方继续执行
     }
   }
+
   // 显示添加笔记对话框（优化性能）
   void _showAddQuoteDialog({
     String? prefilledContent,
@@ -752,8 +755,7 @@ class _HomePageState extends State<HomePage>
       );
 
       final tempDir = await getTemporaryDirectory();
-      final fileName =
-          '心迹_Card_${DateTime.now().millisecondsSinceEpoch}.png';
+      final fileName = '心迹_Card_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(imageBytes);
 

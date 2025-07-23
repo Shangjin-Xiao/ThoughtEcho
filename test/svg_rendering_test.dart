@@ -63,9 +63,9 @@ void main() {
 
     test('无效SVG处理', () async {
       const invalidSvg = '<invalid>not svg</invalid>';
-      
+
       final imageBytes = await SvgToImageService.convertSvgToImage(invalidSvg);
-      
+
       // 应该返回错误图片而不是抛出异常
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
@@ -73,7 +73,7 @@ void main() {
 
     test('空SVG处理', () async {
       final imageBytes = await SvgToImageService.convertSvgToImage('');
-      
+
       // 应该返回错误图片
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
@@ -112,21 +112,21 @@ void main() {
 
     test('性能测试', () async {
       final stopwatch = Stopwatch()..start();
-      
+
       final imageBytes = await SvgToImageService.convertSvgToImage(
         testSvg,
         width: 400,
         height: 600,
       );
-      
+
       stopwatch.stop();
-      
+
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      
+
       // 渲染时间应该在合理范围内（小于5秒）
       expect(stopwatch.elapsedMilliseconds, lessThan(5000));
-      
+
       if (stopwatch.elapsedMilliseconds > 1000) {
         print('警告: SVG渲染耗时 ${stopwatch.elapsedMilliseconds}ms');
       }
@@ -140,11 +140,11 @@ void main() {
           width: 400,
           height: 600,
         );
-        
+
         expect(imageBytes, isNotNull);
         expect(imageBytes.length, greaterThan(0));
       }
-      
+
       // 如果没有内存泄漏，测试应该正常完成
     });
   });

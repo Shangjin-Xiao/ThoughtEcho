@@ -85,7 +85,7 @@ class AICardGenerationService {
 
     for (int i = 0; i < notesToProcess.length; i++) {
       final note = notesToProcess[i];
-      
+
       try {
         if (kDebugMode) {
           print('正在生成第${i + 1}/${notesToProcess.length}张卡片...');
@@ -102,9 +102,10 @@ class AICardGenerationService {
           await Future.delayed(const Duration(milliseconds: 500));
         }
       } catch (e) {
-        final errorMsg = '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
+        final errorMsg =
+            '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
         errors.add(errorMsg);
-        
+
         if (kDebugMode) {
           print(errorMsg);
         }
@@ -117,7 +118,7 @@ class AICardGenerationService {
           logError('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
           break;
         }
-        
+
         continue; // 跳过失败的卡片，继续生成其他卡片
       }
     }
@@ -309,7 +310,7 @@ class AICardGenerationService {
       if (width <= 0 || height <= 0) {
         throw ArgumentError('图片尺寸必须大于0');
       }
-      
+
       if (width > 4000 || height > 4000) {
         throw ArgumentError('图片尺寸过大，最大支持4000x4000');
       }
@@ -327,7 +328,7 @@ class AICardGenerationService {
 
       // 生成唯一文件名，避免重复
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = customName != null 
+      final fileName = customName != null
           ? '${customName}_$timestamp'
           : '心迹_Card_$timestamp';
 
@@ -419,7 +420,8 @@ class AICardGenerationService {
   String _selectBestPrompt(Quote note, String? customStyle) {
     // 分析内容特征
     final content = note.content.toLowerCase();
-    final hasAuthor = note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
+    final hasAuthor =
+        note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
 
     // 如果指定了自定义风格，使用对应的提示词
     if (customStyle != null) {
@@ -452,7 +454,10 @@ class AICardGenerationService {
     }
 
     // 3. 检查是否为引用/名言
-    if (hasAuthor || content.contains('说') || content.contains('曰') || content.contains('"')) {
+    if (hasAuthor ||
+        content.contains('说') ||
+        content.contains('曰') ||
+        content.contains('"')) {
       return AICardPrompts.intelligentCardPrompt(
         content: note.content,
         author: note.sourceAuthor,

@@ -510,9 +510,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       // 方法1：尝试使用Data URI在浏览器中直接打开
       try {
         // 对于较小的HTML内容，使用Data URI
-        if (contentToWrite.length < 8000) { // 限制Data URI长度避免问题
+        if (contentToWrite.length < 8000) {
+          // 限制Data URI长度避免问题
           final encodedHtml = Uri.encodeComponent(contentToWrite);
-          final dataUri = Uri.parse('data:text/html;charset=utf-8,$encodedHtml');
+          final dataUri =
+              Uri.parse('data:text/html;charset=utf-8,$encodedHtml');
 
           if (await canLaunchUrl(dataUri)) {
             await launchUrl(dataUri, mode: LaunchMode.externalApplication);
@@ -589,7 +591,6 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         _showCopyInstructions();
       }
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

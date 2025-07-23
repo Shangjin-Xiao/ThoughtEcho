@@ -5,7 +5,7 @@ import '../services/temporary_media_service.dart';
 import '../utils/app_logger.dart';
 
 /// 媒体文件管理页面
-/// 
+///
 /// 提供媒体文件的统计、清理、维护等功能
 class MediaManagementPage extends StatefulWidget {
   const MediaManagementPage({super.key});
@@ -53,7 +53,8 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
     }
   }
 
-  Future<void> _performOperation(String operation, Future<Map<String, dynamic>> Function() action) async {
+  Future<void> _performOperation(
+      String operation, Future<Map<String, dynamic>> Function() action) async {
     setState(() {
       _isLoading = true;
       _lastOperation = operation;
@@ -153,10 +154,14 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
             _buildStatRow('孤儿文件数', '${stats['orphanFiles'] ?? 0}'),
             _buildStatRow('总引用数', '${stats['totalReferences'] ?? 0}'),
             const Divider(),
-            _buildStatRow('总大小', '${(stats['totalSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
-            _buildStatRow('图片大小', '${(stats['imagesSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
-            _buildStatRow('视频大小', '${(stats['videosSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
-            _buildStatRow('音频大小', '${(stats['audiosSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
+            _buildStatRow('总大小',
+                '${(stats['totalSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
+            _buildStatRow('图片大小',
+                '${(stats['imagesSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
+            _buildStatRow('视频大小',
+                '${(stats['videosSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
+            _buildStatRow('音频大小',
+                '${(stats['audiosSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
             const Divider(),
             const Text(
               '临时文件',
@@ -165,7 +170,8 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
             const SizedBox(height: 8),
             _buildStatRow('临时文件数', '${tempStats['totalFiles'] ?? 0}'),
             _buildStatRow('过期文件数', '${tempStats['expiredFiles'] ?? 0}'),
-            _buildStatRow('临时文件大小', '${(tempStats['totalSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
+            _buildStatRow('临时文件大小',
+                '${(tempStats['totalSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
           ],
         ),
       ),
@@ -207,7 +213,8 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
               () => _performOperation(
                 '清理过期临时文件',
                 () async {
-                  final count = await TemporaryMediaService.cleanupExpiredTemporaryFiles();
+                  final count = await TemporaryMediaService
+                      .cleanupExpiredTemporaryFiles();
                   return {'cleanedFiles': count};
                 },
               ),
@@ -220,7 +227,8 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
               () => _performOperation(
                 '清理孤儿文件',
                 () async {
-                  final count = await MediaReferenceService.cleanupOrphanFiles();
+                  final count =
+                      await MediaReferenceService.cleanupOrphanFiles();
                   return {'cleanedFiles': count};
                 },
               ),
@@ -304,7 +312,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
 
   Widget _buildResultSection() {
     final result = _lastOperationResult!;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),

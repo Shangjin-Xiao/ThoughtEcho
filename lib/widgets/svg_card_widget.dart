@@ -29,7 +29,8 @@ class SVGCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // 只在debug模式且SVG内容有问题时才打印详细信息
     if (kDebugMode && svgContent.length < 100) {
-      logDebug('SVG渲染 - 内容可能过短: ${svgContent.length}字符', source: 'SVGCardWidget');
+      logDebug('SVG渲染 - 内容可能过短: ${svgContent.length}字符',
+          source: 'SVGCardWidget');
     }
 
     return GestureDetector(
@@ -451,7 +452,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
@@ -459,7 +460,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
       parent: _animationController,
       curve: Curves.easeOutBack,
     ));
-    
+
     _opacityAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -467,7 +468,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
       parent: _animationController,
       curve: Curves.easeOut,
     ));
-    
+
     _animationController.forward();
   }
 
@@ -489,7 +490,8 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
             child: Opacity(
               opacity: _opacityAnimation.value,
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+                constraints:
+                    const BoxConstraints(maxWidth: 500, maxHeight: 700),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -503,7 +505,8 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                         ),
                         child: IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                          icon: const Icon(Icons.close,
+                              color: Colors.white, size: 24),
                           tooltip: '关闭',
                         ),
                       ),
@@ -531,9 +534,12 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               // 标题
                               Text(
                                 '精选卡片',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                               const SizedBox(height: 16),
                               // 卡片
