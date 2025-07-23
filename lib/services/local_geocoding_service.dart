@@ -100,6 +100,7 @@ class LocalGeocodingService {
       return null;
     }
   }
+
   /// 通过经纬度获取地址信息
   /// [latitude]: 纬度
   /// [longitude]: 经度

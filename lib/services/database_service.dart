@@ -242,7 +242,8 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    logDebug('初始化数据库...');    try {
+    logDebug('初始化数据库...');
+    try {
       // FFI初始化已在main.dart中统一处理，这里不再重复初始化
       // 获取数据库存储路径，由 main.dart 已设置好路径
       final dbPath = await getDatabasesPath();
@@ -387,8 +388,6 @@ class DatabaseService extends ChangeNotifier {
           logError('数据库升级失败: $e', error: e, source: 'DatabaseUpgrade');
           rethrow;
         }
-
-
       },
     );
   }
@@ -739,7 +738,8 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 修复：在事务中初始化媒体引用表
-  Future<void> _initializeMediaReferenceTableInTransaction(Transaction txn) async {
+  Future<void> _initializeMediaReferenceTableInTransaction(
+      Transaction txn) async {
     await txn.execute('''
       CREATE TABLE IF NOT EXISTS media_references (
         id TEXT PRIMARY KEY,
@@ -764,6 +764,7 @@ class DatabaseService extends ChangeNotifier {
 
     logDebug('媒体引用表在事务中初始化完成');
   }
+
   // 新增初始化新数据库方法，用于在迁移失败时创建新的数据库
   Future<void> initializeNewDatabase() async {
     if (_isInitialized) return;

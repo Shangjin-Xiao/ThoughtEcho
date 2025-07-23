@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
 /// Windows启动调试服务
@@ -12,7 +11,7 @@ class WindowsStartupDebugService {
   static const String _debugLogFileName = 'windows_startup_debug.log';
   static const String _crashReportFileName = 'crash_report.json';
   static const String _initProgressFileName = 'init_progress.json';
-  
+
   static bool _isInitialized = false;
   static File? _debugLogFile;
   static File? _desktopLogFile;
@@ -43,7 +42,8 @@ class WindowsStartupDebugService {
       await _writeDebugLog('=== Windows 启动调试会话开始 ===');
       await _writeDebugLog('时间: ${DateTime.now().toIso8601String()}');
       await _writeDebugLog('Flutter版本: ${kDebugMode ? 'Debug' : 'Release'}');
-      await _writeDebugLog('平台: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}');
+      await _writeDebugLog(
+          '平台: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}');
       await _writeDebugLog('进程ID: ${Platform.resolvedExecutable}');
 
       _isInitialized = true;
@@ -59,7 +59,8 @@ class WindowsStartupDebugService {
     try {
       if (_desktopLogFile != null) {
         final timestamp = DateTime.now().toIso8601String();
-        await _desktopLogFile!.writeAsString('[$timestamp] $message\n', mode: FileMode.append);
+        await _desktopLogFile!
+            .writeAsString('[$timestamp] $message\n', mode: FileMode.append);
       }
     } catch (e) {
       // 静默处理桌面日志写入错误
@@ -69,14 +70,16 @@ class WindowsStartupDebugService {
   /// 创建桌面日志文件，确保用户能看到启动问题
   static Future<void> _createDesktopLogFile() async {
     try {
-      final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+      final home =
+          Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
       if (home == null) return;
 
       final desktop = Directory(path.join(home, 'Desktop'));
       if (!await desktop.exists()) return;
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final desktopLogFile = File(path.join(desktop.path, 'ThoughtEcho_启动日志_$timestamp.txt'));
+      final desktopLogFile =
+          File(path.join(desktop.path, 'ThoughtEcho_启动日志_$timestamp.txt'));
 
       await desktopLogFile.writeAsString('''
 === ThoughtEcho Windows 启动日志 ===
@@ -94,16 +97,18 @@ class WindowsStartupDebugService {
   }
 
   /// 记录初始化步骤
-  static Future<void> recordInitStep(String step, {String? details, bool success = true}) async {
+  static Future<void> recordInitStep(String step,
+      {String? details, bool success = true}) async {
     if (!_isInitialized) await initialize();
-    
+
     final timestamp = DateTime.now().toIso8601String();
     final status = success ? '✓' : '✗';
-    final logEntry = '[$timestamp] $status $step${details != null ? ' - $details' : ''}';
-    
+    final logEntry =
+        '[$timestamp] $status $step${details != null ? ' - $details' : ''}';
+
     _initSteps.add(logEntry);
     await _writeDebugLog(logEntry);
-    
+
     // 同时保存进度到JSON文件
     await _saveInitProgress();
   }
@@ -111,15 +116,16 @@ class WindowsStartupDebugService {
   /// 记录调试信息
   static Future<void> recordDebugInfo(String key, dynamic value) async {
     if (!_isInitialized) await initialize();
-    
+
     _debugInfo[key] = value;
     await _writeDebugLog('调试信息[$key]: $value');
   }
 
   /// 记录崩溃报告
-  static Future<void> recordCrash(String error, StackTrace? stackTrace, {String? context}) async {
+  static Future<void> recordCrash(String error, StackTrace? stackTrace,
+      {String? context}) async {
     if (!_isInitialized) await initialize();
-    
+
     final crashReport = {
       'timestamp': DateTime.now().toIso8601String(),
       'error': error,
@@ -133,12 +139,12 @@ class WindowsStartupDebugService {
         'locale': Platform.localeName,
       }
     };
-    
+
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final debugDir = Directory(path.join(appDir.path, 'debug'));
       final crashFile = File(path.join(debugDir.path, _crashReportFileName));
-      
+
       await crashFile.writeAsString(json.encode(crashReport));
       await _writeDebugLog('崩溃报告已保存: ${crashFile.path}');
     } catch (e) {
@@ -151,12 +157,13 @@ class WindowsStartupDebugService {
     try {
       await recordDebugInfo('is_windows', Platform.isWindows);
       await recordDebugInfo('executable_path', Platform.resolvedExecutable);
-      await recordDebugInfo('environment_path', Platform.environment['PATH']?.substring(0, 200));
-      
+      await recordDebugInfo(
+          'environment_path', Platform.environment['PATH']?.substring(0, 200));
+
       // 检查DLL文件
       final exeDir = path.dirname(Platform.resolvedExecutable);
       await recordDebugInfo('exe_directory', exeDir);
-      
+
       // 检查常见的SQLite相关文件
       final sqliteFiles = ['sqlite3.dll', 'msvcp140.dll', 'vcruntime140.dll'];
       for (final fileName in sqliteFiles) {
@@ -179,7 +186,8 @@ class WindowsStartupDebugService {
       if (await dbFile.exists()) {
         final stat = await dbFile.stat();
         await recordDebugInfo('database_size', stat.size);
-        await recordDebugInfo('database_modified', stat.modified.toIso8601String());
+        await recordDebugInfo(
+            'database_modified', stat.modified.toIso8601String());
       }
     }
   }
@@ -187,31 +195,31 @@ class WindowsStartupDebugService {
   /// 生成诊断报告
   static Future<String> generateDiagnosticReport() async {
     if (!_isInitialized) await initialize();
-    
+
     final report = StringBuffer();
     report.writeln('=== Windows 启动诊断报告 ===');
     report.writeln('生成时间: ${DateTime.now().toIso8601String()}');
     report.writeln();
-    
+
     report.writeln('平台信息:');
     report.writeln('  操作系统: ${Platform.operatingSystem}');
     report.writeln('  版本: ${Platform.operatingSystemVersion}');
     report.writeln('  区域: ${Platform.localeName}');
     report.writeln('  可执行文件: ${Platform.resolvedExecutable}');
     report.writeln();
-    
+
     report.writeln('初始化步骤:');
     for (final step in _initSteps) {
       report.writeln('  $step');
     }
     report.writeln();
-    
+
     report.writeln('调试信息:');
     _debugInfo.forEach((key, value) {
       report.writeln('  $key: $value');
     });
     report.writeln();
-    
+
     // 添加日志统计
     try {
       final logService = UnifiedLogService.instance;
@@ -223,7 +231,7 @@ class WindowsStartupDebugService {
     } catch (e) {
       report.writeln('获取日志统计失败: $e');
     }
-    
+
     return report.toString();
   }
 
@@ -231,28 +239,31 @@ class WindowsStartupDebugService {
   static Future<String?> exportDebugFiles() async {
     try {
       // 获取桌面路径
-      final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+      final home =
+          Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
       if (home == null) return null;
-      
+
       final desktop = Directory(path.join(home, 'Desktop'));
       if (!await desktop.exists()) return null;
-      
+
       // 创建导出文件夹
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final exportDir = Directory(path.join(desktop.path, 'ThoughtEcho_Debug_$timestamp'));
+      final exportDir =
+          Directory(path.join(desktop.path, 'ThoughtEcho_Debug_$timestamp'));
       await exportDir.create();
-      
+
       // 复制调试日志
       if (_debugLogFile != null && await _debugLogFile!.exists()) {
         final targetFile = File(path.join(exportDir.path, _debugLogFileName));
         await _debugLogFile!.copy(targetFile.path);
       }
-      
+
       // 生成诊断报告
       final diagnosticReport = await generateDiagnosticReport();
-      final reportFile = File(path.join(exportDir.path, 'diagnostic_report.txt'));
+      final reportFile =
+          File(path.join(exportDir.path, 'diagnostic_report.txt'));
       await reportFile.writeAsString(diagnosticReport);
-      
+
       // 复制日志数据库文件
       try {
         final appDir = await getApplicationDocumentsDirectory();
@@ -265,20 +276,22 @@ class WindowsStartupDebugService {
       } catch (e) {
         await _writeDebugLog('复制日志数据库失败: $e');
       }
-      
+
       // 复制主数据库文件
       try {
         final appDir = await getApplicationDocumentsDirectory();
-        final mainDbPath = path.join(appDir.path, 'databases', 'app_database.db');
+        final mainDbPath =
+            path.join(appDir.path, 'databases', 'app_database.db');
         final mainDbFile = File(mainDbPath);
         if (await mainDbFile.exists()) {
-          final targetMainDb = File(path.join(exportDir.path, 'app_database.db'));
+          final targetMainDb =
+              File(path.join(exportDir.path, 'app_database.db'));
           await mainDbFile.copy(targetMainDb.path);
         }
       } catch (e) {
         await _writeDebugLog('复制主数据库失败: $e');
       }
-      
+
       await _writeDebugLog('调试文件已导出到: ${exportDir.path}');
       return exportDir.path;
     } catch (e) {
@@ -291,25 +304,29 @@ class WindowsStartupDebugService {
   static Future<void> checkWindowsRuntime() async {
     try {
       await recordInitStep('检查Windows运行时依赖');
-      
+
       // 检查Visual C++ Redistributable
       final vcRedistKeys = [
         r'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
         r'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86',
       ];
-      
+
       for (final key in vcRedistKeys) {
         try {
-          final result = await Process.run('reg', ['query', 'HKEY_LOCAL_MACHINE\\$key'], runInShell: true);
-          await recordDebugInfo('vcredist_$key', result.exitCode == 0 ? 'found' : 'not_found');
+          final result = await Process.run(
+              'reg', ['query', 'HKEY_LOCAL_MACHINE\\$key'],
+              runInShell: true);
+          await recordDebugInfo(
+              'vcredist_$key', result.exitCode == 0 ? 'found' : 'not_found');
         } catch (e) {
           await recordDebugInfo('vcredist_check_error', e.toString());
         }
       }
-      
+
       await recordInitStep('Windows运行时依赖检查完成', success: true);
     } catch (e) {
-      await recordInitStep('Windows运行时依赖检查失败', details: e.toString(), success: false);
+      await recordInitStep('Windows运行时依赖检查失败',
+          details: e.toString(), success: false);
     }
   }
 
@@ -318,7 +335,8 @@ class WindowsStartupDebugService {
     try {
       if (_debugLogFile != null) {
         final timestamp = DateTime.now().toIso8601String();
-        await _debugLogFile!.writeAsString('[$timestamp] $message\n', mode: FileMode.append);
+        await _debugLogFile!
+            .writeAsString('[$timestamp] $message\n', mode: FileMode.append);
       }
     } catch (e) {
       // 静默处理写入错误，避免递归
@@ -330,19 +348,21 @@ class WindowsStartupDebugService {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final debugDir = Directory(path.join(appDir.path, 'debug'));
-      final progressFile = File(path.join(debugDir.path, _initProgressFileName));
-      
+      final progressFile =
+          File(path.join(debugDir.path, _initProgressFileName));
+
       final progressData = {
         'timestamp': DateTime.now().toIso8601String(),
         'steps': _initSteps,
         'debugInfo': _debugInfo,
       };
-      
+
       await progressFile.writeAsString(json.encode(progressData));
     } catch (e) {
       await _writeDebugLog('保存初始化进度失败: $e');
     }
   }
+
   /// 获取调试文件路径
   static Future<String?> getDebugLogPath() async {
     if (_debugLogFile != null) {
@@ -356,15 +376,17 @@ class WindowsStartupDebugService {
   static Future<void> createStartupGuide() async {
     try {
       // 获取桌面路径
-      final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+      final home =
+          Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
       if (home == null) return;
-      
+
       final desktop = Directory(path.join(home, 'Desktop'));
       if (!await desktop.exists()) return;
-      
+
       // 创建启动指南文件
-      final guideFile = File(path.join(desktop.path, 'ThoughtEcho_启动问题解决指南.txt'));
-      
+      final guideFile =
+          File(path.join(desktop.path, 'ThoughtEcho_启动问题解决指南.txt'));
+
       final guide = '''
 === ThoughtEcho 启动问题解决指南 ===
 生成时间: ${DateTime.now().toLocal()}
@@ -418,16 +440,17 @@ class WindowsStartupDebugService {
   static Future<void> flushLogs() async {
     try {
       await _writeDebugLog('开始刷新日志到磁盘');
-      
+
       // 1. 刷新当前调试日志
       if (_debugLogFile != null) {
         // 强制刷新文件系统缓存
-        await _debugLogFile!.writeAsString('', mode: FileMode.append, flush: true);
+        await _debugLogFile!
+            .writeAsString('', mode: FileMode.append, flush: true);
       }
-      
+
       // 2. 保存最终的初始化进度
       await _saveInitProgress();
-      
+
       // 3. 尝试刷新统一日志服务
       try {
         final logService = UnifiedLogService.instance;
@@ -436,23 +459,26 @@ class WindowsStartupDebugService {
       } catch (e) {
         await _writeDebugLog('统一日志服务刷新失败: $e');
       }
-      
+
       // 4. 生成最终诊断报告
       try {
         final diagnosticReport = await generateDiagnosticReport();
-        
+
         // 保存到应用目录
         final appDir = await getApplicationDocumentsDirectory();
         final debugDir = Directory(path.join(appDir.path, 'debug'));
-        final finalReportFile = File(path.join(debugDir.path, 'final_diagnostic_report.txt'));
+        final finalReportFile =
+            File(path.join(debugDir.path, 'final_diagnostic_report.txt'));
         await finalReportFile.writeAsString(diagnosticReport);
-        
+
         // 同时保存到桌面（如果可能）
-        final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+        final home =
+            Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
         if (home != null) {
           final desktop = Directory(path.join(home, 'Desktop'));
           if (await desktop.exists()) {
-            final desktopReportFile = File(path.join(desktop.path, 'ThoughtEcho_最终诊断报告_${DateTime.now().millisecondsSinceEpoch}.txt'));
+            final desktopReportFile = File(path.join(desktop.path,
+                'ThoughtEcho_最终诊断报告_${DateTime.now().millisecondsSinceEpoch}.txt'));
             await desktopReportFile.writeAsString(diagnosticReport);
             await _writeDebugLog('最终诊断报告已保存到桌面: ${desktopReportFile.path}');
           }
@@ -460,21 +486,22 @@ class WindowsStartupDebugService {
       } catch (e) {
         await _writeDebugLog('生成最终诊断报告失败: $e');
       }
-      
+
       // 5. 记录刷新完成
       await _writeDebugLog('所有日志刷新完成');
-      
+
       // 6. 最后再次强制刷新调试日志文件
       if (_debugLogFile != null) {
-        await _debugLogFile!.writeAsString('', mode: FileMode.append, flush: true);
+        await _debugLogFile!
+            .writeAsString('', mode: FileMode.append, flush: true);
       }
-      
     } catch (e) {
       // 即使刷新失败也要尝试记录
       try {
         await _writeDebugLog('日志刷新过程中发生错误: $e');
         if (_debugLogFile != null) {
-          await _debugLogFile!.writeAsString('', mode: FileMode.append, flush: true);
+          await _debugLogFile!
+              .writeAsString('', mode: FileMode.append, flush: true);
         }
       } catch (_) {
         // 静默处理最后的错误
@@ -487,12 +514,12 @@ class WindowsStartupDebugService {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final debugDir = Directory(path.join(appDir.path, 'debug'));
-      
+
       if (!await debugDir.exists()) return;
-      
+
       final now = DateTime.now();
       final cutoffDate = now.subtract(const Duration(days: 7)); // 保留7天内的文件
-      
+
       await for (final entity in debugDir.list()) {
         if (entity is File) {
           final stat = await entity.stat();

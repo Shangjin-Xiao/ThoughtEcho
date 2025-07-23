@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
 // 条件导入：Web平台使用stub实现，其他平台使用gal
-import '../utils/stub_implementations.dart' if (dart.library.io) 'package:gal/gal.dart' as gal;
+import '../utils/stub_implementations.dart'
+    if (dart.library.io) 'package:gal/gal.dart' as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -332,7 +333,7 @@ class AICardGenerationService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = customName != null
           ? '${customName}_$timestamp'
-          : '心迹_Card_$timestamp';      // 保存到相册（仅移动端）
+          : '心迹_Card_$timestamp'; // 保存到相册（仅移动端）
       if (!kIsWeb && Platform.isAndroid || Platform.isIOS) {
         await gal.Gal.putImageBytes(imageBytes, name: fileName);
       } else {
@@ -351,7 +352,9 @@ class AICardGenerationService {
       }
       rethrow; // 重新抛出异常让上层处理
     }
-  }  /// 检查当前平台是否支持相册功能
+  }
+
+  /// 检查当前平台是否支持相册功能
   bool _isPlatformSupported() {
     // gal插件只支持Android和iOS平台
     return !kIsWeb && (Platform.isAndroid || Platform.isIOS);
@@ -362,7 +365,8 @@ class AICardGenerationService {
     // 检查平台支持
     if (!_isPlatformSupported()) {
       return false;
-    }    try {
+    }
+    try {
       // 仅在移动端检查权限
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
         final hasAccess = await gal.Gal.hasAccess();

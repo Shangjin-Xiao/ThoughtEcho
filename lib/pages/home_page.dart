@@ -532,18 +532,35 @@ class _HomePageState extends State<HomePage>
     String? prefilledAuthor,
     String? prefilledWork,
     dynamic hitokotoData,
-  }) {
+  }) async {
     // 确保标签数据已经加载
-    if (_isLoadingTags) {
-      logDebug('标签仍在加载中，稍后再试');
+    if (_isLoadingTags || _tags.isEmpty) {
+      logDebug('标签数据未准备好，重新加载标签数据...');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('正在加载数据，请稍后再试'),
+          content: Text('正在加载数据，请稍等...'),
           duration: Duration(seconds: 1),
         ),
       );
-      return;
+
+      // 强制重新加载标签数据
+      await _loadTags();
+
+      // 如果仍然没有标签数据，提示用户
+      if (_tags.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('暂无标签数据，请检查网络连接或稍后重试'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
     }
+
+    logDebug('显示添加笔记对话框，可用标签数: ${_tags.length}');
 
     // 使用延迟显示，确保动画流畅
     Future.microtask(() {
@@ -1021,7 +1038,8 @@ class _HomePageState extends State<HomePage>
           // 首页 - 每日一言和每日提示
           RefreshIndicator(
             onRefresh: _handleRefresh,
-            child: LayoutBuilder(              builder: (context, constraints) {
+            child: LayoutBuilder(
+              builder: (context, constraints) {
                 final screenHeight = constraints.maxHeight;
                 final screenWidth = constraints.maxWidth;
                 final isSmallScreen = screenHeight < 600;
@@ -1037,7 +1055,8 @@ class _HomePageState extends State<HomePage>
                         Expanded(
                           child: Container(
                             constraints: BoxConstraints(
-                              minHeight: screenHeight * (isVerySmallScreen ? 0.55 : 0.50), // 极小屏幕调整比例
+                              minHeight: screenHeight *
+                                  (isVerySmallScreen ? 0.55 : 0.50), // 极小屏幕调整比例
                             ),
                             child: DailyQuoteView(
                               key: _dailyQuoteViewKey,
@@ -1051,17 +1070,23 @@ class _HomePageState extends State<HomePage>
                               ),
                             ),
                           ),
-                        ),                        // 每日提示部分 - 固定在底部，紧凑布局
+                        ), // 每日提示部分 - 固定在底部，紧凑布局
                         Container(
                           width: double.infinity,
                           margin: EdgeInsets.fromLTRB(
-                            screenWidth > 600 ? 16.0 : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
+                            screenWidth > 600
+                                ? 16.0
+                                : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
                             isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
-                            screenWidth > 600 ? 16.0 : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
+                            screenWidth > 600
+                                ? 16.0
+                                : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
                             isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
                           ),
                           padding: EdgeInsets.all(
-                            screenWidth > 600 ? 18.0 : (isVerySmallScreen ? 10.0 : 14.0), // 动态调整内边距
+                            screenWidth > 600
+                                ? 18.0
+                                : (isVerySmallScreen ? 10.0 : 14.0), // 动态调整内边距
                           ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
@@ -1075,42 +1100,64 @@ class _HomePageState extends State<HomePage>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [                              Row(
+                            children: [
+                              Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
                                     Icons.lightbulb_outline,
                                     color: theme.colorScheme.primary,
-                                    size: screenWidth > 600 ? 22 : (isVerySmallScreen ? 16 : 18), // 动态调整图标大小
+                                    size: screenWidth > 600
+                                        ? 22
+                                        : (isVerySmallScreen
+                                            ? 16
+                                            : 18), // 动态调整图标大小
                                   ),
-                                  SizedBox(width: isVerySmallScreen ? 4 : 6), // 动态调整间距
+                                  SizedBox(
+                                      width:
+                                          isVerySmallScreen ? 4 : 6), // 动态调整间距
                                   Text(
                                     '今日思考',
                                     style:
                                         theme.textTheme.titleMedium?.copyWith(
                                       color: theme.colorScheme.primary,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: screenWidth > 600 ? 16 : (isVerySmallScreen ? 13 : 15), // 动态调整字体
+                                      fontSize: screenWidth > 600
+                                          ? 16
+                                          : (isVerySmallScreen
+                                              ? 13
+                                              : 15), // 动态调整字体
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: isVerySmallScreen ? 4 : (isSmallScreen ? 6 : 8)), // 动态调整间距
+                              SizedBox(
+                                  height: isVerySmallScreen
+                                      ? 4
+                                      : (isSmallScreen ? 6 : 8)), // 动态调整间距
 
                               // 提示内容区域 - 更紧凑
                               _isGeneratingDailyPrompt &&
                                       _accumulatedPromptText.isEmpty
                                   ? Column(
-                                      mainAxisSize: MainAxisSize.min,                                      children: [
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
                                         SizedBox(
-                                          width: isVerySmallScreen ? 16 : 18, // 动态调整加载指示器大小
+                                          width: isVerySmallScreen
+                                              ? 16
+                                              : 18, // 动态调整加载指示器大小
                                           height: isVerySmallScreen ? 16 : 18,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
                                             color: theme.colorScheme.primary,
                                           ),
                                         ),
-                                        SizedBox(height: isVerySmallScreen ? 3 : (isSmallScreen ? 4 : 6)), // 动态调整间距
+                                        SizedBox(
+                                            height: isVerySmallScreen
+                                                ? 3
+                                                : (isSmallScreen
+                                                    ? 4
+                                                    : 6)), // 动态调整间距
                                         Text(
                                           isAiConfigured
                                               ? '正在加载今日思考...'
@@ -1119,13 +1166,17 @@ class _HomePageState extends State<HomePage>
                                               ?.copyWith(
                                             color: theme.colorScheme.onSurface
                                                 .withAlpha(160),
-                                            fontSize:
-                                                screenWidth > 600 ? 13 : (isVerySmallScreen ? 10 : 12), // 动态调整字体
+                                            fontSize: screenWidth > 600
+                                                ? 13
+                                                : (isVerySmallScreen
+                                                    ? 10
+                                                    : 12), // 动态调整字体
                                           ),
                                           textAlign: TextAlign.center,
                                         ),
                                       ],
-                                    )                                  : Text(
+                                    )
+                                  : Text(
                                       _accumulatedPromptText.isNotEmpty
                                           ? _accumulatedPromptText.trim()
                                           : (isAiConfigured
@@ -1134,14 +1185,19 @@ class _HomePageState extends State<HomePage>
                                       style:
                                           theme.textTheme.bodyMedium?.copyWith(
                                         height: 1.4,
-                                        fontSize: screenWidth > 600 ? 15 : (isVerySmallScreen ? 12 : 14), // 动态调整字体
+                                        fontSize: screenWidth > 600
+                                            ? 15
+                                            : (isVerySmallScreen
+                                                ? 12
+                                                : 14), // 动态调整字体
                                         color: _accumulatedPromptText.isNotEmpty
                                             ? theme.textTheme.bodyMedium?.color
                                             : theme.colorScheme.onSurface
                                                 .withAlpha(120),
                                       ),
                                       textAlign: TextAlign.center,
-                                      maxLines: isVerySmallScreen ? 2 : 3, // 极小屏幕最多2行
+                                      maxLines:
+                                          isVerySmallScreen ? 2 : 3, // 极小屏幕最多2行
                                       overflow: TextOverflow.ellipsis,
                                     ),
                             ],

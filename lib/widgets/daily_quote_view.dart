@@ -111,6 +111,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
 
     return result;
   }
+
   // 公开刷新方法，供父组件调用
   Future<void> refreshQuote() async {
     await _loadDailyQuote();
@@ -135,7 +136,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     if (screenWidth > 600) {
       return null; // 大屏设备不限制行数
     }
-    
+
     if (screenHeight < 550) {
       return 3; // 极小屏设备最多3行
     } else if (screenHeight < 600) {
@@ -155,12 +156,13 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       return screenWidth > 600 ? 14 : 12;
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     // 更精细的屏幕尺寸判断
     final isSmallScreen = screenHeight < 600;
     final isVerySmallScreen = screenHeight < 550;
@@ -170,8 +172,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       width: double.infinity,
       margin: EdgeInsets.symmetric(
         horizontal: screenWidth > 600 ? 10.0 : 2.0, // 调整外边距使总间距与今日思考一致
-        vertical: isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
-      ),      child: SlidingCard(
+        vertical:
+            isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
+      ),
+      child: SlidingCard(
         // 传递screenHeight给SlidingCard以动态调整内边距
         child: Padding(
           padding: EdgeInsets.zero, // 移除内边距，依靠SlidingCard的动态padding提供间距
@@ -206,14 +210,16 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                       child: Text(
                         dailyQuote['content'],
                         style: theme.textTheme.headlineSmall?.copyWith(
-                          fontSize: _getResponsiveFontSize(screenWidth, screenHeight),
+                          fontSize:
+                              _getResponsiveFontSize(screenWidth, screenHeight),
                           height: isVerySmallScreen ? 1.3 : 1.4, // 极小屏幕进一步减少行高
                           fontWeight: FontWeight.w500,
                         ),
                         textAlign: TextAlign.center,
-                        maxLines: _getResponsiveMaxLines(screenWidth, screenHeight),
-                        overflow: screenWidth > 600 
-                            ? TextOverflow.visible 
+                        maxLines:
+                            _getResponsiveMaxLines(screenWidth, screenHeight),
+                        overflow: screenWidth > 600
+                            ? TextOverflow.visible
                             : TextOverflow.ellipsis, // 小屏设备使用省略号
                       ),
                     ),
@@ -222,7 +228,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                         dailyQuote['from'] != null &&
                             dailyQuote['from'].isNotEmpty)
                       Padding(
-                        padding: EdgeInsets.only(top: isVerySmallScreen ? 8.0 : 12.0), // 动态调整间距
+                        padding: EdgeInsets.only(
+                            top: isVerySmallScreen ? 8.0 : 12.0), // 动态调整间距
                         child: Text(
                           formatHitokotoSource(
                             dailyQuote['from_who'],
@@ -230,7 +237,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                           ),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontStyle: FontStyle.italic,
-                            fontSize: _getResponsiveSourceFontSize(screenWidth, screenHeight),
+                            fontSize: _getResponsiveSourceFontSize(
+                                screenWidth, screenHeight),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,

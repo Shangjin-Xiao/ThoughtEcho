@@ -90,11 +90,12 @@ class _SlidingCardState extends State<SlidingCard>
     });
     _hoverController.reverse();
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     // 根据屏幕高度动态调整内边距
     double getResponsivePadding() {
       if (screenHeight < 550) {
@@ -144,7 +145,8 @@ class _SlidingCardState extends State<SlidingCard>
                       details.primaryVelocity! < 0 &&
                       widget.onSlideComplete != null) {
                     widget.onSlideComplete!();
-                  }                },
+                  }
+                },
                 child: Container(
                   padding: EdgeInsets.all(cardPadding), // 使用动态padding
                   child: Card(
@@ -153,7 +155,8 @@ class _SlidingCardState extends State<SlidingCard>
                       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                     ),
                     shadowColor: Colors.transparent,
-                    child: AnimatedContainer(                      duration: const Duration(milliseconds: 200),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOutCubic,
                       padding: EdgeInsets.all(cardPadding), // 使用动态padding
                       alignment: Alignment.center,
