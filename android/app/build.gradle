@@ -33,7 +33,7 @@ if (flutterVersionName == null) {
 android {
     namespace "com.shangjin.thoughtecho"
     compileSdk 35
-    ndkVersion flutter.ndkVersion
+    ndkVersion "27.0.12077973"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -56,14 +56,16 @@ android {
         versionName flutterVersionName
         multiDexEnabled true
 
-        // 大文件处理优化配置
+        // ARM32 binder64设备优化配置
         manifestPlaceholders = [
             'applicationName': 'io.flutter.app.FlutterApplication',
             'largeHeap': 'true',
             'hardwareAccelerated': 'false'
         ]
 
-        // NDK配置
+
+
+        // NDK配置 - 恢复原始配置以避免兼容性问题
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }

@@ -302,14 +302,14 @@ class MediaFileService {
 
       // 先收集所有文件实体，避免在遍历过程中阻塞
       final List<FileSystemEntity> allEntities = [];
-      
+
       await for (final entity in mediaDir.list(recursive: true)) {
         cancelToken?.throwIfCancelled();
-        
+
         if (entity is File) {
           allEntities.add(entity);
         }
-        
+
         // 每收集100个实体就让UI有机会更新
         if (allEntities.length % 100 == 0) {
           await Future.delayed(const Duration(milliseconds: 5));
@@ -325,9 +325,9 @@ class MediaFileService {
 
       for (int i = 0; i < allEntities.length; i += batchSize) {
         cancelToken?.throwIfCancelled();
-        
+
         final batch = allEntities.skip(i).take(batchSize);
-        
+
         for (final entity in batch) {
           try {
             // 检查文件是否仍然存在（可能在遍历过程中被删除）
@@ -343,7 +343,7 @@ class MediaFileService {
 
         // 更新进度
         onProgress?.call(processedCount, totalCount);
-        
+
         // 让UI有机会更新
         await Future.delayed(const Duration(milliseconds: 10));
       }
@@ -355,7 +355,7 @@ class MediaFileService {
         logDebug('媒体文件路径收集已取消');
         rethrow;
       }
-      
+
       logDebug('获取媒体文件路径失败: $e');
       return [];
     }

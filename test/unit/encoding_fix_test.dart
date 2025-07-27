@@ -33,8 +33,9 @@ void main() {
       await jsonFile.writeAsString(json.encode(testData), encoding: utf8);
 
       // 测试解析
-      final result = await StreamingBackupProcessor.parseJsonBackupStreaming(jsonPath);
-      
+      final result =
+          await StreamingBackupProcessor.parseJsonBackupStreaming(jsonPath);
+
       // 验证中文内容是否正确
       expect(result['title'], equals('测试笔记'));
       expect(result['content'], equals('这是一个包含中文的测试内容。包含特殊字符：你好世界！'));
@@ -78,24 +79,26 @@ void main() {
       // 创建ZIP文件
       final zipPath = '${tempDir.path}/test_chinese.zip';
       final archive = Archive();
-      
+
       // 将JSON数据编码为UTF-8字节
       final jsonContent = json.encode(testData);
       final jsonBytes = utf8.encode(jsonContent);
       final file = ArchiveFile('backup_data.json', jsonBytes.length, jsonBytes);
       archive.addFile(file);
-      
+
       // 写入ZIP文件
       final zipData = ZipEncoder().encode(archive);
-      await File(zipPath).writeAsBytes(zipData!);
+      await File(zipPath).writeAsBytes(zipData);
 
       // 测试解析
-      final result = await StreamingBackupProcessor.processZipBackupStreaming(zipPath);
-      
+      final result =
+          await StreamingBackupProcessor.processZipBackupStreaming(zipPath);
+
       // 验证中文内容是否正确
       expect(result['notes']['categories'][0]['name'], equals('日记'));
       expect(result['notes']['categories'][1]['name'], equals('工作笔记'));
-      expect(result['notes']['quotes'][0]['content'], equals('这是一个包含中文的测试笔记内容。'));
+      expect(
+          result['notes']['quotes'][0]['content'], equals('这是一个包含中文的测试笔记内容。'));
       expect(result['notes']['quotes'][0]['title'], equals('测试标题'));
       expect(result['settings']['theme'], equals('深色主题'));
       expect(result['settings']['language'], equals('中文'));
@@ -119,12 +122,12 @@ void main() {
       await jsonFile.writeAsString(json.encode(testData), encoding: utf8);
 
       // 验证文件大小
-      final fileSize = await jsonFile.length();
-      print('测试文件大小: ${(fileSize / 1024).toStringAsFixed(1)}KB');
+      // Test output: 测试文件大小: ${(fileSize / 1024).toStringAsFixed(1)}KB
 
       // 测试解析
-      final result = await StreamingBackupProcessor.parseJsonBackupStreaming(jsonPath);
-      
+      final result =
+          await StreamingBackupProcessor.parseJsonBackupStreaming(jsonPath);
+
       // 验证中文内容是否正确
       expect(result['title'], equals('大文件测试'));
       expect(result['content'], equals(largeContent));

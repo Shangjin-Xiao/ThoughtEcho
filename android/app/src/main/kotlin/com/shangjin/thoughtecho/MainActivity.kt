@@ -2,63 +2,53 @@ package com.shangjin.thoughtecho
 
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
-// import android.view.WindowManager // Commented out as it's no longer needed
-// import android.util.Log // Commented out as it's no longer needed
 
 class MainActivity : FlutterActivity() {
-    
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.plugins.add(MemoryInfoPlugin())
         flutterEngine.plugins.add(StreamFileSelector())
     }
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // Temporarily comment out the hardware acceleration check as it might cause issues before super.onCreate()
-        // if (!is64BitDevice()) {
-        //     Log.i("MainActivity", "Detected 32-bit device, disabling hardware acceleration.")
-        //     // The following line was likely causing the crash by being called before super.onCreate()
-        //     // and potentially enabling HW acceleration instead of disabling it.
-        //     // window.setFlags(
-        //     //     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-        //     //     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-        //     // )
-        // } else {
-        //      Log.i("MainActivity", "Detected 64-bit device, hardware acceleration remains enabled.")
-        // }
-        
-        // Call super.onCreate() first before any window modifications if needed later
-        super.onCreate(savedInstanceState)
 
-        // If you need to modify window flags later, do it *after* super.onCreate()
-        // For example (though disabling HW accel is usually done in AndroidManifest):
-        // if (!is64BitDevice()) {
-        //    window.clearFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
-        // }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // ARM32设备在Application层已经设置了系统属性
+        // 这里再次确保窗口级别的硬件加速被禁用
+        if (isArm32Device()) {
+            Log.i("MainActivity", "ARM32设备：确保窗口级硬件加速被禁用")
+            try {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
+                // 强制设置软件渲染
+                window.setFlags(0, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
+            } catch (e: Exception) {
+                Log.w("MainActivity", "无法设置窗口渲染模式: ${e.message}")
+            }
+        }
+
+        super.onCreate(savedInstanceState)
     }
 
     /**
-     * 检查设备是否为64位架构
-     * 返回true表示64位设备，false表示32位设备
-     * Note: This function is currently unused.
+     * 检测是否为ARM32设备（包括ARM32 binder64）
      */
-    private fun is64BitDevice(): Boolean {
+    private fun isArm32Device(): Boolean {
         return try {
-            // Android API 21+ (Lollipop及以上)可以通过Build类直接检测
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
-            } else {
-                // 对于更老的设备，通过CPU架构字符串判断
-                // 注意：这种方法可能不完全可靠，但作为一种兼容性尝试
-                val arch = System.getProperty("os.arch")?.lowercase() ?: ""
-                // Log.d("MainActivity", "Device architecture string: $arch") // Log the architecture string for debugging
-                arch.contains("64") || arch == "aarch64" || arch == "x86_64" || arch == "mips64"
-            }
+            val supportedAbis = Build.SUPPORTED_ABIS
+            val hasArm32 = supportedAbis.contains("armeabi-v7a")
+            val hasArm64 = supportedAbis.contains("arm64-v8a")
+
+            // ARM32设备：有armeabi-v7a但没有arm64-v8a
+            val isArm32 = hasArm32 && !hasArm64
+
+            Log.i("MainActivity", "设备架构: ${supportedAbis.joinToString()}, ARM32: $isArm32")
+            isArm32
         } catch (e: Exception) {
-            // 如果发生异常，保守起见返回false (当作32位处理)
-            // Log.e("MainActivity", "Error checking device architecture", e)
-            false
+            Log.e("MainActivity", "检测设备架构失败", e)
+            false // 保守起见，不禁用硬件加速
         }
     }
 }

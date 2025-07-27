@@ -250,18 +250,11 @@ class NativeLogStorage implements LogStorage {
   static const int _dbVersion = 1;
 
   Database? _database;
-
   @override
   Future<void> initialize() async {
     if (!kIsWeb) {
       try {
-        // 在 Windows 平台上初始化 FFI
-        if (Platform.isWindows) {
-          logDebug('Windows平台：初始化 sqflite_ffi');
-          sqfliteFfiInit();
-          databaseFactory = databaseFactoryFfi;
-        }
-
+        // FFI初始化已在main.dart中统一处理，这里不再重复初始化
         // 确保数据库目录存在
         final appDir = await getApplicationDocumentsDirectory();
         final dbPath = join(appDir.path, 'databases');

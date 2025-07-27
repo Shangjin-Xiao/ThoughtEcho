@@ -100,34 +100,35 @@ class ZipStreamProcessor {
   ) async {
     final stat = await file.stat();
     final fileSize = stat.size;
-    
+
     // 对于超大文件（>500MB），使用流式读取避免内存溢出
     if (fileSize > 500 * 1024 * 1024) {
-      logDebug('使用流式方式添加超大文件到ZIP: $relativePath (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)');
-      
+      logDebug(
+          '使用流式方式添加超大文件到ZIP: $relativePath (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+
       // 分块读取文件内容
       const chunkSize = 1024 * 1024; // 1MB chunks
       final chunks = <int>[];
-      
+
       final stream = file.openRead();
       await for (final chunk in stream) {
         chunks.addAll(chunk);
-        
+
         // 定期让出控制权，避免阻塞
         if (chunks.length % (chunkSize * 10) == 0) {
           await Future.delayed(const Duration(milliseconds: 1));
         }
       }
-      
+
       final archiveFile = ArchiveFile(relativePath, chunks.length, chunks);
       archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
       archiveFile.mode = stat.mode;
       encoder.addArchiveFile(archiveFile);
-      
     } else {
       // 小文件直接读取
       final fileBytes = await file.readAsBytes();
-      final archiveFile = ArchiveFile(relativePath, fileBytes.length, fileBytes);
+      final archiveFile =
+          ArchiveFile(relativePath, fileBytes.length, fileBytes);
       archiveFile.lastModTime = stat.modified.millisecondsSinceEpoch;
       archiveFile.mode = stat.mode;
       encoder.addArchiveFile(archiveFile);

@@ -94,8 +94,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       });
 
       // 移除自动生成逻辑，改为用户手动触发
-
-
     } catch (e) {
       setState(() {
         _isLoadingData = false;
@@ -208,8 +206,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     return selected;
   }
-
-
 
   String _getPeriodName() {
     switch (_selectedPeriod) {
@@ -798,7 +794,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         children: [
                           Text(
                             '共 ${_featuredCards.length} 张卡片',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurfaceVariant,
@@ -807,15 +806,23 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                           if (_selectedCardIndex != null) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '已选中第${_selectedCardIndex! + 1}张',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
                                       fontWeight: FontWeight.w500,
                                     ),
                               ),
@@ -920,11 +927,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               if (_aiCardService?.isEnabled == true) ...[
                 // AI服务已启用，显示生成卡片按钮
                 FilledButton.icon(
-                  onPressed: _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
+                  onPressed:
+                      _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
                   icon: const Icon(Icons.auto_awesome),
                   label: const Text('生成卡片'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                 ),
               ] else ...[
@@ -959,7 +968,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       itemBuilder: (context, index) {
         final card = _featuredCards[index];
         final isSelected = _selectedCardIndex == index;
-        
+
         return AnimatedContainer(
           duration: Duration(milliseconds: 200 + (index * 50)),
           curve: Curves.easeOutCubic,
@@ -974,7 +983,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border: isSelected 
+                    border: isSelected
                         ? Border.all(
                             color: Theme.of(context).colorScheme.primary,
                             width: 2,
@@ -982,8 +991,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: isSelected 
-                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                        color: isSelected
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.3)
                             : Colors.black.withValues(alpha: 0.1),
                         blurRadius: isSelected ? 12 : 8,
                         offset: const Offset(0, 4),
@@ -1007,13 +1019,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   void _showCardDetail(GeneratedCard card) {
     // 添加触觉反馈
     HapticFeedback.lightImpact();
-    
+
     // 设置选中状态
     final cardIndex = _featuredCards.indexOf(card);
     setState(() {
       _selectedCardIndex = cardIndex;
     });
-    
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -1146,8 +1158,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         card,
         width: 800,
         height: 1200,
-        customName:
-            '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
+        customName: '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       if (mounted) {
@@ -1185,8 +1196,4 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       }
     }
   }
-
-
 }
-
-
