@@ -4,7 +4,8 @@ import 'package:thoughtecho/models/generated_card.dart';
 
 void main() {
   group('现代化SVG卡片模板测试', () {
-    const testContent = '这是一段测试内容，用来验证SVG卡片模板的生成效果。内容包含中文字符和标点符号，以确保模板能够正确处理各种文本。';
+    const testContent =
+        '这是一段测试内容，用来验证SVG卡片模板的生成效果。内容包含中文字符和标点符号，以确保模板能够正确处理各种文本。';
     const testAuthor = '测试作者';
     const testDate = '2024年1月15日';
 
@@ -158,7 +159,7 @@ void main() {
       expect(svg, contains('<rect'));
       expect(svg, contains('<text'));
       expect(svg, contains('filter="url(#shadow)"'));
-      
+
       // 验证现代化设计元素
       expect(svg, contains('system-ui'));
       expect(svg, contains('font-weight'));

@@ -41,7 +41,7 @@ void main() {
       expect(imageBytes[2], equals(0x4E));
       expect(imageBytes[3], equals(0x47));
 
-      print('知识卡片图片大小: ${imageBytes.length} bytes');
+      // Test output: 知识卡片图片大小: ${imageBytes.length} bytes
     });
 
     test('引用卡片SVG生成和图片转换', () async {
@@ -64,7 +64,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('引用卡片图片大小: ${imageBytes.length} bytes');
+      // Test output: 引用卡片图片大小: ${imageBytes.length} bytes
     });
 
     test('哲学卡片SVG生成和图片转换', () async {
@@ -87,7 +87,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('哲学卡片图片大小: ${imageBytes.length} bytes');
+      // Test output: 哲学卡片图片大小: ${imageBytes.length} bytes
     });
 
     test('简约卡片SVG生成和图片转换', () async {
@@ -110,7 +110,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('简约卡片图片大小: ${imageBytes.length} bytes');
+      // Test output: 简约卡片图片大小: ${imageBytes.length} bytes
     });
 
     test('高分辨率图片转换', () async {
@@ -136,7 +136,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('高分辨率卡片图片大小: ${imageBytes.length} bytes');
+      // Test output: 高分辨率卡片图片大小: ${imageBytes.length} bytes
 
       // 高分辨率图片应该比标准分辨率大
       final standardImageBytes = await card.toImageBytes();
@@ -145,7 +145,7 @@ void main() {
 
     test('批量卡片转换性能测试', () async {
       final cards = <GeneratedCard>[];
-      
+
       // 创建多个卡片
       for (int i = 0; i < 3; i++) {
         final svgContent = CardTemplates.knowledgeTemplate(
@@ -180,7 +180,7 @@ void main() {
         expect(result.length, greaterThan(0));
       }
 
-      print('批量转换3张卡片耗时: ${stopwatch.elapsedMilliseconds}ms');
+      // Test output: 批量转换3张卡片耗时: ${stopwatch.elapsedMilliseconds}ms
       expect(stopwatch.elapsedMilliseconds, lessThan(10000)); // 应该在10秒内完成
     });
 
@@ -199,7 +199,7 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
-      print('错误SVG处理图片大小: ${imageBytes.length} bytes');
+      // Test output: 错误SVG处理图片大小: ${imageBytes.length} bytes
     });
   });
 }

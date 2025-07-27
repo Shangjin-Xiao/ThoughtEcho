@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-// 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
+// 导入sqflite以使用全局databaseFactory
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'
     if (dart.library.io) 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
@@ -49,27 +50,15 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<Database> get database async {
     if (_database != null) return _database!;
 
-    // 初始化平台特定代码
-    if (Platform.isWindows || Platform.isLinux) {
-      // 为Windows和Linux平台设置sqflite_ffi
-      sqfliteFfiInit();
-      _database = await databaseFactoryFfi.openDatabase(
-        await _getDatabasePath(),
-        options: OpenDatabaseOptions(
-          version: 1,
-          onCreate: _createDatabase,
-          onUpgrade: _onUpgradeDatabase,
-        ),
-      );
-    } else {
-      // 为其他平台使用标准sqflite
-      _database = await openDatabase(
-        await _getDatabasePath(),
+    // FFI初始化已在main.dart中统一处理，这里直接使用配置好的databaseFactory
+    _database = await databaseFactory.openDatabase(
+      await _getDatabasePath(),
+      options: OpenDatabaseOptions(
         version: 1,
         onCreate: _createDatabase,
         onUpgrade: _onUpgradeDatabase,
-      );
-    }
+      ),
+    );
 
     return _database!;
   }
@@ -176,7 +165,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       AppLogger.i('AI分析保存完成: ${newAnalysis.id}', source: 'AIAnalysisDB');
       return newAnalysis;
     } catch (e, stackTrace) {
-      AppLogger.e('保存AI分析失败: $e', error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
+      AppLogger.e('保存AI分析失败: $e',
+          error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
       rethrow;
     }
   }
@@ -188,7 +178,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
       if (kIsWeb) {
         // Web平台使用内存存储
-        AppLogger.i('从内存存储获取，数量: ${_memoryStore.length}', source: 'AIAnalysisDB');
+        AppLogger.i('从内存存储获取，数量: ${_memoryStore.length}',
+            source: 'AIAnalysisDB');
         return List.from(_memoryStore);
       } else {
         // 非Web平台使用SQLite
@@ -210,7 +201,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         return analyses;
       }
     } catch (e, stackTrace) {
-      AppLogger.e('获取AI分析列表失败: $e', error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
+      AppLogger.e('获取AI分析列表失败: $e',
+          error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
       return [];
     }
   }

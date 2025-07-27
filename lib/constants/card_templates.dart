@@ -11,7 +11,7 @@ class CardTemplates {
     final displayContent = _processDisplayContent(content, maxLength: 180);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
-    final lines = _splitTextIntoLines(displayContent, 32);
+    final lines = _splitTextIntoAdaptiveLines(displayContent, 26, maxLines: 8);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -64,7 +64,7 @@ class CardTemplates {
   <rect x="40" y="200" width="60" height="3" fill="#4f46e5" rx="1.5"/>
 
   <!-- 内容文字 -->
-  ${_generateModernTextLines(lines, 200, 240, 16, '#1e293b', 1.6)}
+  ${_generateModernTextLines(lines, 200, 240, 16, '#1e293b', 1.5, verticalCenter: true, areaHeight: 320)}
 
   <!-- 底部信息区域 -->
   <rect x="24" y="520" width="352" height="60" fill="#ffffff" fill-opacity="0.1" rx="20"/>
@@ -74,7 +74,7 @@ class CardTemplates {
 
   <!-- 日期和品牌 -->
   <text x="200" y="565" text-anchor="middle" fill="#ffffff" fill-opacity="0.8" font-family="system-ui, -apple-system, sans-serif" font-size="11">
-    $displayDate · 心迹
+    $displayDate · 心迹 · ThoughtEcho
   </text>
 
   <!-- 右下角装饰点 -->
@@ -92,7 +92,7 @@ class CardTemplates {
     final displayContent = _processDisplayContent(content, maxLength: 140);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
-    final lines = _splitTextIntoLines(displayContent, 30);
+    final lines = _splitTextIntoAdaptiveLines(displayContent, 22, maxLines: 8);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -135,7 +135,7 @@ class CardTemplates {
   <rect x="48" y="220" width="80" height="3" fill="#f59e0b" rx="1.5"/>
 
   <!-- 引用内容 -->
-  ${_generateModernTextLines(lines, 200, 260, 17, '#374151', 1.7)}
+  ${_generateModernTextLines(lines, 200, 260, 17, '#374151', 1.5, verticalCenter: true, areaHeight: 260)}
 
   <!-- 作者信息区域 -->
   ${author != null ? '''
@@ -148,7 +148,7 @@ class CardTemplates {
   <!-- 底部信息 -->
   <rect x="32" y="500" width="336" height="50" fill="#ffffff" fill-opacity="0.15" rx="20"/>
   <text x="200" y="530" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill-opacity="0.9">
-    $displayDate · 心迹
+    $displayDate · 心迹 · ThoughtEcho
   </text>
 </svg>
 ''';
@@ -163,7 +163,7 @@ class CardTemplates {
     final displayContent = _processDisplayContent(content, maxLength: 200);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
-    final lines = _splitTextIntoLines(displayContent, 32);
+    final lines = _splitTextIntoAdaptiveLines(displayContent, 26, maxLines: 8);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -223,7 +223,7 @@ class CardTemplates {
   <rect x="40" y="220" width="100" height="3" fill="#1e1b4b" rx="1.5"/>
 
   <!-- 哲学内容 -->
-  ${_generateModernTextLines(lines, 200, 260, 16, '#1e293b', 1.8)}
+  ${_generateModernTextLines(lines, 200, 260, 16, '#1e293b', 1.5, verticalCenter: true, areaHeight: 300)}
 
   <!-- 底部思考者信息 -->
   <rect x="24" y="520" width="352" height="60" fill="#ffffff" fill-opacity="0.1" rx="20"/>
@@ -233,7 +233,7 @@ class CardTemplates {
 
   <!-- 日期信息 -->
   <text x="200" y="565" text-anchor="middle" fill="#ffffff" fill-opacity="0.8" font-family="system-ui, -apple-system, sans-serif" font-size="11">
-    $displayDate · 心迹
+    $displayDate · 心迹 · ThoughtEcho
   </text>
 
   <!-- 装饰性思考点 -->
@@ -253,7 +253,7 @@ class CardTemplates {
     final displayContent = _processDisplayContent(content, maxLength: 160);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
-    final lines = _splitTextIntoLines(displayContent, 30);
+    final lines = _splitTextIntoAdaptiveLines(displayContent, 22, maxLines: 8);
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -289,13 +289,13 @@ class CardTemplates {
   <rect x="48" y="120" width="328" height="360" fill="#ffffff" rx="16" filter="url(#shadow)"/>
 
   <!-- 内容文字 -->
-  ${_generateModernTextLines(lines, 212, 180, 16, '#1e293b', 1.6)}
+  ${_generateModernTextLines(lines, 212, 180, 16, '#1e293b', 1.5, verticalCenter: true, areaHeight: 240)}
 
   <!-- 底部信息 -->
   ${author != null ? '<text x="212" y="440" text-anchor="middle" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500">$author</text>' : ''}
 
   <text x="212" y="460" text-anchor="middle" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10">
-    $displayDate · 心迹
+    $displayDate · 心迹 · ThoughtEcho
   </text>
 </svg>
 ''';
@@ -328,53 +328,52 @@ class CardTemplates {
   }
 
   /// 将文本分割成多行
-  static List<String> _splitTextIntoLines(String text, int maxCharsPerLine) {
+  static List<String> _splitTextIntoAdaptiveLines(String text, int maxLineChars,
+      {int maxLines = 8}) {
     final lines = <String>[];
-    final words = text.split(' '); // 按空格分割为单词
-    String currentLine = '';
-
-    for (final word in words) {
-      // 检查添加这个单词后是否会超过限制
-      final potentialLine = currentLine.isEmpty ? word : '$currentLine $word';
-
-      if (potentialLine.length <= maxCharsPerLine) {
-        currentLine = potentialLine;
-      } else {
-        // 如果当前行不为空，保存当前行并开始新行
-        if (currentLine.isNotEmpty) {
-          lines.add(currentLine);
-          currentLine = word;
-        } else {
-          // 如果单个单词就超过了限制，强制换行
-          lines.add(word);
-          currentLine = '';
-        }
+    String current = '';
+    int count = 0;
+    for (int i = 0; i < text.length; i++) {
+      // 英文和数字算1，汉字和罕见字符算2
+      count += RegExp(r'[A-Za-z0-9]').hasMatch(text[i]) ? 1 : 2;
+      current += text[i];
+      if (count >= maxLineChars || text[i] == '\n') {
+        lines.add(current.trim());
+        current = '';
+        count = 0;
       }
     }
-
-    // 添加最后一行
-    if (currentLine.isNotEmpty) {
-      lines.add(currentLine);
+    if (current.isNotEmpty) lines.add(current.trim());
+    // 若行太多，缩小每行字数再重新切，防止溢出
+    // 避免递归爆炸
+    if (lines.length > maxLines && maxLineChars > 5) {
+      int tighter = (maxLineChars * 0.8).floor();
+      return _splitTextIntoAdaptiveLines(text, tighter, maxLines: maxLines);
     }
-
-    return lines.take(8).toList(); // 最多8行
+    if (lines.length > maxLines) {
+      // 强行等分切块
+      int chunk = (text.length / maxLines).ceil();
+      List<String> result = [];
+      for (int i = 0; i < text.length; i += chunk) {
+        result.add(text.substring(
+            i, (i + chunk > text.length) ? text.length : i + chunk));
+      }
+      return result.take(maxLines).toList();
+    }
+    return lines.take(maxLines).toList();
   }
 
   /// 生成现代化多行文本的SVG元素
-  static String _generateModernTextLines(
-    List<String> lines,
-    double centerX,
-    double startY,
-    double fontSize,
-    String color,
-    double lineHeight,
-  ) {
+  static String _generateModernTextLines(List<String> lines, double centerX,
+      double startY, double fontSize, String color, double lineHeight,
+      {bool verticalCenter = true, double areaHeight = 320}) {
     final buffer = StringBuffer();
+    double totalH = lines.length * fontSize * lineHeight;
+    double offsetY = verticalCenter ? (areaHeight - totalH) / 2 : 0;
     for (int i = 0; i < lines.length; i++) {
-      final y = startY + (i * (fontSize * lineHeight));
+      final y = startY + offsetY + (i * (fontSize * lineHeight));
       buffer.writeln(
-        '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="$fontSize" font-weight="400">${lines[i]}</text>',
-      );
+          '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, BlinkMacSystemFont, BlinkMacSystemFont, sans-serif" font-size="$fontSize" font-weight="400">${lines[i]}</text>');
     }
     return buffer.toString();
   }

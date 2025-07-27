@@ -53,7 +53,7 @@ void main() {
     test('LargeFileManager 应该正确处理大文件复制进度', () async {
       // 创建一个较大的测试文件 (5MB)
       final testFile = File('${tempDir.path}/large_test_file.bin');
-      final testSize = 5 * 1024 * 1024; // 5MB
+      const testSize = 5 * 1024 * 1024; // 5MB
 
       // 创建测试数据
       final buffer = Uint8List(testSize);

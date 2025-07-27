@@ -78,7 +78,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     try {
       final databaseService = context.read<DatabaseService>();
       final allCategories = await databaseService.getCategories();
-      final tagIdToName = {for (var category in allCategories) category.id: category.name};
+      final tagIdToName = {
+        for (var category in allCategories) category.id: category.name
+      };
 
       final resolvedTopTags = stats.topTags.map((tagStat) {
         final resolvedName = tagIdToName[tagStat.name] ?? tagStat.name;
@@ -139,7 +141,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     // 如果统计数据还未加载完成，显示加载界面
     if (_stats == null) {
       return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
+        backgroundColor:
+            isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
         body: const Center(
           child: CircularProgressIndicator(),
         ),
@@ -244,7 +247,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       borderRadius: BorderRadius.circular(4),
                       color: _currentPage == index
                           ? theme.colorScheme.primary
-                          : ColorUtils.withOpacitySafe(theme.colorScheme.primary, 0.3),
+                          : ColorUtils.withOpacitySafe(
+                              theme.colorScheme.primary, 0.3),
                     ),
                   );
                 }),
@@ -334,7 +338,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   style: TextStyle(
                     fontSize: 16,
                     color: ColorUtils.withOpacitySafe(
-                      Theme.of(context).colorScheme.onSurface, 0.7),
+                        Theme.of(context).colorScheme.onSurface, 0.7),
                     height: 1.4,
                   ),
                 ),
@@ -568,7 +572,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: ColorUtils.withOpacitySafe(
-                                        Theme.of(context).colorScheme.onSurface, 0.7),
+                                        Theme.of(context).colorScheme.onSurface,
+                                        0.7),
                                   ),
                                 ),
                               ],
@@ -588,7 +593,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       Icons.label_outline,
                       size: 80,
                       color: ColorUtils.withOpacitySafe(
-                        Theme.of(context).colorScheme.onSurface, 0.3),
+                          Theme.of(context).colorScheme.onSurface, 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -596,7 +601,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       style: TextStyle(
                         fontSize: 18,
                         color: ColorUtils.withOpacitySafe(
-                          Theme.of(context).colorScheme.onSurface, 0.7),
+                            Theme.of(context).colorScheme.onSurface, 0.7),
                       ),
                     ),
                   ],
@@ -666,7 +671,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                       height: 8,
                                       decoration: BoxDecoration(
                                         color: ColorUtils.withOpacitySafe(
-                                            Theme.of(context).colorScheme.primary, 0.1),
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: FractionallySizedBox(
@@ -778,7 +786,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             style: TextStyle(
               fontSize: 16,
               color: ColorUtils.withOpacitySafe(
-                Theme.of(context).colorScheme.onSurface, 0.7),
+                  Theme.of(context).colorScheme.onSurface, 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -848,7 +856,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     style: TextStyle(
                       fontSize: 14,
                       color: ColorUtils.withOpacitySafe(
-                        Theme.of(context).colorScheme.onSurface, 0.7),
+                          Theme.of(context).colorScheme.onSurface, 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -871,7 +879,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           style: TextStyle(
                             fontSize: 14,
                             color: ColorUtils.withOpacitySafe(
-                              Theme.of(context).colorScheme.onSurface, 0.6),
+                                Theme.of(context).colorScheme.onSurface, 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -921,7 +929,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   style: TextStyle(
                     fontSize: 14,
                     color: ColorUtils.withOpacitySafe(
-                      Theme.of(context).colorScheme.onSurface, 0.7),
+                        Theme.of(context).colorScheme.onSurface, 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -984,7 +992,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             style: TextStyle(
               fontSize: 15,
               color: ColorUtils.withOpacitySafe(
-                Theme.of(context).colorScheme.onSurface, 0.8),
+                  Theme.of(context).colorScheme.onSurface, 0.8),
               height: 1.5,
             ),
           ),

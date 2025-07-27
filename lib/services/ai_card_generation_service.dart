@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:gal/gal.dart';
+import 'dart:io';
 import 'package:uuid/uuid.dart';
+// 条件导入：Web平台使用stub实现，其他平台使用gal
+import '../utils/stub_implementations.dart'
+    if (dart.library.io) 'package:gal/gal.dart' as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -85,7 +88,7 @@ class AICardGenerationService {
 
     for (int i = 0; i < notesToProcess.length; i++) {
       final note = notesToProcess[i];
-      
+
       try {
         if (kDebugMode) {
           print('正在生成第${i + 1}/${notesToProcess.length}张卡片...');
@@ -102,9 +105,10 @@ class AICardGenerationService {
           await Future.delayed(const Duration(milliseconds: 500));
         }
       } catch (e) {
-        final errorMsg = '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
+        final errorMsg =
+            '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
         errors.add(errorMsg);
-        
+
         if (kDebugMode) {
           print(errorMsg);
         }
@@ -117,7 +121,7 @@ class AICardGenerationService {
           logError('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
           break;
         }
-        
+
         continue; // 跳过失败的卡片，继续生成其他卡片
       }
     }
@@ -309,7 +313,7 @@ class AICardGenerationService {
       if (width <= 0 || height <= 0) {
         throw ArgumentError('图片尺寸必须大于0');
       }
-      
+
       if (width > 4000 || height > 4000) {
         throw ArgumentError('图片尺寸过大，最大支持4000x4000');
       }
@@ -327,12 +331,15 @@ class AICardGenerationService {
 
       // 生成唯一文件名，避免重复
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = customName != null 
+      final fileName = customName != null
           ? '${customName}_$timestamp'
-          : '心迹_Card_$timestamp';
-
-      // 保存到相册
-      await Gal.putImageBytes(imageBytes, name: fileName);
+          : '心迹_Card_$timestamp'; // 保存到相册（仅移动端）
+      if (!kIsWeb && Platform.isAndroid || Platform.isIOS) {
+        await gal.Gal.putImageBytes(imageBytes, name: fileName);
+      } else {
+        // 桌面端或Web端的替代方案
+        throw Exception('桌面端暂不支持直接保存到相册，建议使用分享功能');
+      }
 
       if (kDebugMode) {
         print('卡片图片保存成功: $fileName');
@@ -347,17 +354,30 @@ class AICardGenerationService {
     }
   }
 
+  /// 检查当前平台是否支持相册功能
+  bool _isPlatformSupported() {
+    // gal插件只支持Android和iOS平台
+    return !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  }
+
   /// 检查相册权限
   Future<bool> _checkGalleryPermission() async {
+    // 检查平台支持
+    if (!_isPlatformSupported()) {
+      return false;
+    }
     try {
-      // 尝试检查权限状态
-      final hasAccess = await Gal.hasAccess();
-      if (!hasAccess) {
-        // 请求权限
-        final hasAccessAfterRequest = await Gal.requestAccess();
-        return hasAccessAfterRequest;
+      // 仅在移动端检查权限
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        final hasAccess = await gal.Gal.hasAccess();
+        if (!hasAccess) {
+          // 请求权限
+          final hasAccessAfterRequest = await gal.Gal.requestAccess();
+          return hasAccessAfterRequest;
+        }
+        return true;
       }
-      return true;
+      return false; // 桌面端不支持
     } catch (e) {
       if (kDebugMode) {
         print('检查相册权限失败: $e');
@@ -419,7 +439,8 @@ class AICardGenerationService {
   String _selectBestPrompt(Quote note, String? customStyle) {
     // 分析内容特征
     final content = note.content.toLowerCase();
-    final hasAuthor = note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
+    final hasAuthor =
+        note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
 
     // 如果指定了自定义风格，使用对应的提示词
     if (customStyle != null) {
@@ -452,7 +473,10 @@ class AICardGenerationService {
     }
 
     // 3. 检查是否为引用/名言
-    if (hasAuthor || content.contains('说') || content.contains('曰') || content.contains('"')) {
+    if (hasAuthor ||
+        content.contains('说') ||
+        content.contains('曰') ||
+        content.contains('"')) {
       return AICardPrompts.intelligentCardPrompt(
         content: note.content,
         author: note.sourceAuthor,

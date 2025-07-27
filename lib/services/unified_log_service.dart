@@ -416,6 +416,16 @@ class UnifiedLogService with ChangeNotifier {
   void _startBatchSaveTimer() {
     _batchSaveTimer?.cancel();
     _batchSaveTimer = Timer.periodic(_batchSaveInterval, (_) {
+      // 检查是否还有待处理的日志
+      if (_pendingLogs.isEmpty) {
+        return; // 没有待处理日志，跳过本次保存
+      }
+
+      // Windows平台限制批量保存的频率，避免过度写入
+      if (Platform.isWindows && _pendingLogs.length < 5) {
+        return; // Windows平台等待更多日志再批量保存
+      }
+
       _savePendingLogsToDatabase();
     });
   }
@@ -659,6 +669,13 @@ class UnifiedLogService with ChangeNotifier {
       } finally {
         _isLogging = false;
       }
+    }
+  }
+
+  /// 立即刷新所有待处理的日志到数据库
+  Future<void> flushLogs() async {
+    if (_pendingLogs.isNotEmpty) {
+      await _savePendingLogsToDatabase();
     }
   }
 
