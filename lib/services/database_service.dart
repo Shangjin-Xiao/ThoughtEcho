@@ -69,6 +69,12 @@ class DatabaseService extends ChangeNotifier {
   final Map<String, int> _countCache = {}; // 计数查询缓存
   final Map<String, DateTime> _countCacheTimestamps = {};
 
+  /// 修复：添加查询性能统计
+  final Map<String, int> _queryStats = {}; // 查询次数统计
+  final Map<String, int> _queryTotalTime = {}; // 查询总耗时统计
+  int _totalQueries = 0;
+  int _cacheHits = 0;
+
   // 优化：缓存清理定时器，避免每次查询都清理
   Timer? _cacheCleanupTimer;
   DateTime _lastCacheCleanup = DateTime.now();
@@ -104,6 +110,7 @@ class DatabaseService extends ChangeNotifier {
     for (final key in expiredKeys) {
       _filterCache.remove(key);
       _cacheTimestamps.remove(key);
+      _cacheAccessTimes.remove(key); // 同时清理访问时间
     }
 
     // 清理计数缓存
@@ -193,24 +200,31 @@ class DatabaseService extends ChangeNotifier {
     return _database!;
   }
 
-  /// 修复：带锁的数据库操作执行器
-  Future<T> _executeWithLock<T>(String lockKey, Future<T> Function() operation) async {
+  /// 修复：带锁和超时的数据库操作执行器，防止死锁
+  Future<T> _executeWithLock<T>(String operationId, Future<T> Function() action) async {
     // 如果已有相同操作在执行，等待其完成
-    if (_databaseLock.containsKey(lockKey)) {
-      await _databaseLock[lockKey]!.future;
+    if (_databaseLock.containsKey(operationId)) {
+      await _databaseLock[operationId]!.future;
     }
 
     final completer = Completer<void>();
-    _databaseLock[lockKey] = completer;
+    _databaseLock[operationId] = completer;
 
     try {
-      final result = await operation();
+      // 添加超时机制（30秒超时）
+      final result = await action().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('数据库操作超时: $operationId', const Duration(seconds: 30));
+        },
+      );
       completer.complete();
-      _databaseLock.remove(lockKey);
+      _databaseLock.remove(operationId);
       return result;
     } catch (e) {
       completer.completeError(e);
-      _databaseLock.remove(lockKey);
+      _databaseLock.remove(operationId);
+      logError('数据库操作失败: $operationId', error: e);
       rethrow;
     }
   }
@@ -1560,17 +1574,21 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 添加一条分类
+  /// 修复：添加一条分类，统一名称唯一性检查
   Future<void> addCategory(String name, {String? iconName}) async {
-    // 检查参数
-    if (name.trim().isEmpty) {
+    // 统一的参数验证
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
       throw Exception('分类名称不能为空');
+    }
+    if (trimmedName.length > 50) {
+      throw Exception('分类名称不能超过50个字符');
     }
 
     if (kIsWeb) {
-      // 检查是否已存在同名分类
+      // 检查是否已存在同名分类（不区分大小写）
       final exists = _categoryStore.any(
-        (c) => c.name.toLowerCase() == name.toLowerCase(),
+        (c) => c.name.toLowerCase() == trimmedName.toLowerCase(),
       );
       if (exists) {
         throw Exception('已存在相同名称的分类');
@@ -1578,9 +1596,9 @@ class DatabaseService extends ChangeNotifier {
 
       final newCategory = NoteCategory(
         id: _uuid.v4(),
-        name: name,
+        name: trimmedName,
         isDefault: false,
-        iconName: iconName ?? "",
+        iconName: iconName?.trim() ?? "",
       );
       _categoryStore.add(newCategory);
       _categoriesController.add(_categoryStore);
@@ -1590,23 +1608,15 @@ class DatabaseService extends ChangeNotifier {
 
     final db = database;
 
-    // 检查是否已存在同名分类
-    final existing = await db.query(
-      'categories',
-      where: 'LOWER(name) = ?',
-      whereArgs: [name.toLowerCase()],
-    );
-
-    if (existing.isNotEmpty) {
-      throw Exception('已存在相同名称的分类');
-    }
+    // 统一的唯一性检查逻辑
+    await _validateCategoryNameUnique(db, trimmedName);
 
     final id = _uuid.v4();
     final categoryMap = {
       'id': id,
-      'name': name,
+      'name': trimmedName,
       'is_default': 0,
-      'icon_name': iconName ?? "",
+      'icon_name': iconName?.trim() ?? "",
     };
     await db.insert(
       'categories',
@@ -1615,6 +1625,27 @@ class DatabaseService extends ChangeNotifier {
     );
     await _updateCategoriesStream();
     notifyListeners();
+  }
+
+  /// 修复：统一的分类名称唯一性验证
+  Future<void> _validateCategoryNameUnique(Database db, String name, {String? excludeId}) async {
+    final whereClause = excludeId != null
+        ? 'LOWER(name) = ? AND id != ?'
+        : 'LOWER(name) = ?';
+    final whereArgs = excludeId != null
+        ? [name.toLowerCase(), excludeId]
+        : [name.toLowerCase()];
+
+    final existing = await db.query(
+      'categories',
+      where: whereClause,
+      whereArgs: whereArgs,
+      limit: 1,
+    );
+
+    if (existing.isNotEmpty) {
+      throw Exception('已存在相同名称的分类');
+    }
   }
 
   /// 添加一条分类（使用指定ID）
@@ -1767,7 +1798,7 @@ class DatabaseService extends ChangeNotifier {
     return _categoriesController.stream;
   }
 
-  /// 删除指定分类
+  /// 修复：删除指定分类，增加级联删除和孤立数据清理
   Future<void> deleteCategory(String id) async {
     if (kIsWeb) {
       _categoryStore.removeWhere((category) => category.id == id);
@@ -1775,10 +1806,51 @@ class DatabaseService extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
     final db = database;
-    await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+
+    await db.transaction((txn) async {
+      // 1. 检查是否有笔记使用此分类
+      final quotesUsingCategory = await txn.query(
+        'quotes',
+        where: 'category_id = ?',
+        whereArgs: [id],
+        columns: ['id'],
+      );
+
+      // 2. 清理使用此分类的笔记的category_id字段
+      if (quotesUsingCategory.isNotEmpty) {
+        await txn.update(
+          'quotes',
+          {'category_id': null},
+          where: 'category_id = ?',
+          whereArgs: [id],
+        );
+        logDebug('已清理 ${quotesUsingCategory.length} 条笔记的分类关联');
+      }
+
+      // 3. 删除quote_tags表中的相关记录（CASCADE会自动处理，但为了确保一致性）
+      final deletedTagRelations = await txn.delete(
+        'quote_tags',
+        where: 'tag_id = ?',
+        whereArgs: [id],
+      );
+
+      if (deletedTagRelations > 0) {
+        logDebug('已删除 $deletedTagRelations 条标签关联记录');
+      }
+
+      // 4. 最后删除分类本身
+      await txn.delete('categories', where: 'id = ?', whereArgs: [id]);
+    });
+
+    // 清理缓存
+    _clearAllCache();
+
     await _updateCategoriesStream();
     notifyListeners();
+
+    logDebug('分类删除完成，ID: $id');
   }
 
   Future<void> _updateCategoriesStream() async {
@@ -1786,15 +1858,20 @@ class DatabaseService extends ChangeNotifier {
     _categoriesController.add(categories);
   }
 
-  /// 修复：添加一条引用（笔记），增加并发控制
+  /// 修复：添加一条引用（笔记），增加数据验证和并发控制
   Future<void> addQuote(Quote quote) async {
+    // 修复：添加数据验证
+    if (!quote.isValid) {
+      throw ArgumentError('笔记数据无效，请检查内容、日期和其他字段');
+    }
+
     if (kIsWeb) {
       _memoryStore.add(quote);
       notifyListeners();
       return;
     }
 
-    return _executeWithLock('addQuote_${quote.id}', () async {
+    return _executeWithLock('addQuote_${quote.id ?? 'new'}', () async {
       try {
         final db = await safeDatabase;
       await db.transaction((txn) async {
@@ -2113,25 +2190,33 @@ class DatabaseService extends ChangeNotifier {
       args.addAll(selectedDayPeriods);
     }
 
-    // 优化：标签筛选使用EXISTS子查询，性能更好
+    /// 修复：优化标签筛选查询，减少复杂度
     if (tagIds != null && tagIds.isNotEmpty) {
-      // 使用EXISTS替代JOIN，避免重复数据和复杂的GROUP BY
-      final tagPlaceholders = tagIds.map((_) => '?').join(',');
-      conditions.add('''
-        EXISTS (
-          SELECT 1 FROM quote_tags qt
-          WHERE qt.quote_id = q.id
-          AND qt.tag_id IN ($tagPlaceholders)
-          GROUP BY qt.quote_id
-          HAVING COUNT(DISTINCT qt.tag_id) = ?
-        )
-      ''');
-      args.addAll(tagIds);
-      args.add(tagIds.length);
+      if (tagIds.length == 1) {
+        // 单标签查询：使用简单的INNER JOIN，性能最佳
+        joinClause = 'INNER JOIN quote_tags qt ON q.id = qt.quote_id';
+        conditions.add('qt.tag_id = ?');
+        args.add(tagIds.first);
+        groupByClause = 'GROUP BY q.id';
+      } else {
+        // 多标签查询：使用EXISTS确保所有标签都匹配
+        final tagPlaceholders = tagIds.map((_) => '?').join(',');
+        conditions.add('''
+          EXISTS (
+            SELECT 1 FROM quote_tags qt
+            WHERE qt.quote_id = q.id
+            AND qt.tag_id IN ($tagPlaceholders)
+            GROUP BY qt.quote_id
+            HAVING COUNT(DISTINCT qt.tag_id) = ?
+          )
+        ''');
+        args.addAll(tagIds);
+        args.add(tagIds.length);
 
-      // 需要LEFT JOIN来获取标签信息
-      joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
-      groupByClause = 'GROUP BY q.id';
+        // 获取标签信息的LEFT JOIN
+        joinClause = 'LEFT JOIN quote_tags qt2 ON q.id = qt2.quote_id';
+        groupByClause = 'GROUP BY q.id';
+      }
     } else {
       // 没有标签筛选时也需要获取标签信息
       joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
@@ -2145,9 +2230,14 @@ class DatabaseService extends ChangeNotifier {
     final correctedOrderBy =
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
-    // 优化：使用单一查询获取所有数据
+    /// 修复：优化查询，根据JOIN类型选择正确的标签字段
+    String tagField = 'qt.tag_id';
+    if (tagIds != null && tagIds.isNotEmpty && tagIds.length > 1) {
+      tagField = 'qt2.tag_id'; // 多标签查询使用qt2别名
+    }
+
     final query = '''
-      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+      SELECT q.*, GROUP_CONCAT($tagField) as tag_ids
       $fromClause
       $joinClause
       $where
@@ -2192,7 +2282,168 @@ class DatabaseService extends ChangeNotifier {
       '查询完成，耗时: ${queryTime}ms，结果数量: ${maps.length}',
     );
 
+    // 更新性能统计
+    _updateQueryStats('getUserQuotes', queryTime);
+
     return maps.map((m) => Quote.fromJson(m)).toList();
+  }
+
+  /// 修复：更新查询性能统计
+  void _updateQueryStats(String queryType, int timeMs) {
+    _totalQueries++;
+    _queryStats[queryType] = (_queryStats[queryType] ?? 0) + 1;
+    _queryTotalTime[queryType] = (_queryTotalTime[queryType] ?? 0) + timeMs;
+  }
+
+  /// 修复：获取查询性能报告
+  Map<String, dynamic> getQueryPerformanceReport() {
+    final report = <String, dynamic>{
+      'totalQueries': _totalQueries,
+      'cacheHits': _cacheHits,
+      'cacheHitRate': _totalQueries > 0 ? '${(_cacheHits / _totalQueries * 100).toStringAsFixed(2)}%' : '0%',
+      'queryTypes': <String, dynamic>{},
+    };
+
+    for (final entry in _queryStats.entries) {
+      final queryType = entry.key;
+      final count = entry.value;
+      final totalTime = _queryTotalTime[queryType] ?? 0;
+      final avgTime = count > 0 ? (totalTime / count).toStringAsFixed(2) : '0';
+
+      report['queryTypes'][queryType] = {
+        'count': count,
+        'totalTime': '${totalTime}ms',
+        'avgTime': '${avgTime}ms',
+      };
+    }
+
+    return report;
+  }
+
+  /// 修复：标签数据一致性检查
+  Future<Map<String, dynamic>> checkTagDataConsistency() async {
+    try {
+      final db = await safeDatabase;
+      final report = <String, dynamic>{
+        'orphanedQuoteTags': 0,
+        'orphanedCategoryReferences': 0,
+        'duplicateTagRelations': 0,
+        'issues': <String>[],
+      };
+
+      // 1. 检查孤立的quote_tags记录（引用不存在的quote_id）
+      final orphanedQuoteTags = await db.rawQuery('''
+        SELECT qt.quote_id, qt.tag_id
+        FROM quote_tags qt
+        LEFT JOIN quotes q ON qt.quote_id = q.id
+        WHERE q.id IS NULL
+      ''');
+
+      report['orphanedQuoteTags'] = orphanedQuoteTags.length;
+      if (orphanedQuoteTags.isNotEmpty) {
+        report['issues'].add('发现 ${orphanedQuoteTags.length} 条孤立的标签关联记录');
+      }
+
+      // 2. 检查孤立的quote_tags记录（引用不存在的tag_id）
+      final orphanedTagRefs = await db.rawQuery('''
+        SELECT qt.quote_id, qt.tag_id
+        FROM quote_tags qt
+        LEFT JOIN categories c ON qt.tag_id = c.id
+        WHERE c.id IS NULL
+      ''');
+
+      report['orphanedCategoryReferences'] = orphanedTagRefs.length;
+      if (orphanedTagRefs.isNotEmpty) {
+        report['issues'].add('发现 ${orphanedTagRefs.length} 条引用不存在分类的标签关联');
+      }
+
+      // 3. 检查重复的标签关联
+      final duplicateRelations = await db.rawQuery('''
+        SELECT quote_id, tag_id, COUNT(*) as count
+        FROM quote_tags
+        GROUP BY quote_id, tag_id
+        HAVING COUNT(*) > 1
+      ''');
+
+      report['duplicateTagRelations'] = duplicateRelations.length;
+      if (duplicateRelations.isNotEmpty) {
+        report['issues'].add('发现 ${duplicateRelations.length} 组重复的标签关联');
+      }
+
+      // 4. 检查笔记的category_id是否存在对应的分类
+      final invalidCategoryRefs = await db.rawQuery('''
+        SELECT q.id, q.category_id
+        FROM quotes q
+        LEFT JOIN categories c ON q.category_id = c.id
+        WHERE q.category_id IS NOT NULL AND q.category_id != '' AND c.id IS NULL
+      ''');
+
+      if (invalidCategoryRefs.isNotEmpty) {
+        report['issues'].add('发现 ${invalidCategoryRefs.length} 条笔记引用了不存在的分类');
+      }
+
+      return report;
+    } catch (e) {
+      logDebug('标签数据一致性检查失败: $e');
+      return {
+        'error': e.toString(),
+        'issues': ['检查过程中发生错误'],
+      };
+    }
+  }
+
+  /// 修复：清理标签数据不一致问题
+  Future<bool> cleanupTagDataInconsistencies() async {
+    try {
+      final db = await safeDatabase;
+      int cleanedCount = 0;
+
+      await db.transaction((txn) async {
+        // 1. 清理孤立的quote_tags记录（引用不存在的quote_id）
+        final orphanedQuoteTagsCount = await txn.rawDelete('''
+          DELETE FROM quote_tags
+          WHERE quote_id NOT IN (SELECT id FROM quotes)
+        ''');
+        cleanedCount += orphanedQuoteTagsCount;
+
+        // 2. 清理孤立的quote_tags记录（引用不存在的tag_id）
+        final orphanedTagRefsCount = await txn.rawDelete('''
+          DELETE FROM quote_tags
+          WHERE tag_id NOT IN (SELECT id FROM categories)
+        ''');
+        cleanedCount += orphanedTagRefsCount;
+
+        // 3. 清理重复的标签关联（保留一条）
+        await txn.rawDelete('''
+          DELETE FROM quote_tags
+          WHERE rowid NOT IN (
+            SELECT MIN(rowid)
+            FROM quote_tags
+            GROUP BY quote_id, tag_id
+          )
+        ''');
+
+        // 4. 清理笔记中无效的category_id引用
+        final invalidCategoryCount = await txn.rawUpdate('''
+          UPDATE quotes
+          SET category_id = NULL
+          WHERE category_id IS NOT NULL
+          AND category_id != ''
+          AND category_id NOT IN (SELECT id FROM categories)
+        ''');
+        cleanedCount += invalidCategoryCount;
+      });
+
+      logDebug('标签数据清理完成，共处理 $cleanedCount 条记录');
+
+      // 清理缓存
+      _clearAllCache();
+
+      return true;
+    } catch (e) {
+      logDebug('标签数据清理失败: $e');
+      return false;
+    }
   }
 
   /// 获取所有笔记（用于媒体引用迁移）
@@ -2347,18 +2598,39 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 删除指定的笔记
+  /// 修复：删除指定的笔记，增加数据验证和错误处理
   Future<void> deleteQuote(String id) async {
+    // 修复：添加参数验证
+    if (id.isEmpty) {
+      throw ArgumentError('笔记ID不能为空');
+    }
+
     if (kIsWeb) {
       _memoryStore.removeWhere((quote) => quote.id == id);
       notifyListeners();
       _refreshQuotesStream();
       return;
     }
-    final db = database;
 
-    // 先获取笔记引用的媒体文件列表
-    final referencedFiles = await MediaReferenceService.getReferencedFiles(id);
+    return _executeWithLock('deleteQuote_$id', () async {
+      try {
+        final db = await safeDatabase;
+
+        // 先检查笔记是否存在
+        final existingQuote = await db.query(
+          'quotes',
+          where: 'id = ?',
+          whereArgs: [id],
+          limit: 1,
+        );
+
+        if (existingQuote.isEmpty) {
+          logDebug('要删除的笔记不存在: $id');
+          return; // 笔记不存在，直接返回
+        }
+
+        // 先获取笔记引用的媒体文件列表
+        final referencedFiles = await MediaReferenceService.getReferencedFiles(id);
 
     await db.transaction((txn) async {
       // 由于设置了 ON DELETE CASCADE，quote_tags 表中的相关条目会自动删除
@@ -2386,16 +2658,35 @@ class DatabaseService extends ChangeNotifier {
       }
     }
 
-    // 直接从内存中移除并通知
-    _currentQuotes.removeWhere((quote) => quote.id == id);
-    if (_quotesController != null && !_quotesController!.isClosed) {
-      _quotesController!.add(List.from(_currentQuotes));
-    }
-    notifyListeners();
+        // 清理缓存
+        _clearAllCache();
+
+        // 直接从内存中移除并通知
+        _currentQuotes.removeWhere((quote) => quote.id == id);
+        if (_quotesController != null && !_quotesController!.isClosed) {
+          _quotesController!.add(List.from(_currentQuotes));
+        }
+        notifyListeners();
+
+        logDebug('笔记删除完成，ID: $id');
+      } catch (e) {
+        logDebug('删除笔记时出错: $e');
+        rethrow;
+      }
+    });
   }
 
-  /// 更新笔记内容
+  /// 修复：更新笔记内容，增加数据验证和并发控制
   Future<void> updateQuote(Quote quote) async {
+    // 修复：添加数据验证
+    if (quote.id == null || quote.id!.isEmpty) {
+      throw ArgumentError('更新笔记时ID不能为空');
+    }
+
+    if (!quote.isValid) {
+      throw ArgumentError('笔记数据无效，请检查内容、日期和其他字段');
+    }
+
     if (kIsWeb) {
       final index = _memoryStore.indexWhere((q) => q.id == quote.id);
       if (index != -1) {
@@ -2405,12 +2696,9 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    try {
-      if (quote.id == null) {
-        throw Exception('更新笔记时ID不能为空');
-      }
-
-      final db = database;
+    return _executeWithLock('updateQuote_${quote.id}', () async {
+      try {
+        final db = await safeDatabase;
       await db.transaction((txn) async {
         final quoteMap = quote.toJson();
         // 自动补全 day_period 字段
@@ -2451,16 +2739,18 @@ class DatabaseService extends ChangeNotifier {
           whereArgs: [quote.id],
         );
 
-        // 3. 插入新的标签关联
+        /// 修复：插入新的标签关联，避免事务嵌套
         if (quote.tagIds.isNotEmpty) {
-          final batch = txn.batch();
           for (final tagId in quote.tagIds) {
-            batch.insert('quote_tags', {
-              'quote_id': quote.id!,
-              'tag_id': tagId,
-            });
+            await txn.insert(
+              'quote_tags',
+              {
+                'quote_id': quote.id!,
+                'tag_id': tagId,
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
           }
-          await batch.commit(noResult: true);
         }
       });
 
@@ -2478,10 +2768,11 @@ class DatabaseService extends ChangeNotifier {
         _quotesController!.add(List.from(_currentQuotes));
       }
       notifyListeners(); // 通知其他监听者
-    } catch (e) {
-      logDebug('更新笔记时出错: $e');
-      rethrow; // 重新抛出异常，让调用者处理
-    }
+      } catch (e) {
+        logDebug('更新笔记时出错: $e');
+        rethrow; // 重新抛出异常，让调用者处理
+      }
+    });
   }
 
   /// 监听笔记列表，支持分页加载和筛选
@@ -2806,12 +3097,16 @@ class DatabaseService extends ChangeNotifier {
     return '$tagKey@@$categoryKey@@$searchKey@@$orderBy@@$weatherKey@@$dayPeriodKey';
   }
 
-  /// 优化：从缓存中获取数据，改进边界检查
+  /// 修复：从缓存中获取数据，更新LRU访问时间
   List<Quote>? _getFromCache(String cacheKey, int offset, int limit) {
     final cachedData = _filterCache[cacheKey];
     if (cachedData == null || cachedData.isEmpty) {
       return null;
     }
+
+    // 更新LRU访问时间和缓存命中统计
+    _cacheAccessTimes[cacheKey] = DateTime.now();
+    _cacheHits++;
 
     // 优化：改进边界检查逻辑
     if (offset >= cachedData.length) {
@@ -2944,24 +3239,24 @@ class DatabaseService extends ChangeNotifier {
     }
 
     final currentCategory = NoteCategory.fromMap(currentCategories.first);
-    final currentNameLower = currentCategory.name.toLowerCase();
-    final newNameLower = name.toLowerCase();
 
-    // 只有当新名称与当前名称不同时，才检查重复 (检查除自身以外的分类)
-    if (newNameLower != currentNameLower) {
-      final existing = await db.query(
-        'categories',
-        where: 'LOWER(name) = ? AND id != ?', // 排除自身
-        whereArgs: [newNameLower, id],
-      );
-      if (existing.isNotEmpty) {
-        throw Exception('已存在相同名称的分类');
-      }
+    /// 修复：使用统一的名称唯一性验证
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw Exception('分类名称不能为空');
+    }
+    if (trimmedName.length > 50) {
+      throw Exception('分类名称不能超过50个字符');
+    }
+
+    // 只有当新名称与当前名称不同时，才检查重复
+    if (trimmedName.toLowerCase() != currentCategory.name.toLowerCase()) {
+      await _validateCategoryNameUnique(db, trimmedName, excludeId: id);
     }
 
     final categoryMap = {
-      'name': name,
-      'icon_name': iconName ?? currentCategory.iconName, // 如果未提供新图标，则保留旧图标
+      'name': trimmedName,
+      'icon_name': iconName?.trim() ?? currentCategory.iconName, // 如果未提供新图标，则保留旧图标
       // 'is_default' 字段不应在此处更新，它在创建时确定
     };
 

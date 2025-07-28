@@ -82,7 +82,7 @@ void main() {
       final quotes = await databaseService.getUserQuotes(limit: 20, offset: 0);
 
       stopwatch.stop();
-      debugPrint(
+      debugPrintSynchronously(
         '✓ 基本查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
       );
 
@@ -104,7 +104,7 @@ void main() {
         );
 
         stopwatch.stop();
-        debugPrint(
+        debugPrintSynchronously(
           '✓ 搜索查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
         );
 
@@ -115,7 +115,7 @@ void main() {
         );
       } catch (e) {
         stopwatch.stop();
-        debugPrint('✗ 搜索查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        debugPrintSynchronously('✗ 搜索查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
         rethrow;
       }
     });
@@ -123,7 +123,7 @@ void main() {
     test('测试标签筛选查询性能', () async {
       final categories = await databaseService.getCategories();
       if (categories.isEmpty) {
-        debugPrint('跳过标签筛选测试：没有可用的分类');
+        debugPrintSynchronously('跳过标签筛选测试：没有可用的分类');
         return;
       }
 
@@ -137,7 +137,7 @@ void main() {
         );
 
         stopwatch.stop();
-        debugPrint(
+        debugPrintSynchronously(
           '✓ 标签筛选查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
         );
 
@@ -148,7 +148,7 @@ void main() {
         );
       } catch (e) {
         stopwatch.stop();
-        debugPrint('✗ 标签筛选查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        debugPrintSynchronously('✗ 标签筛选查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
         rethrow;
       }
     });
@@ -156,7 +156,7 @@ void main() {
     test('测试复合查询性能（搜索+标签+天气）', () async {
       final categories = await databaseService.getCategories();
       if (categories.isEmpty) {
-        debugPrint('跳过复合查询测试：没有可用的分类');
+        debugPrintSynchronously('跳过复合查询测试：没有可用的分类');
         return;
       }
 
@@ -172,7 +172,7 @@ void main() {
         );
 
         stopwatch.stop();
-        debugPrint(
+        debugPrintSynchronously(
           '✓ 复合查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
         );
 
@@ -183,7 +183,7 @@ void main() {
         );
       } catch (e) {
         stopwatch.stop();
-        debugPrint('✗ 复合查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        debugPrintSynchronously('✗ 复合查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
         rethrow;
       }
     });
@@ -192,7 +192,7 @@ void main() {
       final categories = await databaseService.getCategories();
 
       // 创建大量测试数据来模拟慢查询
-      debugPrint('正在创建大量测试数据...');
+      debugPrintSynchronously('正在创建大量测试数据...');
       final futures = <Future>[];
       for (int i = 0; i < 100; i++) {
         final quote = Quote(
@@ -208,7 +208,7 @@ void main() {
         futures.add(databaseService.addQuote(quote));
       }
       await Future.wait(futures);
-      debugPrint('✓ 批量数据创建完成');
+      debugPrintSynchronously('✓ 批量数据创建完成');
 
       final stopwatch = Stopwatch()..start();
 
@@ -223,7 +223,7 @@ void main() {
         );
 
         stopwatch.stop();
-        debugPrint(
+        debugPrintSynchronously(
           '✓ 大数据量查询耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
         );
 
@@ -235,17 +235,17 @@ void main() {
         );
       } catch (e) {
         stopwatch.stop();
-        debugPrint('查询结果: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+        debugPrintSynchronously('查询结果: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
 
         if (e.toString().contains('TimeoutException')) {
-          debugPrint('✓ 超时机制正常工作，在 ${stopwatch.elapsedMilliseconds}ms 后抛出超时异常');
+          debugPrintSynchronously('✓ 超时机制正常工作，在 ${stopwatch.elapsedMilliseconds}ms 后抛出超时异常');
           expect(
             stopwatch.elapsedMilliseconds,
             lessThan(6000),
             reason: '超时应该在6秒内触发',
           );
         } else {
-          debugPrint('✗ 非超时异常: $e');
+          debugPrintSynchronously('✗ 非超时异常: $e');
           rethrow;
         }
       }
@@ -273,7 +273,7 @@ void main() {
         );
 
         stopwatch.stop();
-        debugPrint(
+        debugPrintSynchronously(
           '✓ 搜索功能测试耗时: ${stopwatch.elapsedMilliseconds}ms, 结果: ${quotes.length}条',
         );
 
@@ -300,10 +300,8 @@ void main() {
           WHERE type='index' AND tbl_name IN ('quotes', 'quote_tags', 'categories')
         ''');
 
-        debugPrint('数据库索引状态:');
-        for (final index in indexes) {
-          debugPrint('  - ${index['name']}');
-        }
+        final indexDetails = indexes.map((index) => '  - ${index['name']}').join('\n');
+          debugPrintSynchronously('数据库索引状态:\n$indexDetails');
 
         // 检查quote_tags表的索引
         final quoteTagsIndexes = indexes
@@ -343,10 +341,8 @@ void main() {
             [categories.first.id],
           );
 
-          debugPrint('标签查询执行计划:');
-          for (final plan in queryPlan) {
-            debugPrint('  ${plan['detail']}');
-          }
+          final planDetails = queryPlan.map((plan) => '  ${plan['detail']}').join('\n');
+          debugPrintSynchronously('标签查询执行计划:\n$planDetails');
 
           // 检查是否使用了索引
           final usesIndex = queryPlan.any(
