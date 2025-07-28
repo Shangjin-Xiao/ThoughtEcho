@@ -422,7 +422,7 @@ class UnifiedLogService with ChangeNotifier {
       }
 
       // Windows平台限制批量保存的频率，避免过度写入
-      if (Platform.isWindows && _pendingLogs.length < 5) {
+      if (!kIsWeb && Platform.isWindows && _pendingLogs.length < 5) {
         return; // Windows平台等待更多日志再批量保存
       }
 

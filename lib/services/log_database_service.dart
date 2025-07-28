@@ -81,27 +81,40 @@ class WebLogStorage implements LogStorage {
   static const String _logStorageKey = 'app_logs_storage';
   static const String _logCountKey = 'app_logs_count';
   late SharedPreferences _prefs;
+  bool _initialized = false;
 
   @override
   Future<void> initialize() async {
+    if (_initialized) return;
     _prefs = await SharedPreferences.getInstance();
+    _initialized = true;
     logDebug('Web平台：初始化日志存储 (SharedPreferences)');
+  }
+
+  // 确保已初始化
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      await initialize();
+    }
   }
 
   // 从 SharedPreferences 获取所有日志
   Future<List<LogEntry>> _getAllLogs() async {
+    await _ensureInitialized();
     final List<String> logStrings = _prefs.getStringList(_logStorageKey) ?? [];
     return logStrings.map((str) => LogEntry.fromJson(str)).toList();
   }
 
   // 保存所有日志到 SharedPreferences
   Future<void> _saveLogs(List<LogEntry> logs) async {
+    await _ensureInitialized();
     final List<String> logStrings = logs.map((log) => log.toJson()).toList();
     await _prefs.setStringList(_logStorageKey, logStrings);
   }
 
   @override
   Future<int> insertLog(Map<String, dynamic> log) async {
+    await _ensureInitialized();
     final logs = await _getAllLogs();
     final logEntry = LogEntry.fromMap(log);
     logs.add(logEntry);
@@ -116,6 +129,7 @@ class WebLogStorage implements LogStorage {
 
   @override
   Future<void> insertLogs(List<Map<String, dynamic>> logs) async {
+    await _ensureInitialized();
     final existingLogs = await _getAllLogs();
     final newLogs = logs.map((log) => LogEntry.fromMap(log)).toList();
     existingLogs.addAll(newLogs);
@@ -192,11 +206,13 @@ class WebLogStorage implements LogStorage {
 
   @override
   Future<int> getLogCount() async {
+    await _ensureInitialized();
     return _prefs.getInt(_logCountKey) ?? 0;
   }
 
   @override
   Future<int> deleteOldLogs(int maxLogCount) async {
+    await _ensureInitialized();
     var logs = await _getAllLogs();
 
     if (logs.length <= maxLogCount) {
@@ -217,6 +233,7 @@ class WebLogStorage implements LogStorage {
 
   @override
   Future<int> clearAllLogs() async {
+    await _ensureInitialized();
     final count = await getLogCount();
     await _prefs.remove(_logStorageKey);
     await _prefs.remove(_logCountKey);

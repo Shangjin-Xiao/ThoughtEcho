@@ -73,6 +73,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Timer? _searchDebounceTimer;
   List<NoteCategory> _filteredTags = [];
   String _lastSearchQuery = '';
+  
+  // 优化：缓存过滤结果，避免重复计算
+  final Map<String, List<NoteCategory>> _filterCache = {};
 
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
@@ -178,7 +181,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     });
   }
 
-  // 更新过滤标签
+  // 更新过滤标签 - 使用缓存优化
   void _updateFilteredTags(String query) {
     if (!mounted) return;
 
@@ -186,9 +189,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       if (query.isEmpty) {
         _filteredTags = widget.tags;
       } else {
-        _filteredTags = widget.tags.where((tag) {
-          return tag.name.toLowerCase().contains(query);
-        }).toList();
+        // 优化：使用缓存避免重复计算
+        if (_filterCache.containsKey(query)) {
+          _filteredTags = _filterCache[query]!;
+        } else {
+          _filteredTags = widget.tags.where((tag) {
+            return tag.name.toLowerCase().contains(query);
+          }).toList();
+          
+          // 缓存结果，限制缓存大小防止内存泄漏
+          if (_filterCache.length < 50) {
+            _filterCache[query] = _filteredTags;
+          }
+        }
       }
     });
   }

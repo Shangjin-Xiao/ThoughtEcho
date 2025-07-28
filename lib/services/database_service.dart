@@ -368,10 +368,11 @@ class DatabaseService extends ChangeNotifier {
 
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
-    return await openDatabase(
+    return await databaseFactory.openDatabase(
       path,
-      version: 13, // 版本号升级至13，以支持媒体文件引用管理
-      onCreate: (db, version) async {
+      options: OpenDatabaseOptions(
+        version: 13, // 版本号升级至13，以支持媒体文件引用管理
+        onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
           CREATE TABLE categories(
@@ -458,28 +459,29 @@ class DatabaseService extends ChangeNotifier {
         // 创建媒体文件引用表
         await MediaReferenceService.initializeTable(db);
       },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        logDebug('开始数据库升级: $oldVersion -> $newVersion');
+        onUpgrade: (db, oldVersion, newVersion) async {
+          logDebug('开始数据库升级: $oldVersion -> $newVersion');
 
-        try {
-          // 修复：使用事务保护整个升级过程
-          await db.transaction((txn) async {
-            // 创建升级备份
-            await _createUpgradeBackup(txn, oldVersion);
+          try {
+            // 修复：使用事务保护整个升级过程
+            await db.transaction((txn) async {
+              // 创建升级备份
+              await _createUpgradeBackup(txn, oldVersion);
 
-            // 按版本顺序执行升级
-            await _performVersionUpgrades(txn, oldVersion, newVersion);
+              // 按版本顺序执行升级
+              await _performVersionUpgrades(txn, oldVersion, newVersion);
 
-            // 验证升级结果
-            await _validateUpgradeResult(txn);
-          });
+              // 验证升级结果
+              await _validateUpgradeResult(txn);
+            });
 
-          logDebug('数据库升级成功完成');
-        } catch (e) {
-          logError('数据库升级失败: $e', error: e, source: 'DatabaseUpgrade');
-          rethrow;
-        }
-      },
+            logDebug('数据库升级成功完成');
+          } catch (e) {
+            logError('数据库升级失败: $e', error: e, source: 'DatabaseUpgrade');
+            rethrow;
+          }
+        },
+      ),
     );
   }
 
@@ -3274,12 +3276,12 @@ class DatabaseService extends ChangeNotifier {
   /// 批量为旧笔记补全 dayPeriod 字段（根据 date 字段推算并写入）
   Future<void> patchQuotesDayPeriod() async {
     try {
-      // 检查数据库是否已初始化
-      if (!_isInitialized || _database == null) {
+      // 检查数据库是否已初始化 - 在初始化过程中允许执行
+      if (_database == null) {
         throw Exception('数据库未初始化，无法执行 day_period 字段补全');
       }
 
-      final db = database;
+      final db = _database!;
       final List<Map<String, dynamic>> maps = await db.query('quotes');
 
       if (maps.isEmpty) {
@@ -3337,12 +3339,12 @@ class DatabaseService extends ChangeNotifier {
   /// 修复：安全迁移旧数据dayPeriod字段为英文key
   Future<void> migrateDayPeriodToKey() async {
     try {
-      // 检查数据库是否已初始化
-      if (!_isInitialized || _database == null) {
+      // 检查数据库是否已初始化 - 在初始化过程中允许执行
+      if (_database == null) {
         throw Exception('数据库未初始化，无法执行 dayPeriod 字段迁移');
       }
 
-      final db = database;
+      final db = _database!;
 
       // 修复：使用事务保护迁移过程
       await db.transaction((txn) async {
@@ -3442,12 +3444,12 @@ class DatabaseService extends ChangeNotifier {
         return;
       }
 
-      // 检查数据库是否已初始化
-      if (!_isInitialized || _database == null) {
+      // 检查数据库是否已初始化 - 在初始化过程中允许执行
+      if (_database == null) {
         throw Exception('数据库未初始化，无法执行 weather 字段迁移');
       }
 
-      final db = database;
+      final db = _database!;
 
       // 修复：使用事务保护迁移过程
       await db.transaction((txn) async {
@@ -3559,6 +3561,12 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) return; // Web平台无需数据迁移
 
     try {
+      // 首先检查数据库是否可用
+      if (_database == null) {
+        logError('数据库不可用，跳过数据迁移操作', source: 'DatabaseService');
+        return;
+      }
+
       logDebug('开始执行数据迁移...');
 
       // 兼容性检查：验证数据库结构完整性
