@@ -24,42 +24,79 @@ class AIService extends ChangeNotifier {
   AIService({required SettingsService settingsService})
       : _settingsService = settingsService;
 
-  Future<void> _validateSettings() async {
+  Future<void> _validateSettings({bool testNetwork = false}) async {
     try {
       final multiSettings = _settingsService.multiAISettings;
 
+      // 1. 检查是否选择了AI服务商
       if (multiSettings.currentProvider == null) {
         throw Exception('请先选择AI服务商');
       }
 
       final currentProvider = multiSettings.currentProvider!;
 
-      // 从加密存储获取真实的API Key
-      final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-      logDebug(
-        '验证设置 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
-      );
+      // 2. 验证API URL
+      if (currentProvider.apiUrl.trim().isEmpty) {
+        throw Exception('请先配置 API URL');
+      }
+      
+      final urlValid = Uri.tryParse(currentProvider.apiUrl)?.isAbsolute ?? false;
+      if (!urlValid) {
+        throw Exception('API URL格式无效，请输入完整的URL地址');
+      }
 
-      // 检查API Key是否存在
+      // 3. 验证模型名称
+      if (currentProvider.model.trim().isEmpty) {
+        throw Exception('AI模型名称不能为空');
+      }
+
+      // 4. 验证API密钥（统一检查）
       final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
         currentProvider.id,
       );
       if (!hasApiKey) {
-        throw Exception('请先为 ${currentProvider.name} 配置 API Key');
+        throw Exception('请先为 ${currentProvider.name} 配置有效的API密钥');
       }
 
-      if (currentProvider.apiUrl.isEmpty) {
-        throw Exception('请先配置 API URL');
-      }
+      // 记录验证成功信息
+      final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
+      logDebug(
+        '验证设置成功 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
+      );
 
-      if (currentProvider.model.isEmpty) {
-        throw Exception('请先配置 AI 模型');
+      // 5. 可选的网络连接测试
+      if (testNetwork) {
+        final hasConnection = await _testConnection(currentProvider);
+        if (!hasConnection) {
+          throw Exception('无法连接到AI服务，请检查网络连接和配置');
+        }
       }
     } catch (e) {
       if (e.toString().contains('请先')) {
         rethrow;
       }
-      throw Exception('AI设置尚未初始化，请稍后再试: $e');
+      throw Exception('AI设置验证失败: $e');
+    }
+  }
+
+  /// 验证网络连接（可选调用，避免每次验证都进行网络请求）
+  Future<bool> _testConnection(AIProviderSettings provider) async {
+    try {
+      final response = await _requestHelper.makeRequestWithProvider(
+        url: provider.apiUrl,
+        systemPrompt: AIPromptManager.connectionTestPrompt,
+        userMessage: '测试连接',
+        provider: provider,
+        temperature: 0.1,
+        maxTokens: 50,
+      );
+
+      final content = _requestHelper.parseResponse(response);
+      logDebug('AI连接测试成功: $content');
+      return true;
+    } catch (e) {
+      logDebug('AI连接测试失败: $e');
+      return false;
     }
   }
 

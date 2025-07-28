@@ -239,16 +239,18 @@ class WeatherService extends ChangeNotifier {
     return WeatherCodeMapper.getIconCode(key);
   }
 
-  /// 检查网络连通性
+  /// 修复：检查网络连通性，使用更可靠的检测方法
   Future<bool> shouldUseLocalWeather() async {
     try {
+      // 使用天气API的健康检查端点，使用北京坐标避免海洋中心
       final result = await NetworkService.instance.get(
-        'https://www.baidu.com',
-        timeoutSeconds: 3,
+        'https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&current=temperature_2m',
+        timeoutSeconds: 5,
       );
       return result.statusCode != 200;
     } catch (e) {
-      return true;
+      logDebug('网络连通性检查失败: $e');
+      return true; // 网络不可用，使用本地天气
     }
   }
 

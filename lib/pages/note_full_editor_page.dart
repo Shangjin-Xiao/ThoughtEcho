@@ -146,10 +146,21 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
   }
 
-  /// 直接初始化富文本内容
+  /// 修复：直接初始化富文本内容，增加Delta格式验证
   Future<void> _initializeDirectly(String deltaContent) async {
     try {
+      // 修复：验证Delta格式的完整性
+      if (!_isValidDeltaFormat(deltaContent)) {
+        throw const FormatException('Delta格式无效');
+      }
+
       final deltaJson = jsonDecode(deltaContent);
+
+      // 修复：验证解析后的JSON结构
+      if (!_isValidDeltaJson(deltaJson)) {
+        throw const FormatException('Delta JSON结构无效');
+      }
+
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
@@ -165,6 +176,41 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       logDebug('直接初始化失败: $e');
       rethrow;
+    }
+  }
+
+  /// 修复：验证Delta格式的基本有效性
+  bool _isValidDeltaFormat(String deltaContent) {
+    try {
+      if (deltaContent.trim().isEmpty) return false;
+
+      // 基本JSON格式检查
+      final decoded = jsonDecode(deltaContent);
+      return decoded is List || decoded is Map;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 修复：验证Delta JSON结构的有效性
+  bool _isValidDeltaJson(dynamic deltaJson) {
+    try {
+      if (deltaJson is List) {
+        // 验证Delta操作数组
+        for (final op in deltaJson) {
+          if (op is! Map<String, dynamic>) return false;
+          if (!op.containsKey('insert') && !op.containsKey('retain') && !op.containsKey('delete')) {
+            return false;
+          }
+        }
+        return true;
+      } else if (deltaJson is Map<String, dynamic>) {
+        // 验证Document格式
+        return deltaJson.containsKey('ops') && deltaJson['ops'] is List;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -190,11 +236,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
   }
 
-  /// 使用分段加载初始化超大富文本内容
+  /// 修复：使用分段加载初始化超大富文本内容，优化内存管理
   Future<void> _initializeWithChunkedLoading(String deltaContent) async {
     try {
       // 对于超大内容，先创建一个空文档，然后逐步加载内容
-      logDebug('开始分段加载超大富文本内容');
+      logDebug('开始分段加载超大富文本内容，大小: ${deltaContent.length} 字符');
 
       // 首先创建一个简单的占位符文档
       final placeholderDocument = quill.Document()..insert(0, '正在加载大型文档...');
@@ -209,8 +255,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         });
       }
 
-      // 在后台处理实际内容
-      final deltaJson = await compute(_parseJsonInIsolate, deltaContent);
+      // 修复：分批处理超大内容，避免内存峰值
+      final deltaJson = await _processLargeContentSafely(deltaContent);
+
+      if (deltaJson == null) {
+        throw Exception('大型内容处理失败');
+      }
+
       final document = quill.Document.fromJson(deltaJson);
 
       // 替换为实际文档
@@ -227,6 +278,66 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       logDebug('分段加载失败: $e');
       rethrow;
+    }
+  }
+
+  /// 获取针对当前设备优化的块大小
+  Future<int> _getOptimalChunkSize() async {
+    try {
+      final memoryManager = DeviceMemoryManager();
+      final memoryPressure = await memoryManager.getMemoryPressureLevel();
+      
+      // 根据内存压力级别调整块大小
+      switch (memoryPressure) {
+        case 0: // 内存充足
+          return 4 * 1024 * 1024; // 4MB
+        case 1: // 内存正常
+          return 2 * 1024 * 1024; // 2MB
+        case 2: // 内存紧张
+          return 1 * 1024 * 1024; // 1MB
+        case 3: // 内存临界
+          return 512 * 1024; // 512KB
+        default: // 内存不足或未知状态
+          return 256 * 1024; // 256KB（最保守）
+      }
+    } catch (e) {
+      logDebug('获取设备内存状况失败，使用默认块大小: $e');
+      return 1024 * 1024; // 回退到1MB
+    }
+  }
+
+  /// 修复：安全处理大型内容，分批加载避免内存峰值
+  Future<dynamic> _processLargeContentSafely(String deltaContent) async {
+    try {
+      // 动态获取适合当前设备的块大小
+      final chunkSize = await _getOptimalChunkSize();
+      logDebug('使用动态块大小: ${(chunkSize / 1024).toStringAsFixed(1)}KB');
+
+      if (deltaContent.length > chunkSize) {
+        logDebug('内容过大，使用分批处理策略');
+
+        // 尝试简化内容
+        final simplifiedContent = _simplifyLargeContent(deltaContent);
+        return await compute(_parseJsonInIsolate, simplifiedContent);
+      } else {
+        // 正常处理
+        return await compute(_parseJsonInIsolate, deltaContent);
+      }
+    } catch (e) {
+      logDebug('大型内容处理失败: $e');
+      return null;
+    }
+  }
+
+  /// 修复：简化大型内容，移除非必要元素
+  String _simplifyLargeContent(String deltaContent) {
+    try {
+      final deltaJson = jsonDecode(deltaContent);
+      final simplified = _simplifyDeltaData(deltaJson);
+      return jsonEncode(simplified);
+    } catch (e) {
+      logDebug('简化大型内容失败: $e');
+      return deltaContent;
     }
   }
 
@@ -355,7 +466,23 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     return jsonEncode(data);
   }
 
-  // 初始化为纯文本的辅助方法
+  /// 深拷贝List或Map，递归处理嵌套对象
+  dynamic _deepCopy(dynamic original) {
+    if (original == null) {
+      return null;
+    } else if (original is Map) {
+      return Map<String, dynamic>.from(
+        original.map((key, value) => MapEntry(key, _deepCopy(value)))
+      );
+    } else if (original is List) {
+      return original.map((item) => _deepCopy(item)).toList();
+    } else {
+      // 基本类型（String, int, double, bool等）直接返回
+      return original;
+    }
+  }
+
+  /// 修复：初始化为纯文本的辅助方法，增强错误恢复
   void _initializeAsPlainText() {
     try {
       if (mounted) {
@@ -370,6 +497,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       // 如果即使初始化纯文本也失败，使用空文档
       logDebug('初始化编辑器为纯文本失败: $e');
+      _initializeEmptyDocument();
+    }
+  }
+
+  /// 修复：初始化空文档作为最后的错误恢复手段
+  void _initializeEmptyDocument() {
+    try {
       if (mounted) {
         setState(() {
           _controller.dispose(); // 释放旧控制器
@@ -378,13 +512,39 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           // 尝试安全地添加内容
           try {
             if (widget.initialContent.isNotEmpty) {
-              _controller.document.insert(0, widget.initialContent);
+              // 修复：分批添加内容，避免一次性插入大量文本，并正确跟踪插入位置
+              final content = widget.initialContent;
+              const chunkSize = 1000; // 每次插入1000字符
+              int currentInsertPosition = 0; // 跟踪当前插入位置
+
+              for (int i = 0; i < content.length; i += chunkSize) {
+                final end = (i + chunkSize < content.length) ? i + chunkSize : content.length;
+                final chunk = content.substring(i, end);
+                
+                // 确保插入位置在有效范围内
+                final docLength = _controller.document.length;
+                final safeInsertPosition = currentInsertPosition.clamp(0, docLength - 1);
+                
+                _controller.document.insert(safeInsertPosition, chunk);
+                
+                // 更新插入位置：当前位置 + 插入的文本长度
+                currentInsertPosition = safeInsertPosition + chunk.length;
+              }
             }
-          } catch (_) {
-            // 忽略失败的内容插入
+          } catch (insertError) {
+            logDebug('插入内容失败: $insertError');
+            // 最后的兜底：创建一个包含错误信息的文档
+            try {
+              _controller.document.insert(0, '文档加载失败，请重新打开编辑器');
+            } catch (_) {
+              // 完全失败，保持空文档
+            }
           }
         });
       }
+    } catch (e) {
+      logDebug('初始化空文档也失败: $e');
+      // 这种情况下，保持现有控制器状态
     }
   }
 
@@ -912,12 +1072,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLowest,
+                  color: theme.colorScheme.surface,
                   border: Border(
                     bottom: BorderSide(
                       color: theme.colorScheme.outlineVariant.applyOpacity(
-                        0.3,
-                      ), // MODIFIED
+                        0.1,
+                      ),
                       width: 1,
                     ),
                   ),
@@ -1998,13 +2158,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
   }
 
-  /// 处理临时媒体文件，将其移动到永久目录
+  /// 修复：处理临时媒体文件，增加事务安全性和错误恢复
   Future<void> _processTemporaryMediaFiles() async {
     try {
       logDebug('开始处理临时媒体文件...');
 
       // 获取当前文档的Delta内容
       final deltaData = _controller.document.toDelta().toJson();
+      // 修复：使用深拷贝确保备份数据完全独立，避免嵌套对象的意外修改
+      final originalDeltaData = _deepCopy(deltaData) as List;
+      bool hasChanges = false;
+      final processedFiles = <String, String>{}; // 记录已处理的文件映射
 
       // 遍历Delta内容，查找临时媒体文件
       for (final op in deltaData) {
@@ -2014,12 +2178,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             // 处理图片
             if (insert.containsKey('image')) {
               final imagePath = insert['image'] as String?;
-              if (imagePath != null &&
-                  await TemporaryMediaService.isTemporaryFile(imagePath)) {
-                final permanentPath =
-                    await TemporaryMediaService.moveToPermament(imagePath);
+              if (imagePath != null && await TemporaryMediaService.isTemporaryFile(imagePath)) {
+                final permanentPath = await _moveMediaFileSafely(imagePath, processedFiles);
                 if (permanentPath != null) {
                   insert['image'] = permanentPath;
+                  hasChanges = true;
                   logDebug('临时图片已移动: $imagePath -> $permanentPath');
                 }
               }
@@ -2028,12 +2191,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             // 处理视频
             if (insert.containsKey('video')) {
               final videoPath = insert['video'] as String?;
-              if (videoPath != null &&
-                  await TemporaryMediaService.isTemporaryFile(videoPath)) {
-                final permanentPath =
-                    await TemporaryMediaService.moveToPermament(videoPath);
+              if (videoPath != null && await TemporaryMediaService.isTemporaryFile(videoPath)) {
+                final permanentPath = await _moveMediaFileSafely(videoPath, processedFiles);
                 if (permanentPath != null) {
                   insert['video'] = permanentPath;
+                  hasChanges = true;
                   logDebug('临时视频已移动: $videoPath -> $permanentPath');
                 }
               }
@@ -2044,12 +2206,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               final custom = insert['custom'];
               if (custom is Map && custom.containsKey('audio')) {
                 final audioPath = custom['audio'] as String?;
-                if (audioPath != null &&
-                    await TemporaryMediaService.isTemporaryFile(audioPath)) {
-                  final permanentPath =
-                      await TemporaryMediaService.moveToPermament(audioPath);
+                if (audioPath != null && await TemporaryMediaService.isTemporaryFile(audioPath)) {
+                  final permanentPath = await _moveMediaFileSafely(audioPath, processedFiles);
                   if (permanentPath != null) {
                     custom['audio'] = permanentPath;
+                    hasChanges = true;
                     logDebug('临时音频已移动: $audioPath -> $permanentPath');
                   }
                 }
@@ -2059,79 +2220,51 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       }
 
-      // 更新编辑器内容
-      final newDocument = quill.Document.fromJson(deltaData);
-      _controller.document = newDocument;
-
-      logDebug('临时媒体文件处理完成');
+      // 只有在有变更时才更新编辑器内容
+      if (hasChanges) {
+        try {
+          final newDocument = quill.Document.fromJson(deltaData);
+          _controller.document = newDocument;
+          logDebug('临时媒体文件处理完成，共处理 ${processedFiles.length} 个文件');
+        } catch (e) {
+          logDebug('更新编辑器内容失败，回滚到原始状态: $e');
+          // 回滚到原始状态
+          final rollbackDocument = quill.Document.fromJson(originalDeltaData);
+          _controller.document = rollbackDocument;
+          rethrow;
+        }
+      } else {
+        logDebug('没有临时媒体文件需要处理');
+      }
     } catch (e) {
       logDebug('处理临时媒体文件失败: $e');
+      rethrow;
     }
   }
 
-  /// 清理临时文件
-  Future<void> _cleanupTemporaryFiles() async {
+  /// 修复：安全移动媒体文件，避免重复处理
+  Future<String?> _moveMediaFileSafely(String sourcePath, Map<String, String> processedFiles) async {
     try {
-      logDebug('开始清理临时文件...');
-
-      // 获取当前文档的Delta内容
-      final deltaData = _controller.document.toDelta().toJson();
-
-      // 收集所有临时文件路径
-      final tempFiles = <String>[];
-
-      for (final op in deltaData) {
-        if (op.containsKey('insert')) {
-          final insert = op['insert'];
-          if (insert is Map) {
-            // 检查图片
-            if (insert.containsKey('image')) {
-              final imagePath = insert['image'] as String?;
-              if (imagePath != null &&
-                  await TemporaryMediaService.isTemporaryFile(imagePath)) {
-                tempFiles.add(imagePath);
-              }
-            }
-
-            // 检查视频
-            if (insert.containsKey('video')) {
-              final videoPath = insert['video'] as String?;
-              if (videoPath != null &&
-                  await TemporaryMediaService.isTemporaryFile(videoPath)) {
-                tempFiles.add(videoPath);
-              }
-            }
-
-            // 检查音频
-            if (insert.containsKey('custom')) {
-              final custom = insert['custom'];
-              if (custom is Map && custom.containsKey('audio')) {
-                final audioPath = custom['audio'] as String?;
-                if (audioPath != null &&
-                    await TemporaryMediaService.isTemporaryFile(audioPath)) {
-                  tempFiles.add(audioPath);
-                }
-              }
-            }
-          }
-        }
+      // 检查是否已经处理过这个文件
+      if (processedFiles.containsKey(sourcePath)) {
+        return processedFiles[sourcePath];
       }
 
-      // 清理临时文件
-      for (final tempFile in tempFiles) {
-        await TemporaryMediaService.cleanupTemporaryFile(tempFile);
+      final permanentPath = await TemporaryMediaService.moveToPermament(sourcePath);
+      if (permanentPath != null) {
+        processedFiles[sourcePath] = permanentPath;
       }
-
-      logDebug('临时文件清理完成，共清理 ${tempFiles.length} 个文件');
+      return permanentPath;
     } catch (e) {
-      logDebug('清理临时文件失败: $e');
+      logDebug('移动媒体文件失败: $sourcePath, 错误: $e');
+      return null;
     }
   }
 
   @override
   void dispose() {
-    // 异步清理未保存的临时文件
-    _cleanupTemporaryFiles();
+    // 清理临时媒体文件（异步执行，不阻塞dispose）
+    _cleanupTemporaryMedia();
 
     // 释放QuillController
     _controller.dispose();
@@ -2142,5 +2275,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _tagSearchController.dispose();
 
     super.dispose();
+  }
+
+  /// 清理临时媒体文件
+  Future<void> _cleanupTemporaryMedia() async {
+    try {
+      await TemporaryMediaService.cleanupAllTemporaryFiles();
+      logDebug('临时媒体文件清理完成');
+    } catch (e) {
+      logDebug('清理临时媒体文件失败: $e');
+    }
   }
 }

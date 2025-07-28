@@ -15,6 +15,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
+import '../constants/app_constants.dart'; // 导入应用常量
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -68,12 +69,11 @@ class NoteListViewState extends State<NoteListView> {
   final List<Quote> _quotes = [];
   bool _isLoading = true;
   bool _hasMore = true;
-  static const int _pageSize = 20;
+  static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
 
-  // 优化：添加防抖定时器
+  // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
-  static const Duration _searchDebounceDelay = Duration(milliseconds: 500);
 
   @override
   void initState() {
@@ -168,7 +168,7 @@ class NoteListViewState extends State<NoteListView> {
               content: Text(
                 '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
               ),
-              duration: const Duration(seconds: 3),
+              duration: AppConstants.snackBarDurationImportant,
               backgroundColor: Colors.red,
               action: SnackBarAction(
                 label: '重试',
@@ -331,7 +331,7 @@ class NoteListViewState extends State<NoteListView> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        duration: const Duration(seconds: 2),
+        duration: AppConstants.snackBarDurationNormal,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
           label: '重试',
@@ -380,15 +380,32 @@ class NoteListViewState extends State<NoteListView> {
       return;
     }
 
-    logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
-    final db = Provider.of<DatabaseService>(context, listen: false);
-    await db.loadMoreQuotes();
+    // 修复：立即设置加载状态，防止并发调用
+    setState(() {
+      _isLoading = true;
+    });
 
-    // 强制检查状态更新
-    if (mounted) {
-      setState(() {
-        _hasMore = db.hasMoreQuotes;
-      });
+    try {
+      logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      await db.loadMoreQuotes();
+
+      // 强制检查状态更新
+      if (mounted) {
+        setState(() {
+          _hasMore = db.hasMoreQuotes;
+          _isLoading = false; // 加载完成后重置状态
+        });
+      }
+    } catch (e) {
+      // 修复：出错时也要重置加载状态
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      logError('加载更多数据失败: $e', error: e, source: 'NoteListView');
+      rethrow;
     }
   }
 
@@ -450,12 +467,15 @@ class NoteListViewState extends State<NoteListView> {
 
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
-        // 预加载逻辑：当用户滚动到距离底部较近的位置时，提前加载下一页
+        // 修复：优化预加载逻辑，减少频繁触发
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
-          // 降低阈值，使其更容易触发（距离底部100像素或10%）
-          final threshold = metrics.maxScrollExtent - 100;
-          if (metrics.pixels > threshold && metrics.maxScrollExtent > 0) {
+          // 修复：使用常量文件中的阈值，适应不同屏幕尺寸
+          final threshold = metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
+          if (metrics.pixels > threshold &&
+              metrics.maxScrollExtent > 0 &&
+              !_isLoading &&
+              _hasMore) {
             logDebug(
                 '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
                 source: 'NoteListView');
@@ -551,7 +571,8 @@ class NoteListViewState extends State<NoteListView> {
       if (value.isEmpty && widget.searchQuery.isNotEmpty) {
         _isLoading = true;
         logDebug('搜索内容被清空，重置加载状态');
-      } else if (value.isNotEmpty && value.length >= 2) {
+      // 优化：只有当搜索内容长度>=2时才显示加载状态
+      } else if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
         // 优化：只有当搜索内容长度>=2时才显示加载状态
         _isLoading = true;
       }
@@ -564,8 +585,8 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     // 优化：只有当搜索内容长度>=2时才使用防抖延迟
-    if (value.length >= 2) {
-      _searchDebounceTimer = Timer(_searchDebounceDelay, () {
+    if (value.length >= AppConstants.minSearchLength) {
+      _searchDebounceTimer = Timer(AppConstants.searchDebounceDelay, () {
         if (mounted) {
           _performSearch(value);
         }
@@ -583,7 +604,7 @@ class NoteListViewState extends State<NoteListView> {
     logDebug('执行搜索: "$value"', source: 'NoteListView');
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
-    if (value.isNotEmpty && value.length >= 2) {
+    if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
       try {
         final searchController = Provider.of<NoteSearchController>(
           context,
@@ -598,9 +619,9 @@ class NoteListViewState extends State<NoteListView> {
     // 直接调用父组件的搜索回调
     widget.onSearchChanged(value);
 
-    // 优化：只有在实际搜索时才设置超时保护，缩短超时时间
-    if (value.isNotEmpty && value.length >= 2) {
-      Timer(const Duration(seconds: 4), () {
+    // 优化：只有在实际搜索时才设置超时保护，使用常量配置的超时时间
+    if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
+      Timer(AppConstants.searchTimeout, () {
         if (mounted && _isLoading) {
           setState(() {
             _isLoading = false;
@@ -621,7 +642,7 @@ class NoteListViewState extends State<NoteListView> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('搜索超时，请重试或检查网络连接'),
-                duration: const Duration(seconds: 3),
+                duration: AppConstants.snackBarDurationImportant,
                 behavior: SnackBarBehavior.floating,
                 backgroundColor: Colors.orange,
                 action: SnackBarAction(
@@ -657,8 +678,8 @@ class NoteListViewState extends State<NoteListView> {
 
     // 响应式设计：根据屏幕宽度调整布局
     final width = MediaQuery.of(context).size.width;
-    final isTablet = width > 600;
-    final maxWidth = isTablet ? 800.0 : width;
+    final isTablet = width > AppConstants.tabletMinWidth;
+    final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
     final horizontalPadding = isTablet ? 16.0 : 8.0;
 
     // 布局构建
@@ -701,9 +722,9 @@ class NoteListViewState extends State<NoteListView> {
                                   )
                                 : const Icon(Icons.search),
                             contentPadding: EdgeInsets.symmetric(
-                              vertical: constraints.maxWidth < 600 ? 8.0 : 12.0,
+                              vertical: constraints.maxWidth < AppConstants.tabletMinWidth ? 8.0 : 12.0,
                             ),
-                            isDense: constraints.maxWidth < 600, // 小屏幕更紧凑
+                            isDense: constraints.maxWidth < AppConstants.tabletMinWidth, // 小屏幕更紧凑
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
