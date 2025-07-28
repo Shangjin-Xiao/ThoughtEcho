@@ -13,6 +13,7 @@ import 'package:uuid/uuid.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/app_logger.dart';
+import '../utils/database_platform_init.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
 
@@ -299,6 +300,12 @@ class DatabaseService extends ChangeNotifier {
 
     logDebug('初始化数据库...');
     try {
+      // 修复：确保平台初始化在数据库操作之前完成
+      if (!kIsWeb) {
+        DatabasePlatformInit.initialize();
+        logDebug('数据库平台初始化完成');
+      }
+
       // FFI初始化已在main.dart中统一处理，这里不再重复初始化
       // 获取数据库存储路径，由 main.dart 已设置好路径
       final dbPath = await getDatabasesPath();
@@ -430,9 +437,24 @@ class DatabaseService extends ChangeNotifier {
         await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
         );
-        await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
-        );
+        // 修复：确保字段存在后再创建索引
+        try {
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+          );
+        } catch (e) {
+          logDebug('day_period索引创建失败，可能字段不存在: $e');
+          // 如果字段不存在，先添加字段再创建索引
+          try {
+            await db.execute('ALTER TABLE quotes ADD COLUMN day_period TEXT');
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+            );
+            logDebug('day_period字段和索引创建成功');
+          } catch (alterError) {
+            logDebug('添加day_period字段也失败: $alterError');
+          }
+        }
 
         // 创建新的 quote_tags 关联表
         await db.execute('''
@@ -670,23 +692,32 @@ class DatabaseService extends ChangeNotifier {
       logDebug('数据库升级：媒体文件引用表创建完成');
     }
 
-    // 如果数据库版本低于 14，添加 day_period 字段
+    // 修复：如果数据库版本低于 14，安全地添加 day_period 字段
     if (oldVersion < 14) {
       logDebug(
         '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 day_period 字段',
       );
 
       try {
-        await txn.execute('ALTER TABLE quotes ADD COLUMN day_period TEXT');
-        logDebug('数据库升级：day_period 字段添加完成');
+        // 先检查字段是否已存在
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasColumn = columns.any((col) => col['name'] == 'day_period');
         
-        // 为新添加的字段创建索引
+        if (!hasColumn) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN day_period TEXT');
+          logDebug('数据库升级：day_period 字段添加完成');
+        } else {
+          logDebug('数据库升级：day_period 字段已存在，跳过添加');
+        }
+        
+        // 为新添加的字段创建索引（使用 IF NOT EXISTS 确保安全）
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
         );
         logDebug('数据库升级：day_period 索引创建完成');
       } catch (e) {
-        logDebug('day_period 字段可能已存在: $e');
+        logError('day_period 字段升级失败: $e', error: e, source: 'DatabaseUpgrade');
+        // 不要重新抛出异常，允许升级继续
       }
     }
   }
@@ -954,6 +985,7 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 检查并修复数据库结构，确保所有必要的列都存在
+  /// 修复：检查并修复数据库结构，包括字段和索引
   Future<void> _checkAndFixDatabaseStructure() async {
     try {
       final db = database;
@@ -990,8 +1022,49 @@ class DatabaseService extends ChangeNotifier {
       } else {
         logDebug('数据库结构完整，无需修复');
       }
+
+      // 修复：检查并创建必要的索引
+      await _ensureRequiredIndexes(db);
+      
     } catch (e) {
       logDebug('检查数据库结构时出错: $e');
+    }
+  }
+
+  /// 修复：确保必要的索引存在
+  Future<void> _ensureRequiredIndexes(Database db) async {
+    try {
+      final requiredIndexes = {
+        'idx_quotes_category_id': 'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
+        'idx_quotes_date': 'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
+        'idx_quotes_weather': 'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
+        'idx_quotes_day_period': 'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+      };
+
+      // 获取当前存在的索引
+      final existingIndexes = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='quotes'",
+      );
+      final existingIndexNames = existingIndexes
+          .map((idx) => idx['name'] as String)
+          .where((name) => !name.startsWith('sqlite_')) // 排除系统索引
+          .toSet();
+
+      logDebug('当前存在的索引: $existingIndexNames');
+
+      // 创建缺失的索引
+      for (final entry in requiredIndexes.entries) {
+        if (!existingIndexNames.contains(entry.key)) {
+          try {
+            await db.execute(entry.value);
+            logDebug('成功创建索引: ${entry.key}');
+          } catch (e) {
+            logDebug('创建索引 ${entry.key} 失败: $e');
+          }
+        }
+      }
+    } catch (e) {
+      logError('检查索引时出错: $e', error: e, source: 'DatabaseStructureCheck');
     }
   }
 
@@ -2096,20 +2169,24 @@ class DatabaseService extends ChangeNotifier {
   Future<T> _executeQueryWithRetry<T>(
     Future<T> Function() query, {
     int maxRetries = 2,
-    Duration timeout = const Duration(seconds: 6),
+    Duration? timeout,
   }) async {
+    // 修复：根据平台调整超时时间
+    timeout ??= _getOptimalTimeout();
+    final actualTimeout = timeout; // 确保非空
+    
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
         final completer = Completer<T>();
         Timer? timeoutTimer;
 
-        timeoutTimer = Timer(timeout, () {
+        timeoutTimer = Timer(actualTimeout, () {
           if (!completer.isCompleted) {
             logError(
-              '数据库查询超时（${timeout.inSeconds}秒）',
+              '数据库查询超时（${actualTimeout.inSeconds}秒）',
               source: 'DatabaseService',
             );
-            completer.completeError(TimeoutException('数据库查询超时', timeout));
+            completer.completeError(TimeoutException('数据库查询超时', actualTimeout));
           }
         });
 
@@ -2156,6 +2233,19 @@ class DatabaseService extends ChangeNotifier {
     }
 
     throw Exception('查询重试失败');
+  }
+
+  /// 修复：根据平台和设备性能获取最优超时时间
+  Duration _getOptimalTimeout() {
+    if (kIsWeb) {
+      return const Duration(seconds: 8); // Web平台网络延迟较高
+    } else if (Platform.isAndroid) {
+      return const Duration(seconds: 10); // Android设备性能差异较大
+    } else if (Platform.isIOS) {
+      return const Duration(seconds: 6); // iOS设备性能相对稳定
+    } else {
+      return const Duration(seconds: 8); // 桌面平台
+    }
   }
 
   /// 执行实际的数据库查询（修复版本）
