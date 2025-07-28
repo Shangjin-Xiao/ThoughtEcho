@@ -371,7 +371,7 @@ class DatabaseService extends ChangeNotifier {
     return await databaseFactory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 13, // 版本号升级至13，以支持媒体文件引用管理
+        version: 14, // 版本号升级至14，以支持day_period字段
         onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -382,7 +382,7 @@ class DatabaseService extends ChangeNotifier {
             icon_name TEXT
           )
         ''');
-        // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content 字段
+        // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content、day_period 字段
         await db.execute('''
           CREATE TABLE quotes(
             id TEXT PRIMARY KEY,
@@ -401,7 +401,8 @@ class DatabaseService extends ChangeNotifier {
             weather TEXT,
             temperature TEXT,
             edit_source TEXT,
-            delta_content TEXT
+            delta_content TEXT,
+            day_period TEXT
           )
         ''');
 
@@ -427,10 +428,10 @@ class DatabaseService extends ChangeNotifier {
 
         // 天气和时间段查询索引
         await db.execute(
-          'CREATE INDEX idx_quotes_weather ON quotes(weather)',
+          'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
         );
         await db.execute(
-          'CREATE INDEX idx_quotes_day_period ON quotes(day_period)',
+          'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
         );
 
         // 创建新的 quote_tags 关联表
@@ -667,6 +668,26 @@ class DatabaseService extends ChangeNotifier {
 
       await _initializeMediaReferenceTableInTransaction(txn);
       logDebug('数据库升级：媒体文件引用表创建完成');
+    }
+
+    // 如果数据库版本低于 14，添加 day_period 字段
+    if (oldVersion < 14) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 day_period 字段',
+      );
+
+      try {
+        await txn.execute('ALTER TABLE quotes ADD COLUMN day_period TEXT');
+        logDebug('数据库升级：day_period 字段添加完成');
+        
+        // 为新添加的字段创建索引
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+        );
+        logDebug('数据库升级：day_period 索引创建完成');
+      } catch (e) {
+        logDebug('day_period 字段可能已存在: $e');
+      }
     }
   }
 
