@@ -575,20 +575,38 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
 
     final position = await locationService.getCurrentLocation();
-    if (position != null) {
-      setState(() {
-        _location = locationService.getFormattedLocation();
-      });
+    if (position != null && mounted) {
+      final location = locationService.getFormattedLocation();
+      
+      // 优化：将网络请求包装为 Future，避免阻塞主线程
+      try {
+        // 先更新位置信息
+        setState(() {
+          _location = location;
+        });
 
-      // 获取天气
-      await weatherService.getWeatherData(
-        position.latitude,
-        position.longitude,
-      );
-      setState(() {
-        _weather = weatherService.currentWeather;
-        _temperature = weatherService.temperature;
-      });
+        // 异步获取天气数据，不阻塞UI
+        _fetchWeatherAsync(weatherService, position.latitude, position.longitude);
+      } catch (e) {
+        logError('获取位置天气失败', error: e, source: 'NoteFullEditorPage');
+      }
+    }
+  }
+
+  // 异步获取天气数据的辅助方法
+  Future<void> _fetchWeatherAsync(WeatherService weatherService, double latitude, double longitude) async {
+    try {
+      await weatherService.getWeatherData(latitude, longitude);
+      
+      // 优化：仅在组件仍然挂载时更新状态
+      if (mounted) {
+        setState(() {
+          _weather = weatherService.currentWeather;
+          _temperature = weatherService.temperature;
+        });
+      }
+    } catch (e) {
+      logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
     }
   }
 
@@ -958,27 +976,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   );
 
                   if (advancedColor != null && mounted) {
-                    // 更新颜色状态并立即触发重建，强制刷新整个页面
+                    // 优化：合并所有状态更新为单次 setState 调用
                     setState(() {
                       _selectedColorHex = advancedColor == Colors.transparent
                           ? null
                           : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}';
-                    });
-
-                    // 使用单独的延迟setState确保UI完全刷新
-                    Future.microtask(() {
-                      if (mounted) {
-                        setState(() {
-                          // 空setState强制完整重建界面
-                        });
-                      }
-                    });
-
-                    // 额外调用一次setState让卡片指示条能立即更新
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {});
-                      }
                     });
                   }
                 },
@@ -1003,27 +1005,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
 
     if (result != null) {
-      // 更新颜色状态并立即触发重建，强制刷新整个页面
+      // 优化：合并所有状态更新为单次 setState 调用
       setState(() {
         _selectedColorHex = result == Colors.transparent
             ? null
             : '#${result.toARGB32().toRadixString(16).substring(2)}';
-      });
-
-      // 使用单独的延迟setState确保UI完全刷新
-      Future.microtask(() {
-        if (mounted) {
-          setState(() {
-            // 空setState强制完整重建界面
-          });
-        }
-      });
-
-      // 额外调用一次setState让卡片指示条能立即更新
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {});
-        }
       });
     }
   }
@@ -1709,26 +1695,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       },
     );
 
-    // 对话框关闭后使用多重刷新机制确保UI完全更新
-    setState(() {
-      // 强制刷新所有状态
-    });
-
-    // 使用延迟setState确保更新被正确应用
-    Future.microtask(() {
-      if (mounted) {
-        setState(() {
-          // 空setState强制完整重建界面
-        });
-      }
-    });
-
-    // 额外调用一次框架级别的重建确保元数据指示条正确显示
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    // 优化：对话框关闭后使用单次 setState 更新UI
+    if (mounted) {
+      setState(() {
+        // 强制刷新所有状态
+      });
+    }
   }
 
   Widget _buildTagIcon(NoteCategory tag) {
