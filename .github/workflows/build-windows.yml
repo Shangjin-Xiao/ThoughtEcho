@@ -65,7 +65,36 @@ jobs:
       run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
       
     - name: Build MSIX installer
-      run: flutter pub run msix:create
+      shell: powershell
+      continue-on-error: true  # 允许MSIX构建失败，但继续执行后续步骤
+      run: |
+        Write-Host "构建MSIX安装包..."
+        
+        # 设置非交互式环境变量
+        $env:CI = "true"
+        $env:MSIX_SILENT = "true"
+        
+        try {
+          # 使用PowerShell的输入流重定向来自动回答证书安装提示
+          $inputData = "n`n"  # 回答 'n' 并添加换行符
+          $process = Start-Process -FilePath "flutter" -ArgumentList "pub", "run", "msix:create" -NoNewWindow -PassThru -RedirectStandardInput ([System.IO.StringReader]::new($inputData))
+          $process.WaitForExit()
+          
+          if ($process.ExitCode -eq 0) {
+            Write-Host "✅ MSIX构建成功" -ForegroundColor Green
+            echo "msix_success=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Warning "⚠️ MSIX构建失败（退出码: $($process.ExitCode)）"
+            echo "msix_success=false" >> $env:GITHUB_OUTPUT
+          }
+        }
+        catch {
+          Write-Warning "⚠️ MSIX构建失败: $_"
+          echo "msix_success=false" >> $env:GITHUB_OUTPUT
+        }
+      id: msix_build
+      env:
+        FLUTTER_SUPPRESS_ANALYTICS: true
       
     - name: Get app version
       id: version
@@ -103,13 +132,16 @@ jobs:
         
         # 检查MSIX文件是否存在
         $msixFile = "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix"
-        if (Test-Path $msixFile) {
+        $msixSuccess = "${{ steps.msix_build.outputs.msix_success }}" -eq "true"
+        
+        if ($msixSuccess -and (Test-Path $msixFile)) {
             $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
             Copy-Item -Path $msixFile -Destination $msixName
             echo "msix_name=$msixName" >> $env:GITHUB_OUTPUT
-            Write-Output "创建MSIX安装包: $msixName"
+            Write-Output "✅ 创建MSIX安装包: $msixName"
         } else {
-            Write-Output "警告: MSIX文件未找到，跳过MSIX打包"
+            Write-Output "⚠️ MSIX文件未找到或构建失败，跳过MSIX打包"
+            Write-Output "主要的Windows应用已经构建成功，可以通过ZIP包分发"
         }
         
         echo "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
@@ -137,15 +169,38 @@ jobs:
         $buildType = "${{ github.event.inputs.build_type || 'release' }}"
         $archiveName = "${{ steps.archive.outputs.archive_name }}"
         $msixName = "${{ steps.archive.outputs.msix_name }}"
+        $msixSuccess = "${{ steps.msix_build.outputs.msix_success }}" -eq "true"
         
-        Write-Output "## 构建完成 ✅" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "## 🎉 Windows构建完成" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "### 📋 构建信息" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **应用版本**: $version" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **构建类型**: $buildType" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **Flutter版本**: ${{ github.event.inputs.flutter_version || '3.29.2' }}" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "- **ZIP发布包**: $archiveName" >> $env:GITHUB_STEP_SUMMARY
-        if ($msixName) {
-            Write-Output "- **MSIX安装包**: $msixName" >> $env:GITHUB_STEP_SUMMARY
-        }
+        Write-Output "- **提交哈希**: ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "发布包已上传到 Artifacts，请在 Actions 页面下载。" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "### 📦 发布文件" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- **ZIP压缩包**: ✅ $archiveName" >> $env:GITHUB_STEP_SUMMARY
+        
+        if ($msixSuccess -and $msixName) {
+            Write-Output "- **MSIX安装包**: ✅ $msixName" >> $env:GITHUB_STEP_SUMMARY
+        } else {
+            Write-Output "- **MSIX安装包**: ❌ 构建失败（可使用ZIP包替代）" >> $env:GITHUB_STEP_SUMMARY
+        }
+        
+        Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "### 📥 下载说明" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "1. 在Actions页面的Artifacts部分下载对应的发布包" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "2. **ZIP包**: 解压后直接运行 thoughtecho.exe" >> $env:GITHUB_STEP_SUMMARY
+        
+        if ($msixSuccess) {
+            Write-Output "3. **MSIX包**: 双击安装到系统（推荐）" >> $env:GITHUB_STEP_SUMMARY
+        } else {
+            Write-Output "3. **MSIX包**: 本次构建失败，请使用ZIP包" >> $env:GITHUB_STEP_SUMMARY
+        }
+        
+        Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "### ⚠️ 注意事项" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- 首次启动可能需要等待数秒" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- 确保系统已安装 Visual C++ Redistributable" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- 建议将应用文件夹添加到杀毒软件白名单" >> $env:GITHUB_STEP_SUMMARY

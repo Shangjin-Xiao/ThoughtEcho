@@ -77,19 +77,14 @@ class SVGCardWidget extends StatelessWidget {
                 )
             : null,
         errorBuilder: (context, error, stackTrace) {
-          if (kDebugMode) {
-            print('SVG渲染错误: $error');
-            print('SVG内容: $svgContent');
-            print('错误堆栈: $stackTrace');
-          }
+          AppLogger.e('SVG渲染错误: $error', error: error, stackTrace: stackTrace, source: 'SvgCardWidget');
+          AppLogger.d('SVG内容: $svgContent', source: 'SvgCardWidget');
           // 使用回退SVG模板而不是错误提示
           return _buildFallbackSVG();
         },
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('SVG组件构建错误: $e');
-      }
+      AppLogger.e('SVG组件构建错误: $e', error: e, source: 'SvgCardWidget');
       return _buildErrorWidget('SVG组件错误: ${e.toString()}');
     }
   }
@@ -170,9 +165,7 @@ class SVGCardWidget extends StatelessWidget {
       // 生成回退SVG
       final fallbackSVG = _generateFallbackSVGContent(extractedContent);
 
-      if (kDebugMode) {
-        print('使用回退SVG模板，内容长度: ${fallbackSVG.length}');
-      }
+      AppLogger.i('使用回退SVG模板，内容长度: ${fallbackSVG.length}', source: 'SvgCardWidget');
 
       return SvgPicture.string(
         fallbackSVG,
@@ -196,16 +189,12 @@ class SVGCardWidget extends StatelessWidget {
                 )
             : null,
         errorBuilder: (context, error, stackTrace) {
-          if (kDebugMode) {
-            print('回退SVG也渲染失败: $error');
-          }
+          AppLogger.e('回退SVG也渲染失败: $error', error: error, source: 'SvgCardWidget');
           return _buildFinalErrorWidget();
         },
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('构建回退SVG失败: $e');
-      }
+      AppLogger.e('构建回退SVG失败: $e', error: e, source: 'SvgCardWidget');
       return _buildFinalErrorWidget();
     }
   }

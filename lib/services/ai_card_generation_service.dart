@@ -28,9 +28,7 @@ class AICardGenerationService {
       // 1. 智能选择最适合的提示词
       final prompt = _selectBestPrompt(note, customStyle);
 
-      if (kDebugMode) {
-        print('开始AI生成SVG卡片，内容长度: ${note.content.length}');
-      }
+      AppLogger.i('开始AI生成SVG卡片，内容长度: ${note.content.length}', source: 'AICardGeneration');
 
       // 2. 调用AI生成SVG
       final svgContent = await _generateSVGContent(prompt);
@@ -38,9 +36,7 @@ class AICardGenerationService {
       // 3. 清理和验证SVG
       final cleanedSVG = _cleanSVGContent(svgContent);
 
-      if (kDebugMode) {
-        print('AI生成SVG成功，长度: ${cleanedSVG.length}');
-      }
+      AppLogger.i('AI生成SVG成功，长度: ${cleanedSVG.length}', source: 'AICardGeneration');
 
       // 4. 创建卡片对象
       return GeneratedCard(
@@ -52,9 +48,7 @@ class AICardGenerationService {
         createdAt: DateTime.now(),
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('AI生成失败，使用回退模板: $e');
-      }
+      AppLogger.w('AI生成失败，使用回退模板: $e', source: 'AICardGeneration');
 
       // AI生成失败时，使用预设模板作为回退方案
       final cardType = _analyzeContentTypeByKeywords(note);
@@ -90,9 +84,7 @@ class AICardGenerationService {
       final note = notesToProcess[i];
 
       try {
-        if (kDebugMode) {
-          print('正在生成第${i + 1}/${notesToProcess.length}张卡片...');
-        }
+        AppLogger.i('正在生成第${i + 1}/${notesToProcess.length}张卡片...', source: 'AICardGeneration');
 
         final card = await generateCard(note: note);
         cards.add(card);
@@ -109,9 +101,7 @@ class AICardGenerationService {
             '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
         errors.add(errorMsg);
 
-        if (kDebugMode) {
-          print(errorMsg);
-        }
+        AppLogger.e(errorMsg, source: 'AICardGeneration');
 
         // 报告错误进度
         onProgress?.call(i + 1, notesToProcess.length, e.toString());
@@ -130,9 +120,7 @@ class AICardGenerationService {
       throw AICardGenerationException('批量生成完全失败: ${errors.join('; ')}');
     }
 
-    if (kDebugMode) {
-      print('批量生成完成: 成功${cards.length}张，失败${errors.length}张');
-    }
+    AppLogger.i('批量生成完成: 成功${cards.length}张，失败${errors.length}张', source: 'AICardGeneration');
 
     return cards;
   }
@@ -163,18 +151,14 @@ class AICardGenerationService {
 
       return svgContent;
     } catch (e) {
-      if (kDebugMode) {
-        print('AI SVG生成失败: $e');
-      }
+      AppLogger.e('AI SVG生成失败: $e', error: e, source: 'AICardGeneration');
       rethrow; // 重新抛出异常，让上层处理回退
     }
   }
 
   /// 清理SVG内容
   String _cleanSVGContent(String response) {
-    if (kDebugMode) {
-      print('开始清理SVG内容，原始长度: ${response.length}');
-    }
+    AppLogger.d('开始清理SVG内容，原始长度: ${response.length}', source: 'AICardGeneration');
 
     String cleaned = response.trim();
 
@@ -227,18 +211,14 @@ class AICardGenerationService {
     if (!foundSvgStart ||
         !cleaned.contains('<svg') ||
         !cleaned.contains('</svg>')) {
-      if (kDebugMode) {
-        print('未找到完整SVG，尝试字符串提取...');
-      }
+      AppLogger.w('未找到完整SVG，尝试字符串提取...', source: 'AICardGeneration');
 
       final svgStartIndex = response.indexOf('<svg');
       if (svgStartIndex >= 0) {
         final svgEndIndex = response.lastIndexOf('</svg>');
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
-          if (kDebugMode) {
-            print('字符串提取成功，SVG长度: ${cleaned.length}');
-          }
+          AppLogger.i('字符串提取成功，SVG长度: ${cleaned.length}', source: 'AICardGeneration');
         }
       }
     }
@@ -256,9 +236,7 @@ class AICardGenerationService {
       throw const AICardGenerationException('SVG内容包含不安全的元素');
     }
 
-    if (kDebugMode) {
-      print('SVG清理完成，最终长度: ${cleaned.length}');
-    }
+    AppLogger.d('SVG清理完成，最终长度: ${cleaned.length}', source: 'AICardGeneration');
 
     return cleaned;
   }
@@ -305,9 +283,7 @@ class AICardGenerationService {
     String? customName,
   }) async {
     try {
-      if (kDebugMode) {
-        print('开始保存卡片图片: ${card.id}');
-      }
+      AppLogger.i('开始保存卡片图片: ${card.id}', source: 'AICardGeneration');
 
       // 验证输入参数
       if (width <= 0 || height <= 0) {
@@ -341,15 +317,11 @@ class AICardGenerationService {
         throw Exception('桌面端暂不支持直接保存到相册，建议使用分享功能');
       }
 
-      if (kDebugMode) {
-        print('卡片图片保存成功: $fileName');
-      }
+      AppLogger.i('卡片图片保存成功: $fileName', source: 'AICardGeneration');
 
       return fileName;
     } catch (e) {
-      if (kDebugMode) {
-        print('保存卡片图片失败: $e');
-      }
+      AppLogger.e('保存卡片图片失败: $e', error: e, source: 'AICardGeneration');
       rethrow; // 重新抛出异常让上层处理
     }
   }
@@ -379,9 +351,7 @@ class AICardGenerationService {
       }
       return false; // 桌面端不支持
     } catch (e) {
-      if (kDebugMode) {
-        print('检查相册权限失败: $e');
-      }
+      AppLogger.e('检查相册权限失败: $e', error: e, source: 'AICardGeneration');
       return false;
     }
   }
@@ -408,9 +378,7 @@ class AICardGenerationService {
 
         onProgress?.call(i + 1, cards.length);
       } catch (e) {
-        if (kDebugMode) {
-          print('批量保存第${i + 1}张卡片失败: $e');
-        }
+        AppLogger.e('批量保存第${i + 1}张卡片失败: $e', error: e, source: 'AICardGeneration');
         // 继续处理其他卡片
         savedFiles.add(''); // 添加空字符串表示失败
       }
@@ -565,9 +533,7 @@ class AICardGenerationService {
     final lowerContent = svgContent.toLowerCase();
     for (final dangerous in dangerousElements) {
       if (lowerContent.contains(dangerous)) {
-        if (kDebugMode) {
-          print('发现不安全的SVG元素: $dangerous');
-        }
+        AppLogger.w('发现不安全的SVG元素: $dangerous', source: 'AICardGeneration');
         return false;
       }
     }

@@ -14,6 +14,8 @@ import 'theme_settings_page.dart';
 import 'logs_settings_page.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
+import '../services/version_check_service.dart';
+import '../widgets/update_dialog.dart';
 import 'backup_restore_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
@@ -35,6 +37,10 @@ class _SettingsPageState extends State<SettingsPage> {
   final String _websiteUrl = 'https://echo.shangjinyun.cn/';
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
+
+  // --- 版本检查相关状态 ---
+  bool _isCheckingUpdate = false;
+  String? _updateCheckMessage;
 
   @override
   void initState() {
@@ -72,6 +78,51 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
   // --- 启动 URL 辅助函数结束 ---
+
+  // --- 版本检查方法 ---
+  Future<void> _checkForUpdates({bool showNoUpdateMessage = true}) async {
+    if (_isCheckingUpdate) return;
+
+    setState(() {
+      _isCheckingUpdate = true;
+      _updateCheckMessage = null;
+    });
+
+    try {
+      final versionInfo = await VersionCheckService.checkForUpdates(
+        forceRefresh: true,
+      );
+
+      setState(() {
+        _isCheckingUpdate = false;
+      });
+
+      if (mounted) {
+        await UpdateDialog.show(
+          context,
+          versionInfo,
+          showNoUpdateMessage: showNoUpdateMessage,
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isCheckingUpdate = false;
+        _updateCheckMessage = e.toString();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('检查更新失败: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+
+  // --- 版本检查方法结束 ---
 
   // 显示城市搜索对话框
   void _showCitySearchDialog(BuildContext context) {
@@ -673,6 +724,35 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 // --- 关于标题 ListTile 结束 ---
+
+                // 添加分隔线
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Divider(
+                    color: Theme.of(context).colorScheme.outline.withAlpha(
+                      (0.2 * 255).round(),
+                    ),
+                  ),
+                ),
+
+                // 检查更新 ListTile
+                ListTile(
+                  title: const Text('检查更新'),
+                  subtitle: _updateCheckMessage != null
+                      ? Text(_updateCheckMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error))
+                      : const Text('检查是否有新版本可用'),
+                  leading: _isCheckingUpdate
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.system_update),
+                  trailing: _isCheckingUpdate
+                      ? null
+                      : const Icon(Icons.chevron_right),
+                  onTap: _isCheckingUpdate ? null : () => _checkForUpdates(),
+                ),
 
                 // --- 移除主列表中的链接 ListTile ---
                 // Padding(...), ListTile(...), ListTile(...)
