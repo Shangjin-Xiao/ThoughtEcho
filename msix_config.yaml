@@ -11,7 +11,7 @@ msix_config:
   msix_version: 1.0.0.0
   
   # 发布者信息（使用占位符，实际发布时需要替换为真实证书）
-  publisher: "CN=ThoughtEcho"
+  publisher: "CN=ThoughtEcho, O=ThoughtEcho Team, C=CN"
   
   # 应用描述
   description: "一款帮助你记录和分析思想的应用"
