@@ -161,7 +161,7 @@ class NoteSyncService extends ChangeNotifier {
                 // 尝试连接设备
                 try {
                   final response = await http.get(
-                    Uri.parse('http://$targetIp:53317/api/localsend/v2/info'),
+                    Uri.parse('http://$targetIp:53318/api/localsend/v2/info'),
                   ).timeout(const Duration(seconds: 1));
                   
                   if (response.statusCode == 200) {

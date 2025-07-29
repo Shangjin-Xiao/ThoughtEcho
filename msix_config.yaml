@@ -7,11 +7,11 @@ msix_config:
   publisher_display_name: "ThoughtEcho Team"
   identity_name: "com.thoughtecho.app"
   
-  # 版本信息
+  # 版本信息 - 将在CI中自动更新
   msix_version: 1.0.0.0
   
-  # 发布者信息（使用占位符，实际发布时需要替换为真实证书）
-  publisher: "CN=ThoughtEcho, O=ThoughtEcho Team, C=CN"
+  # 发布者信息（CI环境使用自动生成的测试证书）
+  publisher: "CN=ThoughtEcho Team"
   
   # 应用描述
   description: "一款帮助你记录和分析思想的应用"
@@ -26,7 +26,7 @@ msix_config:
   # 所需权限
   capabilities: "internetClient"
   
-  # 安装设置 - custom允许用户选择安装路径
+  # 安装设置
   install_location: "custom"
   
   # 语言和本地化
@@ -38,22 +38,16 @@ msix_config:
   # 输出文件名
   output_name: "ThoughtEcho-Setup.msix"
   
-  # 签名设置（CI环境使用自动生成的测试证书）
+  # 签名设置（CI环境自动处理）
   certificate_path: null
   certificate_password: null
   
   # 应用设置
   app_execution_alias: "thoughtecho"
   
-  # 协议支持
-  protocol_activation: null
-  
-  # 文件关联
-  file_extension: null
-  
   # CI/CD设置 - 在非交互式环境中自动处理证书
-  auto_install_certificate: false
-  create_certificate: true
+  certificate_subject: "CN=ThoughtEcho Team"
+  store_type: "defaultInstallLocation"
   
   # 可视化资产
   visual_elements:
