@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -346,6 +347,13 @@ class DatabaseService extends ChangeNotifier {
         logDebug('笔记流控制器已初始化');
       }
       
+      // 修复：先设置初始化完成状态，再预加载数据，避免循环依赖
+      _isInitialized = true; // 数据库初始化完成
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
+
       // 初始化完成后，预加载笔记数据
       logDebug('数据库初始化完成，开始预加载笔记数据...');
       // 重置流相关状态
@@ -353,15 +361,20 @@ class DatabaseService extends ChangeNotifier {
       _quotesCache = [];
       _filterCache.clear();
       _watchHasMore = true;
-      // 预加载数据
-      await _prefetchInitialQuotes();
 
-      _isInitialized = true; // 数据库初始化完成
-      _isInitializing = false;
-      if (_initCompleter != null && !_initCompleter!.isCompleted) {
-        _initCompleter!.complete();
-      }
-      notifyListeners();
+      // 修复：延迟预加载，避免在初始化过程中阻塞
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await _prefetchInitialQuotes();
+        } catch (e) {
+          logDebug('延迟预加载失败: $e');
+        }
+      });
+
+      // 修复：延迟通知，避免在build期间调用setState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } catch (e) {
       logDebug('数据库初始化失败: $e');
       _isInitializing = false;
@@ -444,24 +457,8 @@ class DatabaseService extends ChangeNotifier {
         await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
         );
-        // 修复：确保字段存在后再创建索引
-        try {
-          await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
-          );
-        } catch (e) {
-          logDebug('day_period索引创建失败，可能字段不存在: $e');
-          // 如果字段不存在，先添加字段再创建索引
-          try {
-            await db.execute('ALTER TABLE quotes ADD COLUMN day_period TEXT');
-            await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
-            );
-            logDebug('day_period字段和索引创建成功');
-          } catch (alterError) {
-            logDebug('添加day_period字段也失败: $alterError');
-          }
-        }
+        // 修复：安全地创建day_period索引
+        await _createIndexSafely(db, 'quotes', 'day_period', 'idx_quotes_day_period');
 
         // 创建新的 quote_tags 关联表
         await db.execute('''
@@ -950,7 +947,11 @@ class DatabaseService extends ChangeNotifier {
       await initDefaultHitokotoCategories();
 
       _isInitialized = true;
-      notifyListeners();
+
+      // 修复：延迟通知，避免在build期间调用setState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
       logDebug('成功初始化新数据库');
     } catch (e) {
       logDebug('初始化新数据库失败: $e');
@@ -958,8 +959,7 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 在初始化时预加载笔记数据
-  /// 修复：预加载初始笔记数据，确保UI能正确显示
+  /// 修复：在初始化时预加载笔记数据，避免循环依赖
   Future<void> _prefetchInitialQuotes() async {
     try {
       // 修复：重置状态，但不依赖流控制器
@@ -968,8 +968,8 @@ class DatabaseService extends ChangeNotifier {
       _isLoading = false;
       _watchOffset = 0;
 
-      // 修复：直接查询数据库而不是使用loadMoreQuotes，避免依赖流控制器
-      final quotes = await getUserQuotes(
+      // 修复：直接查询数据库，绕过getUserQuotes的初始化检查，避免循环依赖
+      final quotes = await _directGetQuotes(
         tagIds: null,
         categoryId: null,
         offset: 0,
@@ -983,18 +983,158 @@ class DatabaseService extends ChangeNotifier {
       _currentQuotes = quotes;
       _watchHasMore = quotes.length >= _watchLimit;
 
-      // 修复：通知流订阅者，确保UI能够显示预加载的数据
-      _safeNotifyQuotesStream();
+      // 修复：延迟通知，避免在build期间调用setState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _safeNotifyQuotesStream();
+      });
 
-      logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
+      logDebug('预加载完成，获取到 ${quotes.length} 条笔记，将在下一帧通知UI更新');
     } catch (e) {
       logDebug('预加载笔记时出错: $e');
       // 确保状态一致
       _currentQuotes = [];
       _watchHasMore = false;
-      // 即使出错也要通知流，确保UI状态正确
-      _safeNotifyQuotesStream();
+      // 即使出错也要通知流，确保UI状态正确，延迟执行避免build期间调用
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _safeNotifyQuotesStream();
+      });
     }
+  }
+
+  /// 修复：直接查询数据库，不进行初始化状态检查，用于内部调用
+  Future<List<Quote>> _directGetQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+  }) async {
+    if (kIsWeb) {
+      // Web平台的完整筛选逻辑
+      var filtered = _memoryStore;
+      if (tagIds != null && tagIds.isNotEmpty) {
+        filtered = filtered
+            .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+            .toList();
+      }
+      if (categoryId != null && categoryId.isNotEmpty) {
+        filtered = filtered.where((q) => q.categoryId == categoryId).toList();
+      }
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        final query = searchQuery.toLowerCase();
+        filtered = filtered
+            .where(
+              (q) =>
+                  q.content.toLowerCase().contains(query) ||
+                  (q.source?.toLowerCase().contains(query) ?? false) ||
+                  (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+                  (q.sourceWork?.toLowerCase().contains(query) ?? false),
+            )
+            .toList();
+      }
+
+      // 排序
+      if (orderBy.contains('date')) {
+        filtered.sort((a, b) {
+          final aDate = DateTime.tryParse(a.date) ?? DateTime.now();
+          final bDate = DateTime.tryParse(b.date) ?? DateTime.now();
+          return orderBy.contains('DESC')
+              ? bDate.compareTo(aDate)
+              : aDate.compareTo(bDate);
+        });
+      } else if (orderBy.contains('content')) {
+        filtered.sort((a, b) {
+          return orderBy.contains('DESC')
+              ? b.content.compareTo(a.content)
+              : a.content.compareTo(b.content);
+        });
+      }
+
+      // 分页
+      final start = offset;
+      final end = (start + limit).clamp(0, filtered.length);
+      return filtered.sublist(start, end);
+    }
+
+    // 非Web平台直接查询数据库
+    final db = _database!; // 直接使用数据库，不进行安全检查
+
+    // 构建查询条件
+    final conditions = <String>[];
+    final args = <dynamic>[];
+
+    // 标签筛选
+    if (tagIds != null && tagIds.isNotEmpty) {
+      final tagPlaceholders = tagIds.map((_) => '?').join(',');
+      conditions.add('q.id IN (SELECT quote_id FROM quote_tags WHERE tag_id IN ($tagPlaceholders))');
+      args.addAll(tagIds);
+    }
+
+    // 分类筛选
+    if (categoryId != null && categoryId.isNotEmpty) {
+      conditions.add('q.category_id = ?');
+      args.add(categoryId);
+    }
+
+    // 搜索查询
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      conditions.add(
+        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
+      );
+      final searchParam = '%$searchQuery%';
+      args.addAll([searchParam, searchParam, searchParam, searchParam]);
+    }
+
+    // 天气筛选
+    if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+      final weatherPlaceholders = selectedWeathers.map((_) => '?').join(',');
+      conditions.add('q.weather IN ($weatherPlaceholders)');
+      args.addAll(selectedWeathers);
+    }
+
+    // 时间段筛选
+    if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+      final dayPeriodPlaceholders = selectedDayPeriods.map((_) => '?').join(',');
+      conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
+      args.addAll(selectedDayPeriods);
+    }
+
+    final whereClause = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+    final query = '''
+      SELECT DISTINCT q.* FROM quotes q
+      $whereClause
+      ORDER BY q.$orderBy
+      LIMIT ? OFFSET ?
+    ''';
+
+    args.addAll([limit, offset]);
+
+    final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
+    final quotes = <Quote>[];
+
+    for (final map in maps) {
+      try {
+        // 获取标签ID
+        final tagMaps = await db.query(
+          'quote_tags',
+          where: 'quote_id = ?',
+          whereArgs: [map['id']],
+        );
+        final tagIds = tagMaps.map((m) => m['tag_id'] as String).toList();
+
+        // 创建包含标签ID的Quote对象
+        final quote = Quote.fromJson({...map, 'tag_ids': tagIds});
+        quotes.add(quote);
+      } catch (e) {
+        logDebug('解析笔记数据失败: $e, 数据: $map');
+      }
+    }
+
+    return quotes;
   }
 
   /// 检查并修复数据库结构，确保所有必要的列都存在
@@ -2455,6 +2595,40 @@ class DatabaseService extends ChangeNotifier {
     }
 
     return report;
+  }
+
+  /// 修复：安全地创建索引，检查列是否存在
+  Future<void> _createIndexSafely(Database db, String tableName, String columnName, String indexName) async {
+    try {
+      // 检查列是否存在
+      final columnExists = await _checkColumnExists(db, tableName, columnName);
+      if (!columnExists) {
+        logDebug('列 $columnName 不存在于表 $tableName 中，跳过索引创建');
+        return;
+      }
+
+      // 创建索引
+      await db.execute('CREATE INDEX IF NOT EXISTS $indexName ON $tableName($columnName)');
+      logDebug('索引 $indexName 创建成功');
+    } catch (e) {
+      logDebug('创建索引 $indexName 失败: $e');
+    }
+  }
+
+  /// 修复：检查列是否存在
+  Future<bool> _checkColumnExists(Database db, String tableName, String columnName) async {
+    try {
+      final result = await db.rawQuery("PRAGMA table_info($tableName)");
+      for (final row in result) {
+        if (row['name'] == columnName) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      logDebug('检查列是否存在失败: $e');
+      return false;
+    }
   }
 
   /// 修复：标签数据一致性检查
