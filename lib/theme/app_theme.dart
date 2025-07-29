@@ -403,9 +403,9 @@ class AppTheme with ChangeNotifier {
         foregroundColor: colorScheme.onPrimaryContainer,
       ),
       
-      // 列表项目使用白色背景
+      // 列表项目使用透明背景，以继承Card的颜色
       listTileTheme: baseTheme.listTileTheme.copyWith(
-        tileColor: Colors.white,
+        tileColor: Colors.transparent,
       ),
     );
   }
