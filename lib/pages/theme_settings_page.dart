@@ -312,7 +312,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => appTheme.setCustomColor(color),
+      onTap: () async {
+        await appTheme.setCustomColor(color);
+        await appTheme.setUseCustomColor(true);
+        await appTheme.setUseDynamicColor(false);
+      },
       child: Container(
         width: 48,
         height: 48,
@@ -395,7 +399,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
     // 如果用户点击了确认按钮，则应用选择的颜色
     if (colorSelected) {
-      appTheme.setCustomColor(selectedColor);
+      await appTheme.setCustomColor(selectedColor);
+      await appTheme.setUseCustomColor(true);
+      await appTheme.setUseDynamicColor(false);
     }
   }
 }

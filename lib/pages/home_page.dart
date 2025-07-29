@@ -568,9 +568,7 @@ class _HomePageState extends State<HomePage>
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          backgroundColor: Theme.of(context).brightness == Brightness.light
-              ? Colors.white
-              : Theme.of(context).colorScheme.surface,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
           builder: (context) => AddNoteDialog(
             prefilledContent: prefilledContent,
             prefilledAuthor: prefilledAuthor,
