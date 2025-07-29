@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 /// 简化的HTTP服务器，用于接收文件
 class SimpleServer {
   HttpServer? _server;
-  final int _port = 53317; // LocalSend默认端口
+  final int _port = 53318; // ThoughtEcho端口（避免与LocalSend冲突）
   
   bool get isRunning => _server != null;
   int get port => _port;
