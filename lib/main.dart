@@ -17,6 +17,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // 项目内部
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -313,6 +314,23 @@ Future<void> main() async {
                   databaseService: dbService,
                   settingsService: settingsService,
                   aiAnalysisDbService: aiService,
+                ),
+              ),
+              ProxyProvider4<BackupService, DatabaseService, SettingsService,
+                  AIAnalysisDatabaseService, NoteSyncService>(
+                update: (
+                  context,
+                  backupService,
+                  databaseService,
+                  settingsService,
+                  aiAnalysisDbService,
+                  previous,
+                ) =>
+                    NoteSyncService(
+                  backupService: backupService,
+                  databaseService: databaseService,
+                  settingsService: settingsService,
+                  aiAnalysisDbService: aiAnalysisDbService,
                 ),
               ),
             ],

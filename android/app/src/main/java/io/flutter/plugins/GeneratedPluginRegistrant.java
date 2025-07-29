@@ -21,6 +21,11 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin audioplayers_android, xyz.luan.audioplayers.AudioplayersPlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin device_info_plus, dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new io.material.plugins.dynamic_color.DynamicColorPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin dynamic_color, io.material.plugins.dynamic_color.DynamicColorPlugin", e);
@@ -79,6 +84,11 @@ public final class GeneratedPluginRegistrant {
       flutterEngine.getPlugins().add(new com.tencent.mmkv.MMKVPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin mmkv_android, com.tencent.mmkv.MMKVPlugin", e);
+    }
+    try {
+      flutterEngine.getPlugins().add(new dev.fluttercommunity.plus.network_info.NetworkInfoPlusPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin network_info_plus, dev.fluttercommunity.plus.network_info.NetworkInfoPlusPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new dev.fluttercommunity.plus.packageinfo.PackageInfoPlugin());

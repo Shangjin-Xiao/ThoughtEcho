@@ -17,6 +17,7 @@ import '../services/weather_service.dart';
 import '../services/version_check_service.dart';
 import '../widgets/update_dialog.dart';
 import 'backup_restore_page.dart';
+import 'note_sync_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
@@ -653,6 +654,20 @@ class _SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const BackupRestorePage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: const Text('笔记同步'),
+                  subtitle: const Text('与附近设备同步笔记数据'),
+                  leading: const Icon(Icons.sync),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NoteSyncPage(),
                       ),
                     );
                   },
