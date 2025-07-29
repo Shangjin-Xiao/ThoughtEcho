@@ -387,11 +387,10 @@ class DatabaseService extends ChangeNotifier {
 
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
-    return await databaseFactory.openDatabase(
+    return await openDatabase(
       path,
-      options: OpenDatabaseOptions(
-        version: 14, // 版本号升级至14，以支持day_period字段
-        onCreate: (db, version) async {
+      version: 14, // 版本号升级至14，以支持day_period字段
+      onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
           CREATE TABLE categories(
@@ -478,7 +477,7 @@ class DatabaseService extends ChangeNotifier {
         // 创建媒体文件引用表
         await MediaReferenceService.initializeTable(db);
       },
-        onUpgrade: (db, oldVersion, newVersion) async {
+      onUpgrade: (db, oldVersion, newVersion) async {
           logDebug('开始数据库升级: $oldVersion -> $newVersion');
 
           try {
@@ -500,7 +499,6 @@ class DatabaseService extends ChangeNotifier {
             rethrow;
           }
         },
-      ),
     );
   }
 
