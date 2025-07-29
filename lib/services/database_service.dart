@@ -354,40 +354,8 @@ class DatabaseService extends ChangeNotifier {
         _initCompleter!.complete();
       }
 
-      // 初始化完成后，预加载笔记数据
-      logDebug('数据库初始化完成，开始预加载笔记数据...');
-      // 重置流相关状态
-      _watchOffset = 0;
-      _quotesCache = [];
-      _filterCache.clear();
-      _watchHasMore = true;
-
-      // 修复：针对安卓平台优化预加载时机
-      if (kIsWeb || !Platform.isAndroid) {
-        // 非安卓平台立即预加载
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          try {
-            await _prefetchInitialQuotes();
-            logDebug('预加载完成，通知UI更新');
-            notifyListeners();
-          } catch (e) {
-            logDebug('延迟预加载失败: $e');
-            notifyListeners();
-          }
-        });
-      } else {
-        // 安卓平台延迟更长时间预加载，确保UI完全准备好
-        Future.delayed(const Duration(milliseconds: 500), () async {
-          try {
-            await _prefetchInitialQuotes();
-            logDebug('安卓平台预加载完成，通知UI更新');
-            notifyListeners();
-          } catch (e) {
-            logDebug('安卓平台预加载失败: $e');
-            notifyListeners();
-          }
-        });
-      }
+      // 初始化完成后，不再进行数据预加载，交由UI层通过调用getUserQuotes来触发首次加载
+      logDebug('数据库初始化完成，准备好提供数据服务');
     } catch (e) {
       logDebug('数据库初始化失败: $e');
       _isInitializing = false;
