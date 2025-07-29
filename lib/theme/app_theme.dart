@@ -399,8 +399,8 @@ class AppTheme with ChangeNotifier {
 
       // 浮动操作按钮使用主题色系
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
-        backgroundColor: colorScheme.primaryContainer,
-        foregroundColor: colorScheme.onPrimaryContainer,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
       ),
       
       // 列表项目使用透明背景，以继承Card的颜色
@@ -489,8 +489,8 @@ class AppTheme with ChangeNotifier {
 
       // 浮动操作按钮使用主题色系
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
-        backgroundColor: colorScheme.primaryContainer,
-        foregroundColor: colorScheme.onPrimaryContainer,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
       ),
       
       // 列表项目使用主题色系
