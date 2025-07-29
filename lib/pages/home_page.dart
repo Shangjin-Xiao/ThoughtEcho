@@ -1260,8 +1260,8 @@ class _HomePageState extends State<HomePage>
           heroTag: 'homePageFAB',
           onPressed: () => _showAddQuoteDialog(),
           elevation: 0,
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
+          backgroundColor: theme.colorScheme.primaryContainer, // 使用浅色系
+          foregroundColor: theme.colorScheme.onPrimaryContainer, // 对应的前景色
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-// 导入sqflite以使用全局databaseFactory
-import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'
-    if (dart.library.io) 'package:sqflite_common_ffi/sqflite_ffi.dart';
+// 修复：统一使用sqflite_common_ffi以支持所有平台
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/ai_analysis_model.dart';
@@ -46,11 +44,27 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 初始化数据库
+  /// 修复：初始化数据库，确保数据库工厂已正确初始化
   Future<Database> get database async {
     if (_database != null) return _database!;
 
-    // FFI初始化已在main.dart中统一处理，这里直接使用配置好的databaseFactory
+    // 修复：确保数据库工厂已初始化
+    if (!kIsWeb && Platform.isWindows) {
+      try {
+        // 检查是否已初始化，如果没有则初始化
+        if (databaseFactory == databaseFactory) {
+          // 这是一个检查，如果抛出异常说明未初始化
+          await databaseFactory.getDatabasesPath();
+        }
+      } catch (e) {
+        // 如果获取路径失败，说明databaseFactory未初始化
+        AppLogger.w('数据库工厂未初始化，正在初始化...', source: 'AIAnalysisDB');
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+        AppLogger.i('数据库工厂初始化完成', source: 'AIAnalysisDB');
+      }
+    }
+
     _database = await databaseFactory.openDatabase(
       await _getDatabasePath(),
       options: OpenDatabaseOptions(

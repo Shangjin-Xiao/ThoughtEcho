@@ -1,0 +1,61 @@
+# MSIX 配置文件
+# 用于生成Windows应用安装包
+
+msix_config:
+  # 应用基本信息
+  display_name: "ThoughtEcho"
+  publisher_display_name: "ThoughtEcho Team"
+  identity_name: "ThoughtEcho"
+  
+  # 版本信息
+  msix_version: 1.0.0.0
+  
+  # 发布者信息（使用占位符，实际发布时需要替换为真实证书）
+  publisher: "CN=ThoughtEcho"
+  
+  # 应用描述
+  description: "一款帮助你记录和分析思想的应用"
+  
+  # 应用图标（Windows ICO格式）
+  logo_path: "windows/runner/resources/app_icon.ico"
+  
+  # 启动任务
+  start_menu_icon: "windows/runner/resources/app_icon.ico"
+  tile_icon: "windows/runner/resources/app_icon.ico"
+  
+  # 所需权限
+  capabilities: "internetClient"
+  
+  # 安装设置 - custom允许用户选择安装路径
+  install_location: "custom"
+  
+  # 语言和本地化
+  languages: "zh-CN,en-US"
+  
+  # 架构支持
+  architecture: "x64"
+  
+  # 输出文件名
+  output_name: "ThoughtEcho-Setup.msix"
+  
+  # 签名设置（开发时使用自签名，发布时使用真实证书）
+  certificate_path: null
+  certificate_password: null
+  
+  # 应用设置
+  app_execution_alias: "thoughtecho"
+  
+  # 协议支持
+  protocol_activation: null
+  
+  # 文件关联
+  file_extension: null
+  
+  # 可视化资产
+  visual_elements:
+    display_name: "ThoughtEcho"
+    description: "一款帮助你记录和分析思想的应用"
+    background_color: "#2E7D32"
+    show_name_on_square150x150_logo: true
+    square150x150_logo: "windows/runner/resources/app_icon.ico"
+    square44x44_logo: "windows/runner/resources/app_icon.ico"

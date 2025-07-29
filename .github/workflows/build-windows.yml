@@ -64,6 +64,9 @@ jobs:
     - name: Build Windows app
       run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
       
+    - name: Build MSIX installer
+      run: flutter pub run msix:create
+      
     - name: Get app version
       id: version
       run: |
@@ -71,44 +74,61 @@ jobs:
         echo "version=$version" >> $env:GITHUB_OUTPUT
         echo "App version: $version"
       
-    - name: Create release archive
+    - name: Create release packages
       run: |
         $buildType = "${{ github.event.inputs.build_type || 'release' }}"
         $buildPath = if ($buildType -eq "release") { "build/windows/x64/runner/Release" } else { "build/windows/x64/runner/Profile" }
         $version = "${{ steps.version.outputs.version }}"
-        $archiveName = "thoughtecho-windows-x64-v$version-$buildType.zip"
         
         if (!(Test-Path $buildPath)) {
             Write-Error "构建路径不存在: $buildPath"
             exit 1
         }
         
+        # 创建ZIP压缩包
+        $archiveName = "thoughtecho-windows-x64-v$version-$buildType.zip"
         New-Item -ItemType Directory -Path "release_temp" -Force
         Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
         
-        # 创建版本信息文件 (Create version info file)
+        # 创建版本信息文件
         $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}`n提交: ${{ github.sha }}`n`n使用说明:`n1. 解压到任意文件夹`n2. 双击 thoughtecho.exe 启动应用`n3. 如遇问题请查看 logs 文件夹下的日志文件`n`n注意事项:`n- 首次启动可能需要等待数秒`n- 确保系统已安装Visual C++ Redistributable`n- 建议在解压后将整个文件夹添加到杀毒软件白名单"
         $versionText | Out-File -FilePath "release_temp/VERSION_INFO.txt" -Encoding UTF8
-        # Also create Chinese version for compatibility
         $versionText | Out-File -FilePath "release_temp/版本信息.txt" -Encoding UTF8
 
-        # 创建启动脚本 (Create launch script)
+        # 创建启动脚本
         "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause" | Out-File -FilePath "release_temp/LAUNCH_APP.bat" -Encoding Default
-        # Also create Chinese version for compatibility
         "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause" | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
         
-        # 压缩文件
         Compress-Archive -Path "release_temp/*" -DestinationPath $archiveName -Force
         
+        # 检查MSIX文件是否存在
+        $msixFile = "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix"
+        if (Test-Path $msixFile) {
+            $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
+            Copy-Item -Path $msixFile -Destination $msixName
+            echo "msix_name=$msixName" >> $env:GITHUB_OUTPUT
+            Write-Output "创建MSIX安装包: $msixName"
+        } else {
+            Write-Output "警告: MSIX文件未找到，跳过MSIX打包"
+        }
+        
         echo "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
-        Write-Output "创建发布包: $archiveName"
+        Write-Output "创建ZIP发布包: $archiveName"
       id: archive
       
-    - name: Upload build artifacts
+    - name: Upload ZIP build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}
+        name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}-zip
         path: ${{ steps.archive.outputs.archive_name }}
+        retention-days: 90
+        
+    - name: Upload MSIX installer
+      if: steps.archive.outputs.msix_name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}-msix
+        path: ${{ steps.archive.outputs.msix_name }}
         retention-days: 90
         
     - name: Build summary
@@ -116,12 +136,16 @@ jobs:
         $version = "${{ steps.version.outputs.version }}"
         $buildType = "${{ github.event.inputs.build_type || 'release' }}"
         $archiveName = "${{ steps.archive.outputs.archive_name }}"
+        $msixName = "${{ steps.archive.outputs.msix_name }}"
         
         Write-Output "## 构建完成 ✅" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **应用版本**: $version" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **构建类型**: $buildType" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **Flutter版本**: ${{ github.event.inputs.flutter_version || '3.29.2' }}" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "- **发布包**: $archiveName" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- **ZIP发布包**: $archiveName" >> $env:GITHUB_STEP_SUMMARY
+        if ($msixName) {
+            Write-Output "- **MSIX安装包**: $msixName" >> $env:GITHUB_STEP_SUMMARY
+        }
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "发布包已上传到 Artifacts，请在 Actions 页面下载。" >> $env:GITHUB_STEP_SUMMARY

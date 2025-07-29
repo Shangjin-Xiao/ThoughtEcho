@@ -62,8 +62,8 @@ class AskNoteFloatingButton extends StatelessWidget {
       },
       icon: const Icon(Icons.chat),
       label: const Text('问笔记'),
-      backgroundColor: Theme.of(context).colorScheme.secondary,
-      foregroundColor: Theme.of(context).colorScheme.onSecondary,
+      backgroundColor: Theme.of(context).colorScheme.secondaryContainer, // 使用浅色系
+      foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer, // 对应的前景色
     );
   }
 }
