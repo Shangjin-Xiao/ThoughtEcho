@@ -847,7 +847,7 @@ class NoteListViewState extends State<NoteListView> {
               ],
             ),
           ),
-        );
+        ));
       },
     );
   }
