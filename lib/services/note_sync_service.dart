@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -8,7 +7,11 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/models/localsend_device.dart';
 import 'package:thoughtecho/services/localsend_simple_server.dart';
-import 'package:http/http.dart' as http;
+import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
+import 'package:thoughtecho/services/localsend/localsend_server.dart';
+import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart' as ls;
+
 
 /// 笔记同步服务 - 基于LocalSend的P2P同步功能
 /// 
@@ -21,7 +24,10 @@ class NoteSyncService extends ChangeNotifier {
   // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
-  late final SimpleServer _server;
+  SimpleServer? _server;
+  ThoughtEchoDiscoveryService? _discoveryService;
+  LocalSendServer? _localSendServer;
+  LocalSendProvider? _localSendProvider;
 
   NoteSyncService({
     required BackupService backupService,
@@ -35,21 +41,76 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 初始化同步服务
   Future<void> initialize() async {
-    // 初始化LocalSend组件
+    // 在打开同步页面时才启动服务器
+    debugPrint('NoteSyncService initialized, server will start when sync page opens');
+  }
+
+  /// 启动服务器（在打开同步页面时调用）
+  Future<void> startServer() async {
+    if (_server?.isRunning == true || _localSendServer?.isRunning == true) return;
+
+    // Check if we're running on web platform
+    if (kIsWeb) {
+      debugPrint('Note sync servers not supported on web platform');
+      return;
+    }
+
     _server = SimpleServer();
-    
-    // 启动服务器监听文件接收
-    await _server.start(
-      alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
-      onFileReceived: (filePath) async {
-        // 接收到文件后自动导入
-        await receiveAndMergeNotes(filePath);
-      },
-    );
+    _discoveryService = ThoughtEchoDiscoveryService();
+    _localSendServer = LocalSendServer();
+    _localSendProvider = LocalSendProvider();
+
+    try {
+      // 启动原有服务器监听文件接收
+      await _server!.start(
+        alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
+        onFileReceived: (filePath) async {
+          // 接收到文件后自动导入
+          await receiveAndMergeNotes(filePath);
+        },
+      );
+
+      // 启动LocalSend服务器
+      await _localSendServer!.start(
+        onFileReceived: (filePath) async {
+          // 接收到文件后自动导入
+          await receiveAndMergeNotes(filePath);
+        },
+      );
+
+      // 启动设备发现
+      await _discoveryService!.startDiscovery();
+
+      debugPrint('ThoughtEcho servers started:');
+      debugPrint('  - Simple server on port ${_server?.port}');
+      debugPrint('  - LocalSend server on port ${_localSendServer?.port}');
+    } catch (e) {
+      debugPrint('Failed to start servers: $e');
+      // Clean up on failure
+      await stopServer();
+      rethrow;
+    }
+  }
+
+  /// 停止服务器（在关闭同步页面时调用）
+  Future<void> stopServer() async {
+    await _server?.stop();
+    await _localSendServer?.stop();
+    await _discoveryService?.stopDiscovery();
+
+    _server = null;
+    _localSendServer = null;
+    _discoveryService = null;
+
+    debugPrint('ThoughtEcho sync servers stopped');
   }
 
   /// 发送笔记数据到指定设备
   Future<void> sendNotesToDevice(Device targetDevice) async {
+    if (_localSendProvider == null) {
+      throw Exception('LocalSend服务未初始化');
+    }
+
     try {
       // 1. 使用备份服务创建数据包
       final backupPath = await _backupService.exportAllData(
@@ -60,26 +121,55 @@ class NoteSyncService extends ChangeNotifier {
         },
       );
 
-      // 2. 使用HTTP发送备份文件
+      // 2. 创建LocalSend设备对象
+      final lsDevice = ls.Device(
+        signalingId: null,
+        ip: targetDevice.ip,
+        version: '2.1',
+        port: targetDevice.port,
+        https: false,
+        fingerprint: targetDevice.fingerprint,
+        alias: targetDevice.alias,
+        deviceModel: targetDevice.deviceModel,
+        deviceType: _convertDeviceType(targetDevice.deviceType),
+        download: true,
+        discoveryMethods: {const ls.MulticastDiscovery()},
+      );
+
+      // 3. 使用LocalSend发送文件
       final backupFile = File(backupPath);
-      
-      // 构建上传URL
-      final url = 'http://${targetDevice.ip}:${targetDevice.port}/api/localsend/v2/upload';
-      
-      // 创建multipart请求
-      final request = http.MultipartRequest('POST', Uri.parse(url));
-      request.files.add(await http.MultipartFile.fromPath('file', backupFile.path));
-      
-      // 发送文件
-      final response = await request.send();
-      
-      if (response.statusCode != 200) {
-        throw Exception('发送失败: ${response.statusCode}');
-      }
-      
+      final sessionId = await _localSendProvider!.startSession(
+        target: lsDevice,
+        files: [backupFile],
+        background: true,
+      );
+
+      debugPrint('LocalSend文件发送会话已启动: $sessionId');
+
     } catch (e) {
       debugPrint('发送笔记失败: $e');
       rethrow;
+    }
+  }
+
+  /// 转换设备类型
+  ls.DeviceType _convertDeviceType(dynamic deviceType) {
+    if (deviceType == null) return ls.DeviceType.desktop;
+
+    final typeStr = deviceType.toString().toLowerCase();
+    switch (typeStr) {
+      case 'mobile':
+        return ls.DeviceType.mobile;
+      case 'desktop':
+        return ls.DeviceType.desktop;
+      case 'web':
+        return ls.DeviceType.web;
+      case 'headless':
+        return ls.DeviceType.headless;
+      case 'server':
+        return ls.DeviceType.server;
+      default:
+        return ls.DeviceType.desktop;
     }
   }
 
@@ -143,62 +233,19 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 发现附近的设备
   Future<List<Device>> discoverNearbyDevices() async {
-    // 简化的设备发现 - 扫描本地网络
-    final devices = <Device>[];
-    
-    try {
-      // 获取本地IP
-      final interfaces = await NetworkInterface.list();
-      for (final interface in interfaces) {
-        for (final addr in interface.addresses) {
-          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-            // 扫描同网段设备
-            final subnet = addr.address.substring(0, addr.address.lastIndexOf('.'));
-            
-            for (int i = 1; i <= 254; i++) {
-              final targetIp = '$subnet.$i';
-              if (targetIp != addr.address) {
-                // 尝试连接设备
-                try {
-                  final response = await http.get(
-                    Uri.parse('http://$targetIp:53318/api/localsend/v2/info'),
-                  ).timeout(const Duration(seconds: 1));
-                  
-                  if (response.statusCode == 200) {
-                    final deviceInfo = jsonDecode(response.body);
-                    devices.add(Device(
-                      signalingId: null,
-                      ip: targetIp,
-                      version: deviceInfo['version'] ?? '2.0',
-                      port: 53317,
-                      https: false,
-                      fingerprint: deviceInfo['fingerprint'] ?? '',
-                      alias: deviceInfo['alias'] ?? 'Unknown Device',
-                      deviceModel: deviceInfo['deviceModel'],
-                      deviceType: DeviceType.desktop,
-                      download: true,
-                      discoveryMethods: {HttpDiscovery(ip: targetIp)},
-                    ));
-                  }
-                } catch (e) {
-                  // 忽略连接失败的设备
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('设备发现失败: $e');
+    // 使用UDP组播发现设备
+    if (_discoveryService != null) {
+      return _discoveryService!.devices;
     }
-    
-    return devices;
+    return [];
   }
 
   @override
   void dispose() {
     // 清理LocalSend资源
-    _server.stop();
+    _server?.stop();
+    _localSendServer?.stop();
+    _localSendProvider?.dispose();
     super.dispose();
   }
 }

@@ -72,6 +72,8 @@ dependencies:
   rhttp: ^0.13.0 # Rust实现的HTTP客户端
   pasteboard: ^0.3.0 # 剪贴板操作
   http: ^1.2.2 # HTTP客户端库
+  collection: ^1.18.0
+  refena_flutter: ^2.0.0
 
 dev_dependencies:
   flutter_test:

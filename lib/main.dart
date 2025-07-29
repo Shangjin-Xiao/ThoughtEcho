@@ -316,8 +316,14 @@ Future<void> main() async {
                   aiAnalysisDbService: aiService,
                 ),
               ),
-              ProxyProvider4<BackupService, DatabaseService, SettingsService,
+              ChangeNotifierProxyProvider4<BackupService, DatabaseService, SettingsService,
                   AIAnalysisDatabaseService, NoteSyncService>(
+                create: (context) => NoteSyncService(
+                  backupService: context.read<BackupService>(),
+                  databaseService: context.read<DatabaseService>(),
+                  settingsService: context.read<SettingsService>(),
+                  aiAnalysisDbService: context.read<AIAnalysisDatabaseService>(),
+                ),
                 update: (
                   context,
                   backupService,
@@ -326,7 +332,7 @@ Future<void> main() async {
                   aiAnalysisDbService,
                   previous,
                 ) =>
-                    NoteSyncService(
+                    previous ?? NoteSyncService(
                   backupService: backupService,
                   databaseService: databaseService,
                   settingsService: settingsService,
