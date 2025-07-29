@@ -1,90 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:thoughtecho/services/note_sync_service.dart';
-import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:refena_flutter/refena_flutter.dart';
+import 'package:thoughtecho/common/model/device.dart';
+import 'package:thoughtecho/services/localsend/provider/network/nearby_devices_provider.dart';
+import 'package:thoughtecho/services/localsend/provider/network/server/server_provider.dart';
+import 'package:thoughtecho/services/localsend/provider/selection/send_provider.dart';
+import 'package:thoughtecho/services/backup_restore_service.dart'; // 假设这是您的备份服务
 
 /// 笔记同步页面
 /// 
 /// 提供设备发现、笔记发送和接收功能的用户界面
-class NoteSyncPage extends StatefulWidget {
+class NoteSyncPage extends ConsumerStatefulWidget {
   const NoteSyncPage({super.key});
 
   @override
-  State<NoteSyncPage> createState() => _NoteSyncPageState();
+  ConsumerState<NoteSyncPage> createState() => _NoteSyncPageState();
 }
 
-class _NoteSyncPageState extends State<NoteSyncPage> {
-  List<Device> _nearbyDevices = [];
-  bool _isScanning = false;
+class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
   bool _isSending = false;
-  NoteSyncService? _syncService;
 
   @override
   void initState() {
     super.initState();
-    _initializeSyncService();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 在这里安全地获取NoteSyncService的引用
-    _syncService = context.read<NoteSyncService>();
+    // WidgetsBinding.instance.addPostFrameCallback((_) => _initializeSyncService());
   }
 
   Future<void> _initializeSyncService() async {
     try {
-      final syncService = context.read<NoteSyncService>();
-      await syncService.startServer();
-      _startDeviceDiscovery();
+      // Start the server
+      await ref.notifier(serverProvider).startServerFromSettings();
+      // Start listening for devices
+      ref.redux(nearbyDevicesProvider).dispatchAsync(StartMulticastListener());
+      // Trigger a scan
+      ref.redux(nearbyDevicesProvider).dispatch(StartMulticastScan());
     } catch (e) {
-      debugPrint('启动同步服务失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('启动同步服务失败: $e')),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
-    _stopSyncService();
+    // Stop the server when the page is disposed
+    ref.notifier(serverProvider).stopServer();
     super.dispose();
-  }
-
-  Future<void> _stopSyncService() async {
-    try {
-      // 使用保存的引用而不是context.read
-      if (_syncService != null) {
-        await _syncService!.stopServer();
-      }
-    } catch (e) {
-      debugPrint('停止同步服务失败: $e');
-    }
-  }
-
-  Future<void> _startDeviceDiscovery() async {
-    setState(() {
-      _isScanning = true;
-    });
-
-    try {
-      final syncService = context.read<NoteSyncService>();
-      final devices = await syncService.discoverNearbyDevices();
-      if (mounted) {
-        setState(() {
-          _nearbyDevices = devices;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('设备发现失败: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
-      }
-    }
   }
 
   Future<void> _sendNotesToDevice(Device device) async {
@@ -93,9 +55,23 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     });
 
     try {
-      final syncService = context.read<NoteSyncService>();
-      await syncService.sendNotesToDevice(device);
-      
+      // 1. Use the backup service to create a temporary file
+      final backupService = BackupRestoreService(); // 您可能需要通过依赖注入获取此服务
+      final backupFile = await backupService.createBackupFile(); // 假设此方法返回一个File对象
+
+      if (backupFile == null) {
+        throw Exception('创建备份文件失败');
+      }
+
+      // 2. Use the send_provider to send the file
+      await ref.redux(sendProvider).dispatchAsync(
+            SendAction(
+              target: device,
+              files: [backupFile],
+              showInHistory: true,
+            ),
+          );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('笔记发送成功！')),
@@ -118,13 +94,18 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   @override
   Widget build(BuildContext context) {
+    final nearbyDevicesState = ref.watch(nearbyDevicesProvider);
+    final nearbyDevices = nearbyDevicesState.devices.values.toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('笔记同步'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _isScanning ? null : _startDeviceDiscovery,
+            onPressed: nearbyDevicesState.runningIps.isNotEmpty
+                ? null
+                : () => ref.redux(nearbyDevicesProvider).dispatch(StartMulticastScan()),
           ),
         ],
       ),
@@ -137,7 +118,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Row(
               children: [
-                if (_isScanning) ...[
+                if (nearbyDevicesState.runningIps.isNotEmpty) ...[
                   const SizedBox(
                     width: 16,
                     height: 16,
@@ -151,7 +132,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
-                  Text('发现 ${_nearbyDevices.length} 台设备'),
+                  Text('发现 ${nearbyDevices.length} 台设备'),
                 ],
               ],
             ),
@@ -159,7 +140,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
           // 设备列表
           Expanded(
-            child: _nearbyDevices.isEmpty
+            child: nearbyDevices.isEmpty
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -183,9 +164,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: _nearbyDevices.length,
+                    itemCount: nearbyDevices.length,
                     itemBuilder: (context, index) {
-                      final device = _nearbyDevices[index];
+                      final device = nearbyDevices[index];
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,

@@ -4,16 +4,23 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
+  bitsdojo_window_windows
+  connectivity_plus
   dynamic_color
   file_selector_windows
   flutter_secure_storage_windows
   gal
   geolocator_windows
+  open_dir_windows
   pasteboard
   permission_handler_windows
+  screen_retriever_windows
   share_plus
   sqlite3_flutter_libs
+  tray_manager
+  uri_content
   url_launcher_windows
+  window_manager
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

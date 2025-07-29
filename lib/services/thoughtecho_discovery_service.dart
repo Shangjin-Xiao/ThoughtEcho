@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/constants/thoughtecho_constants.dart';
 import 'package:thoughtecho/models/localsend_device.dart';
 import 'package:thoughtecho/models/thoughtecho_multicast_dto.dart';
-import 'package:thoughtecho/models/thoughtecho_register_dto.dart';
 import 'package:thoughtecho/utils/thoughtecho_network_interfaces.dart';
 
 /// ThoughtEcho设备发现服务 - 基于UDP组播

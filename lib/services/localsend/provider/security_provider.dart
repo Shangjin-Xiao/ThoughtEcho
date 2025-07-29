@@ -1,0 +1,34 @@
+import 'package:thoughtecho/isolate.dart';
+import 'package:thoughtecho/model/stored_security_context.dart';
+import 'package:thoughtecho/provider/persistence_provider.dart';
+import 'package:thoughtecho/util/security_helper.dart';
+import 'package:refena_flutter/refena_flutter.dart';
+
+/// This provider manages the [StoredSecurityContext].
+/// It contains all the security related data for HTTPS communication.
+final securityProvider = ReduxProvider<SecurityService, StoredSecurityContext>((ref) {
+  return SecurityService(ref.read(persistenceProvider));
+}, onChanged: (_, next, ref) {
+  ref.redux(parentIsolateProvider).dispatch(IsolateSyncSecurityContextAction(securityContext: next));
+});
+
+class SecurityService extends ReduxNotifier<StoredSecurityContext> {
+  final PersistenceService _persistence;
+
+  SecurityService(this._persistence);
+
+  @override
+  StoredSecurityContext init() {
+    return _persistence.getSecurityContext();
+  }
+}
+
+/// Generates a new [StoredSecurityContext] and persists it.
+class ResetSecurityContextAction extends AsyncReduxAction<SecurityService, StoredSecurityContext> {
+  @override
+  Future<StoredSecurityContext> reduce() async {
+    final securityContext = generateSecurityContext();
+    await notifier._persistence.setSecurityContext(securityContext);
+    return securityContext;
+  }
+}

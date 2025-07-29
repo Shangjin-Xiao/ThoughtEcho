@@ -1,48 +1,40 @@
 import 'dart:typed_data';
-import 'file_type.dart';
 
-/// Simplified CrossFile model for ThoughtEcho
-/// Based on LocalSend's CrossFile but adapted for our needs
-class CrossFile {
+import 'package:thoughtecho/model/file_type.dart';
+import 'package:dart_mappable/dart_mappable.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+
+part 'cross_file.mapper.dart';
+
+/// Common file model to avoid any third party libraries in the core logic.
+/// This model is used during the file selection phase.
+@MappableClass()
+class CrossFile with CrossFileMappable {
   final String name;
-  final int size;
   final FileType fileType;
+  final int size;
   final Uint8List? thumbnail;
-  final dynamic asset; // Simplified from AssetEntity
+  final AssetEntity? asset; // for thumbnails
   final String? path;
-  final List<int>? bytes;
+  final List<int>? bytes; // if type message, then UTF-8 encoded
   final DateTime? lastModified;
   final DateTime? lastAccessed;
 
   const CrossFile({
     required this.name,
-    required this.size,
     required this.fileType,
-    this.thumbnail,
-    this.asset,
-    this.path,
-    this.bytes,
-    this.lastModified,
-    this.lastAccessed,
+    required this.size,
+    required this.thumbnail,
+    required this.asset,
+    required this.path,
+    required this.bytes,
+    required this.lastModified,
+    required this.lastAccessed,
   });
 
+  /// Custom toString() to avoid printing the bytes.
   @override
   String toString() {
-    return 'CrossFile(name: $name, size: $size, fileType: $fileType, path: $path, bytes: ${bytes?.length})';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is CrossFile &&
-        other.name == name &&
-        other.size == size &&
-        other.fileType == fileType &&
-        other.path == path;
-  }
-
-  @override
-  int get hashCode {
-    return Object.hash(name, size, fileType, path);
+    return 'CrossFile(name: $name, fileType: $fileType, size: $size, thumbnail: ${thumbnail != null ? thumbnail!.length : 'null'}, asset: $asset, path: $path, bytes: ${bytes != null ? bytes!.length : 'null'})';
   }
 }
