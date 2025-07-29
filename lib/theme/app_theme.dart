@@ -131,6 +131,42 @@ class AppTheme with ChangeNotifier {
   Color? get customColor => _customColor;
   ThemeMode get themeMode => _themeMode;
 
+  // 获取当前有效的主色调
+  Color get effectivePrimaryColor {
+    if (_useCustomColor && _customColor != null) {
+      return _customColor!;
+    }
+    if (_useDynamicColor && _lightDynamicColorScheme != null) {
+      return _lightDynamicColorScheme!.primary;
+    }
+    return Colors.blue;
+  }
+
+  // 判断当前是否为深色模式
+  bool get isDarkMode {
+    switch (_themeMode) {
+      case ThemeMode.dark:
+        return true;
+      case ThemeMode.light:
+        return false;
+      case ThemeMode.system:
+        // 这里需要从外部获取系统主题，暂时返回false
+        return false;
+    }
+  }
+
+  // 获取适合当前主题的文本颜色
+  Color getTextColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? Colors.white : Colors.black87;
+  }
+
+  // 获取适合当前主题的次要文本颜色
+  Color getSecondaryTextColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? Colors.white70 : Colors.black54;
+  }
+
   // 初始化主题服务
   Future<void> initialize() async {
     if (_hasInitialized) return; // 防止重复初始化
@@ -316,52 +352,52 @@ class AppTheme with ChangeNotifier {
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 
-    // 使用非常接近白色的浅色调，减少背景和组件的差异
+    // 使用主题色系的浅色调，确保颜色一致性
     final colorScheme = baseTheme.colorScheme;
-    
+
     return baseTheme.copyWith(
-      // 使用极浅的背景色，接近白色
-      scaffoldBackgroundColor: const Color(0xFFFEFEFE),
-      
-      // 对话框使用非常浅的色调，与背景差异极小
+      // 使用主题色系的极浅背景色
+      scaffoldBackgroundColor: colorScheme.surface,
+
+      // 对话框使用主题色系
       dialogTheme: baseTheme.dialogTheme.copyWith(
-        backgroundColor: const Color(0xFFFDFDFD),
+        backgroundColor: colorScheme.surfaceContainerLowest,
       ),
-      
-      // 卡片使用极浅的色调
+
+      // 卡片使用主题色系
       cardTheme: baseTheme.cardTheme.copyWith(
-        color: const Color(0xFFFCFCFC),
+        color: colorScheme.surfaceContainerLowest,
       ),
-      
-      // 底部表单使用浅色调
+
+      // 底部表单使用主题色系
       bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
-        backgroundColor: const Color(0xFFFDFDFD),
+        backgroundColor: colorScheme.surfaceContainerLowest,
       ),
-      
-      // 抽屉使用浅色调
+
+      // 抽屉使用主题色系
       drawerTheme: baseTheme.drawerTheme.copyWith(
-        backgroundColor: const Color(0xFFFEFEFE),
+        backgroundColor: colorScheme.surface,
       ),
-      
-      // AppBar使用稍深的色调，增强标题区分度
+
+      // AppBar使用稍深的主题色调，增强标题区分度
       appBarTheme: baseTheme.appBarTheme.copyWith(
-        backgroundColor: const Color(0xFFF5F5F5), // 更深的背景色，增强区分度
-        foregroundColor: const Color(0xFF1A1A1A), // 深色文字，增强对比
+        backgroundColor: colorScheme.surfaceContainerLow,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
-          color: const Color(0xFF1A1A1A),
+          color: colorScheme.onSurface,
           fontWeight: FontWeight.w600, // 增强标题字重
           fontSize: 20, // 适当增大字号
         ),
       ),
-      
-      // 导航栏使用浅色调
+
+      // 导航栏使用主题色系
       navigationBarTheme: baseTheme.navigationBarTheme.copyWith(
-        backgroundColor: const Color(0xFFFDFDFD),
+        backgroundColor: colorScheme.surfaceContainerLowest,
       ),
-      
-      // 浮动操作按钮使用浅色系
+
+      // 浮动操作按钮使用主题色系
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
         backgroundColor: colorScheme.primaryContainer,
         foregroundColor: colorScheme.onPrimaryContainer,
@@ -406,33 +442,33 @@ class AppTheme with ChangeNotifier {
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 
-    // 使用更接近的深色调，减少差异，但保持用户选择的配色
+    // 使用主题色系的深色调，确保用户选择的颜色能够正确应用
     final colorScheme = baseTheme.colorScheme;
-    
+
     return baseTheme.copyWith(
       // 使用主题色系的基础暗色背景
       scaffoldBackgroundColor: colorScheme.surface,
-      
+
       // 对话框使用主题色系
       dialogTheme: baseTheme.dialogTheme.copyWith(
         backgroundColor: colorScheme.surfaceContainerLow,
       ),
-      
+
       // 卡片使用主题色系
       cardTheme: baseTheme.cardTheme.copyWith(
         color: colorScheme.surfaceContainerLow,
       ),
-      
+
       // 底部表单使用主题色系
       bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
         backgroundColor: colorScheme.surfaceContainer,
       ),
-      
+
       // 抽屉使用主题色系
       drawerTheme: baseTheme.drawerTheme.copyWith(
         backgroundColor: colorScheme.surfaceContainerLow,
       ),
-      
+
       // AppBar使用略深的色调，增强标题区分度
       appBarTheme: baseTheme.appBarTheme.copyWith(
         backgroundColor: colorScheme.surfaceContainerHigh,
@@ -445,13 +481,13 @@ class AppTheme with ChangeNotifier {
           fontSize: 20, // 适当增大字号
         ),
       ),
-      
+
       // 导航栏使用主题色系
       navigationBarTheme: baseTheme.navigationBarTheme.copyWith(
         backgroundColor: colorScheme.surfaceContainer,
       ),
-      
-      // 浮动操作按钮使用浅色系
+
+      // 浮动操作按钮使用主题色系
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
         backgroundColor: colorScheme.primaryContainer,
         foregroundColor: colorScheme.onPrimaryContainer,

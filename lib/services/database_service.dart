@@ -362,19 +362,32 @@ class DatabaseService extends ChangeNotifier {
       _filterCache.clear();
       _watchHasMore = true;
 
-      // 修复：延迟预加载，避免在初始化过程中阻塞
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          await _prefetchInitialQuotes();
-          // 预加载完成后，再次通知监听者确保UI更新
-          logDebug('预加载完成，通知UI更新');
-          notifyListeners();
-        } catch (e) {
-          logDebug('延迟预加载失败: $e');
-          // 即使预加载失败，也要通知UI，避免永远显示加载状态
-          notifyListeners();
-        }
-      });
+      // 修复：针对安卓平台优化预加载时机
+      if (kIsWeb || !Platform.isAndroid) {
+        // 非安卓平台立即预加载
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          try {
+            await _prefetchInitialQuotes();
+            logDebug('预加载完成，通知UI更新');
+            notifyListeners();
+          } catch (e) {
+            logDebug('延迟预加载失败: $e');
+            notifyListeners();
+          }
+        });
+      } else {
+        // 安卓平台延迟更长时间预加载，确保UI完全准备好
+        Future.delayed(const Duration(milliseconds: 500), () async {
+          try {
+            await _prefetchInitialQuotes();
+            logDebug('安卓平台预加载完成，通知UI更新');
+            notifyListeners();
+          } catch (e) {
+            logDebug('安卓平台预加载失败: $e');
+            notifyListeners();
+          }
+        });
+      }
     } catch (e) {
       logDebug('数据库初始化失败: $e');
       _isInitializing = false;
@@ -654,9 +667,10 @@ class DatabaseService extends ChangeNotifier {
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
       );
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
-      );
+      // 修复：不再为tag_ids列创建索引，因为该列已被quote_tags表替代
+      // await txn.execute(
+      //   'CREATE INDEX IF NOT EXISTS idx_quotes_tag_ids ON quotes(tag_ids)',
+      // );
       logDebug('数据库升级：索引添加完成');
     }
 
@@ -785,6 +799,15 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：安全的标签数据迁移
   Future<void> _migrateTagDataSafely(Transaction txn) async {
+    // 首先检查tag_ids列是否存在
+    final tableInfo = await txn.rawQuery('PRAGMA table_info(quotes)');
+    final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
+
+    if (!hasTagIdsColumn) {
+      logDebug('tag_ids列不存在，跳过标签数据迁移');
+      return;
+    }
+
     // 获取所有有标签的笔记
     final quotesWithTags = await txn.query(
       'quotes',
@@ -854,6 +877,126 @@ class DatabaseService extends ChangeNotifier {
     logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
   }
 
+  /// 安全地删除tag_ids列（通过重建表）
+  Future<void> _removeTagIdsColumnSafely(Transaction txn) async {
+    try {
+      // 首先检查tag_ids列是否存在
+      final tableInfo = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
+
+      if (!hasTagIdsColumn) {
+        logDebug('tag_ids列已不存在，跳过删除');
+        return;
+      }
+
+      logDebug('开始删除tag_ids列...');
+
+      // 1. 创建新的quotes表（不包含tag_ids列）
+      await txn.execute('''
+        CREATE TABLE quotes_new(
+          id TEXT PRIMARY KEY,
+          content TEXT NOT NULL,
+          date TEXT NOT NULL,
+          source TEXT,
+          source_author TEXT,
+          source_work TEXT,
+          ai_analysis TEXT,
+          sentiment TEXT,
+          keywords TEXT,
+          summary TEXT,
+          category_id TEXT DEFAULT '',
+          color_hex TEXT,
+          location TEXT,
+          weather TEXT,
+          temperature TEXT,
+          edit_source TEXT,
+          delta_content TEXT,
+          day_period TEXT
+        )
+      ''');
+
+      // 2. 复制数据（排除tag_ids列）
+      await txn.execute('''
+        INSERT INTO quotes_new (
+          id, content, date, source, source_author, source_work,
+          ai_analysis, sentiment, keywords, summary, category_id,
+          color_hex, location, weather, temperature, edit_source,
+          delta_content, day_period
+        )
+        SELECT
+          id, content, date, source, source_author, source_work,
+          ai_analysis, sentiment, keywords, summary, category_id,
+          color_hex, location, weather, temperature, edit_source,
+          delta_content, day_period
+        FROM quotes
+      ''');
+
+      // 3. 删除旧表
+      await txn.execute('DROP TABLE quotes');
+
+      // 4. 重命名新表
+      await txn.execute('ALTER TABLE quotes_new RENAME TO quotes');
+
+      // 5. 重新创建索引
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
+      );
+      await txn.execute('CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)');
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_date_category ON quotes(date DESC, category_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_category_date ON quotes(category_id, date DESC)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_content_fts ON quotes(content)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+      );
+
+      logDebug('tag_ids列删除完成');
+    } catch (e) {
+      logError('删除tag_ids列失败: $e', error: e, source: 'DatabaseUpgrade');
+      // 不重新抛出异常，让升级继续
+    }
+  }
+
+  /// 清理遗留的tag_ids列
+  Future<void> _cleanupLegacyTagIdsColumn() async {
+    try {
+      final db = database;
+
+      // 检查quotes表是否还有tag_ids列
+      final tableInfo = await db.rawQuery('PRAGMA table_info(quotes)');
+      final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
+
+      if (!hasTagIdsColumn) {
+        logDebug('tag_ids列已不存在，无需清理');
+        return;
+      }
+
+      logDebug('检测到遗留的tag_ids列，开始清理...');
+
+      // 在事务中执行清理
+      await db.transaction((txn) async {
+        // 首先确保数据已迁移到quote_tags表
+        await _migrateTagDataSafely(txn);
+
+        // 然后删除tag_ids列
+        await _removeTagIdsColumnSafely(txn);
+      });
+
+      logDebug('遗留tag_ids列清理完成');
+    } catch (e) {
+      logError('清理遗留tag_ids列失败: $e', error: e, source: 'DatabaseService');
+      // 不重新抛出异常，避免影响应用启动
+    }
+  }
+
   /// 修复：在事务中安全地执行版本12升级
   Future<void> _upgradeToVersion12SafelyInTransaction(Transaction txn) async {
     try {
@@ -878,6 +1021,9 @@ class DatabaseService extends ChangeNotifier {
 
       // 3. 安全迁移数据
       await _migrateTagDataSafely(txn);
+
+      // 4. 迁移完成后，删除旧的tag_ids列（SQLite不支持直接删除列，需要重建表）
+      await _removeTagIdsColumnSafely(txn);
 
       logDebug('版本12升级在事务中安全完成');
     } catch (e) {
@@ -989,10 +1135,17 @@ class DatabaseService extends ChangeNotifier {
       _currentQuotes = quotes;
       _watchHasMore = quotes.length >= _watchLimit;
 
-      // 修复：立即通知流，确保UI能接收到数据
-      _safeNotifyQuotesStream();
-
-      logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
+      // 修复：针对安卓平台的特殊处理
+      if (!kIsWeb && Platform.isAndroid) {
+        // 安卓平台延迟通知，确保UI完全准备好
+        await Future.delayed(const Duration(milliseconds: 100));
+        _safeNotifyQuotesStream();
+        logDebug('安卓平台预加载完成，延迟通知UI，获取到 ${quotes.length} 条笔记');
+      } else {
+        // 其他平台立即通知
+        _safeNotifyQuotesStream();
+        logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
+      }
     } catch (e) {
       logDebug('预加载笔记时出错: $e');
       // 确保状态一致
@@ -3175,10 +3328,18 @@ class DatabaseService extends ChangeNotifier {
           logDebug('数据库初始化完成，通知UI重新订阅数据流');
           tempController.close();
 
-          // 延迟通知监听者，让UI重新调用watchQuotes
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            notifyListeners();
-          });
+          // 针对安卓平台的特殊处理
+          if (!kIsWeb && Platform.isAndroid) {
+            // 安卓平台延迟更长时间通知，确保UI完全准备好
+            Future.delayed(const Duration(milliseconds: 300), () {
+              notifyListeners();
+            });
+          } else {
+            // 其他平台立即通知
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              notifyListeners();
+            });
+          }
         } catch (e) {
           logError('等待数据库初始化失败: $e', error: e, source: 'watchQuotes');
           tempController.addError(e);
@@ -3920,8 +4081,13 @@ class DatabaseService extends ChangeNotifier {
 
       logDebug('开始执行数据迁移...');
 
-      // 兼容性检查：验证数据库结构完整性
-      await _validateDatabaseCompatibility();
+      // 兼容性检查：验证数据库结构完整性（仅在非新建数据库时执行）
+      try {
+        await _validateDatabaseCompatibility();
+      } catch (e) {
+        logDebug('数据库兼容性验证跳过: $e');
+        // 如果验证失败，可能是新数据库，继续执行其他迁移
+      }
 
       // 检查并迁移天气数据
       await _checkAndMigrateWeatherData();
@@ -3931,6 +4097,9 @@ class DatabaseService extends ChangeNotifier {
 
       // 补全缺失的时间段数据
       await patchQuotesDayPeriod();
+
+      // 修复：检查并清理遗留的tag_ids列
+      await _cleanupLegacyTagIdsColumn();
 
       logDebug('所有数据迁移完成');
     } catch (e) {
@@ -3962,14 +4131,26 @@ class DatabaseService extends ChangeNotifier {
       final quoteTagsCount = await db.rawQuery(
         'SELECT COUNT(*) as count FROM quote_tags',
       );
-      final quotesWithTagsCount = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM quotes WHERE tag_ids IS NOT NULL AND tag_ids != ""',
-      );
 
-      logDebug(
-        '兼容性检查完成 - quote_tags表记录数: ${quoteTagsCount.first['count']}, '
-        '有标签的quotes记录数: ${quotesWithTagsCount.first['count']}',
-      );
+      // 修复：检查quotes表中是否还有tag_ids列，如果有则说明迁移未完成
+      final tableInfo = await db.rawQuery('PRAGMA table_info(quotes)');
+      final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
+
+      if (hasTagIdsColumn) {
+        // 如果还有tag_ids列，检查是否有数据需要迁移
+        final quotesWithTagsCount = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM quotes WHERE tag_ids IS NOT NULL AND tag_ids != ""',
+        );
+        logDebug(
+          '兼容性检查完成 - quote_tags表记录数: ${quoteTagsCount.first['count']}, '
+          '有tag_ids列的quotes记录数: ${quotesWithTagsCount.first['count']}',
+        );
+      } else {
+        logDebug(
+          '兼容性检查完成 - quote_tags表记录数: ${quoteTagsCount.first['count']}, '
+          'tag_ids列已迁移完成',
+        );
+      }
     } catch (e) {
       logError('数据库兼容性验证失败: $e', error: e, source: 'DatabaseService');
       // 不抛出异常，让应用继续运行

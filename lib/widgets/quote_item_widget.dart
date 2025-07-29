@@ -135,14 +135,12 @@ class QuoteItemWidget extends StatelessWidget {
     // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
 
     // Determine the background color of the card
-    // If the quote has a color, use it, otherwise use fixed color based on theme
+    // If the quote has a color, use it, otherwise use theme color
     final Color cardColor = quote.colorHex != null && quote.colorHex!.isNotEmpty
         ? Color(
             int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
           ) // Ensure alpha for hex string
-        : (theme.brightness == Brightness.light
-            ? Colors.white
-            : const Color(0xFF2D2D2D));
+        : theme.colorScheme.surfaceContainerLowest;
 
     // Determine the text color based on the card color
 

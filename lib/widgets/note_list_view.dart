@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
@@ -107,8 +109,19 @@ class NoteListViewState extends State<NoteListView> {
       logDebug('数据库初始化完成，重新订阅数据流');
       // 移除监听器，避免重复监听
       db.removeListener(_onDatabaseServiceChanged);
-      // 重新初始化数据流
-      _initializeDataStream();
+
+      // 针对安卓平台的特殊处理
+      if (!kIsWeb && Platform.isAndroid) {
+        // 安卓平台延迟重新订阅，确保数据库完全准备好
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) {
+            _initializeDataStream();
+          }
+        });
+      } else {
+        // 其他平台立即重新订阅
+        _initializeDataStream();
+      }
     }
   }
 
@@ -716,12 +729,14 @@ class NoteListViewState extends State<NoteListView> {
     // 布局构建
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 主体内容
-        return Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: Column(
-              children: [
+        // 主体内容 - 添加白色背景容器
+        return Container(
+          color: Colors.white, // 固定白色背景，不受主题影响
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                children: [
                 // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
                 Container(
                   padding: EdgeInsets.fromLTRB(
@@ -776,10 +791,7 @@ class NoteListViewState extends State<NoteListView> {
                           showModalBottomSheet(
                             context: context,
                             isScrollControlled: true, // 允许更大的底部表单
-                            backgroundColor:
-                                Theme.of(context).brightness == Brightness.light
-                                    ? Colors.white
-                                    : Theme.of(context).colorScheme.surface,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(16),

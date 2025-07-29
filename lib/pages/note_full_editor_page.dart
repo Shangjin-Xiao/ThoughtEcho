@@ -1137,10 +1137,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ],
                 ),
               ),
-            // 编辑器主体 - 使用增强配置
+            // 编辑器主体 - 使用增强配置，保持白色背景
             Expanded(
               child: Container(
-                color: theme.colorScheme.surface,
+                color: Colors.white, // 固定使用白色背景，不受主题影响
                 padding: const EdgeInsets.all(16),
                 // 使用增强配置支持图片、视频等嵌入内容
                 child: quill.QuillEditor(
