@@ -339,6 +339,13 @@ class DatabaseService extends ChangeNotifier {
 
       // 更新分类流数据
       await _updateCategoriesStream();
+      
+      // 修复：确保笔记流控制器在预加载前被正确初始化
+      if (_quotesController == null || _quotesController!.isClosed) {
+        _quotesController = StreamController<List<Quote>>.broadcast();
+        logDebug('笔记流控制器已初始化');
+      }
+      
       // 初始化完成后，预加载笔记数据
       logDebug('数据库初始化完成，开始预加载笔记数据...');
       // 重置流相关状态
@@ -952,6 +959,7 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 在初始化时预加载笔记数据
+  /// 修复：预加载初始笔记数据，确保UI能正确显示
   Future<void> _prefetchInitialQuotes() async {
     try {
       // 修复：重置状态，但不依赖流控制器
@@ -975,12 +983,17 @@ class DatabaseService extends ChangeNotifier {
       _currentQuotes = quotes;
       _watchHasMore = quotes.length >= _watchLimit;
 
-      logDebug('预加载完成，获取到 ${quotes.length} 条笔记');
+      // 修复：通知流订阅者，确保UI能够显示预加载的数据
+      _safeNotifyQuotesStream();
+
+      logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
     } catch (e) {
       logDebug('预加载笔记时出错: $e');
       // 确保状态一致
       _currentQuotes = [];
       _watchHasMore = false;
+      // 即使出错也要通知流，确保UI状态正确
+      _safeNotifyQuotesStream();
     }
   }
 
@@ -2056,6 +2069,7 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
+  /// 修复：获取用户笔记，增加初始化状态检查
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -2067,6 +2081,16 @@ class DatabaseService extends ChangeNotifier {
     List<String>? selectedDayPeriods, // 时间段筛选
   }) async {
     try {
+      // 修复：确保数据库已完全初始化
+      if (!_isInitialized) {
+        logDebug('数据库尚未初始化，等待初始化完成...');
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
+      }
+
       // 优化：定期清理缓存而不是每次查询都清理
       _scheduleCacheCleanup();
 
@@ -2938,6 +2962,7 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 修复：监听笔记列表，支持分页加载和筛选
+  /// 修复：观察笔记流，增加初始化状态检查
   Stream<List<Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -2947,6 +2972,34 @@ class DatabaseService extends ChangeNotifier {
     List<String>? selectedWeathers, // 天气筛选
     List<String>? selectedDayPeriods, // 时间段筛选
   }) {
+    // 修复：如果数据库未初始化，先返回空流并等待初始化
+    if (!_isInitialized) {
+      logDebug('数据库尚未初始化，返回空流并等待初始化...');
+      
+      // 创建一个临时的流控制器
+      final tempController = StreamController<List<Quote>>.broadcast();
+      tempController.add([]); // 立即发送空列表
+      
+      // 异步等待初始化完成后重新调用
+      Future.microtask(() async {
+        try {
+          if (_isInitializing && _initCompleter != null) {
+            await _initCompleter!.future;
+          } else if (!_isInitialized) {
+            await init();
+          }
+          
+          // 初始化完成后，重新设置流
+          tempController.close();
+          // 这里不需要重新调用watchQuotes，因为UI会重新订阅
+        } catch (e) {
+          logError('等待数据库初始化失败: $e', error: e, source: 'watchQuotes');
+          tempController.addError(e);
+        }
+      });
+      
+      return tempController.stream;
+    }
     // 检查是否有筛选条件改变
     bool hasFilterChanged = false;
 
