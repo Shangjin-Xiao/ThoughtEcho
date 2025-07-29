@@ -26,7 +26,6 @@ linter:
 
 analyzer:
   exclude:
-#    - test/**
-
+    - localsend_temp/**
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
