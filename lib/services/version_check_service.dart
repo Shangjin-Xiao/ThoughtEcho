@@ -121,24 +121,32 @@ class VersionCheckService {
       }
 
       logDebug('开始检查版本更新...');
-      
+      logDebug('请求URL: $_githubApiUrl');
+
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
-      
+      logDebug('当前应用版本: $currentVersion');
+
       final response = await dio.get(
         _githubApiUrl,
         options: Options(
           receiveTimeout: timeout ?? _defaultTimeout,
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'ThoughtEcho-App',
+          },
         ),
       ).timeout(timeout ?? _defaultTimeout);
 
+      logDebug('GitHub API响应状态码: ${response.statusCode}');
+
       if (response.statusCode == 200 && response.data != null) {
         final versionInfo = VersionInfo.fromJson(response.data, currentVersion);
-        
+
         // 更新缓存
         _cachedVersionInfo = versionInfo;
         _lastCheckTime = DateTime.now();
-        
+
         logDebug('版本检查完成: 当前版本 $currentVersion, 最新版本 ${versionInfo.latestVersion}, 有更新: ${versionInfo.hasUpdate}');
         return versionInfo;
       } else {
@@ -149,7 +157,14 @@ class VersionCheckService {
       throw VersionCheckTimeoutException('版本检查超时，请检查网络连接');
     } on DioException catch (e) {
       logDebug('版本检查网络错误: ${e.message}');
-      throw VersionCheckNetworkException('网络连接失败: ${e.message}');
+      logDebug('错误详情: ${e.response?.statusCode} - ${e.response?.statusMessage}');
+
+      if (e.response?.statusCode == 404) {
+        // 404错误特殊处理 - 可能是仓库没有releases
+        throw VersionCheckException('暂无可用的版本更新信息。这可能是因为：\n1. 仓库还没有发布任何版本\n2. 网络连接问题\n\n您可以访问项目主页查看最新信息。');
+      } else {
+        throw VersionCheckNetworkException('网络连接失败: ${e.message}');
+      }
     } catch (e) {
       logDebug('版本检查失败: $e');
       throw VersionCheckException('版本检查失败: $e');

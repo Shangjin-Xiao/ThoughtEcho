@@ -29,9 +29,10 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
-import 'package:thoughtecho/services/debug_service.dart';
+// import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
+import 'utils/global_exception_handler.dart';
 import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
@@ -127,6 +128,9 @@ Future<void> main() async {
       // 初始化日志系统
       AppLogger.initialize();
 
+      // 初始化全局异常处理器
+      GlobalExceptionHandler.initialize();
+
       // 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
       PlatformDispatcher.instance.onError = (error, stack) {
         // Windows平台使用简化的错误处理，避免复杂操作导致卡死
@@ -218,22 +222,22 @@ Future<void> main() async {
         // }
 
         // 初始化网络服务
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('开始初始化网络服务');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('开始初始化网络服务');
+        // }
         await NetworkService.instance.init();
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('网络服务初始化完成');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('网络服务初始化完成');
+        // }
 
         // 初始化设置服务
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('开始初始化设置服务');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('开始初始化设置服务');
+        // }
         final settingsService = await SettingsService.create();
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('设置服务初始化完成');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('设置服务初始化完成');
+        // }
         // 自动获取应用版本号
         final packageInfo = await PackageInfo.fromPlatform();
         final String currentVersion = packageInfo.version;
@@ -314,23 +318,8 @@ Future<void> main() async {
             ],
             child: Builder(
               builder: (context) {
-                // Windows平台简化延迟错误处理，避免卡死
-                if (_deferredErrors.isNotEmpty &&
-                    !(!kIsWeb && Platform.isWindows)) {
-                  final logService = Provider.of<UnifiedLogService>(
-                    context,
-                    listen: false,
-                  );
-                  for (var err in _deferredErrors) {
-                    logService.error(
-                      err['message'],
-                      error: err['error'],
-                      stackTrace: err['stackTrace'],
-                      source: err['source'],
-                    );
-                  }
-                  _deferredErrors.clear();
-                }
+                // 处理延迟的错误
+                GlobalExceptionHandler.processDeferredErrors();
                 return MyApp(
                   navigatorKey: navigatorKey,
                   isEmergencyMode: _isEmergencyMode,
@@ -418,38 +407,38 @@ Future<void> main() async {
                     ? TimeoutConstants.databaseInitTimeoutWindows
                     : TimeoutConstants.databaseInitTimeoutDefault;
 
-                if (Platform.isWindows) {
-                  await WindowsStartupDebugService.recordInitStep('开始初始化主数据库');
-                }
+                // if (Platform.isWindows) {
+                //   await WindowsStartupDebugService.recordInitStep('开始初始化主数据库');
+                // }
                 await databaseService.init().timeout(
                   dbTimeoutDuration,
                   onTimeout: () {
                     throw TimeoutException('数据库初始化超时');
                   },
                 );
-                if (Platform.isWindows) {
-                  await WindowsStartupDebugService.recordInitStep('主数据库初始化完成');
-                }
+                // if (Platform.isWindows) {
+                //   await WindowsStartupDebugService.recordInitStep('主数据库初始化完成');
+                // }
 
                 // 初始化AI分析数据库
                 try {
-                  if (Platform.isWindows) {
-                    await WindowsStartupDebugService.recordInitStep(
-                        '开始初始化AI分析数据库');
-                  }
+                  // if (Platform.isWindows) {
+                  //   await WindowsStartupDebugService.recordInitStep(
+                  //       '开始初始化AI分析数据库');
+                  // }
                   await aiAnalysisDbService.init();
-                  if (Platform.isWindows) {
-                    await WindowsStartupDebugService.recordInitStep(
-                        'AI分析数据库初始化完成');
-                  }
+                  // if (Platform.isWindows) {
+                  //   await WindowsStartupDebugService.recordInitStep(
+                  //       'AI分析数据库初始化完成');
+                  // }
                   logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
                 } catch (aiDbError) {
-                  if (Platform.isWindows) {
-                    await WindowsStartupDebugService.recordInitStep(
-                        'AI分析数据库初始化失败',
-                        details: aiDbError.toString(),
-                        success: false);
-                  }
+                  // if (Platform.isWindows) {
+                  //   await WindowsStartupDebugService.recordInitStep(
+                  //       'AI分析数据库初始化失败',
+                  //       details: aiDbError.toString(),
+                  //       success: false);
+                  // }
                   logError('AI分析数据库初始化失败: $aiDbError',
                       error: aiDbError, source: 'BackgroundInit');
                   // AI分析数据库初始化失败不影响主要功能，继续执行
@@ -460,12 +449,12 @@ Future<void> main() async {
 
                 logInfo('后台数据库迁移完成', source: 'BackgroundInit');
               } catch (e, stackTrace) {
-                if (Platform.isWindows) {
-                  await WindowsStartupDebugService.recordCrash(
-                      e.toString(), stackTrace,
-                      context: '后台数据库迁移失败');
-                  await WindowsStartupDebugService.flushLogs(); // 确保崩溃信息立即写入磁盘
-                }
+                // if (Platform.isWindows) {
+                //   await WindowsStartupDebugService.recordCrash(
+                //       e.toString(), stackTrace,
+                //       context: '后台数据库迁移失败');
+                //   await WindowsStartupDebugService.flushLogs(); // 确保崩溃信息立即写入磁盘
+                // }
                 logError(
                   '后台数据库迁移失败: $e',
                   error: e,
@@ -475,10 +464,10 @@ Future<void> main() async {
 
                 // 在紧急情况下尝试初始化新数据库
                 try {
-                  if (Platform.isWindows) {
-                    await WindowsStartupDebugService.recordInitStep(
-                        '尝试紧急恢复：初始化新数据库');
-                  }
+                  // if (Platform.isWindows) {
+                  //   await WindowsStartupDebugService.recordInitStep(
+                  //       '尝试紧急恢复：初始化新数据库');
+                  // }
                   await databaseService.initializeNewDatabase();
 
                   // 尝试初始化AI分析数据库
@@ -598,15 +587,15 @@ Future<void> main() async {
       }
     },
     (error, stackTrace) {
-      // Windows平台立即记录崩溃信息
-      if (Platform.isWindows) {
-        try {
-          WindowsStartupDebugService.recordCrash(error.toString(), stackTrace,
-              context: '全局未捕获异常');
-        } catch (_) {
-          // 静默处理调试记录失败
-        }
-      }
+      // Windows平台立即记录崩溃信息 - 正式版已禁用
+      // if (Platform.isWindows) {
+      //   try {
+      //     WindowsStartupDebugService.recordCrash(error.toString(), stackTrace,
+      //         context: '全局未捕获异常');
+      //   } catch (_) {
+      //     // 静默处理调试记录失败
+      //   }
+      // }
 
       logError(
         '未捕获的异常: $error',

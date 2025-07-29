@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'large_file_manager.dart';
 import 'streaming_file_processor.dart';
-import '../utils/app_logger.dart';
+
 
 /// 媒体文件管理服务
 /// 优化版本：支持文件压缩、流式处理和内存优化
