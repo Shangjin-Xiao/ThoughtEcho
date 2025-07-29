@@ -17,6 +17,12 @@ class SimpleServer {
   }) async {
     if (_server != null) return;
 
+    // Check if we're running on web platform
+    if (kIsWeb) {
+      debugPrint('SimpleServer not supported on web platform');
+      return;
+    }
+
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
       debugPrint('ThoughtEcho服务器启动在端口: $_port');

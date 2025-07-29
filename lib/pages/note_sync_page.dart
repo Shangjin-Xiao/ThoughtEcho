@@ -17,11 +17,46 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   List<Device> _nearbyDevices = [];
   bool _isScanning = false;
   bool _isSending = false;
+  NoteSyncService? _syncService;
 
   @override
   void initState() {
     super.initState();
-    _startDeviceDiscovery();
+    _initializeSyncService();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在这里安全地获取NoteSyncService的引用
+    _syncService = context.read<NoteSyncService>();
+  }
+
+  Future<void> _initializeSyncService() async {
+    try {
+      final syncService = context.read<NoteSyncService>();
+      await syncService.startServer();
+      _startDeviceDiscovery();
+    } catch (e) {
+      debugPrint('启动同步服务失败: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopSyncService();
+    super.dispose();
+  }
+
+  Future<void> _stopSyncService() async {
+    try {
+      // 使用保存的引用而不是context.read
+      if (_syncService != null) {
+        await _syncService!.stopServer();
+      }
+    } catch (e) {
+      debugPrint('停止同步服务失败: $e');
+    }
   }
 
   Future<void> _startDeviceDiscovery() async {
