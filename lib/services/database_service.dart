@@ -354,8 +354,19 @@ class DatabaseService extends ChangeNotifier {
         _initCompleter!.complete();
       }
 
-      // 初始化完成后，不再进行数据预加载，交由UI层通过调用getUserQuotes来触发首次加载
-      logDebug('数据库初始化完成，准备好提供数据服务');
+      // 修复：恢复简化的预加载逻辑，确保首次加载能正常工作
+      logDebug('数据库初始化完成，准备预加载数据...');
+
+      // 重置流相关状态
+      _watchOffset = 0;
+      _quotesCache = [];
+      _filterCache.clear();
+      _watchHasMore = true;
+
+      // 延迟通知监听者，让UI知道数据库已准备好
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } catch (e) {
       logDebug('数据库初始化失败: $e');
       _isInitializing = false;
@@ -3319,6 +3330,13 @@ class DatabaseService extends ChangeNotifier {
     // 检查是否有筛选条件改变
     bool hasFilterChanged = false;
 
+    // 修复：检查是否是首次调用
+    bool isFirstCall = (_quotesController == null || _quotesController!.isClosed) ||
+                       (_currentQuotes.isEmpty);
+
+    logDebug('watchQuotes调用 - isFirstCall: $isFirstCall, hasController: ${_quotesController != null}, '
+             'currentQuotesCount: ${_currentQuotes.length}, tagIds: $tagIds, categoryId: $categoryId');
+
     // 检查标签是否变更
     if (_watchTagIds != null && tagIds != null) {
       if (_watchTagIds!.length != tagIds.length) {
@@ -3417,13 +3435,18 @@ class DatabaseService extends ChangeNotifier {
     _watchSelectedDayPeriods = selectedDayPeriods; // 保存时间段筛选条件
 
     // 修复：筛选条件变化时重置_watchHasMore状态
-    if (hasFilterChanged) {
+    if (hasFilterChanged || isFirstCall) {
       _watchHasMore = true;
-      logDebug('筛选条件变化，重置_watchHasMore=true');
+      if (isFirstCall) {
+        logDebug('首次调用watchQuotes，准备加载初始数据');
+      } else {
+        logDebug('筛选条件变化，重置_watchHasMore=true');
+      }
     }
 
-    // 修复：如果有筛选条件变更或未初始化，重新创建流
+    // 修复：如果有筛选条件变更、首次调用或未初始化，重新创建流
     if (hasFilterChanged ||
+        isFirstCall ||
         _quotesController == null ||
         _quotesController!.isClosed) {
       // 安全关闭现有控制器

@@ -76,7 +76,7 @@ jobs:
         
         try {
           # 使用PowerShell的输入流重定向来自动回答证书安装提示
-          $inputData = "n`n"  # 回答 'n' 并添加换行符
+          $inputData = "n" + [Environment]::NewLine  # 回答 'n' 并添加换行符
           $process = Start-Process -FilePath "flutter" -ArgumentList "pub", "run", "msix:create" -NoNewWindow -PassThru -RedirectStandardInput ([System.IO.StringReader]::new($inputData))
           $process.WaitForExit()
           
@@ -120,13 +120,39 @@ jobs:
         Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
         
         # 创建版本信息文件
-        $versionText = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}`n提交: ${{ github.sha }}`n`n使用说明:`n1. 解压到任意文件夹`n2. 双击 thoughtecho.exe 启动应用`n3. 如遇问题请查看 logs 文件夹下的日志文件`n`n注意事项:`n- 首次启动可能需要等待数秒`n- 确保系统已安装Visual C++ Redistributable`n- 建议在解压后将整个文件夹添加到杀毒软件白名单"
+        $versionText = @"
+ThoughtEcho Windows版本信息
+版本: $version
+构建类型: $buildType
+构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Flutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}
+提交: ${{ github.sha }}
+
+使用说明:
+1. 解压到任意文件夹
+2. 双击 thoughtecho.exe 启动应用
+3. 如遇问题请查看 logs 文件夹下的日志文件
+
+注意事项:
+- 首次启动可能需要等待数秒
+- 确保系统已安装Visual C++ Redistributable
+- 建议在解压后将整个文件夹添加到杀毒软件白名单
+"@
         $versionText | Out-File -FilePath "release_temp/VERSION_INFO.txt" -Encoding UTF8
         $versionText | Out-File -FilePath "release_temp/版本信息.txt" -Encoding UTF8
 
         # 创建启动脚本
-        "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause" | Out-File -FilePath "release_temp/LAUNCH_APP.bat" -Encoding Default
-        "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause" | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
+        $batchScript = @"
+@echo off
+echo 正在启动 ThoughtEcho...
+echo 首次启动可能需要等待数秒，请耐心等待
+echo.
+start thoughtecho.exe
+echo 如果应用未正常启动，请检查版本信息.txt中的注意事项
+pause
+"@
+        $batchScript | Out-File -FilePath "release_temp/LAUNCH_APP.bat" -Encoding Default
+        $batchScript | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
         
         Compress-Archive -Path "release_temp/*" -DestinationPath $archiveName -Force
         
