@@ -49,15 +49,11 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     if (_database != null) return _database!;
 
     // 修复：确保数据库工厂已初始化
-    if (!kIsWeb && Platform.isWindows) {
-      try {
-        // 检查是否已初始化，如果没有则初始化
-        if (databaseFactory == databaseFactory) {
-          // 这是一个检查，如果抛出异常说明未初始化
-          await databaseFactory.getDatabasesPath();
-        }
-      } catch (e) {
-        // 如果获取路径失败，说明databaseFactory未初始化
+    // 扩展支持所有需要FFI的非Web平台，不仅仅是Windows
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      // 使用一个更可靠的检查方式来确定是否已初始化
+      // databaseFactoryFfi是FFI工厂的实例，我们可以直接检查是否相等
+      if (databaseFactory != databaseFactoryFfi) {
         AppLogger.w('数据库工厂未初始化，正在初始化...', source: 'AIAnalysisDB');
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
