@@ -5,7 +5,7 @@ msix_config:
   # 应用基本信息
   display_name: "ThoughtEcho"
   publisher_display_name: "ThoughtEcho Team"
-  identity_name: "ThoughtEcho"
+  identity_name: "com.thoughtecho.app"
   
   # 版本信息
   msix_version: 1.0.0.0
@@ -38,7 +38,7 @@ msix_config:
   # 输出文件名
   output_name: "ThoughtEcho-Setup.msix"
   
-  # 签名设置（开发时使用自签名，发布时使用真实证书）
+  # 签名设置（CI环境使用自动生成的测试证书）
   certificate_path: null
   certificate_password: null
   
@@ -50,6 +50,10 @@ msix_config:
   
   # 文件关联
   file_extension: null
+  
+  # CI/CD设置 - 在非交互式环境中自动处理证书
+  auto_install_certificate: false
+  create_certificate: true
   
   # 可视化资产
   visual_elements:

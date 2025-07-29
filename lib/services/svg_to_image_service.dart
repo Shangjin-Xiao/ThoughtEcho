@@ -1,20 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import 'image_cache_service.dart';
-
-/// 日志记录函数
-void logError(String message, {Object? error, String? source}) {
-  if (kDebugMode) {
-    final timestamp = DateTime.now().toString();
-    print('时间: $timestamp');
-    print('级别: ERROR');
-    if (source != null) print('来源: $source');
-    print('消息: $message');
-    if (error != null) print('错误: $error');
-    print('---');
-  }
-}
 
 /// SVG到图片转换服务
 class SvgToImageService {
@@ -51,9 +39,7 @@ class SvgToImageService {
       if (useCache && cacheKey != null) {
         final cachedImage = _cacheService.getCachedImage(cacheKey);
         if (cachedImage != null) {
-          if (kDebugMode) {
-            print('使用缓存图片: $cacheKey');
-          }
+          AppLogger.d('使用缓存图片: $cacheKey', source: 'SvgToImageService');
           return cachedImage;
         }
       }
@@ -83,7 +69,7 @@ class SvgToImageService {
 
       return imageBytes;
     } catch (e) {
-      logError('SVG转换失败: $e', error: e, source: 'SvgToImageService');
+      AppLogger.e('SVG转换失败: $e', error: e, source: 'SvgToImageService');
       // 生成错误提示图片
       return await _generateErrorImage(width, height, format, e.toString());
     }
@@ -173,9 +159,7 @@ class SvgToImageService {
         backgroundColor,
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('SVG渲染失败，使用回退方案: $e');
-      }
+      AppLogger.w('SVG渲染失败，使用回退方案: $e', error: e, source: 'SvgToImageService');
       // 如果SVG渲染失败，使用回退方案
       return await _renderFallbackImage(
         svgContent,

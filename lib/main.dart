@@ -28,8 +28,8 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
+import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/debug_service.dart';
-import 'package:thoughtecho/services/startup_monitor_service.dart';
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
 import 'theme/app_theme.dart';
@@ -107,33 +107,27 @@ Future<void> main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Windows平台启动监控 - 最优先启动
-      if (!kIsWeb && Platform.isWindows) {
-        await StartupMonitorService.startMonitoring();
-        await StartupMonitorService.recordStep('Flutter绑定初始化完成');
-      }
-
-      // Windows平台启动调试服务 - 异步初始化，不阻塞主流程
-      if (!kIsWeb && Platform.isWindows) {
-        // 异步初始化调试服务，不等待完成
-        Future.microtask(() async {
-          try {
-            await WindowsStartupDebugService.initialize();
-            await WindowsStartupDebugService.recordInitStep('调试服务已启动');
-            await WindowsStartupDebugService.createStartupGuide();
-            await WindowsStartupDebugService.recordFFIInfo();
-            await WindowsStartupDebugService.checkWindowsRuntime();
-          } catch (e) {
-            // 静默处理调试服务错误，不影响主流程
-            logError('调试服务初始化失败: $e', error: e, source: 'DebugService');
-          }
-        });
-      } // 初始化日志系统
+      // Windows平台启动调试服务 - 正式版已禁用
+      // if (!kIsWeb && Platform.isWindows) {
+      //   // 异步初始化调试服务，不等待完成
+      //   Future.microtask(() async {
+      //     try {
+      //       await WindowsStartupDebugService.initialize();
+      //       await WindowsStartupDebugService.recordInitStep('调试服务已启动');
+      //       await WindowsStartupDebugService.createStartupGuide();
+      //       await WindowsStartupDebugService.recordFFIInfo();
+      //       await WindowsStartupDebugService.checkWindowsRuntime();
+      //     } catch (e) {
+      //       // 静默处理调试服务错误，不影响主流程
+      //       logError('调试服务初始化失败: $e', error: e, source: 'DebugService');
+      //     }
+      //   });
+      // } 
+      
+      // 初始化日志系统
       AppLogger.initialize();
 
-      if (!kIsWeb && Platform.isWindows) {
-        await StartupMonitorService.recordStep('日志系统初始化完成');
-      } // 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
+      // 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
       PlatformDispatcher.instance.onError = (error, stack) {
         // Windows平台使用简化的错误处理，避免复杂操作导致卡死
         if (!kIsWeb && Platform.isWindows) {
@@ -205,23 +199,23 @@ Future<void> main() async {
       };
       try {
         // 先初始化必要的平台特定的数据库配置
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('开始初始化数据库平台');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('开始初始化数据库平台');
+        // }
         await initializeDatabasePlatform();
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('数据库平台初始化完成');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('数据库平台初始化完成');
+        // }
 
         // 初始化轻量级且必须的服务
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('开始初始化MMKV服务');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('开始初始化MMKV服务');
+        // }
         final mmkvService = MMKVService();
         await mmkvService.init();
-        if (!kIsWeb && Platform.isWindows) {
-          await WindowsStartupDebugService.recordInitStep('MMKV服务初始化完成');
-        }
+        // if (!kIsWeb && Platform.isWindows) {
+        //   await WindowsStartupDebugService.recordInitStep('MMKV服务初始化完成');
+        // }
 
         // 初始化网络服务
         if (!kIsWeb && Platform.isWindows) {
@@ -346,14 +340,7 @@ Future<void> main() async {
               },
             ),
           ),
-        ); // Windows平台记录UI显示完成并停止启动监控
-        if (!kIsWeb && Platform.isWindows) {
-          await StartupMonitorService.recordStep('UI显示完成');
-          // 延迟停止监控，确保后台初始化也被记录
-          Future.delayed(const Duration(seconds: 5), () async {
-            await StartupMonitorService.stopMonitoring();
-          });
-        }
+        );
 
         // 简单预初始化位置服务（异步执行，不阻塞UI）
         Future.microtask(() async {
@@ -564,6 +551,15 @@ Future<void> main() async {
             // 初始化完成，更新状态
             servicesInitialized.value = true;
             logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
+
+            // 启动后台版本检查（静默执行，不影响用户体验）
+            VersionCheckService.backgroundCheckForUpdates(
+              onUpdateAvailable: (versionInfo) {
+                // 这里可以添加更新提示的逻辑，比如显示通知
+                logInfo('检测到新版本: ${versionInfo.latestVersion}', source: 'VersionCheck');
+              },
+              delay: const Duration(seconds: 5), // 延迟5秒执行
+            );
           } catch (e, stackTrace) {
             logError(
               '后台服务初始化失败: $e',
@@ -595,13 +591,6 @@ Future<void> main() async {
 
         // 如果初始化失败，直接运行一个简单的错误应用
         _isEmergencyMode = true;
-        // Windows平台记录启动失败
-        if (Platform.isWindows) {
-          await StartupMonitorService.recordStep('应用启动失败', data: {
-            'error': e.toString(),
-            'emergency_mode': true,
-          });
-        }
 
         runApp(
           EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()),

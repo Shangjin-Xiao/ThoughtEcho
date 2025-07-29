@@ -366,14 +366,14 @@ class DatabaseService extends ChangeNotifier {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {
           await _prefetchInitialQuotes();
+          // 预加载完成后，再次通知监听者确保UI更新
+          logDebug('预加载完成，通知UI更新');
+          notifyListeners();
         } catch (e) {
           logDebug('延迟预加载失败: $e');
+          // 即使预加载失败，也要通知UI，避免永远显示加载状态
+          notifyListeners();
         }
-      });
-
-      // 修复：延迟通知，避免在build期间调用setState
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
       });
     } catch (e) {
       logDebug('数据库初始化失败: $e');
@@ -968,6 +968,12 @@ class DatabaseService extends ChangeNotifier {
       _isLoading = false;
       _watchOffset = 0;
 
+      // 修复：确保流控制器已初始化
+      if (_quotesController == null || _quotesController!.isClosed) {
+        _quotesController = StreamController<List<Quote>>.broadcast();
+        logDebug('预加载时初始化流控制器');
+      }
+
       // 修复：直接查询数据库，绕过getUserQuotes的初始化检查，避免循环依赖
       final quotes = await _directGetQuotes(
         tagIds: null,
@@ -983,21 +989,23 @@ class DatabaseService extends ChangeNotifier {
       _currentQuotes = quotes;
       _watchHasMore = quotes.length >= _watchLimit;
 
-      // 修复：延迟通知，避免在build期间调用setState
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _safeNotifyQuotesStream();
-      });
+      // 修复：立即通知流，确保UI能接收到数据
+      _safeNotifyQuotesStream();
 
-      logDebug('预加载完成，获取到 ${quotes.length} 条笔记，将在下一帧通知UI更新');
+      logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
     } catch (e) {
       logDebug('预加载笔记时出错: $e');
       // 确保状态一致
       _currentQuotes = [];
       _watchHasMore = false;
-      // 即使出错也要通知流，确保UI状态正确，延迟执行避免build期间调用
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _safeNotifyQuotesStream();
-      });
+
+      // 修复：确保流控制器存在
+      if (_quotesController == null || _quotesController!.isClosed) {
+        _quotesController = StreamController<List<Quote>>.broadcast();
+      }
+
+      // 即使出错也要通知流，确保UI状态正确
+      _safeNotifyQuotesStream();
     }
   }
 
@@ -3149,11 +3157,11 @@ class DatabaseService extends ChangeNotifier {
     // 修复：如果数据库未初始化，先返回空流并等待初始化
     if (!_isInitialized) {
       logDebug('数据库尚未初始化，返回空流并等待初始化...');
-      
+
       // 创建一个临时的流控制器
       final tempController = StreamController<List<Quote>>.broadcast();
       tempController.add([]); // 立即发送空列表
-      
+
       // 异步等待初始化完成后重新调用
       Future.microtask(() async {
         try {
@@ -3162,16 +3170,21 @@ class DatabaseService extends ChangeNotifier {
           } else if (!_isInitialized) {
             await init();
           }
-          
-          // 初始化完成后，重新设置流
+
+          // 修复：初始化完成后，通知UI重新订阅
+          logDebug('数据库初始化完成，通知UI重新订阅数据流');
           tempController.close();
-          // 这里不需要重新调用watchQuotes，因为UI会重新订阅
+
+          // 延迟通知监听者，让UI重新调用watchQuotes
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            notifyListeners();
+          });
         } catch (e) {
           logError('等待数据库初始化失败: $e', error: e, source: 'watchQuotes');
           tempController.addError(e);
         }
       });
-      
+
       return tempController.stream;
     }
     // 检查是否有筛选条件改变

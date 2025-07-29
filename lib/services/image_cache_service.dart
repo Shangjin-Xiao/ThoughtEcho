@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 图片缓存服务
 class ImageCacheService {
@@ -145,9 +146,7 @@ class ImageCacheService {
 
   /// 预热缓存（可选）
   Future<void> preloadImages(List<String> svgContents) async {
-    if (kDebugMode) {
-      print('开始预热图片缓存: ${svgContents.length} 个SVG');
-    }
+    AppLogger.i('开始预热图片缓存: ${svgContents.length} 个SVG', source: 'ImageCacheService');
 
     for (int i = 0; i < svgContents.length && i < maxCacheSize; i++) {
       try {
@@ -162,9 +161,7 @@ class ImageCacheService {
         // 这里可以添加预加载逻辑
         // 由于需要异步转换，暂时跳过实际预加载
       } catch (e) {
-        if (kDebugMode) {
-          print('预热缓存失败: $e');
-        }
+        AppLogger.e('预热缓存失败: $e', error: e, source: 'ImageCacheService');
       }
     }
   }
@@ -197,9 +194,7 @@ class ImageCacheService {
         _removeCacheEntry(key);
       }
 
-      if (kDebugMode) {
-        print('智能清理缓存: 移除 ${keysToRemove.length} 个条目');
-      }
+      AppLogger.i('智能清理缓存: 移除 ${keysToRemove.length} 个条目', source: 'ImageCacheService');
     }
   }
 }

@@ -98,6 +98,20 @@ class NoteListViewState extends State<NoteListView> {
     logDebug('搜索框焦点状态: ${_searchFocusNode.hasFocus}');
   }
 
+  /// 数据库服务变化监听器
+  void _onDatabaseServiceChanged() {
+    if (!mounted) return;
+
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    if (db.isInitialized) {
+      logDebug('数据库初始化完成，重新订阅数据流');
+      // 移除监听器，避免重复监听
+      db.removeListener(_onDatabaseServiceChanged);
+      // 重新初始化数据流
+      _initializeDataStream();
+    }
+  }
+
   /// 修复：将数据流初始化分离到独立方法
   void _initializeDataStream() {
     if (!mounted) return; // 确保组件仍然挂载
@@ -106,6 +120,15 @@ class NoteListViewState extends State<NoteListView> {
     _quotesSub?.cancel();
 
     final db = Provider.of<DatabaseService>(context, listen: false);
+
+    // 修复：检查数据库是否已初始化，如果未初始化则等待
+    if (!db.isInitialized) {
+      logDebug('数据库未初始化，等待初始化完成后重新订阅');
+      // 监听数据库服务的变化，当初始化完成时重新订阅
+      db.addListener(_onDatabaseServiceChanged);
+      return;
+    }
+
     _quotesSub = db
         .watchQuotes(
       tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
@@ -350,6 +373,14 @@ class NoteListViewState extends State<NoteListView> {
       _quotesSub?.cancel();
     } catch (e) {
       logDebug('取消订阅时出错: $e');
+    }
+
+    // 修复：清理数据库服务监听器
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      db.removeListener(_onDatabaseServiceChanged);
+    } catch (e) {
+      logDebug('清理数据库服务监听器时出错: $e');
     }
 
     _searchController.dispose();

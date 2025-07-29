@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import 'large_file_manager.dart';
 import 'streaming_file_processor.dart';
 import '../utils/app_logger.dart';
@@ -268,9 +269,7 @@ class MediaFileService {
       }
       return false;
     } catch (e) {
-      if (kDebugMode) {
-        print('删除媒体文件失败: $e');
-      }
+      AppLogger.e('删除媒体文件失败: $e', error: e, source: 'MediaFileService');
       return false;
     }
   }
