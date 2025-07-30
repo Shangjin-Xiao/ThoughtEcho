@@ -1,66 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:refena_flutter/refena_flutter.dart';
-import 'package:common/model/device.dart';
-import 'package:thoughtecho/services/localsend/provider/network/nearby_devices_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/network/server/server_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/network/send_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:common/model/cross_file.dart';
-import 'package:provider/provider.dart';
+import 'package:thoughtecho/services/note_sync_service.dart';
+import 'package:thoughtecho/models/localsend_device.dart';
 
 /// 笔记同步页面
 /// 
 /// 提供设备发现、笔记发送和接收功能的用户界面
-class NoteSyncPage extends ConsumerStatefulWidget {
+class NoteSyncPage extends StatefulWidget {
   const NoteSyncPage({super.key});
 
   @override
-  ConsumerState<NoteSyncPage> createState() => _NoteSyncPageState();
+  State<NoteSyncPage> createState() => _NoteSyncPageState();
 }
 
-class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
+class _NoteSyncPageState extends State<NoteSyncPage> {
   bool _isSending = false;
+  bool _isScanning = false;
+  List<Device> _nearbyDevices = [];
+  NoteSyncService? _syncService;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeSyncService());
+    _initializeSyncService();
   }
 
   Future<void> _initializeSyncService() async {
     try {
-      // Start the server
-      await ref.notifier(serverProvider).startServerFromSettings();
-      // Start listening for devices
-      ref.redux(nearbyDevicesProvider).dispatchAsync(StartMulticastListener());
-      // Trigger a scan
-      ref.redux(nearbyDevicesProvider).dispatch(StartMulticastScan());
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('启动同步服务失败: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    // Stop the server when the page is disposed
-    ref.notifier(serverProvider).stopServer();
-    super.dispose();
-  }
-
-  Future<void> _sendNotesToDevice(Device device) async {
-    setState(() {
-      _isSending = true;
-    });
-
-    try {
-      // Get the services from Provider context
+      // Get services from Provider
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
       final settingsService = Provider.of<SettingsService>(context, listen: false);
       final aiAnalysisDbService = Provider.of<AIAnalysisDatabaseService>(context, listen: false);
@@ -72,23 +43,68 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
         aiAnalysisDbService: aiAnalysisDbService,
       );
       
-      // Create a temporary backup file
-      final backupFilePath = await backupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: (current, total) {
-          // You can add progress UI here if needed
-        },
+      // Initialize the sync service
+      _syncService = NoteSyncService(
+        backupService: backupService,
+        databaseService: databaseService,
+        settingsService: settingsService,
+        aiAnalysisDbService: aiAnalysisDbService,
       );
       
-      final backupFile = CrossFile(backupFilePath);
+      await _syncService!.initialize();
+      await _syncService!.startServer();
+      
+      // Start scanning for devices
+      _startDeviceScan();
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('启动同步服务失败: $e')),
+        );
+      }
+    }
+  }
 
-      // Use the send_provider to send the file
-      final sendNotifier = ref.read(sendProvider.notifier);
-      await sendNotifier.startSession(
-        target: device,
-        files: [backupFile],
-        background: false,
-      );
+  Future<void> _startDeviceScan() async {
+    if (_syncService == null) return;
+    
+    setState(() {
+      _isScanning = true;
+    });
+
+    try {
+      final devices = await _syncService!.discoverNearbyDevices();
+      setState(() {
+        _nearbyDevices = devices;
+        _isScanning = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isScanning = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('搜索设备失败: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _syncService?.stopServer();
+    super.dispose();
+  }
+
+  Future<void> _sendNotesToDevice(Device device) async {
+    setState(() {
+      _isSending = true;
+    });
+
+    try {
+      // Send notes using the sync service
+      await _syncService!.sendNotesToDevice(device);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -112,18 +128,13 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
 
   @override
   Widget build(BuildContext context) {
-    final nearbyDevicesState = ref.watch(nearbyDevicesProvider);
-    final nearbyDevices = nearbyDevicesState.devices.values.toList();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('笔记同步'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: nearbyDevicesState.runningIps.isNotEmpty
-                ? null
-                : () => ref.redux(nearbyDevicesProvider).dispatch(StartMulticastScan()),
+            onPressed: _isScanning ? null : _startDeviceScan,
           ),
         ],
       ),
@@ -136,7 +147,7 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Row(
               children: [
-                if (nearbyDevicesState.runningIps.isNotEmpty) ...[
+                if (_isScanning) ...[
                   const SizedBox(
                     width: 16,
                     height: 16,
@@ -150,7 +161,7 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
-                  Text('发现 ${nearbyDevices.length} 台设备'),
+                  Text('发现 ${_nearbyDevices.length} 台设备'),
                 ],
               ],
             ),
@@ -158,7 +169,7 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
 
           // 设备列表
           Expanded(
-            child: nearbyDevices.isEmpty
+            child: _nearbyDevices.isEmpty
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -182,9 +193,9 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: nearbyDevices.length,
+                    itemCount: _nearbyDevices.length,
                     itemBuilder: (context, index) {
-                      final device = nearbyDevices[index];
+                      final device = _nearbyDevices[index];
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
