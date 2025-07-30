@@ -1,4 +1,4 @@
-import 'package:thoughtecho/model/file_type.dart';
+import 'package:common/model/file_type.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:intl/intl.dart';
 import 'package:thoughtecho/gen/strings.g.dart';

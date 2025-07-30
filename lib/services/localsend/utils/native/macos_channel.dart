@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:thoughtecho/gen/strings.g.dart';
-import 'package:thoughtecho/util/native/taskbar_helper.dart';
-import 'package:thoughtecho/util/native/tray_helper.dart';
+import 'package:common/util/native/taskbar_helper.dart';
+import 'package:common/util/native/tray_helper.dart';
 
 const _methodChannel = MethodChannel('main-delegate-channel');
 

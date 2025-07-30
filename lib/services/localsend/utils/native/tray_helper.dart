@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/gen/assets.gen.dart';
 import 'package:thoughtecho/gen/strings.g.dart';
 import 'package:thoughtecho/provider/animation_provider.dart';
-import 'package:thoughtecho/util/native/platform_check.dart';
+import 'package:common/util/native/platform_check.dart';
 import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:tray_manager/tray_manager.dart' as tm;

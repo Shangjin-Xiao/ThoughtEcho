@@ -3,11 +3,11 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:thoughtecho/util/logger.dart';
+import 'package:common/util/logger.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:thoughtecho/util/file_path_helper.dart';
-import 'package:thoughtecho/util/native/platform_check.dart';
+import 'package:common/util/file_path_helper.dart';
+import 'package:common/util/native/platform_check.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_foundation/path_provider_foundation.dart';

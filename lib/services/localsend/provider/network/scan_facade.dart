@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:thoughtecho/util/sleep.dart';
+import 'package:common/util/sleep.dart';
 import 'package:thoughtecho/pages/home_page.dart';
 import 'package:thoughtecho/pages/home_page_controller.dart';
 import 'package:thoughtecho/provider/favorites_provider.dart';

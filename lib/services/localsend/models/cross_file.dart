@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:thoughtecho/model/file_type.dart';
+import 'package:common/model/file_type.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 

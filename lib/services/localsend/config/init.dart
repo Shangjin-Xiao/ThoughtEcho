@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'package:thoughtecho/common/api_route_builder.dart';
-import 'package:thoughtecho/common/constants.dart';
-import 'package:thoughtecho/common/isolate.dart';
-import 'package:thoughtecho/common/model/dto/file_dto.dart';
-import 'package:thoughtecho/common/model/dto/multicast_dto.dart';
-import 'package:thoughtecho/common/util/logger.dart';
+import 'package:common/api_route_builder.dart';
+import 'package:common/constants.dart';
+import 'package:common/isolate.dart';
+import 'package:common/model/dto/file_dto.dart';
+import 'package:common/model/dto/multicast_dto.dart';
+import 'package:common/util/logger.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';

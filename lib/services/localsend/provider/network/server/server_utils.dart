@@ -1,4 +1,4 @@
-import 'package:thoughtecho/model/state/server/server_state.dart';
+import 'package:common/model/state/server/server_state.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 /// Having this class allows us to have one parameter to access all relevant server methods.

@@ -1,6 +1,6 @@
 import 'package:dart_mappable/dart_mappable.dart';
-import 'package:thoughtecho/model/state/send/web/web_send_file.dart';
-import 'package:thoughtecho/model/state/send/web/web_send_session.dart';
+import 'package:common/model/state/send/web/web_send_file.dart';
+import 'package:common/model/state/send/web/web_send_session.dart';
 
 part 'web_send_state.mapper.dart';
 

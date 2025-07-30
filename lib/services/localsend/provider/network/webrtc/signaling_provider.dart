@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:thoughtecho/constants.dart';
-import 'package:thoughtecho/model/device.dart';
+import 'package:common/model/device.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:thoughtecho/provider/device_info_provider.dart';
 import 'package:thoughtecho/provider/favorites_provider.dart';

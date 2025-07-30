@@ -1,11 +1,11 @@
 import 'package:collection/collection.dart';
-import 'package:thoughtecho/isolate.dart';
-import 'package:thoughtecho/model/device.dart';
+import 'package:common/isolate.dart';
+import 'package:common/model/device.dart';
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/gen/strings.g.dart';
-import 'package:thoughtecho/model/persistence/color_mode.dart';
-import 'package:thoughtecho/model/send_mode.dart';
-import 'package:thoughtecho/model/state/settings_state.dart';
+import 'package:common/model/persistence/color_mode.dart';
+import 'package:common/model/send_mode.dart';
+import 'package:common/model/state/settings_state.dart';
 import 'package:thoughtecho/provider/persistence_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 

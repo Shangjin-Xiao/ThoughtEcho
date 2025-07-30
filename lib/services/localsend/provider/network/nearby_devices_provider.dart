@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
-import 'package:thoughtecho/isolate.dart';
-import 'package:thoughtecho/model/device.dart';
-import 'package:thoughtecho/model/persistence/favorite_device.dart';
-import 'package:thoughtecho/model/state/nearby_devices_state.dart';
+import 'package:common/isolate.dart';
+import 'package:common/model/device.dart';
+import 'package:common/model/persistence/favorite_device.dart';
+import 'package:common/model/state/nearby_devices_state.dart';
 import 'package:thoughtecho/provider/favorites_provider.dart';
 import 'package:thoughtecho/provider/logging/discovery_logs_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';

@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:thoughtecho/util/sleep.dart';
-import 'package:thoughtecho/util/task_runner.dart';
+import 'package:common/util/sleep.dart';
+import 'package:common/util/task_runner.dart';
 
 void main() {
   group('TaskRunner', () {

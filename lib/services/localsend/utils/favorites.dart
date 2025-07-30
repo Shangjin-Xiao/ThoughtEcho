@@ -1,6 +1,6 @@
 import 'package:collection/collection.dart';
-import 'package:thoughtecho/model/device.dart';
-import 'package:thoughtecho/model/persistence/favorite_device.dart';
+import 'package:common/model/device.dart';
+import 'package:common/model/persistence/favorite_device.dart';
 
 extension FavoriteDevicesExt on Iterable<FavoriteDevice> {
   /// Returns the favorite device with the given [device] or null if not found.

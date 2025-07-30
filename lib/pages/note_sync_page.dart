@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:refena_flutter/refena_flutter.dart';
-import 'package:thoughtecho/common/model/device.dart';
+import 'package:common/model/device.dart';
 import 'package:thoughtecho/services/localsend/provider/network/nearby_devices_provider.dart';
 import 'package:thoughtecho/services/localsend/provider/network/server/server_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/selection/send_provider.dart';
-import 'package:thoughtecho/services/backup_restore_service.dart'; // 假设这是您的备份服务
+import 'package:thoughtecho/services/localsend/provider/network/send_provider.dart';
+import 'package:thoughtecho/services/backup_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:common/model/cross_file.dart';
+import 'package:provider/provider.dart';
 
 /// 笔记同步页面
 /// 
@@ -22,7 +27,7 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addPostFrameCallback((_) => _initializeSyncService());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeSyncService());
   }
 
   Future<void> _initializeSyncService() async {
@@ -55,22 +60,35 @@ class _NoteSyncPageState extends ConsumerState<NoteSyncPage> {
     });
 
     try {
-      // 1. Use the backup service to create a temporary file
-      final backupService = BackupRestoreService(); // 您可能需要通过依赖注入获取此服务
-      final backupFile = await backupService.createBackupFile(); // 假设此方法返回一个File对象
+      // Get the services from Provider context
+      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final aiAnalysisDbService = Provider.of<AIAnalysisDatabaseService>(context, listen: false);
+      
+      // Create backup service
+      final backupService = BackupService(
+        databaseService: databaseService,
+        settingsService: settingsService,
+        aiAnalysisDbService: aiAnalysisDbService,
+      );
+      
+      // Create a temporary backup file
+      final backupFilePath = await backupService.exportAllData(
+        includeMediaFiles: true,
+        onProgress: (current, total) {
+          // You can add progress UI here if needed
+        },
+      );
+      
+      final backupFile = CrossFile(backupFilePath);
 
-      if (backupFile == null) {
-        throw Exception('创建备份文件失败');
-      }
-
-      // 2. Use the send_provider to send the file
-      await ref.redux(sendProvider).dispatchAsync(
-            SendAction(
-              target: device,
-              files: [backupFile],
-              showInHistory: true,
-            ),
-          );
+      // Use the send_provider to send the file
+      final sendNotifier = ref.read(sendProvider.notifier);
+      await sendNotifier.startSession(
+        target: device,
+        files: [backupFile],
+        background: false,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

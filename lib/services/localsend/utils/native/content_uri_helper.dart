@@ -1,4 +1,4 @@
-import 'package:thoughtecho/isolate.dart';
+import 'package:common/isolate.dart';
 import 'package:flutter/services.dart';
 import 'package:uri_content/uri_content.dart';
 

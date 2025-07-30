@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:thoughtecho/model/file_type.dart';
+import 'package:common/model/file_type.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:thoughtecho/model/cross_file.dart';
-import 'package:thoughtecho/util/file_path_helper.dart';
-import 'package:thoughtecho/util/native/channel/android_channel.dart' as android_channel;
+import 'package:common/model/cross_file.dart';
+import 'package:common/util/file_path_helper.dart';
+import 'package:common/util/native/channel/android_channel.dart' as android_channel;
 import 'package:share_handler/share_handler.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 

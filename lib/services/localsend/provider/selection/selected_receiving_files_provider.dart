@@ -1,6 +1,6 @@
 import 'package:collection/collection.dart';
-import 'package:thoughtecho/model/dto/file_dto.dart';
-import 'package:thoughtecho/util/file_path_helper.dart';
+import 'package:common/model/dto/file_dto.dart';
+import 'package:common/util/file_path_helper.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:uuid/uuid.dart';
 

@@ -1,7 +1,7 @@
 import 'package:dart_mappable/dart_mappable.dart';
-import 'package:thoughtecho/model/state/send/web/web_send_state.dart';
-import 'package:thoughtecho/model/state/server/receive_session_state.dart';
-import 'package:thoughtecho/util/simple_server.dart';
+import 'package:common/model/state/send/web/web_send_state.dart';
+import 'package:common/model/state/server/receive_session_state.dart';
+import 'package:common/util/simple_server.dart';
 
 part 'server_state.mapper.dart';
 

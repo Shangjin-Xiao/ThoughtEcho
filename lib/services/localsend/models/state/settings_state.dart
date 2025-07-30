@@ -1,9 +1,9 @@
-import 'package:thoughtecho/model/device.dart';
+import 'package:common/model/device.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/gen/strings.g.dart';
-import 'package:thoughtecho/model/persistence/color_mode.dart';
-import 'package:thoughtecho/model/send_mode.dart';
+import 'package:common/model/persistence/color_mode.dart';
+import 'package:common/model/send_mode.dart';
 
 part 'settings_state.mapper.dart';
 

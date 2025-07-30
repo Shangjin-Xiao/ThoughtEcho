@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:thoughtecho/util/network_interfaces.dart';
+import 'package:common/util/network_interfaces.dart';
 
 void main() {
   test('Should allow any IP', () {

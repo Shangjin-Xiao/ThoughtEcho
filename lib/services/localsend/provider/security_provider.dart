@@ -1,7 +1,7 @@
-import 'package:thoughtecho/isolate.dart';
-import 'package:thoughtecho/model/stored_security_context.dart';
+import 'package:common/isolate.dart';
+import 'package:common/model/stored_security_context.dart';
 import 'package:thoughtecho/provider/persistence_provider.dart';
-import 'package:thoughtecho/util/security_helper.dart';
+import 'package:common/util/security_helper.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 /// This provider manages the [StoredSecurityContext].
