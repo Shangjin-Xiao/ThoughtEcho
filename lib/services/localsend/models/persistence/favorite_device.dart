@@ -1,47 +1,54 @@
-import 'package:dart_mappable/dart_mappable.dart';
-import 'package:uuid/uuid.dart';
+/// Model for favorite device persistence
 
-part 'favorite_device.mapper.dart';
-
-const _uuid = Uuid();
-
-@MappableClass()
-class FavoriteDevice with FavoriteDeviceMappable {
+class FavoriteDevice {
   final String id;
-  final String fingerprint;
+  final String name;
   final String ip;
   final int port;
-  final String alias;
-
-  /// If true, the alias was set by the user.
-  /// If false, the alias is derived from the original device alias and
-  /// should be updated when the original device alias changes.
-  final bool customAlias;
+  final bool https;
+  final String? fingerprint;
 
   const FavoriteDevice({
     required this.id,
-    required this.fingerprint,
+    required this.name,
     required this.ip,
     required this.port,
-    required this.alias,
-    this.customAlias = false,
+    required this.https,
+    this.fingerprint,
   });
 
-  factory FavoriteDevice.fromValues({
-    required String fingerprint,
-    required String ip,
-    required int port,
-    required String alias,
-  }) {
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'ip': ip,
+      'port': port,
+      'https': https,
+      'fingerprint': fingerprint,
+    };
+  }
+
+  factory FavoriteDevice.fromJson(Map<String, dynamic> json) {
     return FavoriteDevice(
-      id: _uuid.v1(),
-      fingerprint: fingerprint,
-      ip: ip,
-      port: port,
-      alias: alias,
-      customAlias: false,
+      id: json['id'] as String,
+      name: json['name'] as String,
+      ip: json['ip'] as String,
+      port: json['port'] as int,
+      https: json['https'] as bool,
+      fingerprint: json['fingerprint'] as String?,
     );
   }
 
-  static const fromJson = FavoriteDeviceMapper.fromJson;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FavoriteDevice &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() => 'FavoriteDevice(id: $id, name: $name, ip: $ip:$port)';
 }

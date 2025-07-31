@@ -1,61 +1,25 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
+/// Platform detection utilities for LocalSend
 
-bool checkPlatform(List<TargetPlatform> platforms, {bool web = false}) {
-  if (web && kIsWeb) {
-    return true;
+import 'dart:io';
+
+class PlatformCheck {
+  static bool get isAndroid => Platform.isAndroid;
+  static bool get isIOS => Platform.isIOS;
+  static bool get isLinux => Platform.isLinux;
+  static bool get isMacOS => Platform.isMacOS;
+  static bool get isWindows => Platform.isWindows;
+  static bool get isFuchsia => Platform.isFuchsia;
+  
+  static bool get isMobile => isAndroid || isIOS;
+  static bool get isDesktop => isLinux || isMacOS || isWindows;
+  
+  static String get platformName {
+    if (isAndroid) return 'Android';
+    if (isIOS) return 'iOS';
+    if (isLinux) return 'Linux';
+    if (isMacOS) return 'macOS';
+    if (isWindows) return 'Windows';
+    if (isFuchsia) return 'Fuchsia';
+    return 'Unknown';
   }
-  return platforms.contains(defaultTargetPlatform);
-}
-
-bool checkPlatformIsNot(List<TargetPlatform> platforms, {bool web = false}) {
-  return !checkPlatform(platforms, web: web);
-}
-
-/// This platform runs on a "traditional" computer
-bool checkPlatformIsDesktop() {
-  return checkPlatform([TargetPlatform.linux, TargetPlatform.windows, TargetPlatform.macOS]);
-}
-
-/// This platform supports tray
-bool checkPlatformHasTray() {
-  return checkPlatform([TargetPlatform.windows, TargetPlatform.macOS, TargetPlatform.linux]);
-}
-
-/// This platform can receive share intents
-bool checkPlatformCanReceiveShareIntent() {
-  return checkPlatform([TargetPlatform.android, TargetPlatform.iOS]);
-}
-
-/// This platform can select folders
-bool checkPlatformWithFolderSelect() {
-  return checkPlatform([TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.linux, TargetPlatform.windows, TargetPlatform.macOS]);
-}
-
-/// This platform has a gallery
-bool checkPlatformWithGallery() {
-  return checkPlatform([TargetPlatform.android, TargetPlatform.iOS]);
-}
-
-/// This platform has access to file system
-/// On android, do not allow to change
-bool checkPlatformWithFileSystem() {
-  return checkPlatform([TargetPlatform.linux, TargetPlatform.windows, TargetPlatform.android, TargetPlatform.macOS]);
-}
-
-/// Convenience function to check if the app is not running on a Linux device with the Wayland display manager
-bool checkPlatformIsNotWaylandDesktop() {
-  if (checkPlatform([TargetPlatform.linux])) {
-    if (Platform.environment['XDG_SESSION_TYPE'] == 'wayland') {
-      return false;
-    } else {
-      return true;
-    }
-  }
-  return true;
-}
-
-/// This platform supports payment (in-app purchase)
-bool checkPlatformSupportPayment() {
-  return checkPlatform([TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.macOS]);
 }

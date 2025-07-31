@@ -1,7 +1,7 @@
-import 'package:thoughtecho/services/localsend/provider/logging/http_logs_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/security_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/settings_provider.dart';
-import 'package:thoughtecho/services/localsend/utils/rhttp.dart';
+import '../provider/logging/http_logs_provider.dart';
+import '../provider/security_provider.dart';
+import '../provider/settings_provider.dart';
+import '../utils/rhttp.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:rhttp/rhttp.dart';
 

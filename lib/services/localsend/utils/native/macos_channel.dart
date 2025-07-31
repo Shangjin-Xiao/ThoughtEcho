@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:thoughtecho/gen/strings.g.dart';
+import '../../../gen/strings.g.dart';
 import 'package:common/util/native/taskbar_helper.dart';
 import 'package:common/util/native/tray_helper.dart';
 

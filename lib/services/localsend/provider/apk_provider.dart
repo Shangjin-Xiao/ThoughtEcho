@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:device_apps/device_apps.dart';
-import 'package:thoughtecho/services/localsend/provider/param/apk_provider_param.dart';
-import 'package:thoughtecho/services/localsend/provider/param/cached_apk_provider_param.dart';
+import '../provider/param/apk_provider_param.dart';
+import '../provider/param/cached_apk_provider_param.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 final apkSearchParamProvider = StateProvider<ApkProviderParam>(

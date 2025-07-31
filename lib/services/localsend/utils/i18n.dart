@@ -1,4 +1,4 @@
-import 'package:thoughtecho/gen/strings.g.dart';
+import '../../gen/strings.g.dart';
 
 Future<void> initI18n() async {
   // Register default plural resolver

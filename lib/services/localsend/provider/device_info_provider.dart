@@ -3,10 +3,10 @@ import 'package:common/constants.dart';
 import 'package:common/isolate.dart';
 import 'package:common/model/device.dart';
 import 'package:common/model/device_info_result.dart';
-import 'package:thoughtecho/services/localsend/provider/local_ip_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/network/server/server_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/security_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/settings_provider.dart';
+import '../provider/local_ip_provider.dart';
+import '../provider/network/server/server_provider.dart';
+import '../provider/security_provider.dart';
+import '../provider/settings_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 final deviceRawInfoProvider = Provider<DeviceInfoResult>((ref) {

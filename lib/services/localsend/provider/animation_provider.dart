@@ -1,6 +1,6 @@
 import 'package:flutter/scheduler.dart';
-import 'package:thoughtecho/services/localsend/provider/settings_provider.dart';
-import 'package:thoughtecho/services/localsend/utils/native/platform_check.dart';
+import '../provider/settings_provider.dart';
+import '../utils/native/platform_check.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
 

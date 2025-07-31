@@ -2,11 +2,11 @@ import 'package:collection/collection.dart';
 import 'package:common/isolate.dart';
 import 'package:common/model/device.dart';
 import 'package:flutter/material.dart';
-import 'package:thoughtecho/gen/strings.g.dart';
+import '../../gen/strings.g.dart';
 import 'package:common/model/persistence/color_mode.dart';
 import 'package:common/model/send_mode.dart';
 import 'package:common/model/state/settings_state.dart';
-import 'package:thoughtecho/provider/persistence_provider.dart';
+import './persistence_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 final _listEq = const ListEquality().equals;

@@ -1,6 +1,6 @@
 import 'package:common/model/file_type.dart';
 import 'package:common/model/persistence/receive_history_entry.dart';
-import 'package:thoughtecho/provider/persistence_provider.dart';
+import './persistence_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 const _maxHistoryEntries = 30;

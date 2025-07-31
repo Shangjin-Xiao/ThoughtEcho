@@ -1,5 +1,5 @@
-import 'package:thoughtecho/services/localsend/models/persistence/favorite_device.dart';
-import 'package:thoughtecho/services/localsend/provider/persistence_provider.dart';
+import '../models/persistence/favorite_device.dart';
+import '../provider/persistence_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 /// This provider stores the list of favorite devices.
