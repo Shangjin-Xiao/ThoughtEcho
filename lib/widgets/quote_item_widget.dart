@@ -18,6 +18,7 @@ class QuoteItemWidget extends StatelessWidget {
   final Function() onDelete;
   final Function() onAskAI;
   final Function()? onGenerateCard;
+  final Function()? onLocalSync;
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
@@ -32,6 +33,7 @@ class QuoteItemWidget extends StatelessWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
+    this.onLocalSync,
     this.tagBuilder,
   });
 
@@ -399,6 +401,8 @@ class QuoteItemWidget extends StatelessWidget {
                         onEdit();
                       } else if (value == 'generate_card') {
                         onGenerateCard?.call();
+                      } else if (value == 'local_sync') {
+                        onLocalSync?.call();
                       } else if (value == 'delete') {
                         onDelete();
                       }
@@ -441,6 +445,20 @@ class QuoteItemWidget extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               const Text('生成卡片分享'),
+                            ],
+                          ),
+                        ),
+                      if (onLocalSync != null)
+                        PopupMenuItem<String>(
+                          value: 'local_sync',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.wifi,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('局域网同步'),
                             ],
                           ),
                         ),

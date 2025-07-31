@@ -29,6 +29,8 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
+import 'package:thoughtecho/services/localsend_service.dart';
+import 'package:thoughtecho/services/media_file_service.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -265,6 +267,8 @@ Future<void> main() async {
         final clipboardService = ClipboardService(); // 创建统一日志服务
         final unifiedLogService = UnifiedLogService.instance;
         final aiAnalysisDbService = AIAnalysisDatabaseService();
+        final mediaFileService = MediaFileService();
+        final localSendService = LocalSendService.instance;
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
@@ -287,6 +291,8 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
+              ChangeNotifierProvider(create: (_) => mediaFileService),
+              ChangeNotifierProvider(create: (_) => localSendService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
               Provider.value(
                 value: mmkvService,
@@ -536,6 +542,27 @@ Future<void> main() async {
             } catch (e) {
               logError('媒体清理服务初始化失败: $e', error: e, source: 'BackgroundInit');
               // 媒体清理服务初始化失败不影响主要功能，继续执行
+            }
+
+            // 初始化媒体文件服务
+            try {
+              await mediaFileService.initialize();
+              logInfo('媒体文件服务初始化完成', source: 'BackgroundInit');
+            } catch (e) {
+              logError('媒体文件服务初始化失败: $e', error: e, source: 'BackgroundInit');
+              // 媒体文件服务初始化失败不影响主要功能，继续执行
+            }
+
+            // 初始化LocalSend服务
+            try {
+              await localSendService.initialize(
+                databaseService: databaseService,
+                mediaFileService: mediaFileService,
+              );
+              logInfo('LocalSend服务初始化完成', source: 'BackgroundInit');
+            } catch (e) {
+              logError('LocalSend服务初始化失败: $e', error: e, source: 'BackgroundInit');
+              // LocalSend服务初始化失败不影响主要功能，继续执行
             }
 
             // 初始化完成，更新状态

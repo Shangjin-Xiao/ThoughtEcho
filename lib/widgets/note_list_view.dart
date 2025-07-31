@@ -32,6 +32,7 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
   final Function(Quote)? onGenerateCard;
+  final Function(Quote)? onLocalSync;
   final bool isLoadingTags; // 新增标签加载状态参数
   final List<String> selectedWeathers; // 新增天气筛选参数
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
@@ -51,6 +52,7 @@ class NoteListView extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
+    this.onLocalSync,
     this.isLoadingTags = false, // 默认为false
     this.selectedWeathers = const [],
     this.selectedDayPeriods = const [],
@@ -552,6 +554,9 @@ class NoteListViewState extends State<NoteListView> {
               onAskAI: () => widget.onAskAI(quote),
               onGenerateCard: widget.onGenerateCard != null
                   ? () => widget.onGenerateCard!(quote)
+                  : null,
+              onLocalSync: widget.onLocalSync != null
+                  ? () => widget.onLocalSync!(quote)
                   : null,
               tagBuilder: (tag) {
                 return Container(

@@ -7,6 +7,7 @@ import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
+import '../services/localsend_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -16,6 +17,7 @@ import '../widgets/add_note_dialog.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import 'note_sync_page.dart';
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
@@ -686,6 +688,18 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  // 显示局域网同步页面并预选该笔记
+  void _showLocalSyncPage(Quote quote) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const NoteSyncPage(),
+      ),
+    );
+    
+    // 可以在这里添加预选该笔记的逻辑
+    logInfo('准备同步笔记: ${quote.content.substring(0, 30)}...', source: 'HomePage');
+  }
+
   // 生成AI卡片
   void _generateAICard(Quote quote) async {
     if (_aiCardService == null) {
@@ -1231,6 +1245,7 @@ class _HomePageState extends State<HomePage>
                 onDelete: _showDeleteConfirmDialog,
                 onAskAI: _showAIQuestionDialog,
                 onGenerateCard: _generateAICard,
+                onLocalSync: _showLocalSyncPage,
                 isLoadingTags: _isLoadingTags, // 传递标签加载状态
                 selectedWeathers: _selectedWeathers,
                 selectedDayPeriods: _selectedDayPeriods,

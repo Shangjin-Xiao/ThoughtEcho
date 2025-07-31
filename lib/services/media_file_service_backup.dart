@@ -10,60 +10,14 @@ import 'streaming_file_processor.dart';
 
 /// 媒体文件管理服务
 /// 优化版本：支持文件压缩、流式处理和内存优化
-class MediaFileService extends ChangeNotifier {
+class MediaFileService {
   static const String _mediaFolder = 'media';
   static const String _imagesFolder = 'images';
   static const String _videosFolder = 'videos';
   static const String _audiosFolder = 'audios';
 
-  bool _isInitialized = false;
-  bool get isInitialized => _isInitialized;
-
-  /// 初始化服务
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-    
-    try {
-      // 确保媒体目录存在
-      await _getMediaDirectory(_imagesFolder);
-      await _getMediaDirectory(_videosFolder);
-      await _getMediaDirectory(_audiosFolder);
-      
-      _isInitialized = true;
-      notifyListeners();
-      
-      logInfo('MediaFileService 初始化完成', source: 'MediaFileService');
-    } catch (e) {
-      logError('MediaFileService 初始化失败: $e', error: e, source: 'MediaFileService');
-      rethrow;
-    }
-  }
-
-  /// 保存接收的媒体文件
-  Future<String> saveReceivedMediaFile(File mediaFile) async {
-    final fileName = path.basename(mediaFile.path);
-    final extension = path.extension(fileName).toLowerCase();
-    
-    Directory targetDir;
-    if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(extension)) {
-      targetDir = await _getMediaDirectory(_imagesFolder);
-    } else if (['.mp4', '.mov', '.avi', '.mkv'].contains(extension)) {
-      targetDir = await _getMediaDirectory(_videosFolder);
-    } else if (['.mp3', '.wav', '.m4a', '.aac'].contains(extension)) {
-      targetDir = await _getMediaDirectory(_audiosFolder);
-    } else {
-      targetDir = await _getMediaDirectory(_imagesFolder); // 默认存储到图片目录
-    }
-    
-    final targetPath = path.join(targetDir.path, '${DateTime.now().millisecondsSinceEpoch}_$fileName');
-    await mediaFile.copy(targetPath);
-    
-    notifyListeners();
-    return targetPath;
-  }
-
   /// 获取媒体文件目录
-  Future<Directory> _getMediaDirectory(String subfolder) async {
+  static Future<Directory> _getMediaDirectory(String subfolder) async {
     final appDir = await getApplicationDocumentsDirectory();
     final mediaDir = Directory(path.join(appDir.path, _mediaFolder, subfolder));
     if (!await mediaDir.exists()) {
@@ -73,7 +27,7 @@ class MediaFileService extends ChangeNotifier {
   }
 
   /// 流式保存图片（使用新的流式处理器，彻底防止OOM）
-  Future<String?> saveImage(
+  static Future<String?> saveImage(
     String sourcePath, {
     Function(double progress)? onProgress,
     CancelToken? cancelToken,
