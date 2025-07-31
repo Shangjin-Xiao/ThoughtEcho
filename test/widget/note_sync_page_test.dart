@@ -81,9 +81,9 @@ void main() {
           deviceModel: 'Test Model',
           deviceType: DeviceType.mobile,
           download: true,
-          discoveryMethods: {const MulticastDiscovery()},
+          discoveryMethods: {MulticastDiscovery()},
         ),
-        Device(
+        const Device(
           signalingId: null,
           ip: '192.168.1.101',
           version: '2.1',
@@ -94,7 +94,7 @@ void main() {
           deviceModel: 'Test Model',
           deviceType: DeviceType.desktop,
           download: true,
-          discoveryMethods: {const MulticastDiscovery()},
+          discoveryMethods: {MulticastDiscovery()},
         ),
       ];
 
@@ -182,7 +182,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {const MulticastDiscovery()},
+        discoveryMethods: {MulticastDiscovery()},
       );
 
       when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => [testDevice]);

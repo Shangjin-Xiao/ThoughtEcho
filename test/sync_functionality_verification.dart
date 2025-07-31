@@ -24,7 +24,7 @@ void main() {
 
     test('同步状态转换逻辑', () {
       // 验证状态转换的合理性
-      final validTransitions = {
+      const validTransitions = {
         SyncStatus.idle: [SyncStatus.packaging, SyncStatus.receiving],
         SyncStatus.packaging: [SyncStatus.sending, SyncStatus.failed],
         SyncStatus.sending: [SyncStatus.completed, SyncStatus.failed],
@@ -44,9 +44,9 @@ void main() {
     test('网络协议常量验证', () {
       // 验证协议常量的正确性
       expect(protocolVersion, equals('2.1'));
-      expect(defaultPort, equals(53317));
+      expect(defaultPort, equals(53318));
       expect(defaultDiscoveryTimeout, equals(500));
-      expect(defaultMulticastGroup, equals('224.0.0.167'));
+      expect(defaultMulticastGroup, equals('224.0.0.168'));
     });
 
     test('API路径常量验证', () {
@@ -91,7 +91,7 @@ void main() {
 
     test('文件传输DTO序列化一致性', () {
       // 创建测试数据
-      final fileInfo = FileInfo(
+      const fileInfo = FileInfo(
         id: 'test-file-123',
         fileName: 'test_backup.zip',
         size: 1024 * 1024, // 1MB
@@ -111,7 +111,7 @@ void main() {
 
     test('设备信息DTO序列化一致性', () {
       // 创建测试设备信息
-      final deviceInfo = DeviceInfo(
+      const deviceInfo = DeviceInfo(
         alias: 'ThoughtEcho测试设备',
         version: '2.1',
         deviceModel: 'Test Device Model',
@@ -139,7 +139,7 @@ void main() {
 
     test('网络设备URL生成', () {
       // 创建测试网络设备
-      final deviceInfo = DeviceInfo(
+      const deviceInfo = DeviceInfo(
         alias: 'Test Device',
         version: '2.1',
         deviceModel: 'Test Model',
@@ -150,7 +150,7 @@ void main() {
         download: true,
       );
 
-      final networkDevice = NetworkDevice(
+      const networkDevice = NetworkDevice(
         ip: '192.168.1.100',
         port: 53317,
         info: deviceInfo,
@@ -161,7 +161,7 @@ void main() {
       expect(networkDevice.baseUrl, equals('http://192.168.1.100:53317'));
 
       // 测试HTTPS设备
-      final httpsDevice = NetworkDevice(
+      const httpsDevice = NetworkDevice(
         ip: '192.168.1.101',
         port: 53318,
         info: deviceInfo,
@@ -173,13 +173,13 @@ void main() {
 
     test('传输会话状态管理', () {
       // 创建初始会话
-      final fileInfo = FileInfo(
+      const fileInfo = FileInfo(
         id: 'session-file',
         fileName: 'session_test.zip',
         size: 2048,
       );
 
-      final session = TransferSession(
+      const session = TransferSession(
         sessionId: 'test-session-123',
         remoteDeviceId: 'remote-device-456',
         status: TransferStatus.waiting,
