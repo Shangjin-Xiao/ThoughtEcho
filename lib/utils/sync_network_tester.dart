@@ -11,22 +11,70 @@ class SyncNetworkTester {
   static Future<NetworkTestResult> testMulticastDiscovery() async {
     final result = NetworkTestResult('UDP组播发现测试');
     RawDatagramSocket? socket;
+    List<RawDatagramSocket> testSockets = [];
 
     try {
       logDebug('开始测试UDP组播发现...');
-      // 1. 绑定任意端口
-      socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-      result.addStep('UDP套接字绑定', true, '成功绑定到端口 ${socket.port}');
+      
+      // 测试多个可能的端口
+      final portsToTest = [53318, 53317, 0];
+      bool anyPortBound = false;
+      
+      for (final testPort in portsToTest) {
+        try {
+          socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, testPort);
+          testSockets.add(socket);
+          
+          final actualPort = socket.port;
+          result.addStep('UDP套接字绑定', true, '成功绑定到端口 ${testPort == 0 ? '随机' : testPort} (实际端口: $actualPort)');
+          anyPortBound = true;
+          
+          // 仅使用一个成功绑定的端口
+          break;
+        } catch (e) {
+          result.addStep('UDP套接字绑定 (端口 $testPort)', false, '绑定失败: $e');
+        }
+      }
+      
+      if (!anyPortBound) {
+        result.addStep('UDP套接字绑定', false, '无法绑定到任何测试端口');
+        return result;
+      }
 
       // 基础设置：TTL与回环，便于本机自检
       try {
-        socket.readEventsEnabled = true;
-        socket.broadcastEnabled = true;
-        socket.multicastLoopback = true; // 允许本机收到自己发出的组播
-        // TTL 在 Dart 原生 API 中不可直接设置，保留注释说明
-        result.addStep('组播参数设置', true, '已启用loopback与broadcast');
+        if (socket != null) {
+          socket.readEventsEnabled = true;
+          socket.broadcastEnabled = true;
+          socket.multicastLoopback = true; // 允许本机收到自己发出的组播
+          // TTL 在 Dart 原生 API 中不可直接设置，保留注释说明
+          result.addStep('组播参数设置', true, '已启用loopback与broadcast');
+        } else {
+          result.addStep('组播参数设置', false, '套接字为null，无法设置参数');
+        }
       } catch (e) {
         result.addStep('组播参数设置', false, '设置失败: $e');
+      }
+
+      // 获取所有网络接口信息
+      try {
+        final interfaces = await NetworkInterface.list();
+        final activeInterfaces = interfaces.where((i) => 
+          i.addresses.any((a) => a.type == InternetAddressType.IPv4 && !a.isLoopback)).toList();
+        
+        result.addStep('网络接口检查', activeInterfaces.isNotEmpty, 
+          '发现 ${activeInterfaces.length} 个活动网络接口，总共 ${interfaces.length} 个接口');
+        
+        for (final i in activeInterfaces) {
+          final ipv4Addresses = i.addresses
+            .where((a) => a.type == InternetAddressType.IPv4 && !a.isLoopback)
+            .map((a) => a.address)
+            .join(', ');
+          
+          result.addStep('网络接口 ${i.name}', true, 'IP地址: $ipv4Addresses');
+        }
+      } catch (e) {
+        result.addStep('网络接口检查', false, '检查失败: $e');
       }
 
       // 2. 加入所有可用接口的组播组
@@ -35,14 +83,18 @@ class SyncNetworkTester {
         final interfaces = await NetworkInterface.list();
         bool joinedAny = false;
 
-        for (final interface in interfaces) {
-          try {
-            socket.joinMulticast(multicastAddress, interface);
-            joinedAny = true;
-            result.addStep('加入组播组 (${interface.name})', true, '成功加入 ${multicastAddress.address}');
-          } catch (e) {
-            result.addStep('加入组播组 (${interface.name})', false, '失败: $e');
+        if (socket != null) {
+          for (final interface in interfaces) {
+            try {
+              socket.joinMulticast(multicastAddress, interface);
+              joinedAny = true;
+              result.addStep('加入组播组 (${interface.name})', true, '成功加入 ${multicastAddress.address}');
+            } catch (e) {
+              result.addStep('加入组播组 (${interface.name})', false, '失败: $e');
+            }
           }
+        } else {
+          result.addStep('组播组加入', false, '套接字为null，无法加入组播组');
         }
 
         if (!joinedAny) {
@@ -54,51 +106,94 @@ class SyncNetworkTester {
 
       // 3. 发送并尝试接收自身广播
       try {
+        // 使用完整的设备信息格式
         final testMessage = jsonEncode({
           'alias': 'NetworkTest',
           'version': '2.1',
+          'deviceModel': 'ThoughtEcho',
           'deviceType': 'desktop',
-          'fingerprint': 'test-fingerprint',
+          'fingerprint': 'test-fingerprint-${DateTime.now().millisecondsSinceEpoch}',
           'port': 53318,
+          'protocol': 'http',
+          'download': true,
           'announcement': true,
+          'announce': true
         });
+        
         final messageBytes = utf8.encode(testMessage);
-        final group = InternetAddress('224.0.0.168');
-        const port = 53318;
+        
+        // 尝试两个组播地址
+        final multicastGroups = [
+          InternetAddress('224.0.0.168'), // ThoughtEcho
+          InternetAddress('224.0.0.167'), // LocalSend
+        ];
+        
+        final ports = [53318, 53317];
+        
+        bool anyMessageSent = false;
+        
+        if (socket != null) {
+          for (final group in multicastGroups) {
+            for (final port in ports) {
+              try {
+                final sent = socket.send(messageBytes, group, port);
+                if (sent > 0) {
+                  anyMessageSent = true;
+                  result.addStep('发送测试消息', true, 
+                    '发送到 ${group.address}:$port，消息大小: $sent 字节');
+                }
+              } catch (e) {
+                result.addStep('发送测试消息 (${group.address}:$port)', false, '发送失败: $e');
+              }
+            }
+          }
+        } else {
+          result.addStep('发送测试消息', false, '套接字为null，无法发送消息');
+        }
+        
+        if (!anyMessageSent) {
+          result.addStep('发送测试消息', false, '无法发送组播消息到任何组');
+        }
 
         // 监听接收
         bool received = false;
         final completer = Completer<void>();
         Timer? listenTimer;
 
-        socket.listen((event) {
-          if (event == RawSocketEvent.read) {
-            final datagram = socket!.receive();
-            if (datagram != null) {
-              final data = utf8.decode(datagram.data, allowMalformed: true);
-              if (data.contains('NetworkTest')) {
-                received = true;
-                result.addStep('接收测试消息', true, '来自 ${datagram.address.address}:${datagram.port} -> $data');
-                if (!completer.isCompleted) completer.complete();
+        if (socket != null) {
+          StreamSubscription<RawSocketEvent>? subscription;
+          
+          subscription = socket.listen((event) {
+            if (event == RawSocketEvent.read) {
+              final datagram = socket?.receive();
+              if (datagram != null) {
+                try {
+                  final data = utf8.decode(datagram.data, allowMalformed: true);
+                  if (data.contains('NetworkTest') || data.contains('ThoughtEcho')) {
+                    received = true;
+                    result.addStep('接收测试消息', true, '来自 ${datagram.address.address}:${datagram.port} -> ${data.substring(0, data.length.clamp(0, 100))}...');
+                    if (!completer.isCompleted) completer.complete();
+                  }
+                } catch (e) {
+                  result.addStep('解析接收数据', false, '解析失败: $e');
+                }
               }
             }
+          });
+
+          // 等待接收，最多2秒
+          listenTimer = Timer(const Duration(milliseconds: 2000), () {
+            if (!completer.isCompleted) completer.complete();
+          });
+          await completer.future;
+          listenTimer.cancel();
+          await subscription.cancel();
+
+          if (!received) {
+            result.addStep('接收测试消息', false, '未在2秒内接收到组播包。可能原因：防火墙阻拦/网卡未启用组播/未在同一子网');
           }
-        });
-
-        // 发送两次以提高命中率
-        socket.send(messageBytes, group, port);
-        socket.send(messageBytes, group, port);
-        result.addStep('发送测试消息', true, '消息大小: ${messageBytes.length} 字节, 端口: $port');
-
-        // 等待接收，最多1.5秒
-        listenTimer = Timer(const Duration(milliseconds: 1500), () {
-          if (!completer.isCompleted) completer.complete();
-        });
-        await completer.future;
-        listenTimer.cancel();
-
-        if (!received) {
-          result.addStep('接收测试消息', false, '未在1.5秒内接收到组播包。可能原因：防火墙阻拦/网卡未启用组播/未在同一子网');
+        } else {
+          result.addStep('接收测试消息', false, '套接字为null，无法监听接收');
         }
       } catch (e) {
         result.addStep('发送/接收测试', false, '异常: $e');
@@ -106,9 +201,21 @@ class SyncNetworkTester {
     } catch (e) {
       result.addStep('UDP组播测试', false, '测试失败: $e');
     } finally {
-      socket?.close();
+      for (final s in testSockets) {
+        s.close();
+      }
     }
 
+    // 返回结果前，总结测试情况
+    final successSteps = result.steps.where((s) => s.success).length;
+    final totalSteps = result.steps.length;
+    final successRate = (successSteps / totalSteps * 100).toStringAsFixed(1);
+    
+    result.addStep('组播测试总结', successSteps == totalSteps, 
+      '测试完成: $successSteps/$totalSteps 成功 ($successRate%)');
+      
+    logDebug('UDP组播测试结束: $successRate% 成功率');
+    
     return result;
   }
 
@@ -303,11 +410,11 @@ class SyncNetworkTester {
 
       // 3. 检测备用端口 (53317)
       try {
-        final backupPort = 53317;
+        const backupPort = 53317;
         final client = HttpClient();
         final req = await client.get(host, backupPort, '/api/localsend/v2/info');
         final resp = await req.close().timeout(const Duration(seconds: 2));
-        final body = await resp.transform(utf8.decoder).join();
+        await resp.transform(utf8.decoder).join(); // 读取响应体，确保响应被完全消费
         
         if (resp.statusCode == 200) {
           result.addStep('备用端口检查', true, '备用端口 $backupPort 上服务正常');

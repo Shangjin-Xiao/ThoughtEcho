@@ -48,6 +48,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   Future<void> _initializeSyncService() async {
+    if (!mounted) return; // 确保组件仍然挂载
+
     setState(() {
       _isInitializing = true;
       _initializationError = '';
@@ -64,20 +66,22 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       // 添加更多调试信息
       debugPrint('同步服务初始化成功，服务器已启动');
       
-      setState(() {
-        _isInitializing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
 
-      // 自动开始设备发现
-      _startDeviceDiscovery();
+        // 自动开始设备发现
+        _startDeviceDiscovery();
+      }
     } catch (e) {
       debugPrint('启动同步服务失败: $e');
-      setState(() {
-        _isInitializing = false;
-        _initializationError = e.toString();
-      });
-
       if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _initializationError = e.toString();
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('同步服务启动失败: $e'),
@@ -111,7 +115,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   Future<void> _startDeviceDiscovery() async {
-    if (_isScanning) return;
+    if (_isScanning || !mounted) return;
 
     setState(() {
       _isScanning = true;
@@ -119,26 +123,42 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     });
 
     try {
-      // 首先检查服务是否已初始化
-      if (_syncService == null || _isInitializing) {
+      // 获取当前同步服务实例
+      NoteSyncService? syncService;
+      try {
+        syncService = context.read<NoteSyncService>();
+      } catch (e) {
+        debugPrint('获取NoteSyncService失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('同步服务尚未就绪，请稍后再试'),
+              content: Text('同步服务未就绪，请重新初始化'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        setState(() {
+          _isScanning = false;
+        });
+        return;
+      }
+
+      // 首先检查服务是否已初始化
+      if (_isInitializing) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('同步服务正在初始化，请稍后再试'),
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 3),
             ),
           );
         }
-        // 尝试重新初始化
-        await _initializeSyncService();
-        // 如果仍未初始化，则退出
-        if (_syncService == null || _isInitializing) {
-          setState(() {
-            _isScanning = false;
-          });
-          return;
-        }
+        setState(() {
+          _isScanning = false;
+        });
+        return;
       }
 
       // 显示扫描开始提示
@@ -151,7 +171,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
 
-      final devices = await _syncService!.discoverNearbyDevices();
+      final devices = await syncService.discoverNearbyDevices();
 
       if (mounted) {
         setState(() {
@@ -187,6 +207,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   Future<void> _sendNotesToDevice(Device device) async {
+    if (!mounted) return;
+
     setState(() {
       _isSending = true;
     });
@@ -203,9 +225,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
     } catch (e) {
+      debugPrint('发送笔记失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('发送失败: $e')),
+          SnackBar(
+            content: Text('发送失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     } finally {
@@ -219,6 +246,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   /// 运行网络诊断
   Future<void> _runNetworkDiagnostics() async {
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -237,23 +266,18 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     try {
       // 先检查服务状态
-      if (_syncService == null || _isInitializing) {
+      if (_isInitializing) {
         if (mounted) {
           Navigator.of(context).pop(); // 关闭加载对话框
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('同步服务状态'),
-              content: Text(_isInitializing 
-                ? '同步服务正在初始化中，请稍候再试...' 
-                : '同步服务未初始化，请重新打开同步页面'),
+              content: const Text('同步服务正在初始化中，请稍候再试...'),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    if (!_isInitializing) {
-                      _initializeSyncService(); // 尝试重新初始化
-                    }
                   },
                   child: const Text('确定'),
                 ),
@@ -306,6 +330,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
     } catch (e) {
+      debugPrint('网络诊断失败: $e');
       if (mounted) {
         Navigator.of(context).pop(); // 关闭加载对话框
         ScaffoldMessenger.of(context).showSnackBar(
