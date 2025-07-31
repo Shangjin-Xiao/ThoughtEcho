@@ -80,13 +80,37 @@ class NoteSyncService extends ChangeNotifier {
       return;
     }
 
-    _server = SimpleServer();
-    _discoveryService = ThoughtEchoDiscoveryService();
-    _localSendServer = LocalSendServer();
-    _localSendProvider = LocalSendProvider();
-    _syncSendService = SyncSendService();
-
     try {
+      debugPrint('开始初始化同步服务组件...');
+      
+      // 安全地初始化服务组件
+      _server = SimpleServer();
+      if (_server == null) {
+        throw Exception('SimpleServer创建失败');
+      }
+      
+      _discoveryService = ThoughtEchoDiscoveryService();
+      if (_discoveryService == null) {
+        throw Exception('ThoughtEchoDiscoveryService创建失败');
+      }
+      
+      _localSendServer = LocalSendServer();
+      if (_localSendServer == null) {
+        throw Exception('LocalSendServer创建失败');
+      }
+      
+      _localSendProvider = LocalSendProvider();
+      if (_localSendProvider == null) {
+        throw Exception('LocalSendProvider创建失败');
+      }
+      
+      _syncSendService = SyncSendService();
+      if (_syncSendService == null) {
+        throw Exception('SyncSendService创建失败');
+      }
+
+      debugPrint('所有服务组件创建成功，开始启动服务器...');
+
       // 启动原有服务器监听文件接收
       await _server!.start(
         alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
@@ -95,6 +119,7 @@ class NoteSyncService extends ChangeNotifier {
           await processSyncPackage(filePath);
         },
       );
+      debugPrint('SimpleServer启动成功，端口: ${_server!.port}');
 
       // 启动LocalSend服务器
       await _localSendServer!.start(
@@ -103,9 +128,11 @@ class NoteSyncService extends ChangeNotifier {
           await processSyncPackage(filePath);
         },
       );
+      debugPrint('LocalSendServer启动成功，端口: ${_localSendServer!.port}');
 
       // 启动设备发现
       await _discoveryService!.startDiscovery();
+      debugPrint('设备发现服务启动成功');
 
       debugPrint('ThoughtEcho servers started:');
       debugPrint('  - Simple server on port ${_server?.port}');

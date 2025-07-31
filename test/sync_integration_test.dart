@@ -93,7 +93,7 @@ void main() {
 
     test('处理同步包流程测试', () async {
       // 准备测试数据
-      final testBackupPath = '/tmp/test_backup.zip';
+      const testBackupPath = '/tmp/test_backup.zip';
       
       // Mock数据库服务
       when(mockDatabaseService.getAllQuotes()).thenAnswer((_) async => [
