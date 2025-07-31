@@ -3,12 +3,14 @@ class NoteCategory {
   final String name;
   final bool isDefault;
   final String? iconName;
+  final String? lastModified;
 
   NoteCategory({
     required this.id,
     required this.name,
     this.isDefault = false,
     this.iconName,
+    this.lastModified,
   }) : assert(id.isNotEmpty, '分类ID不能为空'),
        assert(name.isNotEmpty, '分类名称不能为空'),
        assert(name.length <= 50, '分类名称不能超过50字符');
@@ -54,6 +56,7 @@ class NoteCategory {
       'name': name,
       'is_default': isDefault ? 1 : 0,
       'icon_name': iconName,
+      'last_modified': lastModified,
     };
   }
 
@@ -76,6 +79,7 @@ class NoteCategory {
         name: name,
         isDefault: map['is_default'] == 1 || map['is_default'] == true,
         iconName: map['icon_name']?.toString(),
+        lastModified: map['last_modified']?.toString(),
       );
     } catch (e) {
       throw FormatException('解析NoteCategory Map失败: $e, Map: $map');
@@ -88,12 +92,14 @@ class NoteCategory {
     String? name,
     bool? isDefault,
     String? iconName,
+    String? lastModified,
   }) {
     return NoteCategory(
       id: id ?? this.id,
       name: name ?? this.name,
       isDefault: isDefault ?? this.isDefault,
       iconName: iconName ?? this.iconName,
+      lastModified: lastModified ?? this.lastModified,
     );
   }
 

@@ -11,7 +11,19 @@ import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart' as ls;
+import 'package:thoughtecho/services/sync_protocol/sync_send_service.dart';
+import 'package:thoughtecho/services/sync_protocol/models/device_info.dart' as sync;
 
+/// 同步状态枚举
+enum SyncStatus {
+  idle,           // 空闲
+  packaging,      // 打包中
+  sending,        // 发送中
+  receiving,      // 接收中
+  merging,        // 合并中
+  completed,      // 完成
+  failed,         // 失败
+}
 
 /// 笔记同步服务 - 基于LocalSend的P2P同步功能
 /// 
@@ -28,6 +40,19 @@ class NoteSyncService extends ChangeNotifier {
   ThoughtEchoDiscoveryService? _discoveryService;
   LocalSendServer? _localSendServer;
   LocalSendProvider? _localSendProvider;
+
+  // 新的同步协议组件
+  SyncSendService? _syncSendService;
+
+  // 同步状态管理
+  SyncStatus _syncStatus = SyncStatus.idle;
+  String _syncStatusMessage = '';
+  double _syncProgress = 0.0;
+
+  // 状态访问器
+  SyncStatus get syncStatus => _syncStatus;
+  String get syncStatusMessage => _syncStatusMessage;
+  double get syncProgress => _syncProgress;
 
   NoteSyncService({
     required BackupService backupService,
@@ -59,22 +84,23 @@ class NoteSyncService extends ChangeNotifier {
     _discoveryService = ThoughtEchoDiscoveryService();
     _localSendServer = LocalSendServer();
     _localSendProvider = LocalSendProvider();
+    _syncSendService = SyncSendService();
 
     try {
       // 启动原有服务器监听文件接收
       await _server!.start(
         alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
         onFileReceived: (filePath) async {
-          // 接收到文件后自动导入
-          await receiveAndMergeNotes(filePath);
+          // 使用新的processSyncPackage方法处理接收到的文件
+          await processSyncPackage(filePath);
         },
       );
 
       // 启动LocalSend服务器
       await _localSendServer!.start(
         onFileReceived: (filePath) async {
-          // 接收到文件后自动导入
-          await receiveAndMergeNotes(filePath);
+          // 使用新的processSyncPackage方法处理接收到的文件
+          await processSyncPackage(filePath);
         },
       );
 
@@ -97,10 +123,12 @@ class NoteSyncService extends ChangeNotifier {
     await _server?.stop();
     await _localSendServer?.stop();
     await _discoveryService?.stopDiscovery();
+    _syncSendService?.dispose();
 
     _server = null;
     _localSendServer = null;
     _discoveryService = null;
+    _syncSendService = null;
 
     debugPrint('ThoughtEcho sync servers stopped');
   }
@@ -194,40 +222,282 @@ class NoteSyncService extends ChangeNotifier {
     }
   }
 
-  /// 合并重复的笔记数据
+  /// 合并重复的笔记数据（增强版）
   Future<void> _mergeNoteData() async {
-    // 实现智能合并逻辑
-    // 1. 检测重复笔记（基于内容哈希或时间戳）
-    final allQuotes = await _databaseService.getAllQuotes();
-    final duplicateGroups = <String, List<dynamic>>{};
-    
-    // 按内容分组检测重复
-    for (final quote in allQuotes) {
-      final content = quote.content;
-      final contentHash = content.hashCode.toString();
+    try {
+      debugPrint('开始智能笔记合并...');
+      _updateSyncStatus(SyncStatus.merging, '正在检测重复笔记...', 0.1);
       
-      if (duplicateGroups.containsKey(contentHash)) {
-        duplicateGroups[contentHash]!.add(quote);
-      } else {
-        duplicateGroups[contentHash] = [quote];
+      // 1. 获取所有笔记并进行高级重复检测
+      final allQuotes = await _databaseService.getAllQuotes();
+      final duplicateGroups = await _detectDuplicatesAdvanced(allQuotes);
+      
+      _updateSyncStatus(SyncStatus.merging, '发现 ${duplicateGroups.length} 组重复笔记', 0.3);
+      
+      // 2. 逐组处理重复笔记
+      int processedGroups = 0;
+      int totalMerged = 0;
+      
+      for (final group in duplicateGroups) {
+        if (group.length > 1) {
+          await _mergeQuoteGroup(group);
+          totalMerged += group.length - 1;
+        }
+        
+        processedGroups++;
+        final progress = 0.3 + (processedGroups / duplicateGroups.length * 0.4);
+        _updateSyncStatus(SyncStatus.merging, 
+          '正在合并重复笔记... ($processedGroups/${duplicateGroups.length})', progress);
+      }
+      
+      debugPrint('笔记合并完成，合并了 $totalMerged 个重复笔记');
+      _updateSyncStatus(SyncStatus.merging, '笔记合并完成，处理了 $totalMerged 个重复项', 0.8);
+      
+    } catch (e) {
+      debugPrint('笔记合并失败: $e');
+      _updateSyncStatus(SyncStatus.failed, '笔记合并失败: $e', 0.0);
+      rethrow;
+    }
+  }
+
+  /// 高级重复检测算法
+  Future<List<List<dynamic>>> _detectDuplicatesAdvanced(List<dynamic> quotes) async {
+    final duplicateGroups = <List<dynamic>>[];
+    final processed = <String>{};
+
+    for (final quote in quotes) {
+      if (processed.contains(quote.id)) continue;
+
+      final duplicates = await _findSimilarQuotes(quote, quotes);
+      if (duplicates.length > 1) {
+        duplicateGroups.add(duplicates);
+        processed.addAll(duplicates.map((q) => q.id));
+      }
+    }
+
+    return duplicateGroups;
+  }
+
+  /// 查找相似笔记
+  Future<List<dynamic>> _findSimilarQuotes(dynamic target, List<dynamic> allQuotes) async {
+    final similar = [target];
+    
+    for (final quote in allQuotes) {
+      if (quote.id == target.id) continue;
+      
+      if (await _areDuplicates(target, quote)) {
+        similar.add(quote);
       }
     }
     
-    // 2. 合并冲突的笔记 - 保留最新版本
-    for (final group in duplicateGroups.values) {
-      if (group.length > 1) {
-        // 按更新时间排序，保留最新的
-        group.sort((a, b) {
-          final timeA = DateTime.tryParse(a.date) ?? DateTime(1970);
-          final timeB = DateTime.tryParse(b.date) ?? DateTime(1970);
-          return timeB.compareTo(timeA);
-        });
-        
-        // 删除重复的旧版本
-        for (int i = 1; i < group.length; i++) {
-          await _databaseService.deleteQuote(group[i].id);
-        }
+    return similar;
+  }
+
+  /// 判断两个笔记是否重复
+  Future<bool> _areDuplicates(dynamic quote1, dynamic quote2) async {
+    // 1. 精确内容匹配
+    final normalizedContent1 = _normalizeContent(quote1.content);
+    final normalizedContent2 = _normalizeContent(quote2.content);
+    
+    if (normalizedContent1 == normalizedContent2) {
+      return true;
+    }
+
+    // 2. 富文本内容匹配
+    if (quote1.deltaContent != null && quote2.deltaContent != null) {
+      if (quote1.deltaContent == quote2.deltaContent) {
+        return true;
       }
+    }
+
+    // 3. 内容相似度检测（90%以上相似度认为重复）
+    final similarity = _calculateContentSimilarity(quote1.content, quote2.content);
+    if (similarity > 0.9) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// 标准化内容（去除空白字符和标点差异）
+  String _normalizeContent(String content) {
+    return content
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[^\w\s\u4e00-\u9fa5]'), '') // 保留中文字符
+        .toLowerCase()
+        .trim();
+  }
+
+  /// 计算内容相似度（Jaccard相似度）
+  double _calculateContentSimilarity(String content1, String content2) {
+    final words1 = _normalizeContent(content1).split(' ').where((w) => w.isNotEmpty).toSet();
+    final words2 = _normalizeContent(content2).split(' ').where((w) => w.isNotEmpty).toSet();
+    
+    if (words1.isEmpty && words2.isEmpty) return 1.0;
+    if (words1.isEmpty || words2.isEmpty) return 0.0;
+    
+    final intersection = words1.intersection(words2).length;
+    final union = words1.union(words2).length;
+    
+    return intersection / union;
+  }
+
+  /// 合并一组重复笔记
+  Future<void> _mergeQuoteGroup(List<dynamic> duplicates) async {
+    // 按优先级排序（最新时间、最丰富内容）
+    duplicates.sort((a, b) {
+      // 1. 优先保留有富文本内容的
+      if (a.deltaContent != null && b.deltaContent == null) return -1;
+      if (a.deltaContent == null && b.deltaContent != null) return 1;
+      
+      // 2. 优先保留内容更丰富的
+      final aLength = a.content.length + (a.deltaContent?.length ?? 0);
+      final bLength = b.content.length + (b.deltaContent?.length ?? 0);
+      if (aLength != bLength) return bLength.compareTo(aLength);
+      
+      // 3. 优先保留更新时间的
+      final timeA = DateTime.tryParse(a.date) ?? DateTime(1970);
+      final timeB = DateTime.tryParse(b.date) ?? DateTime(1970);
+      return timeB.compareTo(timeA);
+    });
+
+    final keepQuote = duplicates.first;
+    final duplicatesToDelete = duplicates.skip(1).toList();
+
+    debugPrint('保留笔记: ${keepQuote.id}, 删除重复: ${duplicatesToDelete.map((q) => q.id).join(', ')}');
+
+    // 删除重复笔记
+    for (final duplicate in duplicatesToDelete) {
+      await _databaseService.deleteQuote(duplicate.id);
+    }
+  }
+
+  /// 创建同步包并发送到指定设备
+  Future<String> createSyncPackage(Device targetDevice) async {
+    if (_syncSendService == null) {
+      throw Exception('同步服务未初始化');
+    }
+
+    try {
+      // 1. 更新状态：开始打包
+      _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
+
+      // 2. 使用备份服务创建数据包
+      final backupPath = await _backupService.exportAllData(
+        includeMediaFiles: true,
+        onProgress: (current, total) {
+          final progress = 0.1 + (current / total) * 0.4; // 10%-50%的进度用于打包
+          _updateSyncStatus(SyncStatus.packaging, '正在打包数据... ($current/$total)', progress);
+        },
+      );
+
+      // 3. 更新状态：开始发送
+      _updateSyncStatus(SyncStatus.sending, '正在发送到目标设备...', 0.5);
+
+      // 4. 转换设备信息
+      final networkDevice = _convertToNetworkDevice(targetDevice);
+
+      // 5. 发送文件
+      final backupFile = File(backupPath);
+      final sessionId = await _syncSendService!.sendFile(
+        targetDevice: networkDevice,
+        file: backupFile,
+        onProgress: (progress, status) {
+          final totalProgress = 0.5 + progress * 0.5; // 50%-100%的进度用于发送
+          _updateSyncStatus(SyncStatus.sending, status, totalProgress);
+        },
+      );
+
+      // 6. 完成
+      _updateSyncStatus(SyncStatus.completed, '同步包发送完成', 1.0);
+
+      // 7. 清理临时文件
+      try {
+        await backupFile.delete();
+      } catch (e) {
+        debugPrint('清理临时文件失败: $e');
+      }
+
+      return sessionId;
+
+    } catch (e) {
+      _updateSyncStatus(SyncStatus.failed, '发送失败: $e', 0.0);
+      rethrow;
+    }
+  }
+
+  /// 处理接收到的同步包
+  Future<void> processSyncPackage(String backupFilePath) async {
+    try {
+      // 1. 更新状态：开始合并
+      _updateSyncStatus(SyncStatus.merging, '正在合并数据...', 0.1);
+
+      // 2. 导入接收到的备份数据（不清空现有数据）
+      await _backupService.importData(
+        backupFilePath,
+        clearExisting: false, // 关键：不清空现有数据，进行合并
+        onProgress: (current, total) {
+          final progress = 0.1 + (current / total) * 0.7; // 10%-80%的进度用于导入
+          _updateSyncStatus(SyncStatus.merging, '正在导入数据... ($current/$total)', progress);
+        },
+      );
+
+      // 3. 执行数据合并逻辑
+      _updateSyncStatus(SyncStatus.merging, '正在处理重复数据...', 0.8);
+      await _mergeNoteData();
+
+      // 4. 完成
+      _updateSyncStatus(SyncStatus.completed, '数据合并完成', 1.0);
+
+    } catch (e) {
+      _updateSyncStatus(SyncStatus.failed, '合并失败: $e', 0.0);
+      rethrow;
+    }
+  }
+
+  /// 更新同步状态
+  void _updateSyncStatus(SyncStatus status, String message, double progress) {
+    _syncStatus = status;
+    _syncStatusMessage = message;
+    _syncProgress = progress;
+    notifyListeners();
+    debugPrint('同步状态: $status - $message (${(progress * 100).toInt()}%)');
+  }
+
+  /// 转换设备信息格式
+  sync.NetworkDevice _convertToNetworkDevice(Device device) {
+    final deviceInfo = sync.DeviceInfo(
+      alias: device.alias,
+      version: '2.1',
+      deviceModel: device.deviceModel ?? 'Unknown Device',
+      deviceType: _convertToSyncDeviceType(device.deviceType),
+      fingerprint: device.fingerprint,
+      port: device.port,
+      protocol: sync.ProtocolType.http,
+      download: true,
+    );
+
+    return sync.NetworkDevice(
+      ip: device.ip ?? '127.0.0.1',
+      port: device.port,
+      info: deviceInfo,
+      https: false,
+    );
+  }
+
+  /// 转换设备类型
+  sync.DeviceType _convertToSyncDeviceType(DeviceType deviceType) {
+    switch (deviceType) {
+      case DeviceType.mobile:
+        return sync.DeviceType.mobile;
+      case DeviceType.desktop:
+        return sync.DeviceType.desktop;
+      case DeviceType.web:
+        return sync.DeviceType.web;
+      case DeviceType.headless:
+        return sync.DeviceType.headless;
+      case DeviceType.server:
+        return sync.DeviceType.server;
     }
   }
 
@@ -246,6 +516,7 @@ class NoteSyncService extends ChangeNotifier {
     _server?.stop();
     _localSendServer?.stop();
     _localSendProvider?.dispose();
+    _syncSendService?.dispose();
     super.dispose();
   }
 }

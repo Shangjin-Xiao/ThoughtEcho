@@ -18,6 +18,7 @@ class Quote {
   final String? editSource; // "fullscreen" 或 null
   final String? deltaContent; // 新增：用于存储富文本格式(Delta JSON)
   final String? dayPeriod; // 新增：时间段标识(晨曦、午后、黄昏、夜晚等)
+  final String? lastModified;
 
   const Quote({
     this.id,
@@ -39,6 +40,7 @@ class Quote {
     this.editSource,
     this.deltaContent, // 新增：Delta JSON
     this.dayPeriod, // 新增：时间段
+    this.lastModified,
   });
 
   /// 修复：添加数据验证方法
@@ -199,6 +201,7 @@ class Quote {
         editSource: json['edit_source']?.toString(),
         deltaContent: json['delta_content']?.toString(),
         dayPeriod: json['day_period']?.toString(),
+        lastModified: json['last_modified']?.toString(),
       );
     } catch (e) {
       throw FormatException('解析Quote JSON失败: $e, JSON: $json');
@@ -227,6 +230,7 @@ class Quote {
       'edit_source': editSource,
       'delta_content': deltaContent, // 新增：Delta JSON
       'day_period': dayPeriod, // 新增：时间段
+      'last_modified': lastModified,
     };
     // 移除tag_ids字段，因为它不再直接存储在quotes表中
     json.remove('tag_ids');
@@ -254,6 +258,7 @@ class Quote {
     String? editSource,
     String? deltaContent, // 新增：Delta JSON
     String? dayPeriod, // 新增：时间段
+    String? lastModified,
   }) {
     return Quote(
       id: id ?? this.id,
@@ -275,6 +280,7 @@ class Quote {
       editSource: editSource ?? this.editSource,
       deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
+      lastModified: lastModified ?? this.lastModified,
     );
   }
 

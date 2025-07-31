@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:isolate';
 import '../models/device.dart';
 
 /// Simplified isolate actions for ThoughtEcho

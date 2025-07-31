@@ -8,16 +8,13 @@ class SendSessionState {
   final String? remoteSessionId; // v2
   final bool background;
 
-  @override
   final SessionStatus status;
 
   final Device target;
   final Map<String, SendingFile> files; // file id as key
 
-  @override
   final int? startTime;
 
-  @override
   final int? endTime;
 
   final List<SendingTask>? sendingTasks; // used to cancel tasks
