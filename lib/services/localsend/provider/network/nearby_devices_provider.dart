@@ -73,6 +73,16 @@ class ClearFoundDevicesAction extends ReduxAction<NearbyDevicesService, NearbyDe
     if (!_isValidSignalingId) {
       return state;
     }
+    // Skip processing if signaling ID is invalid
+    if (!_isValidSignalingId) {
+      return state;
+    }
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
@@ -125,10 +135,21 @@ class RegisterDeviceAction extends AsyncReduxAction<NearbyDevicesService, Nearby
     if (device.ip == null || device.ip!.isEmpty) {
       return state; // Skip registration for invalid devices
     }
+    
+    // Additional validation for device IP
+    if (device.ip == null || device.ip!.isEmpty) {
+      return state; // Skip registration for invalid devices
+    }
 
     // Ensure device has valid fingerprint before favorite operations
     if (device.fingerprint.isEmpty) {
       // Still register the device but skip favorite operations
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
@@ -171,9 +192,39 @@ class RegisterDeviceAction extends AsyncReduxAction<NearbyDevicesService, Nearby
       updatedSignalingDevices[device.fingerprint] = existingDevices;
     }
     
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     return state.copyWith(
       signalingDevices: updatedSignalingDevices,
     );
+    }
+
+    // Ensure device has valid fingerprint before favorite operations
+    if (device.fingerprint.isEmpty) {
+      // Still register the device but skip favorite operations
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
+    return state.copyWith(
+      signalingDevices: updatedSignalingDevices,
+    );
+        }
+        return updatedDevices;
+      }(),
+      );
     }
 
     // Ensure device has valid fingerprint before favorite operations
@@ -198,6 +249,7 @@ class RegisterDeviceAction extends AsyncReduxAction<NearbyDevicesService, Nearby
     // Handle favorite device updates with proper error handling
     // Handle favorite device updates with proper error handling
     // Handle favorite device updates with proper error handling
+    // Handle favorite device updates with proper error handling
     if (favoriteDevice != null && !favoriteDevice.customAlias) {
       try {
         await external(notifier._favoriteService).dispatchAsync(UpdateFavoriteAction(favoriteDevice.copyWith(alias: device.alias)));
@@ -214,8 +266,18 @@ class RegisterDeviceAction extends AsyncReduxAction<NearbyDevicesService, Nearby
         notifier._discoveryLogger.addLog('[WARNING] Failed to update favorite device ${device.alias}: $e');
       }
     }
+        // Log error but continue with device registration
+        notifier._discoveryLogger.addLog('[WARNING] Failed to update favorite device ${device.alias}: $e');
+      }
+    }
       await Future.microtask(() {});
     }
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
@@ -264,6 +326,10 @@ class RegisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, Ne
     if (!_isValidSignalingId) {
       return state;
     }
+    // Skip processing if signaling ID is invalid
+    if (!_isValidSignalingId) {
+      return state;
+    }
     final Set<Device> existingDevices = state.signalingDevices[device.fingerprint]?.toSet() ?? {};
     final existingDevice = existingDevices.firstWhereOrNull((e) => e.signalingId == device.signalingId);
     if (existingDevice != null) {
@@ -271,6 +337,12 @@ class RegisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, Ne
     }
     existingDevices.add(device);
 
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
@@ -308,6 +380,9 @@ class UnregisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, 
   
   // Validate signaling ID before processing
   bool get _isValidSignalingId => signalingId.trim().isNotEmpty;
+  
+  // Validate signaling ID before processing
+  bool get _isValidSignalingId => signalingId.trim().isNotEmpty;
 
   @override
   NearbyDevicesState reduce() {
@@ -323,6 +398,16 @@ class UnregisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, 
     if (!_isValidSignalingId) {
       return state;
     }
+    // Skip processing if signaling ID is invalid
+    if (!_isValidSignalingId) {
+      return state;
+    }
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
@@ -352,6 +437,10 @@ class UnregisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, 
 class StartMulticastScan extends ReduxAction<NearbyDevicesService, NearbyDevicesState> {
   @override
   NearbyDevicesState reduce() {
+    // Skip processing if signaling ID is invalid
+    if (!_isValidSignalingId) {
+      return state;
+    }
     // Skip processing if signaling ID is invalid
     if (!_isValidSignalingId) {
       return state;
@@ -421,6 +510,12 @@ class StartLegacyScan extends AsyncReduxAction<NearbyDevicesService, NearbyDevic
       updatedSignalingDevices[device.fingerprint] = existingDevices;
     }
     
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     return state.copyWith(
       signalingDevices: updatedSignalingDevices,
     );
@@ -471,6 +566,12 @@ class StartFavoriteScan extends AsyncReduxAction<NearbyDevicesService, NearbyDev
       updatedSignalingDevices[device.fingerprint] = existingDevices;
     }
     
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     return state.copyWith(
       signalingDevices: updatedSignalingDevices,
     );
@@ -496,6 +597,16 @@ class _SetRunningIpsAction extends ReduxAction<NearbyDevicesService, NearbyDevic
     if (!_isValidSignalingId) {
       return state;
     }
+    // Skip processing if signaling ID is invalid
+    if (!_isValidSignalingId) {
+      return state;
+    }
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
@@ -539,6 +650,16 @@ class _SetRunningFavoriteScanAction extends ReduxAction<NearbyDevicesService, Ne
     if (!_isValidSignalingId) {
       return state;
     }
+    // Skip processing if signaling ID is invalid
+    if (!_isValidSignalingId) {
+      return state;
+    }
+    // Update signaling devices with proper validation
+    final updatedSignalingDevices = {...state.signalingDevices};
+    if (device.fingerprint.isNotEmpty) {
+      updatedSignalingDevices[device.fingerprint] = existingDevices;
+    }
+    
     // Update signaling devices with proper validation
     final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {

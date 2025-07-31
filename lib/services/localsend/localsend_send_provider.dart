@@ -29,33 +29,119 @@ class LocalSendProvider {
   
   
   
+  static const String _logTag = "LocalSendProvider";
+  
+  
+  
+  
   final Map<String, SendSession> _sessions = {};
   
   /// Start a file transfer session
   Future<String> startSession({
     // Validate inputs
     if (files.isEmpty) {
-    // Validate inputs
-    if (files.isEmpty) {
-    if (files.isEmpty) {
       throw ArgumentError("Files list cannot be empty");
     }
   
   }
   
-  }
-  
-    
     
     // Validate inputs
     if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
     if (files.isEmpty) {
       throw ArgumentError("Files list cannot be empty");
     }
   
   }
   
+    
+    // Validate inputs
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
   }
+  
+    
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
+  
+    
+    
+    // Validate inputs
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     
     
@@ -65,7 +151,24 @@ class LocalSendProvider {
   
   }
   
+    
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
   }
+  
+    
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     
     
@@ -74,7 +177,18 @@ class LocalSendProvider {
   
   }
   
+    
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     
     
@@ -82,12 +196,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -95,6 +216,7 @@ class LocalSendProvider {
     required List<File> files,
     bool background = true,
   }) async {
+  
   
   
     final sessionId = _uuid.v4();
@@ -138,12 +260,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -151,13 +280,16 @@ class LocalSendProvider {
       
       // Send prepare upload request
       final url = ApiRoute.prepareUpload.target(target);
-      // Add timeout for HTTP requests
       final response = await http.post(
-      // Add timeout for HTTP requests
+      final response = await http.post(
+      final response = await http.post(
+      final response = await http.post(
+      final response = await http.post(
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestDto.toJson()),
+      ).timeout(const Duration(seconds: 30));
       ).timeout(const Duration(seconds: 30));
       ).timeout(const Duration(seconds: 30));
       ).timeout(const Duration(seconds: 30));
@@ -183,12 +315,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -197,12 +336,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -210,12 +356,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -228,7 +381,13 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
@@ -236,8 +395,10 @@ class LocalSendProvider {
   }
   
   
+  
     
   }
+  
   
   
   
@@ -250,7 +411,28 @@ class LocalSendProvider {
   
   }
   
+    if (session == null) {
+      throw StateError("Session not found: $sessionId");
+    }
+  
   }
+  
+      throw StateError("Session not found: $sessionId");
+    }
+  
+  }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     if (session == null) {
       throw StateError("Session not found: $sessionId");
@@ -258,20 +440,51 @@ class LocalSendProvider {
   
   }
   
+      throw StateError("Session not found: $sessionId");
+    }
+  
   }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
       throw StateError("Session not found: $sessionId");
     }
   
   }
   
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     if (session == null) {
       throw StateError("Session not found: $sessionId");
@@ -279,44 +492,98 @@ class LocalSendProvider {
   
   }
   
+      throw StateError("Session not found: $sessionId");
+    }
+  
   }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
       throw StateError("Session not found: $sessionId");
     }
   
   }
   
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
       throw StateError("Session not found: $sessionId");
     }
   
   }
   
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     if (session == null) return;
@@ -350,6 +617,15 @@ class LocalSendProvider {
         final response = await request.send();
         final response = await request.send();
         final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        
         
         
         
@@ -358,17 +634,25 @@ class LocalSendProvider {
           await response.stream.drain(); // Consume response stream
           await response.stream.drain(); // Consume response stream
           await response.stream.drain(); // Consume response stream
+          await response.stream.drain(); // Consume response stream
           throw Exception('Failed to upload file: ${response.statusCode}');
         }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -376,12 +660,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -395,12 +686,19 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     
@@ -413,7 +711,13 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
@@ -421,8 +725,10 @@ class LocalSendProvider {
   }
   
   
+  
     
   }
+  
   
   
   
@@ -430,6 +736,7 @@ class LocalSendProvider {
   SendSession? getSession(String sessionId) {
     return _sessions[sessionId];
   }
+  
   
   
   
@@ -442,7 +749,28 @@ class LocalSendProvider {
   
   }
   
+    if (session == null) {
+      throw StateError("Session not found: $sessionId");
+    }
+  
   }
+  
+      throw StateError("Session not found: $sessionId");
+    }
+  
+  }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     if (session == null) {
       throw StateError("Session not found: $sessionId");
@@ -450,20 +778,51 @@ class LocalSendProvider {
   
   }
   
+      throw StateError("Session not found: $sessionId");
+    }
+  
   }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
       throw StateError("Session not found: $sessionId");
     }
   
   }
   
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     if (session == null) {
       throw StateError("Session not found: $sessionId");
@@ -471,44 +830,98 @@ class LocalSendProvider {
   
   }
   
+      throw StateError("Session not found: $sessionId");
+    }
+  
   }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
       throw StateError("Session not found: $sessionId");
     }
   
   }
   
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
       throw StateError("Session not found: $sessionId");
     }
   
   }
   
+    }
+  
   }
+  
+    
+  
+  }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     }
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
   
   }
+  
   
   
     if (session != null) {
@@ -519,7 +932,13 @@ class LocalSendProvider {
   
   }
   
+    
+  
   }
+  
+  
+  }
+  
   
     
     
@@ -527,8 +946,10 @@ class LocalSendProvider {
   }
   
   
+  
     
   }
+  
   
   
   
@@ -539,15 +960,18 @@ class LocalSendProvider {
   
   
   
+  
   /// Get all active sessions
   Map<String, SendSession> get sessions => Map.unmodifiable(_sessions);
   
   /// Cancel all active sessions
   /// Cancel all active sessions
   /// Cancel all active sessions
+  /// Cancel all active sessions
   void dispose() {
     _sessions.clear();
   }
+  
   
   
 }
@@ -575,6 +999,7 @@ class SendSession {
   
   
   
+  
   SendSession copyWith({
     String? sessionId,
     String? remoteSessionId,
@@ -585,6 +1010,7 @@ class SendSession {
     String? errorMessage,
     double? progress,
   }) {
+  
   
   
     return SendSession(
@@ -598,6 +1024,7 @@ class SendSession {
       progress: progress ?? this.progress,
     );
   }
+  
   
   
 }
