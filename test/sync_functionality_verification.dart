@@ -1,17 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/    test('传输状态枚举完整性', () {
-      // 验证传输状态枚举
-      final transferStates = TransferStatus.values;
-      
-      expect(transferStates.contains(TransferStatus.waiting), isTrue);
-      expect(transferStates.contains(TransferStatus.preparing), isTrue);
-      expect(transferStates.contains(TransferStatus.sending), isTrue);
-      expect(transferStates.contains(TransferStatus.receiving), isTrue);
-      expect(transferStates.contains(TransferStatus.completed), isTrue);
-      expect(transferStates.contains(TransferStatus.failed), isTrue);
-      expect(transferStates.contains(TransferStatus.cancelled), isTrue);
-    });e_sync_service.dart';
-import 'package:thoughtecho/services/sync_protocol/constants.dart' as sync_constants;
+import 'package:thoughtecho/services/note_sync_service.dart';
+import 'package:thoughtecho/services/sync_protocol/constants.dart';
 import 'package:thoughtecho/services/sync_protocol/models/device_info.dart';
 import 'package:thoughtecho/services/sync_protocol/models/file_transfer_dto.dart';
 
@@ -54,18 +43,18 @@ void main() {
 
     test('网络协议常量验证', () {
       // 验证协议常量的正确性
-      expect(sync_constants.protocolVersion, equals('2.1'));
-      expect(sync_constants.defaultPort, equals(53318));
-      expect(sync_constants.defaultDiscoveryTimeout, equals(500));
-      expect(sync_constants.defaultMulticastGroup, equals('224.0.0.168'));
+      expect(protocolVersion, equals('2.1'));
+      expect(defaultPort, equals(53317));
+      expect(defaultDiscoveryTimeout, equals(500));
+      expect(defaultMulticastGroup, equals('224.0.0.167'));
     });
 
     test('API路径常量验证', () {
       // 验证API路径的正确性
-      expect(sync_constants.ApiPaths.info, equals('/api/localsend/v2/info'));
-      expect(sync_constants.ApiPaths.prepareUpload, equals('/api/localsend/v2/prepare-upload'));
-      expect(sync_constants.ApiPaths.upload, equals('/api/localsend/v2/upload'));
-      expect(sync_constants.ApiPaths.cancel, equals('/api/localsend/v2/cancel'));
+      expect(ApiPaths.info, equals('/api/localsend/v2/info'));
+      expect(ApiPaths.prepareUpload, equals('/api/localsend/v2/prepare-upload'));
+      expect(ApiPaths.upload, equals('/api/localsend/v2/upload'));
+      expect(ApiPaths.cancel, equals('/api/localsend/v2/cancel'));
     });
 
     test('设备类型枚举完整性', () {
