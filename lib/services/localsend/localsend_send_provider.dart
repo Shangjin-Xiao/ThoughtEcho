@@ -22,6 +22,9 @@ const _uuid = Uuid();
 class LocalSendProvider {
   static const String _logTag = "LocalSendProvider";
   
+  static const String _logTag = "LocalSendProvider";
+  
+  
   final Map<String, SendSession> _sessions = {};
   
   /// Start a file transfer session
@@ -34,10 +37,42 @@ class LocalSendProvider {
   }
   
     
+    // Validate inputs
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    if (files.isEmpty) {
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+      throw ArgumentError("Files list cannot be empty");
+    }
+  
+  }
+  
+    
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
+    
     required Device target,
     required List<File> files,
     bool background = true,
   }) async {
+  
   
     final sessionId = _uuid.v4();
     
@@ -81,15 +116,23 @@ class LocalSendProvider {
   }
   
     
+  
+  }
+  
+  
+    
       );
       
       // Send prepare upload request
       final url = ApiRoute.prepareUpload.target(target);
       final response = await http.post(
       final response = await http.post(
+      final response = await http.post(
+      final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestDto.toJson()),
+      ).timeout(const Duration(seconds: 30));
       ).timeout(const Duration(seconds: 30));
       );
       
@@ -114,15 +157,30 @@ class LocalSendProvider {
   }
   
     
+  
+  }
+  
+  
+    
         throw Exception('Failed to prepare upload: ${response.statusCode}');
       }
   
   }
   
     
+  
+  }
+  
+  
+    
     } catch (e) {
   
   }
+  
+    
+  
+  }
+  
   
     
       _sessions[sessionId] = session.copyWith(
@@ -135,7 +193,13 @@ class LocalSendProvider {
   }
   
     
+  
   }
+  
+  
+    
+  }
+  
   
   
   /// Upload files for a session
@@ -146,6 +210,26 @@ class LocalSendProvider {
     }
   
   }
+  
+    if (session == null) {
+      throw StateError("Session not found: $sessionId");
+    }
+  
+  }
+  
+      throw StateError("Session not found: $sessionId");
+    }
+  
+  }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
   
     if (session == null) return;
     
@@ -172,9 +256,13 @@ class LocalSendProvider {
         // Send request
         final response = await request.send();
         final response = await request.send();
+        final response = await request.send();
+        final response = await request.send();
+        
         
         
         if (response.statusCode != 200) {
+          await response.stream.drain(); // Consume response stream
           await response.stream.drain(); // Consume response stream
           throw Exception('Failed to upload file: ${response.statusCode}');
         }
@@ -182,9 +270,19 @@ class LocalSendProvider {
   }
   
     
+  
+  }
+  
+  
+    
       }
   
   }
+  
+    
+  
+  }
+  
   
     
       
@@ -198,6 +296,11 @@ class LocalSendProvider {
   }
   
     
+  
+  }
+  
+  
+    
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.finishedWithErrors,
         errorMessage: e.toString(),
@@ -208,13 +311,20 @@ class LocalSendProvider {
   }
   
     
+  
   }
+  
+  
+    
+  }
+  
   
   
   /// Get session status
   SendSession? getSession(String sessionId) {
     return _sessions[sessionId];
   }
+  
   
   
   /// Cancel a session
@@ -226,6 +336,26 @@ class LocalSendProvider {
   
   }
   
+    if (session == null) {
+      throw StateError("Session not found: $sessionId");
+    }
+  
+  }
+  
+      throw StateError("Session not found: $sessionId");
+    }
+  
+  }
+  
+    }
+  
+  }
+  
+    
+  
+  }
+  
+  
     if (session != null) {
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.canceledBySender,
@@ -235,7 +365,13 @@ class LocalSendProvider {
   }
   
     
+  
   }
+  
+  
+    
+  }
+  
   
   
   /// Close a session
@@ -244,13 +380,16 @@ class LocalSendProvider {
   }
   
   
+  
   /// Get all active sessions
   Map<String, SendSession> get sessions => Map.unmodifiable(_sessions);
   
   /// Cancel all active sessions
+  /// Cancel all active sessions
   void dispose() {
     _sessions.clear();
   }
+  
   
 }
 
@@ -276,6 +415,7 @@ class SendSession {
   });
   
   
+  
   SendSession copyWith({
     String? sessionId,
     String? remoteSessionId,
@@ -286,6 +426,7 @@ class SendSession {
     String? errorMessage,
     double? progress,
   }) {
+  
   
     return SendSession(
       sessionId: sessionId ?? this.sessionId,
@@ -298,5 +439,6 @@ class SendSession {
       progress: progress ?? this.progress,
     );
   }
+  
   
 }
