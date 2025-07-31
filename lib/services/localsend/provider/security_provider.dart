@@ -1,6 +1,6 @@
 import 'package:common/isolate.dart';
 import 'package:common/model/stored_security_context.dart';
-import 'package:thoughtecho/provider/persistence_provider.dart';
+import './persistence_provider.dart';
 import 'package:common/util/security_helper.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 

@@ -8,10 +8,10 @@ import 'package:common/model/persistence/favorite_device.dart';
 import 'package:common/model/state/server/receive_session_state.dart';
 import 'package:common/model/state/server/receiving_file.dart';
 import 'package:common/model/state/settings_state.dart';
-import 'package:thoughtecho/pages/receive_page.dart';
-import 'package:thoughtecho/provider/network/webrtc/signaling_provider.dart';
-import 'package:thoughtecho/rust/api/model.dart';
-import 'package:thoughtecho/rust/api/webrtc.dart';
+import '../../../pages/receive_page.dart';
+import '../../../provider/network/webrtc/signaling_provider.dart';
+import '../../../rust/api/model.dart';
+import '../../../rust/api/webrtc.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
 

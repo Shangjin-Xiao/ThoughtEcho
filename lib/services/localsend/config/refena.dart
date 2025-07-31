@@ -1,6 +1,6 @@
-import 'package:thoughtecho/services/localsend/provider/local_ip_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/logging/discovery_logs_provider.dart';
-import 'package:thoughtecho/services/localsend/provider/progress_provider.dart';
+import '../provider/local_ip_provider.dart';
+import '../provider/logging/discovery_logs_provider.dart';
+import '../provider/progress_provider.dart';
 import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:refena_inspector_client/refena_inspector_client.dart';

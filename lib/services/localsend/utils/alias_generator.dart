@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:thoughtecho/gen/strings.g.dart';
+import '../../gen/strings.g.dart';
 
 String generateRandomAlias() {
   final random = Random();

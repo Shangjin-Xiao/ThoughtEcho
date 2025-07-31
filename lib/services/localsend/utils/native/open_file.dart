@@ -2,7 +2,7 @@ import 'package:common/model/file_type.dart';
 import 'package:flutter/material.dart';
 import 'package:common/util/native/channel/android_channel.dart' as android_channel;
 import 'package:common/util/native/platform_check.dart';
-import 'package:thoughtecho/widget/dialogs/cannot_open_file_dialog.dart';
+import '../../../widget/dialogs/cannot_open_file_dialog.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
 

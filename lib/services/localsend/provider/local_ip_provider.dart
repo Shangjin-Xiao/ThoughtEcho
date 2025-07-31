@@ -5,7 +5,7 @@ import 'package:common/util/network_interfaces.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:common/model/state/network_state.dart';
-import 'package:thoughtecho/provider/settings_provider.dart';
+import '../../../provider/settings_provider.dart';
 import 'package:common/util/native/platform_check.dart';
 import 'package:logging/logging.dart';
 import 'package:network_info_plus/network_info_plus.dart' as plugin;
