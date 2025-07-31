@@ -106,12 +106,9 @@ jobs:
           
           Write-Host "开始构建MSIX包..." -ForegroundColor Green
           
-          # 直接运行MSIX创建命令，不使用重定向（在CI环境中可能有问题）
-          $result = flutter pub run msix:create 2>&1
+          # 直接运行MSIX创建命令
+          flutter pub run msix:create
           $exitCode = $LASTEXITCODE
-          
-          Write-Host "MSIX构建输出:"
-          Write-Host $result
           
           if ($exitCode -eq 0) {
             # 检查MSIX文件是否实际创建成功
@@ -127,13 +124,11 @@ jobs:
             }
           } else {
             Write-Warning "⚠️ MSIX构建失败（退出码: $exitCode）"
-            Write-Host "错误输出: $result" -ForegroundColor Red
             echo "msix_success=false" >> $env:GITHUB_OUTPUT
           }
         }
         catch {
-          Write-Warning "⚠️ MSIX构建异常: $_"
-          Write-Host $_.Exception.Message -ForegroundColor Red
+          Write-Warning "⚠️ MSIX构建异常: $($_.Exception.Message)"
           echo "msix_success=false" >> $env:GITHUB_OUTPUT
         }
       id: msix_build

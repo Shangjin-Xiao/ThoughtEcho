@@ -6,7 +6,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/models/localsend_device.dart';
-import 'package:thoughtecho/services/localsend_simple_server.dart';
+import 'package:thoughtecho/services/localsend_file_receiver.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
@@ -36,7 +36,7 @@ class NoteSyncService extends ChangeNotifier {
   // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
-  SimpleServer? _server;
+  LocalSendFileReceiver? _fileReceiver;
   ThoughtEchoDiscoveryService? _discoveryService;
   LocalSendServer? _localSendServer;
   LocalSendProvider? _localSendProvider;
@@ -75,7 +75,12 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 启动服务器（在打开同步页面时调用）
   Future<void> startServer() async {
-    if (_server?.isRunning == true || _localSendServer?.isRunning == true) return;
+    // 检查是否已经启动
+    if ((_fileReceiver?.isRunning == true || _localSendServer?.isRunning == true) ||
+        (_fileReceiver != null || _localSendServer != null)) {
+      debugPrint('同步服务器已经启动，跳过重复启动');
+      return;
+    }
 
     // Check if we're running on web platform
     if (kIsWeb) {
@@ -86,10 +91,13 @@ class NoteSyncService extends ChangeNotifier {
     try {
       debugPrint('开始初始化同步服务组件...');
       
+      // 确保先清理之前的资源
+      await stopServer();
+      
       // 安全地初始化服务组件
-      _server = SimpleServer();
-      if (_server == null) {
-        throw Exception('SimpleServer创建失败');
+      _fileReceiver = LocalSendFileReceiver();
+      if (_fileReceiver == null) {
+        throw Exception('LocalSendFileReceiver创建失败');
       }
       
       _discoveryService = ThoughtEchoDiscoveryService();
@@ -114,17 +122,7 @@ class NoteSyncService extends ChangeNotifier {
 
       debugPrint('所有服务组件创建成功，开始启动服务器...');
 
-      // 启动原有服务器监听文件接收
-      await _server!.start(
-        alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
-        onFileReceived: (filePath) async {
-          // 使用新的processSyncPackage方法处理接收到的文件
-          await processSyncPackage(filePath);
-        },
-      );
-      debugPrint('SimpleServer启动成功，端口: ${_server!.port}');
-
-      // 启动LocalSend服务器
+      // 首先启动LocalSend服务器（优先级更高）
       await _localSendServer!.start(
         onFileReceived: (filePath) async {
           // 使用新的processSyncPackage方法处理接收到的文件
@@ -133,13 +131,28 @@ class NoteSyncService extends ChangeNotifier {
       );
       debugPrint('LocalSendServer启动成功，端口: ${_localSendServer!.port}');
 
+      // 启动文件接收服务器（备用服务器）
+      try {
+        await _fileReceiver!.start(
+          alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
+          onFileReceived: (filePath) async {
+            // 使用新的processSyncPackage方法处理接收到的文件
+            await processSyncPackage(filePath);
+          },
+        );
+        debugPrint('LocalSendFileReceiver启动成功，端口: ${_fileReceiver!.port}');
+      } catch (e) {
+        debugPrint('LocalSendFileReceiver启动失败，但LocalSendServer已启动，继续: $e');
+        // 文件接收服务器启动失败不是致命错误，LocalSendServer可以处理所有请求
+      }
+
       // 启动设备发现
       await _discoveryService!.startDiscovery();
       debugPrint('设备发现服务启动成功');
 
       debugPrint('ThoughtEcho servers started:');
-      debugPrint('  - Simple server on port ${_server?.port}');
       debugPrint('  - LocalSend server on port ${_localSendServer?.port}');
+      debugPrint('  - Simple server on port ${_fileReceiver?.port ?? "未启动"}');
     } catch (e) {
       debugPrint('Failed to start servers: $e');
       // Clean up on failure
@@ -150,17 +163,60 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 停止服务器（在关闭同步页面时调用）
   Future<void> stopServer() async {
-    await _server?.stop();
-    await _localSendServer?.stop();
-    await _discoveryService?.stopDiscovery();
-    _syncSendService?.dispose();
+    debugPrint('开始停止同步服务器...');
+    
+    try {
+      // 停止LocalSendFileReceiver
+      if (_fileReceiver != null) {
+        debugPrint('停止LocalSendFileReceiver...');
+        await _fileReceiver!.stop();
+        debugPrint('LocalSendFileReceiver已停止');
+      }
+    } catch (e) {
+      debugPrint('停止LocalSendFileReceiver时出错: $e');
+    }
+    
+    try {
+      // 停止LocalSendServer
+      if (_localSendServer != null) {
+        debugPrint('停止LocalSendServer...');
+        await _localSendServer!.stop();
+        debugPrint('LocalSendServer已停止');
+      }
+    } catch (e) {
+      debugPrint('停止LocalSendServer时出错: $e');
+    }
+    
+    try {
+      // 停止设备发现服务
+      if (_discoveryService != null) {
+        debugPrint('停止设备发现服务...');
+        await _discoveryService!.stopDiscovery();
+        debugPrint('设备发现服务已停止');
+      }
+    } catch (e) {
+      debugPrint('停止设备发现服务时出错: $e');
+    }
+    
+    try {
+      // 清理同步发送服务
+      if (_syncSendService != null) {
+        debugPrint('清理同步发送服务...');
+        _syncSendService!.dispose();
+        debugPrint('同步发送服务已清理');
+      }
+    } catch (e) {
+      debugPrint('清理同步发送服务时出错: $e');
+    }
 
-    _server = null;
+    // 清空所有引用
+    _fileReceiver = null;
     _localSendServer = null;
+    _localSendProvider = null;
     _discoveryService = null;
     _syncSendService = null;
 
-    debugPrint('ThoughtEcho sync servers stopped');
+    debugPrint('ThoughtEcho sync servers stopped and cleaned up');
   }
 
   /// 发送笔记数据到指定设备
@@ -561,7 +617,7 @@ class NoteSyncService extends ChangeNotifier {
   @override
   void dispose() {
     // 清理LocalSend资源
-    _server?.stop();
+    _fileReceiver?.stop();
     _localSendServer?.stop();
     _localSendProvider?.dispose();
     _syncSendService?.dispose();

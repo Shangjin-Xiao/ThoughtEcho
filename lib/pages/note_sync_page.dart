@@ -57,6 +57,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     try {
       final syncService = context.read<NoteSyncService>();
+      _syncService = syncService; // 保存引用供dispose使用
       
       // 添加调试信息
       debugPrint('开始初始化同步服务...');
@@ -105,12 +106,27 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   Future<void> _stopSyncService() async {
     try {
-      // 使用保存的引用而不是context.read
+      // 优先使用保存的引用
       if (_syncService != null) {
+        debugPrint('使用保存的引用停止同步服务...');
         await _syncService!.stopServer();
+      } else {
+        // 备用方案：通过context获取（但要小心context可能已失效）
+        try {
+          if (mounted) {
+            final syncService = context.read<NoteSyncService>();
+            debugPrint('使用context获取的引用停止同步服务...');
+            await syncService.stopServer();
+          }
+        } catch (e) {
+          debugPrint('通过context停止同步服务失败: $e');
+        }
       }
+      debugPrint('同步服务已停止');
     } catch (e) {
       debugPrint('停止同步服务失败: $e');
+    } finally {
+      _syncService = null; // 清理引用
     }
   }
 
