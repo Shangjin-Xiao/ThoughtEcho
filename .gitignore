@@ -46,6 +46,9 @@ Spotlight-V100
 # .metadata        # Flutter工具使用的元数据文件，可能需要提交
 # devtools_options.yaml  # DevTools配置文件，可能需要提交
 
+# Flutter SDK (shouldn't be committed)
+flutter/
+
 # Symbolication related
 app.*.symbols
 

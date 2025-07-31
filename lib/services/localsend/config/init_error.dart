@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:thoughtecho/util/native/platform_check.dart';
-import 'package:thoughtecho/util/native/tray_helper.dart';
+import 'package:common/util/native/platform_check.dart';
+import 'package:common/util/native/tray_helper.dart';
 import 'package:logging/logging.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:refena_flutter/refena_flutter.dart';

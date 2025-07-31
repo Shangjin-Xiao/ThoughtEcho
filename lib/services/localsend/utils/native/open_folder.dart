@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:thoughtecho/util/native/channel/android_channel.dart' as android_channel;
-import 'package:thoughtecho/util/native/platform_check.dart';
+import 'package:common/util/native/channel/android_channel.dart' as android_channel;
+import 'package:common/util/native/platform_check.dart';
 import 'package:logging/logging.dart';
 import 'package:open_dir/open_dir.dart';
 import 'package:open_filex/open_filex.dart';

@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:thoughtecho/provider/network/server/server_utils.dart';
-import 'package:thoughtecho/util/simple_server.dart';
+import '../../../provider/network/server/server_utils.dart';
+import 'package:common/util/simple_server.dart';
 
 /// Responds with 401 or 429 if the pin is invalid or too many attempts.
 /// Returns true if the pin is correct, or if no pin is set.

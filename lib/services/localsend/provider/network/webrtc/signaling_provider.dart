@@ -1,18 +1,18 @@
 import 'dart:async';
 
-import 'package:thoughtecho/constants.dart';
-import 'package:thoughtecho/model/device.dart';
+import '../../../constants.dart';
+import 'package:common/model/device.dart';
 import 'package:dart_mappable/dart_mappable.dart';
-import 'package:thoughtecho/provider/device_info_provider.dart';
-import 'package:thoughtecho/provider/favorites_provider.dart';
-import 'package:thoughtecho/provider/network/nearby_devices_provider.dart';
-import 'package:thoughtecho/provider/network/webrtc/webrtc_receiver.dart';
-import 'package:thoughtecho/provider/persistence_provider.dart';
-import 'package:thoughtecho/provider/security_provider.dart';
-import 'package:thoughtecho/provider/settings_provider.dart';
-import 'package:thoughtecho/rust/api/crypto.dart' as crypto;
-import 'package:thoughtecho/rust/api/model.dart' as rust;
-import 'package:thoughtecho/rust/api/webrtc.dart';
+import '../../../provider/device_info_provider.dart';
+import '../../../provider/favorites_provider.dart';
+import '../../../provider/network/nearby_devices_provider.dart';
+import '../../../provider/network/webrtc/webrtc_receiver.dart';
+import '../persistence_provider.dart';
+import '../../../provider/security_provider.dart';
+import '../../../provider/settings_provider.dart';
+import '../../../rust/api/crypto.dart' as crypto;
+import '../../../rust/api/model.dart' as rust;
+import '../../../rust/api/webrtc.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 part 'signaling_provider.mapper.dart';

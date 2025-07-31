@@ -1,7 +1,7 @@
-import 'package:thoughtecho/model/session_status.dart';
+import 'package:common/model/session_status.dart';
 import 'package:flutter/material.dart';
-import 'package:thoughtecho/util/native/macos_channel.dart';
-import 'package:thoughtecho/util/native/platform_check.dart';
+import 'package:common/util/native/macos_channel.dart';
+import 'package:common/util/native/platform_check.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
 
 enum TaskbarIcon { regular, error, success }

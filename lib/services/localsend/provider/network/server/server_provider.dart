@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:thoughtecho/constants.dart';
-import 'package:thoughtecho/isolate.dart';
-import 'package:thoughtecho/model/dto/multicast_dto.dart';
-import 'package:thoughtecho/model/cross_file.dart';
-import 'package:thoughtecho/model/state/server/server_state.dart';
-import 'package:thoughtecho/provider/network/server/controller/receive_controller.dart';
-import 'package:thoughtecho/provider/network/server/controller/send_controller.dart';
-import 'package:thoughtecho/provider/network/server/server_utils.dart';
-import 'package:thoughtecho/provider/security_provider.dart';
-import 'package:thoughtecho/provider/settings_provider.dart';
-import 'package:thoughtecho/util/alias_generator.dart';
-import 'package:thoughtecho/util/simple_server.dart';
+import '../../../constants.dart';
+import 'package:common/isolate.dart';
+import 'package:common/model/dto/multicast_dto.dart';
+import 'package:common/model/cross_file.dart';
+import 'package:common/model/state/server/server_state.dart';
+import '../../../provider/network/server/controller/receive_controller.dart';
+import '../../../provider/network/server/controller/send_controller.dart';
+import '../../../provider/network/server/server_utils.dart';
+import '../../../provider/security_provider.dart';
+import '../../../provider/settings_provider.dart';
+import 'package:common/util/alias_generator.dart';
+import 'package:common/util/simple_server.dart';
 import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 

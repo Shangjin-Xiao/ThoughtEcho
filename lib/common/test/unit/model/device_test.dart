@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:thoughtecho/model/device.dart';
+import 'package:common/model/device.dart';
 
 void main() {
   test('Should not have duplicate DiscoveryMethod', () {

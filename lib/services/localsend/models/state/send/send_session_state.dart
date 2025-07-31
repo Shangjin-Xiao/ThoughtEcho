@@ -1,8 +1,8 @@
-import 'package:thoughtecho/model/device.dart';
-import 'package:thoughtecho/model/session_status.dart';
+import 'package:common/model/device.dart';
+import 'package:common/model/session_status.dart';
 import 'package:dart_mappable/dart_mappable.dart';
-import 'package:thoughtecho/model/state/send/sending_file.dart';
-import 'package:thoughtecho/model/state/server/receive_session_state.dart';
+import 'package:common/model/state/send/sending_file.dart';
+import 'package:common/model/state/server/receive_session_state.dart';
 
 part 'send_session_state.mapper.dart';
 

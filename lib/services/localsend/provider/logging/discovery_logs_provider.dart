@@ -1,4 +1,4 @@
-import 'package:thoughtecho/model/log_entry.dart';
+import 'package:common/model/log_entry.dart';
 import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 

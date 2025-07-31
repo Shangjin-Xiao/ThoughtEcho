@@ -1,12 +1,15 @@
+// Import paths fixed for LocalSend integration - ThoughtEcho PR
+// Import paths fixed for LocalSend integration - ThoughtEcho PR
+// Import paths fixed for LocalSend integration - ThoughtEcho PR
 import 'dart:async';
 
-import 'package:thoughtecho/util/sleep.dart';
-import 'package:thoughtecho/pages/home_page.dart';
-import 'package:thoughtecho/pages/home_page_controller.dart';
-import 'package:thoughtecho/provider/favorites_provider.dart';
-import 'package:thoughtecho/provider/local_ip_provider.dart';
-import 'package:thoughtecho/provider/network/nearby_devices_provider.dart';
-import 'package:thoughtecho/provider/settings_provider.dart';
+import 'package:common/util/sleep.dart';
+import '../../../../pages/home_page.dart';
+import '../../../../pages/home_page_controller.dart';
+import '../../../../provider/favorites_provider.dart';
+import '../../../../provider/local_ip_provider.dart';
+import '../../../../provider/network/nearby_devices_provider.dart';
+import '../../../../provider/settings_provider.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 
 /// Scans the network via multicast first,

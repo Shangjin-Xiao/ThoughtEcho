@@ -1,5 +1,5 @@
-import 'package:thoughtecho/model/device.dart';
-import 'package:thoughtecho/model/device_info_result.dart';
+import 'package:common/model/device.dart';
+import 'package:common/model/device_info_result.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 // ignore: implementation_imports

@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:gal/gal.dart';
 import 'package:legalize/legalize.dart';
-import 'package:thoughtecho/util/file_path_helper.dart';
-import 'package:thoughtecho/util/native/channel/android_channel.dart' as android_channel;
-import 'package:thoughtecho/util/native/content_uri_helper.dart';
+import 'package:common/util/file_path_helper.dart';
+import 'package:common/util/native/channel/android_channel.dart' as android_channel;
+import 'package:common/util/native/content_uri_helper.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
