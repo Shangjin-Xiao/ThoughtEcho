@@ -1,5 +1,3 @@
-/// HTTP客户端工具
-/// 专用于ThoughtEcho同步协议的HTTP请求
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';

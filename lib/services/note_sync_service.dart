@@ -503,11 +503,29 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 发现附近的设备
   Future<List<Device>> discoverNearbyDevices() async {
-    // 使用UDP组播发现设备
-    if (_discoveryService != null) {
-      return _discoveryService!.devices;
+    if (_discoveryService == null) {
+      debugPrint('Discovery service not initialized');
+      return [];
     }
-    return [];
+
+    try {
+      // 清空现有设备列表，重新开始发现
+      _discoveryService!.clearDevices();
+
+      // 发送设备公告，触发其他设备响应
+      await _discoveryService!.announceDevice();
+
+      // 等待一段时间收集响应
+      await Future.delayed(const Duration(milliseconds: 2000));
+
+      final devices = _discoveryService!.devices;
+      debugPrint('发现 ${devices.length} 台设备');
+
+      return devices;
+    } catch (e) {
+      debugPrint('设备发现失败: $e');
+      return [];
+    }
   }
 
   @override

@@ -74,44 +74,59 @@ class ReceiveController {
     String sessionId,
     String fileId,
     String token,
-    Stream<List<int>> fileStream,
+    HttpRequest request,
   ) async {
     try {
+      debugPrint('接收文件上传请求: sessionId=$sessionId, fileId=$fileId');
       final session = _sessions[sessionId];
       if (session == null) {
+        debugPrint('找不到会话: $sessionId');
         throw Exception('Session not found');
       }
       
       // Validate token
       if (session.fileTokens?[fileId] != token) {
+        debugPrint('令牌无效: 预期 ${session.fileTokens?[fileId]}, 实际 $token');
         throw Exception('Invalid token');
       }
       
       // Get file info
       final fileDto = session.files[fileId];
       if (fileDto == null) {
+        debugPrint('找不到文件: $fileId');
         throw Exception('File not found');
       }
       
       // Save file to temporary location
       final tempDir = Directory.systemTemp;
-      final filePath = '${tempDir.path}/${fileDto.fileName}';
+      final fileName = fileDto.fileName ?? 'unknown_file';
+      final filePath = '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
       final file = File(filePath);
       
-      // Write file data
-      final sink = file.openWrite();
-      await fileStream.pipe(sink);
+      debugPrint('开始保存文件到: $filePath');
+      
+      // Write file data - 修正为使用fold来收集请求数据
+      final bytes = await request.fold<List<int>>(
+        <int>[],
+        (previous, element) => previous..addAll(element),
+      );
+      await file.writeAsBytes(bytes);
+      
+      debugPrint('文件保存完成: $filePath, 大小: ${await file.length()} 字节');
       
       // Notify file received
       if (onFileReceived != null) {
+        debugPrint('通知上层服务接收到文件');
         onFileReceived!(filePath);
       }
       
-      debugPrint('File received: ${fileDto.fileName} -> $filePath');
+      debugPrint('文件上传处理完成: ${fileDto.fileName} -> $filePath');
       
       return {'message': 'File uploaded successfully'};
       
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('文件上传处理失败: $e');
+      debugPrint('堆栈: $stack');
       throw Exception('Upload failed: $e');
     }
   }

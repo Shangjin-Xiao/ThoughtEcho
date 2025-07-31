@@ -8,7 +8,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/models/localsend_device.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'dart:io';
+
 
 // 生成Mock类
 @GenerateMocks([
@@ -54,7 +54,7 @@ void main() {
 
     test('创建同步包流程测试', () async {
       // 准备测试数据
-      final testDevice = Device(
+      const testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -65,7 +65,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {const MulticastDiscovery()},
+        discoveryMethods: {MulticastDiscovery()},
       );
 
       // Mock备份服务返回
@@ -146,7 +146,7 @@ void main() {
         onProgress: anyNamed('onProgress'),
       )).thenAnswer((_) async => '/tmp/backup_with_media.zip');
 
-      final testDevice = Device(
+      const testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -157,7 +157,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {const MulticastDiscovery()},
+        discoveryMethods: {MulticastDiscovery()},
       );
 
       try {
@@ -180,7 +180,7 @@ void main() {
         onProgress: anyNamed('onProgress'),
       )).thenThrow(Exception('备份失败'));
 
-      final testDevice = Device(
+      const testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -191,7 +191,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {const MulticastDiscovery()},
+        discoveryMethods: {MulticastDiscovery()},
       );
 
       // 应该抛出异常
@@ -202,7 +202,7 @@ void main() {
     });
 
     test('设备类型转换测试', () {
-      final testDevice = Device(
+      const testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -213,7 +213,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.desktop,
         download: true,
-        discoveryMethods: {const MulticastDiscovery()},
+        discoveryMethods: {MulticastDiscovery()},
       );
 
       // 测试设备类型转换（通过反射或其他方式访问私有方法）

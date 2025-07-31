@@ -6,7 +6,7 @@ import 'package:thoughtecho/services/sync_protocol/utils/api_routes.dart';
 void main() {
   group('Sync Protocol Tests', () {
     test('DeviceInfo serialization', () {
-      final deviceInfo = DeviceInfo(
+      const deviceInfo = DeviceInfo(
         alias: 'Test Device',
         version: '2.1',
         deviceModel: 'Test Model',
@@ -44,7 +44,7 @@ void main() {
     });
 
     test('PrepareUploadRequest serialization', () {
-      final deviceInfo = DeviceInfo(
+      const deviceInfo = DeviceInfo(
         alias: 'Test Device',
         version: '2.1',
         deviceModel: 'Test Model',
@@ -55,13 +55,13 @@ void main() {
         download: true,
       );
 
-      final fileInfo = FileInfo(
+      const fileInfo = FileInfo(
         id: 'test-file',
         fileName: 'test.zip',
         size: 1024,
       );
 
-      final request = PrepareUploadRequest(
+      const request = PrepareUploadRequest(
         info: deviceInfo,
         files: {'test-file': fileInfo},
       );
@@ -74,7 +74,7 @@ void main() {
     });
 
     test('API Routes generation', () {
-      final deviceInfo = DeviceInfo(
+      const deviceInfo = DeviceInfo(
         alias: 'Test Device',
         version: '2.1',
         deviceModel: 'Test Model',
@@ -85,7 +85,7 @@ void main() {
         download: true,
       );
 
-      final networkDevice = NetworkDevice(
+      const networkDevice = NetworkDevice(
         ip: '192.168.1.100',
         port: 53317,
         info: deviceInfo,
@@ -110,13 +110,13 @@ void main() {
     });
 
     test('TransferSession state management', () {
-      final fileInfo = FileInfo(
+      const fileInfo = FileInfo(
         id: 'test-file',
         fileName: 'test.zip',
         size: 1024,
       );
 
-      final session = TransferSession(
+      const session = TransferSession(
         sessionId: 'test-session',
         remoteDeviceId: 'remote-device',
         status: TransferStatus.waiting,

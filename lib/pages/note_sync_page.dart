@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:thoughtecho/utils/sync_network_tester.dart';
 
 /// 笔记同步页面
 /// 
@@ -17,6 +18,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   List<Device> _nearbyDevices = [];
   bool _isScanning = false;
   bool _isSending = false;
+  bool _isInitializing = true;
+  String _initializationError = '';
   NoteSyncService? _syncService;
 
   @override
@@ -30,15 +33,63 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     super.didChangeDependencies();
     // 在这里安全地获取NoteSyncService的引用
     _syncService = context.read<NoteSyncService>();
+    
+    // 检查服务状态并提供视觉反馈
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_syncService != null && _isInitializing) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('正在初始化同步服务...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _initializeSyncService() async {
+    setState(() {
+      _isInitializing = true;
+      _initializationError = '';
+    });
+
     try {
       final syncService = context.read<NoteSyncService>();
+      
+      // 添加调试信息
+      debugPrint('开始初始化同步服务...');
+      
       await syncService.startServer();
+
+      // 添加更多调试信息
+      debugPrint('同步服务初始化成功，服务器已启动');
+      
+      setState(() {
+        _isInitializing = false;
+      });
+
+      // 自动开始设备发现
       _startDeviceDiscovery();
     } catch (e) {
       debugPrint('启动同步服务失败: $e');
+      setState(() {
+        _isInitializing = false;
+        _initializationError = e.toString();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('同步服务启动失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: '重试',
+              onPressed: _initializeSyncService,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -60,22 +111,70 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   Future<void> _startDeviceDiscovery() async {
+    if (_isScanning) return;
+
     setState(() {
       _isScanning = true;
+      _nearbyDevices.clear(); // 清空旧的设备列表
     });
 
     try {
-      final syncService = context.read<NoteSyncService>();
-      final devices = await syncService.discoverNearbyDevices();
+      // 首先检查服务是否已初始化
+      if (_syncService == null || _isInitializing) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('同步服务尚未就绪，请稍后再试'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        // 尝试重新初始化
+        await _initializeSyncService();
+        // 如果仍未初始化，则退出
+        if (_syncService == null || _isInitializing) {
+          setState(() {
+            _isScanning = false;
+          });
+          return;
+        }
+      }
+
+      // 显示扫描开始提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('正在搜索附近设备...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      final devices = await _syncService!.discoverNearbyDevices();
+
       if (mounted) {
         setState(() {
           _nearbyDevices = devices;
         });
+
+        // 显示发现结果
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(devices.isEmpty ? '未发现附近设备' : '发现 ${devices.length} 台设备'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
+      debugPrint('设备发现失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('设备发现失败: $e')),
+          SnackBar(
+            content: Text('设备发现失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     } finally {
@@ -118,6 +217,107 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     }
   }
 
+  /// 运行网络诊断
+  Future<void> _runNetworkDiagnostics() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        title: Text('网络诊断'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('正在检测网络连接...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // 先检查服务状态
+      if (_syncService == null || _isInitializing) {
+        if (mounted) {
+          Navigator.of(context).pop(); // 关闭加载对话框
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('同步服务状态'),
+              content: Text(_isInitializing 
+                ? '同步服务正在初始化中，请稍候再试...' 
+                : '同步服务未初始化，请重新打开同步页面'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    if (!_isInitializing) {
+                      _initializeSyncService(); // 尝试重新初始化
+                    }
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      final results = await SyncNetworkTester.runFullNetworkTest();
+
+      if (mounted) {
+        Navigator.of(context).pop(); // 关闭加载对话框
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('网络诊断结果'),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: ListView.builder(
+                itemCount: results.length,
+                itemBuilder: (context, index) {
+                  final result = results[index];
+                  return ExpansionTile(
+                    title: Text(result.testName),
+                    subtitle: Text(result.isSuccess ? '✅ 通过' : '❌ 失败'),
+                    children: result.steps.map((step) => ListTile(
+                      leading: Icon(
+                        step.success ? Icons.check_circle : Icons.error,
+                        color: step.success ? Colors.green : Colors.red,
+                      ),
+                      title: Text(step.name),
+                      subtitle: Text(step.message),
+                      dense: true,
+                    )).toList(),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('关闭'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // 关闭加载对话框
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('网络诊断失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,8 +325,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         title: const Text('笔记同步'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.network_check),
+            onPressed: _runNetworkDiagnostics,
+            tooltip: '网络诊断',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _isScanning ? null : _startDeviceDiscovery,
+            tooltip: '刷新设备列表',
           ),
         ],
       ),
@@ -141,7 +347,19 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               children: [
                 Row(
                   children: [
-                    if (_isScanning) ...[
+                    if (_isInitializing) ...[
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('正在启动同步服务...'),
+                    ] else if (_initializationError.isNotEmpty) ...[
+                      const Icon(Icons.error, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('启动失败: $_initializationError', style: const TextStyle(color: Colors.red))),
+                    ] else if (_isScanning) ...[
                       const SizedBox(
                         width: 16,
                         height: 16,
