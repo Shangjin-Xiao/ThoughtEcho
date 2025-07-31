@@ -220,7 +220,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -255,7 +255,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                     Text(
                       analysis.createdAt,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                     ),
                     const SizedBox(height: 20),

@@ -94,11 +94,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     try {
       final syncService = context.read<NoteSyncService>();
-      await syncService.sendNotesToDevice(device);
-      
+
+      // 使用新的createSyncPackage方法
+      final sessionId = await syncService.createSyncPackage(device);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('笔记发送成功！')),
+          SnackBar(content: Text('笔记发送成功！会话ID: ${sessionId.substring(0, 8)}...')),
         );
       }
     } catch (e) {
@@ -135,24 +137,93 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Row(
+            child: Column(
               children: [
-                if (_isScanning) ...[
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('正在搜索附近设备...'),
-                ] else ...[
-                  Icon(
-                    Icons.devices,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text('发现 ${_nearbyDevices.length} 台设备'),
-                ],
+                Row(
+                  children: [
+                    if (_isScanning) ...[
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('正在搜索附近设备...'),
+                    ] else ...[
+                      Icon(
+                        Icons.devices,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('发现 ${_nearbyDevices.length} 台设备'),
+                    ],
+                  ],
+                ),
+
+                // 同步状态显示
+                Consumer<NoteSyncService>(
+                  builder: (context, syncService, child) {
+                    if (syncService.syncStatus != SyncStatus.idle) {
+                      return Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _getSyncStatusColor(syncService.syncStatus),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            if (syncService.syncStatus == SyncStatus.packaging ||
+                                syncService.syncStatus == SyncStatus.sending ||
+                                syncService.syncStatus == SyncStatus.merging) ...[
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: syncService.syncProgress,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getSyncStatusText(syncService.syncStatus),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (syncService.syncStatusMessage.isNotEmpty)
+                                    Text(
+                                      syncService.syncStatusMessage,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (syncService.syncProgress > 0 && syncService.syncProgress < 1)
+                              Text(
+                                '${(syncService.syncProgress * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
               ],
             ),
           ),
@@ -256,6 +327,46 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         ],
       ),
     );
+  }
+
+  /// 获取同步状态颜色
+  Color _getSyncStatusColor(SyncStatus status) {
+    switch (status) {
+      case SyncStatus.idle:
+        return Colors.grey;
+      case SyncStatus.packaging:
+        return Colors.blue;
+      case SyncStatus.sending:
+        return Colors.orange;
+      case SyncStatus.receiving:
+        return Colors.purple;
+      case SyncStatus.merging:
+        return Colors.indigo;
+      case SyncStatus.completed:
+        return Colors.green;
+      case SyncStatus.failed:
+        return Colors.red;
+    }
+  }
+
+  /// 获取同步状态文本
+  String _getSyncStatusText(SyncStatus status) {
+    switch (status) {
+      case SyncStatus.idle:
+        return '空闲';
+      case SyncStatus.packaging:
+        return '正在打包数据';
+      case SyncStatus.sending:
+        return '正在发送';
+      case SyncStatus.receiving:
+        return '正在接收';
+      case SyncStatus.merging:
+        return '正在合并数据';
+      case SyncStatus.completed:
+        return '同步完成';
+      case SyncStatus.failed:
+        return '同步失败';
+    }
   }
 
   IconData _getDeviceIcon(DeviceType deviceType) {

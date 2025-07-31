@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 
-// 使用debugPrint替代logger
+final _logger = Logger('NetworkInterface');
 
 /// Returns a list of network interfaces respecting the whitelist and blacklist.
 Future<List<NetworkInterface>> getNetworkInterfaces({
@@ -19,7 +19,7 @@ Future<List<NetworkInterface>> getNetworkInterfaces({
       networkBlacklist: digestedBlacklist,
       interface: interface.addresses.map((a) => a.address).toList(),
     )) {
-      debugPrint('Ignore network interface ${interface.name} (${interface.addresses.map((a) => a.address).toList()})');
+      _logger.info('Ignore network interface ${interface.name} (${interface.addresses.map((a) => a.address).toList()})');
       continue;
     }
     result.add(interface);

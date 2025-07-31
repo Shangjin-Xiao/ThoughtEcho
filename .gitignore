@@ -150,7 +150,6 @@ jest_*.log
 .yarn/cache
 .pnp.*
 
-localsend_temp/
 
 # 应用生成的日志和临时文件
 **/debug_info/
