@@ -5,7 +5,9 @@ class ServerUtils {
   final Ref Function() refFunc;
   final ServerState Function() getState;
   final ServerState? Function() getStateOrNull;
-  final void Function(ServerState Function(ServerState?) builder) setState;
+  final void Function(ServerState? Function(ServerState? oldState) builder) setState;
+
+  Ref get ref => refFunc();
 
   ServerUtils({
     required this.refFunc,

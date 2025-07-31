@@ -2,180 +2,143 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'constants.dart';
-import 'receive_controller.dart';
-import 'package:flutter/foundation.dart';
+import '../constants.dart';
+import '../../common/model/device.dart';
+import '../../common/util/simple_server.dart';
+import 'provider/network/server/controller/receive_controller.dart';
+import 'provider/network/server/controller/send_controller.dart';
+import 'provider/network/server/server_utils.dart';
+import 'package:logging/logging.dart';
+import 'package:uuid/uuid.dart';
 
-/// Simple HTTP server for LocalSend protocol
-/// Based on LocalSend's server but simplified for ThoughtEcho
+const _uuid = Uuid();
+final _logger = Logger('LocalSendServer');
+
+/// LocalSend server for ThoughtEcho note synchronization
 class LocalSendServer {
-  HttpServer? _server;
-  late ReceiveController _receiveController;
+  SimpleServer? _server;
   bool _isRunning = false;
   int _port = defaultPort;
-  
+  String _alias = 'ThoughtEcho';
+  String _fingerprint = '';
+  ReceiveController? _receiveController;
+  SendController? _sendController;
+
   bool get isRunning => _isRunning;
   int get port => _port;
-  
-  /// Start the HTTP server
-  Future<void> start({
-    int? port,
-    Function(String filePath)? onFileReceived,
-  }) async {
-    if (_isRunning) return;
+  String get alias => _alias;
 
-    // Check if we're running on web platform
-    if (kIsWeb) {
-      debugPrint('LocalSend server not supported on web platform');
-      _isRunning = false;
+  /// Start the LocalSend server
+  Future<void> start({int? customPort}) async {
+    if (_isRunning) {
+      _logger.warning('Server is already running');
       return;
     }
 
-    _port = port ?? defaultPort;
-    _receiveController = ReceiveController(onFileReceived: onFileReceived);
+    _port = customPort ?? defaultPort;
+    _fingerprint = _generateFingerprint();
 
     try {
-      // Try to bind to the specified port
-      _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
+      _server = SimpleServer();
+      
+      // Create server utilities
+      final serverUtils = ServerUtils(
+        refFunc: () => throw UnimplementedError('Ref not implemented'),
+        getState: () => throw UnimplementedError('State not implemented'),
+        getStateOrNull: () => null,
+        setState: (builder) => {},
+      );
 
-      // Set up request handling
-      _server!.listen(_handleRequest);
+      // Initialize controllers
+      _receiveController = ReceiveController(serverUtils);
+      _sendController = SendController(serverUtils);
 
+      // Install routes
+      _receiveController!.installRoutes(
+        router: _server!.router,
+        alias: _alias,
+        port: _port,
+        https: false,
+        fingerprint: _fingerprint,
+        showToken: _generateToken(),
+      );
+
+      _sendController!.installRoutes(
+        router: _server!.router,
+        alias: _alias,
+        fingerprint: _fingerprint,
+      );
+
+      // Start the server
+      await _server!.start(port: _port);
       _isRunning = true;
-      debugPrint('LocalSend server started on port $_port');
-
+      
+      _logger.info('LocalSend server started on port $_port');
     } catch (e) {
-      debugPrint('Failed to start server on port $_port: $e');
-
-      // Try alternative ports
-      for (int altPort = _port + 1; altPort <= _port + 100; altPort++) {
-        try {
-          _server = await HttpServer.bind(InternetAddress.anyIPv4, altPort);
-          _server!.listen(_handleRequest);
-          _port = altPort;
-          _isRunning = true;
-          debugPrint('LocalSend server started on alternative port $altPort');
-          break;
-        } catch (e) {
-          // Continue trying
-        }
-      }
-
-      if (!_isRunning) {
-        throw Exception('Failed to start server on any port');
-      }
-    }
-  }
-  
-  /// Stop the HTTP server
-  Future<void> stop() async {
-    if (!_isRunning) return;
-    
-    try {
-      await _server?.close();
-      _server = null;
-      _receiveController.dispose();
+      _logger.severe('Failed to start LocalSend server: $e');
       _isRunning = false;
-      debugPrint('LocalSend server stopped');
-    } catch (e) {
-      debugPrint('Error stopping server: $e');
+      rethrow;
     }
   }
-  
-  /// Handle incoming HTTP requests
-  Future<void> _handleRequest(HttpRequest request) async {
+
+  /// Stop the LocalSend server
+  Future<void> stop() async {
+    if (!_isRunning || _server == null) {
+      return;
+    }
+
     try {
-      // Add CORS headers
-      request.response.headers.add('Access-Control-Allow-Origin', '*');
-      request.response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      request.response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      await _server!.stop();
+      _isRunning = false;
+      _server = null;
+      _receiveController = null;
+      _sendController = null;
       
-      // Handle preflight requests
-      if (request.method == 'OPTIONS') {
-        request.response.statusCode = 200;
-        await request.response.close();
-        return;
-      }
-      
-      final path = request.uri.path;
-      final query = request.uri.queryParameters;
-      
-      debugPrint('${request.method} $path');
-      
-      // Route requests
-      Map<String, dynamic> responseData;
-      int statusCode = 200;
-      
-      try {
-        if (path == '/api/localsend/v2/info' && request.method == 'GET') {
-          responseData = _receiveController.handleInfoRequest();
-          
-        } else if (path == '/api/localsend/v2/prepare-upload' && request.method == 'POST') {
-          final bodyBytes = await request.fold<List<int>>(
-            <int>[],
-            (previous, element) => previous..addAll(element),
-          );
-          final bodyString = utf8.decode(bodyBytes);
-          final requestData = jsonDecode(bodyString) as Map<String, dynamic>;
-          responseData = _receiveController.handlePrepareUpload(requestData);
-          
-        } else if (path == '/api/localsend/v2/upload' && request.method == 'POST') {
-          final sessionId = query['sessionId'];
-          final fileId = query['fileId'];
-          final token = query['token'];
-          
-          if (sessionId == null || fileId == null || token == null) {
-            statusCode = 400;
-            responseData = {'error': 'Missing required parameters'};
-          } else {
-            responseData = await _receiveController.handleFileUpload(
-              sessionId,
-              fileId,
-              token,
-              request,
-            );
-          }
-          
-        } else {
-          // 404 Not Found
-          statusCode = 404;
-          responseData = {'error': 'Not found'};
-        }
-      } catch (e) {
-        statusCode = 500;
-        responseData = {'error': e.toString()};
-      }
-      
-      // Send response
-      request.response.statusCode = statusCode;
-      request.response.headers.contentType = ContentType.json;
-      request.response.write(jsonEncode(responseData));
-      await request.response.close();
-      
-    } catch (e, stackTrace) {
-      debugPrint('Error handling request: $e');
-      debugPrint('Stack trace: $stackTrace');
-      
-      try {
-        request.response.statusCode = 500;
-        request.response.headers.contentType = ContentType.json;
-        request.response.write(jsonEncode({'error': 'Internal server error'}));
-        await request.response.close();
-      } catch (e) {
-        // Ignore errors when trying to send error response
-      }
+      _logger.info('LocalSend server stopped');
+    } catch (e) {
+      _logger.severe('Failed to stop LocalSend server: $e');
     }
   }
-  
-  /// Get server info
-  Map<String, dynamic> getServerInfo() {
-    return {
-      'isRunning': _isRunning,
-      'port': _port,
-      'sessions': _receiveController.sessions.length,
-    };
+
+  /// Generate a unique fingerprint for this device
+  String _generateFingerprint() {
+    return _uuid.v4().replaceAll('-', '').substring(0, 16);
   }
-  
-  /// Get receive controller
-  ReceiveController get receiveController => _receiveController;
+
+  /// Generate a token for authentication
+  String _generateToken() {
+    return _uuid.v4().replaceAll('-', '').substring(0, 8);
+  }
+
+  /// Get server device information
+  Device getDeviceInfo() {
+    return Device(
+      ip: _getLocalIp() ?? '127.0.0.1',
+      port: _port,
+      https: false,
+      alias: _alias,
+      version: protocolVersion,
+      deviceModel: 'ThoughtEcho',
+      deviceType: 'mobile',
+      fingerprint: _fingerprint,
+    );
+  }
+
+  /// Get local IP address
+  String? _getLocalIp() {
+    try {
+      return NetworkInterface.list().then((interfaces) {
+        for (final interface in interfaces) {
+          for (final address in interface.addresses) {
+            if (!address.isLoopback && address.type == InternetAddressType.IPv4) {
+              return address.address;
+            }
+          }
+        }
+        return null;
+      }) as String?;
+    } catch (e) {
+      return null;
+    }
+  }
 }

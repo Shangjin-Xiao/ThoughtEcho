@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -10,8 +11,11 @@ import 'package:thoughtecho/services/localsend_simple_server.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
-import '../../common/lib/model/device.dart' as common;
+import "package:common/model/device.dart" as common;
+import '../models/note.dart';
+import 'package:logging/logging.dart';
 
+final _logger = Logger('NoteSyncService');
 
 /// 笔记同步服务 - 基于LocalSend的P2P同步功能
 /// 
@@ -20,14 +24,24 @@ import '../../common/lib/model/device.dart' as common;
 class NoteSyncService extends ChangeNotifier {
   final BackupService _backupService;
   final DatabaseService _databaseService;
-  // final SettingsService _settingsService;
-  // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
   SimpleServer? _server;
   ThoughtEchoDiscoveryService? _discoveryService;
   LocalSendServer? _localSendServer;
   LocalSendProvider? _localSendProvider;
+
+  // 状态管理
+  bool _isServerRunning = false;
+  bool _isDiscovering = false;
+  List<Device> _discoveredDevices = [];
+  SyncStatus _currentStatus = SyncStatus.idle;
+
+  // Getters
+  bool get isServerRunning => _isServerRunning;
+  bool get isDiscovering => _isDiscovering;
+  List<Device> get discoveredDevices => List.unmodifiable(_discoveredDevices);
+  SyncStatus get currentStatus => _currentStatus;
 
   NoteSyncService({
     required BackupService backupService,
@@ -36,237 +50,273 @@ class NoteSyncService extends ChangeNotifier {
     required AIAnalysisDatabaseService aiAnalysisDbService,
   })  : _backupService = backupService,
         _databaseService = databaseService;
-        // _settingsService = settingsService,
-        // _aiAnalysisDbService = aiAnalysisDbService;
 
   /// 初始化同步服务
   Future<void> initialize() async {
-    // 在打开同步页面时才启动服务器
-    debugPrint('NoteSyncService initialized, server will start when sync page opens');
+    try {
+      _localSendProvider = LocalSendProvider();
+      _localSendServer = LocalSendServer();
+      _logger.info('NoteSyncService initialized');
+    } catch (e) {
+      _logger.severe('Failed to initialize NoteSyncService: $e');
+      rethrow;
+    }
   }
 
   /// 启动服务器（在打开同步页面时调用）
   Future<void> startServer() async {
-    if (_server?.isRunning == true || _localSendServer?.isRunning == true) return;
+    if (_isServerRunning || _localSendServer == null) return;
 
-    // Check if we're running on web platform
-    if (kIsWeb) {
-      debugPrint('Note sync servers not supported on web platform');
+    try {
+      await _localSendServer!.start();
+      _isServerRunning = true;
+      _currentStatus = SyncStatus.serverStarted;
+      notifyListeners();
+      _logger.info('LocalSend server started');
+    } catch (e) {
+      _logger.severe('Failed to start server: $e');
+      _currentStatus = SyncStatus.error;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// 停止服务器
+  Future<void> stopServer() async {
+    if (!_isServerRunning || _localSendServer == null) return;
+
+    try {
+      await _localSendServer!.stop();
+      _isServerRunning = false;
+      _currentStatus = SyncStatus.serverStopped;
+      notifyListeners();
+      _logger.info('LocalSend server stopped');
+    } catch (e) {
+      _logger.severe('Failed to stop server: $e');
+    }
+  }
+
+  /// 发现附近设备
+  Future<void> discoverDevices() async {
+    if (_isDiscovering) return;
+
+    _isDiscovering = true;
+    _currentStatus = SyncStatus.discovering;
+    _discoveredDevices.clear();
+    notifyListeners();
+
+    try {
+      // 执行网络扫描
+      await _performNetworkScan();
+      
+      _currentStatus = SyncStatus.discoveryComplete;
+      _logger.info('Device discovery completed. Found ${_discoveredDevices.length} devices');
+    } catch (e) {
+      _logger.severe('Device discovery failed: $e');
+      _currentStatus = SyncStatus.error;
+    } finally {
+      _isDiscovering = false;
+      notifyListeners();
+    }
+  }
+
+  /// 执行网络扫描
+  Future<void> _performNetworkScan() async {
+    final interfaces = await NetworkInterface.list();
+    final localIp = _getLocalIp(interfaces);
+    
+    if (localIp == null) {
+      _logger.warning('No local IP found for scanning');
       return;
     }
 
-    _server = SimpleServer();
-    _discoveryService = ThoughtEchoDiscoveryService();
-    _localSendServer = LocalSendServer();
-    _localSendProvider = LocalSendProvider();
-
-    try {
-      // 启动原有服务器监听文件接收
-      await _server!.start(
-        alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
-        onFileReceived: (filePath) async {
-          // 接收到文件后自动导入
-          await receiveAndMergeNotes(filePath);
-        },
-      );
-
-      // 启动LocalSend服务器
-      await _localSendServer!.start(
-        onFileReceived: (filePath) async {
-          // 接收到文件后自动导入
-          await receiveAndMergeNotes(filePath);
-        },
-      );
-
-      // 启动设备发现
-      await _discoveryService!.startDiscovery();
-
-      debugPrint('ThoughtEcho servers started:');
-      debugPrint('  - Simple server on port ${_server?.port}');
-      debugPrint('  - LocalSend server on port ${_localSendServer?.port}');
-    } catch (e) {
-      debugPrint('Failed to start servers: $e');
-      // Clean up on failure
-      await stopServer();
-      rethrow;
-    }
-  }
-
-  /// 停止服务器（在关闭同步页面时调用）
-  Future<void> stopServer() async {
-    await _server?.stop();
-    await _localSendServer?.stop();
-    await _discoveryService?.stopDiscovery();
-
-    _server = null;
-    _localSendServer = null;
-    _discoveryService = null;
-
-    debugPrint('ThoughtEcho sync servers stopped');
-  }
-
-  /// 发送笔记数据到指定设备
-  Future<void> sendNotesToDevice(Device targetDevice) async {
-    if (_localSendProvider == null) {
-      throw Exception('LocalSend服务未初始化');
-    }
-
-    try {
-      // 1. 使用备份服务创建数据包
-      final backupPath = await _backupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: (current, total) {
-          // 发送进度通知
-          notifyListeners();
-        },
-      );
-
-      // 2. 创建LocalSend设备对象
-      final lsDevice = common.Device(
-        signalingId: null,
-        ip: targetDevice.ip,
-        version: '2.1',
-        port: targetDevice.port,
-        https: false,
-        fingerprint: targetDevice.fingerprint,
-        alias: targetDevice.alias,
-        deviceModel: targetDevice.deviceModel,
-        deviceType: _convertDeviceType(targetDevice.deviceType),
-        download: true,
-        discoveryMethods: {const common.MulticastDiscovery()},
-      );
-
-      // 3. 使用LocalSend发送文件
-      final backupFile = File(backupPath);
-      final sessionId = await _localSendProvider!.startSession(
-        target: lsDevice,
-        files: [backupFile],
-        background: true,
-      );
-
-      debugPrint('LocalSend文件发送会话已启动: $sessionId');
-
-    } catch (e) {
-      debugPrint('发送笔记失败: $e');
-      rethrow;
-    }
-  }
-
-  /// 转换设备类型
-  common.DeviceType _convertDeviceType(dynamic deviceType) {
-    if (deviceType == null) return common.DeviceType.desktop;
-
-    final typeStr = deviceType.toString().toLowerCase();
-    switch (typeStr) {
-      case 'mobile':
-        return common.DeviceType.mobile;
-      case 'desktop':
-        return common.DeviceType.desktop;
-      case 'web':
-        return common.DeviceType.web;
-      case 'headless':
-        return common.DeviceType.headless;
-      case 'server':
-        return common.DeviceType.server;
-      default:
-        return common.DeviceType.desktop;
-    }
-  }
-
-  /// 接收并合并笔记数据
-  Future<void> receiveAndMergeNotes(String backupFilePath) async {
-    try {
-      // 1. 导入接收到的备份数据（不清空现有数据）
-      await _backupService.importData(
-        backupFilePath,
-        clearExisting: false, // 关键：不清空现有数据，进行合并
-        onProgress: (current, total) {
-          notifyListeners();
-        },
-      );
-
-      // 2. 执行数据合并逻辑
-      await _mergeNoteData();
-      
-    } catch (e) {
-      debugPrint('接收笔记失败: $e');
-      rethrow;
-    }
-  }
-
-  /// 合并重复的笔记数据
-  Future<void> _mergeNoteData() async {
-    // 实现智能合并逻辑
-    // 1. 检测重复笔记（基于内容哈希或时间戳）
-    final allQuotes = await _databaseService.getAllQuotes();
-    final duplicateGroups = <String, List<dynamic>>{};
+    final networkBase = localIp.substring(0, localIp.lastIndexOf('.'));
     
-    // 按内容分组检测重复
-    for (final quote in allQuotes) {
-      final content = quote.content;
-      final contentHash = content.hashCode.toString();
-      
-      if (duplicateGroups.containsKey(contentHash)) {
-        duplicateGroups[contentHash]!.add(quote);
-      } else {
-        duplicateGroups[contentHash] = [quote];
+    // 并行扫描网络设备
+    final futures = <Future>[];
+    for (int i = 1; i <= 254; i++) {
+      final targetIp = '$networkBase.$i';
+      if (targetIp != localIp) {
+        futures.add(_scanDevice(targetIp));
       }
     }
     
-    // 2. 合并冲突的笔记 - 保留最新版本
-    for (final group in duplicateGroups.values) {
-      if (group.length > 1) {
-        // 按更新时间排序，保留最新的
-        group.sort((a, b) {
-          final timeA = DateTime.tryParse(a.date) ?? DateTime(1970);
-          final timeB = DateTime.tryParse(b.date) ?? DateTime(1970);
-          return timeB.compareTo(timeA);
-        });
+    await Future.wait(futures).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        _logger.info('Network scan timeout reached');
+        return [];
+      },
+    );
+  }
+
+  /// 扫描特定设备
+  Future<void> _scanDevice(String ip) async {
+    try {
+      final socket = await Socket.connect(ip, 53317)
+          .timeout(const Duration(milliseconds: 500));
+      await socket.close();
+      
+      // 获取设备信息
+      final deviceInfo = await _getDeviceInfo(ip);
+      if (deviceInfo != null) {
+        _discoveredDevices.add(deviceInfo);
+        notifyListeners();
+      }
+    } catch (e) {
+      // 设备不可用或未运行LocalSend
+    }
+  }
+
+  /// 获取设备信息
+  Future<Device?> _getDeviceInfo(String ip) async {
+    try {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse('http://$ip:53317/api/v1/info'))
+          .timeout(const Duration(seconds: 2));
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final data = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(data) as Map<String, dynamic>;
         
-        // 删除重复的旧版本
-        for (int i = 1; i < group.length; i++) {
-          await _databaseService.deleteQuote(group[i].id);
+        return Device(
+          ip: ip,
+          alias: json['alias'] as String? ?? 'Unknown Device',
+          port: 53317,
+          deviceType: json['deviceType'] as String? ?? 'mobile',
+          fingerprint: json['fingerprint'] as String? ?? '',
+        );
+      }
+    } catch (e) {
+      // 获取设备信息失败
+    }
+    return null;
+  }
+
+  /// 发送笔记到目标设备
+  Future<void> sendNotesToDevice(Device target, List<Note> notes) async {
+    if (_localSendProvider == null) {
+      throw StateError('Service not initialized');
+    }
+
+    _currentStatus = SyncStatus.sending;
+    notifyListeners();
+
+    try {
+      // 转换笔记格式
+      final noteFiles = notes.map((note) => NoteFile(
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+      )).toList();
+
+      // 使用通用Device格式
+      final commonDevice = common.Device(
+        ip: target.ip,
+        port: target.port,
+        https: false,
+        alias: target.alias,
+        version: '2.0',
+        deviceModel: 'ThoughtEcho',
+        deviceType: target.deviceType,
+        fingerprint: target.fingerprint,
+      );
+
+      // 开始发送会话
+      final sessionId = await _localSendProvider!.startSession(
+        target: commonDevice,
+        notes: noteFiles,
+      );
+
+      // 监控会话进度
+      await _monitorSendSession(sessionId);
+      
+      _currentStatus = SyncStatus.sendComplete;
+      _logger.info('Successfully sent ${notes.length} notes to ${target.alias}');
+    } catch (e) {
+      _logger.severe('Failed to send notes: $e');
+      _currentStatus = SyncStatus.error;
+      rethrow;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  /// 监控发送会话进度
+  Future<void> _monitorSendSession(String sessionId) async {
+    while (true) {
+      final session = _localSendProvider!.getSession(sessionId);
+      if (session == null) break;
+
+      if (session.status.isFinished || session.status.isCanceled) {
+        break;
+      }
+
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+  }
+
+  /// 获取本地IP地址
+  String? _getLocalIp(List<NetworkInterface> interfaces) {
+    for (final interface in interfaces) {
+      for (final address in interface.addresses) {
+        if (!address.isLoopback && address.type == InternetAddressType.IPv4) {
+          return address.address;
         }
       }
     }
+    return null;
   }
 
-  /// 发现附近的设备
-  Future<List<Device>> discoverNearbyDevices() async {
-    // 使用UDP组播发现设备
-    if (_discoveryService != null) {
-      return _discoveryService!.devices;
-    }
-    return [];
-  }
-
+  /// 清理资源
   @override
   void dispose() {
-    // 清理LocalSend资源
-    _server?.stop();
-    _localSendServer?.stop();
+    stopServer();
     _localSendProvider?.dispose();
     super.dispose();
   }
 }
 
-// CrossFile模型（简化版）
-class CrossFile {
-  final String path;
-  final String name;
-  final int size;
+/// 同步状态枚举
+enum SyncStatus {
+  idle,
+  discovering,
+  discoveryComplete,
+  serverStarted,
+  serverStopped,
+  sending,
+  sendComplete,
+  receiving,
+  receiveComplete,
+  error,
+}
 
-  CrossFile({
-    required this.path,
-    required this.name,
-    required this.size,
-  });
-
-  factory CrossFile.fromFile(File file) {
-    return CrossFile(
-      path: file.path,
-      name: file.path.split('/').last,
-      size: file.lengthSync(),
-    );
+extension SyncStatusExtension on SyncStatus {
+  String get displayName {
+    switch (this) {
+      case SyncStatus.idle:
+        return '空闲';
+      case SyncStatus.discovering:
+        return '正在发现设备...';
+      case SyncStatus.discoveryComplete:
+        return '设备发现完成';
+      case SyncStatus.serverStarted:
+        return '服务器已启动';
+      case SyncStatus.serverStopped:
+        return '服务器已停止';
+      case SyncStatus.sending:
+        return '正在发送笔记...';
+      case SyncStatus.sendComplete:
+        return '发送完成';
+      case SyncStatus.receiving:
+        return '正在接收笔记...';
+      case SyncStatus.receiveComplete:
+        return '接收完成';
+      case SyncStatus.error:
+        return '发生错误';
+    }
   }
 }

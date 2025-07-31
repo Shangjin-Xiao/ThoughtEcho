@@ -1,123 +1,106 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 
-/// 简化的HTTP服务器，用于接收文件
+final _logger = Logger('SimpleServer');
+
+/// Simple HTTP server implementation for LocalSend integration
 class SimpleServer {
   HttpServer? _server;
-  final int _port = 53318; // ThoughtEcho端口（避免与LocalSend冲突）
-  
-  bool get isRunning => _server != null;
+  bool _isRunning = false;
+  int _port = 53317;
+
+  bool get isRunning => _isRunning;
   int get port => _port;
 
-  /// 启动服务器
-  Future<void> start({
-    required String alias,
-    required Function(String filePath) onFileReceived,
-  }) async {
-    if (_server != null) return;
-
-    // Check if we're running on web platform
-    if (kIsWeb) {
-      debugPrint('SimpleServer not supported on web platform');
+  /// Start the server
+  Future<void> start({int? customPort}) async {
+    if (_isRunning) {
+      _logger.warning('Server is already running');
       return;
     }
 
+    _port = customPort ?? 53317;
+
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
-      debugPrint('ThoughtEcho服务器启动在端口: $_port');
-
-      await for (HttpRequest request in _server!) {
-        await _handleRequest(request, alias, onFileReceived);
+      _isRunning = true;
+      
+      // Handle incoming requests
+      await for (final request in _server!) {
+        _handleRequest(request);
       }
+      
     } catch (e) {
-      debugPrint('服务器启动失败: $e');
+      _logger.severe('Failed to start server: $e');
+      _isRunning = false;
       rethrow;
     }
   }
 
-  /// 停止服务器
+  /// Stop the server
   Future<void> stop() async {
-    await _server?.close();
-    _server = null;
-    debugPrint('ThoughtEcho服务器已停止');
+    if (!_isRunning || _server == null) {
+      return;
+    }
+
+    try {
+      await _server!.close();
+      _isRunning = false;
+      _server = null;
+      _logger.info('Server stopped');
+    } catch (e) {
+      _logger.severe('Failed to stop server: $e');
+    }
   }
 
-  /// 处理HTTP请求
-  Future<void> _handleRequest(
-    HttpRequest request,
-    String alias,
-    Function(String filePath) onFileReceived,
-  ) async {
+  /// Handle incoming HTTP requests
+  void _handleRequest(HttpRequest request) {
     try {
-      final uri = request.uri;
-      
-      if (uri.path == '/api/localsend/v2/info' && request.method == 'GET') {
-        // 设备信息请求
-        await _handleInfoRequest(request, alias);
-      } else if (uri.path == '/api/localsend/v2/upload' && request.method == 'POST') {
-        // 文件上传请求
-        await _handleUploadRequest(request, onFileReceived);
+      if (request.uri.path == '/api/v1/info') {
+        _handleInfoRequest(request);
       } else {
-        // 未知请求
-        request.response.statusCode = 404;
-        await request.response.close();
+        _handle404(request);
       }
     } catch (e) {
-      debugPrint('请求处理失败: $e');
-      request.response.statusCode = 500;
-      await request.response.close();
+      _logger.severe('Error handling request: $e');
+      _handle500(request, e.toString());
     }
   }
 
-  /// 处理设备信息请求
-  Future<void> _handleInfoRequest(HttpRequest request, String alias) async {
-    final deviceInfo = {
-      'alias': alias,
+  /// Handle info requests
+  void _handleInfoRequest(HttpRequest request) {
+    final response = {
+      'alias': 'ThoughtEcho',
       'version': '2.0',
       'deviceModel': 'ThoughtEcho',
-      'deviceType': 'desktop',
-      'fingerprint': 'thoughtecho-${DateTime.now().millisecondsSinceEpoch}',
-      'port': _port,
-      'protocol': 'http',
-      'download': true,
+      'deviceType': 'mobile',
+      'fingerprint': 'thoughtecho-device',
+      'download': false,
     };
 
-    request.response.headers.contentType = ContentType.json;
-    request.response.write(jsonEncode(deviceInfo));
-    await request.response.close();
+    request.response
+      ..statusCode = 200
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode(response));
+    request.response.close();
   }
 
-  /// 处理文件上传请求
-  Future<void> _handleUploadRequest(
-    HttpRequest request,
-    Function(String filePath) onFileReceived,
-  ) async {
-    try {
-      // 获取文件名
-      final fileName = request.uri.queryParameters['fileName'] ?? 'received_file';
-      
-      // 创建临时文件
-      final tempDir = Directory.systemTemp;
-      final file = File('${tempDir.path}/$fileName');
-      
-      // 写入文件内容
-      final sink = file.openWrite();
-      await sink.addStream(request);
-      await sink.close();
-      
-      // 通知文件接收完成
-      onFileReceived(file.path);
-      
-      // 响应成功
-      request.response.statusCode = 200;
-      await request.response.close();
-      
-      debugPrint('文件接收完成: ${file.path}');
-    } catch (e) {
-      debugPrint('文件接收失败: $e');
-      request.response.statusCode = 500;
-      await request.response.close();
-    }
+  /// Handle 404 errors
+  void _handle404(HttpRequest request) {
+    request.response
+      ..statusCode = 404
+      ..write('Not Found');
+    request.response.close();
+  }
+
+  /// Handle 500 errors
+  void _handle500(HttpRequest request, String error) {
+    request.response
+      ..statusCode = 500
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode({'error': error}));
+    request.response.close();
   }
 }

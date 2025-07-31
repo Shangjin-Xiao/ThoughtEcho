@@ -61,38 +61,8 @@ class StartMulticastListener extends AsyncReduxAction<NearbyDevicesService, Near
 class ClearFoundDevicesAction extends ReduxAction<NearbyDevicesService, NearbyDevicesState> {
   @override
   NearbyDevicesState reduce() {
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      devices: {},
     );
   }
 }
@@ -115,131 +85,29 @@ class RegisterDeviceAction extends AsyncReduxAction<NearbyDevicesService, Nearby
     if (device.ip == null || device.ip!.isEmpty) {
       return state; // Skip registration for invalid devices
     }
-    
-    // Additional validation for device IP
-    if (device.ip == null || device.ip!.isEmpty) {
-      return state; // Skip registration for invalid devices
-    }
-    
-    // Additional validation for device IP
-    if (device.ip == null || device.ip!.isEmpty) {
-      return state; // Skip registration for invalid devices
-    }
 
     // Ensure device has valid fingerprint before favorite operations
-    if (device.fingerprint.isEmpty) {
-      // Still register the device but skip favorite operations
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
     if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
-    );
-        }
-        return updatedDevices;
-      }(),
+      final favoriteDevice = notifier._favoriteService.state.firstWhereOrNull(
+        (e) => e.fingerprint == device.fingerprint
       );
-    }
-
-    // Ensure device has valid fingerprint before favorite operations
-    if (device.fingerprint.isEmpty) {
-      // Still register the device but skip favorite operations
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
-    );
-    }
-
-    // Ensure device has valid fingerprint before favorite operations
-    if (device.fingerprint.isEmpty) {
-      // Still register the device but skip favorite operations
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
-    );
+      
+      if (favoriteDevice != null && !favoriteDevice.customAlias) {
+        try {
+          await external(notifier._favoriteService).dispatchAsync(
+            UpdateFavoriteAction(favoriteDevice.copyWith(alias: device.alias))
+          );
+        } catch (e) {
+          // Log error but continue with device registration
+          notifier._discoveryLogger.addLog('[WARNING] Failed to update favorite device ${device.alias}: $e');
         }
-        return updatedDevices;
-      }(),
-      );
-    }
-
-    final favoriteDevice = notifier._favoriteService.state.firstWhereOrNull((e) => e.fingerprint == device.fingerprint);
-    // Handle favorite device updates with proper error handling
-    // Handle favorite device updates with proper error handling
-    // Handle favorite device updates with proper error handling
-    if (favoriteDevice != null && !favoriteDevice.customAlias) {
-      try {
-        await external(notifier._favoriteService).dispatchAsync(UpdateFavoriteAction(favoriteDevice.copyWith(alias: device.alias)));
-      } catch (e) {
-        // Log error but continue with device registration
-        notifier._discoveryLogger.addLog('[WARNING] Failed to update favorite device ${device.alias}: $e');
       }
-    }
-        // Log error but continue with device registration
-        notifier._discoveryLogger.addLog('[WARNING] Failed to update favorite device ${device.alias}: $e');
-      }
-    }
-        // Log error but continue with device registration
-        notifier._discoveryLogger.addLog('[WARNING] Failed to update favorite device ${device.alias}: $e');
-      }
-    }
+    } else {
       await Future.microtask(() {});
     }
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
     
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
-    );
-        }
-        return updatedDevices;
-      }(),
+      devices: {...state.devices}..update(device.ip!, (_) => device, ifAbsent: () => device),
     );
   }
 }
@@ -252,18 +120,10 @@ class RegisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, Ne
 
   @override
   NearbyDevicesState reduce() {
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
+    if (device.fingerprint.isEmpty) {
       return state;
     }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
+    
     final Set<Device> existingDevices = state.signalingDevices[device.fingerprint]?.toSet() ?? {};
     final existingDevice = existingDevices.firstWhereOrNull((e) => e.signalingId == device.signalingId);
     if (existingDevice != null) {
@@ -271,26 +131,11 @@ class RegisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, Ne
     }
     existingDevices.add(device);
 
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      signalingDevices: {
+        ...state.signalingDevices,
+        device.fingerprint: existingDevices,
+      },
     );
   }
 }
@@ -302,12 +147,6 @@ class UnregisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, 
   
   // Validate signaling ID before processing
   bool get _isValidSignalingId => signalingId.trim().isNotEmpty;
-  
-  // Validate signaling ID before processing
-  bool get _isValidSignalingId => signalingId.trim().isNotEmpty;
-  
-  // Validate signaling ID before processing
-  bool get _isValidSignalingId => signalingId.trim().isNotEmpty;
 
   @override
   NearbyDevicesState reduce() {
@@ -315,34 +154,12 @@ class UnregisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, 
     if (!_isValidSignalingId) {
       return state;
     }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
     
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      signalingDevices: {
+        for (final entry in state.signalingDevices.entries) 
+          entry.key: entry.value.where((e) => e.signalingId != signalingId).toSet(),
+      },
     );
   }
 }
@@ -352,18 +169,6 @@ class UnregisterSignalingDeviceAction extends ReduxAction<NearbyDevicesService, 
 class StartMulticastScan extends ReduxAction<NearbyDevicesService, NearbyDevicesState> {
   @override
   NearbyDevicesState reduce() {
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
     external(notifier._isolateController).dispatch(IsolateSendMulticastAnnouncementAction());
     return state;
   }
@@ -402,27 +207,9 @@ class StartLegacyScan extends AsyncReduxAction<NearbyDevicesService, NearbyDevic
       notifier._discoveryLogger.addLog('[DISCOVER/TCP] ${device.alias} (${device.ip}, model: ${device.deviceModel})');
       await dispatchAsync(RegisterDeviceAction(device));
     }
-
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
     
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      runningIps: state.runningIps.where((ip) => ip != localIp).toSet(),
     );
   }
 }
@@ -453,26 +240,8 @@ class StartFavoriteScan extends AsyncReduxAction<NearbyDevicesService, NearbyDev
       await dispatchAsync(RegisterDeviceAction(device));
     }
 
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      runningFavoriteScan: false,
     );
   }
 }
@@ -484,38 +253,8 @@ class _SetRunningIpsAction extends ReduxAction<NearbyDevicesService, NearbyDevic
 
   @override
   NearbyDevicesState reduce() {
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      runningIps: runningIps,
     );
   }
 }
@@ -527,38 +266,8 @@ class _SetRunningFavoriteScanAction extends ReduxAction<NearbyDevicesService, Ne
 
   @override
   NearbyDevicesState reduce() {
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Skip processing if signaling ID is invalid
-    if (!_isValidSignalingId) {
-      return state;
-    }
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
-    // Update signaling devices with proper validation
-    final updatedSignalingDevices = {...state.signalingDevices};
-    if (device.fingerprint.isNotEmpty) {
-      updatedSignalingDevices[device.fingerprint] = existingDevices;
-    }
-    
     return state.copyWith(
-      signalingDevices: updatedSignalingDevices,
+      runningFavoriteScan: running,
     );
   }
 }
