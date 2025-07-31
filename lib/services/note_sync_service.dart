@@ -60,9 +60,12 @@ class NoteSyncService extends ChangeNotifier {
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
   })  : _backupService = backupService,
-        _databaseService = databaseService;
-        // _settingsService = settingsService,
-        // _aiAnalysisDbService = aiAnalysisDbService;
+        _databaseService = databaseService {
+    // 存储其他依赖，虽然当前没有直接使用，但为将来扩展保留
+    // _settingsService = settingsService;
+    // _aiAnalysisDbService = aiAnalysisDbService;
+    debugPrint('NoteSyncService 构造函数完成');
+  }
 
   /// 初始化同步服务
   Future<void> initialize() async {
