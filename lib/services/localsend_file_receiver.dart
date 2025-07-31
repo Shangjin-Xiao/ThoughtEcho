@@ -2,15 +2,16 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
-/// 简化的HTTP服务器，用于接收文件
-class SimpleServer {
+/// LocalSend协议的文件接收服务器
+/// 专门用于接收来自其他设备的文件
+class LocalSendFileReceiver {
   HttpServer? _server;
-  final int _port = 53318; // ThoughtEcho端口（避免与LocalSend冲突）
+  int _port = 53319; // 使用不同的端口避免与LocalSendServer冲突
   
   bool get isRunning => _server != null;
   int get port => _port;
 
-  /// 启动服务器
+  /// 启动文件接收服务器
   Future<void> start({
     required String alias,
     required Function(String filePath) onFileReceived,
@@ -19,28 +20,50 @@ class SimpleServer {
 
     // Check if we're running on web platform
     if (kIsWeb) {
-      debugPrint('SimpleServer not supported on web platform');
+      debugPrint('LocalSendFileReceiver not supported on web platform');
       return;
     }
 
     try {
-      _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
-      debugPrint('ThoughtEcho服务器启动在端口: $_port');
+      // 尝试绑定到指定端口，如果失败则尝试其他端口
+      _server = await _bindToAvailablePort();
+      debugPrint('LocalSendFileReceiver启动在端口: $_port');
 
       await for (HttpRequest request in _server!) {
         await _handleRequest(request, alias, onFileReceived);
       }
     } catch (e) {
-      debugPrint('服务器启动失败: $e');
+      debugPrint('LocalSendFileReceiver启动失败: $e');
       rethrow;
     }
   }
 
-  /// 停止服务器
+  /// 尝试绑定到可用端口
+  Future<HttpServer> _bindToAvailablePort() async {
+    final portsToTry = [53319, 53320, 53321, 0]; // 包含随机端口作为备选
+    
+    for (final port in portsToTry) {
+      try {
+        final server = await HttpServer.bind(InternetAddress.anyIPv4, port);
+        _port = server.port; // 更新实际端口
+        debugPrint('LocalSendFileReceiver成功绑定到端口: $_port');
+        return server;
+      } catch (e) {
+        debugPrint('端口 $port 绑定失败: $e');
+        if (port == portsToTry.last) {
+          rethrow; // 所有端口都失败了
+        }
+      }
+    }
+    
+    throw Exception('无法绑定到任何可用端口');
+  }
+
+  /// 停止文件接收服务器
   Future<void> stop() async {
     await _server?.close();
     _server = null;
-    debugPrint('ThoughtEcho服务器已停止');
+    debugPrint('LocalSendFileReceiver已停止');
   }
 
   /// 处理HTTP请求

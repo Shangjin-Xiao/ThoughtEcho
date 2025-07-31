@@ -161,14 +161,12 @@ jobs:
         lcov --summary merged-coverage/lcov.info
         lcov --list merged-coverage/lcov.info
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v4
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
       with:
-        file: merged-coverage/lcov.info
-        name: thoughtecho-coverage
-        flags: unittests
-        fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
+        name: coverage-report
+        path: merged-coverage/lcov.info
+        retention-days: 1
 
   integration-test:
     needs: code-quality
