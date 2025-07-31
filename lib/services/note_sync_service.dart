@@ -10,7 +10,7 @@ import 'package:thoughtecho/services/localsend_simple_server.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
-import 'package:thoughtecho/services/localsend/models/device.dart' as ls;
+import '../../common/lib/model/device.dart' as common;
 
 
 /// 笔记同步服务 - 基于LocalSend的P2P同步功能
@@ -122,7 +122,7 @@ class NoteSyncService extends ChangeNotifier {
       );
 
       // 2. 创建LocalSend设备对象
-      final lsDevice = ls.Device(
+      final lsDevice = common.Device(
         signalingId: null,
         ip: targetDevice.ip,
         version: '2.1',
@@ -133,7 +133,7 @@ class NoteSyncService extends ChangeNotifier {
         deviceModel: targetDevice.deviceModel,
         deviceType: _convertDeviceType(targetDevice.deviceType),
         download: true,
-        discoveryMethods: {const ls.MulticastDiscovery()},
+        discoveryMethods: {const common.MulticastDiscovery()},
       );
 
       // 3. 使用LocalSend发送文件
@@ -153,23 +153,23 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 转换设备类型
-  ls.DeviceType _convertDeviceType(dynamic deviceType) {
-    if (deviceType == null) return ls.DeviceType.desktop;
+  common.DeviceType _convertDeviceType(dynamic deviceType) {
+    if (deviceType == null) return common.DeviceType.desktop;
 
     final typeStr = deviceType.toString().toLowerCase();
     switch (typeStr) {
       case 'mobile':
-        return ls.DeviceType.mobile;
+        return common.DeviceType.mobile;
       case 'desktop':
-        return ls.DeviceType.desktop;
+        return common.DeviceType.desktop;
       case 'web':
-        return ls.DeviceType.web;
+        return common.DeviceType.web;
       case 'headless':
-        return ls.DeviceType.headless;
+        return common.DeviceType.headless;
       case 'server':
-        return ls.DeviceType.server;
+        return common.DeviceType.server;
       default:
-        return ls.DeviceType.desktop;
+        return common.DeviceType.desktop;
     }
   }
 
