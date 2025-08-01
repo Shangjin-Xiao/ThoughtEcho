@@ -5,7 +5,7 @@ import 'package:mockito/annotations.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/pages/note_sync_page.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
-import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 
 // 生成Mock类
 @GenerateMocks([NoteSyncService])
@@ -182,7 +182,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {MulticastDiscovery()},
+
       );
 
       when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => [testDevice]);

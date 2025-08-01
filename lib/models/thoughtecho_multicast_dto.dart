@@ -1,5 +1,5 @@
 import 'package:thoughtecho/constants/thoughtecho_constants.dart';
-import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 
 enum ProtocolType { http, https }
 

@@ -6,7 +6,7 @@ import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 
 
@@ -54,7 +54,7 @@ void main() {
 
     test('创建同步包流程测试', () async {
       // 准备测试数据
-      const testDevice = Device(
+      final testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -65,7 +65,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{MulticastDiscovery()},
       );
 
       // Mock备份服务返回

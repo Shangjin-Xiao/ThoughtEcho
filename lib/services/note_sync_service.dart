@@ -5,14 +5,10 @@ import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:thoughtecho/models/localsend_device.dart';
-import 'package:thoughtecho/services/localsend_file_receiver.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
-import 'package:thoughtecho/services/localsend/models/device.dart' as ls;
-import 'package:thoughtecho/services/sync_protocol/sync_send_service.dart';
-import 'package:thoughtecho/services/sync_protocol/models/device_info.dart' as sync;
+import 'package:thoughtecho/services/localsend/models/device.dart';
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -36,13 +32,11 @@ class NoteSyncService extends ChangeNotifier {
   // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
-  LocalSendFileReceiver? _fileReceiver;
   ThoughtEchoDiscoveryService? _discoveryService;
   LocalSendServer? _localSendServer;
-  LocalSendProvider? _localSendProvider;
 
-  // 新的同步协议组件
-  SyncSendService? _syncSendService;
+  // LocalSend发送组件 (恢复使用优质的LocalSend代码)
+  LocalSendProvider? _localSendProvider;
 
   // 同步状态管理
   SyncStatus _syncStatus = SyncStatus.idle;
@@ -76,8 +70,7 @@ class NoteSyncService extends ChangeNotifier {
   /// 启动服务器（在打开同步页面时调用）
   Future<void> startServer() async {
     // 检查是否已经启动
-    if ((_fileReceiver?.isRunning == true || _localSendServer?.isRunning == true) ||
-        (_fileReceiver != null || _localSendServer != null)) {
+    if (_localSendServer?.isRunning == true) {
       debugPrint('同步服务器已经启动，跳过重复启动');
       return;
     }
@@ -95,11 +88,6 @@ class NoteSyncService extends ChangeNotifier {
       await stopServer();
       
       // 安全地初始化服务组件
-      _fileReceiver = LocalSendFileReceiver();
-      if (_fileReceiver == null) {
-        throw Exception('LocalSendFileReceiver创建失败');
-      }
-      
       _discoveryService = ThoughtEchoDiscoveryService();
       if (_discoveryService == null) {
         throw Exception('ThoughtEchoDiscoveryService创建失败');
@@ -114,45 +102,23 @@ class NoteSyncService extends ChangeNotifier {
       if (_localSendProvider == null) {
         throw Exception('LocalSendProvider创建失败');
       }
-      
-      _syncSendService = SyncSendService();
-      if (_syncSendService == null) {
-        throw Exception('SyncSendService创建失败');
-      }
 
       debugPrint('所有服务组件创建成功，开始启动服务器...');
 
-      // 首先启动LocalSend服务器（优先级更高）
+      // 启动LocalSend服务器
       await _localSendServer!.start(
         onFileReceived: (filePath) async {
-          // 使用新的processSyncPackage方法处理接收到的文件
+          // 使用processSyncPackage方法处理接收到的文件
           await processSyncPackage(filePath);
         },
       );
       debugPrint('LocalSendServer启动成功，端口: ${_localSendServer!.port}');
 
-      // 启动文件接收服务器（备用服务器）
-      try {
-        await _fileReceiver!.start(
-          alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
-          onFileReceived: (filePath) async {
-            // 使用新的processSyncPackage方法处理接收到的文件
-            await processSyncPackage(filePath);
-          },
-        );
-        debugPrint('LocalSendFileReceiver启动成功，端口: ${_fileReceiver!.port}');
-      } catch (e) {
-        debugPrint('LocalSendFileReceiver启动失败，但LocalSendServer已启动，继续: $e');
-        // 文件接收服务器启动失败不是致命错误，LocalSendServer可以处理所有请求
-      }
-
       // 启动设备发现
       await _discoveryService!.startDiscovery();
       debugPrint('设备发现服务启动成功');
 
-      debugPrint('ThoughtEcho servers started:');
-      debugPrint('  - LocalSend server on port ${_localSendServer?.port}');
-      debugPrint('  - Simple server on port ${_fileReceiver?.port ?? "未启动"}');
+      debugPrint('ThoughtEcho sync server started on port ${_localSendServer?.port}');
     } catch (e) {
       debugPrint('Failed to start servers: $e');
       // Clean up on failure
@@ -164,17 +130,6 @@ class NoteSyncService extends ChangeNotifier {
   /// 停止服务器（在关闭同步页面时调用）
   Future<void> stopServer() async {
     debugPrint('开始停止同步服务器...');
-    
-    try {
-      // 停止LocalSendFileReceiver
-      if (_fileReceiver != null) {
-        debugPrint('停止LocalSendFileReceiver...');
-        await _fileReceiver!.stop();
-        debugPrint('LocalSendFileReceiver已停止');
-      }
-    } catch (e) {
-      debugPrint('停止LocalSendFileReceiver时出错: $e');
-    }
     
     try {
       // 停止LocalSendServer
@@ -199,92 +154,28 @@ class NoteSyncService extends ChangeNotifier {
     }
     
     try {
-      // 清理同步发送服务
-      if (_syncSendService != null) {
-        debugPrint('清理同步发送服务...');
-        _syncSendService!.dispose();
-        debugPrint('同步发送服务已清理');
+      // 清理LocalSend发送服务
+      if (_localSendProvider != null) {
+        debugPrint('清理LocalSend发送服务...');
+        _localSendProvider!.dispose();
+        debugPrint('LocalSend发送服务已清理');
       }
     } catch (e) {
-      debugPrint('清理同步发送服务时出错: $e');
+      debugPrint('清理LocalSend发送服务时出错: $e');
     }
 
     // 清空所有引用
-    _fileReceiver = null;
     _localSendServer = null;
-    _localSendProvider = null;
     _discoveryService = null;
-    _syncSendService = null;
+    _localSendProvider = null;
 
     debugPrint('ThoughtEcho sync servers stopped and cleaned up');
   }
 
-  /// 发送笔记数据到指定设备
+  /// 发送笔记数据到指定设备（统一使用createSyncPackage）
   Future<void> sendNotesToDevice(Device targetDevice) async {
-    if (_localSendProvider == null) {
-      throw Exception('LocalSend服务未初始化');
-    }
-
-    try {
-      // 1. 使用备份服务创建数据包
-      final backupPath = await _backupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: (current, total) {
-          // 发送进度通知
-          notifyListeners();
-        },
-      );
-
-      // 2. 创建LocalSend设备对象
-      final lsDevice = ls.Device(
-        signalingId: null,
-        ip: targetDevice.ip,
-        version: '2.1',
-        port: targetDevice.port,
-        https: false,
-        fingerprint: targetDevice.fingerprint,
-        alias: targetDevice.alias,
-        deviceModel: targetDevice.deviceModel,
-        deviceType: _convertDeviceType(targetDevice.deviceType),
-        download: true,
-        discoveryMethods: {const ls.MulticastDiscovery()},
-      );
-
-      // 3. 使用LocalSend发送文件
-      final backupFile = File(backupPath);
-      final sessionId = await _localSendProvider!.startSession(
-        target: lsDevice,
-        files: [backupFile],
-        background: true,
-      );
-
-      debugPrint('LocalSend文件发送会话已启动: $sessionId');
-
-    } catch (e) {
-      debugPrint('发送笔记失败: $e');
-      rethrow;
-    }
-  }
-
-  /// 转换设备类型
-  ls.DeviceType _convertDeviceType(dynamic deviceType) {
-    if (deviceType == null) return ls.DeviceType.desktop;
-
-    final typeStr = deviceType.toString().toLowerCase();
-    switch (typeStr) {
-      case 'mobile':
-        return ls.DeviceType.mobile;
-      case 'desktop':
-        return ls.DeviceType.desktop;
-      case 'web':
-        return ls.DeviceType.web;
-      case 'headless':
-        return ls.DeviceType.headless;
-      case 'server':
-        return ls.DeviceType.server;
-      default:
-        return ls.DeviceType.desktop;
-    }
+    // 使用统一的createSyncPackage方法
+    await createSyncPackage(targetDevice);
   }
 
   /// 接收并合并笔记数据
@@ -460,8 +351,8 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 创建同步包并发送到指定设备
   Future<String> createSyncPackage(Device targetDevice) async {
-    if (_syncSendService == null) {
-      throw Exception('同步服务未初始化');
+    if (_localSendProvider == null) {
+      throw Exception('LocalSend服务未初始化');
     }
 
     try {
@@ -480,18 +371,12 @@ class NoteSyncService extends ChangeNotifier {
       // 3. 更新状态：开始发送
       _updateSyncStatus(SyncStatus.sending, '正在发送到目标设备...', 0.5);
 
-      // 4. 转换设备信息
-      final networkDevice = _convertToNetworkDevice(targetDevice);
-
-      // 5. 发送文件
+      // 5. 发送文件 (使用LocalSend的优质代码)
       final backupFile = File(backupPath);
-      final sessionId = await _syncSendService!.sendFile(
-        targetDevice: networkDevice,
-        file: backupFile,
-        onProgress: (progress, status) {
-          final totalProgress = 0.5 + progress * 0.5; // 50%-100%的进度用于发送
-          _updateSyncStatus(SyncStatus.sending, status, totalProgress);
-        },
+      final sessionId = await _localSendProvider!.startSession(
+        target: targetDevice,
+        files: [backupFile],
+        background: true,
       );
 
       // 6. 完成
@@ -550,43 +435,6 @@ class NoteSyncService extends ChangeNotifier {
     debugPrint('同步状态: $status - $message (${(progress * 100).toInt()}%)');
   }
 
-  /// 转换设备信息格式
-  sync.NetworkDevice _convertToNetworkDevice(Device device) {
-    final deviceInfo = sync.DeviceInfo(
-      alias: device.alias,
-      version: '2.1',
-      deviceModel: device.deviceModel ?? 'Unknown Device',
-      deviceType: _convertToSyncDeviceType(device.deviceType),
-      fingerprint: device.fingerprint,
-      port: device.port,
-      protocol: sync.ProtocolType.http,
-      download: true,
-    );
-
-    return sync.NetworkDevice(
-      ip: device.ip ?? '127.0.0.1',
-      port: device.port,
-      info: deviceInfo,
-      https: false,
-    );
-  }
-
-  /// 转换设备类型
-  sync.DeviceType _convertToSyncDeviceType(DeviceType deviceType) {
-    switch (deviceType) {
-      case DeviceType.mobile:
-        return sync.DeviceType.mobile;
-      case DeviceType.desktop:
-        return sync.DeviceType.desktop;
-      case DeviceType.web:
-        return sync.DeviceType.web;
-      case DeviceType.headless:
-        return sync.DeviceType.headless;
-      case DeviceType.server:
-        return sync.DeviceType.server;
-    }
-  }
-
   /// 发现附近的设备
   Future<List<Device>> discoverNearbyDevices() async {
     if (_discoveryService == null) {
@@ -617,10 +465,8 @@ class NoteSyncService extends ChangeNotifier {
   @override
   void dispose() {
     // 清理LocalSend资源
-    _fileReceiver?.stop();
     _localSendServer?.stop();
     _localSendProvider?.dispose();
-    _syncSendService?.dispose();
     super.dispose();
   }
 }
