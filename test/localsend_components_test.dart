@@ -55,7 +55,7 @@ void main() {
         deviceModel: 'Test Device',
         deviceType: DeviceType.desktop,
         download: true,
-        discoveryMethods: <DiscoveryMethod>{MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       // 验证设备符合LocalSend协议要求
@@ -70,8 +70,8 @@ void main() {
     });
 
     test('MulticastDiscovery 测试', () {
-      final discovery1 = MulticastDiscovery();
-      final discovery2 = MulticastDiscovery();
+      const discovery1 = MulticastDiscovery();
+      const discovery2 = MulticastDiscovery();
       
       // 测试相等性
       expect(discovery1 == discovery2, true);
@@ -86,9 +86,9 @@ void main() {
     });
 
     test('HttpDiscovery 测试', () {
-      final discovery1 = HttpDiscovery(ip: '192.168.1.1');
-      final discovery2 = HttpDiscovery(ip: '192.168.1.1');
-      final discovery3 = HttpDiscovery(ip: '192.168.1.2');
+      const discovery1 = HttpDiscovery(ip: '192.168.1.1');
+      const discovery2 = HttpDiscovery(ip: '192.168.1.1');
+      const discovery3 = HttpDiscovery(ip: '192.168.1.2');
       
       // 测试相等性
       expect(discovery1 == discovery2, true);
@@ -118,9 +118,9 @@ void main() {
         deviceType: DeviceType.server,
         download: true,
         discoveryMethods: <DiscoveryMethod>{
-          MulticastDiscovery(),
-          HttpDiscovery(ip: '10.0.0.5'),
-          SignalingDiscovery(signalingServer: 'signal.example.com'),
+          const MulticastDiscovery(),
+          const HttpDiscovery(ip: '10.0.0.5'),
+          const SignalingDiscovery(signalingServer: 'signal.example.com'),
         },
       );
 

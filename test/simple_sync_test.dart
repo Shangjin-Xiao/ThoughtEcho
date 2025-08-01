@@ -43,7 +43,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       expect(device.ip, '192.168.1.100');

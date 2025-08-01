@@ -70,7 +70,7 @@ void main() {
     testWidgets('设备列表显示', (WidgetTester tester) async {
       // 模拟发现设备
       final testDevices = [
-        const Device(
+        Device(
           signalingId: null,
           ip: '192.168.1.100',
           version: '2.1',
@@ -81,9 +81,9 @@ void main() {
           deviceModel: 'Test Model',
           deviceType: DeviceType.mobile,
           download: true,
-          discoveryMethods: {MulticastDiscovery()},
+          discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
         ),
-        const Device(
+        Device(
           signalingId: null,
           ip: '192.168.1.101',
           version: '2.1',
@@ -94,7 +94,7 @@ void main() {
           deviceModel: 'Test Model',
           deviceType: DeviceType.desktop,
           download: true,
-          discoveryMethods: {MulticastDiscovery()},
+          discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
         ),
       ];
 
@@ -171,7 +171,7 @@ void main() {
     });
 
     testWidgets('发送按钮点击测试', (WidgetTester tester) async {
-      const testDevice = Device(
+      final testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -182,7 +182,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => [testDevice]);

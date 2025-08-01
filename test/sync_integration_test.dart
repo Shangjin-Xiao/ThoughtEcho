@@ -65,7 +65,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: <DiscoveryMethod>{MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       // Mock备份服务返回
@@ -146,7 +146,7 @@ void main() {
         onProgress: anyNamed('onProgress'),
       )).thenAnswer((_) async => '/tmp/backup_with_media.zip');
 
-      const testDevice = Device(
+      final testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -157,7 +157,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       try {
@@ -180,7 +180,7 @@ void main() {
         onProgress: anyNamed('onProgress'),
       )).thenThrow(Exception('备份失败'));
 
-      const testDevice = Device(
+      final testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -191,7 +191,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
         download: true,
-        discoveryMethods: {MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       // 应该抛出异常
@@ -202,7 +202,7 @@ void main() {
     });
 
     test('设备类型转换测试', () {
-      const testDevice = Device(
+      final testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
@@ -213,7 +213,7 @@ void main() {
         deviceModel: 'Test Model',
         deviceType: DeviceType.desktop,
         download: true,
-        discoveryMethods: {MulticastDiscovery()},
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
       // 测试设备类型转换（通过反射或其他方式访问私有方法）
