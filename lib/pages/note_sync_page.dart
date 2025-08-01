@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
-import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/utils/sync_network_tester.dart';
 
 /// 笔记同步页面

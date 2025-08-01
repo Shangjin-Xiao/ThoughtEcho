@@ -1,4 +1,4 @@
-import 'package:thoughtecho/models/localsend_device.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 
 const _basePath = '/api/localsend';
 
