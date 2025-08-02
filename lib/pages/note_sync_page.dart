@@ -191,7 +191,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
       if (mounted) {
         setState(() {
-          _nearbyDevices = devices;
+          // 注意：discoverNearbyDevices() 返回的是不可修改列表，
+          // 需要创建可修改副本以避免后续 clear() 操作失败
+          _nearbyDevices = List<Device>.from(devices); // 创建可修改的副本
         });
 
         // 显示发现结果
