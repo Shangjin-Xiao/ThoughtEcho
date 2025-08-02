@@ -14,9 +14,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   final List<RawDatagramSocket> _sockets = [];
   Timer? _announcementTimer;
   int _actualServerPort = defaultPort; // 实际服务器端口
+  late final String _deviceFingerprint; // 设备指纹，在初始化时生成一次
 
   List<Device> get devices => List.unmodifiable(_devices);
   bool get isScanning => _isScanning;
+
+  /// 构造函数，生成唯一的设备指纹
+  ThoughtEchoDiscoveryService() {
+    _deviceFingerprint = _generateDeviceFingerprint();
+    debugPrint('设备发现服务初始化，设备指纹: $_deviceFingerprint');
+  }
 
   /// 设置实际的服务器端口
   void setServerPort(int port) {
@@ -96,7 +103,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             .join(', ');
           debugPrint('接口地址: $addresses');
           
-          final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, defaultPort);
+          final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, defaultMulticastPort);
           
           debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
           
@@ -107,9 +114,15 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           debugPrint('套接字功能已启用: readEvents, broadcast, multicastLoopback');
           
           // 加入组播组
-          socket.joinMulticast(InternetAddress(defaultMulticastGroup), interface);
-          debugPrint('成功加入组播组 $defaultMulticastGroup (接口: ${interface.name})');
-          
+          try {
+            socket.joinMulticast(InternetAddress(defaultMulticastGroup), interface);
+            debugPrint('✓ 成功加入组播组 $defaultMulticastGroup (接口: ${interface.name})');
+          } catch (e) {
+            debugPrint('❌ 加入组播组失败: $e');
+            socket.close();
+            continue; // 跳过这个接口
+          }
+
           // 设置监听
           socket.listen((event) {
             if (event == RawSocketEvent.read) {
@@ -118,10 +131,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
                 _handleMulticastMessage(datagram);
               }
             }
+          }, onError: (error) {
+            debugPrint('❌ 套接字监听错误: $error');
           });
-          
+
           _sockets.add(socket);
-          debugPrint('UDP组播监听已绑定到接口: ${interface.name}');
+          debugPrint('✓ UDP组播监听已绑定到接口: ${interface.name}');
         } catch (e, stack) {
           debugPrint('绑定UDP组播到接口 ${interface.name} 失败: $e');
           debugPrint('堆栈: $stack');
@@ -143,40 +158,53 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   void _handleMulticastMessage(Datagram datagram) {
     try {
       final message = utf8.decode(datagram.data);
-      debugPrint('收到UDP组播消息: ${datagram.address.address}:${datagram.port} -> ${message.substring(0, message.length.clamp(0, 100))}...');
-      
+      debugPrint('=== 收到UDP组播消息 ===');
+      debugPrint('来源: ${datagram.address.address}:${datagram.port}');
+      debugPrint('消息长度: ${message.length} 字符');
+      debugPrint('完整消息: $message');
+
       final json = jsonDecode(message) as Map<String, dynamic>;
+      debugPrint('解析JSON成功: $json');
+
       final dto = MulticastDto.fromJson(json);
-      
-      // 记录指纹以便调试
-      debugPrint('组播消息指纹: ${dto.fingerprint}, 本机指纹: ${_getDeviceFingerprint()}');
-      
+      debugPrint('创建MulticastDto成功');
+
+      // 详细记录指纹信息
+      final remoteFingerprint = dto.fingerprint;
+      final localFingerprint = _getDeviceFingerprint();
+      debugPrint('远程设备指纹: $remoteFingerprint');
+      debugPrint('本机设备指纹: $localFingerprint');
+      debugPrint('指纹匹配: ${remoteFingerprint == localFingerprint}');
+
       // 忽略自己发送的消息
-      if (dto.fingerprint == _getDeviceFingerprint()) {
-        debugPrint('忽略自己发送的消息');
+      if (remoteFingerprint == localFingerprint) {
+        debugPrint('✓ 忽略自己发送的消息');
         return;
       }
 
       final ip = datagram.address.address;
+      debugPrint('创建设备对象，IP: $ip, 端口: ${dto.port ?? defaultPort}');
       final device = dto.toDevice(ip, defaultPort, false);
-      
+      debugPrint('设备信息: ${device.alias} (${device.ip}:${device.port})');
+
       // 检查是否已存在
       final existingIndex = _devices.indexWhere(
         (d) => d.ip == device.ip && d.port == device.port,
       );
-      
+
       if (existingIndex == -1) {
         _devices.add(device);
         notifyListeners();
-        debugPrint('发现新设备: ${device.alias} (${device.ip})');
-        
+        debugPrint('✓ 发现新设备: ${device.alias} (${device.ip}:${device.port})');
+        debugPrint('当前设备列表: ${_devices.map((d) => '${d.alias}(${d.ip}:${d.port})').join(', ')}');
+
         // 如果是公告消息，回应一个注册消息
         if (dto.announcement == true || dto.announce == true) {
-          debugPrint('收到公告消息，发送回应');
+          debugPrint('收到公告消息，准备发送回应');
           _respondToAnnouncement(device);
         }
       } else {
-        debugPrint('设备已存在: ${device.alias} (${device.ip})');
+        debugPrint('设备已存在: ${device.alias} (${device.ip}:${device.port})');
       }
     } catch (e, stack) {
       debugPrint('解析组播消息失败: $e');
@@ -188,7 +216,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 发送公告消息
   Future<void> _sendAnnouncement() async {
     if (_sockets.isEmpty) {
-      debugPrint('没有可用的套接字发送公告');
+      debugPrint('❌ 没有可用的套接字发送公告');
       return;
     }
 
@@ -206,24 +234,38 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       announce: true,
     );
 
-    final message = utf8.encode(jsonEncode(dto.toJson()));
+    final messageJson = jsonEncode(dto.toJson());
+    final message = utf8.encode(messageJson);
+
+    debugPrint('=== 发送公告消息 ===');
+    debugPrint('设备指纹: $fingerprint');
+    debugPrint('服务器端口: $_actualServerPort');
+    debugPrint('组播地址: $defaultMulticastGroup:$defaultMulticastPort');
+    debugPrint('消息内容: $messageJson');
+    debugPrint('消息字节数: ${message.length}');
+    debugPrint('可用套接字数: ${_sockets.length}');
+
     int successCount = 0;
 
-    for (final socket in _sockets) {
+    for (int i = 0; i < _sockets.length; i++) {
+      final socket = _sockets[i];
       try {
-        final result = socket.send(message, InternetAddress(defaultMulticastGroup), defaultPort);
+        final result = socket.send(message, InternetAddress(defaultMulticastGroup), defaultMulticastPort);
         if (result > 0) {
           successCount++;
+          debugPrint('✓ 套接字 $i 发送成功，字节数: $result');
+        } else {
+          debugPrint('❌ 套接字 $i 发送失败，返回: $result');
         }
       } catch (e) {
-        debugPrint('发送组播消息失败: $e');
+        debugPrint('❌ 套接字 $i 发送异常: $e');
       }
     }
 
     if (successCount > 0) {
-      debugPrint('成功通过 $successCount 个套接字发送公告 (指纹: $fingerprint)');
+      debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
     } else {
-      debugPrint('警告: 未能通过任何套接字发送公告');
+      debugPrint('❌ 警告: 未能通过任何套接字发送公告');
     }
   }
 
@@ -247,7 +289,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     
     for (final socket in _sockets) {
       try {
-        socket.send(message, InternetAddress(defaultMulticastGroup), defaultPort);
+        socket.send(message, InternetAddress(defaultMulticastGroup), defaultMulticastPort);
       } catch (e) {
         debugPrint('回应公告失败: $e');
       }
@@ -306,10 +348,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       // 向所有套接字发送公告
       for (final socket in _sockets) {
         try {
-          final result = socket.send(messageBytes, multicastAddress, defaultPort);
+          final result = socket.send(messageBytes, multicastAddress, defaultMulticastPort);
           if (result > 0) {
             sentCount++;
-            debugPrint('发送设备公告到 ${multicastAddress.address}:$defaultPort, 发送字节: $result');
+            debugPrint('发送设备公告到 ${multicastAddress.address}:$defaultMulticastPort, 发送字节: $result');
           }
         } catch (e) {
           debugPrint('发送公告失败: $e');
@@ -327,10 +369,17 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     }
   }
 
-  /// 获取设备指纹 - 使用更稳定的标识符
+  /// 生成设备指纹 - 在初始化时调用一次
+  String _generateDeviceFingerprint() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final hostname = Platform.localHostname;
+    final os = Platform.operatingSystem;
+    return 'thoughtecho-$hostname-$os-$timestamp';
+  }
+
+  /// 获取设备指纹
   String _getDeviceFingerprint() {
-    // 使用更稳定的设备指纹，避免每次调用都变化
-    return 'thoughtecho-${Platform.localHostname}-${Platform.operatingSystem}';
+    return _deviceFingerprint;
   }
 
   @override
