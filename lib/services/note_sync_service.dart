@@ -455,7 +455,9 @@ class NoteSyncService extends ChangeNotifier {
       final devices = _discoveryService!.devices;
       debugPrint('发现 ${devices.length} 台设备');
 
-      return devices;
+      // 注意：devices 是不可修改的列表，返回可修改副本
+      // 以避免调用方尝试修改列表时出现错误
+      return List<Device>.from(devices); // 返回可修改的副本
     } catch (e) {
       debugPrint('设备发现失败: $e');
       return [];

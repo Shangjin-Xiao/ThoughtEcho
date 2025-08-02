@@ -15,7 +15,7 @@ void main() {
 
     test('FileDto 测试', () {
       // 测试文件DTO
-      final fileDto = FileDto(
+      const fileDto = FileDto(
         id: 'file-123',
         fileName: 'test.txt',
         size: 1024,
