@@ -16,10 +16,13 @@ const peerProtocolVersion = '1.0';
 /// Prior v2, the protocol version was not specified.
 const fallbackProtocolVersion = '1.0';
 
-/// The default http server port and
-/// and multicast port.
+/// The default http server port.
 /// Using 53320 as the default port for ThoughtEcho sync
 const defaultPort = 53320;
+
+/// The default multicast discovery port.
+/// Should be different from HTTP server port
+const defaultMulticastPort = 53317;
 
 /// The default discovery timeout in milliseconds.
 /// This is the time the discovery server waits for responses.
