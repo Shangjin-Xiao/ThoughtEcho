@@ -18,6 +18,7 @@ const fallbackProtocolVersion = '1.0';
 
 /// The default http server port and
 /// and multicast port.
+/// Using 53320 as the default port for ThoughtEcho sync
 const defaultPort = 53320;
 
 /// The default discovery timeout in milliseconds.
@@ -28,4 +29,5 @@ const defaultDiscoveryTimeout = 500;
 /// The default multicast group should be 224.0.0.0/24
 /// because on some Android devices this is the only IP range
 /// that can receive UDP multicast messages.
+/// Using 224.0.0.170 for ThoughtEcho multicast discovery
 const defaultMulticastGroup = '224.0.0.170';

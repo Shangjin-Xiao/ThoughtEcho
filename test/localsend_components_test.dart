@@ -9,7 +9,7 @@ void main() {
     test('Constants 测试', () {
       // 测试常量定义
       expect(protocolVersion, '2.1');
-      expect(defaultPort, 53317);
+      expect(defaultPort, 53320);
       expect(defaultDiscoveryTimeout, 500);
     });
 

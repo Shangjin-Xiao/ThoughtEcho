@@ -49,16 +49,22 @@ class LocalSendServer {
     } catch (e) {
       debugPrint('Failed to start server on port $_port: $e');
 
-      // Try alternative ports
+      // Try alternative ports with better range and logging
       debugPrint('尝试在替代端口上启动服务器...');
-      for (int altPort = _port + 1; altPort <= _port + 100; altPort++) {
+      final alternativePorts = [
+        _port + 1, _port + 2, _port + 3, // Try nearby ports first
+        _port - 1, _port - 2, _port - 3, // Try lower ports
+        0, // Let system choose
+      ];
+
+      for (int altPort in alternativePorts) {
         try {
           debugPrint('尝试端口 $altPort...');
           _server = await HttpServer.bind(InternetAddress.anyIPv4, altPort);
           _server!.listen(_handleRequest);
-          _port = altPort;
+          _port = altPort == 0 ? _server!.port : altPort;
           _isRunning = true;
-          debugPrint('LocalSend server started on alternative port $altPort');
+          debugPrint('LocalSend server started on alternative port $_port');
           break;
         } catch (e) {
           // Continue trying
@@ -138,18 +144,25 @@ class LocalSendServer {
           final sessionId = query['sessionId'];
           final fileId = query['fileId'];
           final token = query['token'];
-          
+
           if (sessionId == null || fileId == null || token == null) {
             debugPrint('缺少必要参数: sessionId=$sessionId, fileId=$fileId, token=$token');
             statusCode = 400;
             responseData = {'error': 'Missing required parameters'};
           } else {
-            responseData = await _receiveController.handleFileUpload(
-              sessionId,
-              fileId,
-              token,
-              request,
-            );
+            try {
+              responseData = await _receiveController.handleFileUpload(
+                sessionId,
+                fileId,
+                token,
+                request,
+              );
+              debugPrint('文件上传成功处理');
+            } catch (e) {
+              debugPrint('文件上传处理失败: $e');
+              statusCode = 500;
+              responseData = {'error': 'File upload failed: $e'};
+            }
           }
           
         } else {

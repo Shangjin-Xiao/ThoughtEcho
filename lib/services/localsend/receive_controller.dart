@@ -69,13 +69,14 @@ class ReceiveController {
     }
   }
 
-  /// Handle file upload
+  /// Handle file upload with enhanced error handling and streaming support
   Future<Map<String, dynamic>> handleFileUpload(
     String sessionId,
     String fileId,
     String token,
     HttpRequest request,
   ) async {
+    File? tempFile;
     try {
       debugPrint('接收文件上传请求: sessionId=$sessionId, fileId=$fileId');
       final session = _sessions[sessionId];
@@ -83,46 +84,71 @@ class ReceiveController {
         debugPrint('找不到会话: $sessionId');
         throw Exception('Session not found');
       }
-      
+
       // Validate token
       if (session.fileTokens?[fileId] != token) {
         debugPrint('令牌无效: 预期 ${session.fileTokens?[fileId]}, 实际 $token');
         throw Exception('Invalid token');
       }
-      
+
       // Get file info
       final fileDto = session.files[fileId];
       if (fileDto == null) {
         debugPrint('找不到文件: $fileId');
         throw Exception('File not found');
       }
-      
-      // Save file to temporary location
+
+      // Create temporary file with better naming
       final tempDir = Directory.systemTemp;
-      final fileName = fileDto.fileName ?? 'unknown_file';
-      final filePath = '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
-      final file = File(filePath);
-      
+      final fileName = _sanitizeFileName(fileDto.fileName ?? 'unknown_file');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filePath = '${tempDir.path}/thoughtecho_${timestamp}_$fileName';
+      tempFile = File(filePath);
+
       debugPrint('开始保存文件到: $filePath');
-      
-      // Write file data - 修正为使用fold来收集请求数据
-      final bytes = await request.fold<List<int>>(
-        <int>[],
-        (previous, element) => previous..addAll(element),
-      );
-      await file.writeAsBytes(bytes);
-      
-      debugPrint('文件保存完成: $filePath, 大小: ${await file.length()} 字节');
-      
-      // Notify file received
-      if (onFileReceived != null) {
-        debugPrint('通知上层服务接收到文件');
-        onFileReceived!(filePath);
+
+      // Enhanced file writing with streaming and progress tracking
+      final sink = tempFile.openWrite();
+      int totalBytes = 0;
+
+      try {
+        await for (final chunk in request) {
+          sink.add(chunk);
+          totalBytes += chunk.length;
+
+          // Optional: Add progress logging for large files
+          if (totalBytes % (1024 * 1024) == 0) { // Every MB
+            debugPrint('已接收 ${totalBytes ~/ (1024 * 1024)} MB');
+          }
+        }
+        await sink.flush();
+        await sink.close();
+
+        final finalSize = await tempFile.length();
+        debugPrint('文件保存完成: $filePath, 大小: $finalSize 字节');
+
+        // Validate file size if provided
+        if (fileDto.size != null && finalSize != fileDto.size) {
+          debugPrint('警告: 文件大小不匹配 - 预期: ${fileDto.size}, 实际: $finalSize');
+        }
+
+        // Notify file received
+        if (onFileReceived != null) {
+          debugPrint('通知上层服务接收到文件');
+          onFileReceived!(filePath);
+        }
+
+        debugPrint('文件上传处理完成: ${fileDto.fileName} -> $filePath');
+
+        return {
+          'message': 'File uploaded successfully',
+          'fileId': fileId,
+          'size': finalSize,
+        };
+      } catch (e) {
+        await sink.close();
+        rethrow;
       }
-      
-      debugPrint('文件上传处理完成: ${fileDto.fileName} -> $filePath');
-      
-      return {'message': 'File uploaded successfully'};
       
     } catch (e, stack) {
       debugPrint('文件上传处理失败: $e');
@@ -143,6 +169,25 @@ class ReceiveController {
 
   /// Get all sessions
   Map<String, ReceiveSession> get sessions => Map.unmodifiable(_sessions);
+
+  /// Sanitize file name to prevent path traversal and invalid characters
+  String _sanitizeFileName(String fileName) {
+    // Remove path separators and invalid characters
+    String sanitized = fileName
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+        .replaceAll('..', '_')
+        .trim();
+
+    // Ensure filename is not empty and not too long
+    if (sanitized.isEmpty) {
+      sanitized = 'unknown_file';
+    }
+    if (sanitized.length > 255) {
+      sanitized = sanitized.substring(0, 255);
+    }
+
+    return sanitized;
+  }
 
   /// Dispose resources
   void dispose() {
