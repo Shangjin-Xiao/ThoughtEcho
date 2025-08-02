@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/localsend/constants.dart';
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -107,12 +108,17 @@ class NoteSyncService extends ChangeNotifier {
 
       // 启动LocalSend服务器
       await _localSendServer!.start(
+        port: defaultPort, // 明确指定端口
         onFileReceived: (filePath) async {
           // 使用processSyncPackage方法处理接收到的文件
           await processSyncPackage(filePath);
         },
       );
-      debugPrint('LocalSendServer启动成功，端口: ${_localSendServer!.port}');
+      final actualPort = _localSendServer!.port;
+      debugPrint('LocalSendServer启动成功，端口: $actualPort');
+
+      // 设置设备发现服务的实际端口
+      _discoveryService!.setServerPort(actualPort);
 
       // 启动设备发现
       await _discoveryService!.startDiscovery();

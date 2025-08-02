@@ -13,9 +13,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   bool _isScanning = false;
   final List<RawDatagramSocket> _sockets = [];
   Timer? _announcementTimer;
+  int _actualServerPort = defaultPort; // 实际服务器端口
 
   List<Device> get devices => List.unmodifiable(_devices);
   bool get isScanning => _isScanning;
+
+  /// 设置实际的服务器端口
+  void setServerPort(int port) {
+    _actualServerPort = port;
+    debugPrint('设备发现服务更新服务器端口为: $port');
+  }
 
   /// 开始设备发现
   Future<void> startDiscovery() async {
@@ -180,13 +187,19 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
   /// 发送公告消息
   Future<void> _sendAnnouncement() async {
+    if (_sockets.isEmpty) {
+      debugPrint('没有可用的套接字发送公告');
+      return;
+    }
+
+    final fingerprint = _getDeviceFingerprint();
     final dto = MulticastDto(
-      alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
+      alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
-      deviceModel: 'ThoughtEcho',
-      deviceType: DeviceType.desktop,
-      fingerprint: _getDeviceFingerprint(),
-      port: defaultPort,
+      deviceModel: 'ThoughtEcho App',
+      deviceType: DeviceType.mobile,
+      fingerprint: fingerprint,
+      port: _actualServerPort, // 使用实际服务器端口
       protocol: ProtocolType.http,
       download: true,
       announcement: true,
@@ -194,13 +207,23 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     );
 
     final message = utf8.encode(jsonEncode(dto.toJson()));
-    
+    int successCount = 0;
+
     for (final socket in _sockets) {
       try {
-        socket.send(message, InternetAddress(defaultMulticastGroup), defaultPort);
+        final result = socket.send(message, InternetAddress(defaultMulticastGroup), defaultPort);
+        if (result > 0) {
+          successCount++;
+        }
       } catch (e) {
         debugPrint('发送组播消息失败: $e');
       }
+    }
+
+    if (successCount > 0) {
+      debugPrint('成功通过 $successCount 个套接字发送公告 (指纹: $fingerprint)');
+    } else {
+      debugPrint('警告: 未能通过任何套接字发送公告');
     }
   }
 
@@ -246,16 +269,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     }
 
     try {
-      final deviceId = 'thoughtecho-${DateTime.now().millisecondsSinceEpoch}';
-      debugPrint('创建设备公告，设备ID: $deviceId');
-      
+      final fingerprint = _getDeviceFingerprint();
+      debugPrint('创建设备公告，设备指纹: $fingerprint');
+
       final announcement = MulticastDto(
-        alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
-        version: '2.1',
+        alias: 'ThoughtEcho-${Platform.localHostname}',
+        version: protocolVersion,
         deviceModel: 'ThoughtEcho App',
         deviceType: DeviceType.mobile,
-        fingerprint: deviceId,
-        port: defaultPort,
+        fingerprint: fingerprint,
+        port: _actualServerPort, // 使用实际服务器端口
         protocol: ProtocolType.http,
         download: true,
         announcement: true,
@@ -266,31 +289,33 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       final messageBytes = utf8.encode(message);
       final multicastAddress = InternetAddress(defaultMulticastGroup);
 
-      debugPrint('设备公告内容: $message');
-      
+      debugPrint('设备公告内容长度: ${message.length} 字符');
+
       // 检查套接字是否为空
       if (_sockets.isEmpty) {
         debugPrint('警告: 无可用UDP套接字发送公告，尝试重新初始化...');
         await _startMulticastListener();
-        
+
         if (_sockets.isEmpty) {
           debugPrint('错误: 无法创建UDP套接字，公告发送失败');
           return;
         }
       }
-      
+
       int sentCount = 0;
       // 向所有套接字发送公告
       for (final socket in _sockets) {
         try {
           final result = socket.send(messageBytes, multicastAddress, defaultPort);
-          sentCount++;
-          debugPrint('发送设备公告到 ${multicastAddress.address}:$defaultPort, 发送字节: $result');
+          if (result > 0) {
+            sentCount++;
+            debugPrint('发送设备公告到 ${multicastAddress.address}:$defaultPort, 发送字节: $result');
+          }
         } catch (e) {
           debugPrint('发送公告失败: $e');
         }
       }
-      
+
       if (sentCount > 0) {
         debugPrint('成功通过 $sentCount 个套接字发送设备公告');
       } else {
@@ -302,9 +327,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     }
   }
 
-  /// 获取设备指纹
+  /// 获取设备指纹 - 使用更稳定的标识符
   String _getDeviceFingerprint() {
-    return 'thoughtecho-${DateTime.now().millisecondsSinceEpoch}';
+    // 使用更稳定的设备指纹，避免每次调用都变化
+    return 'thoughtecho-${Platform.localHostname}-${Platform.operatingSystem}';
   }
 
   @override

@@ -69,35 +69,45 @@ class LocalSendProvider {
         },
       );
       
-      // Send prepare upload request
+      // Send prepare upload request with timeout and retry
       final url = ApiRoute.prepareUpload.target(target);
       debugPrint('发送prepare-upload请求到: $url (设备端口: ${target.port})');
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestDto.toJson()),
-      );
-      
-      debugPrint('prepare-upload响应状态: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        final responseDto = PrepareUploadResponseDto.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>
-        );
-        
-        // Update session with response
-        _sessions[sessionId] = session.copyWith(
-          status: SessionStatus.sending,
-          remoteSessionId: responseDto.sessionId,
-          fileTokens: responseDto.files,
-        );
-        
-        // Start file uploads
-        await _uploadFiles(sessionId);
-        
-        return sessionId;
-      } else {
-        throw Exception('Failed to prepare upload: ${response.statusCode}');
+
+      final client = http.Client();
+      try {
+        final response = await client.post(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'ThoughtEcho/1.0',
+          },
+          body: jsonEncode(requestDto.toJson()),
+        ).timeout(const Duration(seconds: 30));
+
+        debugPrint('prepare-upload响应状态: ${response.statusCode}');
+        debugPrint('响应内容: ${response.body.substring(0, response.body.length.clamp(0, 200))}...');
+
+        if (response.statusCode == 200) {
+          final responseDto = PrepareUploadResponseDto.fromJson(
+            jsonDecode(response.body) as Map<String, dynamic>
+          );
+
+          // Update session with response
+          _sessions[sessionId] = session.copyWith(
+            status: SessionStatus.sending,
+            remoteSessionId: responseDto.sessionId,
+            fileTokens: responseDto.files,
+          );
+
+          // Start file uploads
+          await _uploadFiles(sessionId);
+
+          return sessionId;
+        } else {
+          throw Exception('Failed to prepare upload: ${response.statusCode} - ${response.body}');
+        }
+      } finally {
+        client.close();
       }
     } catch (e) {
       _sessions[sessionId] = session.copyWith(
@@ -108,53 +118,102 @@ class LocalSendProvider {
     }
   }
   
-  /// Upload files for a session
+  /// Upload files for a session with enhanced error handling and progress tracking
   Future<void> _uploadFiles(String sessionId) async {
     final session = _sessions[sessionId];
     if (session == null) return;
-    
+
     try {
       for (int i = 0; i < session.files.length; i++) {
         final file = session.files[i];
         final fileId = 'file_$i';
         final token = session.fileTokens?[fileId];
-        
-        if (token == null) continue;
-        
-        // Upload file
-        final url = ApiRoute.upload.target(session.target);
-        debugPrint('上传文件到: $url (文件: ${file.path})');
-        final request = http.MultipartRequest('POST', Uri.parse(url));
-        
-        // Add query parameters
-        request.fields['sessionId'] = session.remoteSessionId!;
-        request.fields['fileId'] = fileId;
-        request.fields['token'] = token;
-        
-        // Add file
-        request.files.add(await http.MultipartFile.fromPath('file', file.path));
-        
-        // Send request
-        final response = await request.send();
-        
-        debugPrint('文件上传响应状态: ${response.statusCode}');
-        
-        if (response.statusCode != 200) {
-          throw Exception('Failed to upload file: ${response.statusCode}');
+
+        if (token == null) {
+          debugPrint('跳过文件 $fileId: 没有令牌');
+          continue;
         }
+
+        // Verify file exists and is readable
+        if (!await file.exists()) {
+          throw Exception('File not found: ${file.path}');
+        }
+
+        final fileSize = await file.length();
+        debugPrint('准备上传文件: ${file.path} (大小: $fileSize 字节)');
+
+        // Upload file with retry mechanism
+        await _uploadSingleFile(session, fileId, token, file, fileSize);
       }
-      
+
       // Mark as completed
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.finished,
       );
-      
+      debugPrint('所有文件上传完成: $sessionId');
+
     } catch (e) {
+      debugPrint('文件上传失败: $e');
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.finishedWithErrors,
         errorMessage: e.toString(),
       );
       rethrow;
+    }
+  }
+
+  /// Upload a single file with retry mechanism
+  Future<void> _uploadSingleFile(
+    SendSession session,
+    String fileId,
+    String token,
+    File file,
+    int fileSize,
+  ) async {
+    const maxRetries = 3;
+    int attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        final url = ApiRoute.upload.target(session.target);
+        debugPrint('上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)');
+
+        final request = http.MultipartRequest('POST', Uri.parse(url));
+
+        // Add query parameters
+        request.fields['sessionId'] = session.remoteSessionId!;
+        request.fields['fileId'] = fileId;
+        request.fields['token'] = token;
+
+        // Add headers
+        request.headers['User-Agent'] = 'ThoughtEcho/1.0';
+
+        // Add file
+        request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+        // Send request with timeout
+        final response = await request.send().timeout(const Duration(minutes: 5));
+
+        debugPrint('文件上传响应状态: ${response.statusCode}');
+
+        if (response.statusCode == 200) {
+          debugPrint('文件上传成功: ${file.path}');
+          return; // Success, exit retry loop
+        } else {
+          final responseBody = await response.stream.bytesToString();
+          throw Exception('Upload failed with status ${response.statusCode}: $responseBody');
+        }
+      } catch (e) {
+        attempt++;
+        debugPrint('文件上传尝试 $attempt 失败: $e');
+
+        if (attempt >= maxRetries) {
+          throw Exception('Failed to upload file after $maxRetries attempts: $e');
+        }
+
+        // Wait before retry
+        await Future.delayed(Duration(seconds: attempt * 2));
+      }
     }
   }
   
