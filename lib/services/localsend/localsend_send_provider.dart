@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'api_route_builder.dart';
 import 'models/device.dart';
@@ -70,11 +71,14 @@ class LocalSendProvider {
       
       // Send prepare upload request
       final url = ApiRoute.prepareUpload.target(target);
+      debugPrint('发送prepare-upload请求到: $url (设备端口: ${target.port})');
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestDto.toJson()),
       );
+      
+      debugPrint('prepare-upload响应状态: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final responseDto = PrepareUploadResponseDto.fromJson(
@@ -119,6 +123,7 @@ class LocalSendProvider {
         
         // Upload file
         final url = ApiRoute.upload.target(session.target);
+        debugPrint('上传文件到: $url (文件: ${file.path})');
         final request = http.MultipartRequest('POST', Uri.parse(url));
         
         // Add query parameters
@@ -131,6 +136,8 @@ class LocalSendProvider {
         
         // Send request
         final response = await request.send();
+        
+        debugPrint('文件上传响应状态: ${response.statusCode}');
         
         if (response.statusCode != 200) {
           throw Exception('Failed to upload file: ${response.statusCode}');

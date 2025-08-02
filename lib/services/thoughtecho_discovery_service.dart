@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:thoughtecho/constants/thoughtecho_constants.dart';
+import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
-import 'package:thoughtecho/models/thoughtecho_multicast_dto.dart';
-import 'package:thoughtecho/utils/thoughtecho_network_interfaces.dart';
+import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
+import 'package:thoughtecho/services/localsend/utils/network_interfaces.dart';
 
 /// ThoughtEcho设备发现服务 - 基于UDP组播
 class ThoughtEchoDiscoveryService extends ChangeNotifier {
