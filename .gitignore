@@ -263,3 +263,5 @@ android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 android/local.properties
 .claude/settings.json
 .kilocode/mcp.json
+.claude/settings.local.json
+forge.yaml
