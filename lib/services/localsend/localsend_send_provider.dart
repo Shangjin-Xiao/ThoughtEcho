@@ -175,15 +175,15 @@ class LocalSendProvider {
 
     while (attempt < maxRetries) {
       try {
-        final url = ApiRoute.upload.target(session.target);
+        // 构建带查询参数的URL
+        final url = ApiRoute.upload.target(session.target, query: {
+          'sessionId': session.remoteSessionId!,
+          'fileId': fileId,
+          'token': token,
+        });
         debugPrint('上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)');
 
         final request = http.MultipartRequest('POST', Uri.parse(url));
-
-        // Add query parameters
-        request.fields['sessionId'] = session.remoteSessionId!;
-        request.fields['fileId'] = fileId;
-        request.fields['token'] = token;
 
         // Add headers
         request.headers['User-Agent'] = 'ThoughtEcho/1.0';
