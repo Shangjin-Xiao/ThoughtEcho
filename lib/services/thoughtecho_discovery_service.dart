@@ -183,8 +183,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       }
 
       final ip = datagram.address.address;
-      debugPrint('创建设备对象，IP: $ip, 端口: ${dto.port ?? defaultPort}');
-      final device = dto.toDevice(ip, defaultPort, false);
+      final devicePort = dto.port ?? defaultPort;
+      debugPrint('创建设备对象，IP: $ip, 端口: $devicePort');
+      final device = dto.toDevice(ip, devicePort, false);
       debugPrint('设备信息: ${device.alias} (${device.ip}:${device.port})');
 
       // 检查是否已存在

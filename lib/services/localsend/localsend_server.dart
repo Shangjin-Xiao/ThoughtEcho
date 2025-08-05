@@ -122,11 +122,11 @@ class LocalSendServer {
       try {
         debugPrint('处理路径: $path, 查询参数: $query');
         
-        if (path == '/api/localsend/v2/info' && request.method == 'GET') {
+        if ((path == '/api/localsend/v2/info' || path == '/api/localsend/v1/info') && request.method == 'GET') {
           responseData = _receiveController.handleInfoRequest();
           debugPrint('处理INFO请求: ${jsonEncode(responseData)}');
-          
-        } else if (path == '/api/localsend/v2/prepare-upload' && request.method == 'POST') {
+
+        } else if ((path == '/api/localsend/v2/prepare-upload' || path == '/api/localsend/v1/send-request') && request.method == 'POST') {
           debugPrint('处理prepare-upload请求');
           final bodyBytes = await request.fold<List<int>>(
             <int>[],
@@ -139,7 +139,7 @@ class LocalSendServer {
           responseData = _receiveController.handlePrepareUpload(requestData);
           debugPrint('响应: ${jsonEncode(responseData)}');
           
-        } else if (path == '/api/localsend/v2/upload' && request.method == 'POST') {
+        } else if ((path == '/api/localsend/v2/upload' || path == '/api/localsend/v1/send') && request.method == 'POST') {
           debugPrint('处理上传请求');
           final sessionId = query['sessionId'];
           final fileId = query['fileId'];
