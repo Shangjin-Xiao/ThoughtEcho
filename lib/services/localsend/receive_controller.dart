@@ -23,9 +23,19 @@ class ReceiveController {
       'version': protocolVersion,
       'deviceModel': 'ThoughtEcho App',
       'deviceType': 'mobile',
-      'fingerprint': 'thoughtecho-${DateTime.now().millisecondsSinceEpoch}',
+      'fingerprint': _getStableFingerprint(),
       'download': true,
     };
+  }
+
+  /// 生成稳定的设备指纹
+  String _getStableFingerprint() {
+    // 使用稳定的设备标识符，而不是时间戳
+    final hostname = Platform.localHostname;
+    final os = Platform.operatingSystem;
+    // 使用进程启动时间作为会话标识符，确保同一进程内指纹一致
+    final processId = pid;
+    return 'thoughtecho-$hostname-$os-$processId';
   }
 
   /// Handle prepare upload request
