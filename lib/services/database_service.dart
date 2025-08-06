@@ -2297,6 +2297,12 @@ class DatabaseService extends ChangeNotifier {
         final quoteMap = quote.toJson();
         quoteMap['id'] = id;
 
+        // 自动设置 last_modified 时间戳
+        final now = DateTime.now().toUtc().toIso8601String();
+        if (quoteMap['last_modified'] == null || quoteMap['last_modified'].toString().isEmpty) {
+          quoteMap['last_modified'] = now;
+        }
+
         // 自动补全 day_period 字段
         if (quoteMap['date'] != null) {
           final dt = DateTime.tryParse(quoteMap['date']);
@@ -3181,6 +3187,11 @@ class DatabaseService extends ChangeNotifier {
         final db = await safeDatabase;
       await db.transaction((txn) async {
         final quoteMap = quote.toJson();
+        
+        // 更新时总是刷新 last_modified 时间戳
+        final now = DateTime.now().toUtc().toIso8601String();
+        quoteMap['last_modified'] = now;
+        
         // 自动补全 day_period 字段
         if (quoteMap['date'] != null) {
           final dt = DateTime.tryParse(quoteMap['date']);
