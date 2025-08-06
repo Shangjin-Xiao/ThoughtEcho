@@ -389,7 +389,7 @@ class DatabaseService extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 14, // 版本号升级至14，以支持day_period字段
+  version: 15, // 版本号升级至15，新增 last_modified 字段
       onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -400,7 +400,7 @@ class DatabaseService extends ChangeNotifier {
             icon_name TEXT
           )
         ''');
-        // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content、day_period 字段
+    // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content、day_period、last_modified 字段
         await db.execute('''
           CREATE TABLE quotes(
             id TEXT PRIMARY KEY,
@@ -420,7 +420,8 @@ class DatabaseService extends ChangeNotifier {
             temperature TEXT,
             edit_source TEXT,
             delta_content TEXT,
-            day_period TEXT
+      day_period TEXT,
+      last_modified TEXT
           )
         ''');
 
@@ -450,6 +451,8 @@ class DatabaseService extends ChangeNotifier {
         );
         // 修复：安全地创建day_period索引
         await _createIndexSafely(db, 'quotes', 'day_period', 'idx_quotes_day_period');
+  // 新增：last_modified 索引用于同步增量查询
+  await _createIndexSafely(db, 'quotes', 'last_modified', 'idx_quotes_last_modified');
 
         // 创建新的 quote_tags 关联表
         await db.execute('''
@@ -715,6 +718,30 @@ class DatabaseService extends ChangeNotifier {
         // 不要重新抛出异常，允许升级继续
       }
     }
+    
+    // 如果数据库版本低于15，添加 last_modified 字段（用于同步与更新追踪）
+    if (oldVersion < 15) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 last_modified 字段',
+      );
+      try {
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasColumn = columns.any((col) => col['name'] == 'last_modified');
+        if (!hasColumn) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN last_modified TEXT');
+          logDebug('数据库升级：last_modified 字段添加完成');
+          // 回填已有数据的last_modified，使用其date或当前时间
+          final nowIso = DateTime.now().toIso8601String();
+          // 使用COALESCE保证date为空时写入当前时间
+          await txn.execute("UPDATE quotes SET last_modified = COALESCE(date, ?)", [nowIso]);
+        } else {
+          logDebug('数据库升级：last_modified 字段已存在，跳过添加');
+        }
+        await txn.execute('CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)');
+      } catch (e) {
+        logError('last_modified 字段升级失败: $e', error: e, source: 'DatabaseUpgrade');
+      }
+    }
   }
 
   /// 修复：验证升级结果
@@ -888,7 +915,8 @@ class DatabaseService extends ChangeNotifier {
           temperature TEXT,
           edit_source TEXT,
           delta_content TEXT,
-          day_period TEXT
+          day_period TEXT,
+          last_modified TEXT
         )
       ''');
 
@@ -898,13 +926,13 @@ class DatabaseService extends ChangeNotifier {
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, weather, temperature, edit_source,
-          delta_content, day_period
+          delta_content, day_period, last_modified
         )
         SELECT
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, weather, temperature, edit_source,
-          delta_content, day_period
+          delta_content, day_period, last_modified
         FROM quotes
       ''');
 
@@ -933,6 +961,9 @@ class DatabaseService extends ChangeNotifier {
       );
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)',
       );
 
       logDebug('tag_ids列删除完成');
