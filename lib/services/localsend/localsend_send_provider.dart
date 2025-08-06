@@ -216,12 +216,12 @@ class LocalSendProvider {
 
         if (response.statusCode == 404) {
           // Try legacy v1 route if needed
-          url = ApiRoute.upload.targetRaw(
+          url = '${ApiRoute.upload.targetRaw(
             session.target.ip ?? '127.0.0.1',
             session.target.port,
             session.target.https,
             '1.0',
-          ) + '?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
+          )}?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
           debugPrint('v2上传返回404，尝试v1路由: $url');
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
