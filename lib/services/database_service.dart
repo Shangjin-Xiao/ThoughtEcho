@@ -17,6 +17,8 @@ import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
+import '../models/merge_report.dart';
+import '../utils/lww_utils.dart';
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
@@ -389,7 +391,7 @@ class DatabaseService extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-  version: 15, // 版本号升级至15，新增 last_modified 字段
+  version: 16, // 版本号升级至16，为分类表新增 last_modified 字段
       onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -397,7 +399,8 @@ class DatabaseService extends ChangeNotifier {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             is_default BOOLEAN DEFAULT 0,
-            icon_name TEXT
+            icon_name TEXT,
+            last_modified TEXT
           )
         ''');
     // 创建引用（笔记）表，新增 category_id、source、source_author、source_work、color_hex、edit_source、delta_content、day_period、last_modified 字段
@@ -740,6 +743,29 @@ class DatabaseService extends ChangeNotifier {
         await txn.execute('CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)');
       } catch (e) {
         logError('last_modified 字段升级失败: $e', error: e, source: 'DatabaseUpgrade');
+      }
+    }
+
+    // 版本16：为分类表添加last_modified字段
+    if (oldVersion < 16) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，为分类表添加 last_modified 字段',
+      );
+      try {
+        final columns = await txn.rawQuery('PRAGMA table_info(categories)');
+        final hasColumn = columns.any((col) => col['name'] == 'last_modified');
+        if (!hasColumn) {
+          await txn.execute('ALTER TABLE categories ADD COLUMN last_modified TEXT');
+          logDebug('数据库升级：categories表 last_modified 字段添加完成');
+          // 回填已有分类数据的last_modified
+          final nowIso = DateTime.now().toIso8601String();
+          await txn.execute("UPDATE categories SET last_modified = ?", [nowIso]);
+        } else {
+          logDebug('数据库升级：categories表 last_modified 字段已存在，跳过添加');
+        }
+        await txn.execute('CREATE INDEX IF NOT EXISTS idx_categories_last_modified ON categories(last_modified)');
+      } catch (e) {
+        logError('categories表 last_modified 字段升级失败: $e', error: e, source: 'DatabaseUpgrade');
       }
     }
   }
@@ -2035,6 +2061,7 @@ class DatabaseService extends ChangeNotifier {
       'name': trimmedName,
       'is_default': 0,
       'icon_name': iconName?.trim() ?? "",
+      'last_modified': DateTime.now().toUtc().toIso8601String(),
     };
     await db.insert(
       'categories',
@@ -2157,7 +2184,11 @@ class DatabaseService extends ChangeNotifier {
 
         if (existingById.isNotEmpty) {
           // 如果ID已存在，更新此分类
-          final categoryMap = {'name': name, 'icon_name': iconName ?? ""};
+          final categoryMap = {
+            'name': name, 
+            'icon_name': iconName ?? "",
+            'last_modified': DateTime.now().toUtc().toIso8601String(),
+          };
           await txn.update(
             'categories',
             categoryMap,
@@ -2172,6 +2203,7 @@ class DatabaseService extends ChangeNotifier {
             'name': name,
             'is_default': 0,
             'icon_name': iconName ?? "",
+            'last_modified': DateTime.now().toUtc().toIso8601String(),
           };
           await txn.insert(
             'categories',
@@ -2194,6 +2226,7 @@ class DatabaseService extends ChangeNotifier {
           'name': name,
           'is_default': 0,
           'icon_name': iconName ?? "",
+          'last_modified': DateTime.now().toUtc().toIso8601String(),
         };
         await db.insert(
           'categories',
@@ -3802,6 +3835,7 @@ class DatabaseService extends ChangeNotifier {
     final categoryMap = {
       'name': trimmedName,
       'icon_name': iconName?.trim() ?? currentCategory.iconName, // 如果未提供新图标，则保留旧图标
+      'last_modified': DateTime.now().toUtc().toIso8601String(),
       // 'is_default' 字段不应在此处更新，它在创建时确定
     };
 
@@ -4248,6 +4282,193 @@ class DatabaseService extends ChangeNotifier {
     } catch (e) {
       logDebug('数据库恢复失败: $e');
       rethrow;
+    }
+  }
+
+  /// LWW (Last-Write-Wins) 合并导入数据
+  /// 
+  /// 使用时间戳比较来决定是否覆盖本地数据
+  /// [data] - 远程数据Map
+  /// [sourceDevice] - 源设备标识符（可选）
+  /// 返回 [MergeReport] 包含合并统计信息
+  Future<MergeReport> importDataWithLWWMerge(
+    Map<String, dynamic> data, {
+    String? sourceDevice,
+  }) async {
+    final reportBuilder = MergeReportBuilder(sourceDevice: sourceDevice);
+    
+    try {
+      final db = database;
+
+      // 验证数据格式
+      if (!data.containsKey('categories') || !data.containsKey('quotes')) {
+        reportBuilder.addError('备份数据格式无效，缺少 "categories" 或 "quotes" 键');
+        return reportBuilder.build();
+      }
+
+      await db.transaction((txn) async {
+        await _mergeCategories(txn, data['categories'] as List, reportBuilder);
+        await _mergeQuotes(txn, data['quotes'] as List, reportBuilder);
+      });
+
+      // 清理缓存并通知监听器
+      _clearAllCache();
+      notifyListeners();
+
+      logInfo('LWW合并完成: ${reportBuilder.build().summary}');
+      
+    } catch (e) {
+      reportBuilder.addError('合并过程发生错误: $e');
+      logError('LWW合并失败: $e', error: e, source: 'DatabaseService');
+    }
+
+    return reportBuilder.build();
+  }
+
+  /// 合并分类数据（LWW策略）
+  Future<void> _mergeCategories(
+    Transaction txn,
+    List categories,
+    MergeReportBuilder reportBuilder,
+  ) async {
+    for (final c in categories) {
+      try {
+        final categoryData = Map<String, dynamic>.from(c as Map<String, dynamic>);
+        
+        // 标准化字段名
+        final categoryFieldMappings = {
+          'isDefault': 'is_default',
+          'iconName': 'icon_name',
+        };
+
+        for (final mapping in categoryFieldMappings.entries) {
+          if (categoryData.containsKey(mapping.key)) {
+            categoryData[mapping.value] = categoryData[mapping.key];
+            categoryData.remove(mapping.key);
+          }
+        }
+
+  // 确保必要字段存在
+        final categoryId = categoryData['id'] ??= _uuid.v4();
+        categoryData['name'] ??= '未命名分类';
+        categoryData['is_default'] ??= 0;
+  categoryData['last_modified'] ??= DateTime.now().toIso8601String();
+
+        // 查询本地是否存在该分类
+        final existingRows = await txn.query(
+          'categories',
+          where: 'id = ?',
+          whereArgs: [categoryId],
+        );
+
+        if (existingRows.isEmpty) {
+          await txn.insert('categories', categoryData);
+          reportBuilder.addInsertedCategory();
+        } else {
+            final existingCategory = existingRows.first;
+            // 本地记录缺失 last_modified 时无需显式变量，决策器内部使用null视为旧值
+            final decision = LWWDecisionMaker.makeDecision(
+              localTimestamp: existingCategory['last_modified'] as String?,
+              remoteTimestamp: categoryData['last_modified'] as String?,
+            );
+            if (decision.shouldUseRemote) {
+              await txn.update(
+                'categories',
+                categoryData,
+                where: 'id = ?',
+                whereArgs: [categoryId],
+              );
+              reportBuilder.addUpdatedCategory();
+            } else {
+              reportBuilder.addSkippedCategory();
+            }
+        }
+      } catch (e) {
+        reportBuilder.addError('处理分类失败: $e');
+      }
+    }
+  }
+
+  /// 合并笔记数据（LWW策略）
+  Future<void> _mergeQuotes(
+    Transaction txn,
+    List quotes,
+    MergeReportBuilder reportBuilder,
+  ) async {
+    for (final q in quotes) {
+      try {
+        final quoteData = Map<String, dynamic>.from(q as Map<String, dynamic>);
+        
+        // 标准化字段名
+        final fieldMappings = {
+          'sourceAuthor': 'source_author',
+          'sourceWork': 'source_work',
+          'categoryld': 'category_id',
+          'categoryId': 'category_id',
+          'aiAnalysis': 'ai_analysis',
+          'colorHex': 'color_hex',
+          'editSource': 'edit_source',
+          'deltaContent': 'delta_content',
+          'dayPeriod': 'day_period',
+        };
+
+        for (final mapping in fieldMappings.entries) {
+          if (quoteData.containsKey(mapping.key)) {
+            quoteData[mapping.value] = quoteData[mapping.key];
+            quoteData.remove(mapping.key);
+          }
+        }
+
+        // 处理tag_ids字段
+        if (quoteData.containsKey('tag_ids')) {
+          quoteData.remove('tag_ids');
+          // tag_ids处理逻辑保持与原有方式一致，暂时移除
+        }
+
+        // 确保必要字段存在
+        final quoteId = quoteData['id'] ??= _uuid.v4();
+        quoteData['content'] ??= '';
+        quoteData['date'] ??= DateTime.now().toIso8601String();
+  quoteData['last_modified'] ??= (quoteData['date'] as String? ?? DateTime.now().toIso8601String());
+
+        // 查询本地是否存在该笔记
+        final existingRows = await txn.query(
+          'quotes',
+          where: 'id = ?',
+          whereArgs: [quoteId],
+        );
+
+        if (existingRows.isEmpty) {
+          await txn.insert('quotes', quoteData);
+          reportBuilder.addInsertedQuote();
+        } else {
+          final existingQuote = existingRows.first;
+          // existingQuote 可能缺失 last_modified，决策器会将其视为较旧
+          final decision = LWWDecisionMaker.makeDecision(
+            localTimestamp: existingQuote['last_modified'] as String?,
+            remoteTimestamp: quoteData['last_modified'] as String?,
+            localContent: existingQuote['content'] as String?,
+            remoteContent: quoteData['content'] as String?,
+            checkContentSimilarity: true,
+          );
+          if (decision.shouldUseRemote) {
+            await txn.update(
+              'quotes',
+              quoteData,
+              where: 'id = ?',
+              whereArgs: [quoteId],
+            );
+            reportBuilder.addUpdatedQuote();
+          } else if (decision.hasConflict) {
+            // 时间戳相同但内容不同
+            reportBuilder.addSameTimestampDiffQuote();
+          } else {
+            reportBuilder.addSkippedQuote();
+          }
+        }
+      } catch (e) {
+        reportBuilder.addError('处理笔记失败: $e');
+      }
     }
   }
 }

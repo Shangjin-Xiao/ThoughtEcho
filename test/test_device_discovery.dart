@@ -35,7 +35,7 @@ Future<void> testDeviceFingerprint() async {
   final processId = pid;
 
   final fingerprint1 = 'thoughtecho-$hostname-$os-$processId';
-  await Future.delayed(Duration(milliseconds: 100));
+  await Future.delayed(const Duration(milliseconds: 100));
   final fingerprint2 = 'thoughtecho-$hostname-$os-$processId';
 
   if (fingerprint1 == fingerprint2) {
@@ -124,7 +124,7 @@ Future<void> testDeviceDiscovery() async {
     logDebug('启动设备发现服务...');
     await service.startDiscovery();
     logDebug('等待5秒收集设备...');
-    await Future.delayed(Duration(seconds: 5));
+    await Future.delayed(const Duration(seconds: 5));
     final devices = service.devices;
     logDebug('发现 ${devices.length} 台设备:');
     for (final device in devices) {

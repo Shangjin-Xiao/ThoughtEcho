@@ -10,6 +10,7 @@ import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
+import 'package:thoughtecho/models/merge_report.dart';
 import 'package:http/http.dart' as http;
 
 /// 同步状态枚举
@@ -44,11 +45,13 @@ class NoteSyncService extends ChangeNotifier {
   SyncStatus _syncStatus = SyncStatus.idle;
   String _syncStatusMessage = '';
   double _syncProgress = 0.0;
+  MergeReport? _lastMergeReport; // 新增：最近一次合并报告
 
   // 状态访问器
   SyncStatus get syncStatus => _syncStatus;
   String get syncStatusMessage => _syncStatusMessage;
   double get syncProgress => _syncProgress;
+  MergeReport? get lastMergeReport => _lastMergeReport;
 
   NoteSyncService({
     required BackupService backupService,
@@ -185,66 +188,18 @@ class NoteSyncService extends ChangeNotifier {
     await createSyncPackage(targetDevice);
   }
 
-  /// 接收并合并笔记数据
-  Future<void> receiveAndMergeNotes(String backupFilePath) async {
-    try {
-      // 1. 导入接收到的备份数据（不清空现有数据）
-      await _backupService.importData(
-        backupFilePath,
-        clearExisting: false, // 关键：不清空现有数据，进行合并
-        onProgress: (current, total) {
-          notifyListeners();
-        },
-      );
+  /// (Deprecated) 旧receiveAndMerge逻辑已废弃，直接调用processSyncPackage
+  @deprecated
+  Future<void> receiveAndMergeNotes(String backupFilePath) => processSyncPackage(backupFilePath);
 
-      // 2. 执行数据合并逻辑
-      await _mergeNoteData();
-      
-    } catch (e) {
-      debugPrint('接收笔记失败: $e');
-      rethrow;
-    }
-  }
-
-  /// 合并重复的笔记数据（增强版）
-  Future<void> _mergeNoteData() async {
-    try {
-      debugPrint('开始智能笔记合并...');
-      _updateSyncStatus(SyncStatus.merging, '正在检测重复笔记...', 0.1);
-      
-      // 1. 获取所有笔记并进行高级重复检测
-      final allQuotes = await _databaseService.getAllQuotes();
-      final duplicateGroups = await _detectDuplicatesAdvanced(allQuotes);
-      
-      _updateSyncStatus(SyncStatus.merging, '发现 ${duplicateGroups.length} 组重复笔记', 0.3);
-      
-      // 2. 逐组处理重复笔记
-      int processedGroups = 0;
-      int totalMerged = 0;
-      
-      for (final group in duplicateGroups) {
-        if (group.length > 1) {
-          await _mergeQuoteGroup(group);
-          totalMerged += group.length - 1;
-        }
-        
-        processedGroups++;
-        final progress = 0.3 + (processedGroups / duplicateGroups.length * 0.4);
-        _updateSyncStatus(SyncStatus.merging, 
-          '正在合并重复笔记... ($processedGroups/${duplicateGroups.length})', progress);
-      }
-      
-      debugPrint('笔记合并完成，合并了 $totalMerged 个重复笔记');
-      _updateSyncStatus(SyncStatus.merging, '笔记合并完成，处理了 $totalMerged 个重复项', 0.8);
-      
-    } catch (e) {
-      debugPrint('笔记合并失败: $e');
-      _updateSyncStatus(SyncStatus.failed, '笔记合并失败: $e', 0.0);
-      rethrow;
-    }
-  }
+  // 旧的重复检测与合并逻辑已不再需要 (LWW直接覆盖)。保留方法体空实现以避免潜在调用崩溃。
+  @deprecated
+  // ignore: unused_element
+  Future<void> _mergeNoteData() async {}
 
   /// 高级重复检测算法
+  @deprecated
+  // ignore: unused_element
   Future<List<List<dynamic>>> _detectDuplicatesAdvanced(List<dynamic> quotes) async {
     final duplicateGroups = <List<dynamic>>[];
     final processed = <String>{};
@@ -327,6 +282,8 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 合并一组重复笔记
+  @deprecated
+  // ignore: unused_element
   Future<void> _mergeQuoteGroup(List<dynamic> duplicates) async {
     // 按优先级排序（最新时间、最丰富内容）
     duplicates.sort((a, b) {
@@ -436,30 +393,38 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 处理接收到的同步包
+  /// 处理接收到的同步包 (使用LWW策略)
   Future<void> processSyncPackage(String backupFilePath) async {
     try {
       // 1. 更新状态：开始合并
-      _updateSyncStatus(SyncStatus.merging, '正在合并数据...', 0.1);
+      _updateSyncStatus(SyncStatus.merging, '正在使用LWW策略合并数据...', 0.1);
 
-      // 2. 导入接收到的备份数据（不清空现有数据）
-      await _backupService.importData(
+      // 2. 使用新的统一 importData 接口（merge=true）
+      final mergeReport = await _backupService.importData(
         backupFilePath,
-        clearExisting: false, // 关键：不清空现有数据，进行合并
+        merge: true,
+        clearExisting: false,
+        sourceDevice: 'P2P同步',
         onProgress: (current, total) {
-          final progress = 0.1 + (current / total) * 0.7; // 10%-80%的进度用于导入
+          final progress = 0.1 + (current / total) * 0.8;
           _updateSyncStatus(SyncStatus.merging, '正在导入数据... ($current/$total)', progress);
         },
       );
+      _lastMergeReport = mergeReport; // 保存最近一次报告
 
-      // 3. 执行数据合并逻辑
-      _updateSyncStatus(SyncStatus.merging, '正在处理重复数据...', 0.8);
-      await _mergeNoteData();
-
-      // 4. 完成
-      _updateSyncStatus(SyncStatus.completed, '数据合并完成', 1.0);
+      // 3. 显示合并结果
+      final summary = mergeReport?.summary ?? '无报告';
+      if (mergeReport?.hasErrors == true) {
+        _updateSyncStatus(SyncStatus.failed, '合并出现错误: $summary', 0.0);
+        debugPrint('LWW合并错误: ${mergeReport?.errors}');
+      } else {
+        _updateSyncStatus(SyncStatus.completed, '合并完成: $summary', 1.0);
+        debugPrint('LWW合并成功: $summary');
+      }
 
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '合并失败: $e', 0.0);
+      debugPrint('processSyncPackage失败: $e');
       rethrow;
     }
   }

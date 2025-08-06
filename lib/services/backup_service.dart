@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
+import 'package:thoughtecho/models/merge_report.dart';
 import 'streaming_backup_processor.dart';
 
 /// 备份与恢复服务
@@ -208,21 +209,40 @@ class BackupService {
   /// [clearExisting] - 是否在导入前清空现有数据
   /// [onProgress] - 进度回调函数，接收 (current, total) 参数
   /// [cancelToken] - 取消令牌，支持取消操作
-  Future<void> importData(
+  Future<MergeReport?> importData(
     String filePath, {
     bool clearExisting = true,
+    bool merge = false, // 新增：是否使用LWW合并；与 clearExisting=true 互斥
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
+    String? sourceDevice,
   }) async {
-    await LargeFileManager.executeWithMemoryProtection(
-      () async => _performImportWithProtection(
+    if (merge && clearExisting) {
+      // 合并模式不允许清空现有数据
+      logDebug('importData 参数冲突: merge=true 与 clearExisting=true 互斥，自动将 clearExisting 设为 false');
+      clearExisting = false;
+    }
+
+    if (merge) {
+      // 走 LWW 合并路径
+      return await importDataWithLWWMerge(
         filePath,
-        clearExisting: clearExisting,
         onProgress: onProgress,
         cancelToken: cancelToken,
-      ),
-      operationName: '数据导入',
-    );
+        sourceDevice: sourceDevice,
+      );
+    } else {
+      await LargeFileManager.executeWithMemoryProtection(
+        () async => _performImportWithProtection(
+          filePath,
+          clearExisting: clearExisting,
+          onProgress: onProgress,
+          cancelToken: cancelToken,
+        ),
+        operationName: '数据导入',
+      );
+      return null; // 旧模式无 MergeReport
+    }
   }
 
   /// 执行受保护的导入操作（流式处理版）
@@ -379,6 +399,7 @@ class BackupService {
     final notesData = await _databaseService.exportDataAsMap();
     final settingsData = _settingsService.getAllSettingsForBackup();
     final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
+  final deviceId = settingsData['device_id'];
 
     // 处理笔记数据中的媒体文件路径
     Map<String, dynamic> processedNotesData = notesData;
@@ -389,6 +410,7 @@ class BackupService {
     return {
       'version': _backupVersion,
       'createdAt': DateTime.now().toIso8601String(),
+      'device_id': deviceId,
       'notes': processedNotesData,
       'settings': settingsData,
       'ai_analysis': aiAnalysisData,
@@ -605,6 +627,109 @@ class BackupService {
     } catch (e) {
       logDebug('转换媒体文件路径失败: $originalPath, 错误: $e');
       return originalPath; // 如果转换失败，返回原路径
+    }
+  }
+
+  /// 使用LWW策略导入数据
+  /// 
+  /// [filePath] - 备份文件路径
+  /// [onProgress] - 进度回调
+  /// [cancelToken] - 取消令牌
+  /// [sourceDevice] - 源设备标识符（可选）
+  /// 返回 [MergeReport] 包含合并统计信息
+  Future<MergeReport> importDataWithLWWMerge(
+    String filePath, {
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+    String? sourceDevice,
+  }) async {
+    try {
+      final result = await LargeFileManager.executeWithMemoryProtection(
+        () async => _performLWWImportWithProtection(
+          filePath,
+          onProgress: onProgress,
+          cancelToken: cancelToken,
+          sourceDevice: sourceDevice,
+        ),
+        operationName: 'LWW数据导入',
+      );
+      return result ?? MergeReport.start(sourceDevice: sourceDevice).addError('内存保护操作返回空结果').completed();
+    } catch (e) {
+      logError('LWW导入包装过程出错: $e', error: e, source: 'BackupService');
+      return MergeReport.start(sourceDevice: sourceDevice).addError('导入包装过程出错: $e').completed();
+    }
+  }
+
+  /// 执行受保护的LWW导入操作
+  Future<MergeReport> _performLWWImportWithProtection(
+    String filePath, {
+    Function(int current, int total)? onProgress,
+    CancelToken? cancelToken,
+    String? sourceDevice,
+  }) async {
+    logDebug('开始LWW导入备份文件: $filePath');
+
+    // 检查内存状态
+    final memoryManager = DeviceMemoryManager();
+    final memoryPressure = await memoryManager.getMemoryPressureLevel();
+
+    if (memoryPressure >= 3) {
+      final report = MergeReport.start(sourceDevice: sourceDevice);
+      return report.addError('内存不足，无法执行导入操作。请关闭其他应用后重试。').completed();
+    }
+
+    // 获取并验证备份文件
+    final backupInfo = await StreamingBackupProcessor.getBackupInfo(filePath);
+    logDebug('备份文件信息: $backupInfo');
+
+    if (!await StreamingBackupProcessor.validateBackupFile(filePath)) {
+      final report = MergeReport.start(sourceDevice: sourceDevice);
+      return report.addError('备份文件损坏或格式不正确').completed();
+    }
+
+    try {
+      Map<String, dynamic> backupData;
+
+      // 根据文件类型使用相应的流式处理器
+      if (backupInfo['type'] == 'json') {
+        logDebug('使用流式JSON处理器...');
+        backupData = await StreamingBackupProcessor.parseJsonBackupStreaming(
+          filePath,
+          onStatusUpdate: (status) => logDebug('JSON处理状态: $status'),
+          shouldCancel: () => cancelToken?.isCancelled == true,
+        );
+      } else if (backupInfo['type'] == 'zip') {
+        logDebug('使用流式ZIP处理器...');
+        backupData = await StreamingBackupProcessor.processZipBackupStreaming(
+          filePath,
+          onStatusUpdate: (status) => logDebug('ZIP处理状态: $status'),
+          onProgress: onProgress,
+          shouldCancel: () => cancelToken?.isCancelled == true,
+        );
+      } else {
+        final report = MergeReport.start(sourceDevice: sourceDevice);
+        return report.addError('不支持的备份文件格式: ${backupInfo['type']}').completed();
+      }
+
+      // 处理媒体文件路径转换
+      if (backupData.containsKey('notes')) {
+        final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);
+        if (hasMediaFiles) {
+          final notesData = Map<String, dynamic>.from(backupData['notes']);
+          backupData['notes'] = await _convertMediaPathsInNotesForRestore(notesData);
+        }
+      }
+
+      // 使用LWW策略合并数据
+      return await _databaseService.importDataWithLWWMerge(
+        backupData.containsKey('notes') ? backupData['notes'] : backupData,
+        sourceDevice: sourceDevice,
+      );
+
+    } catch (e) {
+      logError('LWW导入过程出错: $e', error: e, source: 'BackupService');
+      final report = MergeReport.start(sourceDevice: sourceDevice);
+      return report.addError('导入过程出错: $e').completed();
     }
   }
 }

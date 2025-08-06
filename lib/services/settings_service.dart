@@ -33,6 +33,7 @@ class SettingsService extends ChangeNotifier {
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
 
   static const String _lastVersionKey = 'lastVersion';
+  static const String _deviceIdKey = 'device_id_v1'; // 新增：设备唯一ID缓存键
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
@@ -387,6 +388,7 @@ class SettingsService extends ChangeNotifier {
       'multi_ai_settings': _multiAISettings.toJson(),
       'app_settings': _appSettings.toJson(),
       'theme_mode': _themeMode.index,
+  'device_id': getOrCreateDeviceId(),
     };
   }
 
@@ -426,10 +428,27 @@ class SettingsService extends ChangeNotifier {
         await updateThemeMode(themeMode);
       }
 
+      // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
+      if (backupData.containsKey('device_id')) {
+        final remoteId = backupData['device_id'];
+        if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty && remoteId is String && remoteId.isNotEmpty) {
+          await _mmkv.setString(_deviceIdKey, remoteId);
+        }
+      }
+
       logDebug('设置数据恢复完成');
     } catch (e) {
       AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');
       rethrow;
     }
+  }
+
+  /// 获取或生成设备唯一ID（持久化）
+  String getOrCreateDeviceId() {
+    final existing = _mmkv.getString(_deviceIdKey);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final newId = DateTime.now().millisecondsSinceEpoch.toString() + '_' + UniqueKey().hashCode.toRadixString(16);
+    _mmkv.setString(_deviceIdKey, newId);
+    return newId;
   }
 }

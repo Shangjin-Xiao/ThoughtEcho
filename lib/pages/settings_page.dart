@@ -687,54 +687,64 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: const Icon(Icons.info_outline),
                   trailing: const Icon(Icons.chevron_right), // 添加箭头指示可点击
                   onTap: () {
-                    showAboutDialog(
+                    // 使用自定义关于对话框替代 showAboutDialog，以避免系统自动添加 "查看许可证" 按钮
+                    showDialog(
                       context: context,
-                      applicationName: '心迹 (ThoughtEcho)',
-                      // 不再显示版本号
-                      // applicationVersion: _appVersion,
-                      applicationIcon: Image.asset(
-                        'assets/icon.png',
-                        width: 48,
-                        height: 48,
-                      ), // 路径修正，兼容所有平台
-                      applicationLegalese: '© 2024 Shangjin Xiao',
-                      children: <Widget>[
-                        const SizedBox(height: 16),
-                        const Text('一款帮助你记录和分析思想的应用。'),
-                        const SizedBox(height: 24), // 增加间距
-                        // --- 在对话框中添加链接 ---
-                        _buildAboutLink(
-                          context: context,
-                          icon: Icons.code_outlined,
-                          text: '查看项目源码 (GitHub)',
-                          url: _projectUrl,
-                        ),
-                        const SizedBox(height: 8), // 链接间距
-                        _buildAboutLink(
-                          context: context,
-                          icon: Icons.language_outlined,
-                          text: '访问官网',
-                          url: _websiteUrl,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const license.LicensePage(),
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('关于 心迹 (ThoughtEcho)'),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/icon.png',
+                                width: 64,
+                                height: 64,
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.article_outlined),
-                          label: const Text('查看许可证信息'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(40),
+                              const SizedBox(height: 12),
+                              const Text('一款帮助你记录和分析思想的应用。'),
+                              const SizedBox(height: 20),
+                              _buildAboutLink(
+                                context: context,
+                                icon: Icons.code_outlined,
+                                text: '查看项目源码 (GitHub)',
+                                url: _projectUrl,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildAboutLink(
+                                context: context,
+                                icon: Icons.language_outlined,
+                                text: '访问官网',
+                                url: _websiteUrl,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const license.LicensePage(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.article_outlined),
+                                label: const Text('查看许可证信息'),
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(40),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        // --- 链接添加结束 ---
-                      ],
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('关闭'),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
