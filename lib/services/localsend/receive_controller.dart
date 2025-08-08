@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http_server/http_server.dart';
 
 import 'constants.dart';
+import 'models/file_dto.dart';
 import 'models/info_register_dto.dart';
 import 'models/prepare_upload_request_dto.dart';
 import 'models/prepare_upload_response_dto.dart';
@@ -109,109 +112,84 @@ class ReceiveController {
         throw Exception('File not found');
       }
 
-      // Create temporary file with better naming
+      // Create temporary file path
       final tempDir = Directory.systemTemp;
-      final defaultName = fileDto.fileName ?? 'unknown_file';
-      final fileName = _sanitizeFileName(defaultName);
+      final fileName = _sanitizeFileName(fileDto.fileName);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${tempDir.path}/thoughtecho_${timestamp}_$fileName';
-      tempFile = File(filePath);
+      final targetPath = '${tempDir.path}/thoughtecho_${timestamp}_$fileName';
 
-      debugPrint('开始保存文件到: $filePath');
-
-      final contentType = request.headers.contentType;
-
-      // Prefer multipart/form-data parsing (as used by LocalSend client)
-      if (contentType != null && contentType.mimeType == 'multipart/form-data') {
-        final boundary = contentType.parameters['boundary'];
-        if (boundary == null || boundary.isEmpty) {
-          throw Exception('Missing multipart boundary');
-        }
-
-        final transformer = MimeMultipartTransformer(boundary);
-        final parts = transformer.bind(request);
-
+      // Parse body using http_server helper (handles multipart/raw)
+      final body = await HttpBodyHandler.processRequest(request);
+      if (body.type == 'multipart') {
+        final parts = body.body as List;
         bool saved = false;
-        await for (final mimePart in parts) {
-          final formData = HttpMultipartFormData.parse(mimePart);
-          // We expect the file field name to be 'file' in LocalSend
-          final partName = formData.name;
-          final partFileName = formData.filename;
-
-          if (partName == 'file') {
-            final actualFileName = _sanitizeFileName(partFileName ?? fileName);
-            final actualPath = '${tempDir.path}/thoughtecho_${timestamp}_$actualFileName';
+        for (final part in parts) {
+          if (part is HttpBodyFileUpload) {
+            // Prefer a part with a filename
+            final filename = part.filename ?? fileName;
+            final actualPath = '${tempDir.path}/thoughtecho_${timestamp}_${_sanitizeFileName(filename)}';
             tempFile = File(actualPath);
 
             final sink = tempFile.openWrite();
-            int totalBytes = 0;
-            try {
-              await for (final chunk in formData) {
-                sink.add(chunk);
-                totalBytes += chunk.length;
-                if (totalBytes % (1024 * 1024) == 0) {
-                  debugPrint('已接收 ${totalBytes ~/ (1024 * 1024)} MB');
-                }
-              }
-              await sink.flush();
-              await sink.close();
-            } catch (e) {
-              await sink.close();
-              rethrow;
+            final content = part.content;
+            if (content is List<int>) {
+              sink.add(content);
+            } else if (content is String) {
+              sink.add(utf8.encode(content));
             }
+            await sink.flush();
+            await sink.close();
 
             final finalSize = await tempFile.length();
-            debugPrint('文件保存完成(MULTIPART): $actualPath, 大小: $finalSize 字节');
+            debugPrint('文件保存完成(MULTIPART): ${tempFile.path}, 大小: $finalSize 字节');
             saved = true;
-          } else {
-            // Drain other fields to avoid hanging
-            await for (final _ in formData) {}
+            break;
           }
         }
-
         if (!saved) {
-          throw Exception('No file part found in multipart upload');
+          throw Exception('No upload file found in multipart body');
         }
       } else {
-        // Fallback: treat the whole request body as the file content
+        // Treat whole body as file content
+        tempFile = File(targetPath);
         final sink = tempFile.openWrite();
-        int totalBytes = 0;
-        try {
+        final content = body.body;
+        if (content is List<int>) {
+          sink.add(content);
+        } else if (content is String) {
+          sink.add(utf8.encode(content));
+        } else {
+          // Fallback: stream directly
           await for (final chunk in request) {
             sink.add(chunk);
-            totalBytes += chunk.length;
-            if (totalBytes % (1024 * 1024) == 0) { // Every MB
-              debugPrint('已接收 ${totalBytes ~/ (1024 * 1024)} MB');
-            }
           }
-          await sink.flush();
-          await sink.close();
-        } catch (e) {
-          await sink.close();
-          rethrow;
         }
-
+        await sink.flush();
+        await sink.close();
         final finalSize = await tempFile.length();
-        debugPrint('文件保存完成(RAW): $filePath, 大小: $finalSize 字节');
+        debugPrint('文件保存完成(RAW): ${tempFile.path}, 大小: $finalSize 字节');
+      }
 
-        // Validate file size if provided
-        if (fileDto.size != null && finalSize != fileDto.size) {
+      // Validate file size if provided
+      if (tempFile != null) {
+        final finalSize = await tempFile.length();
+        if (fileDto.size != finalSize) {
           debugPrint('警告: 文件大小不匹配 - 预期: ${fileDto.size}, 实际: $finalSize');
         }
       }
 
       // Notify file received
-      if (onFileReceived != null) {
+      if (onFileReceived != null && tempFile != null) {
         debugPrint('通知上层服务接收到文件');
         onFileReceived!(tempFile.path);
       }
 
-      debugPrint('文件上传处理完成: ${fileDto.fileName} -> ${tempFile.path}');
+      debugPrint('文件上传处理完成: ${fileDto.fileName} -> ${tempFile?.path}');
 
       return {
         'message': 'File uploaded successfully',
         'fileId': fileId,
-        'size': await tempFile.length(),
+        'size': await tempFile!.length(),
       };
     } catch (e, stack) {
       debugPrint('文件上传处理失败: $e');
@@ -262,7 +240,7 @@ class ReceiveController {
 class ReceiveSession {
   final String sessionId;
   final InfoRegisterDto senderInfo;
-  final Map<String, dynamic> files;
+  final Map<String, FileDto> files;
   final SessionStatus status;
   final Map<String, String>? fileTokens;
   
@@ -277,7 +255,7 @@ class ReceiveSession {
   ReceiveSession copyWith({
     String? sessionId,
     InfoRegisterDto? senderInfo,
-    Map<String, dynamic>? files,
+    Map<String, FileDto>? files,
     SessionStatus? status,
     Map<String, String>? fileTokens,
   }) {

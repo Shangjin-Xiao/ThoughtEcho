@@ -42,18 +42,12 @@ class LocalSendProvider {
     _sessions[sessionId] = session;
     
     try {
+      // 0. Optional handshake: verify /info endpoint for better reliability
+      await _handshakeWithTarget(target);
+
       // Prepare upload request
       final requestDto = PrepareUploadRequestDto(
-        info: InfoRegisterDto(
-          alias: 'ThoughtEcho',
-          version: protocolVersion,
-          deviceModel: 'ThoughtEcho App',
-          deviceType: DeviceType.mobile,
-          fingerprint: 'thoughtecho-${DateTime.now().millisecondsSinceEpoch}',
-          port: defaultPort,
-          protocol: ProtocolType.http,
-          download: true,
-        ),
+        info: _buildInfoRegisterDto(),
         files: {
           for (int i = 0; i < files.length; i++)
             'file_$i': FileDto(
@@ -75,17 +69,41 @@ class LocalSendProvider {
 
       final client = http.Client();
       try {
-        final response = await client.post(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'ThoughtEcho/1.0',
-          },
-          body: jsonEncode(requestDto.toJson()),
-        ).timeout(const Duration(seconds: 30));
+        http.Response response = await client
+            .post(
+              Uri.parse(url),
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'ThoughtEcho/1.0',
+              },
+              body: jsonEncode(requestDto.toJson()),
+            )
+            .timeout(const Duration(seconds: 30));
+
+        // Retry once with v1 route if server responded with 404 (version mismatch)
+        if (response.statusCode == 404) {
+          final fallbackUrl = ApiRoute.prepareUpload.targetRaw(
+            target.ip ?? '127.0.0.1',
+            target.port,
+            target.https,
+            '1.0',
+          );
+          debugPrint('v2路由返回404，尝试v1路由: $fallbackUrl');
+          response = await client
+              .post(
+                Uri.parse(fallbackUrl),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'ThoughtEcho/1.0',
+                },
+                body: jsonEncode(requestDto.toJson()),
+              )
+              .timeout(const Duration(seconds: 30));
+        }
 
         debugPrint('prepare-upload响应状态: ${response.statusCode}');
-        debugPrint('响应内容: ${response.body.substring(0, response.body.length.clamp(0, 200))}...');
+        final previewLen = response.body.length < 200 ? response.body.length : 200;
+        debugPrint('响应内容: ${response.body.substring(0, previewLen)}...');
 
         if (response.statusCode == 200) {
           final responseDto = PrepareUploadResponseDto.fromJson(
@@ -176,7 +194,7 @@ class LocalSendProvider {
     while (attempt < maxRetries) {
       try {
         // 构建带查询参数的URL
-        final url = ApiRoute.upload.target(session.target, query: {
+        var url = ApiRoute.upload.target(session.target, query: {
           'sessionId': session.remoteSessionId!,
           'fileId': fileId,
           'token': token,
@@ -195,6 +213,28 @@ class LocalSendProvider {
         final response = await request.send().timeout(const Duration(minutes: 5));
 
         debugPrint('文件上传响应状态: ${response.statusCode}');
+
+        if (response.statusCode == 404) {
+          // Try legacy v1 route if needed
+          url = ApiRoute.upload.targetRaw(
+            session.target.ip ?? '127.0.0.1',
+            session.target.port,
+            session.target.https,
+            '1.0',
+          ) + '?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
+          debugPrint('v2上传返回404，尝试v1路由: $url');
+          final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
+          legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
+          legacyReq.files.add(await http.MultipartFile.fromPath('file', file.path));
+          final legacyResp = await legacyReq.send().timeout(const Duration(minutes: 5));
+          if (legacyResp.statusCode == 200) {
+            debugPrint('文件上传成功(v1): ${file.path}');
+            return;
+          } else {
+            final respBody = await legacyResp.stream.bytesToString();
+            throw Exception('Legacy upload failed with status ${legacyResp.statusCode}: $respBody');
+          }
+        }
 
         if (response.statusCode == 200) {
           debugPrint('文件上传成功: ${file.path}');
@@ -242,6 +282,54 @@ class LocalSendProvider {
   
   void dispose() {
     _sessions.clear();
+  }
+
+  /// Query target /info once to validate connectivity and possibly adapt route
+  Future<void> _handshakeWithTarget(Device target) async {
+    final client = http.Client();
+    try {
+      final infoUrl = ApiRoute.info.target(target);
+      debugPrint('握手检查: $infoUrl');
+      var resp = await client.get(Uri.parse(infoUrl)).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 404) {
+        final v1Url = ApiRoute.info.targetRaw(
+          target.ip ?? '127.0.0.1',
+          target.port,
+          target.https,
+          '1.0',
+        );
+        debugPrint('v2 /info 404，尝试 v1: $v1Url');
+        resp = await client.get(Uri.parse(v1Url)).timeout(const Duration(seconds: 5));
+      }
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        debugPrint('握手成功: /info 响应 ${resp.statusCode}');
+      } else {
+        debugPrint('握手警告: /info 响应 ${resp.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('握手失败: $e');
+      // Do not throw; allow prepare step to try as well but keep logs
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Build a stable sender info to be compatible with LocalSend
+  InfoRegisterDto _buildInfoRegisterDto() {
+    final hostname = Platform.localHostname;
+    final os = Platform.operatingSystem;
+    final processId = pid; // from dart:io
+    final stableFingerprint = 'thoughtecho-$hostname-$os-$processId';
+    return InfoRegisterDto(
+      alias: 'ThoughtEcho',
+      version: protocolVersion,
+      deviceModel: 'ThoughtEcho App',
+      deviceType: DeviceType.mobile,
+      fingerprint: stableFingerprint,
+      port: defaultPort,
+      protocol: ProtocolType.http,
+      download: true,
+    );
   }
 }
 

@@ -39,6 +39,7 @@ class LocalSendServer {
       
       // Try to bind to the specified port
       _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
+      _server!.autoCompress = true;
 
       // Set up request handling
       _server!.listen(_handleRequest);
@@ -61,6 +62,7 @@ class LocalSendServer {
         try {
           debugPrint('尝试端口 $altPort...');
           _server = await HttpServer.bind(InternetAddress.anyIPv4, altPort);
+          _server!.autoCompress = true;
           _server!.listen(_handleRequest);
           _port = altPort == 0 ? _server!.port : altPort;
           _isRunning = true;
@@ -84,7 +86,7 @@ class LocalSendServer {
     if (!_isRunning) return;
     
     try {
-      await _server?.close();
+      await _server?.close(force: true);
       _server = null;
       _receiveController.dispose();
       _isRunning = false;
@@ -103,6 +105,7 @@ class LocalSendServer {
       request.response.headers.add('Access-Control-Allow-Origin', '*');
       request.response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       request.response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      request.response.headers.add('Connection', 'keep-alive');
       
       // Handle preflight requests
       if (request.method == 'OPTIONS') {
@@ -181,7 +184,9 @@ class LocalSendServer {
       // Send response
       request.response.statusCode = statusCode;
       request.response.headers.contentType = ContentType.json;
-      request.response.write(jsonEncode(responseData));
+      final body = jsonEncode(responseData);
+      request.response.headers.set(HttpHeaders.contentLengthHeader, utf8.encode(body).length);
+      request.response.write(body);
       await request.response.close();
       debugPrint('响应已发送: 状态码=$statusCode');
       
@@ -192,7 +197,9 @@ class LocalSendServer {
       try {
         request.response.statusCode = 500;
         request.response.headers.contentType = ContentType.json;
-        request.response.write(jsonEncode({'error': 'Internal server error: $e'}));
+        const fallback = '{"error":"Internal server error"}';
+        request.response.headers.set(HttpHeaders.contentLengthHeader, fallback.length);
+        request.response.write(fallback);
         await request.response.close();
       } catch (e) {
         // Ignore errors when trying to send error response
