@@ -33,8 +33,8 @@ class ReceiveController {
     // 使用稳定的设备标识符，而不是时间戳
     final hostname = Platform.localHostname;
     final os = Platform.operatingSystem;
-    // 使用进程启动时间作为会话标识符，确保同一进程内指纹一致
-    final processId = pid;
+    // 使用当前进程ID（通过Platform）与主机名/系统组合，确保稳定
+    final processId = Platform.pid;
     return 'thoughtecho-$hostname-$os-$processId';
   }
 
