@@ -581,6 +581,18 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: (_isScanning || _isInitializing) ? null : _startDeviceDiscovery,
+        icon: _isScanning
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.search),
+        label: Text(_isScanning ? '正在发现...' : '发现设备'),
+        tooltip: '开始发现附近设备',
+      ),
     );
   }
 
