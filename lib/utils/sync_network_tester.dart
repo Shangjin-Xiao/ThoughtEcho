@@ -171,7 +171,8 @@ class SyncNetworkTester {
                   final data = utf8.decode(datagram.data, allowMalformed: true);
                   if (data.contains('NetworkTest') || data.contains('ThoughtEcho')) {
                     received = true;
-                    result.addStep('接收测试消息', true, '来自 ${datagram.address.address}:${datagram.port} -> ${data.substring(0, data.length.clamp(0, 100))}...');
+                    final previewLen = data.length < 100 ? data.length : 100;
+                    result.addStep('接收测试消息', true, '来自 ${datagram.address.address}:${datagram.port} -> ${data.substring(0, previewLen)}...');
                     if (!completer.isCompleted) completer.complete();
                   }
                 } catch (e) {
@@ -396,12 +397,14 @@ class SyncNetworkTester {
             final alias = jsonData['alias'] as String?;
             final fingerprint = jsonData['fingerprint'] as String?;
             
-            result.addStep('INFO端点', true, '状态码: ${resp.statusCode}, 设备名称: ${alias ?? '未知'}, 指纹: ${fingerprint?.substring(0, fingerprint.length.clamp(0, 10)) ?? '未知'}...');
+            final fpPreviewLen = (fingerprint ?? '').length < 10 ? (fingerprint ?? '').length : 10;
+            result.addStep('INFO端点', true, '状态码: ${resp.statusCode}, 设备名称: ${alias ?? '未知'}, 指纹: ${(fingerprint ?? '').substring(0, fpPreviewLen)}...');
           } catch (e) {
             result.addStep('INFO端点', true, '状态码: ${resp.statusCode}, 响应解析失败: $e');
           }
         } else {
-          result.addStep('INFO端点', false, '状态码: ${resp.statusCode}, 响应: ${body.substring(0, body.length.clamp(0, 256))}');
+          final previewLen = body.length < 256 ? body.length : 256;
+          result.addStep('INFO端点', false, '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}');
         }
         client.close();
       } catch (e) {
@@ -462,13 +465,15 @@ class SyncNetworkTester {
           try {
             final jsonResponse = jsonDecode(body) as Map<String, dynamic>;
             final sessionId = jsonResponse['sessionId'] as String?;
-            result.addStep('PREPARE端点', true, '状态码: ${resp.statusCode}, 创建会话ID: ${sessionId?.substring(0, 8) ?? '未知'}...');
+            final sidLen = (sessionId ?? '').length < 8 ? (sessionId ?? '').length : 8;
+            result.addStep('PREPARE端点', true, '状态码: ${resp.statusCode}, 创建会话ID: ${(sessionId ?? '').substring(0, sidLen)}...');
           } catch (e) {
             result.addStep('PREPARE端点', true, '状态码: ${resp.statusCode}, 但JSON解析失败: $e');
           }
         } else {
+          final previewLen = body.length < 100 ? body.length : 100;
           result.addStep('PREPARE端点', resp.statusCode >= 200 && resp.statusCode < 500, 
-              '状态码: ${resp.statusCode}, 响应: ${body.substring(0, body.length.clamp(0, 100))}...');
+              '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}...');
         }
         client.close();
       } catch (e) {
@@ -481,8 +486,9 @@ class SyncNetworkTester {
         final req = await client.get(host, port, '/api/localsend/v2/not-exist');
         final resp = await req.close().timeout(const Duration(seconds: 3));
         final body = await resp.transform(utf8.decoder).join();
+        final previewLen = body.length < 100 ? body.length : 100;
         result.addStep('未知路由(404)', resp.statusCode == 404, 
-            '状态码: ${resp.statusCode}, 响应: ${body.substring(0, body.length.clamp(0, 100))}...');
+            '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}...');
         client.close();
       } catch (e) {
         result.addStep('未知路由(404)', false, '请求失败: $e');
@@ -518,53 +524,31 @@ class SyncNetworkTester {
     int total = 0;
     int passed = 0;
     for (final r in results) {
-      for (final s in r.steps) {
-        total++;
-        if (s.success) passed++;
-      }
+      total += r.steps.length;
+      passed += r.steps.where((s) => s.success).length;
     }
-    final rate = total > 0 ? (passed / total * 100).toStringAsFixed(1) : '0.0';
-    summary.addStep('总体测试结果', passed == total, '通过 $passed/$total 项测试 (成功率: $rate%)');
+    final passRate = (passed / total * 100).toStringAsFixed(1);
+    summary.addStep('整体结果', true, '共 ${results.length} 个测试，$passed/$total 步骤通过（$passRate%）');
 
-    return [summary, ...results];
+    return [...results, summary];
   }
 }
 
-/// 网络测试结果
 class NetworkTestResult {
-  final String testName;
-  final List<TestStep> steps = [];
-  final DateTime timestamp = DateTime.now();
+  final String name;
+  final List<NetworkTestStep> steps = [];
 
-  NetworkTestResult(this.testName);
+  NetworkTestResult(this.name);
 
-  void addStep(String stepName, bool success, String message) {
-    steps.add(TestStep(stepName, success, message));
-  }
-
-  bool get isSuccess => steps.every((step) => step.success);
-  
-  @override
-  String toString() {
-    final buffer = StringBuffer();
-    buffer.writeln('=== $testName ===');
-    buffer.writeln('时间: ${timestamp.toIso8601String()}');
-    buffer.writeln('总体结果: ${isSuccess ? "✅ 成功" : "❌ 失败"}');
-    buffer.writeln();
-    
-    for (final step in steps) {
-      buffer.writeln('${step.success ? "✅" : "❌"} ${step.name}: ${step.message}');
-    }
-    
-    return buffer.toString();
+  void addStep(String name, bool success, String details) {
+    steps.add(NetworkTestStep(name: name, success: success, details: details));
   }
 }
 
-/// 测试步骤
-class TestStep {
+class NetworkTestStep {
   final String name;
   final bool success;
-  final String message;
+  final String details;
 
-  TestStep(this.name, this.success, this.message);
+  NetworkTestStep({required this.name, required this.success, required this.details});
 }

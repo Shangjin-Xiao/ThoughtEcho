@@ -10,6 +10,7 @@ import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
+import 'package:http/http.dart' as http;
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -362,6 +363,9 @@ class NoteSyncService extends ChangeNotifier {
     }
 
     try {
+      // 0. Preflight: ensure target /info reachable to avoid blind send
+      await _preflightCheck(targetDevice);
+
       // 1. 更新状态：开始打包
       _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
 
@@ -377,7 +381,7 @@ class NoteSyncService extends ChangeNotifier {
       // 3. 更新状态：开始发送
       _updateSyncStatus(SyncStatus.sending, '正在发送到目标设备...', 0.5);
 
-      // 5. 发送文件 (使用LocalSend的优质代码)
+      // 4. 发送文件 (使用LocalSend的优质代码)
       final backupFile = File(backupPath);
       final sessionId = await _localSendProvider!.startSession(
         target: targetDevice,
@@ -385,10 +389,10 @@ class NoteSyncService extends ChangeNotifier {
         background: true,
       );
 
-      // 6. 完成
+      // 5. 完成
       _updateSyncStatus(SyncStatus.completed, '同步包发送完成', 1.0);
 
-      // 7. 清理临时文件
+      // 6. 清理临时文件
       try {
         await backupFile.delete();
       } catch (e) {
@@ -400,6 +404,34 @@ class NoteSyncService extends ChangeNotifier {
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '发送失败: $e', 0.0);
       rethrow;
+    }
+  }
+
+  Future<void> _preflightCheck(Device target) async {
+    final client = http.Client();
+    try {
+      final infoUrlV2 = 'http://${target.ip}:${target.port}/api/localsend/v2/info';
+      final infoUrlV1 = 'http://${target.ip}:${target.port}/api/localsend/v1/info';
+      http.Response resp;
+      try {
+        resp = await client.get(Uri.parse(infoUrlV2)).timeout(const Duration(seconds: 3));
+      } catch (_) {
+        resp = http.Response('', 404);
+      }
+      if (resp.statusCode == 404) {
+        try {
+          resp = await client.get(Uri.parse(infoUrlV1)).timeout(const Duration(seconds: 3));
+        } catch (_) {
+          // ignore
+        }
+      }
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        debugPrint('Preflight OK: ${resp.statusCode}');
+      } else {
+        debugPrint('Preflight warn: ${resp.statusCode}');
+      }
+    } finally {
+      client.close();
     }
   }
 
@@ -458,14 +490,9 @@ class NoteSyncService extends ChangeNotifier {
       // 等待一段时间收集响应
       await Future.delayed(const Duration(milliseconds: 2000));
 
-      final devices = _discoveryService!.devices;
-      debugPrint('发现 ${devices.length} 台设备');
-
-      // 注意：devices 是不可修改的列表，返回可修改副本
-      // 以避免调用方尝试修改列表时出现错误
-      return List<Device>.from(devices); // 返回可修改的副本
+      return _discoveryService!.devices;
     } catch (e) {
-      debugPrint('设备发现失败: $e');
+      debugPrint('发现附近设备失败: $e');
       return [];
     }
   }

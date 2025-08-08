@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'constants.dart';
+import 'models/file_dto.dart';
 import 'models/info_register_dto.dart';
 import 'models/prepare_upload_request_dto.dart';
 import 'models/prepare_upload_response_dto.dart';
@@ -262,7 +263,7 @@ class ReceiveController {
 class ReceiveSession {
   final String sessionId;
   final InfoRegisterDto senderInfo;
-  final Map<String, dynamic> files;
+  final Map<String, FileDto> files;
   final SessionStatus status;
   final Map<String, String>? fileTokens;
   
@@ -277,7 +278,7 @@ class ReceiveSession {
   ReceiveSession copyWith({
     String? sessionId,
     InfoRegisterDto? senderInfo,
-    Map<String, dynamic>? files,
+    Map<String, FileDto>? files,
     SessionStatus? status,
     Map<String, String>? fileTokens,
   }) {
