@@ -23,7 +23,7 @@ dependencies:
   uuid: ^4.5.1 # UUID生成器
   shared_preferences: ^2.5.2
   flutter_markdown: ^0.7.1
-  intl: 0.19.0
+  intl: ^0.20.2
   url_launcher: ^6.3.1 # URL启动器
   file_picker: ^8.1.2 # 更安全的文件选择器，支持 withData: false 参数
   file_selector: ^1.0.3 # 文件选择器
@@ -72,6 +72,7 @@ dependencies:
   rhttp: ^0.13.0 # Rust实现的HTTP客户端
   pasteboard: ^0.3.0 # 剪贴板操作
   http: ^1.2.2 # HTTP客户端库
+  http_server: ^1.0.0 # for MimeMultipartTransformer and HttpMultipartFormData
   collection: ^1.18.0
   refena_flutter: ^2.0.0
 

@@ -265,39 +265,31 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   /// 运行网络诊断
   Future<void> _runNetworkDiagnostics() async {
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        title: Text('网络诊断'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('正在检测网络连接...'),
-          ],
-        ),
-      ),
-    );
-
     try {
-      // 先检查服务状态
-      if (_isInitializing) {
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          title: Text('正在运行网络诊断...'),
+          content: SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
+        ),
+      );
+
+      // 如果发现服务未运行，提示用户先启用
+      final syncService = _syncService;
+      if (syncService == null) {
         if (mounted) {
-          Navigator.of(context).pop(); // 关闭加载对话框
+          Navigator.of(context).pop();
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('同步服务状态'),
-              content: const Text('同步服务正在初始化中，请稍候再试...'),
+              title: const Text('提示'),
+              content: const Text('同步服务尚未初始化，请返回重新进入同步页面后再试。'),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.of(context).pop(),
                   child: const Text('确定'),
                 ),
               ],
@@ -323,16 +315,17 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 itemCount: results.length,
                 itemBuilder: (context, index) {
                   final result = results[index];
+                  final allSuccess = result.steps.isNotEmpty && result.steps.every((s) => s.success);
                   return ExpansionTile(
-                    title: Text(result.testName),
-                    subtitle: Text(result.isSuccess ? '✅ 通过' : '❌ 失败'),
+                    title: Text(result.name),
+                    subtitle: Text(allSuccess ? '✅ 通过' : '❌ 存在问题'),
                     children: result.steps.map((step) => ListTile(
                       leading: Icon(
                         step.success ? Icons.check_circle : Icons.error,
                         color: step.success ? Colors.green : Colors.red,
                       ),
                       title: Text(step.name),
-                      subtitle: Text(step.message),
+                      subtitle: Text(step.details),
                       dense: true,
                     )).toList(),
                   );
