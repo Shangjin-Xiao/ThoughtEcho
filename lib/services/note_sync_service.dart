@@ -358,7 +358,7 @@ class NoteSyncService extends ChangeNotifier {
   /// 创建同步包并发送到指定设备
   Future<String> createSyncPackage(Device targetDevice) async {
     if (_localSendProvider == null) {
-      throw Exception('LocalSend服务未初始化');
+      throw Exception('同步服务未初始化');
     }
 
     try {

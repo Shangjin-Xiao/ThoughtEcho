@@ -72,8 +72,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           _isInitializing = false;
         });
 
-        // 自动开始设备发现
-        _startDeviceDiscovery();
+        // 初始化完成后不自动开始设备发现，保持与测试期望一致
+        // 用户可通过点击刷新按钮手动开始发现
+        // _startDeviceDiscovery();
       }
     } catch (e) {
       debugPrint('启动同步服务失败: $e');
