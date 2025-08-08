@@ -8,6 +8,7 @@ import 'models/prepare_upload_response_dto.dart';
 import 'models/session_status.dart';
 import 'package:flutter/foundation.dart';
 
+
 /// Simplified receive controller for ThoughtEcho
 /// Based on LocalSend's receive_controller but with minimal dependencies
 class ReceiveController {
@@ -33,7 +34,7 @@ class ReceiveController {
     // 使用稳定的设备标识符，而不是时间戳
     final hostname = Platform.localHostname;
     final os = Platform.operatingSystem;
-    // 使用进程启动时间作为会话标识符，确保同一进程内指纹一致
+    // 使用当前进程ID与主机名/系统组合，确保稳定
     final processId = pid;
     return 'thoughtecho-$hostname-$os-$processId';
   }
@@ -110,56 +111,108 @@ class ReceiveController {
 
       // Create temporary file with better naming
       final tempDir = Directory.systemTemp;
-      final fileName = _sanitizeFileName(fileDto.fileName ?? 'unknown_file');
+      final defaultName = fileDto.fileName ?? 'unknown_file';
+      final fileName = _sanitizeFileName(defaultName);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filePath = '${tempDir.path}/thoughtecho_${timestamp}_$fileName';
       tempFile = File(filePath);
 
       debugPrint('开始保存文件到: $filePath');
 
-      // Enhanced file writing with streaming and progress tracking
-      final sink = tempFile.openWrite();
-      int totalBytes = 0;
+      final contentType = request.headers.contentType;
 
-      try {
-        await for (final chunk in request) {
-          sink.add(chunk);
-          totalBytes += chunk.length;
+      // Prefer multipart/form-data parsing (as used by LocalSend client)
+      if (contentType != null && contentType.mimeType == 'multipart/form-data') {
+        final boundary = contentType.parameters['boundary'];
+        if (boundary == null || boundary.isEmpty) {
+          throw Exception('Missing multipart boundary');
+        }
 
-          // Optional: Add progress logging for large files
-          if (totalBytes % (1024 * 1024) == 0) { // Every MB
-            debugPrint('已接收 ${totalBytes ~/ (1024 * 1024)} MB');
+        final transformer = MimeMultipartTransformer(boundary);
+        final parts = transformer.bind(request);
+
+        bool saved = false;
+        await for (final mimePart in parts) {
+          final formData = HttpMultipartFormData.parse(mimePart);
+          // We expect the file field name to be 'file' in LocalSend
+          final partName = formData.name;
+          final partFileName = formData.filename;
+
+          if (partName == 'file') {
+            final actualFileName = _sanitizeFileName(partFileName ?? fileName);
+            final actualPath = '${tempDir.path}/thoughtecho_${timestamp}_$actualFileName';
+            tempFile = File(actualPath);
+
+            final sink = tempFile.openWrite();
+            int totalBytes = 0;
+            try {
+              await for (final chunk in formData) {
+                sink.add(chunk);
+                totalBytes += chunk.length;
+                if (totalBytes % (1024 * 1024) == 0) {
+                  debugPrint('已接收 ${totalBytes ~/ (1024 * 1024)} MB');
+                }
+              }
+              await sink.flush();
+              await sink.close();
+            } catch (e) {
+              await sink.close();
+              rethrow;
+            }
+
+            final finalSize = await tempFile.length();
+            debugPrint('文件保存完成(MULTIPART): $actualPath, 大小: $finalSize 字节');
+            saved = true;
+          } else {
+            // Drain other fields to avoid hanging
+            await for (final _ in formData) {}
           }
         }
-        await sink.flush();
-        await sink.close();
+
+        if (!saved) {
+          throw Exception('No file part found in multipart upload');
+        }
+      } else {
+        // Fallback: treat the whole request body as the file content
+        final sink = tempFile.openWrite();
+        int totalBytes = 0;
+        try {
+          await for (final chunk in request) {
+            sink.add(chunk);
+            totalBytes += chunk.length;
+            if (totalBytes % (1024 * 1024) == 0) { // Every MB
+              debugPrint('已接收 ${totalBytes ~/ (1024 * 1024)} MB');
+            }
+          }
+          await sink.flush();
+          await sink.close();
+        } catch (e) {
+          await sink.close();
+          rethrow;
+        }
 
         final finalSize = await tempFile.length();
-        debugPrint('文件保存完成: $filePath, 大小: $finalSize 字节');
+        debugPrint('文件保存完成(RAW): $filePath, 大小: $finalSize 字节');
 
         // Validate file size if provided
         if (fileDto.size != null && finalSize != fileDto.size) {
           debugPrint('警告: 文件大小不匹配 - 预期: ${fileDto.size}, 实际: $finalSize');
         }
-
-        // Notify file received
-        if (onFileReceived != null) {
-          debugPrint('通知上层服务接收到文件');
-          onFileReceived!(filePath);
-        }
-
-        debugPrint('文件上传处理完成: ${fileDto.fileName} -> $filePath');
-
-        return {
-          'message': 'File uploaded successfully',
-          'fileId': fileId,
-          'size': finalSize,
-        };
-      } catch (e) {
-        await sink.close();
-        rethrow;
       }
-      
+
+      // Notify file received
+      if (onFileReceived != null) {
+        debugPrint('通知上层服务接收到文件');
+        onFileReceived!(tempFile.path);
+      }
+
+      debugPrint('文件上传处理完成: ${fileDto.fileName} -> ${tempFile.path}');
+
+      return {
+        'message': 'File uploaded successfully',
+        'fileId': fileId,
+        'size': await tempFile.length(),
+      };
     } catch (e, stack) {
       debugPrint('文件上传处理失败: $e');
       debugPrint('堆栈: $stack');
