@@ -339,12 +339,26 @@ class NoteSyncService extends ChangeNotifier {
           _updateSyncStatus(SyncStatus.packaging, '正在打包数据... ($current/$total)', progress);
         },
       );
+      // 额外：打包完成后立即获取文件大小并校验
+      final backupFile = File(backupPath);
+      int size = 0;
+      try { if (await backupFile.exists()) { size = await backupFile.length(); } } catch (_) {}
+      if (size == 0) {
+        // 等待短暂时间再尝试（应对文件系统写入延迟）
+        await Future.delayed(const Duration(milliseconds: 300));
+        try { if (await backupFile.exists()) { size = await backupFile.length(); } } catch (_) {}
+      }
+      logInfo('backup_zip_ready path=$backupPath size=$size', source: 'LocalSend');
+      if (size == 0) {
+        _updateSyncStatus(SyncStatus.failed, '备份文件大小为0，取消发送', 0.0);
+        throw Exception('备份文件大小为0，可能生成失败');
+      }
 
       // 3. 更新状态：开始发送
       _updateSyncStatus(SyncStatus.sending, '正在发送到目标设备...', 0.5);
 
       // 4. 发送文件 (使用LocalSend的优质代码)
-      final backupFile = File(backupPath);
+  // 使用已验证的 backupFile
       final sessionId = await _localSendProvider!.startSession(
         target: targetDevice,
         files: [backupFile],
