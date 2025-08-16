@@ -577,8 +577,11 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                   initiallyExpanded: isExpanded,
                   onExpansionChanged: (open) {
                     setState(() {
-                      if (open) _expanded.add(entryIndex);
-                      else _expanded.remove(entryIndex);
+                      if (open) {
+                        _expanded.add(entryIndex);
+                      } else {
+                        _expanded.remove(entryIndex);
+                      }
                     });
                   },
                   children: [

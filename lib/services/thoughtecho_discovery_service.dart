@@ -6,6 +6,8 @@ import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
 import 'package:thoughtecho/services/localsend/utils/network_interfaces.dart';
+import 'device_identity_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// ThoughtEcho设备发现服务 - 基于UDP组播
 class ThoughtEchoDiscoveryService extends ChangeNotifier {
@@ -20,15 +22,20 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   bool get isScanning => _isScanning;
 
   /// 构造函数，生成唯一的设备指纹
-  ThoughtEchoDiscoveryService() {
-    _deviceFingerprint = _generateDeviceFingerprint();
-    debugPrint('设备发现服务初始化，设备指纹: $_deviceFingerprint');
+  ThoughtEchoDiscoveryService() : _deviceFingerprint = 'initializing' {
+    // initialize real fingerprint asynchronously
+    DeviceIdentityManager.I.getFingerprint().then((fp) {
+      _deviceFingerprint = fp;
+      logDebug('discovery_fp_ready fp=$fp', source: 'LocalSend');
+    });
+    debugPrint('设备发现服务初始化，设备指纹(占位): $_deviceFingerprint');
   }
 
   /// 设置实际的服务器端口
   void setServerPort(int port) {
     _actualServerPort = port;
-    debugPrint('设备发现服务更新服务器端口为: $port');
+  debugPrint('设备发现服务更新服务器端口为: $port');
+  logInfo('discovery_port_set port=$port', source: 'LocalSend');
   }
 
   /// 开始设备发现
@@ -57,9 +64,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         _sendAnnouncement();
       });
 
-      debugPrint('ThoughtEcho设备发现已启动');
+  debugPrint('ThoughtEcho设备发现已启动');
+  logInfo('discovery_started', source: 'LocalSend');
     } catch (e) {
-      debugPrint('启动设备发现失败: $e');
+  debugPrint('启动设备发现失败: $e');
+  logError('discovery_start_fail error=$e', source: 'LocalSend');
       _isScanning = false;
       notifyListeners();
     }
@@ -76,7 +85,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     _sockets.clear();
     
     notifyListeners();
-    debugPrint('ThoughtEcho设备发现已停止');
+  debugPrint('ThoughtEcho设备发现已停止');
+  logInfo('discovery_stopped', source: 'LocalSend');
   }
 
   /// 启动UDP组播监听
@@ -238,7 +248,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     final messageJson = jsonEncode(dto.toJson());
     final message = utf8.encode(messageJson);
 
-    debugPrint('=== 发送公告消息 ===');
+  debugPrint('=== 发送公告消息 ===');
+  logDebug('discovery_broadcast_send port=$_actualServerPort', source: 'LocalSend');
     debugPrint('设备指纹: $fingerprint');
     debugPrint('服务器端口: $_actualServerPort');
     debugPrint('组播地址: $defaultMulticastGroup:$defaultMulticastPort');
@@ -255,6 +266,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         if (result > 0) {
           successCount++;
           debugPrint('✓ 套接字 $i 发送成功，字节数: $result');
+          logDebug('discovery_broadcast_sent sock=$i bytes=$result', source: 'LocalSend');
         } else {
           debugPrint('❌ 套接字 $i 发送失败，返回: $result');
         }
@@ -264,7 +276,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     }
 
     if (successCount > 0) {
-      debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
+  debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
+  logInfo('discovery_broadcast_summary success=$successCount total=${_sockets.length}', source: 'LocalSend');
     } else {
       debugPrint('❌ 警告: 未能通过任何套接字发送公告');
     }
@@ -370,13 +383,6 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     }
   }
 
-  /// 生成设备指纹 - 在初始化时调用一次
-  String _generateDeviceFingerprint() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final hostname = Platform.localHostname;
-    final os = Platform.operatingSystem;
-    return 'thoughtecho-$hostname-$os-$timestamp';
-  }
 
   /// 获取设备指纹
   String _getDeviceFingerprint() {

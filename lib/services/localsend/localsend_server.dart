@@ -5,6 +5,7 @@ import 'dart:io';
 import 'constants.dart';
 import 'receive_controller.dart';
 import 'package:flutter/foundation.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// Simple HTTP server for LocalSend protocol
 /// Based on LocalSend's server but simplified for ThoughtEcho
@@ -32,10 +33,12 @@ class LocalSendServer {
     }
 
     _port = port ?? defaultPort;
-    _receiveController = ReceiveController(onFileReceived: onFileReceived);
+  _receiveController = ReceiveController(onFileReceived: onFileReceived);
+  // ensure fingerprint ready before advertising info endpoint
+  await _receiveController.initializeFingerprint();
 
     try {
-      debugPrint('尝试在端口 $_port 上启动LocalSend服务器...');
+  logInfo('server_start_attempt port=$_port', source: 'LocalSend');
       
       // Try to bind to the specified port
       _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
@@ -45,13 +48,13 @@ class LocalSendServer {
       _server!.listen(_handleRequest);
 
       _isRunning = true;
-      debugPrint('LocalSend server started on port $_port');
+  logInfo('server_started port=$_port', source: 'LocalSend');
 
     } catch (e) {
-      debugPrint('Failed to start server on port $_port: $e');
+  logWarning('server_start_fail port=$_port error=$e', source: 'LocalSend');
 
       // Try alternative ports with better range and logging
-      debugPrint('尝试在替代端口上启动服务器...');
+  logInfo('server_alt_ports', source: 'LocalSend');
       final alternativePorts = [
         _port + 1, _port + 2, _port + 3, // Try nearby ports first
         _port - 1, _port - 2, _port - 3, // Try lower ports
@@ -60,22 +63,22 @@ class LocalSendServer {
 
       for (int altPort in alternativePorts) {
         try {
-          debugPrint('尝试端口 $altPort...');
+          logDebug('server_try_port port=$altPort', source: 'LocalSend');
           _server = await HttpServer.bind(InternetAddress.anyIPv4, altPort);
           _server!.autoCompress = true;
           _server!.listen(_handleRequest);
           _port = altPort == 0 ? _server!.port : altPort;
           _isRunning = true;
-          debugPrint('LocalSend server started on alternative port $_port');
+          logInfo('server_started_alt port=$_port', source: 'LocalSend');
           break;
         } catch (e) {
           // Continue trying
-          debugPrint('端口 $altPort 失败: $e');
+          logWarning('server_try_fail port=$altPort error=$e', source: 'LocalSend');
         }
       }
 
       if (!_isRunning) {
-        debugPrint('无法在任何端口上启动服务器');
+  logError('server_all_ports_failed', source: 'LocalSend');
         throw Exception('Failed to start server on any port');
       }
     }
@@ -90,16 +93,16 @@ class LocalSendServer {
       _server = null;
       _receiveController.dispose();
       _isRunning = false;
-      debugPrint('LocalSend server stopped');
+  logInfo('server_stopped', source: 'LocalSend');
     } catch (e) {
-      debugPrint('Error stopping server: $e');
+  logWarning('server_stop_error error=$e', source: 'LocalSend');
     }
   }
   
   /// Handle incoming HTTP requests
   Future<void> _handleRequest(HttpRequest request) async {
     try {
-      debugPrint('收到请求: ${request.method} ${request.uri.path}');
+  logDebug('req method=${request.method} path=${request.uri.path}', source: 'LocalSend');
       
       // Add CORS headers
       request.response.headers.add('Access-Control-Allow-Origin', '*');
@@ -111,7 +114,7 @@ class LocalSendServer {
       if (request.method == 'OPTIONS') {
         request.response.statusCode = 200;
         await request.response.close();
-        debugPrint('处理OPTIONS请求');
+  logDebug('req_options', source: 'LocalSend');
         return;
       }
       
@@ -123,33 +126,33 @@ class LocalSendServer {
       int statusCode = 200;
       
       try {
-        debugPrint('处理路径: $path, 查询参数: $query');
+  logDebug('route path=$path query=${query.isNotEmpty}', source: 'LocalSend');
         
         if ((path == '/api/localsend/v2/info' || path == '/api/localsend/v1/info') && request.method == 'GET') {
           responseData = _receiveController.handleInfoRequest();
-          debugPrint('处理INFO请求: ${jsonEncode(responseData)}');
+          logDebug('info_ok', source: 'LocalSend');
 
         } else if ((path == '/api/localsend/v2/prepare-upload' || path == '/api/localsend/v1/send-request') && request.method == 'POST') {
-          debugPrint('处理prepare-upload请求');
+          logDebug('prepare_start', source: 'LocalSend');
           final bodyBytes = await request.fold<List<int>>(
             <int>[],
             (previous, element) => previous..addAll(element),
           );
           final bodyString = utf8.decode(bodyBytes);
-          debugPrint('请求体: $bodyString');
+          logDebug('prepare_body_len=${bodyString.length}', source: 'LocalSend');
           
           final requestData = jsonDecode(bodyString) as Map<String, dynamic>;
           responseData = _receiveController.handlePrepareUpload(requestData);
-          debugPrint('响应: ${jsonEncode(responseData)}');
+          logDebug('prepare_ok', source: 'LocalSend');
           
         } else if ((path == '/api/localsend/v2/upload' || path == '/api/localsend/v1/send') && request.method == 'POST') {
-          debugPrint('处理上传请求');
+          logDebug('upload_route', source: 'LocalSend');
           final sessionId = query['sessionId'];
           final fileId = query['fileId'];
           final token = query['token'];
 
           if (sessionId == null || fileId == null || token == null) {
-            debugPrint('缺少必要参数: sessionId=$sessionId, fileId=$fileId, token=$token');
+            logWarning('upload_missing_params sessionId=$sessionId fileId=$fileId token=$token', source: 'LocalSend');
             statusCode = 400;
             responseData = {'error': 'Missing required parameters'};
           } else {
@@ -160,9 +163,9 @@ class LocalSendServer {
                 token,
                 request,
               );
-              debugPrint('文件上传成功处理');
+              logInfo('upload_ok sessionId=$sessionId fileId=$fileId', source: 'LocalSend');
             } catch (e) {
-              debugPrint('文件上传处理失败: $e');
+              logError('upload_fail sessionId=$sessionId fileId=$fileId error=$e', source: 'LocalSend');
               statusCode = 500;
               responseData = {'error': 'File upload failed: $e'};
             }
@@ -172,11 +175,10 @@ class LocalSendServer {
           // 404 Not Found
           statusCode = 404;
           responseData = {'error': 'Not found', 'path': path};
-          debugPrint('未知路径: $path');
+          logWarning('route_404 path=$path', source: 'LocalSend');
         }
       } catch (e, stack) {
-        debugPrint('处理请求时出错: $e');
-        debugPrint('堆栈: $stack');
+  logError('handle_error error=$e', error: e, stackTrace: stack, source: 'LocalSend');
         statusCode = 500;
         responseData = {'error': e.toString()};
       }
@@ -188,11 +190,10 @@ class LocalSendServer {
       request.response.headers.set(HttpHeaders.contentLengthHeader, utf8.encode(body).length);
       request.response.write(body);
       await request.response.close();
-      debugPrint('响应已发送: 状态码=$statusCode');
+  logDebug('resp_sent status=$statusCode', source: 'LocalSend');
       
     } catch (e, stackTrace) {
-      debugPrint('处理请求时出现严重错误: $e');
-      debugPrint('堆栈: $stackTrace');
+  logError('fatal_req error=$e', error: e, stackTrace: stackTrace, source: 'LocalSend');
       
       try {
         request.response.statusCode = 500;
@@ -203,7 +204,7 @@ class LocalSendServer {
         await request.response.close();
       } catch (e) {
         // Ignore errors when trying to send error response
-        debugPrint('发送错误响应时失败: $e');
+  logWarning('fatal_resp_send_fail error=$e', source: 'LocalSend');
       }
     }
   }
