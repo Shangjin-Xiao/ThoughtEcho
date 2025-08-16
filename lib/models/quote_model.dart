@@ -135,10 +135,17 @@ class Quote {
         if (json['tag_ids'] is String) {
           final tagString = json['tag_ids'] as String;
           if (tagString.isEmpty) return [];
-          return tagString.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+          return tagString
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
         }
         if (json['tag_ids'] is List) {
-          return (json['tag_ids'] as List).map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+          return (json['tag_ids'] as List)
+              .map((e) => e.toString().trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
         }
         return [];
       }
@@ -149,10 +156,17 @@ class Quote {
         if (json['keywords'] is String) {
           final keywordString = json['keywords'] as String;
           if (keywordString.isEmpty) return null;
-          return keywordString.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+          return keywordString
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
         }
         if (json['keywords'] is List) {
-          final keywords = (json['keywords'] as List).map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+          final keywords = (json['keywords'] as List)
+              .map((e) => e.toString().trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
           return keywords.isEmpty ? null : keywords;
         }
         return null;
@@ -305,7 +319,8 @@ class Quote {
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
   /// 获取情感分析的中文标签
-  String? get sentimentLabel => sentiment != null ? sentimentKeyToLabel[sentiment] : null;
+  String? get sentimentLabel =>
+      sentiment != null ? sentimentKeyToLabel[sentiment] : null;
 
   /// 获取完整的来源信息
   String get fullSource {
@@ -325,9 +340,9 @@ class Quote {
   bool get isValid {
     try {
       return isValidContent(content) &&
-             isValidDate(date) &&
-             isValidColorHex(colorHex) &&
-             (sentiment == null || sentimentKeyToLabel.containsKey(sentiment!));
+          isValidDate(date) &&
+          isValidColorHex(colorHex) &&
+          (sentiment == null || sentimentKeyToLabel.containsKey(sentiment!));
     } catch (e) {
       return false;
     }

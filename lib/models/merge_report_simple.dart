@@ -1,28 +1,28 @@
 /// 合并报告 - 用于LWW同步的结果统计
-/// 
+///
 /// 简化版本：只关注覆盖(applied)、跳过(skipped)、错误(errors)
 class MergeReport {
   /// 成功应用的笔记数量（新增或覆盖）
   final int appliedQuotes;
-  
+
   /// 因本地较新而跳过的笔记数量
   final int skippedQuotes;
-  
+
   /// 成功应用的分类数量
   final int appliedCategories;
-  
+
   /// 跳过的分类数量
   final int skippedCategories;
-  
+
   /// 处理过程中的错误列表
   final List<String> errors;
-  
+
   /// 处理开始时间
   final DateTime startTime;
-  
+
   /// 处理结束时间
   final DateTime? endTime;
-  
+
   /// 设备指纹（用于审计）
   final String? sourceDevice;
 
@@ -119,7 +119,7 @@ class MergeReport {
   /// 生成简洁的摘要文本
   String get summary {
     final parts = <String>[];
-    
+
     if (appliedQuotes > 0) {
       parts.add('应用 $appliedQuotes 条笔记');
     }
@@ -132,11 +132,11 @@ class MergeReport {
     if (hasErrors) {
       parts.add('${errors.length} 个错误');
     }
-    
+
     if (parts.isEmpty) {
       return '无变更';
     }
-    
+
     return parts.join('，');
   }
 
@@ -153,24 +153,24 @@ class MergeReport {
       buffer.writeln('源设备: $sourceDevice');
     }
     buffer.writeln('');
-    
+
     buffer.writeln('笔记处理:');
     buffer.writeln('  应用: $appliedQuotes');
     buffer.writeln('  跳过: $skippedQuotes');
     buffer.writeln('');
-    
+
     buffer.writeln('分类处理:');
     buffer.writeln('  应用: $appliedCategories');
     buffer.writeln('  跳过: $skippedCategories');
     buffer.writeln('');
-    
+
     if (hasErrors) {
       buffer.writeln('错误列表:');
       for (int i = 0; i < errors.length; i++) {
         buffer.writeln('  ${i + 1}. ${errors[i]}');
       }
     }
-    
+
     return buffer.toString();
   }
 
@@ -202,22 +202,22 @@ class MergeReportBuilder {
   int _appliedCategories = 0;
   int _skippedCategories = 0;
   final List<String> _errors = [];
-  
+
   final DateTime _startTime;
   final String? _sourceDevice;
-  
-  MergeReportBuilder({String? sourceDevice}) 
+
+  MergeReportBuilder({String? sourceDevice})
       : _startTime = DateTime.now(),
         _sourceDevice = sourceDevice;
 
   // 笔记操作统计
   void addAppliedQuote() => _appliedQuotes++;
   void addSkippedQuote() => _skippedQuotes++;
-  
+
   // 分类操作统计
   void addAppliedCategory() => _appliedCategories++;
   void addSkippedCategory() => _skippedCategories++;
-  
+
   // 添加错误
   void addError(String error) => _errors.add(error);
 

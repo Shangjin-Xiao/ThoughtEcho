@@ -520,7 +520,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               const SizedBox(height: 20),
               Expanded(
                 child: ListView.builder(
-                  itemCount: _stats!.topTags.length > 5 ? 5 : _stats!.topTags.length, 
+                  itemCount:
+                      _stats!.topTags.length > 5 ? 5 : _stats!.topTags.length,
                   itemBuilder: (context, index) {
                     final tag = _stats!.topTags[index];
                     final percentage = (tag.count / _stats!.totalNotes * 100);

@@ -515,7 +515,8 @@ class NoteListViewState extends State<NoteListView> {
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
           // 修复：使用常量文件中的阈值，适应不同屏幕尺寸
-          final threshold = metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
+          final threshold =
+              metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
           if (metrics.pixels > threshold &&
               metrics.maxScrollExtent > 0 &&
               !_isLoading &&
@@ -615,8 +616,9 @@ class NoteListViewState extends State<NoteListView> {
       if (value.isEmpty && widget.searchQuery.isNotEmpty) {
         _isLoading = true;
         logDebug('搜索内容被清空，重置加载状态');
-      // 优化：只有当搜索内容长度>=2时才显示加载状态
-      } else if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
+        // 优化：只有当搜索内容长度>=2时才显示加载状态
+      } else if (value.isNotEmpty &&
+          value.length >= AppConstants.minSearchLength) {
         // 优化：只有当搜索内容长度>=2时才显示加载状态
         _isLoading = true;
       }
@@ -731,123 +733,131 @@ class NoteListViewState extends State<NoteListView> {
       builder: (context, constraints) {
         // 主体内容 - 添加白色背景容器
         return Container(
-          color: Colors.white, // 固定白色背景，不受主题影响
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Column(
-                children: [
-                // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
-                Container(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    MediaQuery.of(context).padding.top + 8.0, // 顶部安全区域 + 一些额外空间
-                    horizontalPadding,
-                    0,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode, // 使用管理的焦点节点
-                          decoration: InputDecoration(
-                            hintText: '搜索笔记...',
-                            prefixIcon: searchController.isSearching
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(12.0),
-                                      child: EnhancedLottieAnimation(
-                                        type: LottieAnimationType.searchLoading,
-                                        width: 16,
-                                        height: 16,
-                                      ),
-                                    ),
-                                  )
-                                : const Icon(Icons.search),
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: constraints.maxWidth < AppConstants.tabletMinWidth ? 8.0 : 12.0,
-                            ),
-                            isDense: constraints.maxWidth < AppConstants.tabletMinWidth, // 小屏幕更紧凑
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+            color: Colors.white, // 固定白色背景，不受主题影响
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Column(
+                  children: [
+                    // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
+                    Container(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        MediaQuery.of(context).padding.top +
+                            8.0, // 顶部安全区域 + 一些额外空间
+                        horizontalPadding,
+                        0,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode, // 使用管理的焦点节点
+                              decoration: InputDecoration(
+                                hintText: '搜索笔记...',
+                                prefixIcon: searchController.isSearching
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: Padding(
+                                          padding: EdgeInsets.all(12.0),
+                                          child: EnhancedLottieAnimation(
+                                            type: LottieAnimationType
+                                                .searchLoading,
+                                            width: 16,
+                                            height: 16,
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(Icons.search),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: constraints.maxWidth <
+                                          AppConstants.tabletMinWidth
+                                      ? 8.0
+                                      : 12.0,
+                                ),
+                                isDense: constraints.maxWidth <
+                                    AppConstants.tabletMinWidth, // 小屏幕更紧凑
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onChanged: _onSearchChanged,
                             ),
                           ),
-                          onChanged: _onSearchChanged,
-                        ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.tune),
+                            tooltip: '筛选/排序',
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ), // 更紧凑的按钮
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true, // 允许更大的底部表单
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLowest,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                ),
+                                builder: (context) => NoteFilterSortSheet(
+                                  allTags: widget.tags,
+                                  selectedTagIds: widget.selectedTagIds,
+                                  sortType: widget.sortType,
+                                  sortAscending: widget.sortAscending,
+                                  selectedWeathers: widget.selectedWeathers,
+                                  selectedDayPeriods:
+                                      widget.selectedDayPeriods, // 传递时间段筛选状态
+                                  onApply: (
+                                    tagIds,
+                                    sortType,
+                                    sortAscending,
+                                    selectedWeathers,
+                                    selectedDayPeriods, // 接收时间段筛选结果
+                                  ) {
+                                    widget.onTagSelectionChanged(tagIds);
+                                    widget.onSortChanged(
+                                      sortType,
+                                      sortAscending,
+                                    );
+                                    widget.onFilterChanged(
+                                      selectedWeathers,
+                                      selectedDayPeriods,
+                                    );
+                                    // 在状态更新后，立即触发数据库流的更新
+                                    _updateStreamSubscription();
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      IconButton(
-                        icon: const Icon(Icons.tune),
-                        tooltip: '筛选/排序',
-                        constraints: const BoxConstraints(
-                          minWidth: 40,
-                          minHeight: 40,
-                        ), // 更紧凑的按钮
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true, // 允许更大的底部表单
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(16),
-                              ),
-                            ),
-                            builder: (context) => NoteFilterSortSheet(
-                              allTags: widget.tags,
-                              selectedTagIds: widget.selectedTagIds,
-                              sortType: widget.sortType,
-                              sortAscending: widget.sortAscending,
-                              selectedWeathers: widget.selectedWeathers,
-                              selectedDayPeriods:
-                                  widget.selectedDayPeriods, // 传递时间段筛选状态
-                              onApply: (
-                                tagIds,
-                                sortType,
-                                sortAscending,
-                                selectedWeathers,
-                                selectedDayPeriods, // 接收时间段筛选结果
-                              ) {
-                                widget.onTagSelectionChanged(tagIds);
-                                widget.onSortChanged(
-                                  sortType,
-                                  sortAscending,
-                                );
-                                widget.onFilterChanged(
-                                  selectedWeathers,
-                                  selectedDayPeriods,
-                                );
-                                // 在状态更新后，立即触发数据库流的更新
-                                _updateStreamSubscription();
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 筛选条件展示区域
-                _buildFilterDisplay(theme, horizontalPadding),
-
-                // 笔记列表
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
                     ),
-                    child: _buildNoteList(db, theme),
-                  ),
+
+                    // 筛选条件展示区域
+                    _buildFilterDisplay(theme, horizontalPadding),
+
+                    // 笔记列表
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                        ),
+                        child: _buildNoteList(db, theme),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ));
+              ),
+            ));
       },
     );
   }

@@ -120,21 +120,27 @@ void main() {
     test('should throw error for invalid JSON', () {
       // 测试缺少必填字段
       expect(() => Quote.fromJson({}), throwsA(isA<ArgumentError>()));
-      expect(() => Quote.fromJson({'content': ''}), throwsA(isA<ArgumentError>()));
-      expect(() => Quote.fromJson({'content': '测试', 'date': ''}), throwsA(isA<ArgumentError>()));
+      expect(
+          () => Quote.fromJson({'content': ''}), throwsA(isA<ArgumentError>()));
+      expect(() => Quote.fromJson({'content': '测试', 'date': ''}),
+          throwsA(isA<ArgumentError>()));
 
       // 测试无效日期格式
-      expect(() => Quote.fromJson({
-        'content': '测试内容',
-        'date': 'invalid-date',
-      }), throwsA(isA<ArgumentError>()));
+      expect(
+          () => Quote.fromJson({
+                'content': '测试内容',
+                'date': 'invalid-date',
+              }),
+          throwsA(isA<ArgumentError>()));
 
       // 测试无效颜色格式
-      expect(() => Quote.fromJson({
-        'content': '测试内容',
-        'date': '2024-01-01T00:00:00.000Z',
-        'color_hex': 'invalid-color',
-      }), throwsA(isA<ArgumentError>()));
+      expect(
+          () => Quote.fromJson({
+                'content': '测试内容',
+                'date': '2024-01-01T00:00:00.000Z',
+                'color_hex': 'invalid-color',
+              }),
+          throwsA(isA<ArgumentError>()));
     });
   });
 }

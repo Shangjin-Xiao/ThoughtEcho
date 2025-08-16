@@ -49,7 +49,7 @@ Future<void> testDeviceFingerprint() async {
 /// 测试组播消息格式
 Future<void> testMulticastMessage() async {
   logInfo('📡 测试2: 组播消息格式');
-  
+
   const dto = MulticastDto(
     alias: 'ThoughtEcho-TestDevice',
     version: protocolVersion,
@@ -62,17 +62,17 @@ Future<void> testMulticastMessage() async {
     announcement: true,
     announce: true,
   );
-  
+
   final json = dto.toJson();
   final jsonString = jsonEncode(json);
-  
+
   logDebug('组播消息JSON: $jsonString');
-  
+
   // 验证反序列化
   try {
     final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
     final reconstructed = MulticastDto.fromJson(decoded);
-    if (reconstructed.fingerprint == dto.fingerprint && 
+    if (reconstructed.fingerprint == dto.fingerprint &&
         reconstructed.port == dto.port) {
       logDebug('✅ 组播消息序列化/反序列化正常');
     } else {
@@ -87,7 +87,7 @@ Future<void> testMulticastMessage() async {
 /// 测试端口处理
 Future<void> testPortHandling() async {
   logInfo('🔌 测试3: 端口处理');
-  
+
   const dto = MulticastDto(
     alias: 'TestDevice',
     version: protocolVersion,
@@ -100,10 +100,10 @@ Future<void> testPortHandling() async {
     announcement: true,
     announce: true,
   );
-  
+
   // 测试正确的端口传递
   final device = dto.toDevice('192.168.1.100', dto.port!, false);
-  
+
   if (device.port == 53321) {
     logDebug('✅ 端口处理正确: ${device.port}');
   } else {
@@ -116,7 +116,7 @@ Future<void> testPortHandling() async {
 /// 模拟设备发现过程
 Future<void> testDeviceDiscovery() async {
   logInfo('🔍 测试4: 模拟设备发现过程');
-  
+
   try {
     final service = ThoughtEchoDiscoveryService();
     // 设置服务器端口
@@ -128,7 +128,8 @@ Future<void> testDeviceDiscovery() async {
     final devices = service.devices;
     logDebug('发现 ${devices.length} 台设备:');
     for (final device in devices) {
-      logDebug('  - ${device.alias} (${device.ip}:${device.port}) [${device.fingerprint}]');
+      logDebug(
+          '  - ${device.alias} (${device.ip}:${device.port}) [${device.fingerprint}]');
     }
     await service.stopDiscovery();
     service.dispose();

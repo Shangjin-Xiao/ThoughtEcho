@@ -94,7 +94,8 @@ void main() {
         ],
       };
 
-      final report = await db.importDataWithLWWMerge(remoteData, sourceDevice: 'test-device');
+      final report = await db.importDataWithLWWMerge(remoteData,
+          sourceDevice: 'test-device');
 
       expect(report.insertedQuotes, 1);
       expect(report.updatedQuotes, 1);
@@ -103,16 +104,16 @@ void main() {
       expect(report.errors.length, 0);
 
       // 验证数据库最终内容
-  final all = await db.getAllQuotes();
-  // 转换为 map 方便断言
-  final byId = {for (final q in all) q.id!: q};
-  expect(byId.containsKey('q_insert'), true);
-  expect(byId['q_insert']!.content, 'remote inserted content');
-  expect(byId['q_local_old']!.content, 'remote newer content');
-  // skipped keeps local
-  expect(byId['q_local_new']!.content, 'local new content');
-  // conflict keeps local content
-  expect(byId['q_conflict']!.content, 'local conflict content A');
+      final all = await db.getAllQuotes();
+      // 转换为 map 方便断言
+      final byId = {for (final q in all) q.id!: q};
+      expect(byId.containsKey('q_insert'), true);
+      expect(byId['q_insert']!.content, 'remote inserted content');
+      expect(byId['q_local_old']!.content, 'remote newer content');
+      // skipped keeps local
+      expect(byId['q_local_new']!.content, 'local new content');
+      // conflict keeps local content
+      expect(byId['q_conflict']!.content, 'local conflict content A');
     });
   });
 }

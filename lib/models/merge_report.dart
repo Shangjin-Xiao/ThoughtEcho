@@ -13,14 +13,14 @@ class MergeReport {
   final int appliedCategories;
 
   // 新增：细分统计
-  final int insertedQuotes;      // 新增的笔记
-  final int updatedQuotes;       // 覆盖/更新的笔记
-  final int skippedQuotes;       // 因本地较新而跳过的笔记
+  final int insertedQuotes; // 新增的笔记
+  final int updatedQuotes; // 覆盖/更新的笔记
+  final int skippedQuotes; // 因本地较新而跳过的笔记
   final int sameTimestampDiffQuotes; // 时间戳相同但内容不同，被认定冲突且保留本地
 
-  final int insertedCategories;  // 新增的分类
-  final int updatedCategories;   // 更新的分类
-  final int skippedCategories;   // 跳过的分类
+  final int insertedCategories; // 新增的分类
+  final int updatedCategories; // 更新的分类
+  final int skippedCategories; // 跳过的分类
 
   /// 处理过程中的错误列表（前 N 条，外部可限制长度）
   final List<String> errors;
@@ -142,7 +142,8 @@ class MergeReport {
       insertedQuotes: insertedQuotes ?? this.insertedQuotes,
       updatedQuotes: updatedQuotes ?? this.updatedQuotes,
       skippedQuotes: skippedQuotes ?? this.skippedQuotes,
-      sameTimestampDiffQuotes: sameTimestampDiffQuotes ?? this.sameTimestampDiffQuotes,
+      sameTimestampDiffQuotes:
+          sameTimestampDiffQuotes ?? this.sameTimestampDiffQuotes,
       appliedCategories: appliedCategories ?? this.appliedCategories,
       insertedCategories: insertedCategories ?? this.insertedCategories,
       updatedCategories: updatedCategories ?? this.updatedCategories,
@@ -155,7 +156,8 @@ class MergeReport {
   }
 
   /// 总处理笔记（不含分类）
-  int get totalProcessedQuotes => appliedQuotes + skippedQuotes + sameTimestampDiffQuotes;
+  int get totalProcessedQuotes =>
+      appliedQuotes + skippedQuotes + sameTimestampDiffQuotes;
 
   /// 总处理分类
   int get totalProcessedCategories => appliedCategories + skippedCategories;
@@ -178,7 +180,7 @@ class MergeReport {
   /// 生成简洁的摘要文本
   String get summary {
     final parts = <String>[];
-    
+
     if (insertedQuotes > 0) parts.add('新增 $insertedQuotes');
     if (updatedQuotes > 0) parts.add('更新 $updatedQuotes');
     if (skippedQuotes > 0) {
@@ -193,11 +195,11 @@ class MergeReport {
     if (hasErrors) {
       parts.add('${errors.length} 个错误');
     }
-    
+
     if (parts.isEmpty) {
       return '无变更';
     }
-    
+
     return parts.join('，');
   }
 
@@ -214,47 +216,47 @@ class MergeReport {
       buffer.writeln('源设备: $sourceDevice');
     }
     buffer.writeln('');
-    
-  buffer.writeln('笔记统计:');
-  buffer.writeln('  新增: $insertedQuotes');
-  buffer.writeln('  更新: $updatedQuotes');
-  buffer.writeln('  跳过: $skippedQuotes');
-  buffer.writeln('  冲突(同时间不同内容保留本地): $sameTimestampDiffQuotes');
+
+    buffer.writeln('笔记统计:');
+    buffer.writeln('  新增: $insertedQuotes');
+    buffer.writeln('  更新: $updatedQuotes');
+    buffer.writeln('  跳过: $skippedQuotes');
+    buffer.writeln('  冲突(同时间不同内容保留本地): $sameTimestampDiffQuotes');
     buffer.writeln('');
-    
-  buffer.writeln('分类统计:');
-  buffer.writeln('  新增: $insertedCategories');
-  buffer.writeln('  更新: $updatedCategories');
-  buffer.writeln('  跳过: $skippedCategories');
+
+    buffer.writeln('分类统计:');
+    buffer.writeln('  新增: $insertedCategories');
+    buffer.writeln('  更新: $updatedCategories');
+    buffer.writeln('  跳过: $skippedCategories');
     buffer.writeln('');
-    
+
     if (hasErrors) {
       buffer.writeln('错误列表:');
       for (int i = 0; i < errors.length; i++) {
         buffer.writeln('  ${i + 1}. ${errors[i]}');
       }
     }
-    
+
     return buffer.toString();
   }
 
   @override
   String toString() {
-  return 'MergeReport($summary, 耗时: ${durationMs}ms)';
+    return 'MergeReport($summary, 耗时: ${durationMs}ms)';
   }
 
   /// 转换为JSON（用于日志记录）
   Map<String, dynamic> toJson() {
     return {
-    'appliedQuotes': appliedQuotes,
-    'insertedQuotes': insertedQuotes,
-    'updatedQuotes': updatedQuotes,
-    'skippedQuotes': skippedQuotes,
-    'sameTimestampDiffQuotes': sameTimestampDiffQuotes,
-    'appliedCategories': appliedCategories,
-    'insertedCategories': insertedCategories,
-    'updatedCategories': updatedCategories,
-    'skippedCategories': skippedCategories,
+      'appliedQuotes': appliedQuotes,
+      'insertedQuotes': insertedQuotes,
+      'updatedQuotes': updatedQuotes,
+      'skippedQuotes': skippedQuotes,
+      'sameTimestampDiffQuotes': sameTimestampDiffQuotes,
+      'appliedCategories': appliedCategories,
+      'insertedCategories': insertedCategories,
+      'updatedCategories': updatedCategories,
+      'skippedCategories': skippedCategories,
       'errors': errors,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
@@ -277,11 +279,11 @@ class MergeReportBuilder {
   int _updatedCategories = 0;
   int _skippedCategories = 0;
   final List<String> _errors = [];
-  
+
   final DateTime _startTime;
   final String? _sourceDevice;
-  
-  MergeReportBuilder({String? sourceDevice}) 
+
+  MergeReportBuilder({String? sourceDevice})
       : _startTime = DateTime.now(),
         _sourceDevice = sourceDevice;
 
@@ -290,30 +292,49 @@ class MergeReportBuilder {
   void addAppliedCategory() => addUpdatedCategory();
 
   // 新增细分方法
-  void addInsertedQuote() { _insertedQuotes++; _appliedQuotes++; }
-  void addUpdatedQuote() { _updatedQuotes++; _appliedQuotes++; }
-  void addSameTimestampDiffQuote() { _sameTimestampDiffQuotes++; }
+  void addInsertedQuote() {
+    _insertedQuotes++;
+    _appliedQuotes++;
+  }
+
+  void addUpdatedQuote() {
+    _updatedQuotes++;
+    _appliedQuotes++;
+  }
+
+  void addSameTimestampDiffQuote() {
+    _sameTimestampDiffQuotes++;
+  }
+
   void addSkippedQuote() => _skippedQuotes++;
 
-  void addInsertedCategory() { _insertedCategories++; _appliedCategories++; }
-  void addUpdatedCategory() { _updatedCategories++; _appliedCategories++; }
+  void addInsertedCategory() {
+    _insertedCategories++;
+    _appliedCategories++;
+  }
+
+  void addUpdatedCategory() {
+    _updatedCategories++;
+    _appliedCategories++;
+  }
+
   void addSkippedCategory() => _skippedCategories++;
-  
+
   // 添加错误
   void addError(String error) => _errors.add(error);
 
   /// 构建最终报告
   MergeReport build() {
     return MergeReport(
-    appliedQuotes: _appliedQuotes,
-    insertedQuotes: _insertedQuotes,
-    updatedQuotes: _updatedQuotes,
-    skippedQuotes: _skippedQuotes,
-    sameTimestampDiffQuotes: _sameTimestampDiffQuotes,
-    appliedCategories: _appliedCategories,
-    insertedCategories: _insertedCategories,
-    updatedCategories: _updatedCategories,
-    skippedCategories: _skippedCategories,
+      appliedQuotes: _appliedQuotes,
+      insertedQuotes: _insertedQuotes,
+      updatedQuotes: _updatedQuotes,
+      skippedQuotes: _skippedQuotes,
+      sameTimestampDiffQuotes: _sameTimestampDiffQuotes,
+      appliedCategories: _appliedCategories,
+      insertedCategories: _insertedCategories,
+      updatedCategories: _updatedCategories,
+      skippedCategories: _skippedCategories,
       errors: List.unmodifiable(_errors),
       startTime: _startTime,
       endTime: DateTime.now(),

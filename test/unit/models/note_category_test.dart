@@ -93,16 +93,21 @@ void main() {
       expect(category.name, equals('测试分类'));
 
       // 测试无效数据
-      expect(() => NoteCategory.validated(id: '', name: '测试'), throwsA(isA<ArgumentError>()));
-      expect(() => NoteCategory.validated(id: 'test', name: ''), throwsA(isA<ArgumentError>()));
-      expect(() => NoteCategory.validated(id: 'test', name: 'a' * 51), throwsA(isA<ArgumentError>()));
+      expect(() => NoteCategory.validated(id: '', name: '测试'),
+          throwsA(isA<ArgumentError>()));
+      expect(() => NoteCategory.validated(id: 'test', name: ''),
+          throwsA(isA<ArgumentError>()));
+      expect(() => NoteCategory.validated(id: 'test', name: 'a' * 51),
+          throwsA(isA<ArgumentError>()));
     });
 
     test('should handle edge cases in fromMap', () {
       // 测试缺少必填字段
       expect(() => NoteCategory.fromMap({}), throwsA(isA<ArgumentError>()));
-      expect(() => NoteCategory.fromMap({'id': ''}), throwsA(isA<ArgumentError>()));
-      expect(() => NoteCategory.fromMap({'id': 'test', 'name': ''}), throwsA(isA<ArgumentError>()));
+      expect(() => NoteCategory.fromMap({'id': ''}),
+          throwsA(isA<ArgumentError>()));
+      expect(() => NoteCategory.fromMap({'id': 'test', 'name': ''}),
+          throwsA(isA<ArgumentError>()));
 
       // 测试不同的is_default值
       final map1 = {'id': 'test', 'name': '测试', 'is_default': 1};

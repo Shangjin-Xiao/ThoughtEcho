@@ -21,7 +21,7 @@ import 'note_sync_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
-import 'annual_report_page.dart' ;
+import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 
@@ -121,7 +121,6 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     }
   }
-
 
   // --- 版本检查方法结束 ---
 
@@ -705,11 +704,13 @@ class _SettingsPageState extends State<SettingsPage> {
                                     width: 64,
                                     height: 64,
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Center(
-                                      child: Icon(Icons.apps, color: Colors.white, size: 36),
+                                      child: Icon(Icons.apps,
+                                          color: Colors.white, size: 36),
                                     ),
                                   );
                                 },
@@ -767,8 +768,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
                     color: Theme.of(context).colorScheme.outline.withAlpha(
-                      (0.2 * 255).round(),
-                    ),
+                          (0.2 * 255).round(),
+                        ),
                   ),
                 ),
 
@@ -776,7 +777,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ListTile(
                   title: const Text('检查更新'),
                   subtitle: _updateCheckMessage != null
-                      ? Text(_updateCheckMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error))
+                      ? Text(_updateCheckMessage!,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error))
                       : const Text('检查是否有新版本可用'),
                   leading: _isCheckingUpdate
                       ? const SizedBox(
@@ -824,7 +827,8 @@ class _SettingsPageState extends State<SettingsPage> {
   // --- 辅助方法结束 ---
 
   // 统一按钮样式方法，作为类的私有工具方法，便于在文件内复用
-  ButtonStyle _primaryButtonStyle(BuildContext context) => ElevatedButton.styleFrom(
+  ButtonStyle _primaryButtonStyle(BuildContext context) =>
+      ElevatedButton.styleFrom(
         minimumSize: const Size.fromHeight(44),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       );

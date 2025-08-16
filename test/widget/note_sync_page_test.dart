@@ -17,7 +17,7 @@ void main() {
 
     setUp(() {
       mockSyncService = MockNoteSyncService();
-      
+
       // 设置默认返回值
       when(mockSyncService.syncStatus).thenReturn(SyncStatus.idle);
       when(mockSyncService.syncStatusMessage).thenReturn('');
@@ -42,13 +42,13 @@ void main() {
 
       // 验证页面标题
       expect(find.text('笔记同步'), findsOneWidget);
-      
+
       // 验证刷新按钮
       expect(find.byIcon(Icons.refresh), findsOneWidget);
-      
+
       // 验证设备发现状态
       expect(find.text('发现 0 台设备'), findsOneWidget);
-      
+
       // 验证空设备列表提示
       expect(find.text('未发现附近设备'), findsOneWidget);
       expect(find.text('确保目标设备也打开了ThoughtEcho\n并且在同一网络中'), findsOneWidget);
@@ -98,7 +98,8 @@ void main() {
         ),
       ];
 
-      when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => testDevices);
+      when(mockSyncService.discoverNearbyDevices())
+          .thenAnswer((_) async => testDevices);
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -109,17 +110,17 @@ void main() {
 
       // 验证设备数量显示
       expect(find.text('发现 2 台设备'), findsOneWidget);
-      
+
       // 验证设备列表项
       expect(find.text('Test Device 1'), findsOneWidget);
       expect(find.text('Test Device 2'), findsOneWidget);
       expect(find.text('192.168.1.100:53317'), findsOneWidget);
       expect(find.text('192.168.1.101:53317'), findsOneWidget);
-      
+
       // 验证设备图标
       expect(find.byIcon(Icons.smartphone), findsOneWidget); // mobile
-      expect(find.byIcon(Icons.computer), findsOneWidget);   // desktop
-      
+      expect(find.byIcon(Icons.computer), findsOneWidget); // desktop
+
       // 验证发送按钮
       expect(find.byIcon(Icons.send), findsNWidgets(2));
     });
@@ -136,7 +137,7 @@ void main() {
       // 验证同步状态显示
       expect(find.text('正在打包数据...'), findsOneWidget);
       expect(find.text('30%'), findsOneWidget);
-      
+
       // 验证进度指示器
       expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
@@ -152,7 +153,7 @@ void main() {
 
       // 验证完成状态显示
       expect(find.text('同步完成'), findsOneWidget);
-      
+
       // 完成状态不应该显示进度百分比
       expect(find.text('100%'), findsNothing);
     });
@@ -185,8 +186,10 @@ void main() {
         discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
-      when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => [testDevice]);
-      when(mockSyncService.createSyncPackage(any)).thenAnswer((_) async => 'session-id');
+      when(mockSyncService.discoverNearbyDevices())
+          .thenAnswer((_) async => [testDevice]);
+      when(mockSyncService.createSyncPackage(any))
+          .thenAnswer((_) async => 'session-id');
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -209,10 +212,12 @@ void main() {
 
       // 验证使用说明
       expect(find.text('使用说明'), findsOneWidget);
-      expect(find.text('• 点击设备右侧的发送按钮来分享你的笔记\n'
-          '• 接收到的笔记会自动与现有笔记合并\n'
-          '• 重复的笔记会保留最新版本\n'
-          '• 确保两台设备都连接到同一WiFi网络'), findsOneWidget);
+      expect(
+          find.text('• 点击设备右侧的发送按钮来分享你的笔记\n'
+              '• 接收到的笔记会自动与现有笔记合并\n'
+              '• 重复的笔记会保留最新版本\n'
+              '• 确保两台设备都连接到同一WiFi网络'),
+          findsOneWidget);
     });
   });
 }

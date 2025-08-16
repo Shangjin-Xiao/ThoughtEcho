@@ -7,7 +7,7 @@ import '../models/device.dart';
 class IsolateTaskResult<T> {
   final String taskId;
   final Stream<T> progress;
-  
+
   IsolateTaskResult({
     required this.taskId,
     required this.progress,
@@ -77,13 +77,13 @@ class IsolateFavoriteHttpDiscoveryAction {
 /// Simplified isolate provider for ThoughtEcho
 class ParentIsolateProvider {
   int get uploadIsolateCount => 2; // Default to 2 concurrent uploads
-  
+
   // Simplified dispatch methods - these would need to be implemented
   // based on ThoughtEcho's architecture
   IsolateTaskResult<double> dispatchTakeResult(IsolateHttpUploadAction action) {
     // This is a placeholder - would need actual implementation
     final controller = StreamController<double>();
-    
+
     // Simulate upload progress
     Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (controller.isClosed) {
@@ -93,13 +93,13 @@ class ParentIsolateProvider {
       // Simulate progress
       controller.add(0.5);
     });
-    
+
     return IsolateTaskResult(
       taskId: DateTime.now().millisecondsSinceEpoch.toString(),
       progress: controller.stream,
     );
   }
-  
+
   void dispatch(dynamic action) {
     // Placeholder for action dispatch
   }

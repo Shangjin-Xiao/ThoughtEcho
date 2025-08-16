@@ -28,7 +28,8 @@ class AICardGenerationService {
       // 1. 智能选择最适合的提示词
       final prompt = _selectBestPrompt(note, customStyle);
 
-      AppLogger.i('开始AI生成SVG卡片，内容长度: ${note.content.length}', source: 'AICardGeneration');
+      AppLogger.i('开始AI生成SVG卡片，内容长度: ${note.content.length}',
+          source: 'AICardGeneration');
 
       // 2. 调用AI生成SVG
       final svgContent = await _generateSVGContent(prompt);
@@ -36,7 +37,8 @@ class AICardGenerationService {
       // 3. 清理和验证SVG
       final cleanedSVG = _cleanSVGContent(svgContent);
 
-      AppLogger.i('AI生成SVG成功，长度: ${cleanedSVG.length}', source: 'AICardGeneration');
+      AppLogger.i('AI生成SVG成功，长度: ${cleanedSVG.length}',
+          source: 'AICardGeneration');
 
       // 4. 创建卡片对象
       return GeneratedCard(
@@ -84,7 +86,8 @@ class AICardGenerationService {
       final note = notesToProcess[i];
 
       try {
-        AppLogger.i('正在生成第${i + 1}/${notesToProcess.length}张卡片...', source: 'AICardGeneration');
+        AppLogger.i('正在生成第${i + 1}/${notesToProcess.length}张卡片...',
+            source: 'AICardGeneration');
 
         final card = await generateCard(note: note);
         cards.add(card);
@@ -120,7 +123,8 @@ class AICardGenerationService {
       throw AICardGenerationException('批量生成完全失败: ${errors.join('; ')}');
     }
 
-    AppLogger.i('批量生成完成: 成功${cards.length}张，失败${errors.length}张', source: 'AICardGeneration');
+    AppLogger.i('批量生成完成: 成功${cards.length}张，失败${errors.length}张',
+        source: 'AICardGeneration');
 
     return cards;
   }
@@ -158,7 +162,8 @@ class AICardGenerationService {
 
   /// 清理SVG内容
   String _cleanSVGContent(String response) {
-    AppLogger.d('开始清理SVG内容，原始长度: ${response.length}', source: 'AICardGeneration');
+    AppLogger.d('开始清理SVG内容，原始长度: ${response.length}',
+        source: 'AICardGeneration');
 
     String cleaned = response.trim();
 
@@ -218,7 +223,8 @@ class AICardGenerationService {
         final svgEndIndex = response.lastIndexOf('</svg>');
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
-          AppLogger.i('字符串提取成功，SVG长度: ${cleaned.length}', source: 'AICardGeneration');
+          AppLogger.i('字符串提取成功，SVG长度: ${cleaned.length}',
+              source: 'AICardGeneration');
         }
       }
     }
@@ -378,7 +384,8 @@ class AICardGenerationService {
 
         onProgress?.call(i + 1, cards.length);
       } catch (e) {
-        AppLogger.e('批量保存第${i + 1}张卡片失败: $e', error: e, source: 'AICardGeneration');
+        AppLogger.e('批量保存第${i + 1}张卡片失败: $e',
+            error: e, source: 'AICardGeneration');
         // 继续处理其他卡片
         savedFiles.add(''); // 添加空字符串表示失败
       }

@@ -77,7 +77,8 @@ class SVGCardWidget extends StatelessWidget {
                 )
             : null,
         errorBuilder: (context, error, stackTrace) {
-          AppLogger.e('SVG渲染错误: $error', error: error, stackTrace: stackTrace, source: 'SvgCardWidget');
+          AppLogger.e('SVG渲染错误: $error',
+              error: error, stackTrace: stackTrace, source: 'SvgCardWidget');
           AppLogger.d('SVG内容: $svgContent', source: 'SvgCardWidget');
           // 使用回退SVG模板而不是错误提示
           return _buildFallbackSVG();
@@ -165,7 +166,8 @@ class SVGCardWidget extends StatelessWidget {
       // 生成回退SVG
       final fallbackSVG = _generateFallbackSVGContent(extractedContent);
 
-      AppLogger.i('使用回退SVG模板，内容长度: ${fallbackSVG.length}', source: 'SvgCardWidget');
+      AppLogger.i('使用回退SVG模板，内容长度: ${fallbackSVG.length}',
+          source: 'SvgCardWidget');
 
       return SvgPicture.string(
         fallbackSVG,
@@ -189,7 +191,8 @@ class SVGCardWidget extends StatelessWidget {
                 )
             : null,
         errorBuilder: (context, error, stackTrace) {
-          AppLogger.e('回退SVG也渲染失败: $error', error: error, source: 'SvgCardWidget');
+          AppLogger.e('回退SVG也渲染失败: $error',
+              error: error, source: 'SvgCardWidget');
           return _buildFinalErrorWidget();
         },
       );

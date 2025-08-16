@@ -72,7 +72,8 @@ void main() {
       expect(http.toJson()['type'], 'http');
       expect(http.toJson()['ip'], '192.168.1.1');
 
-      const signaling = SignalingDiscovery(signalingServer: 'signal.server.com');
+      const signaling =
+          SignalingDiscovery(signalingServer: 'signal.server.com');
       expect(signaling.toJson()['type'], 'signaling');
       expect(signaling.toJson()['signalingServer'], 'signal.server.com');
     });

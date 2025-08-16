@@ -124,8 +124,8 @@ Future<void> main() async {
       //       logError('调试服务初始化失败: $e', error: e, source: 'DebugService');
       //     }
       //   });
-      // } 
-      
+      // }
+
       // 初始化日志系统
       AppLogger.initialize();
 
@@ -316,13 +316,14 @@ Future<void> main() async {
                   aiAnalysisDbService: aiService,
                 ),
               ),
-              ChangeNotifierProxyProvider4<BackupService, DatabaseService, SettingsService,
-                  AIAnalysisDatabaseService, NoteSyncService>(
+              ChangeNotifierProxyProvider4<BackupService, DatabaseService,
+                  SettingsService, AIAnalysisDatabaseService, NoteSyncService>(
                 create: (context) => NoteSyncService(
                   backupService: context.read<BackupService>(),
                   databaseService: context.read<DatabaseService>(),
                   settingsService: context.read<SettingsService>(),
-                  aiAnalysisDbService: context.read<AIAnalysisDatabaseService>(),
+                  aiAnalysisDbService:
+                      context.read<AIAnalysisDatabaseService>(),
                 ),
                 update: (
                   context,
@@ -332,12 +333,13 @@ Future<void> main() async {
                   aiAnalysisDbService,
                   previous,
                 ) =>
-                    previous ?? NoteSyncService(
-                  backupService: backupService,
-                  databaseService: databaseService,
-                  settingsService: settingsService,
-                  aiAnalysisDbService: aiAnalysisDbService,
-                ),
+                    previous ??
+                    NoteSyncService(
+                      backupService: backupService,
+                      databaseService: databaseService,
+                      settingsService: settingsService,
+                      aiAnalysisDbService: aiAnalysisDbService,
+                    ),
               ),
             ],
             child: Builder(
@@ -569,7 +571,8 @@ Future<void> main() async {
             VersionCheckService.backgroundCheckForUpdates(
               onUpdateAvailable: (versionInfo) {
                 // 这里可以添加更新提示的逻辑，比如显示通知
-                logInfo('检测到新版本: ${versionInfo.latestVersion}', source: 'VersionCheck');
+                logInfo('检测到新版本: ${versionInfo.latestVersion}',
+                    source: 'VersionCheck');
               },
               delay: const Duration(seconds: 5), // 延迟5秒执行
             );

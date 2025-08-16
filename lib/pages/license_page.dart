@@ -280,7 +280,8 @@ class _LicensePageState extends State<LicensePage> {
               children: [
                 Text(
                   '$title: $name',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 if (description != null) ...[
                   const SizedBox(height: 4),
@@ -323,12 +324,14 @@ class _LicensePageState extends State<LicensePage> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ProgressiveSystemLicensesPage()),
+              MaterialPageRoute(
+                  builder: (_) => const ProgressiveSystemLicensesPage()),
             );
           },
           icon: const Icon(Icons.article_outlined),
           label: const Text('查看系统许可证'),
-          style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+          style:
+              ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
         ),
       ],
     );
@@ -480,7 +483,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
         continue;
       }
       // 只检查首段预览以避免过度工作
-      if (e.paragraphs.isNotEmpty && e.paragraphs.first.text.toLowerCase().contains(q)) {
+      if (e.paragraphs.isNotEmpty &&
+          e.paragraphs.first.text.toLowerCase().contains(q)) {
         result.add(i);
       }
     }
@@ -509,7 +513,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             const Text('系统许可证'),
             if (!_loading && _error.isEmpty)
-              Text('${visible.length}/${_entries.length} 条', style: Theme.of(context).textTheme.bodySmall),
+              Text('${visible.length}/${_entries.length} 条',
+                  style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
         actions: [
@@ -555,8 +560,11 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
               final entryIndex = visible[index];
               final entry = _entries[entryIndex];
               final packages = entry.packages.join(', ');
-              final preview = entry.paragraphs.isNotEmpty ? entry.paragraphs.first.text : '(无许可内容)';
-              final initials = packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
+              final preview = entry.paragraphs.isNotEmpty
+                  ? entry.paragraphs.first.text
+                  : '(无许可内容)';
+              final initials =
+                  packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
               final isExpanded = _expanded.contains(entryIndex);
 
               return Card(
@@ -565,14 +573,24 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                   leading: CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     radius: 18,
-                    child: Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    child: Text(initials,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
-                  title: Text(packages.isEmpty ? '未命名' : packages, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(packages.isEmpty ? '未命名' : packages,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(
-                    preview.length > 120 ? '${preview.substring(0, 120)}…' : preview,
+                    preview.length > 120
+                        ? '${preview.substring(0, 120)}…'
+                        : preview,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.9)),
+                    style: TextStyle(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withOpacity(0.9)),
                   ),
                   initiallyExpanded: isExpanded,
                   onExpansionChanged: (open) {
@@ -586,7 +604,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                   },
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0, vertical: 6.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -594,10 +613,13 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                             icon: const Icon(Icons.copy),
                             tooltip: '复制许可证',
                             onPressed: () async {
-                              final full = await compute(_joinParagraphs, entry.paragraphs.map((p) => p.text).toList());
-                              await Clipboard.setData(ClipboardData(text: full));
+                              final full = await compute(_joinParagraphs,
+                                  entry.paragraphs.map((p) => p.text).toList());
+                              await Clipboard.setData(
+                                  ClipboardData(text: full));
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已复制许可证内容')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('已复制许可证内容')));
                               }
                             },
                           ),
@@ -607,7 +629,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                     Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: FutureBuilder<String>(
-                        future: compute(_joinParagraphs, entry.paragraphs.map((p) => p.text).toList()),
+                        future: compute(_joinParagraphs,
+                            entry.paragraphs.map((p) => p.text).toList()),
                         builder: (c, s) {
                           if (!s.hasData) {
                             return const SizedBox(
@@ -635,10 +658,12 @@ class ProgressiveSystemLicensesPage extends StatefulWidget {
   const ProgressiveSystemLicensesPage({super.key});
 
   @override
-  State<ProgressiveSystemLicensesPage> createState() => _ProgressiveSystemLicensesPageState();
+  State<ProgressiveSystemLicensesPage> createState() =>
+      _ProgressiveSystemLicensesPageState();
 }
 
-class _ProgressiveSystemLicensesPageState extends State<ProgressiveSystemLicensesPage> {
+class _ProgressiveSystemLicensesPageState
+    extends State<ProgressiveSystemLicensesPage> {
   List<LicenseEntry> _entries = [];
   bool _loading = true;
   String? _error;
@@ -681,19 +706,26 @@ class _ProgressiveSystemLicensesPageState extends State<ProgressiveSystemLicense
       itemBuilder: (context, index) {
         final entry = _entries[index];
         final packages = entry.packages.join(', ');
-        final preview = entry.paragraphs.isNotEmpty ? entry.paragraphs.first.text : '(无许可内容)';
-        final initials = packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
+        final preview = entry.paragraphs.isNotEmpty
+            ? entry.paragraphs.first.text
+            : '(无许可内容)';
+        final initials =
+            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
 
         return GestureDetector(
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => LicenseDetailPage(entry: entry, title: packages.isEmpty ? '未命名' : packages)),
+              MaterialPageRoute(
+                  builder: (_) => LicenseDetailPage(
+                      entry: entry,
+                      title: packages.isEmpty ? '未命名' : packages)),
             );
           },
           child: Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
               child: Row(
@@ -701,20 +733,31 @@ class _ProgressiveSystemLicensesPageState extends State<ProgressiveSystemLicense
                   CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     radius: 20,
-                    child: Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    child: Text(initials,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(packages.isEmpty ? '未命名' : packages, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(packages.isEmpty ? '未命名' : packages,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         Text(
-                          preview.length > 140 ? '${preview.substring(0, 140)}…' : preview,
+                          preview.length > 140
+                              ? '${preview.substring(0, 140)}…'
+                              : preview,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.85)),
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.color
+                                  ?.withOpacity(0.85)),
                         ),
                       ],
                     ),
@@ -734,14 +777,16 @@ class _ProgressiveSystemLicensesPageState extends State<ProgressiveSystemLicense
 class LicenseDetailPage extends StatelessWidget {
   final LicenseEntry entry;
   final String title;
-  const LicenseDetailPage({super.key, required this.entry, required this.title});
+  const LicenseDetailPage(
+      {super.key, required this.entry, required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<String>(
-        future: compute(_joinParagraphs, entry.paragraphs.map((p) => p.text).toList()),
+        future: compute(
+            _joinParagraphs, entry.paragraphs.map((p) => p.text).toList()),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());

@@ -402,7 +402,7 @@ class AppTheme with ChangeNotifier {
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),
-      
+
       // 列表项目使用透明背景，以继承Card的颜色
       listTileTheme: baseTheme.listTileTheme.copyWith(
         tileColor: Colors.transparent,
@@ -492,7 +492,7 @@ class AppTheme with ChangeNotifier {
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),
-      
+
       // 列表项目使用主题色系
       listTileTheme: baseTheme.listTileTheme.copyWith(
         tileColor: colorScheme.surfaceContainerLow,

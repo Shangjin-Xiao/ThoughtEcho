@@ -21,7 +21,8 @@ sealed class DiscoveryMethod {
       case 'http':
         return HttpDiscovery(ip: json['ip'] as String);
       case 'signaling':
-        return SignalingDiscovery(signalingServer: json['signalingServer'] as String);
+        return SignalingDiscovery(
+            signalingServer: json['signalingServer'] as String);
       default:
         throw ArgumentError('Unknown discovery method type: $type');
     }
@@ -62,10 +63,12 @@ class SignalingDiscovery extends DiscoveryMethod {
   const SignalingDiscovery({required this.signalingServer});
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'signaling', 'signalingServer': signalingServer};
+  Map<String, dynamic> toJson() =>
+      {'type': 'signaling', 'signalingServer': signalingServer};
 
   @override
-  bool operator ==(Object other) => other is SignalingDiscovery && other.signalingServer == signalingServer;
+  bool operator ==(Object other) =>
+      other is SignalingDiscovery && other.signalingServer == signalingServer;
 
   @override
   int get hashCode => Object.hash('signaling', signalingServer);

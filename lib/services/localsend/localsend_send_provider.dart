@@ -24,16 +24,16 @@ const _uuid = Uuid();
 /// Based on LocalSend's send_provider but with minimal dependencies
 class LocalSendProvider {
   final Map<String, SendSession> _sessions = {};
-  
+
   /// Start a file transfer session
   Future<String> startSession({
     required Device target,
     required List<File> files,
     bool background = true,
-  void Function(int sentBytes, int totalBytes)? onProgress,
+    void Function(int sentBytes, int totalBytes)? onProgress,
   }) async {
     final sessionId = _uuid.v4();
-    
+
     // Create session
     final session = SendSession(
       sessionId: sessionId,
@@ -41,22 +41,22 @@ class LocalSendProvider {
       files: files,
       status: SessionStatus.waiting,
     );
-    
+
     _sessions[sessionId] = session;
-    
+
     try {
       // 0. Optional handshake: verify /info endpoint for better reliability
       await _handshakeWithTarget(target);
 
-  // Prepare upload request
-  final requestDto = PrepareUploadRequestDto(
-    info: await _buildInfoRegisterDto(),
+      // Prepare upload request
+      final requestDto = PrepareUploadRequestDto(
+        info: await _buildInfoRegisterDto(),
         files: {
           for (int i = 0; i < files.length; i++)
             'file_$i': FileDto(
               id: 'file_$i',
               fileName: files[i].path.split('/').last,
-      size: await _ensureStableFileSize(files[i]),
+              size: await _ensureStableFileSize(files[i]),
               fileType: FileType.other,
               hash: null,
               preview: null,
@@ -65,10 +65,12 @@ class LocalSendProvider {
             ),
         },
       );
-      
+
       // Send prepare upload request with timeout and retry
       final url = ApiRoute.prepareUpload.target(target);
-  logInfo('send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId', source: 'LocalSend');
+      logInfo(
+          'send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId',
+          source: 'LocalSend');
 
       final client = http.Client();
       try {
@@ -104,14 +106,15 @@ class LocalSendProvider {
               .timeout(const Duration(seconds: 30));
         }
 
-  logDebug('prepare_resp status=${response.statusCode}', source: 'LocalSend');
-        final previewLen = response.body.length < 200 ? response.body.length : 200;
+        logDebug('prepare_resp status=${response.statusCode}',
+            source: 'LocalSend');
+        final previewLen =
+            response.body.length < 200 ? response.body.length : 200;
         debugPrint('响应内容: ${response.body.substring(0, previewLen)}...');
 
         if (response.statusCode == 200) {
           final responseDto = PrepareUploadResponseDto.fromJson(
-            jsonDecode(response.body) as Map<String, dynamic>
-          );
+              jsonDecode(response.body) as Map<String, dynamic>);
 
           // Update session with response
           _sessions[sessionId] = session.copyWith(
@@ -125,7 +128,8 @@ class LocalSendProvider {
 
           return sessionId;
         } else {
-          throw Exception('Failed to prepare upload: ${response.statusCode} - ${response.body}');
+          throw Exception(
+              'Failed to prepare upload: ${response.statusCode} - ${response.body}');
         }
       } finally {
         client.close();
@@ -138,9 +142,10 @@ class LocalSendProvider {
       rethrow;
     }
   }
-  
+
   /// Upload files for a session with enhanced error handling and progress tracking
-  Future<void> _uploadFiles(String sessionId, {void Function(int,int)? onProgress}) async {
+  Future<void> _uploadFiles(String sessionId,
+      {void Function(int, int)? onProgress}) async {
     final session = _sessions[sessionId];
     if (session == null) return;
 
@@ -192,7 +197,6 @@ class LocalSendProvider {
         status: SessionStatus.finished,
       );
       debugPrint('所有文件上传完成: $sessionId');
-
     } catch (e) {
       debugPrint('文件上传失败: $e');
       _sessions[sessionId] = session.copyWith(
@@ -205,13 +209,8 @@ class LocalSendProvider {
 
   /// Upload a single file with retry mechanism
   Future<void> _uploadSingleFile(
-    SendSession session,
-    String fileId,
-    String token,
-    File file,
-    int fileSize,
-  {void Function(int chunkBytes)? onChunk}
-  ) async {
+      SendSession session, String fileId, String token, File file, int fileSize,
+      {void Function(int chunkBytes)? onChunk}) async {
     const maxRetries = 3;
     int attempt = 0;
 
@@ -223,14 +222,16 @@ class LocalSendProvider {
           'fileId': fileId,
           'token': token,
         });
-        debugPrint('上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)');
+        debugPrint(
+            '上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)');
 
         final request = http.MultipartRequest('POST', Uri.parse(url));
         request.headers['User-Agent'] = 'ThoughtEcho/1.0';
 
         // 构建带进度的流
         final stream = file.openRead().transform<List<int>>(
-          StreamTransformer.fromHandlers(handleData: (List<int> data, EventSink<List<int>> sink) {
+          StreamTransformer.fromHandlers(
+              handleData: (List<int> data, EventSink<List<int>> sink) {
             sink.add(data);
             onChunk?.call(data.length);
           }),
@@ -244,9 +245,11 @@ class LocalSendProvider {
         request.files.add(multipart);
 
         // Send request with timeout
-        final response = await request.send().timeout(const Duration(minutes: 5));
+        final response =
+            await request.send().timeout(const Duration(minutes: 5));
 
-          logDebug('upload_resp status=${response.statusCode} file=${file.path}', source: 'LocalSend');
+        logDebug('upload_resp status=${response.statusCode} file=${file.path}',
+            source: 'LocalSend');
 
         if (response.statusCode == 404) {
           // Try legacy v1 route if needed
@@ -260,7 +263,8 @@ class LocalSendProvider {
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
           final legacyStream = file.openRead().transform<List<int>>(
-            StreamTransformer.fromHandlers(handleData: (List<int> data, EventSink<List<int>> sink) {
+            StreamTransformer.fromHandlers(
+                handleData: (List<int> data, EventSink<List<int>> sink) {
               sink.add(data);
               onChunk?.call(data.length);
             }),
@@ -271,18 +275,22 @@ class LocalSendProvider {
             fileSize,
             filename: file.path.split('/').last,
           ));
-          final legacyResp = await legacyReq.send().timeout(const Duration(minutes: 5));
+          final legacyResp =
+              await legacyReq.send().timeout(const Duration(minutes: 5));
           if (legacyResp.statusCode == 200) {
             debugPrint('文件上传成功(v1): ${file.path}');
             return;
           } else {
             final respBody = await legacyResp.stream.bytesToString();
-            throw Exception('Legacy upload failed with status ${legacyResp.statusCode}: $respBody');
+            throw Exception(
+                'Legacy upload failed with status ${legacyResp.statusCode}: $respBody');
           }
         }
 
         if (response.statusCode == 200) {
-          logInfo('upload_success attempt=${attempt + 1} file=${file.path} size=$fileSize', source: 'LocalSend');
+          logInfo(
+              'upload_success attempt=${attempt + 1} file=${file.path} size=$fileSize',
+              source: 'LocalSend');
           return; // Success
         }
         final responseBody = await response.stream.bytesToString();
@@ -294,25 +302,30 @@ class LocalSendProvider {
         throw Exception('Retriable status $status: $responseBody');
       } catch (e) {
         attempt++;
-        logWarning('upload_retry attempt=$attempt file=${file.path} error=$e', source: 'LocalSend');
+        logWarning('upload_retry attempt=$attempt file=${file.path} error=$e',
+            source: 'LocalSend');
 
         if (attempt >= maxRetries) {
-          logError('upload_give_up file=${file.path} error=$e', source: 'LocalSend');
-          throw Exception('Failed to upload file after $maxRetries attempts: $e');
+          logError('upload_give_up file=${file.path} error=$e',
+              source: 'LocalSend');
+          throw Exception(
+              'Failed to upload file after $maxRetries attempts: $e');
         }
 
         // Exponential backoff (cap 8s)
         final delay = Duration(seconds: 1 << (attempt - 1));
-        await Future.delayed(delay > const Duration(seconds: 8) ? const Duration(seconds: 8) : delay);
+        await Future.delayed(delay > const Duration(seconds: 8)
+            ? const Duration(seconds: 8)
+            : delay);
       }
     }
   }
-  
+
   /// Get session status
   SendSession? getSession(String sessionId) {
     return _sessions[sessionId];
   }
-  
+
   /// Cancel a session
   void cancelSession(String sessionId) {
     final session = _sessions[sessionId];
@@ -322,15 +335,15 @@ class LocalSendProvider {
       );
     }
   }
-  
+
   /// Close a session
   void closeSession(String sessionId) {
     _sessions.remove(sessionId);
   }
-  
+
   /// Get all active sessions
   Map<String, SendSession> get sessions => Map.unmodifiable(_sessions);
-  
+
   void dispose() {
     _sessions.clear();
   }
@@ -341,7 +354,9 @@ class LocalSendProvider {
     try {
       final infoUrl = ApiRoute.info.target(target);
       debugPrint('握手检查: $infoUrl');
-      var resp = await client.get(Uri.parse(infoUrl)).timeout(const Duration(seconds: 5));
+      var resp = await client
+          .get(Uri.parse(infoUrl))
+          .timeout(const Duration(seconds: 5));
       if (resp.statusCode == 404) {
         final v1Url = ApiRoute.info.targetRaw(
           target.ip ?? '127.0.0.1',
@@ -350,7 +365,9 @@ class LocalSendProvider {
           '1.0',
         );
         debugPrint('v2 /info 404，尝试 v1: $v1Url');
-        resp = await client.get(Uri.parse(v1Url)).timeout(const Duration(seconds: 5));
+        resp = await client
+            .get(Uri.parse(v1Url))
+            .timeout(const Duration(seconds: 5));
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         debugPrint('握手成功: /info 响应 ${resp.statusCode}');
@@ -408,7 +425,7 @@ class SendSession {
   final SessionStatus status;
   final Map<String, String>? fileTokens;
   final String? errorMessage;
-  
+
   const SendSession({
     required this.sessionId,
     this.remoteSessionId,
@@ -418,7 +435,7 @@ class SendSession {
     this.fileTokens,
     this.errorMessage,
   });
-  
+
   SendSession copyWith({
     String? sessionId,
     String? remoteSessionId,

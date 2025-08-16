@@ -9,7 +9,6 @@ import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 
-
 // 生成Mock类
 @GenerateMocks([
   BackupService,
@@ -94,24 +93,25 @@ void main() {
     test('处理同步包流程测试', () async {
       // 准备测试数据
       const testBackupPath = '/tmp/test_backup.zip';
-      
+
       // Mock数据库服务
       when(mockDatabaseService.getAllQuotes()).thenAnswer((_) async => [
-        const Quote(
-          id: 'quote1',
-          content: 'Test quote 1',
-          date: '2024-01-01T00:00:00.000Z',
-          categoryId: 'cat1',
-          tagIds: [],
-        ),
-        Quote(
-          id: 'quote2',
-          content: 'Test quote 1', // 重复内容
-          date: DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
-          categoryId: 'cat1',
-          tagIds: [],
-        ),
-      ]);
+            const Quote(
+              id: 'quote1',
+              content: 'Test quote 1',
+              date: '2024-01-01T00:00:00.000Z',
+              categoryId: 'cat1',
+              tagIds: [],
+            ),
+            Quote(
+              id: 'quote2',
+              content: 'Test quote 1', // 重复内容
+              // 使用固定时间避免时间依赖 (早于 quote1 的 2024-01-01T00:00:00.000Z)
+              date: '2023-12-31T23:59:59.000Z',
+              categoryId: 'cat1',
+              tagIds: [],
+            ),
+          ]);
 
       when(mockDatabaseService.deleteQuote(any)).thenAnswer((_) async {});
 
@@ -136,7 +136,7 @@ void main() {
 
       // 验证重复笔记检测被调用
       verify(mockDatabaseService.getAllQuotes()).called(1);
-      
+
       // 验证删除重复笔记被调用（应该删除较旧的quote2）
       verify(mockDatabaseService.deleteQuote('quote2')).called(1);
     });
