@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
@@ -21,6 +22,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   bool _isInitializing = true;
   String _initializationError = '';
   NoteSyncService? _syncService;
+  // 流式发现新增字段
+  StreamSubscription<List<Device>>? _discoverySub;
+  VoidCallback? _cancelDiscovery;
+  int _discoveryRemainingMs = 0;
+  Timer? _discoveryCountdownTimer;
+  static const int _uiDiscoveryTimeoutMs = 30000; // 与 defaultDiscoveryTimeout 对齐
 
   @override
   void initState() {
@@ -101,6 +108,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   @override
   void dispose() {
+  // 取消流式发现资源
+  _cancelDiscovery?.call();
+  _discoverySub?.cancel();
+  _discoveryCountdownTimer?.cancel();
     _stopSyncService();
     super.dispose();
   }
@@ -137,6 +148,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     setState(() {
       _isScanning = true;
       _nearbyDevices.clear(); // 清空旧的设备列表
+  _discoveryRemainingMs = _uiDiscoveryTimeoutMs;
     });
 
     try {
@@ -188,24 +200,44 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
 
-      final devices = await syncService.discoverNearbyDevices();
-
-      if (mounted) {
+      // 使用流式发现
+      final (stream, cancel) = syncService.discoverNearbyDevicesStream(
+          timeout: _uiDiscoveryTimeoutMs);
+      _cancelDiscovery = cancel;
+      _discoverySub = stream.listen((devices) {
+        if (!mounted) return;
         setState(() {
-          // 注意：discoverNearbyDevices() 返回的是不可修改列表，
-          // 需要创建可修改副本以避免后续 clear() 操作失败
-          _nearbyDevices = List<Device>.from(devices); // 创建可修改的副本
+          _nearbyDevices = List<Device>.from(devices);
         });
-
-        // 显示发现结果
+      }, onDone: () {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(devices.isEmpty ? '未发现附近设备' : '发现 ${devices.length} 台设备'),
+            content: Text(_nearbyDevices.isEmpty
+                ? '未发现附近设备'
+                : '发现 ${_nearbyDevices.length} 台设备'),
             duration: const Duration(seconds: 2),
           ),
         );
-      }
+        setState(() {
+          _isScanning = false;
+          _cancelDiscovery = null;
+          _discoveryCountdownTimer?.cancel();
+        });
+      });
+
+      // 启动倒计时
+      _discoveryCountdownTimer?.cancel();
+      _discoveryCountdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted) return;
+        setState(() {
+          _discoveryRemainingMs -= 1000;
+          if (_discoveryRemainingMs <= 0) {
+            _discoveryRemainingMs = 0;
+            t.cancel();
+          }
+        });
+      });
     } catch (e) {
       debugPrint('设备发现失败: $e');
       if (mounted) {
@@ -218,11 +250,28 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
-      }
+      // 结束由 onDone 处理；这里不抢先复位
+    }
+  }
+
+  void _cancelDeviceDiscovery() {
+    if (_cancelDiscovery != null) {
+      _cancelDiscovery!();
+      _cancelDiscovery = null;
+    }
+    _discoverySub?.cancel();
+    _discoverySub = null;
+    _discoveryCountdownTimer?.cancel();
+    _discoveryCountdownTimer = null;
+    if (mounted) {
+      setState(() {
+        _isScanning = false;
+        _discoveryRemainingMs = 0;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('设备发现已取消'),
+        duration: Duration(seconds: 2),
+      ));
     }
   }
 
@@ -415,7 +464,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       const SizedBox(width: 8),
-                      const Text('正在搜索附近设备...'),
+                      Text(
+                        '正在搜索... 已发现 ${_nearbyDevices.length} 台' +
+                            (_discoveryRemainingMs > 0
+                                ? ' (剩余 ${( _discoveryRemainingMs / 1000).ceil()}s)'
+                                : ''),
+                      ),
                     ] else ...[
                       Icon(
                         Icons.devices,
@@ -600,20 +654,20 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed:
-            (_isScanning || _isInitializing) ? null : _startDeviceDiscovery,
-        icon: _isScanning
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              )
-            : const Icon(Icons.search),
-        label: Text(_isScanning ? '正在发现...' : '发现设备'),
-        tooltip: '开始发现附近设备',
-      ),
+    floatingActionButton: FloatingActionButton.extended(
+    onPressed: _isInitializing
+      ? null
+      : (_isScanning ? _cancelDeviceDiscovery : _startDeviceDiscovery),
+    icon: _isInitializing
+      ? const Icon(Icons.hourglass_empty)
+      : _isScanning
+        ? const Icon(Icons.close)
+        : const Icon(Icons.search),
+    label: Text(_isInitializing
+      ? '初始化中'
+      : (_isScanning ? '取消发现' : '发现设备')),
+    tooltip: _isScanning ? '取消本次设备发现' : '开始发现附近设备',
+    ),
     );
   }
 

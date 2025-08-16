@@ -89,7 +89,7 @@ class ReceiveController {
 
       // Auto-accept all files for ThoughtEcho
       final fileTokens = <String, String>{};
-      final uuid = const Uuid();
+      const uuid = Uuid();
       for (final fileId in prepareRequest.files.keys) {
         fileTokens[fileId] = uuid.v4();
       }
@@ -234,8 +234,9 @@ class ReceiveController {
         await raf?.close();
       } catch (_) {}
       try {
-        if (tempFile != null && await tempFile.exists())
+        if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
+        }
       } catch (_) {}
       throw Exception('Upload failed: $e');
     }

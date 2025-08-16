@@ -495,7 +495,10 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 发现附近的设备
-  Future<List<Device>> discoverNearbyDevices() async {
+  ///
+  /// [timeout] 可选，单位为毫秒，表示等待远端设备响应的时间。默认使用
+  /// `defaultDiscoveryTimeout`，在较慢或不稳定网络上建议增加该值。
+  Future<List<Device>> discoverNearbyDevices({int? timeout}) async {
     if (_discoveryService == null) {
       debugPrint('Discovery service not initialized');
       return [];
@@ -508,14 +511,88 @@ class NoteSyncService extends ChangeNotifier {
       // 发送设备公告，触发其他设备响应
       await _discoveryService!.announceDevice();
 
-      // 等待一段时间收集响应
-      await Future.delayed(const Duration(milliseconds: 2000));
+  // 等待一段时间收集响应（使用可配置的超时时间）
+  final waitMs = timeout ?? defaultDiscoveryTimeout;
+  await Future.delayed(Duration(milliseconds: waitMs));
 
       return _discoveryService!.devices;
     } catch (e) {
       debugPrint('发现附近设备失败: $e');
       return [];
     }
+  }
+
+  /// 流式发现附近设备，实时推送列表更新。
+  /// 返回 (Stream<List<Device>>, VoidCallback cancel) 二元组。
+  ///  - stream: 订阅后会立即收到第一次空列表，然后设备变化时推送。
+  ///  - cancel: 调用后提前结束等待并完成 stream。
+  /// [timeout] 总等待时长毫秒。
+  (Stream<List<Device>>, VoidCallback) discoverNearbyDevicesStream({int? timeout}) {
+    if (_discoveryService == null) {
+      final controller = StreamController<List<Device>>();
+      // 立即关闭
+      controller.close();
+      return (controller.stream, () {});
+    }
+
+    final waitMs = timeout ?? defaultDiscoveryTimeout;
+    final controller = StreamController<List<Device>>();
+    bool cancelled = false;
+    Timer? periodic;
+    Timer? endTimer;
+
+    // 清空 & 首次公告
+    _discoveryService!.clearDevices();
+    _discoveryService!.announceDevice();
+
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(_discoveryService!.devices);
+      }
+    }
+
+    // 周期性广播（提升发现概率）和推送更新
+    periodic = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (cancelled) return;
+      await _discoveryService!.announceDevice();
+      emit();
+    });
+
+    // 快速轮询前几秒（前 5 秒每 1s 更新一次）
+    int fastTicks = 0;
+    Timer.periodic(const Duration(seconds: 1), (t) {
+      if (cancelled || t.isActive == false) return;
+      fastTicks++;
+      emit();
+      if (fastTicks >= 5) t.cancel();
+    });
+
+    // 最终超时结束
+    endTimer = Timer(Duration(milliseconds: waitMs), () {
+      if (cancelled) return;
+      cancelled = true;
+      emit();
+      controller.close();
+      periodic?.cancel();
+    });
+
+    // 初始立即一次
+    emit();
+
+    void cancel() {
+      if (cancelled) return;
+      cancelled = true;
+      periodic?.cancel();
+      endTimer?.cancel();
+      if (!controller.isClosed) {
+        emit();
+        controller.close();
+      }
+    }
+
+    controller.onCancel = cancel;
+
+    return (controller.stream, cancel);
   }
 
   @override
