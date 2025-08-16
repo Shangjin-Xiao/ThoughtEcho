@@ -16,6 +16,7 @@ import 'constants.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import '../device_identity_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 const _uuid = Uuid();
 
@@ -48,14 +49,14 @@ class LocalSendProvider {
       await _handshakeWithTarget(target);
 
   // Prepare upload request
-      final requestDto = PrepareUploadRequestDto(
-        info: _buildInfoRegisterDto(),
+  final requestDto = PrepareUploadRequestDto(
+    info: await _buildInfoRegisterDto(),
         files: {
           for (int i = 0; i < files.length; i++)
             'file_$i': FileDto(
               id: 'file_$i',
               fileName: files[i].path.split('/').last,
-              size: await files[i].length(),
+      size: await _ensureStableFileSize(files[i]),
               fileType: FileType.other,
               hash: null,
               preview: null,
@@ -67,7 +68,7 @@ class LocalSendProvider {
       
       // Send prepare upload request with timeout and retry
       final url = ApiRoute.prepareUpload.target(target);
-      debugPrint('发送prepare-upload请求到: $url (设备端口: ${target.port})');
+  logInfo('send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId', source: 'LocalSend');
 
       final client = http.Client();
       try {
@@ -103,7 +104,7 @@ class LocalSendProvider {
               .timeout(const Duration(seconds: 30));
         }
 
-        debugPrint('prepare-upload响应状态: ${response.statusCode}');
+  logDebug('prepare_resp status=${response.statusCode}', source: 'LocalSend');
         final previewLen = response.body.length < 200 ? response.body.length : 200;
         debugPrint('响应内容: ${response.body.substring(0, previewLen)}...');
 
@@ -245,7 +246,7 @@ class LocalSendProvider {
         // Send request with timeout
         final response = await request.send().timeout(const Duration(minutes: 5));
 
-        debugPrint('文件上传响应状态: ${response.statusCode}');
+          logDebug('upload_resp status=${response.statusCode} file=${file.path}', source: 'LocalSend');
 
         if (response.statusCode == 404) {
           // Try legacy v1 route if needed
@@ -281,22 +282,28 @@ class LocalSendProvider {
         }
 
         if (response.statusCode == 200) {
-          debugPrint('文件上传成功: ${file.path}');
-          return; // Success, exit retry loop
-        } else {
-          final responseBody = await response.stream.bytesToString();
-          throw Exception('Upload failed with status ${response.statusCode}: $responseBody');
+          logInfo('upload_success attempt=${attempt + 1} file=${file.path} size=$fileSize', source: 'LocalSend');
+          return; // Success
         }
+        final responseBody = await response.stream.bytesToString();
+        final status = response.statusCode;
+        final retriable = status >= 500 || status == 408 || status == 429;
+        if (!retriable) {
+          throw Exception('Non-retriable status $status: $responseBody');
+        }
+        throw Exception('Retriable status $status: $responseBody');
       } catch (e) {
         attempt++;
-        debugPrint('文件上传尝试 $attempt 失败: $e');
+        logWarning('upload_retry attempt=$attempt file=${file.path} error=$e', source: 'LocalSend');
 
         if (attempt >= maxRetries) {
+          logError('upload_give_up file=${file.path} error=$e', source: 'LocalSend');
           throw Exception('Failed to upload file after $maxRetries attempts: $e');
         }
 
-        // Wait before retry
-        await Future.delayed(Duration(seconds: attempt * 2));
+        // Exponential backoff (cap 8s)
+        final delay = Duration(seconds: 1 << (attempt - 1));
+        await Future.delayed(delay > const Duration(seconds: 8) ? const Duration(seconds: 8) : delay);
       }
     }
   }
@@ -359,12 +366,8 @@ class LocalSendProvider {
   }
 
   /// Build a stable sender info to be compatible with LocalSend
-  InfoRegisterDto _buildInfoRegisterDto() {
-  // 使用持久化设备指纹
-  // 这里同步获取缓存值；若尚未加载完成, 返回一个占位符稍后握手再更新（不阻塞主流程）
-  // 为确保尽快加载，在进入构造前主动触发异步加载
-  DeviceIdentityManager.I.getFingerprint();
-  final stableFingerprint = DeviceIdentityManager.I.currentFingerprint ?? 'loading';
+  Future<InfoRegisterDto> _buildInfoRegisterDto() async {
+    final stableFingerprint = await DeviceIdentityManager.I.getFingerprint();
     return InfoRegisterDto(
       alias: 'ThoughtEcho',
       version: protocolVersion,
@@ -375,6 +378,24 @@ class LocalSendProvider {
       protocol: ProtocolType.http,
       download: true,
     );
+  }
+
+  /// Ensure file size is stable (not 0 after creation); retry short time if needed
+  Future<int> _ensureStableFileSize(File f) async {
+    int size = 0;
+    for (int i = 0; i < 3; i++) {
+      try {
+        size = await f.length();
+      } catch (_) {
+        size = 0;
+      }
+      if (size > 0) return size;
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    if (size == 0) {
+      logError('file_size_zero path=${f.path}', source: 'LocalSend');
+    }
+    return size;
   }
 }
 

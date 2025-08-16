@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'package:http_server/http_server.dart';
 import '../device_identity_manager.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,6 +11,10 @@ import 'models/prepare_upload_request_dto.dart';
 import 'models/prepare_upload_response_dto.dart';
 import 'models/session_status.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mime/mime.dart';
+import 'package:path/path.dart' as p;
+import 'package:http_parser/http_parser.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 
 /// Simplified receive controller for ThoughtEcho
@@ -21,6 +24,7 @@ class ReceiveController {
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
+  String? _cachedFingerprint; // initialized explicitly before serving info
   
   ReceiveController({this.onFileReceived});
 
@@ -41,29 +45,34 @@ class ReceiveController {
 
   /// Handle info request - returns device information
   Map<String, dynamic> handleInfoRequest() {
-    // 异步预热指纹（不阻塞）
-    DeviceIdentityManager.I.getFingerprint();
     return {
       'alias': 'ThoughtEcho',
       'version': protocolVersion,
       'deviceModel': 'ThoughtEcho App',
       'deviceType': 'mobile',
-      // 指纹异步载入期间可能为空，用占位符避免空字符串
-      'fingerprint': _cachedFingerprint ?? 'loading',
+      'fingerprint': _cachedFingerprint ?? 'uninitialized',
       'download': true,
     };
   }
 
-  String? _cachedFingerprint;
-  Future<void> _ensureFingerprint() async {
-    _cachedFingerprint ??= await DeviceIdentityManager.I.getFingerprint();
+  /// Explicitly set fingerprint when server starts to avoid 'loading' flicker
+  Future<void> initializeFingerprint() async {
+    try {
+      _cachedFingerprint = await DeviceIdentityManager.I.getFingerprint();
+      logDebug('fingerprint_initialized fp=$_cachedFingerprint', source: 'LocalSend');
+    } catch (e) {
+      logWarning('fingerprint_init_fail $e', source: 'LocalSend');
+    }
   }
 
   /// Handle prepare upload request
   Map<String, dynamic> handlePrepareUpload(Map<String, dynamic> requestData) {
     try {
       // 确保指纹已就绪
-      _ensureFingerprint();
+      // fingerprint already initialized by server; if null attempt once lazily
+      if (_cachedFingerprint == null) {
+        initializeFingerprint();
+      }
       final prepareRequest = PrepareUploadRequestDto.fromJson(requestData);
       
       // Create session
@@ -114,28 +123,20 @@ class ReceiveController {
     HttpRequest request,
   ) async {
     File? tempFile;
+    RandomAccessFile? raf;
     try {
-      debugPrint('接收文件上传请求: sessionId=$sessionId, fileId=$fileId');
-  final session = _sessions[sessionId];
+      logInfo('recv_upload_start session=$sessionId fileId=$fileId', source: 'LocalSend');
+      final session = _sessions[sessionId];
       if (session == null) {
-        debugPrint('找不到会话: $sessionId');
         throw Exception('Session not found');
       }
-
-      // Validate token
-  if (session.fileTokens?[fileId] != token) {
-        debugPrint('令牌无效: 预期 ${session.fileTokens?[fileId]}, 实际 $token');
+      if (session.fileTokens?[fileId] != token) {
         throw Exception('Invalid token');
       }
-
-      // Get file info
       final fileDto = session.files[fileId];
       if (fileDto == null) {
-        debugPrint('找不到文件: $fileId');
         throw Exception('File not found');
       }
-
-      // 基础校验：仅要求大于0
       if (fileDto.size <= 0) {
         throw Exception('Invalid file size');
       }
@@ -145,98 +146,82 @@ class ReceiveController {
         throw Exception('Blocked file type');
       }
 
-      // Create temporary file path
       final tempDir = Directory.systemTemp;
-      final fileName = _sanitizeFileName(fileDto.fileName);
+      final sanitizedName = _sanitizeFileName(fileDto.fileName);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final targetPath = '${tempDir.path}/thoughtecho_${timestamp}_$fileName';
+      final targetPath = p.join(tempDir.path, 'thoughtecho_${timestamp}_$sanitizedName');
+      tempFile = File(targetPath);
+      raf = await tempFile.open(mode: FileMode.write);
 
-      // Parse body using http_server helper (handles multipart/raw)
-      final body = await HttpBodyHandler.processRequest(request);
-      if (body.type == 'multipart') {
-        final parts = body.body as List;
-        bool saved = false;
-        for (final part in parts) {
-          if (part is HttpBodyFileUpload) {
-            // Prefer a part with a filename
-            final filename = part.filename;
-            final actualPath = '${tempDir.path}/thoughtecho_${timestamp}_${_sanitizeFileName(filename)}';
-            tempFile = File(actualPath);
+      int received = 0;
+      final contentType = request.headers.contentType;
+      final boundary = contentType?.parameters['boundary'];
 
-            final sink = tempFile.openWrite();
-            final content = part.content;
-            if (content is List<int>) {
-              sink.add(content);
-            } else if (content is String) {
-              sink.add(utf8.encode(content));
+      if (contentType != null && contentType.mimeType == 'multipart/form-data' && boundary != null) {
+        // Multipart streaming
+        final transformer = MimeMultipartTransformer(boundary);
+        final parts = request.cast<List<int>>().transform(transformer);
+        await for (final part in parts) {
+          final headers = part.headers;
+            final disposition = headers['content-disposition'] ?? '';
+            if (!disposition.contains('filename=')) {
+              // Skip non-file fields
+              await part.drain();
+              continue;
             }
-            await sink.flush();
-            await sink.close();
-
-            final finalSize = await tempFile.length();
-            debugPrint('文件保存完成(MULTIPART): ${tempFile.path}, 大小: $finalSize 字节');
-            saved = true;
-            break;
-          }
-        }
-        if (!saved) {
-          throw Exception('No upload file found in multipart body');
+            await for (final chunk in part) {
+              received += chunk.length;
+              await raf.writeFrom(chunk);
+              if (received % (64 * 1024) == 0) {
+                logDebug('recv_progress bytes=$received size=${fileDto.size}', source: 'LocalSend');
+              }
+            }
         }
       } else {
-        // Treat whole body as file content
-        tempFile = File(targetPath);
-        final sink = tempFile.openWrite();
-        final content = body.body;
-        if (content is List<int>) {
-          sink.add(content);
-        } else if (content is String) {
-          sink.add(utf8.encode(content));
-        } else {
-          // Fallback: stream directly
-          await for (final chunk in request) {
-            sink.add(chunk);
+        // Raw body streaming
+        await for (final chunk in request) {
+          received += chunk.length;
+          await raf.writeFrom(chunk);
+          if (received % (64 * 1024) == 0) {
+            logDebug('recv_progress bytes=$received size=${fileDto.size}', source: 'LocalSend');
           }
         }
-        await sink.flush();
-        await sink.close();
-        final finalSize = await tempFile.length();
-        debugPrint('文件保存完成(RAW): ${tempFile.path}, 大小: $finalSize 字节');
       }
 
-      // Validate file size if provided
-      if (tempFile != null) {
-        final finalSize = await tempFile.length();
-        if (fileDto.size != finalSize) {
-          debugPrint('警告: 文件大小不匹配 - 预期: ${fileDto.size}, 实际: $finalSize');
-        }
+      await raf.close();
+      raf = null;
+      final finalSize = await tempFile.length();
+      if (finalSize == 0) {
+        throw Exception('Received empty file');
+      }
+      if (finalSize != fileDto.size) {
+        logWarning('recv_size_mismatch expected=${fileDto.size} actual=$finalSize', source: 'LocalSend');
       }
 
-      // Notify file received
-      if (onFileReceived != null && tempFile != null) {
-        debugPrint('通知上层服务接收到文件');
+      // update session lastActivity
+      _sessions[sessionId] = session.copyWith(lastActivity: DateTime.now());
+
+      if (onFileReceived != null) {
         onFileReceived!(tempFile.path);
-        // 简单延迟清理：由上层复制/处理后 30 秒删除
-        final pathToDelete = tempFile.path;
+        final deletePath = tempFile.path;
         Future.delayed(const Duration(seconds: 30), () async {
           try {
-            final f = File(pathToDelete);
-            if (await f.exists()) {
-              await f.delete();
-            }
+            final f = File(deletePath);
+            if (await f.exists()) await f.delete();
           } catch (_) {}
         });
       }
 
-      debugPrint('文件上传处理完成: ${fileDto.fileName} -> ${tempFile?.path}');
-
+      logInfo('recv_upload_done session=$sessionId fileId=$fileId size=$finalSize path=${tempFile.path}', source: 'LocalSend');
       return {
         'message': 'File uploaded successfully',
         'fileId': fileId,
-        'size': await tempFile!.length(),
+        'size': finalSize,
       };
     } catch (e, stack) {
-      debugPrint('文件上传处理失败: $e');
-      debugPrint('堆栈: $stack');
+      logError('recv_upload_fail session=$sessionId fileId=$fileId error=$e', error: e, stackTrace: stack, source: 'LocalSend');
+      try { await raf?.close(); } catch (_) {}
+      try { if (tempFile != null && await tempFile.exists()) await tempFile.delete(); } catch (_) {}
       throw Exception('Upload failed: $e');
     }
   }

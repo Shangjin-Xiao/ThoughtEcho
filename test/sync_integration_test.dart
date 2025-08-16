@@ -120,7 +120,9 @@ void main() {
         testBackupPath,
         clearExisting: false,
         onProgress: anyNamed('onProgress'),
-      )).thenAnswer((_) async {});
+      )).thenAnswer((_) async {
+        return null;
+      });
 
       // 执行处理同步包
       await syncService.processSyncPackage(testBackupPath);

@@ -12,6 +12,8 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:http/http.dart' as http;
+import 'device_identity_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -86,7 +88,7 @@ class NoteSyncService extends ChangeNotifier {
       return;
     }
 
-    try {
+  try {
       debugPrint('开始初始化同步服务组件...');
       
       // 确保先清理之前的资源
@@ -111,7 +113,9 @@ class NoteSyncService extends ChangeNotifier {
       debugPrint('所有服务组件创建成功，开始启动服务器...');
 
       // 启动LocalSend服务器
-      await _localSendServer!.start(
+  // ensure fingerprint ready before server start
+  await DeviceIdentityManager.I.getFingerprint();
+  await _localSendServer!.start(
         port: defaultPort, // 明确指定端口
         onFileReceived: (filePath) async {
           // 使用processSyncPackage方法处理接收到的文件
@@ -120,6 +124,7 @@ class NoteSyncService extends ChangeNotifier {
       );
       final actualPort = _localSendServer!.port;
       debugPrint('LocalSendServer启动成功，端口: $actualPort');
+  logInfo('sync_server_started port=$actualPort', source: 'LocalSend');
 
       // 设置设备发现服务的实际端口
       _discoveryService!.setServerPort(actualPort);
@@ -130,7 +135,7 @@ class NoteSyncService extends ChangeNotifier {
 
       debugPrint('ThoughtEcho sync server started on port ${_localSendServer?.port}');
     } catch (e) {
-      debugPrint('Failed to start servers: $e');
+  logError('sync_server_start_fail $e', source: 'LocalSend');
       // Clean up on failure
       await stopServer();
       rethrow;
