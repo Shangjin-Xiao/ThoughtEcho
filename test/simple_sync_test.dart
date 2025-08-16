@@ -7,6 +7,7 @@ import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
+import 'package:thoughtecho/models/merge_report.dart';
 
 void main() {
   group('简化同步功能测试', () {
@@ -77,13 +78,19 @@ class MockBackupService implements BackupService {
   }
 
   @override
-  Future<void> importData(
+  Future<MergeReport?> importData(
     String filePath, {
     bool clearExisting = true,
+    bool merge = false,
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
+    String? sourceDevice,
   }) async {
-    // Mock implementation
+    // 返回一个空的合并报告或 null（当 merge=false 时与真实逻辑一致）
+    if (merge) {
+      return MergeReport.start(sourceDevice: sourceDevice).completed();
+    }
+    return null;
   }
 
   @override

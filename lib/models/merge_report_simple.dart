@@ -176,7 +176,7 @@ class MergeReport {
 
   @override
   String toString() {
-    return 'MergeReport(${summary}, 耗时: ${durationMs}ms)';
+    return 'MergeReport($summary, 耗时: ${durationMs}ms)';
   }
 
   /// 转换为JSON（用于日志记录）
@@ -204,7 +204,7 @@ class MergeReportBuilder {
   final List<String> _errors = [];
   
   final DateTime _startTime;
-  String? _sourceDevice;
+  final String? _sourceDevice;
   
   MergeReportBuilder({String? sourceDevice}) 
       : _startTime = DateTime.now(),
