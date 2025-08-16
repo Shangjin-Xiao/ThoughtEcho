@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('高级笔记合并算法测试', () {
-    
     test('内容标准化测试', () {
       // 模拟标准化函数
       String normalizeContent(String content) {
@@ -46,15 +45,21 @@ void main() {
               .trim();
         }
 
-        final words1 = normalizeContent(content1).split(' ').where((w) => w.isNotEmpty).toSet();
-        final words2 = normalizeContent(content2).split(' ').where((w) => w.isNotEmpty).toSet();
-        
+        final words1 = normalizeContent(content1)
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .toSet();
+        final words2 = normalizeContent(content2)
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .toSet();
+
         if (words1.isEmpty && words2.isEmpty) return 1.0;
         if (words1.isEmpty || words2.isEmpty) return 0.0;
-        
+
         final intersection = words1.intersection(words2).length;
         final union = words1.union(words2).length;
-        
+
         return intersection / union;
       }
 
@@ -95,7 +100,8 @@ void main() {
 
     test('重复检测逻辑测试', () {
       // 模拟重复检测函数
-      bool areDuplicates(Map<String, dynamic> quote1, Map<String, dynamic> quote2) {
+      bool areDuplicates(
+          Map<String, dynamic> quote1, Map<String, dynamic> quote2) {
         String normalizeContent(String content) {
           return content
               .replaceAll(RegExp(r'\s+'), ' ')
@@ -105,22 +111,28 @@ void main() {
         }
 
         double calculateContentSimilarity(String content1, String content2) {
-          final words1 = normalizeContent(content1).split(' ').where((w) => w.isNotEmpty).toSet();
-          final words2 = normalizeContent(content2).split(' ').where((w) => w.isNotEmpty).toSet();
-          
+          final words1 = normalizeContent(content1)
+              .split(' ')
+              .where((w) => w.isNotEmpty)
+              .toSet();
+          final words2 = normalizeContent(content2)
+              .split(' ')
+              .where((w) => w.isNotEmpty)
+              .toSet();
+
           if (words1.isEmpty && words2.isEmpty) return 1.0;
           if (words1.isEmpty || words2.isEmpty) return 0.0;
-          
+
           final intersection = words1.intersection(words2).length;
           final union = words1.union(words2).length;
-          
+
           return intersection / union;
         }
 
         // 1. 精确内容匹配
         final normalizedContent1 = normalizeContent(quote1['content']);
         final normalizedContent2 = normalizeContent(quote2['content']);
-        
+
         if (normalizedContent1 == normalizedContent2) {
           return true;
         }
@@ -133,7 +145,8 @@ void main() {
         }
 
         // 3. 内容相似度检测（90%以上相似度认为重复）
-        final similarity = calculateContentSimilarity(quote1['content'], quote2['content']);
+        final similarity =
+            calculateContentSimilarity(quote1['content'], quote2['content']);
         if (similarity > 0.9) {
           return true;
         }
@@ -147,35 +160,56 @@ void main() {
       expect(areDuplicates(quote1, quote2), isTrue);
 
       // 测试富文本匹配
-      final richQuote1 = {'content': 'Test', 'deltaContent': '{"ops":[{"insert":"Test"}]}'};
-      final richQuote2 = {'content': 'Test', 'deltaContent': '{"ops":[{"insert":"Test"}]}'};
+      final richQuote1 = {
+        'content': 'Test',
+        'deltaContent': '{"ops":[{"insert":"Test"}]}'
+      };
+      final richQuote2 = {
+        'content': 'Test',
+        'deltaContent': '{"ops":[{"insert":"Test"}]}'
+      };
       expect(areDuplicates(richQuote1, richQuote2), isTrue);
 
       // 测试高相似度匹配 - 使用完全相同的内容（应该被检测为重复）
-      final identicalQuote1 = {'content': 'This is exactly the same content', 'deltaContent': null};
-      final identicalQuote2 = {'content': 'This is exactly the same content', 'deltaContent': null};
+      final identicalQuote1 = {
+        'content': 'This is exactly the same content',
+        'deltaContent': null
+      };
+      final identicalQuote2 = {
+        'content': 'This is exactly the same content',
+        'deltaContent': null
+      };
       expect(areDuplicates(identicalQuote1, identicalQuote2), isTrue);
 
       // 测试不相似内容
-      final differentQuote1 = {'content': 'Completely different content', 'deltaContent': null};
-      final differentQuote2 = {'content': 'Totally unrelated text', 'deltaContent': null};
+      final differentQuote1 = {
+        'content': 'Completely different content',
+        'deltaContent': null
+      };
+      final differentQuote2 = {
+        'content': 'Totally unrelated text',
+        'deltaContent': null
+      };
       expect(areDuplicates(differentQuote1, differentQuote2), isFalse);
     });
 
     test('合并优先级测试', () {
       // 模拟合并排序函数
-      List<Map<String, dynamic>> sortForMerging(List<Map<String, dynamic>> duplicates) {
+      List<Map<String, dynamic>> sortForMerging(
+          List<Map<String, dynamic>> duplicates) {
         final sorted = List<Map<String, dynamic>>.from(duplicates);
         sorted.sort((a, b) {
           // 1. 优先保留有富文本内容的
           if (a['deltaContent'] != null && b['deltaContent'] == null) return -1;
           if (a['deltaContent'] == null && b['deltaContent'] != null) return 1;
-          
+
           // 2. 优先保留内容更丰富的
-          final aLength = (a['content'] as String).length + (a['deltaContent']?.length ?? 0);
-          final bLength = (b['content'] as String).length + (b['deltaContent']?.length ?? 0);
+          final aLength = (a['content'] as String).length +
+              (a['deltaContent']?.length ?? 0);
+          final bLength = (b['content'] as String).length +
+              (b['deltaContent']?.length ?? 0);
           if (aLength != bLength) return bLength.compareTo(aLength);
-          
+
           // 3. 优先保留更新时间的
           final timeA = DateTime.tryParse(a['date']) ?? DateTime(1970);
           final timeB = DateTime.tryParse(b['date']) ?? DateTime(1970);
@@ -189,28 +223,53 @@ void main() {
 
       // 测试富文本优先级
       final duplicates1 = [
-        {'content': 'Test', 'deltaContent': null, 'date': now.toIso8601String()},
-        {'content': 'Test', 'deltaContent': '{"ops":[{"insert":"Test"}]}', 'date': earlier.toIso8601String()},
+        {
+          'content': 'Test',
+          'deltaContent': null,
+          'date': now.toIso8601String()
+        },
+        {
+          'content': 'Test',
+          'deltaContent': '{"ops":[{"insert":"Test"}]}',
+          'date': earlier.toIso8601String()
+        },
       ];
-      
+
       final sorted1 = sortForMerging(duplicates1);
       expect(sorted1.first['deltaContent'], isNotNull);
 
       // 测试内容长度优先级
       final duplicates2 = [
-        {'content': 'Short', 'deltaContent': null, 'date': now.toIso8601String()},
-        {'content': 'Much longer content with more details', 'deltaContent': null, 'date': earlier.toIso8601String()},
+        {
+          'content': 'Short',
+          'deltaContent': null,
+          'date': now.toIso8601String()
+        },
+        {
+          'content': 'Much longer content with more details',
+          'deltaContent': null,
+          'date': earlier.toIso8601String()
+        },
       ];
-      
+
       final sorted2 = sortForMerging(duplicates2);
-      expect(sorted2.first['content'], equals('Much longer content with more details'));
+      expect(sorted2.first['content'],
+          equals('Much longer content with more details'));
 
       // 测试时间优先级
       final duplicates3 = [
-        {'content': 'Same content', 'deltaContent': null, 'date': earlier.toIso8601String()},
-        {'content': 'Same content', 'deltaContent': null, 'date': now.toIso8601String()},
+        {
+          'content': 'Same content',
+          'deltaContent': null,
+          'date': earlier.toIso8601String()
+        },
+        {
+          'content': 'Same content',
+          'deltaContent': null,
+          'date': now.toIso8601String()
+        },
       ];
-      
+
       final sorted3 = sortForMerging(duplicates3);
       expect(sorted3.first['date'], equals(now.toIso8601String()));
     });

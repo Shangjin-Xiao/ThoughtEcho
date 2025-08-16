@@ -57,6 +57,7 @@ class DeviceIdentityManager {
 
   String _fallbackRandom() {
     final r = Random();
-    return List.generate(16, (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+    return List.generate(
+        16, (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
   }
 }

@@ -2,12 +2,16 @@
 enum FileStatus {
   /// 队列中
   queue,
+
   /// 正在发送
   sending,
+
   /// 已完成
   finished,
+
   /// 失败
   failed,
+
   /// 已跳过
   skipped,
 }
@@ -33,8 +37,8 @@ extension FileStatusExtension on FileStatus {
   }
 
   bool get isCompleted {
-    return this == FileStatus.finished || 
-           this == FileStatus.failed || 
-           this == FileStatus.skipped;
+    return this == FileStatus.finished ||
+        this == FileStatus.failed ||
+        this == FileStatus.skipped;
   }
 }

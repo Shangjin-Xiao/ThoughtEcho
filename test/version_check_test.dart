@@ -21,8 +21,9 @@ void main() {
           'published_at': '2024-01-01T00:00:00Z',
         };
 
-        final versionInfo = VersionInfo.fromJson(mockJson, data['current'] as String);
-        
+        final versionInfo =
+            VersionInfo.fromJson(mockJson, data['current'] as String);
+
         expect(
           versionInfo.hasUpdate,
           data['hasUpdate'],
@@ -34,7 +35,8 @@ void main() {
     test('should parse GitHub API response correctly', () {
       const mockResponse = {
         'tag_name': 'v1.2.0',
-        'html_url': 'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/tag/v1.2.0',
+        'html_url':
+            'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/tag/v1.2.0',
         'body': '## 新功能\n- 添加了版本检查功能\n- 优化了UI界面',
         'published_at': '2024-07-29T10:00:00Z',
       };
@@ -44,7 +46,8 @@ void main() {
       expect(versionInfo.currentVersion, '1.0.0');
       expect(versionInfo.latestVersion, 'v1.2.0');
       expect(versionInfo.hasUpdate, true);
-      expect(versionInfo.downloadUrl, 'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/tag/v1.2.0');
+      expect(versionInfo.downloadUrl,
+          'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/tag/v1.2.0');
       expect(versionInfo.releaseNotes, '## 新功能\n- 添加了版本检查功能\n- 优化了UI界面');
     });
   });

@@ -16,7 +16,8 @@ class NetworkDiagnosticPage extends StatefulWidget {
 class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
   MulticastDiagnosticResult? _diagnosticResult;
   bool _isRunningDiagnostic = false;
-  final ThoughtEchoDiscoveryService _discoveryService = ThoughtEchoDiscoveryService();
+  final ThoughtEchoDiscoveryService _discoveryService =
+      ThoughtEchoDiscoveryService();
   bool _isDiscoveryRunning = false;
 
   @override
@@ -114,15 +115,15 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
             // 配置信息
             _buildConfigSection(),
             const SizedBox(height: 20),
-            
+
             // 诊断工具
             _buildDiagnosticSection(),
             const SizedBox(height: 20),
-            
+
             // 设备发现
             _buildDiscoverySection(),
             const SizedBox(height: 20),
-            
+
             // 发现的设备
             _buildDevicesSection(),
           ],
@@ -206,25 +207,25 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
         ),
         const SizedBox(height: 8),
         ...result.steps.map((step) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                step.success ? Icons.check_circle : Icons.error,
-                color: step.success ? Colors.green : Colors.red,
-                size: 16,
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    step.success ? Icons.check_circle : Icons.error,
+                    color: step.success ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${step.name}: ${step.message}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${step.name}: ${step.message}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        )),
+            )),
       ],
     );
   }
@@ -284,26 +285,26 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
               const Text('暂无发现的设备')
             else
               ...devices.map((device) => Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                child: ListTile(
-                  leading: Icon(
-                    device.deviceType == DeviceType.mobile
-                        ? Icons.phone_android
-                        : Icons.computer,
-                  ),
-                  title: Text(device.alias),
-                  subtitle: Text(
-                    '${device.ip}:${device.port}\n'
-                    '${device.deviceModel ?? "未知型号"}\n'
-                    '指纹: ${device.fingerprint}',
-                  ),
-                  isThreeLine: true,
-                  trailing: Icon(
-                    device.download ? Icons.download : Icons.block,
-                    color: device.download ? Colors.green : Colors.red,
-                  ),
-                ),
-              )),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: ListTile(
+                      leading: Icon(
+                        device.deviceType == DeviceType.mobile
+                            ? Icons.phone_android
+                            : Icons.computer,
+                      ),
+                      title: Text(device.alias),
+                      subtitle: Text(
+                        '${device.ip}:${device.port}\n'
+                        '${device.deviceModel ?? "未知型号"}\n'
+                        '指纹: ${device.fingerprint}',
+                      ),
+                      isThreeLine: true,
+                      trailing: Icon(
+                        device.download ? Icons.download : Icons.block,
+                        color: device.download ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  )),
           ],
         ),
       ),

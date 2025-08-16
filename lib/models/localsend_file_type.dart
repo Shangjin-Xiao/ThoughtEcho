@@ -2,16 +2,22 @@
 enum FileType {
   /// 图片
   image,
+
   /// 视频
   video,
+
   /// 音频
   audio,
+
   /// 文档
   document,
+
   /// 文本
   text,
+
   /// 应用
   apk,
+
   /// 其他
   other,
 }
@@ -39,14 +45,16 @@ extension FileTypeExtension on FileType {
   /// 根据文件扩展名判断文件类型
   static FileType fromExtension(String extension) {
     final ext = extension.toLowerCase();
-    
+
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].contains(ext)) {
       return FileType.image;
-    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'].contains(ext)) {
+    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm']
+        .contains(ext)) {
       return FileType.video;
     } else if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].contains(ext)) {
       return FileType.audio;
-    } else if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].contains(ext)) {
+    } else if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']
+        .contains(ext)) {
       return FileType.document;
     } else if (['txt', 'md', 'json', 'xml', 'csv'].contains(ext)) {
       return FileType.text;

@@ -19,7 +19,8 @@ Future<List<NetworkInterface>> getNetworkInterfaces({
       networkBlacklist: digestedBlacklist,
       interface: interface.addresses.map((a) => a.address).toList(),
     )) {
-      _logger.info('Ignore network interface ${interface.name} (${interface.addresses.map((a) => a.address).toList()})');
+      _logger.info(
+          'Ignore network interface ${interface.name} (${interface.addresses.map((a) => a.address).toList()})');
       continue;
     }
     result.add(interface);
@@ -58,10 +59,12 @@ bool isNetworkIgnored({
   required List<RegExp>? networkBlacklist,
   required List<String> interface,
 }) {
-  if (networkWhitelist != null && !interface.any((a) => networkWhitelist.any((w) => w.hasMatch(a)))) {
+  if (networkWhitelist != null &&
+      !interface.any((a) => networkWhitelist.any((w) => w.hasMatch(a)))) {
     return true;
   }
-  if (networkBlacklist != null && interface.any((a) => networkBlacklist.any((b) => b.hasMatch(a)))) {
+  if (networkBlacklist != null &&
+      interface.any((a) => networkBlacklist.any((b) => b.hasMatch(a)))) {
     return true;
   }
   return false;

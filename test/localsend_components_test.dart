@@ -62,7 +62,7 @@ void main() {
       expect(device.version, protocolVersion);
       expect(device.port, defaultPort);
       expect(device.download, true);
-      
+
       // 测试传输方法
       final transmissionMethods = device.transmissionMethods;
       expect(transmissionMethods.isNotEmpty, true);
@@ -72,15 +72,15 @@ void main() {
     test('MulticastDiscovery 测试', () {
       const discovery1 = MulticastDiscovery();
       const discovery2 = MulticastDiscovery();
-      
+
       // 测试相等性
       expect(discovery1 == discovery2, true);
       expect(discovery1.hashCode, discovery2.hashCode);
-      
+
       // 测试JSON序列化
       final json = discovery1.toJson();
       expect(json['type'], 'multicast');
-      
+
       final fromJson = DiscoveryMethod.fromJson(json);
       expect(fromJson, isA<MulticastDiscovery>());
     });
@@ -89,16 +89,16 @@ void main() {
       const discovery1 = HttpDiscovery(ip: '192.168.1.1');
       const discovery2 = HttpDiscovery(ip: '192.168.1.1');
       const discovery3 = HttpDiscovery(ip: '192.168.1.2');
-      
+
       // 测试相等性
       expect(discovery1 == discovery2, true);
       expect(discovery1 == discovery3, false);
-      
+
       // 测试JSON序列化
       final json = discovery1.toJson();
       expect(json['type'], 'http');
       expect(json['ip'], '192.168.1.1');
-      
+
       final fromJson = DiscoveryMethod.fromJson(json);
       expect(fromJson, isA<HttpDiscovery>());
       expect((fromJson as HttpDiscovery).ip, '192.168.1.1');
@@ -128,18 +128,19 @@ void main() {
       expect(device.discoveryMethods.length, 3);
       expect(device.https, true);
       expect(device.deviceType, DeviceType.server);
-      
+
       // 验证传输方法包含HTTP和WebRTC
       final methods = device.transmissionMethods;
       expect(methods.contains(TransmissionMethod.http), true);
       expect(methods.contains(TransmissionMethod.webrtc), true);
-      
+
       // 测试JSON往返转换
       final json = device.toJson();
       final deviceFromJson = Device.fromJson(json);
       expect(deviceFromJson.ip, device.ip);
       expect(deviceFromJson.alias, device.alias);
-      expect(deviceFromJson.discoveryMethods.length, device.discoveryMethods.length);
+      expect(deviceFromJson.discoveryMethods.length,
+          device.discoveryMethods.length);
     });
   });
 }

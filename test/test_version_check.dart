@@ -4,9 +4,9 @@ import 'package:thoughtecho/services/version_check_service.dart';
 
 void main() async {
   AppLogger.i('开始测试版本检查功能...');
-  
+
   // 测试版本比较逻辑
-  AppLogger.i ('\n=== 测试版本比较逻辑 ===');
+  AppLogger.i('\n=== 测试版本比较逻辑 ===');
   final testCases = [
     {'current': '1.0.0', 'latest': '1.0.1', 'expected': true},
     {'current': '1.0.0', 'latest': '1.0.0', 'expected': false},
@@ -23,18 +23,21 @@ void main() async {
       'published_at': '2024-01-01T00:00:00Z',
     };
 
-    final versionInfo = VersionInfo.fromJson(mockJson, testCase['current'] as String);
+    final versionInfo =
+        VersionInfo.fromJson(mockJson, testCase['current'] as String);
     final result = versionInfo.hasUpdate;
     final expected = testCase['expected'] as bool;
-    
-    AppLogger.i('当前: ${testCase['current']}, 最新: ${testCase['latest']}, 有更新: $result, 期望: $expected, ${result == expected ? '✓' : '✗'}');
+
+    AppLogger.i(
+        '当前: ${testCase['current']}, 最新: ${testCase['latest']}, 有更新: $result, 期望: $expected, ${result == expected ? '✓' : '✗'}');
   }
 
   // 测试GitHub API响应解析
   AppLogger.i('\n=== 测试GitHub API响应解析 ===');
   const mockResponse = {
     'tag_name': 'v1.2.0',
-    'html_url': 'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/tag/v1.2.0',
+    'html_url':
+        'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/tag/v1.2.0',
     'body': '## 新功能\n- 添加了版本检查功能\n- 优化了UI界面',
     'published_at': '2024-07-29T10:00:00Z',
   };

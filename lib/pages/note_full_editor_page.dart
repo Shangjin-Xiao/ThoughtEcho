@@ -199,7 +199,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         // 验证Delta操作数组
         for (final op in deltaJson) {
           if (op is! Map<String, dynamic>) return false;
-          if (!op.containsKey('insert') && !op.containsKey('retain') && !op.containsKey('delete')) {
+          if (!op.containsKey('insert') &&
+              !op.containsKey('retain') &&
+              !op.containsKey('delete')) {
             return false;
           }
         }
@@ -286,7 +288,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     try {
       final memoryManager = DeviceMemoryManager();
       final memoryPressure = await memoryManager.getMemoryPressureLevel();
-      
+
       // 根据内存压力级别调整块大小
       switch (memoryPressure) {
         case 0: // 内存充足
@@ -472,8 +474,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       return null;
     } else if (original is Map) {
       return Map<String, dynamic>.from(
-        original.map((key, value) => MapEntry(key, _deepCopy(value)))
-      );
+          original.map((key, value) => MapEntry(key, _deepCopy(value))));
     } else if (original is List) {
       return original.map((item) => _deepCopy(item)).toList();
     } else {
@@ -518,15 +519,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               int currentInsertPosition = 0; // 跟踪当前插入位置
 
               for (int i = 0; i < content.length; i += chunkSize) {
-                final end = (i + chunkSize < content.length) ? i + chunkSize : content.length;
+                final end = (i + chunkSize < content.length)
+                    ? i + chunkSize
+                    : content.length;
                 final chunk = content.substring(i, end);
-                
+
                 // 确保插入位置在有效范围内
                 final docLength = _controller.document.length;
-                final safeInsertPosition = currentInsertPosition.clamp(0, docLength - 1);
-                
+                final safeInsertPosition =
+                    currentInsertPosition.clamp(0, docLength - 1);
+
                 _controller.document.insert(safeInsertPosition, chunk);
-                
+
                 // 更新插入位置：当前位置 + 插入的文本长度
                 currentInsertPosition = safeInsertPosition + chunk.length;
               }
@@ -577,7 +581,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final position = await locationService.getCurrentLocation();
     if (position != null && mounted) {
       final location = locationService.getFormattedLocation();
-      
+
       // 优化：将网络请求包装为 Future，避免阻塞主线程
       try {
         // 先更新位置信息
@@ -586,7 +590,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         });
 
         // 异步获取天气数据，不阻塞UI
-        _fetchWeatherAsync(weatherService, position.latitude, position.longitude);
+        _fetchWeatherAsync(
+            weatherService, position.latitude, position.longitude);
       } catch (e) {
         logError('获取位置天气失败', error: e, source: 'NoteFullEditorPage');
       }
@@ -594,10 +599,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   // 异步获取天气数据的辅助方法
-  Future<void> _fetchWeatherAsync(WeatherService weatherService, double latitude, double longitude) async {
+  Future<void> _fetchWeatherAsync(
+      WeatherService weatherService, double latitude, double longitude) async {
     try {
       await weatherService.getWeatherData(latitude, longitude);
-      
+
       // 优化：仅在组件仍然挂载时更新状态
       if (mounted) {
         setState(() {
@@ -2150,8 +2156,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             // 处理图片
             if (insert.containsKey('image')) {
               final imagePath = insert['image'] as String?;
-              if (imagePath != null && await TemporaryMediaService.isTemporaryFile(imagePath)) {
-                final permanentPath = await _moveMediaFileSafely(imagePath, processedFiles);
+              if (imagePath != null &&
+                  await TemporaryMediaService.isTemporaryFile(imagePath)) {
+                final permanentPath =
+                    await _moveMediaFileSafely(imagePath, processedFiles);
                 if (permanentPath != null) {
                   insert['image'] = permanentPath;
                   hasChanges = true;
@@ -2163,8 +2171,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             // 处理视频
             if (insert.containsKey('video')) {
               final videoPath = insert['video'] as String?;
-              if (videoPath != null && await TemporaryMediaService.isTemporaryFile(videoPath)) {
-                final permanentPath = await _moveMediaFileSafely(videoPath, processedFiles);
+              if (videoPath != null &&
+                  await TemporaryMediaService.isTemporaryFile(videoPath)) {
+                final permanentPath =
+                    await _moveMediaFileSafely(videoPath, processedFiles);
                 if (permanentPath != null) {
                   insert['video'] = permanentPath;
                   hasChanges = true;
@@ -2178,8 +2188,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               final custom = insert['custom'];
               if (custom is Map && custom.containsKey('audio')) {
                 final audioPath = custom['audio'] as String?;
-                if (audioPath != null && await TemporaryMediaService.isTemporaryFile(audioPath)) {
-                  final permanentPath = await _moveMediaFileSafely(audioPath, processedFiles);
+                if (audioPath != null &&
+                    await TemporaryMediaService.isTemporaryFile(audioPath)) {
+                  final permanentPath =
+                      await _moveMediaFileSafely(audioPath, processedFiles);
                   if (permanentPath != null) {
                     custom['audio'] = permanentPath;
                     hasChanges = true;
@@ -2215,14 +2227,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   /// 修复：安全移动媒体文件，避免重复处理
-  Future<String?> _moveMediaFileSafely(String sourcePath, Map<String, String> processedFiles) async {
+  Future<String?> _moveMediaFileSafely(
+      String sourcePath, Map<String, String> processedFiles) async {
     try {
       // 检查是否已经处理过这个文件
       if (processedFiles.containsKey(sourcePath)) {
         return processedFiles[sourcePath];
       }
 
-      final permanentPath = await TemporaryMediaService.moveToPermament(sourcePath);
+      final permanentPath =
+          await TemporaryMediaService.moveToPermament(sourcePath);
       if (permanentPath != null) {
         processedFiles[sourcePath] = permanentPath;
       }

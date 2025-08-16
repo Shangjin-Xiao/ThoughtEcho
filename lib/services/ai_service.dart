@@ -39,8 +39,9 @@ class AIService extends ChangeNotifier {
       if (currentProvider.apiUrl.trim().isEmpty) {
         throw Exception('请先配置 API URL');
       }
-      
-      final urlValid = Uri.tryParse(currentProvider.apiUrl)?.isAbsolute ?? false;
+
+      final urlValid =
+          Uri.tryParse(currentProvider.apiUrl)?.isAbsolute ?? false;
       if (!urlValid) {
         throw Exception('API URL格式无效，请输入完整的URL地址');
       }

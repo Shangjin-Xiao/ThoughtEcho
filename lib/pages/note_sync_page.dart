@@ -5,7 +5,7 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/utils/sync_network_tester.dart';
 
 /// 笔记同步页面
-/// 
+///
 /// 提供设备发现、笔记发送和接收功能的用户界面
 class NoteSyncPage extends StatefulWidget {
   const NoteSyncPage({super.key});
@@ -33,7 +33,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     super.didChangeDependencies();
     // 在这里安全地获取NoteSyncService的引用
     _syncService = context.read<NoteSyncService>();
-    
+
     // 检查服务状态并提供视觉反馈
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_syncService != null && _isInitializing) {
@@ -58,15 +58,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     try {
       final syncService = context.read<NoteSyncService>();
       _syncService = syncService; // 保存引用供dispose使用
-      
+
       // 添加调试信息
       debugPrint('开始初始化同步服务...');
-      
+
       await syncService.startServer();
 
       // 添加更多调试信息
       debugPrint('同步服务初始化成功，服务器已启动');
-      
+
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -200,7 +200,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         // 显示发现结果
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(devices.isEmpty ? '未发现附近设备' : '发现 ${devices.length} 台设备'),
+            content:
+                Text(devices.isEmpty ? '未发现附近设备' : '发现 ${devices.length} 台设备'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -239,8 +240,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       final sessionId = await syncService.createSyncPackage(device);
 
       if (mounted) {
+    final String displayId = sessionId.length <= 8
+      ? sessionId
+      : '${sessionId.substring(0, 8)}...';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('笔记发送成功！会话ID: ${sessionId.substring(0, 8)}...')),
+          SnackBar(
+            content: Text('笔记发送成功！会话ID: $displayId'),
+          ),
         );
       }
     } catch (e) {
@@ -273,7 +279,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         barrierDismissible: false,
         builder: (context) => const AlertDialog(
           title: Text('正在运行网络诊断...'),
-          content: SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
+          content: SizedBox(
+              height: 80, child: Center(child: CircularProgressIndicator())),
         ),
       );
 
@@ -315,19 +322,22 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 itemCount: results.length,
                 itemBuilder: (context, index) {
                   final result = results[index];
-                  final allSuccess = result.steps.isNotEmpty && result.steps.every((s) => s.success);
+                  final allSuccess = result.steps.isNotEmpty &&
+                      result.steps.every((s) => s.success);
                   return ExpansionTile(
                     title: Text(result.name),
                     subtitle: Text(allSuccess ? '✅ 通过' : '❌ 存在问题'),
-                    children: result.steps.map((step) => ListTile(
-                      leading: Icon(
-                        step.success ? Icons.check_circle : Icons.error,
-                        color: step.success ? Colors.green : Colors.red,
-                      ),
-                      title: Text(step.name),
-                      subtitle: Text(step.details),
-                      dense: true,
-                    )).toList(),
+                    children: result.steps
+                        .map((step) => ListTile(
+                              leading: Icon(
+                                step.success ? Icons.check_circle : Icons.error,
+                                color: step.success ? Colors.green : Colors.red,
+                              ),
+                              title: Text(step.name),
+                              subtitle: Text(step.details),
+                              dense: true,
+                            ))
+                        .toList(),
                   );
                 },
               ),
@@ -395,7 +405,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     ] else if (_initializationError.isNotEmpty) ...[
                       const Icon(Icons.error, color: Colors.red),
                       const SizedBox(width: 8),
-                      Expanded(child: Text('启动失败: $_initializationError', style: const TextStyle(color: Colors.red))),
+                      Expanded(
+                          child: Text('启动失败: $_initializationError',
+                              style: const TextStyle(color: Colors.red))),
                     ] else if (_isScanning) ...[
                       const SizedBox(
                         width: 16,
@@ -428,9 +440,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         ),
                         child: Row(
                           children: [
-                            if (syncService.syncStatus == SyncStatus.packaging ||
+                            if (syncService.syncStatus ==
+                                    SyncStatus.packaging ||
                                 syncService.syncStatus == SyncStatus.sending ||
-                                syncService.syncStatus == SyncStatus.merging) ...[
+                                syncService.syncStatus ==
+                                    SyncStatus.merging) ...[
                               SizedBox(
                                 width: 16,
                                 height: 16,
@@ -466,7 +480,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 ],
                               ),
                             ),
-                            if (syncService.syncProgress > 0 && syncService.syncProgress < 1)
+                            if (syncService.syncProgress > 0 &&
+                                syncService.syncProgress < 1)
                               Text(
                                 '${(syncService.syncProgress * 100).toInt()}%',
                                 style: const TextStyle(
@@ -521,7 +536,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
                             child: Icon(
                               _getDeviceIcon(device.deviceType),
                               color: Colors.white,
@@ -533,7 +549,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : IconButton(
                                   icon: const Icon(Icons.send),
@@ -584,12 +601,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: (_isScanning || _isInitializing) ? null : _startDeviceDiscovery,
+        onPressed:
+            (_isScanning || _isInitializing) ? null : _startDeviceDiscovery,
         icon: _isScanning
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
               )
             : const Icon(Icons.search),
         label: Text(_isScanning ? '正在发现...' : '发现设备'),

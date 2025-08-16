@@ -2,16 +2,22 @@
 enum SessionStatus {
   /// 等待中
   waiting,
+
   /// 正在发送
   sending,
+
   /// 正在接收
   receiving,
+
   /// 已完成
   finished,
+
   /// 已取消
   cancelled,
+
   /// 被拒绝
   declined,
+
   /// 发生错误
   error,
 }
@@ -41,9 +47,9 @@ extension SessionStatusExtension on SessionStatus {
   }
 
   bool get isCompleted {
-    return this == SessionStatus.finished || 
-           this == SessionStatus.cancelled || 
-           this == SessionStatus.declined || 
-           this == SessionStatus.error;
+    return this == SessionStatus.finished ||
+        this == SessionStatus.cancelled ||
+        this == SessionStatus.declined ||
+        this == SessionStatus.error;
   }
 }

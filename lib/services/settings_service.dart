@@ -388,7 +388,7 @@ class SettingsService extends ChangeNotifier {
       'multi_ai_settings': _multiAISettings.toJson(),
       'app_settings': _appSettings.toJson(),
       'theme_mode': _themeMode.index,
-  'device_id': getOrCreateDeviceId(),
+      'device_id': getOrCreateDeviceId(),
     };
   }
 
@@ -431,7 +431,9 @@ class SettingsService extends ChangeNotifier {
       // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
       if (backupData.containsKey('device_id')) {
         final remoteId = backupData['device_id'];
-        if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty && remoteId is String && remoteId.isNotEmpty) {
+        if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty &&
+            remoteId is String &&
+            remoteId.isNotEmpty) {
           await _mmkv.setString(_deviceIdKey, remoteId);
         }
       }
@@ -447,7 +449,8 @@ class SettingsService extends ChangeNotifier {
   String getOrCreateDeviceId() {
     final existing = _mmkv.getString(_deviceIdKey);
     if (existing != null && existing.isNotEmpty) return existing;
-    final newId = '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
+    final newId =
+        '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
     _mmkv.setString(_deviceIdKey, newId);
     return newId;
   }

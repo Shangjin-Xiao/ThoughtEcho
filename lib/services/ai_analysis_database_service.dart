@@ -50,7 +50,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
     // 修复：确保数据库工厂已初始化
     // 扩展支持所有需要FFI的非Web平台，不仅仅是Windows
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       // 使用一个更可靠的检查方式来确定是否已初始化
       // databaseFactoryFfi是FFI工厂的实例，我们可以直接检查是否相等
       if (databaseFactory != databaseFactoryFfi) {

@@ -21,16 +21,19 @@ class VersionInfo {
     required this.hasUpdate,
   });
 
-  factory VersionInfo.fromJson(Map<String, dynamic> json, String currentVersion) {
+  factory VersionInfo.fromJson(
+      Map<String, dynamic> json, String currentVersion) {
     final latestVersion = json['tag_name'] as String? ?? '';
-    final hasUpdate = VersionInfo._compareVersions(currentVersion, latestVersion) < 0;
-    
+    final hasUpdate =
+        VersionInfo._compareVersions(currentVersion, latestVersion) < 0;
+
     return VersionInfo(
       currentVersion: currentVersion,
       latestVersion: latestVersion,
       downloadUrl: json['html_url'] as String? ?? '',
       releaseNotes: json['body'] as String? ?? '',
-      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? '') ?? DateTime.now(),
+      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? '') ??
+          DateTime.now(),
       hasUpdate: hasUpdate,
     );
   }
@@ -41,24 +44,25 @@ class VersionInfo {
     // 移除版本号前缀（如 v1.0.0 -> 1.0.0）
     final v1 = version1.replaceFirst(RegExp(r'^v'), '');
     final v2 = version2.replaceFirst(RegExp(r'^v'), '');
-    
+
     final v1Parts = v1.split('.').map((e) => int.tryParse(e) ?? 0).toList();
     final v2Parts = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    
+
     // 确保两个版本号有相同的长度
-    final maxLength = v1Parts.length > v2Parts.length ? v1Parts.length : v2Parts.length;
+    final maxLength =
+        v1Parts.length > v2Parts.length ? v1Parts.length : v2Parts.length;
     while (v1Parts.length < maxLength) {
       v1Parts.add(0);
     }
     while (v2Parts.length < maxLength) {
       v2Parts.add(0);
     }
-    
+
     for (int i = 0; i < maxLength; i++) {
       if (v1Parts[i] < v2Parts[i]) return -1;
       if (v1Parts[i] > v2Parts[i]) return 1;
     }
-    
+
     return 0;
   }
 }
@@ -73,10 +77,11 @@ enum VersionCheckResult {
 
 /// GitHub版本检查服务
 class VersionCheckService {
-  static const String _githubApiUrl = 'https://api.github.com/repos/Shangjin-Xiao/ThoughtEcho/releases/latest';
+  static const String _githubApiUrl =
+      'https://api.github.com/repos/Shangjin-Xiao/ThoughtEcho/releases/latest';
   static const Duration _defaultTimeout = Duration(seconds: 10);
   static const Duration _backgroundCheckDelay = Duration(seconds: 5);
-  
+
   static Dio? _dio;
   static DateTime? _lastCheckTime;
   static VersionInfo? _cachedVersionInfo;
@@ -89,7 +94,7 @@ class VersionCheckService {
       _dio!.options.connectTimeout = _defaultTimeout;
       _dio!.options.receiveTimeout = _defaultTimeout;
       _dio!.options.sendTimeout = _defaultTimeout;
-      
+
       // 添加日志拦截器
       _dio!.interceptors.add(
         LogInterceptor(
@@ -112,7 +117,9 @@ class VersionCheckService {
   }) async {
     try {
       // 如果有缓存且未过期，且不是强制刷新，则返回缓存
-      if (!forceRefresh && _cachedVersionInfo != null && _lastCheckTime != null) {
+      if (!forceRefresh &&
+          _cachedVersionInfo != null &&
+          _lastCheckTime != null) {
         final cacheAge = DateTime.now().difference(_lastCheckTime!);
         if (cacheAge < _cacheValidDuration) {
           logDebug('使用缓存的版本信息');
@@ -127,16 +134,18 @@ class VersionCheckService {
       final currentVersion = packageInfo.version;
       logDebug('当前应用版本: $currentVersion');
 
-      final response = await dio.get(
-        _githubApiUrl,
-        options: Options(
-          receiveTimeout: timeout ?? _defaultTimeout,
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'ThoughtEcho-App',
-          },
-        ),
-      ).timeout(timeout ?? _defaultTimeout);
+      final response = await dio
+          .get(
+            _githubApiUrl,
+            options: Options(
+              receiveTimeout: timeout ?? _defaultTimeout,
+              headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'ThoughtEcho-App',
+              },
+            ),
+          )
+          .timeout(timeout ?? _defaultTimeout);
 
       logDebug('GitHub API响应状态码: ${response.statusCode}');
 
@@ -147,7 +156,8 @@ class VersionCheckService {
         _cachedVersionInfo = versionInfo;
         _lastCheckTime = DateTime.now();
 
-        logDebug('版本检查完成: 当前版本 $currentVersion, 最新版本 ${versionInfo.latestVersion}, 有更新: ${versionInfo.hasUpdate}');
+        logDebug(
+            '版本检查完成: 当前版本 $currentVersion, 最新版本 ${versionInfo.latestVersion}, 有更新: ${versionInfo.hasUpdate}');
         return versionInfo;
       } else {
         throw Exception('GitHub API响应异常: ${response.statusCode}');
@@ -157,11 +167,13 @@ class VersionCheckService {
       throw VersionCheckTimeoutException('版本检查超时，请检查网络连接');
     } on DioException catch (e) {
       logDebug('版本检查网络错误: ${e.message}');
-      logDebug('错误详情: ${e.response?.statusCode} - ${e.response?.statusMessage}');
+      logDebug(
+          '错误详情: ${e.response?.statusCode} - ${e.response?.statusMessage}');
 
       if (e.response?.statusCode == 404) {
         // 404错误特殊处理 - 可能是仓库没有releases
-        throw VersionCheckException('暂无可用的版本更新信息。这可能是因为：\n1. 仓库还没有发布任何版本\n2. 网络连接问题\n\n您可以访问项目主页查看最新信息。');
+        throw VersionCheckException(
+            '暂无可用的版本更新信息。这可能是因为：\n1. 仓库还没有发布任何版本\n2. 网络连接问题\n\n您可以访问项目主页查看最新信息。');
       } else {
         throw VersionCheckNetworkException('网络连接失败: ${e.message}');
       }
@@ -178,11 +190,11 @@ class VersionCheckService {
   }) async {
     // 延迟执行，避免影响应用启动
     await Future.delayed(delay);
-    
+
     try {
       logDebug('开始后台版本检查...');
       final versionInfo = await checkForUpdates();
-      
+
       if (versionInfo.hasUpdate && onUpdateAvailable != null) {
         logDebug('检测到新版本: ${versionInfo.latestVersion}');
         onUpdateAvailable(versionInfo);
@@ -213,7 +225,7 @@ class VersionCheckService {
 class VersionCheckException implements Exception {
   final String message;
   VersionCheckException(this.message);
-  
+
   @override
   String toString() => message;
 }

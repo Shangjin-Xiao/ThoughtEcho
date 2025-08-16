@@ -11,7 +11,7 @@ class LogViewer {
     final logService = UnifiedLogService.instance;
     final stats = logService.logStats;
     final exceptionStats = GlobalExceptionHandler.getExceptionStats();
-    
+
     return {
       'totalLogs': logService.logs.length,
       'logsByLevel': stats.map((level, count) => MapEntry(level.name, count)),
@@ -98,7 +98,8 @@ class LogViewer {
       if (olderThan != null) {
         final cutoffDate = DateTime.now().subtract(olderThan);
         // 这里需要在UnifiedLogService中添加按日期清理的方法
-        AppLogger.i('清理${cutoffDate.toIso8601String()}之前的日志', source: 'LogViewer');
+        AppLogger.i('清理${cutoffDate.toIso8601String()}之前的日志',
+            source: 'LogViewer');
       }
 
       if (keepCount != null) {
@@ -122,13 +123,13 @@ class LogViewer {
   static List<String> getLogSources() {
     final logService = UnifiedLogService.instance;
     final sources = <String>{};
-    
+
     for (final log in logService.logs) {
       if (log.source != null && log.source!.isNotEmpty) {
         sources.add(log.source!);
       }
     }
-    
+
     return sources.toList()..sort();
   }
 
@@ -160,31 +161,31 @@ class LogViewer {
   static Map<String, dynamic> analyzeLogPatterns() {
     final logService = UnifiedLogService.instance;
     final logs = logService.logs;
-    
+
     // 分析错误模式
     final errorPatterns = <String, int>{};
     final warningPatterns = <String, int>{};
     final sourceActivity = <String, int>{};
-    
+
     for (final log in logs) {
       // 统计来源活动
       if (log.source != null) {
         sourceActivity[log.source!] = (sourceActivity[log.source!] ?? 0) + 1;
       }
-      
+
       // 分析错误模式
       if (log.level == UnifiedLogLevel.error && log.error != null) {
         final errorType = _extractErrorType(log.error!);
         errorPatterns[errorType] = (errorPatterns[errorType] ?? 0) + 1;
       }
-      
+
       // 分析警告模式
       if (log.level == UnifiedLogLevel.warning) {
         final warningType = _extractWarningType(log.message);
         warningPatterns[warningType] = (warningPatterns[warningType] ?? 0) + 1;
       }
     }
-    
+
     return {
       'errorPatterns': errorPatterns,
       'warningPatterns': warningPatterns,
@@ -202,18 +203,18 @@ class LogViewer {
     final stats = getLogStatistics();
     final recentErrors = getRecentErrors();
     final recentWarnings = getRecentWarnings();
-    
+
     final buffer = StringBuffer();
     buffer.writeln('# 心迹应用日志报告');
     buffer.writeln('生成时间: ${DateTime.now().toIso8601String()}');
     buffer.writeln();
-    
+
     // 基本统计
     buffer.writeln('## 基本统计');
     buffer.writeln('总日志数: ${stats['totalLogs']}');
     buffer.writeln('最后日志时间: ${stats['lastLogTime'] ?? '无'}');
     buffer.writeln();
-    
+
     // 日志级别分布
     buffer.writeln('## 日志级别分布');
     final logsByLevel = stats['logsByLevel'] as Map<String, dynamic>;
@@ -221,7 +222,7 @@ class LogViewer {
       buffer.writeln('${entry.key}: ${entry.value}');
     }
     buffer.writeln();
-    
+
     // 异常统计
     buffer.writeln('## 异常统计');
     final exceptionStats = stats['exceptionStats'] as Map<String, dynamic>;
@@ -231,28 +232,30 @@ class LogViewer {
       buffer.writeln('${entry.key}: ${entry.value}');
     }
     buffer.writeln();
-    
+
     // 最近错误
     buffer.writeln('## 最近错误 (最多10条)');
     for (final error in recentErrors) {
-      buffer.writeln('- [${error.timestamp.toIso8601String()}] ${error.source}: ${error.message}');
+      buffer.writeln(
+          '- [${error.timestamp.toIso8601String()}] ${error.source}: ${error.message}');
     }
     buffer.writeln();
-    
+
     // 最近警告
     buffer.writeln('## 最近警告 (最多10条)');
     for (final warning in recentWarnings) {
-      buffer.writeln('- [${warning.timestamp.toIso8601String()}] ${warning.source}: ${warning.message}');
+      buffer.writeln(
+          '- [${warning.timestamp.toIso8601String()}] ${warning.source}: ${warning.message}');
     }
     buffer.writeln();
-    
+
     // 性能统计
     buffer.writeln('## 性能统计');
     final perfStats = stats['performanceStats'] as Map<String, dynamic>;
     for (final entry in perfStats.entries) {
       buffer.writeln('${entry.key}: ${entry.value}');
     }
-    
+
     return buffer.toString();
   }
 

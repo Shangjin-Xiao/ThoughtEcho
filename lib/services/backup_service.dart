@@ -220,7 +220,8 @@ class BackupService {
   }) async {
     if (merge && clearExisting) {
       // 合并模式不允许清空现有数据
-      logDebug('importData 参数冲突: merge=true 与 clearExisting=true 互斥，自动将 clearExisting 设为 false');
+      logDebug(
+          'importData 参数冲突: merge=true 与 clearExisting=true 互斥，自动将 clearExisting 设为 false');
       clearExisting = false;
     }
 
@@ -400,7 +401,7 @@ class BackupService {
     final notesData = await _databaseService.exportDataAsMap();
     final settingsData = _settingsService.getAllSettingsForBackup();
     final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
-  final deviceId = settingsData['device_id'];
+    final deviceId = settingsData['device_id'];
 
     // 处理笔记数据中的媒体文件路径
     Map<String, dynamic> processedNotesData = notesData;
@@ -644,7 +645,7 @@ class BackupService {
   }
 
   /// 使用LWW策略导入数据
-  /// 
+  ///
   /// [filePath] - 备份文件路径
   /// [onProgress] - 进度回调
   /// [cancelToken] - 取消令牌
@@ -666,10 +667,15 @@ class BackupService {
         ),
         operationName: 'LWW数据导入',
       );
-      return result ?? MergeReport.start(sourceDevice: sourceDevice).addError('内存保护操作返回空结果').completed();
+      return result ??
+          MergeReport.start(sourceDevice: sourceDevice)
+              .addError('内存保护操作返回空结果')
+              .completed();
     } catch (e) {
       logError('LWW导入包装过程出错: $e', error: e, source: 'BackupService');
-      return MergeReport.start(sourceDevice: sourceDevice).addError('导入包装过程出错: $e').completed();
+      return MergeReport.start(sourceDevice: sourceDevice)
+          .addError('导入包装过程出错: $e')
+          .completed();
     }
   }
 
@@ -729,7 +735,8 @@ class BackupService {
         final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);
         if (hasMediaFiles) {
           final notesData = Map<String, dynamic>.from(backupData['notes']);
-          backupData['notes'] = await _convertMediaPathsInNotesForRestore(notesData);
+          backupData['notes'] =
+              await _convertMediaPathsInNotesForRestore(notesData);
         }
       }
 
@@ -738,7 +745,6 @@ class BackupService {
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
-
     } catch (e) {
       logError('LWW导入过程出错: $e', error: e, source: 'BackupService');
       final report = MergeReport.start(sourceDevice: sourceDevice);

@@ -9,7 +9,7 @@ import 'package:thoughtecho/utils/global_exception_handler.dart';
 /// 提供更好的异常处理和日志记录
 class SafeCompute {
   /// 安全执行compute操作
-  /// 
+  ///
   /// [callback] - 要在isolate中执行的函数
   /// [message] - 传递给函数的参数
   /// [debugLabel] - 调试标签，用于日志记录
@@ -23,19 +23,18 @@ class SafeCompute {
     R? fallbackValue,
   }) async {
     final operationName = debugLabel ?? 'SafeCompute';
-    
+
     try {
       AppLogger.d('开始执行Isolate操作: $operationName', source: 'SafeCompute');
-      
+
       // 使用超时包装compute操作
-      final result = await compute(callback, message)
-          .timeout(timeout, onTimeout: () {
+      final result =
+          await compute(callback, message).timeout(timeout, onTimeout: () {
         throw TimeoutException('Isolate操作超时', timeout);
       });
-      
+
       AppLogger.d('Isolate操作完成: $operationName', source: 'SafeCompute');
       return result;
-      
     } on TimeoutException catch (e, s) {
       GlobalExceptionHandler.recordException(
         e,
@@ -44,7 +43,6 @@ class SafeCompute {
         context: '$operationName - 超时',
       );
       return fallbackValue;
-      
     } catch (e, s) {
       GlobalExceptionHandler.recordException(
         e,
@@ -57,7 +55,7 @@ class SafeCompute {
   }
 
   /// 安全执行多个并发compute操作
-  /// 
+  ///
   /// [operations] - 操作列表，每个操作包含callback、message和debugLabel
   /// [timeout] - 单个操作的超时时间
   /// [maxConcurrency] - 最大并发数，默认为CPU核心数
@@ -66,42 +64,43 @@ class SafeCompute {
     Duration timeout = const Duration(seconds: 30),
     int? maxConcurrency,
   }) async {
-    final concurrency = maxConcurrency ??
-        (kDebugMode ? 2 : 4); // 调试模式使用较少并发数
-    
-    AppLogger.d('开始执行${operations.length}个并发Isolate操作，并发数: $concurrency', source: 'SafeCompute');
-    
+    final concurrency = maxConcurrency ?? (kDebugMode ? 2 : 4); // 调试模式使用较少并发数
+
+    AppLogger.d('开始执行${operations.length}个并发Isolate操作，并发数: $concurrency',
+        source: 'SafeCompute');
+
     final results = <R?>[];
-    
+
     // 分批处理操作
     for (int i = 0; i < operations.length; i += concurrency) {
       final batch = operations.skip(i).take(concurrency).toList();
-      
+
       final batchFutures = batch.map((op) => run(
-        op.callback,
-        op.message,
-        debugLabel: op.debugLabel,
-        timeout: timeout,
-        fallbackValue: op.fallbackValue,
-      ));
-      
+            op.callback,
+            op.message,
+            debugLabel: op.debugLabel,
+            timeout: timeout,
+            fallbackValue: op.fallbackValue,
+          ));
+
       final batchResults = await Future.wait(batchFutures);
       results.addAll(batchResults);
-      
+
       // 在批次之间稍作延迟，避免过度占用资源
       if (i + concurrency < operations.length) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
     }
-    
-    AppLogger.d('并发Isolate操作完成，成功: ${results.where((r) => r != null).length}/${operations.length}', 
+
+    AppLogger.d(
+        '并发Isolate操作完成，成功: ${results.where((r) => r != null).length}/${operations.length}',
         source: 'SafeCompute');
-    
+
     return results;
   }
 
   /// 创建一个可重用的Isolate
-  /// 
+  ///
   /// [entryPoint] - Isolate入口点
   /// [debugName] - 调试名称
   static Future<SafeIsolate?> createIsolate(
@@ -115,11 +114,11 @@ class SafeCompute {
         receivePort.sendPort,
         debugName: debugName,
       );
-      
-      AppLogger.d('创建Isolate成功: ${debugName ?? 'unnamed'}', source: 'SafeCompute');
-      
+
+      AppLogger.d('创建Isolate成功: ${debugName ?? 'unnamed'}',
+          source: 'SafeCompute');
+
       return SafeIsolate._(isolate, receivePort, debugName);
-      
     } catch (e, s) {
       GlobalExceptionHandler.recordException(
         e,
@@ -162,7 +161,7 @@ class SafeIsolate {
       AppLogger.w('尝试向已终止的Isolate发送消息: $_debugName', source: 'SafeIsolate');
       return;
     }
-    
+
     try {
       _receivePort.sendPort.send(message);
     } catch (e, s) {
@@ -181,14 +180,13 @@ class SafeIsolate {
   /// 终止Isolate
   void kill({int priority = Isolate.beforeNextEvent}) {
     if (_isKilled) return;
-    
+
     try {
       _isolate.kill(priority: priority);
       _receivePort.close();
       _isKilled = true;
-      
+
       AppLogger.d('Isolate已终止: $_debugName', source: 'SafeIsolate');
-      
     } catch (e, s) {
       GlobalExceptionHandler.recordException(
         e,

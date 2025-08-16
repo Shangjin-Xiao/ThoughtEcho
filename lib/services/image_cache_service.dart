@@ -146,7 +146,8 @@ class ImageCacheService {
 
   /// 预热缓存（可选）
   Future<void> preloadImages(List<String> svgContents) async {
-    AppLogger.i('开始预热图片缓存: ${svgContents.length} 个SVG', source: 'ImageCacheService');
+    AppLogger.i('开始预热图片缓存: ${svgContents.length} 个SVG',
+        source: 'ImageCacheService');
 
     for (int i = 0; i < svgContents.length && i < maxCacheSize; i++) {
       try {
@@ -194,7 +195,8 @@ class ImageCacheService {
         _removeCacheEntry(key);
       }
 
-      AppLogger.i('智能清理缓存: 移除 ${keysToRemove.length} 个条目', source: 'ImageCacheService');
+      AppLogger.i('智能清理缓存: 移除 ${keysToRemove.length} 个条目',
+          source: 'ImageCacheService');
     }
   }
 }

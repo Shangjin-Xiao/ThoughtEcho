@@ -30,18 +30,24 @@ void main() {
       ];
 
       // 备份阶段: 绝对 -> 相对
-      final toRelative = BackupService.testConvertDeltaMediaPaths(delta, appPath: appPath, toRelative: true);
+      final toRelative = BackupService.testConvertDeltaMediaPaths(delta,
+          appPath: appPath, toRelative: true);
       // 验证路径被裁剪
-  String norm(dynamic v) => v.toString().replaceAll('\\', '/');
-  expect(norm(toRelative[0]['insert']['image']), 'media/images/img1.png');
-  expect(norm(toRelative[1]['insert']['video']), 'media/videos/v1.mp4');
-  expect(norm(toRelative[2]['insert']['custom']['audio']), 'media/audios/a1.mp3');
+      String norm(dynamic v) => v.toString().replaceAll('\\', '/');
+      expect(norm(toRelative[0]['insert']['image']), 'media/images/img1.png');
+      expect(norm(toRelative[1]['insert']['video']), 'media/videos/v1.mp4');
+      expect(norm(toRelative[2]['insert']['custom']['audio']),
+          'media/audios/a1.mp3');
 
       // 还原阶段: 相对 -> 绝对
-      final restored = BackupService.testConvertDeltaMediaPaths(toRelative, appPath: appPath, toRelative: false);
-  expect(norm(restored[0]['insert']['image']), '/app/documents/media/images/img1.png');
-  expect(norm(restored[1]['insert']['video']), '/app/documents/media/videos/v1.mp4');
-  expect(norm(restored[2]['insert']['custom']['audio']), '/app/documents/media/audios/a1.mp3');
+      final restored = BackupService.testConvertDeltaMediaPaths(toRelative,
+          appPath: appPath, toRelative: false);
+      expect(norm(restored[0]['insert']['image']),
+          '/app/documents/media/images/img1.png');
+      expect(norm(restored[1]['insert']['video']),
+          '/app/documents/media/videos/v1.mp4');
+      expect(norm(restored[2]['insert']['custom']['audio']),
+          '/app/documents/media/audios/a1.mp3');
     });
   });
 }

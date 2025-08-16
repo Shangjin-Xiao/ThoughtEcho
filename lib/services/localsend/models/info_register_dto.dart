@@ -44,7 +44,7 @@ class InfoRegisterDto {
       alias: json['alias'] as String,
       version: json['version'] as String?,
       deviceModel: json['deviceModel'] as String?,
-      deviceType: json['deviceType'] != null 
+      deviceType: json['deviceType'] != null
           ? DeviceType.values.firstWhere(
               (e) => e.name == json['deviceType'],
               orElse: () => DeviceType.desktop,
@@ -64,7 +64,8 @@ class InfoRegisterDto {
 }
 
 extension InfoRegisterDtoExt on InfoRegisterDto {
-  Device toDevice(String ip, int ownPort, bool ownHttps, DiscoveryMethod? method) {
+  Device toDevice(
+      String ip, int ownPort, bool ownHttps, DiscoveryMethod? method) {
     return Device(
       signalingId: null,
       ip: ip,

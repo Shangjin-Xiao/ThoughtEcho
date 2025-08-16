@@ -20,8 +20,12 @@ class FileMetadata {
 
   static FileMetadata fromJson(Map<String, dynamic> json) {
     return FileMetadata(
-      lastModified: json['modified'] != null ? DateTime.parse(json['modified'] as String) : null,
-      lastAccessed: json['accessed'] != null ? DateTime.parse(json['accessed'] as String) : null,
+      lastModified: json['modified'] != null
+          ? DateTime.parse(json['modified'] as String)
+          : null,
+      lastAccessed: json['accessed'] != null
+          ? DateTime.parse(json['accessed'] as String)
+          : null,
     );
   }
 
@@ -106,7 +110,9 @@ class FileDto {
       fileType = decodeFromMime(rawFileType);
     } else {
       // parse legacy enum to internal internal enum
-      fileType = FileType.values.firstWhereOrNull((e) => e.name == rawFileType) ?? FileType.other;
+      fileType =
+          FileType.values.firstWhereOrNull((e) => e.name == rawFileType) ??
+              FileType.other;
     }
 
     return FileDto(
@@ -138,10 +144,9 @@ class FileDto {
           legacy == other.legacy;
 
   @override
-  int get hashCode => Object.hash(id, fileName, size, fileType, hash, preview, legacy);
+  int get hashCode =>
+      Object.hash(id, fileName, size, fileType, hash, preview, legacy);
 }
-
-
 
 FileType decodeFromMime(String mime) {
   if (mime.startsWith('image/')) {
