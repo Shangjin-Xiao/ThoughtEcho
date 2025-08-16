@@ -344,10 +344,16 @@ class NoteSyncService extends ChangeNotifier {
         target: targetDevice,
         files: [backupFile],
         background: true,
+        onProgress: (sent, total) {
+          // 打包阶段占 0-0.5 ，发送阶段占 0.5-0.9，余下 0.9-1.0 为完成收尾
+          final ratio = total == 0 ? 0.0 : sent / total;
+          final progress = 0.5 + ratio * 0.4; // 线性映射
+          _updateSyncStatus(SyncStatus.sending, '正在发送 ${(sent / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB', progress);
+        },
       );
 
       // 5. 完成
-      _updateSyncStatus(SyncStatus.completed, '同步包发送完成', 1.0);
+  _updateSyncStatus(SyncStatus.completed, '发送完成', 1.0);
 
       // 6. 清理临时文件
       try {

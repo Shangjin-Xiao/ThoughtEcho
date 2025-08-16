@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:http_server/http_server.dart';
+import '../device_identity_manager.dart';
+import 'package:uuid/uuid.dart';
 
 import 'constants.dart';
 import 'models/file_dto.dart';
@@ -17,58 +19,79 @@ import 'package:flutter/foundation.dart';
 class ReceiveController {
   final Function(String filePath)? onFileReceived;
   final Map<String, ReceiveSession> _sessions = {};
+  final Duration sessionTimeout = const Duration(minutes: 2);
+  Timer? _gcTimer;
   
   ReceiveController({this.onFileReceived});
 
+  void _startGcTimer() {
+    _gcTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
+      final now = DateTime.now();
+      final toRemove = <String>[];
+      _sessions.forEach((id, s) {
+        if (now.difference(s.lastActivity).compareTo(sessionTimeout) > 0) {
+          toRemove.add(id);
+        }
+      });
+      for (final id in toRemove) {
+        _sessions.remove(id);
+      }
+    });
+  }
+
   /// Handle info request - returns device information
   Map<String, dynamic> handleInfoRequest() {
+    // 异步预热指纹（不阻塞）
+    DeviceIdentityManager.I.getFingerprint();
     return {
       'alias': 'ThoughtEcho',
       'version': protocolVersion,
       'deviceModel': 'ThoughtEcho App',
       'deviceType': 'mobile',
-      'fingerprint': _getStableFingerprint(),
+      // 指纹异步载入期间可能为空，用占位符避免空字符串
+      'fingerprint': _cachedFingerprint ?? 'loading',
       'download': true,
     };
   }
 
-  /// 生成稳定的设备指纹
-  String _getStableFingerprint() {
-    // 使用稳定的设备标识符，而不是时间戳
-    final hostname = Platform.localHostname;
-    final os = Platform.operatingSystem;
-    // 使用当前进程ID与主机名/系统组合，确保稳定
-    final processId = pid;
-    return 'thoughtecho-$hostname-$os-$processId';
+  String? _cachedFingerprint;
+  Future<void> _ensureFingerprint() async {
+    _cachedFingerprint ??= await DeviceIdentityManager.I.getFingerprint();
   }
 
   /// Handle prepare upload request
   Map<String, dynamic> handlePrepareUpload(Map<String, dynamic> requestData) {
     try {
+      // 确保指纹已就绪
+      _ensureFingerprint();
       final prepareRequest = PrepareUploadRequestDto.fromJson(requestData);
       
       // Create session
-      final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+      final sessionId = const Uuid().v4();
       final session = ReceiveSession(
         sessionId: sessionId,
         senderInfo: prepareRequest.info,
         files: prepareRequest.files,
         status: SessionStatus.waiting,
+        lastActivity: DateTime.now(),
       );
       
       _sessions[sessionId] = session;
       
       // Auto-accept all files for ThoughtEcho
       final fileTokens = <String, String>{};
+      final uuid = const Uuid();
       for (final fileId in prepareRequest.files.keys) {
-        fileTokens[fileId] = 'token_$fileId';
+        fileTokens[fileId] = uuid.v4();
       }
       
       // Update session status
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.sending,
         fileTokens: fileTokens,
+        lastActivity: DateTime.now(),
       );
+      _startGcTimer();
       
       // Create response
       final response = PrepareUploadResponseDto(
@@ -93,14 +116,14 @@ class ReceiveController {
     File? tempFile;
     try {
       debugPrint('接收文件上传请求: sessionId=$sessionId, fileId=$fileId');
-      final session = _sessions[sessionId];
+  final session = _sessions[sessionId];
       if (session == null) {
         debugPrint('找不到会话: $sessionId');
         throw Exception('Session not found');
       }
 
       // Validate token
-      if (session.fileTokens?[fileId] != token) {
+  if (session.fileTokens?[fileId] != token) {
         debugPrint('令牌无效: 预期 ${session.fileTokens?[fileId]}, 实际 $token');
         throw Exception('Invalid token');
       }
@@ -110,6 +133,16 @@ class ReceiveController {
       if (fileDto == null) {
         debugPrint('找不到文件: $fileId');
         throw Exception('File not found');
+      }
+
+      // 基础校验：仅要求大于0
+      if (fileDto.size <= 0) {
+        throw Exception('Invalid file size');
+      }
+      final lowerName = fileDto.fileName.toLowerCase();
+      const blockedExtensions = ['.exe', '.bat', '.sh', '.cmd'];
+      if (blockedExtensions.any((b) => lowerName.endsWith(b))) {
+        throw Exception('Blocked file type');
       }
 
       // Create temporary file path
@@ -126,7 +159,7 @@ class ReceiveController {
         for (final part in parts) {
           if (part is HttpBodyFileUpload) {
             // Prefer a part with a filename
-            final filename = part.filename ?? fileName;
+            final filename = part.filename;
             final actualPath = '${tempDir.path}/thoughtecho_${timestamp}_${_sanitizeFileName(filename)}';
             tempFile = File(actualPath);
 
@@ -182,6 +215,16 @@ class ReceiveController {
       if (onFileReceived != null && tempFile != null) {
         debugPrint('通知上层服务接收到文件');
         onFileReceived!(tempFile.path);
+        // 简单延迟清理：由上层复制/处理后 30 秒删除
+        final pathToDelete = tempFile.path;
+        Future.delayed(const Duration(seconds: 30), () async {
+          try {
+            final f = File(pathToDelete);
+            if (await f.exists()) {
+              await f.delete();
+            }
+          } catch (_) {}
+        });
       }
 
       debugPrint('文件上传处理完成: ${fileDto.fileName} -> ${tempFile?.path}');
@@ -233,6 +276,7 @@ class ReceiveController {
   /// Dispose resources
   void dispose() {
     _sessions.clear();
+  _gcTimer?.cancel();
   }
 }
 
@@ -243,6 +287,7 @@ class ReceiveSession {
   final Map<String, FileDto> files;
   final SessionStatus status;
   final Map<String, String>? fileTokens;
+  final DateTime lastActivity;
   
   const ReceiveSession({
     required this.sessionId,
@@ -250,6 +295,7 @@ class ReceiveSession {
     required this.files,
     required this.status,
     this.fileTokens,
+  required this.lastActivity,
   });
   
   ReceiveSession copyWith({
@@ -258,6 +304,7 @@ class ReceiveSession {
     Map<String, FileDto>? files,
     SessionStatus? status,
     Map<String, String>? fileTokens,
+    DateTime? lastActivity,
   }) {
     return ReceiveSession(
       sessionId: sessionId ?? this.sessionId,
@@ -265,6 +312,7 @@ class ReceiveSession {
       files: files ?? this.files,
       status: status ?? this.status,
       fileTokens: fileTokens ?? this.fileTokens,
+      lastActivity: lastActivity ?? this.lastActivity,
     );
   }
 }

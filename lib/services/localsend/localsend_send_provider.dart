@@ -15,6 +15,7 @@ import 'models/session_status.dart';
 import 'constants.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import '../device_identity_manager.dart';
 
 const _uuid = Uuid();
 
@@ -28,6 +29,7 @@ class LocalSendProvider {
     required Device target,
     required List<File> files,
     bool background = true,
+  void Function(int sentBytes, int totalBytes)? onProgress,
   }) async {
     final sessionId = _uuid.v4();
     
@@ -45,7 +47,7 @@ class LocalSendProvider {
       // 0. Optional handshake: verify /info endpoint for better reliability
       await _handshakeWithTarget(target);
 
-      // Prepare upload request
+  // Prepare upload request
       final requestDto = PrepareUploadRequestDto(
         info: _buildInfoRegisterDto(),
         files: {
@@ -117,8 +119,8 @@ class LocalSendProvider {
             fileTokens: responseDto.files,
           );
 
-          // Start file uploads
-          await _uploadFiles(sessionId);
+          // Start file uploads with progress
+          await _uploadFiles(sessionId, onProgress: onProgress);
 
           return sessionId;
         } else {
@@ -137,11 +139,19 @@ class LocalSendProvider {
   }
   
   /// Upload files for a session with enhanced error handling and progress tracking
-  Future<void> _uploadFiles(String sessionId) async {
+  Future<void> _uploadFiles(String sessionId, {void Function(int,int)? onProgress}) async {
     final session = _sessions[sessionId];
     if (session == null) return;
 
     try {
+      // 计算总大小
+      int totalSize = 0;
+      for (final f in session.files) {
+        if (await f.exists()) {
+          totalSize += await f.length();
+        }
+      }
+      int sentBytes = 0;
       for (int i = 0; i < session.files.length; i++) {
         final file = session.files[i];
         final fileId = 'file_$i';
@@ -161,7 +171,19 @@ class LocalSendProvider {
         debugPrint('准备上传文件: ${file.path} (大小: $fileSize 字节)');
 
         // Upload file with retry mechanism
-        await _uploadSingleFile(session, fileId, token, file, fileSize);
+        await _uploadSingleFile(
+          session,
+          fileId,
+          token,
+          file,
+          fileSize,
+          onChunk: (c) {
+            sentBytes += c;
+            if (onProgress != null) {
+              onProgress(sentBytes, totalSize == 0 ? 1 : totalSize);
+            }
+          },
+        );
       }
 
       // Mark as completed
@@ -187,6 +209,7 @@ class LocalSendProvider {
     String token,
     File file,
     int fileSize,
+  {void Function(int chunkBytes)? onChunk}
   ) async {
     const maxRetries = 3;
     int attempt = 0;
@@ -202,12 +225,22 @@ class LocalSendProvider {
         debugPrint('上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)');
 
         final request = http.MultipartRequest('POST', Uri.parse(url));
-
-        // Add headers
         request.headers['User-Agent'] = 'ThoughtEcho/1.0';
 
-        // Add file
-        request.files.add(await http.MultipartFile.fromPath('file', file.path));
+        // 构建带进度的流
+        final stream = file.openRead().transform<List<int>>(
+          StreamTransformer.fromHandlers(handleData: (List<int> data, EventSink<List<int>> sink) {
+            sink.add(data);
+            onChunk?.call(data.length);
+          }),
+        );
+        final multipart = http.MultipartFile(
+          'file',
+          stream,
+          fileSize,
+          filename: file.path.split('/').last,
+        );
+        request.files.add(multipart);
 
         // Send request with timeout
         final response = await request.send().timeout(const Duration(minutes: 5));
@@ -225,7 +258,18 @@ class LocalSendProvider {
           debugPrint('v2上传返回404，尝试v1路由: $url');
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
-          legacyReq.files.add(await http.MultipartFile.fromPath('file', file.path));
+          final legacyStream = file.openRead().transform<List<int>>(
+            StreamTransformer.fromHandlers(handleData: (List<int> data, EventSink<List<int>> sink) {
+              sink.add(data);
+              onChunk?.call(data.length);
+            }),
+          );
+          legacyReq.files.add(http.MultipartFile(
+            'file',
+            legacyStream,
+            fileSize,
+            filename: file.path.split('/').last,
+          ));
           final legacyResp = await legacyReq.send().timeout(const Duration(minutes: 5));
           if (legacyResp.statusCode == 200) {
             debugPrint('文件上传成功(v1): ${file.path}');
@@ -316,10 +360,11 @@ class LocalSendProvider {
 
   /// Build a stable sender info to be compatible with LocalSend
   InfoRegisterDto _buildInfoRegisterDto() {
-    final hostname = Platform.localHostname;
-    final os = Platform.operatingSystem;
-    final processId = pid; // from dart:io
-    final stableFingerprint = 'thoughtecho-$hostname-$os-$processId';
+  // 使用持久化设备指纹
+  // 这里同步获取缓存值；若尚未加载完成, 返回一个占位符稍后握手再更新（不阻塞主流程）
+  // 为确保尽快加载，在进入构造前主动触发异步加载
+  DeviceIdentityManager.I.getFingerprint();
+  final stableFingerprint = DeviceIdentityManager.I.currentFingerprint ?? 'loading';
     return InfoRegisterDto(
       alias: 'ThoughtEcho',
       version: protocolVersion,

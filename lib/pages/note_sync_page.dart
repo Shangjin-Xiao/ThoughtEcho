@@ -460,6 +460,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                         color: Colors.white70,
                                         fontSize: 12,
                                       ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                 ],
                               ),

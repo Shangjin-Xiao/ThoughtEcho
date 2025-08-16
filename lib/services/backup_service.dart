@@ -11,6 +11,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'streaming_backup_processor.dart';
+import 'package:meta/meta.dart';
 
 /// 备份与恢复服务
 ///
@@ -533,7 +534,8 @@ class BackupService {
   }
 
   /// 递归处理 Delta JSON 中的媒体文件路径
-  dynamic _convertDeltaMediaPaths(
+  // 提取为 static 便于测试；递归转换 Delta 中的媒体路径
+  static dynamic _convertDeltaMediaPaths(
     dynamic deltaJson,
     String appPath,
     bool toRelative,
@@ -604,8 +606,19 @@ class BackupService {
     }
   }
 
-  /// 转换单个媒体文件路径
-  String _convertSingleMediaPath(
+  /// 测试辅助：直接转换一段 Delta JSON 的媒体路径（不访问文件系统）
+  /// toRelative=true 模拟备份阶段，false 模拟还原阶段。
+  @visibleForTesting
+  static dynamic testConvertDeltaMediaPaths(
+    dynamic deltaJson, {
+    required String appPath,
+    required bool toRelative,
+  }) {
+    return _convertDeltaMediaPaths(deltaJson, appPath, toRelative);
+  }
+
+  /// 转换单个媒体文件路径 (static 便于测试)
+  static String _convertSingleMediaPath(
     String originalPath,
     String appPath,
     bool toRelative,

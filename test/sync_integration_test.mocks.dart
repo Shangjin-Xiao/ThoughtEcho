@@ -18,6 +18,7 @@ import 'package:thoughtecho/models/note_category.dart' as _i12;
 import 'package:thoughtecho/models/quote_model.dart' as _i13;
 import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i17;
 import 'package:thoughtecho/services/backup_service.dart' as _i7;
+import 'package:thoughtecho/models/merge_report.dart' as _i18;
 import 'package:thoughtecho/services/database_service.dart' as _i11;
 import 'package:thoughtecho/services/large_file_manager.dart' as _i9;
 import 'package:thoughtecho/services/settings_service.dart' as _i15;
@@ -132,14 +133,16 @@ class MockBackupService extends _i1.Mock implements _i7.BackupService {
       ) as _i8.Future<String>);
 
   @override
-  _i8.Future<void> importData(
+  _i8.Future<_i18.MergeReport?> importData(
     String? filePath, {
     bool? clearExisting = true,
+    bool? merge = false,
     dynamic Function(
       int,
       int,
     )? onProgress,
     _i9.CancelToken? cancelToken,
+    String? sourceDevice,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -147,13 +150,15 @@ class MockBackupService extends _i1.Mock implements _i7.BackupService {
           [filePath],
           {
             #clearExisting: clearExisting,
+            #merge: merge,
             #onProgress: onProgress,
             #cancelToken: cancelToken,
+            #sourceDevice: sourceDevice,
           },
         ),
-        returnValue: _i8.Future<void>.value(),
-        returnValueForMissingStub: _i8.Future<void>.value(),
-      ) as _i8.Future<void>);
+        returnValue: _i8.Future<_i18.MergeReport?>.value(),
+        returnValueForMissingStub: _i8.Future<_i18.MergeReport?>.value(),
+      ) as _i8.Future<_i18.MergeReport?>);
 
   @override
   _i8.Future<bool> validateBackupFile(String? filePath) => (super.noSuchMethod(

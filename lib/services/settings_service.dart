@@ -447,7 +447,7 @@ class SettingsService extends ChangeNotifier {
   String getOrCreateDeviceId() {
     final existing = _mmkv.getString(_deviceIdKey);
     if (existing != null && existing.isNotEmpty) return existing;
-    final newId = DateTime.now().millisecondsSinceEpoch.toString() + '_' + UniqueKey().hashCode.toRadixString(16);
+    final newId = '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
     _mmkv.setString(_deviceIdKey, newId);
     return newId;
   }

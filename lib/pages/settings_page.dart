@@ -21,7 +21,7 @@ import 'note_sync_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
-import 'annual_report_page.dart';
+import 'annual_report_page.dart' ;
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 
@@ -700,6 +700,19 @@ class _SettingsPageState extends State<SettingsPage> {
                                 'assets/icon.png',
                                 width: 64,
                                 height: 64,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(Icons.apps, color: Colors.white, size: 36),
+                                    ),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 12),
                               const Text('一款帮助你记录和分析思想的应用。'),
@@ -731,15 +744,14 @@ class _SettingsPageState extends State<SettingsPage> {
                                 },
                                 icon: const Icon(Icons.article_outlined),
                                 label: const Text('查看许可证信息'),
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size.fromHeight(40),
-                                ),
+                                style: _primaryButtonStyle(context),
                               ),
                             ],
                           ),
                         ),
                         actions: [
                           TextButton(
+                            style: _textButtonStyle(dialogContext),
                             onPressed: () => Navigator.pop(dialogContext),
                             child: const Text('关闭'),
                           ),
@@ -800,32 +812,26 @@ class _SettingsPageState extends State<SettingsPage> {
     required String text,
     required String url,
   }) {
-    return InkWell(
-      onTap: () => _launchUrl(url),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center, // 居中显示
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: Theme.of(context).colorScheme.primary,
-            ), // 图标稍大一点
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                // decoration: TextDecoration.underline, // 可选：添加下划线强调链接
-              ),
-            ),
-          ],
-        ),
+    return Center(
+      child: ElevatedButton.icon(
+        style: _primaryButtonStyle(context),
+        onPressed: () => _launchUrl(url),
+        icon: Icon(icon, size: 18),
+        label: Text(text),
       ),
     );
   }
   // --- 辅助方法结束 ---
+
+  // 统一按钮样式方法，作为类的私有工具方法，便于在文件内复用
+  ButtonStyle _primaryButtonStyle(BuildContext context) => ElevatedButton.styleFrom(
+        minimumSize: const Size.fromHeight(44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      );
+
+  ButtonStyle _textButtonStyle(BuildContext context) => TextButton.styleFrom(
+        minimumSize: const Size.fromHeight(44),
+      );
 
   // 构建剪贴板监控设置项
   Widget _buildClipboardMonitoringItem(BuildContext context) {
