@@ -103,7 +103,7 @@ void main() {
               categoryId: 'cat1',
               tagIds: [],
             ),
-            Quote(
+            const Quote(
               id: 'quote2',
               content: 'Test quote 1', // 重复内容
               // 使用固定时间避免时间依赖 (早于 quote1 的 2024-01-01T00:00:00.000Z)

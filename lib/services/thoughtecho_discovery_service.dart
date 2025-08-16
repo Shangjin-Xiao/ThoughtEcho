@@ -16,19 +16,33 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   final List<RawDatagramSocket> _sockets = [];
   Timer? _announcementTimer;
   int _actualServerPort = defaultPort; // 实际服务器端口
-  late final String _deviceFingerprint; // 设备指纹，在初始化时生成一次
+  String _deviceFingerprint = 'initializing'; // 设备指纹，异步获取
+  bool _fingerprintReady = false; // 指纹是否已获取
 
   List<Device> get devices => List.unmodifiable(_devices);
   bool get isScanning => _isScanning;
 
-  /// 构造函数，生成唯一的设备指纹
-  ThoughtEchoDiscoveryService() : _deviceFingerprint = 'initializing' {
-    // initialize real fingerprint asynchronously
-    DeviceIdentityManager.I.getFingerprint().then((fp) {
-      _deviceFingerprint = fp;
-      logDebug('discovery_fp_ready fp=$fp', source: 'LocalSend');
-    });
+  /// 构造函数：开始异步获取指纹
+  ThoughtEchoDiscoveryService() {
+    _ensureFingerprint();
     debugPrint('设备发现服务初始化，设备指纹(占位): $_deviceFingerprint');
+  }
+
+  /// 幂等获取设备指纹
+  Future<void> _ensureFingerprint() async {
+    if (_fingerprintReady && _deviceFingerprint != 'initializing') return;
+    try {
+      final fp = await DeviceIdentityManager.I.getFingerprint();
+      if (!_fingerprintReady) {
+        _deviceFingerprint = fp;
+        _fingerprintReady = true;
+        logDebug('discovery_fp_ready fp=$fp', source: 'LocalSend');
+      } else {
+        // 已就绪则忽略后续结果
+      }
+    } catch (e) {
+      logWarning('discovery_fp_fetch_fail error=$e', source: 'LocalSend');
+    }
   }
 
   /// 设置实际的服务器端口
@@ -54,14 +68,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
     try {
       // 确保指纹已就绪，避免首次广播使用占位
-      if (_deviceFingerprint == 'initializing') {
-        try {
-          final fp = await DeviceIdentityManager.I.getFingerprint();
-          _deviceFingerprint = fp;
-          logDebug('discovery_fp_confirm fp=$fp', source: 'LocalSend');
-        } catch (e) {
-          logWarning('discovery_fp_wait_fail error=$e', source: 'LocalSend');
-        }
+      if (_deviceFingerprint == 'initializing' || !_fingerprintReady) {
+        await _ensureFingerprint();
       }
 
       // 启动UDP组播监听
@@ -246,6 +254,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       return;
     }
 
+    if (!_fingerprintReady) {
+      await _ensureFingerprint();
+    }
     final fingerprint = _getDeviceFingerprint();
     final dto = MulticastDto(
       alias: 'ThoughtEcho-${Platform.localHostname}',
@@ -346,6 +357,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     }
 
     try {
+      if (!_fingerprintReady) {
+        await _ensureFingerprint();
+      }
       final fingerprint = _getDeviceFingerprint();
       debugPrint('创建设备公告，设备指纹: $fingerprint');
 

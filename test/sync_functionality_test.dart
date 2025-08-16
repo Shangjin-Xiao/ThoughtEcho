@@ -108,7 +108,7 @@ void main() {
       });
 
       test('发现超时配置测试', () {
-        expect(defaultDiscoveryTimeout, 500);
+  expect(defaultDiscoveryTimeout, 30000);
       });
     });
   });

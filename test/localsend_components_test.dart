@@ -10,7 +10,7 @@ void main() {
       // 测试常量定义
       expect(protocolVersion, '2.1');
       expect(defaultPort, 53320);
-      expect(defaultDiscoveryTimeout, 500);
+  expect(defaultDiscoveryTimeout, 30000);
     });
 
     test('FileDto 测试', () {
