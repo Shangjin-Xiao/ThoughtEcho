@@ -53,11 +53,22 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 确保指纹已就绪，避免首次广播使用占位
+      if (_deviceFingerprint == 'initializing') {
+        try {
+          final fp = await DeviceIdentityManager.I.getFingerprint();
+          _deviceFingerprint = fp;
+          logDebug('discovery_fp_confirm fp=$fp', source: 'LocalSend');
+        } catch (e) {
+          logWarning('discovery_fp_wait_fail error=$e', source: 'LocalSend');
+        }
+      }
+
       // 启动UDP组播监听
       await _startMulticastListener();
 
       // 发送公告消息
-      await _sendAnnouncement();
+  await _sendAnnouncement();
 
       // 定期发送公告
       _announcementTimer = Timer.periodic(const Duration(seconds: 5), (_) {
