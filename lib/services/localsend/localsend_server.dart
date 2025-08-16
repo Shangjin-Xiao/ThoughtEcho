@@ -137,6 +137,31 @@ class LocalSendServer {
             request.method == 'GET') {
           responseData = _receiveController.handleInfoRequest();
           logDebug('info_ok', source: 'LocalSend');
+        } else if ((path == '/api/localsend/v2/register' ||
+                path == '/api/localsend/v1/register') &&
+            (request.method == 'POST' || request.method == 'GET')) {
+          // Some LocalSend clients call /register (POST) as initial handshake.
+          // We accept both GET and POST for robustness and simply answer with the same
+          // payload as /info so the peer can obtain our meta information.
+          try {
+            if (request.method == 'POST') {
+              // Drain body to avoid socket issues (ignore content for now)
+              final bodyBytes = await request.fold<List<int>>(
+                  <int>[], (p, e) => p..addAll(e));
+              if (bodyBytes.isNotEmpty) {
+                logDebug('register_body_len=${bodyBytes.length}',
+                    source: 'LocalSend');
+              }
+            }
+          } catch (e) {
+            logWarning('register_body_read_fail error=$e',
+                source: 'LocalSend');
+          }
+          responseData = _receiveController.handleInfoRequest();
+          // Spec in original LocalSend also returns a token; we currently don't need it.
+          // Add placeholder for future compatibility.
+          responseData['token'] = 'compat';
+          logDebug('register_ok', source: 'LocalSend');
         } else if ((path == '/api/localsend/v2/prepare-upload' ||
                 path == '/api/localsend/v1/send-request') &&
             request.method == 'POST') {
