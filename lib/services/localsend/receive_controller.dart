@@ -19,14 +19,21 @@ class ReceiveController {
   final Function(String filePath)? onFileReceived;
   final void Function(int received, int total)? onReceiveProgress;
   final void Function(String sessionId, int totalBytes, String senderAlias)?
-      onSessionCreated;
+    onSessionCreated; // 通知有新的会话（等待审批）
+  final Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
+    onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
+  final bool Function(String? fingerprint)? consumePreApproval; // 若返回true表示已存在预批准并已消费
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
   String? _cachedFingerprint; // initialized explicitly before serving info
 
   ReceiveController(
-      {this.onFileReceived, this.onReceiveProgress, this.onSessionCreated});
+      {this.onFileReceived,
+      this.onReceiveProgress,
+      this.onSessionCreated,
+      this.onApprovalNeeded,
+      this.consumePreApproval});
 
   void _startGcTimer() {
     _gcTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
@@ -67,7 +74,8 @@ class ReceiveController {
   }
 
   /// Handle prepare upload request
-  Map<String, dynamic> handlePrepareUpload(Map<String, dynamic> requestData) {
+  Future<Map<String, dynamic>> handlePrepareUpload(
+      Map<String, dynamic> requestData) async {
     try {
       // 确保指纹已就绪
       // fingerprint already initialized by server; if null attempt once lazily
@@ -88,25 +96,51 @@ class ReceiveController {
 
       _sessions[sessionId] = session;
 
-      // Auto-accept all files for ThoughtEcho
+      // 计算总大小
+      int totalBytes = 0;
+      for (final f in prepareRequest.files.values) {
+        totalBytes += f.size;
+      }
+
+      // 预批准检测（ handshake 已批准 ）
+      bool approved = false;
+      final senderFp = prepareRequest.info.fingerprint;
+      if (consumePreApproval?.call(senderFp) == true) {
+        approved = true;
+      } else {
+        // 通知 UI 有新会话（等待审批）
+        try {
+          onSessionCreated?.call(
+              sessionId, totalBytes, prepareRequest.info.alias);
+        } catch (_) {}
+
+        approved = true; // 默认通过除非显式需要用户确认
+        if (onApprovalNeeded != null) {
+          try {
+            approved = await onApprovalNeeded!(
+                sessionId, totalBytes, prepareRequest.info.alias);
+          } catch (_) {
+            approved = false;
+          }
+        }
+      }
+
+      if (!approved) {
+        // 标记取消
+        _sessions[sessionId] = session.copyWith(
+          status: SessionStatus.canceledByReceiver,
+          lastActivity: DateTime.now(),
+        );
+        throw Exception('接收端已拒绝');
+      }
+
+      // 生成 tokens（审批通过）
       final fileTokens = <String, String>{};
       const uuid = Uuid();
       for (final fileId in prepareRequest.files.keys) {
         fileTokens[fileId] = uuid.v4();
       }
 
-      // 计算总大小
-      int totalBytes = 0;
-      for (final f in prepareRequest.files.values) {
-        totalBytes += f.size;
-      }
-      // 回调通知 session 创建（包含总大小与别名）
-      try {
-        onSessionCreated?.call(
-            sessionId, totalBytes, prepareRequest.info.alias);
-      } catch (_) {}
-
-      // Update session status
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.sending,
         fileTokens: fileTokens,
@@ -114,12 +148,8 @@ class ReceiveController {
       );
       _startGcTimer();
 
-      // Create response
-      final response = PrepareUploadResponseDto(
-        sessionId: sessionId,
-        files: fileTokens,
-      );
-
+      final response =
+          PrepareUploadResponseDto(sessionId: sessionId, files: fileTokens);
       return response.toJson();
     } catch (e) {
       throw Exception('Invalid prepare upload request: $e');

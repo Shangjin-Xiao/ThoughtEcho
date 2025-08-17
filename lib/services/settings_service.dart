@@ -34,10 +34,15 @@ class SettingsService extends ChangeNotifier {
 
   static const String _lastVersionKey = 'lastVersion';
   static const String _deviceIdKey = 'device_id_v1'; // 新增：设备唯一ID缓存键
+  static const String _syncSkipConfirmKey = 'sync_skip_confirm';
+  static const String _syncDefaultIncludeMediaKey = 'sync_default_include_media';
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
   MultiAISettings get multiAISettings => _multiAISettings; // 新增getter
+  bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
+  bool get syncDefaultIncludeMedia =>
+      _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
 
   SettingsService(this._prefs);
 
@@ -53,6 +58,16 @@ class SettingsService extends ChangeNotifier {
     await service._loadSettings();
     // 返回初始化完成的实例
     return service;
+  }
+
+  Future<void> setSyncSkipConfirm(bool value) async {
+    await _mmkv.setBool(_syncSkipConfirmKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setSyncDefaultIncludeMedia(bool value) async {
+    await _mmkv.setBool(_syncDefaultIncludeMediaKey, value);
+    notifyListeners();
   }
 
   Future<void> _loadSettings() async {

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/utils/sync_network_tester.dart';
+import 'package:thoughtecho/services/device_identity_manager.dart';
 
 /// 笔记同步页面
 ///
@@ -24,6 +25,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   bool _isInitializing = true;
   String _initializationError = '';
   NoteSyncService? _syncService;
+  String? _localFingerprint; // 本机完整指纹
+  String? _localShortFingerprint; // 本机短指纹 #XXXXXX
   // 流式发现新增字段
   StreamSubscription<List<Device>>? _discoverySub;
   VoidCallback? _cancelDiscovery;
@@ -32,11 +35,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   static const int _uiDiscoveryTimeoutMs =
       30000; // 与 defaultDiscoveryTimeout 对齐
   bool _syncDialogVisible = false;
+  bool _sendIncludeMedia = true; // 发送时是否包含媒体文件（用户可选）
+  bool _receiveAcceptDialogShown = false; // 接收端是否已弹出确认
 
   @override
   void initState() {
     super.initState();
     _initializeSyncService();
+  _loadLocalFingerprint();
   }
 
   @override
@@ -111,6 +117,21 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadLocalFingerprint() async {
+    try {
+      // 延迟到下一帧，避免与Provider读取竞争
+      await Future.delayed(Duration.zero);
+      final fp = await DeviceIdentityManager.I.getFingerprint();
+      if (!mounted) return;
+      setState(() {
+        _localFingerprint = fp;
+        _localShortFingerprint = _shortFingerprint(fp);
+      });
+    } catch (_) {
+      // 忽略失败，保持为空
     }
   }
 
@@ -334,6 +355,50 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Future<void> _sendNotesToDevice(Device device) async {
     if (!mounted) return;
 
+    // 先弹出确认对话框（是否包含媒体文件）
+    bool includeMedia = _sendIncludeMedia;
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) {
+            bool localInclude = includeMedia;
+            return StatefulBuilder(builder: (ctx, setLocal) {
+              return AlertDialog(
+                title: const Text('发送确认'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('将向设备 “${device.alias}” 发送全部笔记数据。'),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('包含媒体文件'),
+                      subtitle: const Text('图片/音频/视频等，可能增加体积和耗时'),
+                      value: localInclude,
+                      onChanged: (v) => setLocal(() => localInclude = v ?? true),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('开始发送'),
+                  ),
+                ],
+              );
+            });
+          },
+        ) ??
+        false;
+    if (!confirmed) return;
+
+    // 保存用户选择
+    _sendIncludeMedia = includeMedia;
+
     setState(() {
       _isSending = true;
       _sendingFingerprint = device.fingerprint;
@@ -341,18 +406,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     try {
       final syncService = context.read<NoteSyncService>();
-
-      // 使用新的createSyncPackage方法
-      final sessionId = await syncService.createSyncPackage(device);
-
+      final sessionId =
+          await syncService.createSyncPackage(device, includeMediaFiles: includeMedia);
       if (mounted) {
-        final String displayId = sessionId.length <= 8
+        final displayId = sessionId.length <= 8
             ? sessionId
             : '${sessionId.substring(0, 8)}...';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('笔记发送成功！会话ID: $displayId'),
-          ),
+          SnackBar(content: Text('笔记发送启动，会话ID: $displayId')),
         );
       }
     } catch (e) {
@@ -542,6 +603,59 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         Text('发现 ${_nearbyDevices.length} 台设备'),
                       ],
                     ],
+                  ),
+                  // 本机短指纹标识行
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Row(
+                      children: [
+                        Tooltip(
+                          message: '# 后 6 位是设备指纹，用于区分同名设备，可在两端核对是否一致。',
+                          child: Icon(Icons.fingerprint,
+                              size: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _localShortFingerprint == null
+                              ? '本机标识获取中...'
+                              : '本机标识 #$_localShortFingerprint',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color
+                                ?.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        if (_localShortFingerprint != null)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 0),
+                              minimumSize: const Size(0, 28),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              final full = _localFingerprint ?? '';
+                              Clipboard.setData(ClipboardData(text: full));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('已复制指纹: $full'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              '复制',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
 
                   // 同步状态显示
@@ -809,6 +923,69 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         service.syncStatus == SyncStatus.failed ||
         service.syncStatus == SyncStatus.idle;
 
+    // 单独处理接收审批弹窗（在主进度弹窗之外）
+    if (service.awaitingUserApproval && !_receiveAcceptDialogShown) {
+      _receiveAcceptDialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) {
+            final sizeMB = service.pendingReceiveTotalBytes == null
+                ? '?'
+                : (service.pendingReceiveTotalBytes! / 1024 / 1024)
+                    .toStringAsFixed(1);
+            bool dontAskAgain = false;
+            return StatefulBuilder(builder: (c, setLocal) {
+              return AlertDialog(
+                title: const Text('接收同步请求'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('设备 “${service.receiveSenderAlias ?? '对方'}” 想要向你同步笔记数据（约 $sizeMB MB）。是否接受？'),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      value: dontAskAgain,
+                      onChanged: (v) => setLocal(() => dontAskAgain = v ?? false),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('以后不再提示'),
+                      dense: true,
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      service.rejectIncoming();
+                      Navigator.of(ctx).pop();
+                    },
+                    child: const Text('拒绝'),
+                  ),
+                  FilledButton(
+                    onPressed: () async {
+                      if (dontAskAgain) {
+                        await service.setSkipSyncConfirmation(true);
+                      }
+                      service.approveIncoming();
+                      Navigator.of(ctx).pop();
+                    },
+                    child: const Text('接受'),
+                  ),
+                ],
+              );
+            });
+          },
+        ).then((_) {
+          // 若审批后仍在等待（异常情况）重置标记允许再次弹出
+          if (mounted && service.awaitingUserApproval) {
+            _receiveAcceptDialogShown = false;
+          }
+        });
+      });
+    }
+
     if (active && !_syncDialogVisible) {
       _syncDialogVisible = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -844,6 +1021,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             s.syncStatusMessage,
                             style: const TextStyle(fontSize: 13),
                           ),
+                          // 审批流程改为独立弹窗，不在这里显示
                         ],
                       ),
                     ),
@@ -879,11 +1057,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           },
         ).then((_) {
           _syncDialogVisible = false;
+          _receiveAcceptDialogShown = false; // 重置（审批弹窗标志）
         });
       });
     } else if (terminal && _syncDialogVisible) {
       // 终态：更新对话框为可关闭状态（不立即强制关闭，给用户查看结果）
-      if (service.syncStatus == SyncStatus.completed) {
+  if (service.syncStatus == SyncStatus.completed) {
         // 成功提示
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('同步完成')),
@@ -895,16 +1074,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               backgroundColor: Colors.red),
         );
       }
-      // 自动延时关闭（1.2s）如果用户未手动关闭
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (mounted &&
-            _syncDialogVisible &&
-            (service.syncStatus == SyncStatus.completed ||
-                service.syncStatus == SyncStatus.failed)) {
-          Navigator.of(context, rootNavigator: true).maybePop();
-          _syncDialogVisible = false;
-        }
-      });
+  // 不再自动关闭，由用户点击“关闭”按钮手动关闭，保留结果供查看
+  _receiveAcceptDialogShown = false; // 终态重置
     }
   }
 
@@ -1045,9 +1216,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   /// 构建简短指纹徽章（显示后 6 位），便于区分同名设备
   Widget _buildShortFingerprint(String fingerprint) {
     if (fingerprint.isEmpty) return const SizedBox.shrink();
-    final short = fingerprint.length <= 6
-        ? fingerprint
-        : fingerprint.substring(fingerprint.length - 6).toUpperCase();
+    final short = _shortFingerprint(fingerprint);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -1064,6 +1233,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         ),
       ),
     );
+  }
+
+  String _shortFingerprint(String full) {
+    if (full.length <= 6) return full.toUpperCase();
+    return full.substring(full.length - 6).toUpperCase();
   }
 
   String _platformLabel(DeviceType type) {

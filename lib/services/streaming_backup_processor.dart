@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import '../utils/app_logger.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 /// 流式备份处理器
 ///
@@ -102,8 +104,8 @@ class StreamingBackupProcessor {
 
     onStatusUpdate?.call('正在解压备份文件...');
 
-    // 解压ZIP
-    final archive = ZipDecoder().decodeBytes(bytes);
+  // 解压ZIP
+  final archive = ZipDecoder().decodeBytes(bytes);
 
     // 查找数据文件 - 修复：使用正确的文件名
     ArchiveFile? dataFile;
@@ -126,7 +128,28 @@ class StreamingBackupProcessor {
     // 解析JSON数据 - 修复：使用UTF-8解码避免中文乱码
     final jsonBytes = dataFile.content as List<int>;
     final jsonString = utf8.decode(jsonBytes);
-    return json.decode(jsonString) as Map<String, dynamic>;
+    final map = json.decode(jsonString) as Map<String, dynamic>;
+
+    // 提取媒体文件到应用目录 (排除数据文件本身 & 目录)
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      for (final f in archive) {
+        if (f.isFile && f.name != dataFile.name) {
+          final targetPath = p.join(appDir.path, f.name);
+          final targetDir = Directory(p.dirname(targetPath));
+          if (!await targetDir.exists()) {
+            await targetDir.create(recursive: true);
+          }
+            final outFile = File(targetPath);
+          await outFile.writeAsBytes(f.content as List<int>, flush: true);
+        }
+      }
+      logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
+    } catch (e) {
+      logWarning('媒体文件解压失败: $e', source: 'StreamingBackupProcessor');
+    }
+
+    return map;
   }
 
   /// 分块读取文件

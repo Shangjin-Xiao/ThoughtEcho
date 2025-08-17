@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -33,7 +34,7 @@ enum SyncStatus {
 class NoteSyncService extends ChangeNotifier {
   final BackupService _backupService;
   final DatabaseService _databaseService;
-  // final SettingsService _settingsService;
+  final SettingsService _settingsService;
   // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
@@ -51,6 +52,11 @@ class NoteSyncService extends ChangeNotifier {
   String? _currentReceiveSessionId; // 当前接收会话ID
   DateTime? _receiveStartTime;
   String? _receiveSenderAlias;
+  int? _pendingReceiveTotalBytes; // 等待审批大小
+  bool _awaitingUserApproval = false; // 是否处于接收审批阶段
+
+  bool get awaitingUserApproval => _awaitingUserApproval;
+  int? get pendingReceiveTotalBytes => _pendingReceiveTotalBytes;
 
   DateTime? _sendStartTime;
   String? _currentSendSessionId; // 当前发送会话ID
@@ -60,6 +66,7 @@ class NoteSyncService extends ChangeNotifier {
   String get syncStatusMessage => _syncStatusMessage;
   double get syncProgress => _syncProgress;
   MergeReport? get lastMergeReport => _lastMergeReport;
+  String? get receiveSenderAlias => _receiveSenderAlias;
 
   NoteSyncService({
     required BackupService backupService,
@@ -67,12 +74,11 @@ class NoteSyncService extends ChangeNotifier {
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
   })  : _backupService = backupService,
-        _databaseService = databaseService {
-    // 存储其他依赖，虽然当前没有直接使用，但为将来扩展保留
-    // _settingsService = settingsService;
-    // _aiAnalysisDbService = aiAnalysisDbService;
+        _databaseService = databaseService,
+        _settingsService = settingsService {
     debugPrint('NoteSyncService 构造函数完成');
   }
+  bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
 
   /// 初始化同步服务
   Future<void> initialize() async {
@@ -169,6 +175,18 @@ class NoteSyncService extends ChangeNotifier {
                 0.02);
           }
         },
+        onApprovalNeeded: (sid, totalBytes, alias) async {
+          // 进入审批阶段，暂停进度显示（保持接收状态初始progress）
+          _awaitingUserApproval = true;
+          _pendingReceiveTotalBytes = totalBytes;
+          _currentReceiveSessionId = sid;
+            _receiveSenderAlias = alias;
+          notifyListeners();
+          // 等待 UI 调用 approve 或 reject
+          final completer = Completer<bool>();
+          _approvalWaiters[sid] = completer;
+          return completer.future;
+        },
       );
       final actualPort = _localSendServer!.port;
       debugPrint('LocalSendServer启动成功，端口: $actualPort');
@@ -188,6 +206,29 @@ class NoteSyncService extends ChangeNotifier {
       // Clean up on failure
       await stopServer();
       rethrow;
+    }
+  }
+
+  // ===== 接收审批机制 =====
+  final Map<String, Completer<bool>> _approvalWaiters = {};
+
+  /// 用户批准接收
+  void approveIncoming() {
+    if (_currentReceiveSessionId != null) {
+      final c = _approvalWaiters.remove(_currentReceiveSessionId!);
+      c?.complete(true);
+      _awaitingUserApproval = false;
+      notifyListeners();
+    }
+  }
+
+  /// 用户拒绝接收
+  void rejectIncoming() {
+    if (_currentReceiveSessionId != null) {
+      final c = _approvalWaiters.remove(_currentReceiveSessionId!);
+      c?.complete(false);
+      _awaitingUserApproval = false;
+      _updateSyncStatus(SyncStatus.failed, '已拒绝来自$_receiveSenderAlias 的同步', 0.0);
     }
   }
 
@@ -239,7 +280,7 @@ class NoteSyncService extends ChangeNotifier {
   /// 发送笔记数据到指定设备（统一使用createSyncPackage）
   Future<void> sendNotesToDevice(Device targetDevice) async {
     // 使用统一的createSyncPackage方法
-    await createSyncPackage(targetDevice);
+  await createSyncPackage(targetDevice); // 使用默认包含媒体文件
   }
 
   /// (Deprecated) 旧receiveAndMerge逻辑已废弃，直接调用processSyncPackage
@@ -378,23 +419,31 @@ class NoteSyncService extends ChangeNotifier {
     }
   }
 
-  /// 创建同步包并发送到指定设备
-  Future<String> createSyncPackage(Device targetDevice) async {
+  /// 创建同步包并发送到指定设备（若对方需要先审批，先走意向握手，再打包发送）
+  /// [includeMediaFiles] 是否包含媒体文件（默认包含）
+  Future<String> createSyncPackage(Device targetDevice, {bool includeMediaFiles = true}) async {
     if (_localSendProvider == null) {
       throw Exception('同步服务未初始化');
     }
 
     try {
-      // 0. Preflight: ensure target /info reachable to avoid blind send
+      // 0. Preflight: ensure target /info reachable
       await _preflightCheck(targetDevice);
+
+      // 0.1 发送意向握手（让对方先决定是否允许以及是否需要媒体）
+      final approved = await _sendSyncIntent(targetDevice);
+      if (!approved) {
+        _updateSyncStatus(SyncStatus.failed, '对方拒绝同步请求', 0.0);
+        throw Exception('对方拒绝同步请求');
+      }
 
       // 1. 更新状态：开始打包
       _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
       _currentSendSessionId = null;
 
       // 2. 使用备份服务创建数据包
-      final backupPath = await _backupService.exportAllData(
-        includeMediaFiles: true,
+  final backupPath = await _backupService.exportAllData(
+        includeMediaFiles: includeMediaFiles,
         onProgress: (current, total) {
           final progress = 0.1 + (current / total) * 0.4; // 10%-50%的进度用于打包
           _updateSyncStatus(
@@ -479,6 +528,33 @@ class NoteSyncService extends ChangeNotifier {
     }
   }
 
+  /// 发送同步意向，返回是否获得对方批准
+  Future<bool> _sendSyncIntent(Device target) async {
+    if (skipSyncConfirmation) return true; // 全局跳过确认
+    try {
+      final uri = Uri.parse('http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent');
+      final fp = await DeviceIdentityManager.I.getFingerprint();
+      final body = jsonEncode({
+        'fingerprint': fp,
+        'alias': 'ThoughtEcho',
+      });
+      final resp = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 5));
+      if (resp.statusCode != 200) return true; // 回退：旧版本对方不支持则直接继续
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      return data['approved'] != false;
+    } catch (e) {
+      // 容错：如果对方是旧版本（无该端点）继续旧流程
+      return true;
+    }
+  }
+
+  Future<void> setSkipSyncConfirmation(bool value) async {
+    await _settingsService.setSyncSkipConfirm(value);
+    notifyListeners();
+  }
+
   /// 取消当前发送（仅在发送阶段有效）
   void cancelOngoingSend() {
     if (_syncStatus != SyncStatus.sending || _currentSendSessionId == null) {
@@ -494,8 +570,9 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 取消接收（如果正在接收且尚未进入合并阶段）
   void cancelReceiving() {
-    if (_syncStatus != SyncStatus.receiving || _currentReceiveSessionId == null)
+    if (_syncStatus != SyncStatus.receiving || _currentReceiveSessionId == null) {
       return;
+    }
     try {
       final rc = _localSendServer?.receiveController;
       rc?.cancelSession(_currentReceiveSessionId!);
