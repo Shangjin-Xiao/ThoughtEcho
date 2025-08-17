@@ -24,6 +24,7 @@ import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 import '../services/temporary_media_service.dart';
+import '../widgets/media_player_widget.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -1043,7 +1044,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           IconButton(
             icon: const Icon(Icons.save),
             tooltip: '保存',
-            onPressed: _saveContent,
+            onPressed: () async {
+              // 确保所有媒体播放器暂停，避免视频层拦截点击或导致资源竞争
+              try {
+                await pauseAllMediaPlayers();
+              } catch (_) {}
+
+              await _saveContent();
+            },
           ),
         ],
         automaticallyImplyLeading: true,
