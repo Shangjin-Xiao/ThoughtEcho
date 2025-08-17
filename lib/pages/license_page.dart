@@ -14,34 +14,7 @@ class LicensePage extends StatefulWidget {
 }
 
 class _LicensePageState extends State<LicensePage> {
-  final TextEditingController _searchController = TextEditingController();
-  List<LicenseEntry> _licenses = [];
-  final Set<int> _expandedHashes = {};
-  bool _loadingLicenses = true;
-
-  @override
-  void initState() {
-    super.initState();
-    LicenseRegistry.licenses.toList().then((list) {
-      setState(() {
-        _licenses = list;
-        _loadingLicenses = false;
-      });
-    }).catchError((e) {
-      setState(() {
-        _licenses = [];
-        _loadingLicenses = false;
-      });
-    });
-    _searchController.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
+  // 页面当前为静态内容展示，已移除未使用的搜索/加载逻辑以减少无效状态与 lint 警告。
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -586,11 +559,12 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withOpacity(0.9)),
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withValues(alpha: 0.9),
+                    ),
                   ),
                   initiallyExpanded: isExpanded,
                   onExpansionChanged: (open) {
@@ -752,12 +726,12 @@ class _ProgressiveSystemLicensesPageState
                               : preview,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.color
-                                  ?.withOpacity(0.85)),
+              style: TextStyle(
+                color: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.color
+                  ?.withValues(alpha: 0.85)),
                         ),
                       ],
                     ),

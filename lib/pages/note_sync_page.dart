@@ -474,8 +474,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          final allow = await _onWillPop();
+          if (allow && mounted) Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('笔记同步'),
@@ -683,11 +689,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                       device.deviceModel!,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.color
-                                            ?.withOpacity(0.7),
+                    color: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.color
+                      ?.withValues(alpha: 0.7),
                                       ),
                                     ),
                                   ),
@@ -967,7 +973,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         '未提供发现方式',
         style: TextStyle(
           fontSize: 11,
-          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
         ),
       );
     }
@@ -993,10 +999,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           labelPadding: const EdgeInsets.symmetric(horizontal: 4),
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
-          backgroundColor:
-              Theme.of(context).colorScheme.primary.withOpacity(0.08),
+      backgroundColor:
+        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
           side: BorderSide(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
             width: 0.5,
           ),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
