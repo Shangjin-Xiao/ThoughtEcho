@@ -542,10 +542,39 @@ class NoteSyncService extends ChangeNotifier {
     try {
       final uri = Uri.parse('http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent');
       final fp = await DeviceIdentityManager.I.getFingerprint();
-      final body = jsonEncode({
-        'fingerprint': fp,
-        'alias': 'ThoughtEcho',
-      });
+      // 动态 alias：优先使用发现服务中的真实设备型号
+      String alias = 'ThoughtEcho';
+      try {
+        // 通过 discovery service 找到本机注册的 deviceModel（若可）
+        if (_discoveryService != null) {
+          // discovery 服务内部维护 deviceModel，但未暴露；临时通过 toString 不安全，改为在广播中由对方解析
+          // 方案：走一次 announce 所带的 model；这里简化：如果有任意本机广播设备项则取其 deviceModel
+          final self = _discoveryService!.devices.firstWhere(
+            (d) => d.fingerprint == fp,
+            orElse: () => Device(
+              signalingId: null,
+              ip: null,
+              version: '',
+              port: _localSendServer?.port ?? defaultPort,
+              https: false,
+              fingerprint: fp,
+              alias: alias,
+              deviceModel: null,
+              deviceType: DeviceType.desktop,
+              download: false,
+              discoveryMethods: const {},
+            ),
+          );
+          if ((self.deviceModel ?? '').trim().isNotEmpty) {
+            alias = self.deviceModel!.trim();
+          } else if ((self.alias).trim().isNotEmpty) {
+            alias = self.alias.trim();
+          }
+        }
+      } catch (_) {
+        // 忽略，Fallback 保持 ThoughtEcho
+      }
+      final body = jsonEncode({'fingerprint': fp, 'alias': alias});
       final resp = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 5));
