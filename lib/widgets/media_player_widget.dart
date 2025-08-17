@@ -28,6 +28,27 @@ class MediaPlayerWidget extends StatefulWidget {
 }
 
 class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
+  static final Set<VideoPlayerController> _activeVideoControllers = <VideoPlayerController>{};
+  static final Set<AudioPlayer> _activeAudioPlayers = <AudioPlayer>{};
+
+  static Future<void> pauseAll() async {
+    final futures = <Future>[];
+    for (final vc in _activeVideoControllers.toList()) {
+      try {
+        if (vc.value.isPlaying) futures.add(vc.pause());
+      } catch (_) {}
+    }
+    for (final ap in _activeAudioPlayers.toList()) {
+      try {
+        futures.add(ap.pause());
+      } catch (_) {}
+    }
+    if (futures.isNotEmpty) {
+      try {
+        await Future.wait(futures);
+      } catch (_) {}
+    }
+  }
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   AudioPlayer? _audioPlayer;
@@ -96,6 +117,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
       // 创建视频控制器
       _videoController = VideoPlayerController.file(file);
+      _activeVideoControllers.add(_videoController!);
 
       // 使用超时保护，防止初始化过程卡死
       bool initializeCompleted = false;
@@ -239,6 +261,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   void _cleanupVideoResources() {
     try {
       if (_videoController != null) {
+        _activeVideoControllers.remove(_videoController);
         _videoController!.dispose();
         _videoController = null;
       }
@@ -323,6 +346,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       }
 
       _audioPlayer = AudioPlayer();
+      _activeAudioPlayers.add(_audioPlayer!);
 
       // 监听播放状态
       _audioPlayer!.onPlayerStateChanged.listen((state) {
@@ -807,6 +831,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     // 释放音频资源
     try {
       if (_audioPlayer != null) {
+        _activeAudioPlayers.remove(_audioPlayer);
         _audioPlayer!.dispose();
         _audioPlayer = null;
       }
@@ -825,6 +850,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
     super.dispose();
   }
+}
+
+Future<void> pauseAllMediaPlayers() async {
+  await _MediaPlayerWidgetState.pauseAll();
 }
 
 enum MediaType { video, audio }
