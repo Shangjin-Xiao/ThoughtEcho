@@ -342,7 +342,8 @@ class LocalSendProvider {
       // 通知对端（最佳努力，不影响本地状态）
       final remoteId = session.remoteSessionId;
       if (remoteId != null) {
-        final url = ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
+        final url =
+            ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
         try {
           final client = http.Client();
           client

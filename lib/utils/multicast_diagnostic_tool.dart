@@ -136,7 +136,8 @@ class MulticastDiagnosticTool {
 
       int bytesSent = 0;
       try {
-        bytesSent = socket.send(testData, multicastAddress, defaultMulticastPort);
+        bytesSent =
+            socket.send(testData, multicastAddress, defaultMulticastPort);
       } catch (e) {
         result.addStep('组播发送测试', false, '发送调用失败: $e');
         debugPrint('❌ 组播发送调用失败: $e');

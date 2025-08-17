@@ -22,8 +22,9 @@ class LocalSendServer {
   Future<void> start({
     int? port,
     Function(String filePath)? onFileReceived,
-  Function(int received, int total)? onReceiveProgress,
-  Function(String sessionId, int totalBytes, String senderAlias)? onReceiveSessionCreated,
+    Function(int received, int total)? onReceiveProgress,
+    Function(String sessionId, int totalBytes, String senderAlias)?
+        onReceiveSessionCreated,
   }) async {
     if (_isRunning) return;
 
@@ -38,7 +39,7 @@ class LocalSendServer {
     _receiveController = ReceiveController(
       onFileReceived: onFileReceived,
       onReceiveProgress: onReceiveProgress,
-  onSessionCreated: onReceiveSessionCreated,
+      onSessionCreated: onReceiveSessionCreated,
     );
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
@@ -152,16 +153,15 @@ class LocalSendServer {
           try {
             if (request.method == 'POST') {
               // Drain body to avoid socket issues (ignore content for now)
-              final bodyBytes = await request.fold<List<int>>(
-                  <int>[], (p, e) => p..addAll(e));
+              final bodyBytes = await request
+                  .fold<List<int>>(<int>[], (p, e) => p..addAll(e));
               if (bodyBytes.isNotEmpty) {
                 logDebug('register_body_len=${bodyBytes.length}',
                     source: 'LocalSend');
               }
             }
           } catch (e) {
-            logWarning('register_body_read_fail error=$e',
-                source: 'LocalSend');
+            logWarning('register_body_read_fail error=$e', source: 'LocalSend');
           }
           responseData = _receiveController.handleInfoRequest();
           // Spec in original LocalSend also returns a token; we currently don't need it.
@@ -219,14 +219,16 @@ class LocalSendServer {
           // 取消会话接口（简化版）
           if (path == '/api/localsend/v2/cancel' && request.method == 'POST') {
             try {
-              final bodyBytes = await request.fold<List<int>>(<int>[], (p, e) => p..addAll(e));
+              final bodyBytes = await request
+                  .fold<List<int>>(<int>[], (p, e) => p..addAll(e));
               final body = utf8.decode(bodyBytes);
               final data = jsonDecode(body) as Map<String, dynamic>;
               final sessionId = data['sessionId'] as String?;
               if (sessionId != null) {
                 _receiveController.cancelSession(sessionId);
                 responseData = {'ok': true};
-                logInfo('cancel_marked session=$sessionId', source: 'LocalSend');
+                logInfo('cancel_marked session=$sessionId',
+                    source: 'LocalSend');
               } else {
                 statusCode = 400;
                 responseData = {'error': 'missing sessionId'};
@@ -236,10 +238,10 @@ class LocalSendServer {
               responseData = {'error': 'bad request'};
             }
           } else {
-          // 404 Not Found
-          statusCode = 404;
-          responseData = {'error': 'Not found', 'path': path};
-          logWarning('route_404 path=$path', source: 'LocalSend');
+            // 404 Not Found
+            statusCode = 404;
+            responseData = {'error': 'Not found', 'path': path};
+            logWarning('route_404 path=$path', source: 'LocalSend');
           }
         }
       } catch (e, stack) {

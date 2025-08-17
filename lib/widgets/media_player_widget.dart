@@ -28,7 +28,8 @@ class MediaPlayerWidget extends StatefulWidget {
 }
 
 class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
-  static final Set<VideoPlayerController> _activeVideoControllers = <VideoPlayerController>{};
+  static final Set<VideoPlayerController> _activeVideoControllers =
+      <VideoPlayerController>{};
   static final Set<AudioPlayer> _activeAudioPlayers = <AudioPlayer>{};
 
   static Future<void> pauseAll() async {
@@ -49,6 +50,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       } catch (_) {}
     }
   }
+
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   AudioPlayer? _audioPlayer;

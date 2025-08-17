@@ -4325,6 +4325,8 @@ class DatabaseService extends ChangeNotifier {
     String? sourceDevice,
   }) async {
     final reportBuilder = MergeReportBuilder(sourceDevice: sourceDevice);
+    // 分类ID重映射：用于处理不同设备上相同名称分类(标签)导致的ID不一致与重复问题
+    final Map<String, String> categoryIdRemap = {}; // remoteId -> localId
 
     try {
       final db = database;
@@ -4336,14 +4338,24 @@ class DatabaseService extends ChangeNotifier {
       }
 
       await db.transaction((txn) async {
-        await _mergeCategories(txn, data['categories'] as List, reportBuilder);
-        await _mergeQuotes(txn, data['quotes'] as List, reportBuilder);
+        await _mergeCategories(
+          txn,
+          data['categories'] as List,
+          reportBuilder,
+          categoryIdRemap,
+        );
+        await _mergeQuotes(
+          txn,
+          data['quotes'] as List,
+          reportBuilder,
+          categoryIdRemap,
+        );
       });
 
-  // 清理缓存并通知监听器，然后刷新当前流（如果存在）
-  _clearAllCache();
-  notifyListeners();
-  _refreshQuotesStream();
+      // 清理缓存并通知监听器，然后刷新当前流（如果存在）
+      _clearAllCache();
+      notifyListeners();
+      _refreshQuotesStream();
 
       logInfo('LWW合并完成: ${reportBuilder.build().summary}');
     } catch (e) {
@@ -4366,18 +4378,28 @@ class DatabaseService extends ChangeNotifier {
     Transaction txn,
     List categories,
     MergeReportBuilder reportBuilder,
+    Map<String, String> categoryIdRemap,
   ) async {
+    // 预先加载本地分类，建立名称(小写)->行、ID->行映射，便于避免 O(n^2) 查询
+    final existingCategoryRows = await txn.query('categories');
+    final Map<String, Map<String, dynamic>> idToRow = {
+      for (final row in existingCategoryRows) (row['id'] as String): row
+    };
+    final Map<String, Map<String, dynamic>> nameLowerToRow = {
+      for (final row in existingCategoryRows)
+        (row['name'] as String).toLowerCase(): row
+    };
+
     for (final c in categories) {
       try {
         final categoryData =
             Map<String, dynamic>.from(c as Map<String, dynamic>);
 
         // 标准化字段名
-        final categoryFieldMappings = {
+        const categoryFieldMappings = {
           'isDefault': 'is_default',
           'iconName': 'icon_name',
         };
-
         for (final mapping in categoryFieldMappings.entries) {
           if (categoryData.containsKey(mapping.key)) {
             categoryData[mapping.value] = categoryData[mapping.key];
@@ -4385,41 +4407,69 @@ class DatabaseService extends ChangeNotifier {
           }
         }
 
-        // 确保必要字段存在
-        final categoryId = categoryData['id'] ??= _uuid.v4();
-        categoryData['name'] ??= '未命名分类';
+        final remoteId = (categoryData['id'] as String?) ?? _uuid.v4();
+        categoryData['id'] = remoteId; // 统一
+        final remoteName = (categoryData['name'] as String?) ?? '未命名分类';
+        categoryData['name'] = remoteName;
         categoryData['is_default'] ??= 0;
         categoryData['last_modified'] ??= DateTime.now().toIso8601String();
 
-        // 查询本地是否存在该分类
-        final existingRows = await txn.query(
-          'categories',
-          where: 'id = ?',
-          whereArgs: [categoryId],
-        );
-
-        if (existingRows.isEmpty) {
-          await txn.insert('categories', categoryData);
-          reportBuilder.addInsertedCategory();
-        } else {
-          final existingCategory = existingRows.first;
-          // 本地记录缺失 last_modified 时无需显式变量，决策器内部使用null视为旧值
+        // 1. 优先按ID匹配
+        if (idToRow.containsKey(remoteId)) {
+          final existing = idToRow[remoteId]!;
           final decision = LWWDecisionMaker.makeDecision(
-            localTimestamp: existingCategory['last_modified'] as String?,
+            localTimestamp: existing['last_modified'] as String?,
             remoteTimestamp: categoryData['last_modified'] as String?,
           );
           if (decision.shouldUseRemote) {
-            await txn.update(
-              'categories',
-              categoryData,
-              where: 'id = ?',
-              whereArgs: [categoryId],
-            );
+            await txn.update('categories', categoryData,
+                where: 'id = ?', whereArgs: [remoteId]);
+            reportBuilder.addUpdatedCategory();
+            // 更新缓存
+            idToRow[remoteId] = categoryData;
+            nameLowerToRow[remoteName.toLowerCase()] = categoryData;
+          } else {
+            reportBuilder.addSkippedCategory();
+          }
+          categoryIdRemap[remoteId] = remoteId; // identity
+          continue;
+        }
+
+        // 2. 按名称(小写)匹配，处理不同设备相同名称但不同ID的情况 -> 复用本地ID，建立重映射
+        final nameKey = remoteName.toLowerCase();
+        if (nameLowerToRow.containsKey(nameKey)) {
+          final existing = nameLowerToRow[nameKey]!;
+          final existingId = existing['id'] as String;
+          final decision = LWWDecisionMaker.makeDecision(
+            localTimestamp: existing['last_modified'] as String?,
+            remoteTimestamp: categoryData['last_modified'] as String?,
+          );
+          if (decision.shouldUseRemote) {
+            // 仅更新可变字段（名称相同无需变更）
+            final updateMap = Map<String, dynamic>.from(existing)
+              ..addAll({
+                'icon_name': categoryData['icon_name'],
+                'is_default': categoryData['is_default'],
+                'last_modified': categoryData['last_modified'],
+              });
+            await txn.update('categories', updateMap,
+                where: 'id = ?', whereArgs: [existingId]);
+            idToRow[existingId] = updateMap;
+            nameLowerToRow[nameKey] = updateMap;
             reportBuilder.addUpdatedCategory();
           } else {
             reportBuilder.addSkippedCategory();
           }
+          categoryIdRemap[remoteId] = existingId;
+          continue;
         }
+
+        // 3. 新分类，直接插入
+        await txn.insert('categories', categoryData);
+        idToRow[remoteId] = categoryData;
+        nameLowerToRow[nameKey] = categoryData;
+        categoryIdRemap[remoteId] = remoteId;
+        reportBuilder.addInsertedCategory();
       } catch (e) {
         reportBuilder.addError('处理分类失败: $e');
       }
@@ -4431,7 +4481,16 @@ class DatabaseService extends ChangeNotifier {
     Transaction txn,
     List quotes,
     MergeReportBuilder reportBuilder,
+    Map<String, String> categoryIdRemap,
   ) async {
+    // 预加载当前事务中有效的分类ID集合，用于过滤无效的远程标签引用，防止外键错误
+    final existingCategoryIdRows =
+        await txn.query('categories', columns: ['id']);
+    final Set<String> validCategoryIds = existingCategoryIdRows
+        .map((r) => r['id'] as String)
+        .whereType<String>()
+        .toSet();
+
     for (final q in quotes) {
       try {
         final quoteData = Map<String, dynamic>.from(q as Map<String, dynamic>);
@@ -4456,10 +4515,43 @@ class DatabaseService extends ChangeNotifier {
           }
         }
 
-        // 处理tag_ids字段
+        // 提取并解析 tag_ids (字符串或列表)，稍后写入 quote_tags
+        List<String> parsedTagIds = [];
         if (quoteData.containsKey('tag_ids')) {
-          quoteData.remove('tag_ids');
-          // tag_ids处理逻辑保持与原有方式一致，暂时移除
+          final raw = quoteData['tag_ids'];
+          if (raw is String) {
+            if (raw.isNotEmpty) {
+              parsedTagIds = raw
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+            }
+          } else if (raw is List) {
+            parsedTagIds = raw
+                .map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toSet()
+                .toList();
+          }
+          quoteData.remove('tag_ids'); // 不存储在 quotes 表
+        }
+
+        // 重映射 category_id （如果存在）
+        final originalCategoryId = quoteData['category_id'] as String?;
+        if (originalCategoryId != null &&
+            categoryIdRemap.containsKey(originalCategoryId)) {
+          quoteData['category_id'] = categoryIdRemap[originalCategoryId];
+        }
+
+        // 重映射标签ID并去重
+        final remappedTagIds = <String>{};
+        for (final tid in parsedTagIds) {
+          final mapped = categoryIdRemap[tid] ?? tid; // 若未重映射则保持原ID
+          if (validCategoryIds.contains(mapped)) {
+            remappedTagIds.add(mapped);
+          }
         }
 
         // 确保必要字段存在
@@ -4476,12 +4568,13 @@ class DatabaseService extends ChangeNotifier {
           whereArgs: [quoteId],
         );
 
+        bool inserted = false;
         if (existingRows.isEmpty) {
           await txn.insert('quotes', quoteData);
           reportBuilder.addInsertedQuote();
+          inserted = true;
         } else {
           final existingQuote = existingRows.first;
-          // existingQuote 可能缺失 last_modified，决策器会将其视为较旧
           final decision = LWWDecisionMaker.makeDecision(
             localTimestamp: existingQuote['last_modified'] as String?,
             remoteTimestamp: quoteData['last_modified'] as String?,
@@ -4490,19 +4583,34 @@ class DatabaseService extends ChangeNotifier {
             checkContentSimilarity: true,
           );
           if (decision.shouldUseRemote) {
-            await txn.update(
-              'quotes',
-              quoteData,
-              where: 'id = ?',
-              whereArgs: [quoteId],
-            );
+            await txn.update('quotes', quoteData,
+                where: 'id = ?', whereArgs: [quoteId]);
             reportBuilder.addUpdatedQuote();
           } else if (decision.hasConflict) {
-            // 时间戳相同但内容不同
             reportBuilder.addSameTimestampDiffQuote();
           } else {
             reportBuilder.addSkippedQuote();
           }
+        }
+
+        // 写入标签关联 (插入或更新场景都需要同步), 仅当存在标签
+        if (remappedTagIds.isNotEmpty) {
+          // 如果是更新，先清理旧关联
+          if (!inserted) {
+            await txn.delete('quote_tags',
+                where: 'quote_id = ?', whereArgs: [quoteId]);
+          }
+          final batch = txn.batch();
+          for (final tagId in remappedTagIds) {
+            batch.insert(
+                'quote_tags',
+                {
+                  'quote_id': quoteId,
+                  'tag_id': tagId,
+                },
+                conflictAlgorithm: ConflictAlgorithm.ignore);
+          }
+          await batch.commit(noResult: true);
         }
       } catch (e) {
         reportBuilder.addError('处理笔记失败: $e');
