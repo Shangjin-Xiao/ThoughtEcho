@@ -48,6 +48,9 @@ class NoteSyncService extends ChangeNotifier {
   SyncStatus _syncStatus = SyncStatus.idle;
   String _syncStatusMessage = '';
   double _syncProgress = 0.0;
+  // UI节流：避免高频notify导致数字跳动与重建闪烁
+  DateTime _lastUiNotify = DateTime.fromMillisecondsSinceEpoch(0);
+  static const int _minUiNotifyIntervalMs = 160; // ~6fps 足够平滑
   MergeReport? _lastMergeReport; // 新增：最近一次合并报告
   String? _currentReceiveSessionId; // 当前接收会话ID
   DateTime? _receiveStartTime;
@@ -660,11 +663,37 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 更新同步状态
   void _updateSyncStatus(SyncStatus status, String message, double progress) {
+    // 约束 progress 合法区间
+    if (progress.isNaN || progress.isInfinite) progress = 0.0;
+    if (progress < 0) progress = 0; else if (progress > 1) progress = 1;
+
+    final now = DateTime.now();
+    final statusChanged = status != _syncStatus;
+    final messageChanged = message != _syncStatusMessage;
+    final progressDelta = (progress - _syncProgress).abs();
+    final timeDeltaMs = now.difference(_lastUiNotify).inMilliseconds;
+
     _syncStatus = status;
     _syncStatusMessage = message;
     _syncProgress = progress;
-    notifyListeners();
-    debugPrint('同步状态: $status - $message (${(progress * 100).toInt()}%)');
+
+    // 通知策略：
+    // 1. 状态或消息变化立即通知
+    // 2. 进度变化累计 >=1% 或 距上次>=_minUiNotifyIntervalMs 才通知
+    final shouldNotify = statusChanged ||
+        messageChanged ||
+        progressDelta >= 0.01 ||
+        timeDeltaMs >= _minUiNotifyIntervalMs ||
+        progress >= 1.0 ||
+        status == SyncStatus.failed ||
+        status == SyncStatus.completed;
+    if (shouldNotify) {
+      _lastUiNotify = now;
+      notifyListeners();
+    }
+    if (shouldNotify || statusChanged) {
+      debugPrint('同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)');
+    }
   }
 
   /// 发现附近的设备

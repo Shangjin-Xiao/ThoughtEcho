@@ -529,26 +529,97 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         return;
       }
 
-      // 确认还原操作
+      // 选择导入模式：覆盖 或 合并(LWW)
+      bool useMerge = false;
       if (mounted) {
-        final confirmed = await _showRestoreConfirmDialog();
+        final mode = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (c) {
+            String selected = 'overwrite';
+            return StatefulBuilder(builder: (ctx, setLocal) {
+              return AlertDialog(
+                title: const Text('选择导入模式'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RadioListTile<String>(
+                      title: const Text('覆盖导入 (清空现有数据)'),
+                      subtitle: const Text('删除当前所有数据，以备份内容替换'),
+                      value: 'overwrite',
+                      groupValue: selected,
+                      onChanged: (v) => setLocal(() => selected = v!),
+                      dense: true,
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('合并导入 (LWW策略)'),
+                      subtitle: const Text('保留现有数据，与备份数据按更新时间合并'),
+                      value: 'merge',
+                      groupValue: selected,
+                      onChanged: (v) => setLocal(() => selected = v!),
+                      dense: true,
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(null),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(selected),
+                    child: const Text('继续'),
+                  ),
+                ],
+              );
+            });
+          },
+        );
+        if (mode == null) return; // 用户取消
+        useMerge = mode == 'merge';
+      }
+
+      // 确认还原/合并操作
+      if (mounted) {
+        final confirmed = useMerge
+            ? await _showMergeConfirmDialog()
+            : await _showRestoreConfirmDialog();
         if (!confirmed) return;
       }
 
-      // 执行还原
-      await backupService.importData(
-        file.path!,
-        clearExisting: true,
-        onProgress: (current, total) {
-          if (mounted) {
-            setState(() {
-              _progress = (current / total * 100).toDouble();
-              _progressText = '正在还原数据... $current/$total';
-            });
-          }
-        },
-        cancelToken: _cancelToken,
-      );
+      // 执行导入
+      if (useMerge) {
+        final report = await backupService.importData(
+          file.path!,
+          clearExisting: false,
+          merge: true,
+          onProgress: (current, total) {
+            if (mounted) {
+              setState(() {
+                _progress = (current / total * 100).toDouble();
+                _progressText = '正在合并数据... $current/$total';
+              });
+            }
+          },
+          cancelToken: _cancelToken,
+        );
+        debugPrint('合并导入完成: ${report?.summary}');
+      } else {
+        await backupService.importData(
+          file.path!,
+          clearExisting: true,
+          onProgress: (current, total) {
+            if (mounted) {
+              setState(() {
+                _progress = (current / total * 100).toDouble();
+                _progressText = '正在还原数据... $current/$total';
+              });
+            }
+          },
+          cancelToken: _cancelToken,
+        );
+      }
 
       if (mounted) {
         // 还原成功，回到主页并显示成功消息
@@ -680,6 +751,47 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('确认还原'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  /// 显示合并导入确认对话框
+  Future<bool> _showMergeConfirmDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.merge_type, color: Colors.indigo),
+                SizedBox(width: 8),
+                Text('确认合并导入'),
+              ],
+            ),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('此操作将保留当前数据，并与备份数据进行合并：'),
+                SizedBox(height: 8),
+                Text('• 相同ID的笔记按“最后写入 wins”保留较新版本'),
+                Text('• 不同ID的笔记全部保留'),
+                Text('• 设置与AI分析数据合并追加'),
+                SizedBox(height: 12),
+                Text('此操作可逆：可再次导入覆盖备份或继续合并。'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('开始合并'),
               ),
             ],
           ),

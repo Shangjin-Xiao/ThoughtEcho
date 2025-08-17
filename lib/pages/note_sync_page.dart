@@ -36,7 +36,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       30000; // 与 defaultDiscoveryTimeout 对齐
   bool _syncDialogVisible = false;
   bool _sendIncludeMedia = true; // 发送时是否包含媒体文件（用户可选）
-  bool _receiveAcceptDialogShown = false; // 接收端是否已弹出确认
+  // 旧的接收确认弹窗标记已移除；审批与进度合并为单一对话框
+  
+  // 还原模式枚举（备份还原页中支持 LWW 合并导入，此处复用时可参考）
+  // enum RestoreMode { overwrite, merge }
 
   @override
   void initState() {
@@ -356,8 +359,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     if (!mounted) return;
 
     // 先弹出确认对话框（是否包含媒体文件）
-    bool includeMedia = _sendIncludeMedia;
-    final confirmed = await showDialog<bool>(
+  bool includeMedia = _sendIncludeMedia;
+  final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) {
             bool localInclude = includeMedia;
@@ -385,7 +388,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     child: const Text('取消'),
                   ),
                   FilledButton(
-                    onPressed: () => Navigator.of(ctx).pop(true),
+                    onPressed: () {
+                      // 关键修复：把对话框中的最新勾选结果写回外层变量
+                      includeMedia = localInclude;
+                      Navigator.of(ctx).pop(true);
+                    },
                     child: const Text('开始发送'),
                   ),
                 ],
@@ -406,8 +413,21 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     try {
       final syncService = context.read<NoteSyncService>();
-      final sessionId =
-          await syncService.createSyncPackage(device, includeMediaFiles: includeMedia);
+      if (!includeMedia) {
+        // 反馈提示：明确说明此次不包含媒体
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('将仅发送笔记文本（不含媒体文件）'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+      final sessionId = await syncService.createSyncPackage(
+        device,
+        includeMediaFiles: includeMedia,
+      );
       if (mounted) {
         final displayId = sessionId.length <= 8
             ? sessionId
@@ -912,79 +932,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   void _maybeShowOrHideSyncDialog(NoteSyncService service) {
-    // 需要展示的状态
-    final active = service.syncStatus == SyncStatus.packaging ||
+    // 统一：审批 + 进度 合并为一个弹窗
+    final active = service.awaitingUserApproval ||
+        service.syncStatus == SyncStatus.packaging ||
         service.syncStatus == SyncStatus.sending ||
         service.syncStatus == SyncStatus.receiving ||
         service.syncStatus == SyncStatus.merging;
 
-    // 完成或失败后如果弹窗在显示则关闭
     final terminal = service.syncStatus == SyncStatus.completed ||
         service.syncStatus == SyncStatus.failed ||
         service.syncStatus == SyncStatus.idle;
-
-    // 单独处理接收审批弹窗（在主进度弹窗之外）
-    if (service.awaitingUserApproval && !_receiveAcceptDialogShown) {
-      _receiveAcceptDialogShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) {
-            final sizeMB = service.pendingReceiveTotalBytes == null
-                ? '?'
-                : (service.pendingReceiveTotalBytes! / 1024 / 1024)
-                    .toStringAsFixed(1);
-            bool dontAskAgain = false;
-            return StatefulBuilder(builder: (c, setLocal) {
-              return AlertDialog(
-                title: const Text('接收同步请求'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('设备 “${service.receiveSenderAlias ?? '对方'}” 想要向你同步笔记数据（约 $sizeMB MB）。是否接受？'),
-                    const SizedBox(height: 12),
-                    CheckboxListTile(
-                      value: dontAskAgain,
-                      onChanged: (v) => setLocal(() => dontAskAgain = v ?? false),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('以后不再提示'),
-                      dense: true,
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      service.rejectIncoming();
-                      Navigator.of(ctx).pop();
-                    },
-                    child: const Text('拒绝'),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      if (dontAskAgain) {
-                        await service.setSkipSyncConfirmation(true);
-                      }
-                      service.approveIncoming();
-                      Navigator.of(ctx).pop();
-                    },
-                    child: const Text('接受'),
-                  ),
-                ],
-              );
-            });
-          },
-        ).then((_) {
-          // 若审批后仍在等待（异常情况）重置标记允许再次弹出
-          if (mounted && service.awaitingUserApproval) {
-            _receiveAcceptDialogShown = false;
-          }
-        });
-      });
-    }
 
     if (active && !_syncDialogVisible) {
       _syncDialogVisible = true;
@@ -998,37 +955,160 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               return Consumer<NoteSyncService>(
                 builder: (context, s, _) {
                   final progress = s.syncProgress.clamp(0.0, 1.0);
-                  final active = s.syncStatus == SyncStatus.packaging ||
+                  final inProgress = s.syncStatus == SyncStatus.packaging ||
                       s.syncStatus == SyncStatus.sending ||
                       s.syncStatus == SyncStatus.receiving ||
                       s.syncStatus == SyncStatus.merging;
+                  final awaiting = s.awaitingUserApproval;
+                  final sizeMB = s.pendingReceiveTotalBytes == null
+                      ? '?'
+                      : (s.pendingReceiveTotalBytes! / 1024 / 1024)
+                          .toStringAsFixed(1);
+                  // 平滑动画：状态 / 文本变化使用 AnimatedSwitcher
                   return AlertDialog(
-                    title: Text(_getSyncStatusText(s.syncStatus)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18)),
+                    titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                    contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                    actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    title: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 260),
+                      child: Row(
+                        key: ValueKey('title-${awaiting ? 'approval' : s.syncStatus.name}'),
+                        children: [
+                          Icon(
+                            awaiting
+                                ? Icons.handshake
+                                : s.syncStatus == SyncStatus.failed
+                                    ? Icons.error_outline
+                                    : s.syncStatus == SyncStatus.completed
+                                        ? Icons.check_circle_outline
+                                        : Icons.sync,
+                            color: awaiting
+                                ? Theme.of(context).colorScheme.primary
+                                : s.syncStatus == SyncStatus.failed
+                                    ? Colors.red
+                                    : s.syncStatus == SyncStatus.completed
+                                        ? Colors.green
+                                        : Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              awaiting
+                                  ? '接收同步请求'
+                                  : _getSyncStatusText(s.syncStatus),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     content: SizedBox(
-                      width: 320,
+                      width: 340,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          LinearProgressIndicator(
-                              value: active
-                                  ? (progress == 0 || progress == 1
-                                      ? null
-                                      : progress)
-                                  : 1),
-                          const SizedBox(height: 12),
-                          Text(
-                            s.syncStatusMessage,
-                            style: const TextStyle(fontSize: 13),
+                          // 进度条 + 百分比
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: LinearProgressIndicator(
+                                    minHeight: 6,
+                                    value: awaiting
+                                        ? null
+                                        : (inProgress
+                                            ? (progress == 0 || progress == 1
+                                                ? null
+                                                : progress)
+                                            : 1),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 250),
+                                child: Text(
+                                  awaiting
+                                      ? '等待'
+                                      : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                                  key: ValueKey('pct-${s.syncStatus.name}-${(s.syncProgress*100).toInt()}'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          // 审批流程改为独立弹窗，不在这里显示
+                          const SizedBox(height: 14),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 240),
+                            child: awaiting
+                                ? Column(
+                                    key: const ValueKey('approval-body'),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '设备 “${s.receiveSenderAlias ?? '对方'}” 想向你同步笔记数据（约 $sizeMB MB）。是否接受？',
+                                        style: const TextStyle(fontSize: 13, height: 1.3),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      CheckboxListTile(
+                                        value: s.skipSyncConfirmation,
+                                        onChanged: (v) async {
+                                          await s.setSkipSyncConfirmation(
+                                              v ?? false);
+                                          setLocal(() {});
+                                        },
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        title: const Text('以后不再提示', style: TextStyle(fontSize: 12)),
+                                      ),
+                                    ],
+                                  )
+                                : SizedBox(
+                                    key: const ValueKey('progress-body'),
+                                    width: double.infinity,
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: Text(
+                                        s.syncStatusMessage,
+                                        key: ValueKey('msg-${s.syncStatusMessage.hashCode}'),
+                                        style: const TextStyle(fontSize: 13, height: 1.25),
+                                      ),
+                                    ),
+                                  ),
+                          ),
                         ],
                       ),
                     ),
                     actions: [
-                      if (active &&
+                      if (awaiting) ...[
+                        TextButton(
+                          onPressed: () {
+                            s.rejectIncoming();
+                            Navigator.of(ctx).pop();
+                          },
+                          child: const Text('拒绝'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            s.approveIncoming();
+                          },
+                          child: const Text('接受'),
+                        ),
+                      ] else if (inProgress &&
                           (s.syncStatus == SyncStatus.sending ||
-                              s.syncStatus == SyncStatus.receiving))
+                              s.syncStatus == SyncStatus.receiving)) ...[
                         TextButton(
                           onPressed: () {
                             if (s.syncStatus == SyncStatus.sending) {
@@ -1037,11 +1117,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               s.cancelReceiving();
                             }
                           },
-                          child: Text(s.syncStatus == SyncStatus.receiving
-                              ? '取消接收'
-                              : '取消发送'),
+                          child: Text(
+                              s.syncStatus == SyncStatus.receiving ? '取消接收' : '取消发送'),
                         ),
-                      if (!active)
+                      ] else if (!inProgress && !awaiting) ...[
                         TextButton(
                           onPressed: () {
                             Navigator.of(ctx).pop();
@@ -1049,6 +1128,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           },
                           child: const Text('关闭'),
                         ),
+                      ],
                     ],
                   );
                 },
@@ -1057,12 +1137,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           },
         ).then((_) {
           _syncDialogVisible = false;
-          _receiveAcceptDialogShown = false; // 重置（审批弹窗标志）
         });
       });
     } else if (terminal && _syncDialogVisible) {
       // 终态：更新对话框为可关闭状态（不立即强制关闭，给用户查看结果）
-  if (service.syncStatus == SyncStatus.completed) {
+      if (service.syncStatus == SyncStatus.completed) {
         // 成功提示
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('同步完成')),
@@ -1074,8 +1153,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               backgroundColor: Colors.red),
         );
       }
-  // 不再自动关闭，由用户点击“关闭”按钮手动关闭，保留结果供查看
-  _receiveAcceptDialogShown = false; // 终态重置
+      // 不再自动关闭，由用户点击“关闭”按钮手动关闭，保留结果供查看
+  // 终态，无额外操作
     }
   }
 
