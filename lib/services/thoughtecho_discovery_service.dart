@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
 import 'package:thoughtecho/services/localsend/utils/network_interfaces.dart';
@@ -18,6 +19,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   int _actualServerPort = defaultPort; // 实际服务器端口
   String _deviceFingerprint = 'initializing'; // 设备指纹，异步获取
   bool _fingerprintReady = false; // 指纹是否已获取
+  String _deviceModel = 'ThoughtEcho'; // 真实设备型号（含平台），异步填充
+  bool _deviceInfoReady = false;
 
   List<Device> get devices => List.unmodifiable(_devices);
   bool get isScanning => _isScanning;
@@ -25,6 +28,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 构造函数：开始异步获取指纹
   ThoughtEchoDiscoveryService() {
     _ensureFingerprint();
+  _ensureDeviceInfo();
     debugPrint('设备发现服务初始化，设备指纹(占位): $_deviceFingerprint');
   }
 
@@ -42,6 +46,58 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       }
     } catch (e) {
       logWarning('discovery_fp_fetch_fail error=$e', source: 'LocalSend');
+    }
+  }
+
+  /// 异步获取真实设备型号并缓存。保持轻量：只获取一次。
+  Future<void> _ensureDeviceInfo() async {
+    if (_deviceInfoReady) return;
+    if (kIsWeb) {
+      _deviceModel = 'Web';
+      _deviceInfoReady = true;
+      return;
+    }
+    try {
+      final plugin = DeviceInfoPlugin();
+      String model;
+    if (Platform.isAndroid) {
+    final info = await plugin.androidInfo;
+    final brand = info.brand.trim();
+    final m = info.model.trim();
+    model = [brand, m].where((e) => e.isNotEmpty).join(' ');
+      } else if (Platform.isIOS) {
+        final info = await plugin.iosInfo;
+    // name 例如“张三的 iPhone”，model 如 “iPhone15,2” (代号)
+    final name = info.name.trim();
+    final machine = info.utsname.machine.trim();
+        model = name.isNotEmpty && machine.isNotEmpty
+            ? '$name ($machine)'
+            : (name.isNotEmpty ? name : machine);
+      } else if (Platform.isMacOS) {
+        final info = await plugin.macOsInfo;
+    model = info.model.trim().isEmpty ? 'macOS' : info.model.trim();
+      } else if (Platform.isWindows) {
+        final info = await plugin.windowsInfo;
+    model = info.computerName.trim().isEmpty
+      ? 'Windows'
+      : info.computerName.trim();
+      } else if (Platform.isLinux) {
+        final info = await plugin.linuxInfo;
+    model = info.prettyName.trim().isEmpty
+      ? 'Linux'
+      : info.prettyName.trim();
+      } else {
+        model = Platform.operatingSystem;
+      }
+      if (model.isEmpty) model = 'Unknown Device';
+      _deviceModel = model;
+      _deviceInfoReady = true;
+      logDebug('discovery_device_model_ready model=$_deviceModel',
+          source: 'LocalSend');
+    } catch (e) {
+      _deviceModel = 'Unknown Device';
+      _deviceInfoReady = true;
+      logWarning('discovery_device_model_fail error=$e', source: 'LocalSend');
     }
   }
 
@@ -70,6 +126,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       // 确保指纹已就绪，避免首次广播使用占位
       if (_deviceFingerprint == 'initializing' || !_fingerprintReady) {
         await _ensureFingerprint();
+      }
+      if (!_deviceInfoReady) {
+        await _ensureDeviceInfo();
       }
 
       // 启动UDP组播监听
@@ -257,11 +316,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     if (!_fingerprintReady) {
       await _ensureFingerprint();
     }
+    if (!_deviceInfoReady) {
+      await _ensureDeviceInfo();
+    }
     final fingerprint = _getDeviceFingerprint();
     final dto = MulticastDto(
       alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
-      deviceModel: 'ThoughtEcho App',
+      deviceModel: _deviceModel,
       deviceType: DeviceType.mobile,
       fingerprint: fingerprint,
       port: _actualServerPort, // 使用实际服务器端口
@@ -317,10 +379,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 回应公告消息
   Future<void> _respondToAnnouncement(Device peer) async {
     // 可以通过HTTP发送注册消息，或者通过UDP回应
+    if (!_deviceInfoReady) {
+      await _ensureDeviceInfo();
+    }
+    if (!_fingerprintReady) {
+      await _ensureFingerprint();
+    }
     final dto = MulticastDto(
-      alias: 'ThoughtEcho-${DateTime.now().millisecondsSinceEpoch}',
+      alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
-      deviceModel: 'ThoughtEcho',
+      deviceModel: _deviceModel,
       deviceType: DeviceType.desktop,
       fingerprint: _getDeviceFingerprint(),
       port: defaultPort,
@@ -360,13 +428,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       if (!_fingerprintReady) {
         await _ensureFingerprint();
       }
+      if (!_deviceInfoReady) {
+        await _ensureDeviceInfo();
+      }
       final fingerprint = _getDeviceFingerprint();
       debugPrint('创建设备公告，设备指纹: $fingerprint');
 
       final announcement = MulticastDto(
         alias: 'ThoughtEcho-${Platform.localHostname}',
         version: protocolVersion,
-        deviceModel: 'ThoughtEcho App',
+  deviceModel: _deviceModel,
         deviceType: DeviceType.mobile,
         fingerprint: fingerprint,
         port: _actualServerPort, // 使用实际服务器端口

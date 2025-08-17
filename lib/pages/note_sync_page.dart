@@ -672,31 +672,19 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ),
                             ),
                             title: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
                                   child: Text(
                                     device.alias,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                                if (device.deviceModel != null &&
-                                    device.deviceModel!.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 6.0),
-                                    child: Text(
-                                      device.deviceModel!,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                    color: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.color
-                      ?.withValues(alpha: 0.7),
-                                      ),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                                ),
+                                const SizedBox(width: 4),
+                                _buildShortFingerprint(device.fingerprint),
                               ],
                             ),
                             subtitle: Column(
@@ -708,6 +696,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   ipLine,
                                   style: const TextStyle(fontSize: 12),
                                 ),
+                                if ((device.deviceModel ?? '').isNotEmpty)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.only(top: 2.0, bottom: 2.0),
+                                    child: Text(
+                                      '${_platformLabel(device.deviceType)} • ${device.deviceModel}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.color
+                                            ?.withValues(alpha: 0.65),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 const SizedBox(height: 4),
                                 _buildDiscoveryBadges(device),
                               ],
@@ -1034,5 +1040,44 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
     } catch (_) {}
+  }
+
+  /// 构建简短指纹徽章（显示后 6 位），便于区分同名设备
+  Widget _buildShortFingerprint(String fingerprint) {
+    if (fingerprint.isEmpty) return const SizedBox.shrink();
+    final short = fingerprint.length <= 6
+        ? fingerprint
+        : fingerprint.substring(fingerprint.length - 6).toUpperCase();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '#$short',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSecondaryContainer,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  String _platformLabel(DeviceType type) {
+    switch (type) {
+      case DeviceType.mobile:
+        return 'Mobile';
+      case DeviceType.desktop:
+        return 'Desktop';
+      case DeviceType.web:
+        return 'Web';
+      case DeviceType.server:
+        return 'Server';
+      case DeviceType.headless:
+        return 'Headless';
+    }
   }
 }
