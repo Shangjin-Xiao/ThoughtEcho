@@ -243,17 +243,17 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// (Deprecated) 旧receiveAndMerge逻辑已废弃，直接调用processSyncPackage
-  @deprecated
+  @Deprecated('Legacy receive logic replaced by processSyncPackage; will be removed in future release')
   Future<void> receiveAndMergeNotes(String backupFilePath) =>
       processSyncPackage(backupFilePath);
 
   // 旧的重复检测与合并逻辑已不再需要 (LWW直接覆盖)。保留方法体空实现以避免潜在调用崩溃。
-  @deprecated
+  @Deprecated('Legacy duplicate merge removed; kept as no-op for binary compatibility')
   // ignore: unused_element
   Future<void> _mergeNoteData() async {}
 
   /// 高级重复检测算法
-  @deprecated
+  @Deprecated('Legacy advanced duplicate detection not used after LWW strategy')
   // ignore: unused_element
   Future<List<List<dynamic>>> _detectDuplicatesAdvanced(
       List<dynamic> quotes) async {
@@ -346,7 +346,7 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 合并一组重复笔记
-  @deprecated
+  @Deprecated('Legacy merge duplicates function unused after LWW strategy')
   // ignore: unused_element
   Future<void> _mergeQuoteGroup(List<dynamic> duplicates) async {
     // 按优先级排序（最新时间、最丰富内容）
