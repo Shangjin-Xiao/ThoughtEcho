@@ -48,6 +48,12 @@ class NoteSyncService extends ChangeNotifier {
   String _syncStatusMessage = '';
   double _syncProgress = 0.0;
   MergeReport? _lastMergeReport; // 新增：最近一次合并报告
+  String? _currentReceiveSessionId; // 当前接收会话ID
+  DateTime? _receiveStartTime;
+  String? _receiveSenderAlias;
+
+  DateTime? _sendStartTime;
+  String? _currentSendSessionId; // 当前发送会话ID
 
   // 状态访问器
   SyncStatus get syncStatus => _syncStatus;
@@ -119,8 +125,40 @@ class NoteSyncService extends ChangeNotifier {
       await _localSendServer!.start(
         port: defaultPort, // 明确指定端口
         onFileReceived: (filePath) async {
-          // 使用processSyncPackage方法处理接收到的文件
+          // 文件接收完毕后开始处理合并
           await processSyncPackage(filePath);
+        },
+        onReceiveProgress: (received, total) {
+          // 接收端进度：0-100% 映射到 receiving 状态的 0-0.9，剩余0.9-1.0给合并阶段
+          if (total > 0) {
+            final ratio = received / total;
+            // 仅当未进入合并阶段才更新为接收状态，避免覆盖后续合并状态
+            if (_syncStatus == SyncStatus.idle || _syncStatus == SyncStatus.receiving) {
+              String extra = '';
+              if (_receiveStartTime != null) {
+                final elapsed = DateTime.now().difference(_receiveStartTime!).inMilliseconds / 1000.0;
+                if (elapsed > 0.2) {
+                  final speed = received / 1024 / 1024 / elapsed; // MB/s
+                  final remaining = total - received;
+                  final etaSec = speed > 0 ? remaining / 1024 / 1024 / speed : 0;
+                  extra = ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
+                }
+              }
+              _updateSyncStatus(
+                SyncStatus.receiving,
+                '正在接收${_receiveSenderAlias != null ? '（来自$_receiveSenderAlias）' : ''} ${(received / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
+                0.05 + ratio * 0.75, // 留出空间给合并
+              );
+            }
+          }
+        },
+        onReceiveSessionCreated: (sid, totalBytes, alias) {
+          _currentReceiveSessionId = sid;
+          _receiveSenderAlias = alias;
+          _receiveStartTime = DateTime.now();
+          if (_syncStatus == SyncStatus.idle) {
+            _updateSyncStatus(SyncStatus.receiving, '等待 $alias 发送数据 (0/${(totalBytes / 1024 / 1024).toStringAsFixed(1)}MB)', 0.02);
+          }
         },
       );
       final actualPort = _localSendServer!.port;
@@ -343,6 +381,7 @@ class NoteSyncService extends ChangeNotifier {
 
       // 1. 更新状态：开始打包
       _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
+  _currentSendSessionId = null;
 
       // 2. 使用备份服务创建数据包
       final backupPath = await _backupService.exportAllData(
@@ -389,11 +428,26 @@ class NoteSyncService extends ChangeNotifier {
         onProgress: (sent, total) {
           // 打包阶段占 0-0.5 ，发送阶段占 0.5-0.9，余下 0.9-1.0 为完成收尾
           final ratio = total == 0 ? 0.0 : sent / total;
+          _sendStartTime ??= DateTime.now();
+          String extra = '';
+          if (_sendStartTime != null) {
+            final now = DateTime.now();
+            final elapsed = now.difference(_sendStartTime!).inMilliseconds / 1000.0;
+            if (elapsed > 0.2) {
+              final speed = sent / 1024 / 1024 / elapsed; // MB/s 总平均
+              final remaining = (total - sent).clamp(0, total);
+              final etaSec = speed > 0 ? remaining / 1024 / 1024 / speed : 0;
+              extra = ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
+            }
+          }
           final progress = 0.5 + ratio * 0.4; // 线性映射
           _updateSyncStatus(
               SyncStatus.sending,
-              '正在发送 ${(sent / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB',
+              '正在发送 ${(sent / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
               progress);
+        },
+        onSessionCreated: (sid) {
+          _currentSendSessionId = sid;
         },
       );
 
@@ -411,6 +465,31 @@ class NoteSyncService extends ChangeNotifier {
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '发送失败: $e', 0.0);
       rethrow;
+    }
+  }
+
+  /// 取消当前发送（仅在发送阶段有效）
+  void cancelOngoingSend() {
+    if (_syncStatus != SyncStatus.sending || _currentSendSessionId == null) {
+      return;
+    }
+    try {
+      _localSendProvider?.cancelSession(_currentSendSessionId!);
+      _updateSyncStatus(SyncStatus.failed, '发送已取消', 0.0);
+    } catch (e) {
+      debugPrint('取消发送失败: $e');
+    }
+  }
+
+  /// 取消接收（如果正在接收且尚未进入合并阶段）
+  void cancelReceiving() {
+    if (_syncStatus != SyncStatus.receiving || _currentReceiveSessionId == null) return;
+    try {
+      final rc = _localSendServer?.receiveController;
+      rc?.cancelSession(_currentReceiveSessionId!);
+      _updateSyncStatus(SyncStatus.failed, '接收已取消', 0.0);
+    } catch (e) {
+      debugPrint('取消接收失败: $e');
     }
   }
 
@@ -477,6 +556,11 @@ class NoteSyncService extends ChangeNotifier {
       } else {
         _updateSyncStatus(SyncStatus.completed, '合并完成: $summary', 1.0);
         debugPrint('LWW合并成功: $summary');
+        try {
+          _databaseService.refreshAllData();
+        } catch (e) {
+          debugPrint('刷新数据库数据流失败: $e');
+        }
       }
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '合并失败: $e', 0.0);

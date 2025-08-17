@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
@@ -18,7 +19,8 @@ class NoteSyncPage extends StatefulWidget {
 class _NoteSyncPageState extends State<NoteSyncPage> {
   List<Device> _nearbyDevices = [];
   bool _isScanning = false;
-  bool _isSending = false;
+  bool _isSending = false; // 是否存在发送任务（全局禁用其他按钮用）
+  String? _sendingFingerprint; // 当前正在发送的设备指纹，仅该行显示加载指示
   bool _isInitializing = true;
   String _initializationError = '';
   NoteSyncService? _syncService;
@@ -28,6 +30,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   int _discoveryRemainingMs = 0;
   Timer? _discoveryCountdownTimer;
   static const int _uiDiscoveryTimeoutMs = 30000; // 与 defaultDiscoveryTimeout 对齐
+  bool _syncDialogVisible = false;
 
   @override
   void initState() {
@@ -79,9 +82,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           _isInitializing = false;
         });
 
-        // 初始化完成后不自动开始设备发现，保持与测试期望一致
-        // 用户可通过点击刷新按钮手动开始发现
-        // _startDeviceDiscovery();
+        // 初始化完成后立即开始设备发现（用户期望：进入页面即开始发现）
+        // 使用微任务确保状态更新后再启动，避免与初始化状态冲突
+        Future.microtask(() {
+          if (mounted) {
+            _startDeviceDiscovery();
+          }
+        });
       }
     } catch (e) {
       debugPrint('启动同步服务失败: $e');
@@ -114,6 +121,53 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   _discoveryCountdownTimer?.cancel();
     _stopSyncService();
     super.dispose();
+  }
+
+  /// 返回拦截：根据当前状态提示用户
+  Future<bool> _onWillPop() async {
+    // 如果没有初始化或已经出错，直接允许返回
+    final syncService = _syncService;
+    final busySync = syncService != null &&
+        (syncService.syncStatus == SyncStatus.packaging ||
+            syncService.syncStatus == SyncStatus.sending ||
+            syncService.syncStatus == SyncStatus.receiving ||
+            syncService.syncStatus == SyncStatus.merging);
+    final busy = _isScanning || _isSending || busySync;
+    if (!busy) return true; // 空闲直接返回
+
+    // 弹出确认对话框
+    final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) {
+            return AlertDialog(
+              title: const Text('确认离开'),
+        content: Text(busySync
+          ? '当前正在进行同步操作（${_getSyncStatusText(syncService.syncStatus)}），离开将中断过程并停止服务器，确认要返回吗？'
+                  : _isScanning
+                      ? '当前正在发现设备，离开将停止发现并关闭服务器，确认返回吗？'
+                      : '当前正在发送数据，离开将中断发送并关闭服务器，确认返回吗？'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (shouldLeave) {
+      // 清理扫描与服务
+      _cancelDeviceDiscovery();
+      await _stopSyncService();
+      return true;
+    }
+    return false;
   }
 
   Future<void> _stopSyncService() async {
@@ -280,6 +334,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     setState(() {
       _isSending = true;
+  _sendingFingerprint = device.fingerprint;
     });
 
     try {
@@ -313,6 +368,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       if (mounted) {
         setState(() {
           _isSending = false;
+          _sendingFingerprint = null;
         });
       }
     }
@@ -416,7 +472,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('笔记同步'),
         actions: [
@@ -484,6 +542,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 // 同步状态显示
                 Consumer<NoteSyncService>(
                   builder: (context, syncService, child) {
+                    _maybeShowOrHideSyncDialog(syncService);
                     if (syncService.syncStatus != SyncStatus.idle) {
                       return Container(
                         margin: const EdgeInsets.only(top: 8),
@@ -494,11 +553,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         ),
                         child: Row(
                           children: [
-                            if (syncService.syncStatus ==
-                                    SyncStatus.packaging ||
-                                syncService.syncStatus == SyncStatus.sending ||
-                                syncService.syncStatus ==
-                                    SyncStatus.merging) ...[
+              if (syncService.syncStatus == SyncStatus.packaging ||
+                syncService.syncStatus == SyncStatus.sending ||
+                syncService.syncStatus == SyncStatus.receiving ||
+                syncService.syncStatus == SyncStatus.merging) ...[
                               SizedBox(
                                 width: 16,
                                 height: 16,
@@ -583,6 +641,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     itemCount: _nearbyDevices.length,
                     itemBuilder: (context, index) {
                       final device = _nearbyDevices[index];
+                      final displayIp = _resolveDeviceIp(device);
+                      final ipLine = displayIp != null
+                          ? '$displayIp:${device.port}'
+                          : 'IP未知${device.port > 0 ? ' : :' + device.port.toString() : ''}';
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -597,19 +659,56 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               color: Colors.white,
                             ),
                           ),
-                          title: Text(device.alias),
-                          subtitle: Text('${device.ip}:${device.port}'),
-                          trailing: _isSending
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  device.alias,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              if (device.deviceModel != null && device.deviceModel!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 6.0),
+                                  child: Text(
+                                    device.deviceModel!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 第一行保持原有纯文本格式，兼容现有测试 (find.text('192.168.x.x:port'))
+                              Text(
+                                ipLine,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(height: 4),
+                              _buildDiscoveryBadges(device),
+                            ],
+                          ),
+                          isThreeLine: true,
+                          trailing: (_sendingFingerprint == device.fingerprint)
                               ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : IconButton(
                                   icon: const Icon(Icons.send),
-                                  onPressed: () => _sendNotesToDevice(device),
+                                  tooltip: _isSending ? '正在发送其它设备...' : '发送到此设备',
+                                  onPressed: _isSending
+                                      ? null
+                                      : () => _sendNotesToDevice(device),
                                 ),
+                          onLongPress: () => _copyIpPort(ipLine),
                         ),
                       );
                     },
@@ -654,7 +753,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         ],
       ),
-    floatingActionButton: FloatingActionButton.extended(
+  floatingActionButton: FloatingActionButton.extended(
     onPressed: _isInitializing
       ? null
       : (_isScanning ? _cancelDeviceDiscovery : _startDeviceDiscovery),
@@ -668,7 +767,102 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       : (_isScanning ? '取消发现' : '发现设备')),
     tooltip: _isScanning ? '取消本次设备发现' : '开始发现附近设备',
     ),
-    );
+  ),
+  );
+  }
+
+  void _maybeShowOrHideSyncDialog(NoteSyncService service) {
+    // 需要展示的状态
+    final active = service.syncStatus == SyncStatus.packaging ||
+        service.syncStatus == SyncStatus.sending ||
+        service.syncStatus == SyncStatus.receiving ||
+        service.syncStatus == SyncStatus.merging;
+
+    // 完成或失败后如果弹窗在显示则关闭
+    final terminal = service.syncStatus == SyncStatus.completed ||
+        service.syncStatus == SyncStatus.failed ||
+        service.syncStatus == SyncStatus.idle;
+
+    if (active && !_syncDialogVisible) {
+      _syncDialogVisible = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) {
+            return StatefulBuilder(builder: (ctx, setLocal) {
+              return Consumer<NoteSyncService>(
+                builder: (context, s, _) {
+                  final progress = s.syncProgress.clamp(0.0, 1.0);
+                  final active = s.syncStatus == SyncStatus.packaging || s.syncStatus == SyncStatus.sending || s.syncStatus == SyncStatus.receiving || s.syncStatus == SyncStatus.merging;
+                  return AlertDialog(
+                    title: Text(_getSyncStatusText(s.syncStatus)),
+                    content: SizedBox(
+                      width: 320,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinearProgressIndicator(value: active ? (progress == 0 || progress == 1 ? null : progress) : 1),
+                          const SizedBox(height: 12),
+                          Text(
+                            s.syncStatusMessage,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      if (active && (s.syncStatus == SyncStatus.sending || s.syncStatus == SyncStatus.receiving))
+                        TextButton(
+                          onPressed: () {
+                            if (s.syncStatus == SyncStatus.sending) {
+                              s.cancelOngoingSend();
+                            } else if (s.syncStatus == SyncStatus.receiving) {
+                              s.cancelReceiving();
+                            }
+                          },
+                          child: Text(s.syncStatus == SyncStatus.receiving ? '取消接收' : '取消发送'),
+                        ),
+                      if (!active)
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            _syncDialogVisible = false;
+                          },
+                          child: const Text('关闭'),
+                        ),
+                    ],
+                  );
+                },
+              );
+            });
+          },
+        ).then((_) {
+          _syncDialogVisible = false;
+        });
+      });
+    } else if (terminal && _syncDialogVisible) {
+      // 终态：更新对话框为可关闭状态（不立即强制关闭，给用户查看结果）
+      if (service.syncStatus == SyncStatus.completed) {
+        // 成功提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('同步完成')),
+        );
+      } else if (service.syncStatus == SyncStatus.failed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(service.syncStatusMessage), backgroundColor: Colors.red),
+        );
+      }
+      // 自动延时关闭（1.2s）如果用户未手动关闭
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted && _syncDialogVisible && (service.syncStatus == SyncStatus.completed || service.syncStatus == SyncStatus.failed)) {
+          Navigator.of(context, rootNavigator: true).maybePop();
+          _syncDialogVisible = false;
+        }
+      });
+    }
   }
 
   /// 获取同步状态颜色
@@ -724,5 +918,82 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       case DeviceType.headless:
         return Icons.memory;
     }
+  }
+
+  /// 优先返回 device.ip；如果为空尝试从发现方式中提取 HttpDiscovery 的 ip
+  String? _resolveDeviceIp(Device device) {
+    if (device.ip != null && device.ip!.isNotEmpty) return device.ip;
+    for (final m in device.discoveryMethods) {
+      if (m is HttpDiscovery && m.ip.isNotEmpty) return m.ip;
+    }
+    return null;
+  }
+
+  /// 构建发现方式徽章
+  Widget _buildDiscoveryBadges(Device device) {
+    if (device.discoveryMethods.isEmpty) {
+      return Text(
+        '未提供发现方式',
+        style: TextStyle(
+          fontSize: 11,
+          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+        ),
+      );
+    }
+    final chips = device.discoveryMethods.map((m) {
+      String label;
+      IconData icon;
+      if (m is MulticastDiscovery) {
+        label = 'Multicast';
+        icon = Icons.wifi_tethering;
+      } else if (m is HttpDiscovery) {
+        label = 'HTTP';
+        icon = Icons.http;
+      } else if (m is SignalingDiscovery) {
+        label = 'Signal';
+        icon = Icons.cloud;
+      } else {
+        label = 'Other';
+        icon = Icons.device_unknown;
+      }
+      return Padding(
+        padding: const EdgeInsets.only(right: 4, bottom: 2),
+        child: Chip(
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+              width: 0.5,
+            ),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          avatar: Icon(icon, size: 14, color: Theme.of(context).colorScheme.primary),
+          label: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+    return Wrap(children: chips, spacing: 0, runSpacing: 0);
+  }
+
+  Future<void> _copyIpPort(String text) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已复制: $text'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {}
   }
 }

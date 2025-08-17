@@ -22,6 +22,8 @@ class LocalSendServer {
   Future<void> start({
     int? port,
     Function(String filePath)? onFileReceived,
+  Function(int received, int total)? onReceiveProgress,
+  Function(String sessionId, int totalBytes, String senderAlias)? onReceiveSessionCreated,
   }) async {
     if (_isRunning) return;
 
@@ -33,7 +35,11 @@ class LocalSendServer {
     }
 
     _port = port ?? defaultPort;
-    _receiveController = ReceiveController(onFileReceived: onFileReceived);
+    _receiveController = ReceiveController(
+      onFileReceived: onFileReceived,
+      onReceiveProgress: onReceiveProgress,
+  onSessionCreated: onReceiveSessionCreated,
+    );
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
 
@@ -210,10 +216,31 @@ class LocalSendServer {
             }
           }
         } else {
+          // 取消会话接口（简化版）
+          if (path == '/api/localsend/v2/cancel' && request.method == 'POST') {
+            try {
+              final bodyBytes = await request.fold<List<int>>(<int>[], (p, e) => p..addAll(e));
+              final body = utf8.decode(bodyBytes);
+              final data = jsonDecode(body) as Map<String, dynamic>;
+              final sessionId = data['sessionId'] as String?;
+              if (sessionId != null) {
+                _receiveController.cancelSession(sessionId);
+                responseData = {'ok': true};
+                logInfo('cancel_marked session=$sessionId', source: 'LocalSend');
+              } else {
+                statusCode = 400;
+                responseData = {'error': 'missing sessionId'};
+              }
+            } catch (e) {
+              statusCode = 400;
+              responseData = {'error': 'bad request'};
+            }
+          } else {
           // 404 Not Found
           statusCode = 404;
           responseData = {'error': 'Not found', 'path': path};
           logWarning('route_404 path=$path', source: 'LocalSend');
+          }
         }
       } catch (e, stack) {
         logError('handle_error error=$e',
