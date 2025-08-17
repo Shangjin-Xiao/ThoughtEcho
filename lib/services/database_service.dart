@@ -4340,9 +4340,10 @@ class DatabaseService extends ChangeNotifier {
         await _mergeQuotes(txn, data['quotes'] as List, reportBuilder);
       });
 
-      // 清理缓存并通知监听器
-      _clearAllCache();
-      notifyListeners();
+  // 清理缓存并通知监听器，然后刷新当前流（如果存在）
+  _clearAllCache();
+  notifyListeners();
+  _refreshQuotesStream();
 
       logInfo('LWW合并完成: ${reportBuilder.build().summary}');
     } catch (e) {
@@ -4351,6 +4352,13 @@ class DatabaseService extends ChangeNotifier {
     }
 
     return reportBuilder.build();
+  }
+
+  /// 外部调用的统一刷新入口（同步/恢复后使用）
+  void refreshAllData() {
+    _clearAllCache();
+    notifyListeners();
+    _refreshQuotesStream();
   }
 
   /// 合并分类数据（LWW策略）

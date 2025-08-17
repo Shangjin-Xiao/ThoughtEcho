@@ -31,8 +31,14 @@ class LocalSendProvider {
     required List<File> files,
     bool background = true,
     void Function(int sentBytes, int totalBytes)? onProgress,
+    void Function(String sessionId)? onSessionCreated,
   }) async {
     final sessionId = _uuid.v4();
+
+    // 提前通知 sessionId 以支持取消操作
+    try {
+      onSessionCreated?.call(sessionId);
+    } catch (_) {}
 
     // Create session
     final session = SendSession(
@@ -333,6 +339,20 @@ class LocalSendProvider {
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.canceledBySender,
       );
+      // 通知对端（最佳努力，不影响本地状态）
+      final remoteId = session.remoteSessionId;
+      if (remoteId != null) {
+        final url = ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
+        try {
+          final client = http.Client();
+          client
+              .post(Uri.parse(url),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({'sessionId': remoteId}))
+              .timeout(const Duration(seconds: 2))
+              .catchError((_) => http.Response('{}', 499));
+        } catch (_) {}
+      }
     }
   }
 

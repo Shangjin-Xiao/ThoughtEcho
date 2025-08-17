@@ -243,6 +243,11 @@ class BackupService {
         ),
         operationName: '数据导入',
       );
+      try {
+        _databaseService.refreshAllData();
+      } catch (e) {
+        logWarning('导入后刷新数据库失败: $e', source: 'BackupService');
+      }
       return null; // 旧模式无 MergeReport
     }
   }
@@ -676,6 +681,13 @@ class BackupService {
       return MergeReport.start(sourceDevice: sourceDevice)
           .addError('导入包装过程出错: $e')
           .completed();
+    } finally {
+      // 无论成功失败都尝试刷新，以确保UI更新
+      try {
+        _databaseService.refreshAllData();
+      } catch (e) {
+        logWarning('LWW导入后刷新数据库失败: $e', source: 'BackupService');
+      }
     }
   }
 

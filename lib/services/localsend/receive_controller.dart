@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import '../device_identity_manager.dart';
 import 'package:uuid/uuid.dart';
 
@@ -10,22 +9,22 @@ import 'models/info_register_dto.dart';
 import 'models/prepare_upload_request_dto.dart';
 import 'models/prepare_upload_response_dto.dart';
 import 'models/session_status.dart';
-import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
-import 'package:http_parser/http_parser.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// Simplified receive controller for ThoughtEcho
 /// Based on LocalSend's receive_controller but with minimal dependencies
 class ReceiveController {
   final Function(String filePath)? onFileReceived;
+  final void Function(int received, int total)? onReceiveProgress;
+  final void Function(String sessionId, int totalBytes, String senderAlias)? onSessionCreated;
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
   String? _cachedFingerprint; // initialized explicitly before serving info
 
-  ReceiveController({this.onFileReceived});
+  ReceiveController({this.onFileReceived, this.onReceiveProgress, this.onSessionCreated});
 
   void _startGcTimer() {
     _gcTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
@@ -75,7 +74,7 @@ class ReceiveController {
       }
       final prepareRequest = PrepareUploadRequestDto.fromJson(requestData);
 
-      // Create session
+  // Create session
       final sessionId = const Uuid().v4();
       final session = ReceiveSession(
         sessionId: sessionId,
@@ -94,7 +93,15 @@ class ReceiveController {
         fileTokens[fileId] = uuid.v4();
       }
 
-      // Update session status
+      // 计算总大小
+      int totalBytes = 0;
+      for (final f in prepareRequest.files.values) {
+        totalBytes += f.size;
+      }
+      // 回调通知 session 创建（包含总大小与别名）
+      try { onSessionCreated?.call(sessionId, totalBytes, prepareRequest.info.alias); } catch (_) {}
+
+  // Update session status
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.sending,
         fileTokens: fileTokens,
@@ -165,6 +172,11 @@ class ReceiveController {
         final transformer = MimeMultipartTransformer(boundary);
         final parts = request.cast<List<int>>().transform(transformer);
         await for (final part in parts) {
+          final currentSession = _sessions[sessionId];
+          if (currentSession != null && currentSession.status == SessionStatus.canceledByReceiver) {
+            logWarning('recv_aborted_by_user session=$sessionId', source: 'LocalSend');
+            throw Exception('接收已取消');
+          }
           final headers = part.headers;
           final disposition = headers['content-disposition'] ?? '';
           if (!disposition.contains('filename=')) {
@@ -178,17 +190,24 @@ class ReceiveController {
             if (received % (64 * 1024) == 0) {
               logDebug('recv_progress bytes=$received size=${fileDto.size}',
                   source: 'LocalSend');
+              onReceiveProgress?.call(received, fileDto.size);
             }
           }
         }
       } else {
         // Raw body streaming
         await for (final chunk in request) {
+          final currentSession = _sessions[sessionId];
+          if (currentSession != null && currentSession.status == SessionStatus.canceledByReceiver) {
+            logWarning('recv_aborted_by_user session=$sessionId', source: 'LocalSend');
+            throw Exception('接收已取消');
+          }
           received += chunk.length;
           await raf.writeFrom(chunk);
           if (received % (64 * 1024) == 0) {
             logDebug('recv_progress bytes=$received size=${fileDto.size}',
                 source: 'LocalSend');
+            onReceiveProgress?.call(received, fileDto.size);
           }
         }
       }
@@ -219,9 +238,11 @@ class ReceiveController {
         });
       }
 
-      logInfo(
-          'recv_upload_done session=$sessionId fileId=$fileId size=$finalSize path=${tempFile.path}',
-          source: 'LocalSend');
+    logInfo(
+      'recv_upload_done session=$sessionId fileId=$fileId size=$finalSize path=${tempFile.path}',
+      source: 'LocalSend');
+    // 最终完成进度
+    onReceiveProgress?.call(finalSize, fileDto.size);
       return {
         'message': 'File uploaded successfully',
         'fileId': fileId,
@@ -249,7 +270,10 @@ class ReceiveController {
 
   /// Cancel session
   void cancelSession(String sessionId) {
-    _sessions.remove(sessionId);
+    final s = _sessions[sessionId];
+    if (s != null) {
+      _sessions[sessionId] = s.copyWith(status: SessionStatus.canceledByReceiver);
+    }
   }
 
   /// Get all sessions
