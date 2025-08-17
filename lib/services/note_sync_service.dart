@@ -50,7 +50,8 @@ class NoteSyncService extends ChangeNotifier {
   double _syncProgress = 0.0;
   // UI节流：避免高频notify导致数字跳动与重建闪烁
   DateTime _lastUiNotify = DateTime.fromMillisecondsSinceEpoch(0);
-  static const int _minUiNotifyIntervalMs = 160; // ~6fps 足够平滑
+  // 调整：进一步缩短 UI 通知节流时间以实现更实时的进度更新（用户期望更“实时”）
+  static const int _minUiNotifyIntervalMs = 50; // ~20fps
   MergeReport? _lastMergeReport; // 新增：最近一次合并报告
   String? _currentReceiveSessionId; // 当前接收会话ID
   DateTime? _receiveStartTime;
@@ -167,15 +168,16 @@ class NoteSyncService extends ChangeNotifier {
             }
           }
         },
-        onReceiveSessionCreated: (sid, totalBytes, alias) {
+    onReceiveSessionCreated: (sid, totalBytes, alias) {
           _currentReceiveSessionId = sid;
           _receiveSenderAlias = alias;
           _receiveStartTime = DateTime.now();
           if (_syncStatus == SyncStatus.idle) {
-            _updateSyncStatus(
-                SyncStatus.receiving,
-                '等待 $alias 发送数据 (0/${(totalBytes / 1024 / 1024).toStringAsFixed(1)}MB)',
-                0.02);
+      // 审批前不展示总大小，简化文案
+      _updateSyncStatus(
+        SyncStatus.receiving,
+        '等待 $alias 发送数据...',
+        0.02);
           }
         },
         onApprovalNeeded: (sid, totalBytes, alias) async {
@@ -440,17 +442,20 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('对方拒绝同步请求');
       }
 
-      // 1. 更新状态：开始打包
-      _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
+  // 1. 更新状态：开始打包（不显示大小/数量）
+  _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
       _currentSendSessionId = null;
 
-      // 2. 使用备份服务创建数据包
-  final backupPath = await _backupService.exportAllData(
+      // 2. 使用备份服务创建数据包（隐藏具体数量，仅显示百分比）
+      final backupPath = await _backupService.exportAllData(
         includeMediaFiles: includeMediaFiles,
         onProgress: (current, total) {
-          final progress = 0.1 + (current / total) * 0.4; // 10%-50%的进度用于打包
+          final ratio = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
+            final progress = 0.1 + ratio * 0.4; // 10%-50%
           _updateSyncStatus(
-              SyncStatus.packaging, '正在打包数据... ($current/$total)', progress);
+              SyncStatus.packaging,
+              '正在打包数据... ${(ratio * 100).toStringAsFixed(0)}%',
+              progress);
         },
       );
       // 额外：打包完成后立即获取文件大小并校验
@@ -624,7 +629,8 @@ class NoteSyncService extends ChangeNotifier {
   Future<void> processSyncPackage(String backupFilePath) async {
     try {
       // 1. 更新状态：开始合并
-      _updateSyncStatus(SyncStatus.merging, '正在使用LWW策略合并数据...', 0.1);
+  // 文案简化：去掉专业术语 LWW，避免用户困惑
+  _updateSyncStatus(SyncStatus.merging, '正在合并数据...', 0.1);
 
       // 2. 使用新的统一 importData 接口（merge=true）
       final mergeReport = await _backupService.importData(
@@ -644,10 +650,10 @@ class NoteSyncService extends ChangeNotifier {
       final summary = mergeReport?.summary ?? '无报告';
       if (mergeReport?.hasErrors == true) {
         _updateSyncStatus(SyncStatus.failed, '合并出现错误: $summary', 0.0);
-        debugPrint('LWW合并错误: ${mergeReport?.errors}');
+  debugPrint('合并错误: ${mergeReport?.errors}');
       } else {
         _updateSyncStatus(SyncStatus.completed, '合并完成: $summary', 1.0);
-        debugPrint('LWW合并成功: $summary');
+  debugPrint('合并成功: $summary');
         try {
           _databaseService.refreshAllData();
         } catch (e) {
@@ -670,7 +676,7 @@ class NoteSyncService extends ChangeNotifier {
     final now = DateTime.now();
     final statusChanged = status != _syncStatus;
     final messageChanged = message != _syncStatusMessage;
-    final progressDelta = (progress - _syncProgress).abs();
+  final progressDelta = (progress - _syncProgress).abs();
     final timeDeltaMs = now.difference(_lastUiNotify).inMilliseconds;
 
     _syncStatus = status;
@@ -678,11 +684,11 @@ class NoteSyncService extends ChangeNotifier {
     _syncProgress = progress;
 
     // 通知策略：
-    // 1. 状态或消息变化立即通知
-    // 2. 进度变化累计 >=1% 或 距上次>=_minUiNotifyIntervalMs 才通知
+  // 1. 状态或消息变化立即通知
+  // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
     final shouldNotify = statusChanged ||
         messageChanged ||
-        progressDelta >= 0.01 ||
+  progressDelta >= 0.002 || // 0.2% 进度变化就刷新
         timeDeltaMs >= _minUiNotifyIntervalMs ||
         progress >= 1.0 ||
         status == SyncStatus.failed ||

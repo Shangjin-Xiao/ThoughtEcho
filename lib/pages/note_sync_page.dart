@@ -4,7 +4,8 @@ import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
-import 'package:thoughtecho/utils/sync_network_tester.dart';
+// 网络测速入口已根据用户需求隐藏，相关 import 注释保留以便未来恢复
+// import 'package:thoughtecho/utils/sync_network_tester.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
 
 /// 笔记同步页面
@@ -458,100 +459,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   /// 运行网络诊断
-  Future<void> _runNetworkDiagnostics() async {
-    try {
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          title: Text('正在运行网络诊断...'),
-          content: SizedBox(
-              height: 80, child: Center(child: CircularProgressIndicator())),
-        ),
-      );
-
-      // 如果发现服务未运行，提示用户先启用
-      final syncService = _syncService;
-      if (syncService == null) {
-        if (mounted) {
-          Navigator.of(context).pop();
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('提示'),
-              content: const Text('同步服务尚未初始化，请返回重新进入同步页面后再试。'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('确定'),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
-      }
-
-      final results = await SyncNetworkTester.runFullNetworkTest();
-
-      if (mounted) {
-        Navigator.of(context).pop(); // 关闭加载对话框
-
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('网络诊断结果'),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: ListView.builder(
-                itemCount: results.length,
-                itemBuilder: (context, index) {
-                  final result = results[index];
-                  final allSuccess = result.steps.isNotEmpty &&
-                      result.steps.every((s) => s.success);
-                  return ExpansionTile(
-                    title: Text(result.name),
-                    subtitle: Text(allSuccess ? '✅ 通过' : '❌ 存在问题'),
-                    children: result.steps
-                        .map((step) => ListTile(
-                              leading: Icon(
-                                step.success ? Icons.check_circle : Icons.error,
-                                color: step.success ? Colors.green : Colors.red,
-                              ),
-                              title: Text(step.name),
-                              subtitle: Text(step.details),
-                              dense: true,
-                            ))
-                        .toList(),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('关闭'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('网络诊断失败: $e');
-      if (mounted) {
-        Navigator.of(context).pop(); // 关闭加载对话框
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('网络诊断失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // 网络诊断功能已隐藏，如需恢复可将上面实现解注释
+  // 已隐藏，留空实现（保持接口，避免潜在外部调用报错）
+  // ignore: unused_element
+  Future<void> _runNetworkDiagnostics() async {}
 
   @override
   Widget build(BuildContext context) {
@@ -567,11 +478,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         appBar: AppBar(
           title: const Text('笔记同步'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.network_check),
-              onPressed: _runNetworkDiagnostics,
-              tooltip: '网络诊断',
-            ),
+            // 用户需求：隐藏网络测速/诊断入口
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _isScanning ? null : _startDeviceDiscovery,
@@ -581,178 +488,50 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         ),
         body: Column(
           children: [
-            // 状态指示器
+            // 顶部状态指示器精简：仅保留当前发现/数量，本机指纹；同步状态由弹窗处理
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       if (_isInitializing) ...[
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 8),
-                        const Text('正在启动同步服务...'),
+                        const Text('正在启动...'),
                       ] else if (_initializationError.isNotEmpty) ...[
-                        const Icon(Icons.error, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                            child: Text('启动失败: $_initializationError',
-                                style: const TextStyle(color: Colors.red))),
+                        const Icon(Icons.error, color: Colors.red, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text('启动失败: $_initializationError', style: const TextStyle(color: Colors.red, fontSize: 12))),
                       ] else if (_isScanning) ...[
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 8),
-                        Text(
-                          '正在搜索... 已发现 ${_nearbyDevices.length} 台${_discoveryRemainingMs > 0 ? ' (剩余 ${(_discoveryRemainingMs / 1000).ceil()}s)' : ''}',
-                        ),
+                        Text('搜索中... ${_nearbyDevices.length} 台'),
                       ] else ...[
-                        Icon(
-                          Icons.devices,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.devices, size: 18),
+                        const SizedBox(width: 6),
                         Text('发现 ${_nearbyDevices.length} 台设备'),
                       ],
                     ],
                   ),
-                  // 本机短指纹标识行
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6.0),
-                    child: Row(
-                      children: [
-                        Tooltip(
-                          message: '# 后 6 位是设备指纹，用于区分同名设备，可在两端核对是否一致。',
-                          child: Icon(Icons.fingerprint,
-                              size: 16,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _localShortFingerprint == null
-                              ? '本机标识获取中...'
-                              : '本机标识 #$_localShortFingerprint',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.color
-                                ?.withValues(alpha: 0.8),
-                          ),
-                        ),
-                        if (_localShortFingerprint != null)
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 0),
-                              minimumSize: const Size(0, 28),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () {
-                              final full = _localFingerprint ?? '';
-                              Clipboard.setData(ClipboardData(text: full));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('已复制指纹: $full'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              '复制',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                      ],
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onLongPress: () {
+                      if (_localFingerprint != null) {
+                        Clipboard.setData(ClipboardData(text: _localFingerprint!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('已复制本机指纹: $_localFingerprint')),);
+                      }
+                    },
+                    child: Text(
+                      _localShortFingerprint == null ? '本机标识获取中...' : '本机 #$_localShortFingerprint',
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75)),
                     ),
                   ),
-
-                  // 同步状态显示
-                  Consumer<NoteSyncService>(
-                    builder: (context, syncService, child) {
-                      _maybeShowOrHideSyncDialog(syncService);
-                      if (syncService.syncStatus != SyncStatus.idle) {
-                        return Container(
-                          margin: const EdgeInsets.only(top: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _getSyncStatusColor(syncService.syncStatus),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              if (syncService.syncStatus ==
-                                      SyncStatus.packaging ||
-                                  syncService.syncStatus ==
-                                      SyncStatus.sending ||
-                                  syncService.syncStatus ==
-                                      SyncStatus.receiving ||
-                                  syncService.syncStatus ==
-                                      SyncStatus.merging) ...[
-                                SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    value: syncService.syncProgress,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _getSyncStatusText(
-                                          syncService.syncStatus),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (syncService
-                                        .syncStatusMessage.isNotEmpty)
-                                      Text(
-                                        syncService.syncStatusMessage,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 12,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              if (syncService.syncProgress > 0 &&
-                                  syncService.syncProgress < 1)
-                                Text(
-                                  '${(syncService.syncProgress * 100).toInt()}%',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
+                  // 触发同步对话框逻辑（隐藏状态条但保留监听）
+                  Consumer<NoteSyncService>(builder: (context, s, _) { _maybeShowOrHideSyncDialog(s); return const SizedBox.shrink(); }),
                 ],
               ),
             ),
@@ -808,15 +587,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             title: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    device.alias,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
+                                Expanded(child: Text(
+                                  // 需求：设备名称直接使用当前下面小字（型号）那个。优先型号，其次 alias
+                                  (device.deviceModel?.isNotEmpty == true ? device.deviceModel! : device.alias).trim(),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                )),
                                 const SizedBox(width: 4),
                                 _buildShortFingerprint(device.fingerprint),
                               ],
@@ -826,30 +602,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 // 第一行保持原有纯文本格式，兼容现有测试 (find.text('192.168.x.x:port'))
-                                Text(
-                                  ipLine,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                if ((device.deviceModel ?? '').isNotEmpty)
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 2.0, bottom: 2.0),
-                                    child: Text(
-                                      '${_platformLabel(device.deviceType)} • ${device.deviceModel}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.color
-                                            ?.withValues(alpha: 0.65),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                const SizedBox(height: 4),
-                                _buildDiscoveryBadges(device),
+                                Text(ipLine, style: const TextStyle(fontSize: 12)),
+                                // 去除平台 + 型号 + 发现方式徽章，仅保留必要信息
                               ],
                             ),
                             isThreeLine: true,
@@ -960,10 +714,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       s.syncStatus == SyncStatus.receiving ||
                       s.syncStatus == SyncStatus.merging;
                   final awaiting = s.awaitingUserApproval;
-                  final sizeMB = s.pendingReceiveTotalBytes == null
-                      ? '?'
-                      : (s.pendingReceiveTotalBytes! / 1024 / 1024)
-                          .toStringAsFixed(1);
+                  // 审批阶段不再显示数据大小，简化文案
                   // 平滑动画：状态 / 文本变化使用 AnimatedSwitcher
                   return AlertDialog(
                     shape: RoundedRectangleBorder(
@@ -1057,10 +808,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        '设备 “${s.receiveSenderAlias ?? '对方'}” 想向你同步笔记数据（约 $sizeMB MB）。是否接受？',
-                                        style: const TextStyle(fontSize: 13, height: 1.3),
-                                      ),
+                                      Text('设备 “${s.receiveSenderAlias ?? '对方'}” 想同步笔记，是否接受？', style: const TextStyle(fontSize: 13, height: 1.3)),
                                       const SizedBox(height: 12),
                                       CheckboxListTile(
                                         value: s.skipSyncConfirmation,
@@ -1159,24 +907,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   /// 获取同步状态颜色
-  Color _getSyncStatusColor(SyncStatus status) {
-    switch (status) {
-      case SyncStatus.idle:
-        return Colors.grey;
-      case SyncStatus.packaging:
-        return Colors.blue;
-      case SyncStatus.sending:
-        return Colors.orange;
-      case SyncStatus.receiving:
-        return Colors.purple;
-      case SyncStatus.merging:
-        return Colors.indigo;
-      case SyncStatus.completed:
-        return Colors.green;
-      case SyncStatus.failed:
-        return Colors.red;
-    }
-  }
+  // 已移除顶部状态条颜色逻辑，保留方法则会未使用，故删除
 
   /// 获取同步状态文本
   String _getSyncStatusText(SyncStatus status) {
@@ -1190,7 +921,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       case SyncStatus.receiving:
         return '正在接收';
       case SyncStatus.merging:
-        return '正在合并数据';
+        return '正在合并';
       case SyncStatus.completed:
         return '同步完成';
       case SyncStatus.failed:
@@ -1223,60 +954,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   /// 构建发现方式徽章
-  Widget _buildDiscoveryBadges(Device device) {
-    if (device.discoveryMethods.isEmpty) {
-      return Text(
-        '未提供发现方式',
-        style: TextStyle(
-          fontSize: 11,
-          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-        ),
-      );
-    }
-    final chips = device.discoveryMethods.map((m) {
-      String label;
-      IconData icon;
-      if (m is MulticastDiscovery) {
-        label = 'Multicast';
-        icon = Icons.wifi_tethering;
-      } else if (m is HttpDiscovery) {
-        label = 'HTTP';
-        icon = Icons.http;
-      } else if (m is SignalingDiscovery) {
-        label = 'Signal';
-        icon = Icons.cloud;
-      } else {
-        label = 'Other';
-        icon = Icons.device_unknown;
-      }
-      return Padding(
-        padding: const EdgeInsets.only(right: 4, bottom: 2),
-        child: Chip(
-          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-          padding: EdgeInsets.zero,
-          visualDensity: VisualDensity.compact,
-      backgroundColor:
-        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-            width: 0.5,
-          ),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          avatar: Icon(icon,
-              size: 14, color: Theme.of(context).colorScheme.primary),
-          label: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      );
-    }).toList();
-    return Wrap(spacing: 0, runSpacing: 0, children: chips);
-  }
+  // 发现方式徽章 UI 已按需求移除
 
   Future<void> _copyIpPort(String text) async {
     try {
@@ -1319,18 +997,5 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     return full.substring(full.length - 6).toUpperCase();
   }
 
-  String _platformLabel(DeviceType type) {
-    switch (type) {
-      case DeviceType.mobile:
-        return 'Mobile';
-      case DeviceType.desktop:
-        return 'Desktop';
-      case DeviceType.web:
-        return 'Web';
-      case DeviceType.server:
-        return 'Server';
-      case DeviceType.headless:
-        return 'Headless';
-    }
-  }
+  // 平台标签显示已移除
 }
