@@ -133,15 +133,21 @@ class NoteSyncService extends ChangeNotifier {
           if (total > 0) {
             final ratio = received / total;
             // 仅当未进入合并阶段才更新为接收状态，避免覆盖后续合并状态
-            if (_syncStatus == SyncStatus.idle || _syncStatus == SyncStatus.receiving) {
+            if (_syncStatus == SyncStatus.idle ||
+                _syncStatus == SyncStatus.receiving) {
               String extra = '';
               if (_receiveStartTime != null) {
-                final elapsed = DateTime.now().difference(_receiveStartTime!).inMilliseconds / 1000.0;
+                final elapsed = DateTime.now()
+                        .difference(_receiveStartTime!)
+                        .inMilliseconds /
+                    1000.0;
                 if (elapsed > 0.2) {
                   final speed = received / 1024 / 1024 / elapsed; // MB/s
                   final remaining = total - received;
-                  final etaSec = speed > 0 ? remaining / 1024 / 1024 / speed : 0;
-                  extra = ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
+                  final etaSec =
+                      speed > 0 ? remaining / 1024 / 1024 / speed : 0;
+                  extra =
+                      ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
                 }
               }
               _updateSyncStatus(
@@ -157,7 +163,10 @@ class NoteSyncService extends ChangeNotifier {
           _receiveSenderAlias = alias;
           _receiveStartTime = DateTime.now();
           if (_syncStatus == SyncStatus.idle) {
-            _updateSyncStatus(SyncStatus.receiving, '等待 $alias 发送数据 (0/${(totalBytes / 1024 / 1024).toStringAsFixed(1)}MB)', 0.02);
+            _updateSyncStatus(
+                SyncStatus.receiving,
+                '等待 $alias 发送数据 (0/${(totalBytes / 1024 / 1024).toStringAsFixed(1)}MB)',
+                0.02);
           }
         },
       );
@@ -381,7 +390,7 @@ class NoteSyncService extends ChangeNotifier {
 
       // 1. 更新状态：开始打包
       _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
-  _currentSendSessionId = null;
+      _currentSendSessionId = null;
 
       // 2. 使用备份服务创建数据包
       final backupPath = await _backupService.exportAllData(
@@ -432,12 +441,14 @@ class NoteSyncService extends ChangeNotifier {
           String extra = '';
           if (_sendStartTime != null) {
             final now = DateTime.now();
-            final elapsed = now.difference(_sendStartTime!).inMilliseconds / 1000.0;
+            final elapsed =
+                now.difference(_sendStartTime!).inMilliseconds / 1000.0;
             if (elapsed > 0.2) {
               final speed = sent / 1024 / 1024 / elapsed; // MB/s 总平均
               final remaining = (total - sent).clamp(0, total);
               final etaSec = speed > 0 ? remaining / 1024 / 1024 / speed : 0;
-              extra = ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
+              extra =
+                  ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
             }
           }
           final progress = 0.5 + ratio * 0.4; // 线性映射
@@ -483,7 +494,8 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 取消接收（如果正在接收且尚未进入合并阶段）
   void cancelReceiving() {
-    if (_syncStatus != SyncStatus.receiving || _currentReceiveSessionId == null) return;
+    if (_syncStatus != SyncStatus.receiving || _currentReceiveSessionId == null)
+      return;
     try {
       final rc = _localSendServer?.receiveController;
       rc?.cancelSession(_currentReceiveSessionId!);
@@ -595,9 +607,9 @@ class NoteSyncService extends ChangeNotifier {
       // 发送设备公告，触发其他设备响应
       await _discoveryService!.announceDevice();
 
-  // 等待一段时间收集响应（使用可配置的超时时间）
-  final waitMs = timeout ?? defaultDiscoveryTimeout;
-  await Future.delayed(Duration(milliseconds: waitMs));
+      // 等待一段时间收集响应（使用可配置的超时时间）
+      final waitMs = timeout ?? defaultDiscoveryTimeout;
+      await Future.delayed(Duration(milliseconds: waitMs));
 
       return _discoveryService!.devices;
     } catch (e) {
@@ -611,7 +623,8 @@ class NoteSyncService extends ChangeNotifier {
   ///  - stream: 订阅后会立即收到第一次空列表，然后设备变化时推送。
   ///  - cancel: 调用后提前结束等待并完成 stream。
   /// [timeout] 总等待时长毫秒。
-  (Stream<List<Device>>, VoidCallback) discoverNearbyDevicesStream({int? timeout}) {
+  (Stream<List<Device>>, VoidCallback) discoverNearbyDevicesStream(
+      {int? timeout}) {
     if (_discoveryService == null) {
       final controller = StreamController<List<Device>>();
       // 立即关闭
