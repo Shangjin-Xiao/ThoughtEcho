@@ -1163,6 +1163,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         width: 800,
         height: 1200,
         customName: '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
+  context: context,
       );
 
       if (mounted) {
