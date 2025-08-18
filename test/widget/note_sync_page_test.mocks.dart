@@ -113,17 +113,20 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<String> createSyncPackage(_i5.Device? targetDevice) =>
+  _i4.Future<String> createSyncPackage(_i5.Device? targetDevice,
+          {bool includeMediaFiles = true}) =>
       (super.noSuchMethod(
         Invocation.method(
           #createSyncPackage,
           [targetDevice],
+          {#includeMediaFiles: includeMediaFiles},
         ),
         returnValue: _i4.Future<String>.value(_i3.dummyValue<String>(
           this,
           Invocation.method(
             #createSyncPackage,
             [targetDevice],
+            {#includeMediaFiles: includeMediaFiles},
           ),
         )),
       ) as _i4.Future<String>);
@@ -140,7 +143,8 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i5.Device>> discoverNearbyDevices({int? timeout}) => (super.noSuchMethod(
+  _i4.Future<List<_i5.Device>> discoverNearbyDevices({int? timeout}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #discoverNearbyDevices,
           [],

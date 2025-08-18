@@ -23,7 +23,8 @@ class CardTemplates {
     final bgGradientId = (dayPeriod != null || normalizedWeather != null)
         ? 'dynamicKnowledgeBg'
         : 'modernKnowledgeBg';
-    final backgroundGradientDef = (dayPeriod != null || normalizedWeather != null)
+    final backgroundGradientDef = (dayPeriod != null ||
+            normalizedWeather != null)
         ? _buildDynamicGradientDef(bgGradientId, palette)
         : '''<linearGradient id="modernKnowledgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
@@ -113,12 +114,19 @@ class CardTemplates {
   static String? _normalizeWeatherType(String? weather) {
     if (weather == null) return null;
     final w = weather.toLowerCase();
-    if (w.contains('晴') || w.contains('sun') || w.contains('clear')) return 'sunny';
-    if (w.contains('多云') || w.contains('云') || w.contains('cloud')) return 'cloudy';
-    if (w.contains('雨') || w.contains('drizzle') || w.contains('showers')) return 'rain';
+    if (w.contains('晴') || w.contains('sun') || w.contains('clear'))
+      return 'sunny';
+    if (w.contains('多云') || w.contains('云') || w.contains('cloud'))
+      return 'cloudy';
+    if (w.contains('雨') || w.contains('drizzle') || w.contains('showers'))
+      return 'rain';
     if (w.contains('雪') || w.contains('snow')) return 'snow';
-    if (w.contains('雾') || w.contains('fog') || w.contains('霾') || w.contains('mist')) return 'fog';
-    if (w.contains('雷') || w.contains('storm') || w.contains('电')) return 'storm';
+    if (w.contains('雾') ||
+        w.contains('fog') ||
+        w.contains('霾') ||
+        w.contains('mist')) return 'fog';
+    if (w.contains('雷') || w.contains('storm') || w.contains('电'))
+      return 'storm';
     if (w.contains('风') || w.contains('wind')) return 'windy';
     return null;
   }
@@ -157,12 +165,11 @@ class CardTemplates {
   }
 
   static String _buildDynamicGradientDef(String id, List<String> palette) {
-    return '<linearGradient id="$id" x1="0%" y1="0%" x2="100%" y2="100%">' +
-        List.generate(palette.length, (i) {
-          final pct = (i / (palette.length - 1) * 100).toStringAsFixed(0);
-          return '<stop offset="${pct}%" style="stop-color:${palette[i]};stop-opacity:1" />';
-        }).join() +
-        '</linearGradient>';
+    final stops = List.generate(palette.length, (i) {
+      final pct = (i / (palette.length - 1) * 100).toStringAsFixed(0);
+      return '<stop offset="$pct%" style="stop-color:${palette[i]};stop-opacity:1" />';
+    }).join();
+    return '<linearGradient id="$id" x1="0%" y1="0%" x2="100%" y2="100%">$stops</linearGradient>';
   }
 
   /// 构建天气/时间段场景叠加层（轻量元素，不喧宾夺主）
@@ -176,8 +183,10 @@ class CardTemplates {
     final elements = StringBuffer();
     // 月亮或太阳
     if (dayPeriod == 'night') {
-      elements.writeln('<circle cx="320" cy="90" r="32" fill="#f1f5f9" fill-opacity="0.85"/>');
-      elements.writeln('<circle cx="330" cy="80" r="32" fill="#0f172a"/>'); // 月亮缺口
+      elements.writeln(
+          '<circle cx="320" cy="90" r="32" fill="#f1f5f9" fill-opacity="0.85"/>');
+      elements
+          .writeln('<circle cx="330" cy="80" r="32" fill="#0f172a"/>'); // 月亮缺口
       // 星星
       for (final star in [
         [60, 100],
@@ -185,14 +194,19 @@ class CardTemplates {
         [140, 110],
         [260, 70]
       ]) {
-        elements.writeln('<circle cx="${star[0]}" cy="${star[1]}" r="2" fill="#f8fafc" />');
+        elements.writeln(
+            '<circle cx="${star[0]}" cy="${star[1]}" r="2" fill="#f8fafc" />');
       }
     } else if (dayPeriod == 'morning' || weather == 'sunny') {
-      elements.writeln('<circle cx="340" cy="80" r="40" fill="#fcd34d" fill-opacity="0.9"/>');
-      elements.writeln('<circle cx="340" cy="80" r="55" fill="#fde68a" fill-opacity="0.35"/>');
+      elements.writeln(
+          '<circle cx="340" cy="80" r="40" fill="#fcd34d" fill-opacity="0.9"/>');
+      elements.writeln(
+          '<circle cx="340" cy="80" r="55" fill="#fde68a" fill-opacity="0.35"/>');
     } else if (dayPeriod == 'evening') {
-      elements.writeln('<circle cx="340" cy="90" r="38" fill="#fb923c" fill-opacity="0.9"/>');
-      elements.writeln('<circle cx="340" cy="90" r="54" fill="#fdba74" fill-opacity="0.35"/>');
+      elements.writeln(
+          '<circle cx="340" cy="90" r="38" fill="#fb923c" fill-opacity="0.9"/>');
+      elements.writeln(
+          '<circle cx="340" cy="90" r="54" fill="#fdba74" fill-opacity="0.35"/>');
     }
 
     // 天气特效
@@ -207,7 +221,8 @@ class CardTemplates {
         for (int i = 0; i < 12; i++) {
           final x = 100 + (i * 12);
           final y = 140 + (i % 3) * 8;
-            elements.writeln('<line x1="$x" y1="$y" x2="$x" y2="${y + 16}" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>');
+          elements.writeln(
+              '<line x1="$x" y1="$y" x2="$x" y2="${y + 16}" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>');
         }
         break;
       case 'snow':
@@ -215,40 +230,57 @@ class CardTemplates {
         for (int i = 0; i < 18; i++) {
           final x = 90 + (i * 10) % 220;
           final y = 150 + (i * 7) % 80;
-          elements.writeln('<circle cx="$x" cy="$y" r="2" fill="#ffffff" fill-opacity="0.9"/>');
+          elements.writeln(
+              '<circle cx="$x" cy="$y" r="2" fill="#ffffff" fill-opacity="0.9"/>');
         }
         break;
       case 'fog':
         for (int i = 0; i < 4; i++) {
           final y = 140 + i * 18;
-          elements.writeln('<rect x="20" y="$y" width="360" height="10" fill="#ffffff" fill-opacity="${0.05 + i * 0.05}" rx="5"/>');
+          elements.writeln(
+              '<rect x="20" y="$y" width="360" height="10" fill="#ffffff" fill-opacity="${0.05 + i * 0.05}" rx="5"/>');
         }
         break;
       case 'storm':
         elements.writeln(_cloud(150, 95, 110));
         // 闪电
-        elements.writeln('<path d="M180 140 L200 140 L185 180 L210 180 L160 250 L175 200 L150 200 Z" fill="#fde047" fill-opacity="0.85"/>');
+        elements.writeln(
+            '<path d="M180 140 L200 140 L185 180 L210 180 L160 250 L175 200 L150 200 Z" fill="#fde047" fill-opacity="0.85"/>');
         break;
       case 'windy':
         for (int i = 0; i < 3; i++) {
           final y = 150 + i * 20;
-          elements.writeln('<path d="M40 $y Q120 ${y - 10} 200 $y T360 $y" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round" stroke-opacity="0.6"/>');
+          elements.writeln(
+              '<path d="M40 $y Q120 ${y - 10} 200 $y T360 $y" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round" stroke-opacity="0.6"/>');
         }
         break;
     }
 
     if (elements.isEmpty) return '';
-    return '<g opacity="0.9">${elements.toString()}</g>';
+    final content = elements.toString();
+    return '<g opacity="0.9">$content</g>';
   }
 
   static String _cloud(double cx, double cy, double w) {
     final h = w * 0.6;
     final left = cx - w / 2;
+    final rx = (w / 2).toString();
+    final ry = (h / 2).toString();
+    final cx1 = (cx - w * 0.3).toString();
+    final cy1 = (cy + h * 0.05).toString();
+    final rx1 = (w * 0.35).toString();
+    final ry1 = (h * 0.4).toString();
+    final cx2 = (cx + w * 0.3).toString();
+    final cy2 = (cy + h * 0.05).toString();
+    final rx2 = (w * 0.33).toString();
+    final ry2 = (h * 0.38).toString();
+    final h25 = (h * 0.25).toString();
+    final h12 = (h * 0.12).toString();
     return '<g fill="#ffffff" fill-opacity="0.75">'
-        '<ellipse cx="$cx" cy="$cy" rx="${w / 2}" ry="${h / 2}" />'
-        '<ellipse cx="${cx - w * 0.3}" cy="${cy + h * 0.05}" rx="${w * 0.35}" ry="${h * 0.4}" />'
-        '<ellipse cx="${cx + w * 0.3}" cy="${cy + h * 0.05}" rx="${w * 0.33}" ry="${h * 0.38}" />'
-        '<rect x="$left" y="${cy}" width="$w" height="${h * 0.25}" rx="${h * 0.12}" />'
+        '<ellipse cx="$cx" cy="$cy" rx="$rx" ry="$ry" />'
+        '<ellipse cx="$cx1" cy="$cy1" rx="$rx1" ry="$ry1" />'
+        '<ellipse cx="$cx2" cy="$cy2" rx="$rx2" ry="$ry2" />'
+        '<rect x="$left" y="$cy" width="$w" height="$h25" rx="$h12" />'
         '</g>';
   }
 
@@ -282,11 +314,17 @@ class CardTemplates {
     return lines;
   }
 
-  static String _buildMetadataTextBlock(List<String> lines, {required double centerX, required double startY, required double lineHeight, required String color}) {
+  static String _buildMetadataTextBlock(List<String> lines,
+      {required double centerX,
+      required double startY,
+      required double lineHeight,
+      required String color}) {
     final buf = StringBuffer();
     for (int i = 0; i < lines.length; i++) {
       final y = startY + i * lineHeight;
-      buf.writeln('<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill-opacity="${i==0?0.9:0.75}">${_escape(lines[i])}</text>');
+      final opacity = i == 0 ? 0.9 : 0.75;
+      buf.writeln(
+          '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill-opacity="$opacity">${_escape(lines[i])}</text>');
     }
     return buf.toString();
   }
@@ -585,14 +623,14 @@ class CardTemplates {
       case CardType.philosophical:
         return philosophicalTemplate(
           content: content,
-            author: author,
-            date: date,
-            source: source,
-            location: location,
-            weather: weather,
-            temperature: temperature,
-            dayPeriod: dayPeriod,
-          );
+          author: author,
+          date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
+        );
       case CardType.minimalist:
         return minimalistTemplate(
           content: content,

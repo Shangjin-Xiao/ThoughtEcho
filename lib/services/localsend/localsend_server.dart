@@ -16,9 +16,9 @@ class LocalSendServer {
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   Function(String sessionId, int totalBytes, String senderAlias)?
-    _onReceiveSessionCreated;
+      _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-    _onApprovalNeeded;
+      _onApprovalNeeded;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -43,10 +43,10 @@ class LocalSendServer {
     }
 
     _port = port ?? defaultPort;
-  _onReceiveSessionCreated = onReceiveSessionCreated;
-  _onApprovalNeeded = onApprovalNeeded;
+    _onReceiveSessionCreated = onReceiveSessionCreated;
+    _onApprovalNeeded = onApprovalNeeded;
 
-  _receiveController = ReceiveController(
+    _receiveController = ReceiveController(
         onFileReceived: onFileReceived,
         onReceiveProgress: onReceiveProgress,
         onSessionCreated: onReceiveSessionCreated,
@@ -188,8 +188,8 @@ class LocalSendServer {
         } else if (path == '/api/thoughtecho/v1/sync-intent' &&
             request.method == 'POST') {
           // 轻量意向握手：请求体包含 fingerprint, alias, estimatedNotes(optional)
-          final bodyBytes = await request
-              .fold<List<int>>(<int>[], (p, e) => p..addAll(e));
+          final bodyBytes =
+              await request.fold<List<int>>(<int>[], (p, e) => p..addAll(e));
           final bodyString = utf8.decode(bodyBytes);
           Map<String, dynamic> req = {};
           try {
@@ -198,14 +198,14 @@ class LocalSendServer {
           final senderFp = req['fingerprint'] as String?;
           final senderAlias = req['alias'] as String? ?? '对方';
           bool approved = true;
-      if (_onReceiveSessionCreated != null && _onApprovalNeeded != null) {
+          if (_onReceiveSessionCreated != null && _onApprovalNeeded != null) {
             // 临时使用虚拟 sessionId 供审批显示大小未知
             final tempId = 'intent_${DateTime.now().millisecondsSinceEpoch}';
             try {
-        _onReceiveSessionCreated!(tempId, 0, senderAlias);
+              _onReceiveSessionCreated!(tempId, 0, senderAlias);
             } catch (_) {}
             try {
-        approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
+              approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
             } catch (_) {
               approved = false;
             }
@@ -215,8 +215,8 @@ class LocalSendServer {
           }
           responseData = {'approved': approved};
         } else if ((path == '/api/localsend/v2/prepare-upload' ||
-    path == '/api/localsend/v1/send-request') &&
-      request.method == 'POST') {
+                path == '/api/localsend/v1/send-request') &&
+            request.method == 'POST') {
           logDebug('prepare_start', source: 'LocalSend');
           final bodyBytes = await request.fold<List<int>>(
             <int>[],
@@ -227,7 +227,8 @@ class LocalSendServer {
               source: 'LocalSend');
 
           final requestData = jsonDecode(bodyString) as Map<String, dynamic>;
-          responseData = await _receiveController.handlePrepareUpload(requestData);
+          responseData =
+              await _receiveController.handlePrepareUpload(requestData);
           logDebug('prepare_ok', source: 'LocalSend');
         } else if ((path == '/api/localsend/v2/upload' ||
                 path == '/api/localsend/v1/send') &&

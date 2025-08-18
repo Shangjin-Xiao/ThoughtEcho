@@ -38,7 +38,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   bool _syncDialogVisible = false;
   bool _sendIncludeMedia = true; // 发送时是否包含媒体文件（用户可选）
   // 旧的接收确认弹窗标记已移除；审批与进度合并为单一对话框
-  
+
   // 还原模式枚举（备份还原页中支持 LWW 合并导入，此处复用时可参考）
   // enum RestoreMode { overwrite, merge }
 
@@ -46,7 +46,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   void initState() {
     super.initState();
     _initializeSyncService();
-  _loadLocalFingerprint();
+    _loadLocalFingerprint();
   }
 
   @override
@@ -360,8 +360,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     if (!mounted) return;
 
     // 先弹出确认对话框（是否包含媒体文件）
-  bool includeMedia = _sendIncludeMedia;
-  final confirmed = await showDialog<bool>(
+    bool includeMedia = _sendIncludeMedia;
+    final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) {
             bool localInclude = includeMedia;
@@ -379,7 +379,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       title: const Text('包含媒体文件'),
                       subtitle: const Text('图片/音频/视频等，可能增加体积和耗时'),
                       value: localInclude,
-                      onChanged: (v) => setLocal(() => localInclude = v ?? true),
+                      onChanged: (v) =>
+                          setLocal(() => localInclude = v ?? true),
                     ),
                   ],
                 ),
@@ -412,35 +413,33 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       _sendingFingerprint = device.fingerprint;
     });
 
+    // ignore: use_build_context_synchronously (已在 await 之前捕获所需引用)
+    final messenger = ScaffoldMessenger.of(context);
+    // ignore: use_build_context_synchronously
+    final syncService = context.read<NoteSyncService>();
     try {
-      final syncService = context.read<NoteSyncService>();
-      if (!includeMedia) {
-        // 反馈提示：明确说明此次不包含媒体
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('将仅发送笔记文本（不含媒体文件）'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+      if (!includeMedia && mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('将仅发送笔记文本（不含媒体文件）'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
       final sessionId = await syncService.createSyncPackage(
         device,
         includeMediaFiles: includeMedia,
       );
-      if (mounted) {
-        final displayId = sessionId.length <= 8
-            ? sessionId
-            : '${sessionId.substring(0, 8)}...';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('笔记发送启动，会话ID: $displayId')),
-        );
-      }
+      if (!mounted) return;
+      final displayId =
+          sessionId.length <= 8 ? sessionId : '${sessionId.substring(0, 8)}...';
+      messenger.showSnackBar(
+        SnackBar(content: Text('笔记发送启动，会话ID: $displayId')),
+      );
     } catch (e) {
       debugPrint('发送笔记失败: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('发送失败: $e'),
             backgroundColor: Colors.red,
@@ -468,10 +467,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           final allow = await _onWillPop();
-          if (allow && mounted) Navigator.of(context).pop();
+          // ignore: use_build_context_synchronously (allow结果与Widget生命周期无关，已检查mounted)
+          if (allow && mounted) Navigator.of(context).pop(result);
         }
       },
       child: Scaffold(
@@ -498,15 +498,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   Row(
                     children: [
                       if (_isInitializing) ...[
-                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 8),
                         const Text('正在启动...'),
                       ] else if (_initializationError.isNotEmpty) ...[
                         const Icon(Icons.error, color: Colors.red, size: 18),
                         const SizedBox(width: 6),
-                        Expanded(child: Text('启动失败: $_initializationError', style: const TextStyle(color: Colors.red, fontSize: 12))),
+                        Expanded(
+                            child: Text('启动失败: $_initializationError',
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 12))),
                       ] else if (_isScanning) ...[
-                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 8),
                         Text('搜索中... ${_nearbyDevices.length} 台'),
                       ] else ...[
@@ -520,18 +529,32 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   GestureDetector(
                     onLongPress: () {
                       if (_localFingerprint != null) {
-                        Clipboard.setData(ClipboardData(text: _localFingerprint!));
+                        Clipboard.setData(
+                            ClipboardData(text: _localFingerprint!));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('已复制本机指纹: $_localFingerprint')),);
+                          SnackBar(
+                              content: Text('已复制本机指纹: $_localFingerprint')),
+                        );
                       }
                     },
                     child: Text(
-                      _localShortFingerprint == null ? '本机标识获取中...' : '本机 #$_localShortFingerprint',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75)),
+                      _localShortFingerprint == null
+                          ? '本机标识获取中...'
+                          : '本机 #$_localShortFingerprint',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withValues(alpha: 0.75)),
                     ),
                   ),
                   // 触发同步对话框逻辑（隐藏状态条但保留监听）
-                  Consumer<NoteSyncService>(builder: (context, s, _) { _maybeShowOrHideSyncDialog(s); return const SizedBox.shrink(); }),
+                  Consumer<NoteSyncService>(builder: (context, s, _) {
+                    _maybeShowOrHideSyncDialog(s);
+                    return const SizedBox.shrink();
+                  }),
                 ],
               ),
             ),
@@ -587,11 +610,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             title: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Expanded(child: Text(
+                                Expanded(
+                                    child: Text(
                                   // 需求：设备名称直接使用当前下面小字（型号）那个。优先型号，其次 alias
-                                  (device.deviceModel?.isNotEmpty == true ? device.deviceModel! : device.alias).trim(),
+                                  (device.deviceModel?.isNotEmpty == true
+                                          ? device.deviceModel!
+                                          : device.alias)
+                                      .trim(),
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600),
                                 )),
                                 const SizedBox(width: 4),
                                 _buildShortFingerprint(device.fingerprint),
@@ -602,7 +630,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 // 第一行保持原有纯文本格式，兼容现有测试 (find.text('192.168.x.x:port'))
-                                Text(ipLine, style: const TextStyle(fontSize: 12)),
+                                Text(ipLine,
+                                    style: const TextStyle(fontSize: 12)),
                                 // 去除平台 + 型号 + 发现方式徽章，仅保留必要信息
                               ],
                             ),
@@ -699,10 +728,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     if (active && !_syncDialogVisible) {
       _syncDialogVisible = true;
+      final dialogContext = context;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         showDialog(
-          context: context,
+          context: dialogContext,
           barrierDismissible: false,
           builder: (ctx) {
             return StatefulBuilder(builder: (ctx, setLocal) {
@@ -725,7 +755,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     title: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 260),
                       child: Row(
-                        key: ValueKey('title-${awaiting ? 'approval' : s.syncStatus.name}'),
+                        key: ValueKey(
+                            'title-${awaiting ? 'approval' : s.syncStatus.name}'),
                         children: [
                           Icon(
                             awaiting
@@ -787,7 +818,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   awaiting
                                       ? '等待'
                                       : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                                  key: ValueKey('pct-${s.syncStatus.name}-${(s.syncProgress*100).toInt()}'),
+                                  key: ValueKey(
+                                      'pct-${s.syncStatus.name}-${(s.syncProgress * 100).toInt()}'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Theme.of(context)
@@ -808,7 +840,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text('设备 “${s.receiveSenderAlias ?? '对方'}” 想同步笔记，是否接受？', style: const TextStyle(fontSize: 13, height: 1.3)),
+                                      Text(
+                                          '设备 “${s.receiveSenderAlias ?? '对方'}” 想同步笔记，是否接受？',
+                                          style: const TextStyle(
+                                              fontSize: 13, height: 1.3)),
                                       const SizedBox(height: 12),
                                       CheckboxListTile(
                                         value: s.skipSyncConfirmation,
@@ -819,7 +854,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                         },
                                         dense: true,
                                         contentPadding: EdgeInsets.zero,
-                                        title: const Text('以后不再提示', style: TextStyle(fontSize: 12)),
+                                        title: const Text('以后不再提示',
+                                            style: TextStyle(fontSize: 12)),
                                       ),
                                     ],
                                   )
@@ -827,11 +863,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     key: const ValueKey('progress-body'),
                                     width: double.infinity,
                                     child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration:
+                                          const Duration(milliseconds: 200),
                                       child: Text(
                                         s.syncStatusMessage,
-                                        key: ValueKey('msg-${s.syncStatusMessage.hashCode}'),
-                                        style: const TextStyle(fontSize: 13, height: 1.25),
+                                        key: ValueKey(
+                                            'msg-${s.syncStatusMessage.hashCode}'),
+                                        style: const TextStyle(
+                                            fontSize: 13, height: 1.25),
                                       ),
                                     ),
                                   ),
@@ -865,8 +904,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               s.cancelReceiving();
                             }
                           },
-                          child: Text(
-                              s.syncStatus == SyncStatus.receiving ? '取消接收' : '取消发送'),
+                          child: Text(s.syncStatus == SyncStatus.receiving
+                              ? '取消接收'
+                              : '取消发送'),
                         ),
                       ] else if (!inProgress && !awaiting) ...[
                         TextButton(
@@ -902,7 +942,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
       // 不再自动关闭，由用户点击“关闭”按钮手动关闭，保留结果供查看
-  // 终态，无额外操作
+      // 终态，无额外操作
     }
   }
 

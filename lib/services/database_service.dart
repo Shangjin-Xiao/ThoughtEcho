@@ -3188,13 +3188,15 @@ class DatabaseService extends ChangeNotifier {
 
         // 检查并清理孤儿媒体文件
         for (final storedPath in referencedFiles) {
-          final refCount = await MediaReferenceService.getReferenceCount(storedPath);
+          final refCount =
+              await MediaReferenceService.getReferenceCount(storedPath);
           if (refCount == 0) {
             try {
               // storedPath 可能是相对路径（相对于应用文档目录）
               String absolutePath = storedPath;
               try {
-                if (!absolutePath.startsWith('/')) { // 简单判断相对路径
+                if (!absolutePath.startsWith('/')) {
+                  // 简单判断相对路径
                   final appDir = await getApplicationDocumentsDirectory();
                   absolutePath = join(appDir.path, storedPath);
                 }

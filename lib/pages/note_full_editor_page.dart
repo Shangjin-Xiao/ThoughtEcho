@@ -647,7 +647,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('媒体文件处理失败: $e'), backgroundColor: Colors.orange),
+          SnackBar(
+              content: Text('媒体文件处理失败: $e'), backgroundColor: Colors.orange),
         );
       }
     }
@@ -1091,7 +1092,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             icon: const Icon(Icons.save),
             tooltip: '保存',
             onPressed: () async {
-              try { await pauseAllMediaPlayers(); } catch (_) {}
+              try {
+                await pauseAllMediaPlayers();
+              } catch (_) {}
               await _saveContent();
             },
           ),
@@ -1117,7 +1120,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       color: theme.colorScheme.surface,
                       border: Border(
                         bottom: BorderSide(
-                          color: theme.colorScheme.outlineVariant.applyOpacity(0.1),
+                          color: theme.colorScheme.outlineVariant
+                              .applyOpacity(0.1),
                           width: 1,
                         ),
                       ),
@@ -1129,7 +1133,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             padding: const EdgeInsets.only(right: 12),
                             child: Chip(
                               visualDensity: VisualDensity.compact,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               label: Text('${_selectedTagIds.length}个标签'),
                               avatar: const Icon(Icons.tag, size: 16),
                             ),
@@ -1142,15 +1147,19 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               height: 16,
                               decoration: BoxDecoration(
                                 color: Color(
-                                  int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
+                                  int.parse(_selectedColorHex!.substring(1),
+                                          radix: 16) |
+                                      0xFF000000,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: theme.colorScheme.outline.applyOpacity(0.2),
+                                  color: theme.colorScheme.outline
+                                      .applyOpacity(0.2),
                                   width: 1,
                                 ),
                               ),
-                              key: ValueKey('color-indicator-$_selectedColorHex'),
+                              key: ValueKey(
+                                  'color-indicator-$_selectedColorHex'),
                             ),
                           ),
                         if (_showLocation && _location != null)
@@ -1211,18 +1220,19 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             if (_isSaving)
               Positioned.fill(
                 child: Container(
-                  color: theme.colorScheme.surface.withOpacity(0.72),
+                  color: theme.colorScheme.surface.withValues(alpha: 0.72),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 300),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 24),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 18,
                               offset: const Offset(0, 4),
                             ),
@@ -1240,7 +1250,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   child: CircularProgressIndicator(
                                     value: _saveProgress >= 0.99
                                         ? 1.0
-                                        : (_saveProgress <= 0 ? null : _saveProgress),
+                                        : (_saveProgress <= 0
+                                            ? null
+                                            : _saveProgress),
                                     strokeWidth: 3,
                                   ),
                                 ),
@@ -2288,7 +2300,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         final key = entry['key'] as String;
         final typeLabel = entry['type'] as String;
         final pathVal = ref[key] as String?;
-        if (pathVal != null && await TemporaryMediaService.isTemporaryFile(pathVal)) {
+        if (pathVal != null &&
+            await TemporaryMediaService.isTemporaryFile(pathVal)) {
           final newPath = await _moveMediaFileSafely(
             pathVal,
             processedFiles,

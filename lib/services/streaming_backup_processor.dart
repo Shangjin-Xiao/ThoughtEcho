@@ -104,8 +104,8 @@ class StreamingBackupProcessor {
 
     onStatusUpdate?.call('正在解压备份文件...');
 
-  // 解压ZIP
-  final archive = ZipDecoder().decodeBytes(bytes);
+    // 解压ZIP
+    final archive = ZipDecoder().decodeBytes(bytes);
 
     // 查找数据文件 - 修复：使用正确的文件名
     ArchiveFile? dataFile;
@@ -140,7 +140,7 @@ class StreamingBackupProcessor {
           if (!await targetDir.exists()) {
             await targetDir.create(recursive: true);
           }
-            final outFile = File(targetPath);
+          final outFile = File(targetPath);
           await outFile.writeAsBytes(f.content as List<int>, flush: true);
         }
       }

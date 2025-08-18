@@ -852,7 +852,6 @@ class _HomePageState extends State<HomePage>
         card,
         width: 800,
         height: 1200,
-        context: context,
         scaleFactor: 2.0,
         renderMode: ExportRenderMode.contain,
       );

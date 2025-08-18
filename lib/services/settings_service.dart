@@ -35,7 +35,8 @@ class SettingsService extends ChangeNotifier {
   static const String _lastVersionKey = 'lastVersion';
   static const String _deviceIdKey = 'device_id_v1'; // 新增：设备唯一ID缓存键
   static const String _syncSkipConfirmKey = 'sync_skip_confirm';
-  static const String _syncDefaultIncludeMediaKey = 'sync_default_include_media';
+  static const String _syncDefaultIncludeMediaKey =
+      'sync_default_include_media';
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;

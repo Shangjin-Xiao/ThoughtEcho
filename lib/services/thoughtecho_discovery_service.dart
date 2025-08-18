@@ -28,7 +28,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 构造函数：开始异步获取指纹
   ThoughtEchoDiscoveryService() {
     _ensureFingerprint();
-  _ensureDeviceInfo();
+    _ensureDeviceInfo();
     debugPrint('设备发现服务初始化，设备指纹(占位): $_deviceFingerprint');
   }
 
@@ -60,32 +60,31 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     try {
       final plugin = DeviceInfoPlugin();
       String model;
-    if (Platform.isAndroid) {
-    final info = await plugin.androidInfo;
-    final brand = info.brand.trim();
-    final m = info.model.trim();
-    model = [brand, m].where((e) => e.isNotEmpty).join(' ');
+      if (Platform.isAndroid) {
+        final info = await plugin.androidInfo;
+        final brand = info.brand.trim();
+        final m = info.model.trim();
+        model = [brand, m].where((e) => e.isNotEmpty).join(' ');
       } else if (Platform.isIOS) {
         final info = await plugin.iosInfo;
-    // name 例如“张三的 iPhone”，model 如 “iPhone15,2” (代号)
-    final name = info.name.trim();
-    final machine = info.utsname.machine.trim();
+        // name 例如“张三的 iPhone”，model 如 “iPhone15,2” (代号)
+        final name = info.name.trim();
+        final machine = info.utsname.machine.trim();
         model = name.isNotEmpty && machine.isNotEmpty
             ? '$name ($machine)'
             : (name.isNotEmpty ? name : machine);
       } else if (Platform.isMacOS) {
         final info = await plugin.macOsInfo;
-    model = info.model.trim().isEmpty ? 'macOS' : info.model.trim();
+        model = info.model.trim().isEmpty ? 'macOS' : info.model.trim();
       } else if (Platform.isWindows) {
         final info = await plugin.windowsInfo;
-    model = info.computerName.trim().isEmpty
-      ? 'Windows'
-      : info.computerName.trim();
+        model = info.computerName.trim().isEmpty
+            ? 'Windows'
+            : info.computerName.trim();
       } else if (Platform.isLinux) {
         final info = await plugin.linuxInfo;
-    model = info.prettyName.trim().isEmpty
-      ? 'Linux'
-      : info.prettyName.trim();
+        model =
+            info.prettyName.trim().isEmpty ? 'Linux' : info.prettyName.trim();
       } else {
         model = Platform.operatingSystem;
       }
@@ -437,7 +436,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       final announcement = MulticastDto(
         alias: 'ThoughtEcho-${Platform.localHostname}',
         version: protocolVersion,
-  deviceModel: _deviceModel,
+        deviceModel: _deviceModel,
         deviceType: DeviceType.mobile,
         fingerprint: fingerprint,
         port: _actualServerPort, // 使用实际服务器端口
