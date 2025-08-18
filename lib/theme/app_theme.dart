@@ -144,15 +144,12 @@ class AppTheme with ChangeNotifier {
 
   // 判断当前是否为深色模式
   bool get isDarkMode {
-    switch (_themeMode) {
-      case ThemeMode.dark:
-        return true;
-      case ThemeMode.light:
-        return false;
-      case ThemeMode.system:
-        // 这里需要从外部获取系统主题，暂时返回false
-        return false;
-    }
+  // 仅根据用户显式选择返回，ThemeMode.system 的实际亮度应由外部通过 MediaQuery/Theme.of 来判断；
+  // 这里返回一个“偏好”状态：只有显式设为 dark 才视为 true。
+  if (_themeMode == ThemeMode.dark) return true;
+  if (_themeMode == ThemeMode.light) return false;
+  // system 模式下不做武断判断，交给使用方基于上下文判断；提供一个保守值 false
+  return false;
   }
 
   // 获取适合当前主题的文本颜色
@@ -412,14 +409,15 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
+    final bool usingCustom = _useCustomColor && _customColor != null;
     final baseTheme = FlexThemeData.dark(
       colorScheme: darkColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 3, // 进一步降低混合级别
+      blendLevel: 0,
       subThemesData: const FlexSubThemesData(
-        blendOnLevel: 5, // 进一步降低表面颜色混合级别
-        blendOnColors: true,
+        blendOnLevel: 0,
+        blendOnColors: false,
         useMaterial3Typography: true,
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
@@ -437,7 +435,10 @@ class AppTheme with ChangeNotifier {
         textButtonRadius: buttonRadius,
         fabRadius: buttonRadius,
       ),
-      keyColors: const FlexKeyColors(useSecondary: true, useTertiary: true),
+      // 当使用自定义主色时关闭次/三色自动调和，避免某些动态调和链条残留导致偏紫
+      keyColors: usingCustom
+          ? const FlexKeyColors(useSecondary: false, useTertiary: false)
+          : const FlexKeyColors(useSecondary: true, useTertiary: true),
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
@@ -495,7 +496,8 @@ class AppTheme with ChangeNotifier {
 
       // 列表项目使用主题色系
       listTileTheme: baseTheme.listTileTheme.copyWith(
-        tileColor: colorScheme.surfaceContainerLow,
+  // 设为透明，避免 ListTile 再叠加一层带主色调的 surfaceContainerLow 造成紫色块状感
+  tileColor: Colors.transparent,
       ),
     );
   }
