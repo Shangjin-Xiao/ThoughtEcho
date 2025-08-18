@@ -140,10 +140,11 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i5.Device>> discoverNearbyDevices() => (super.noSuchMethod(
+  _i4.Future<List<_i5.Device>> discoverNearbyDevices({int? timeout}) => (super.noSuchMethod(
         Invocation.method(
           #discoverNearbyDevices,
           [],
+          {#timeout: timeout},
         ),
         returnValue: _i4.Future<List<_i5.Device>>.value(<_i5.Device>[]),
       ) as _i4.Future<List<_i5.Device>>);

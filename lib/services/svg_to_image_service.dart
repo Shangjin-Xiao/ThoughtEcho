@@ -2,7 +2,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'svg_offscreen_renderer.dart';
 import 'image_cache_service.dart';
+
+/// 导出渲染模式
+enum ExportRenderMode {
+  contain, // 等比完整显示（可能留边）
+  cover,   // 等比填满（可能裁切）
+  stretch, // 拉伸填满（可能变形）
+}
 
 /// SVG到图片转换服务
 class SvgToImageService {
@@ -17,6 +25,9 @@ class SvgToImageService {
     Color backgroundColor = Colors.white,
     bool maintainAspectRatio = true,
     bool useCache = true,
+    double scaleFactor = 1.0,
+    ExportRenderMode renderMode = ExportRenderMode.contain,
+  BuildContext? context,
   }) async {
     try {
       // 验证输入参数
@@ -60,6 +71,9 @@ class SvgToImageService {
         format,
         backgroundColor,
         maintainAspectRatio,
+        scaleFactor,
+  renderMode,
+  context,
       );
 
       // 缓存结果
@@ -148,6 +162,9 @@ class SvgToImageService {
     ui.ImageByteFormat format,
     Color backgroundColor,
     bool maintainAspectRatio,
+    double scaleFactor,
+  ExportRenderMode renderMode,
+  BuildContext? buildContext,
   ) async {
     try {
       // 直接使用Canvas渲染SVG
@@ -157,6 +174,9 @@ class SvgToImageService {
         height,
         format,
         backgroundColor,
+  scaleFactor,
+  renderMode,
+  buildContext,
       );
     } catch (e) {
       AppLogger.w('SVG渲染失败，使用回退方案: $e', error: e, source: 'SvgToImageService');
@@ -174,31 +194,60 @@ class SvgToImageService {
   /// 使用Canvas渲染SVG（简化版本）
   static Future<Uint8List> _renderSvgWithCanvas(
     String svgContent,
+    int targetWidth,
+    int targetHeight,
+    ui.ImageByteFormat format,
+    Color backgroundColor,
+    double scaleFactor,
+    ExportRenderMode renderMode,
+  BuildContext? buildContext,
+  ) async {
+    // 优先尝试离屏Flutter渲染（与预览一致）
+    try {
+    if (buildContext != null) {
+        final bytes = await SvgOffscreenRenderer.instance.renderSvgString(
+          svgContent,
+      context: buildContext,
+          width: targetWidth,
+          height: targetHeight,
+          scaleFactor: scaleFactor,
+          background: backgroundColor,
+          mode: renderMode,
+        );
+        return bytes;
+      } else {
+        throw StateError('缺少BuildContext，无法执行精准渲染');
+      }
+    } catch (e) {
+      AppLogger.w('离屏真实渲染失败，使用简化回退: $e', error: e, source: 'SvgToImageService');
+      return _legacySimplifiedRender(
+        svgContent,
+        targetWidth,
+        targetHeight,
+        format,
+        backgroundColor,
+      );
+    }
+  }
+
+  /// 旧的简化渲染逻辑作为回退保留
+  static Future<Uint8List> _legacySimplifiedRender(
+    String svgContent,
     int width,
     int height,
     ui.ImageByteFormat format,
     Color backgroundColor,
   ) async {
-    // 创建画布
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-
-    // 设置背景色
     final backgroundPaint = Paint()..color = backgroundColor;
     canvas.drawRect(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
         backgroundPaint);
-
-    // 尝试解析和绘制SVG内容
     await _drawSvgContent(canvas, svgContent, width, height);
-
-    // 转换为图片
     final picture = recorder.endRecording();
     final image = await picture.toImage(width, height);
     final byteData = await image.toByteData(format: format);
-
-    // 清理资源
     picture.dispose();
-
     return byteData!.buffer.asUint8List();
   }
 

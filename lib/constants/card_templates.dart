@@ -7,21 +7,52 @@ class CardTemplates {
     required String content,
     String? author,
     String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 180);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 26, maxLines: 8);
 
-    return '''
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
-  <defs>
-    <!-- 现代渐变背景 -->
-    <linearGradient id="modernKnowledgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+    final normalizedWeather = _normalizeWeatherType(weather);
+    final palette = _selectPalette(dayPeriod, normalizedWeather);
+    final bgGradientId = (dayPeriod != null || normalizedWeather != null)
+        ? 'dynamicKnowledgeBg'
+        : 'modernKnowledgeBg';
+    final backgroundGradientDef = (dayPeriod != null || normalizedWeather != null)
+        ? _buildDynamicGradientDef(bgGradientId, palette)
+        : '''<linearGradient id="modernKnowledgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
       <stop offset="50%" style="stop-color:#7c3aed;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#db2777;stop-opacity:1" />
-    </linearGradient>
+    </linearGradient>''';
+
+    final weatherLayer = _buildWeatherSceneOverlay(
+      dayPeriod: dayPeriod,
+      weather: normalizedWeather,
+      palette: palette,
+      width: 400,
+      height: 600,
+    );
+
+    final metaLines = _buildMetadataLines(
+      date: displayDate,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+      source: source ?? author,
+      appMark: '心迹 · ThoughtEcho',
+    );
+
+    return '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+  <defs>
+    <!-- 背景渐变（可能为动态） -->
+    $backgroundGradientDef
 
     <!-- 内容区域渐变 -->
     <linearGradient id="contentBg" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -36,7 +67,9 @@ class CardTemplates {
   </defs>
 
   <!-- 主背景 -->
-  <rect width="400" height="600" fill="url(#modernKnowledgeBg)" rx="24"/>
+  <rect width="400" height="600" fill="url(#$bgGradientId)" rx="24"/>
+
+  $weatherLayer
 
   <!-- 装饰性几何元素 -->
   <circle cx="350" cy="80" r="40" fill="#ffffff" fill-opacity="0.08"/>
@@ -67,15 +100,8 @@ class CardTemplates {
   ${_generateModernTextLines(lines, 200, 240, 16, '#1e293b', 1.5, verticalCenter: true, areaHeight: 320)}
 
   <!-- 底部信息区域 -->
-  <rect x="24" y="520" width="352" height="60" fill="#ffffff" fill-opacity="0.1" rx="20"/>
-
-  <!-- 作者信息 -->
-  ${author != null ? '<text x="200" y="545" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500">$author</text>' : ''}
-
-  <!-- 日期和品牌 -->
-  <text x="200" y="565" text-anchor="middle" fill="#ffffff" fill-opacity="0.8" font-family="system-ui, -apple-system, sans-serif" font-size="11">
-    $displayDate · 心迹 · ThoughtEcho
-  </text>
+  <rect x="24" y="520" width="352" height="72" fill="#000000" fill-opacity="0.18" rx="20"/>
+  ${_buildMetadataTextBlock(metaLines, centerX: 200, startY: 540, lineHeight: 15, color: '#ffffff')}
 
   <!-- 右下角装饰点 -->
   <circle cx="360" cy="560" r="3" fill="#ffffff" fill-opacity="0.6"/>
@@ -83,16 +109,218 @@ class CardTemplates {
 ''';
   }
 
+  /// 归一化天气字符串 -> 简单类别
+  static String? _normalizeWeatherType(String? weather) {
+    if (weather == null) return null;
+    final w = weather.toLowerCase();
+    if (w.contains('晴') || w.contains('sun') || w.contains('clear')) return 'sunny';
+    if (w.contains('多云') || w.contains('云') || w.contains('cloud')) return 'cloudy';
+    if (w.contains('雨') || w.contains('drizzle') || w.contains('showers')) return 'rain';
+    if (w.contains('雪') || w.contains('snow')) return 'snow';
+    if (w.contains('雾') || w.contains('fog') || w.contains('霾') || w.contains('mist')) return 'fog';
+    if (w.contains('雷') || w.contains('storm') || w.contains('电')) return 'storm';
+    if (w.contains('风') || w.contains('wind')) return 'windy';
+    return null;
+  }
+
+  /// 为时间段/天气选择颜色调色板
+  static List<String> _selectPalette(String? dayPeriod, String? weather) {
+    // 优先时间段再天气
+    switch (dayPeriod) {
+      case 'morning':
+        return ['#ffedd5', '#fde68a', '#fbbf24']; // 温暖晨光
+      case 'afternoon':
+        return ['#bfdbfe', '#60a5fa', '#0ea5e9']; // 明亮蓝
+      case 'evening':
+        return ['#fed7aa', '#fb923c', '#f97316']; // 暖夕阳
+      case 'night':
+        return ['#1e3a8a', '#1e40af', '#0f172a']; // 深夜蓝
+    }
+    switch (weather) {
+      case 'sunny':
+        return ['#fef3c7', '#fde68a', '#f59e0b'];
+      case 'cloudy':
+        return ['#e2e8f0', '#cbd5e1', '#94a3b8'];
+      case 'rain':
+        return ['#c7d2fe', '#93c5fd', '#64748b'];
+      case 'snow':
+        return ['#f1f5f9', '#e2e8f0', '#cbd5e1'];
+      case 'fog':
+        return ['#f1f5f9', '#cbd5e1', '#94a3b8'];
+      case 'storm':
+        return ['#475569', '#334155', '#1e293b'];
+      case 'windy':
+        return ['#bae6fd', '#7dd3fc', '#38bdf8'];
+    }
+    // default neutral soft gradient (避免过度紫色)
+    return ['#e0f2fe', '#bfdbfe', '#93c5fd'];
+  }
+
+  static String _buildDynamicGradientDef(String id, List<String> palette) {
+    return '<linearGradient id="$id" x1="0%" y1="0%" x2="100%" y2="100%">' +
+        List.generate(palette.length, (i) {
+          final pct = (i / (palette.length - 1) * 100).toStringAsFixed(0);
+          return '<stop offset="${pct}%" style="stop-color:${palette[i]};stop-opacity:1" />';
+        }).join() +
+        '</linearGradient>';
+  }
+
+  /// 构建天气/时间段场景叠加层（轻量元素，不喧宾夺主）
+  static String _buildWeatherSceneOverlay({
+    required String? dayPeriod,
+    required String? weather,
+    required List<String> palette,
+    required double width,
+    required double height,
+  }) {
+    final elements = StringBuffer();
+    // 月亮或太阳
+    if (dayPeriod == 'night') {
+      elements.writeln('<circle cx="320" cy="90" r="32" fill="#f1f5f9" fill-opacity="0.85"/>');
+      elements.writeln('<circle cx="330" cy="80" r="32" fill="#0f172a"/>'); // 月亮缺口
+      // 星星
+      for (final star in [
+        [60, 100],
+        [100, 60],
+        [140, 110],
+        [260, 70]
+      ]) {
+        elements.writeln('<circle cx="${star[0]}" cy="${star[1]}" r="2" fill="#f8fafc" />');
+      }
+    } else if (dayPeriod == 'morning' || weather == 'sunny') {
+      elements.writeln('<circle cx="340" cy="80" r="40" fill="#fcd34d" fill-opacity="0.9"/>');
+      elements.writeln('<circle cx="340" cy="80" r="55" fill="#fde68a" fill-opacity="0.35"/>');
+    } else if (dayPeriod == 'evening') {
+      elements.writeln('<circle cx="340" cy="90" r="38" fill="#fb923c" fill-opacity="0.9"/>');
+      elements.writeln('<circle cx="340" cy="90" r="54" fill="#fdba74" fill-opacity="0.35"/>');
+    }
+
+    // 天气特效
+    switch (weather) {
+      case 'cloudy':
+        elements.writeln(_cloud(80, 120, 60));
+        elements.writeln(_cloud(150, 90, 80));
+        break;
+      case 'rain':
+        elements.writeln(_cloud(140, 95, 100));
+        // 雨滴
+        for (int i = 0; i < 12; i++) {
+          final x = 100 + (i * 12);
+          final y = 140 + (i % 3) * 8;
+            elements.writeln('<line x1="$x" y1="$y" x2="$x" y2="${y + 16}" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>');
+        }
+        break;
+      case 'snow':
+        elements.writeln(_cloud(140, 95, 100));
+        for (int i = 0; i < 18; i++) {
+          final x = 90 + (i * 10) % 220;
+          final y = 150 + (i * 7) % 80;
+          elements.writeln('<circle cx="$x" cy="$y" r="2" fill="#ffffff" fill-opacity="0.9"/>');
+        }
+        break;
+      case 'fog':
+        for (int i = 0; i < 4; i++) {
+          final y = 140 + i * 18;
+          elements.writeln('<rect x="20" y="$y" width="360" height="10" fill="#ffffff" fill-opacity="${0.05 + i * 0.05}" rx="5"/>');
+        }
+        break;
+      case 'storm':
+        elements.writeln(_cloud(150, 95, 110));
+        // 闪电
+        elements.writeln('<path d="M180 140 L200 140 L185 180 L210 180 L160 250 L175 200 L150 200 Z" fill="#fde047" fill-opacity="0.85"/>');
+        break;
+      case 'windy':
+        for (int i = 0; i < 3; i++) {
+          final y = 150 + i * 20;
+          elements.writeln('<path d="M40 $y Q120 ${y - 10} 200 $y T360 $y" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round" stroke-opacity="0.6"/>');
+        }
+        break;
+    }
+
+    if (elements.isEmpty) return '';
+    return '<g opacity="0.9">${elements.toString()}</g>';
+  }
+
+  static String _cloud(double cx, double cy, double w) {
+    final h = w * 0.6;
+    final left = cx - w / 2;
+    return '<g fill="#ffffff" fill-opacity="0.75">'
+        '<ellipse cx="$cx" cy="$cy" rx="${w / 2}" ry="${h / 2}" />'
+        '<ellipse cx="${cx - w * 0.3}" cy="${cy + h * 0.05}" rx="${w * 0.35}" ry="${h * 0.4}" />'
+        '<ellipse cx="${cx + w * 0.3}" cy="${cy + h * 0.05}" rx="${w * 0.33}" ry="${h * 0.38}" />'
+        '<rect x="$left" y="${cy}" width="$w" height="${h * 0.25}" rx="${h * 0.12}" />'
+        '</g>';
+  }
+
+  static List<String> _buildMetadataLines({
+    required String date,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? source,
+    required String appMark,
+  }) {
+    final lines = <String>[];
+    final line1Parts = <String>[date];
+    if (location != null && location.trim().isNotEmpty) {
+      line1Parts.add(location.trim());
+    }
+    if (weather != null && weather.trim().isNotEmpty) {
+      final wt = temperature != null && temperature.trim().isNotEmpty
+          ? '$weather ${temperature.trim()}'
+          : weather.trim();
+      line1Parts.add(wt);
+    }
+    lines.add(line1Parts.join(' · '));
+
+    final line2Parts = <String>[];
+    if (source != null && source.trim().isNotEmpty) {
+      line2Parts.add(source.trim());
+    }
+    line2Parts.add(appMark);
+    lines.add(line2Parts.join(' · '));
+    return lines;
+  }
+
+  static String _buildMetadataTextBlock(List<String> lines, {required double centerX, required double startY, required double lineHeight, required String color}) {
+    final buf = StringBuffer();
+    for (int i = 0; i < lines.length; i++) {
+      final y = startY + i * lineHeight;
+      buf.writeln('<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill-opacity="${i==0?0.9:0.75}">${_escape(lines[i])}</text>');
+    }
+    return buf.toString();
+  }
+
+  static String _escape(String input) {
+    return input
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+  }
+
   /// 现代化引用卡片模板
   static String quoteTemplate({
     required String content,
     String? author,
     String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 140);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 22, maxLines: 8);
+    final metaLines = _buildMetadataLines(
+      date: displayDate,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+      source: source ?? author,
+      appMark: '心迹 · ThoughtEcho',
+    );
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -146,10 +374,8 @@ class CardTemplates {
   ''' : ''}
 
   <!-- 底部信息 -->
-  <rect x="32" y="500" width="336" height="50" fill="#ffffff" fill-opacity="0.15" rx="20"/>
-  <text x="200" y="530" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill-opacity="0.9">
-    $displayDate · 心迹 · ThoughtEcho
-  </text>
+  <rect x="32" y="500" width="336" height="72" fill="#000000" fill-opacity="0.18" rx="20"/>
+  ${_buildMetadataTextBlock(metaLines, centerX: 200, startY: 520, lineHeight: 15, color: '#ffffff')}
 </svg>
 ''';
   }
@@ -159,11 +385,24 @@ class CardTemplates {
     required String content,
     String? author,
     String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 200);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 26, maxLines: 8);
+    final metaLines = _buildMetadataLines(
+      date: displayDate,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+      source: source ?? author,
+      appMark: '心迹 · ThoughtEcho',
+    );
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -231,10 +470,8 @@ class CardTemplates {
   <!-- 作者信息 -->
   ${author != null ? '<text x="200" y="545" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" font-style="italic">思考者：$author</text>' : ''}
 
-  <!-- 日期信息 -->
-  <text x="200" y="565" text-anchor="middle" fill="#ffffff" fill-opacity="0.8" font-family="system-ui, -apple-system, sans-serif" font-size="11">
-    $displayDate · 心迹 · ThoughtEcho
-  </text>
+  <!-- 底部信息重写 -->
+  ${_buildMetadataTextBlock(metaLines, centerX: 200, startY: 535, lineHeight: 15, color: '#ffffff')}
 
   <!-- 装饰性思考点 -->
   <circle cx="50" cy="550" r="2" fill="#ffffff" fill-opacity="0.6"/>
@@ -249,11 +486,24 @@ class CardTemplates {
     required String content,
     String? author,
     String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 160);
     final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 22, maxLines: 8);
+    final metaLines = _buildMetadataLines(
+      date: displayDate,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+      source: source ?? author,
+      appMark: '心迹 · ThoughtEcho',
+    );
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -292,11 +542,7 @@ class CardTemplates {
   ${_generateModernTextLines(lines, 212, 180, 16, '#1e293b', 1.5, verticalCenter: true, areaHeight: 240)}
 
   <!-- 底部信息 -->
-  ${author != null ? '<text x="212" y="440" text-anchor="middle" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500">$author</text>' : ''}
-
-  <text x="212" y="460" text-anchor="middle" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10">
-    $displayDate · 心迹 · ThoughtEcho
-  </text>
+  ${_buildMetadataTextBlock(metaLines, centerX: 212, startY: 430, lineHeight: 14, color: '#64748b')}
 </svg>
 ''';
   }
@@ -307,23 +553,69 @@ class CardTemplates {
     required String content,
     String? author,
     String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
   }) {
     switch (type) {
       case CardType.knowledge:
-        return knowledgeTemplate(content: content, author: author, date: date);
-      case CardType.quote:
-        return quoteTemplate(content: content, author: author, date: date);
-      case CardType.philosophical:
-        return philosophicalTemplate(
+        return knowledgeTemplate(
           content: content,
           author: author,
           date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
         );
+      case CardType.quote:
+        return quoteTemplate(
+          content: content,
+          author: author,
+          date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
+        );
+      case CardType.philosophical:
+        return philosophicalTemplate(
+          content: content,
+            author: author,
+            date: date,
+            source: source,
+            location: location,
+            weather: weather,
+            temperature: temperature,
+            dayPeriod: dayPeriod,
+          );
       case CardType.minimalist:
-        return minimalistTemplate(content: content, author: author, date: date);
+        return minimalistTemplate(
+          content: content,
+          author: author,
+          date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
+        );
       case CardType.gradient:
         // 暂时使用知识模板，后续可添加专门的渐变模板
-        return knowledgeTemplate(content: content, author: author, date: date);
+        return knowledgeTemplate(
+          content: content,
+          author: author,
+          date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
+        );
     }
   }
 

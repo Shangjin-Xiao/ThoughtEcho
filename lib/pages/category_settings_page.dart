@@ -58,11 +58,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         child: TextField(
                           controller: _categoryController,
                           maxLength: 50,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: '新标签名称',
                             hintText: '输入标签名称（最多50字）',
                             counterText: '',
-                            border: const OutlineInputBorder(),
+                            border: OutlineInputBorder(),
                           ),
                         ),
                       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
 // 条件导入：Web平台使用stub实现，其他平台使用gal
@@ -11,6 +12,7 @@ import '../constants/card_templates.dart';
 import '../utils/app_logger.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
+import 'svg_to_image_service.dart';
 
 /// AI卡片生成服务
 class AICardGenerationService {
@@ -35,7 +37,19 @@ class AICardGenerationService {
       final svgContent = await _generateSVGContent(prompt);
 
       // 3. 清理和验证SVG
-      final cleanedSVG = _cleanSVGContent(svgContent);
+      var cleanedSVG = _cleanSVGContent(svgContent);
+
+      // 3. 补全缺失的底部元数据（AI 可能忽略）
+      cleanedSVG = _ensureMetadataPresence(
+        cleanedSVG,
+        date: _formatDate(note.date),
+        location: note.location,
+        weather: note.weather,
+        temperature: note.temperature,
+        author: note.sourceAuthor,
+        source: note.fullSource,
+        dayPeriod: note.dayPeriod,
+      );
 
       AppLogger.i('AI生成SVG成功，长度: ${cleanedSVG.length}',
           source: 'AICardGeneration');
@@ -48,6 +62,13 @@ class AICardGenerationService {
         svgContent: cleanedSVG,
         type: CardType.knowledge, // AI生成的默认为knowledge类型
         createdAt: DateTime.now(),
+  author: note.sourceAuthor,
+  source: note.fullSource,
+  location: note.location,
+  weather: note.weather,
+  temperature: note.temperature,
+  date: note.date,
+  dayPeriod: note.dayPeriod,
       );
     } catch (e) {
       AppLogger.w('AI生成失败，使用回退模板: $e', source: 'AICardGeneration');
@@ -59,6 +80,11 @@ class AICardGenerationService {
         content: note.content,
         author: note.sourceAuthor,
         date: _formatDate(note.date),
+  source: note.fullSource,
+  location: note.location,
+  weather: note.weather,
+  temperature: note.temperature,
+  dayPeriod: note.dayPeriod,
       );
 
       return GeneratedCard(
@@ -68,6 +94,13 @@ class AICardGenerationService {
         svgContent: fallbackSVG,
         type: cardType,
         createdAt: DateTime.now(),
+  author: note.sourceAuthor,
+  source: note.fullSource,
+  location: note.location,
+  weather: note.weather,
+  temperature: note.temperature,
+  date: note.date,
+  dayPeriod: note.dayPeriod,
       );
     }
   }
@@ -287,6 +320,9 @@ class AICardGenerationService {
     int width = 400,
     int height = 600,
     String? customName,
+  BuildContext? context,
+  double scaleFactor = 2.0,
+  ExportRenderMode renderMode = ExportRenderMode.contain,
   }) async {
     try {
       AppLogger.i('开始保存卡片图片: ${card.id}', source: 'AICardGeneration');
@@ -309,6 +345,9 @@ class AICardGenerationService {
       final imageBytes = await card.toImageBytes(
         width: width,
         height: height,
+        context: context,
+        scaleFactor: scaleFactor,
+        renderMode: renderMode,
       );
 
       // 生成唯一文件名，避免重复
@@ -368,6 +407,9 @@ class AICardGenerationService {
     int width = 400,
     int height = 600,
     Function(int current, int total)? onProgress,
+  BuildContext? context,
+  double scaleFactor = 2.0,
+  ExportRenderMode renderMode = ExportRenderMode.contain,
   }) async {
     final savedFiles = <String>[];
 
@@ -377,8 +419,10 @@ class AICardGenerationService {
           cards[i],
           width: width,
           height: height,
-          customName:
-              '心迹_Card_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
+          context: context,
+          scaleFactor: scaleFactor,
+          renderMode: renderMode,
+          customName: '心迹_Card_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
         );
         savedFiles.add(fileName);
 
@@ -421,15 +465,38 @@ class AICardGenerationService {
     if (customStyle != null) {
       switch (customStyle) {
         case 'creative':
-          return AICardPrompts.randomStylePosterPrompt(content: note.content);
+          return AICardPrompts.randomStylePosterPrompt(
+            content: note.content,
+            author: note.sourceAuthor,
+            date: _formatDate(note.date),
+            location: note.location,
+            weather: note.weather,
+            temperature: note.temperature,
+            dayPeriod: note.dayPeriod,
+            source: note.fullSource,
+          );
         case 'intelligent':
           return AICardPrompts.intelligentCardPrompt(
             content: note.content,
             author: note.sourceAuthor,
             date: _formatDate(note.date),
+            location: note.location,
+            weather: note.weather,
+            temperature: note.temperature,
+            dayPeriod: note.dayPeriod,
+            source: note.fullSource,
           );
         case 'visual':
-          return AICardPrompts.contentAwareVisualPrompt(content: note.content);
+          return AICardPrompts.contentAwareVisualPrompt(
+            content: note.content,
+            author: note.sourceAuthor,
+            date: _formatDate(note.date),
+            location: note.location,
+            weather: note.weather,
+            temperature: note.temperature,
+            dayPeriod: note.dayPeriod,
+            source: note.fullSource,
+          );
       }
     }
 
@@ -438,7 +505,16 @@ class AICardGenerationService {
     // 1. 检查是否为技术/学习内容
     final techKeywords = ['代码', '编程', '算法', '技术', '开发', '学习', '知识', '方法', '原理'];
     if (techKeywords.any((keyword) => content.contains(keyword))) {
-      return AICardPrompts.contentAwareVisualPrompt(content: note.content);
+      return AICardPrompts.contentAwareVisualPrompt(
+        content: note.content,
+        author: note.sourceAuthor,
+        date: _formatDate(note.date),
+        location: note.location,
+        weather: note.weather,
+        temperature: note.temperature,
+        dayPeriod: note.dayPeriod,
+        source: note.fullSource,
+      );
     }
 
     // 2. 检查是否为情感/生活内容
@@ -456,6 +532,11 @@ class AICardGenerationService {
         content: note.content,
         author: note.sourceAuthor,
         date: _formatDate(note.date),
+  location: note.location,
+  weather: note.weather,
+  temperature: note.temperature,
+  dayPeriod: note.dayPeriod,
+  source: note.fullSource,
       );
     }
 
@@ -469,8 +550,48 @@ class AICardGenerationService {
       content: note.content,
       author: note.sourceAuthor,
       date: _formatDate(note.date),
+      location: note.location,
+      weather: note.weather,
+      temperature: note.temperature,
+      dayPeriod: note.dayPeriod,
+      source: note.fullSource,
     );
   }
+
+  /// 如果AI未输出底部元数据，则添加一个简单信息块
+  String _ensureMetadataPresence(
+    String svg, {
+    required String? date,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? author,
+    String? source,
+    String? dayPeriod,
+  }) {
+    final lower = svg.toLowerCase();
+    final hasDate = date != null && lower.contains(date.toLowerCase());
+    final hasLocation = location != null && lower.contains(location.toLowerCase());
+    final hasWeather = weather != null && lower.contains(weather.toLowerCase());
+    final need = !(hasDate || hasLocation || hasWeather);
+    if (!need) return svg; // 已有至少一个信息
+    // 简单插入在 </svg> 前
+    final metaParts = <String>[];
+    if (date != null) metaParts.add(date);
+    if (location != null) metaParts.add(location);
+    if (weather != null) metaParts.add(temperature != null ? '$weather $temperature' : weather);
+    if (author != null) metaParts.add(author);
+    if (source != null && source != author) metaParts.add(source);
+    if (dayPeriod != null) metaParts.add(dayPeriod);
+    metaParts.add('心迹');
+    final meta = metaParts.join(' · ');
+    final injection = '<text x="200" y="590" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#ffffff" fill-opacity="0.75">${_escape(meta)}</text>';
+    final idx = svg.lastIndexOf('</svg>');
+    if (idx == -1) return svg; // 非法结构保持原样
+    return svg.substring(0, idx) + injection + svg.substring(idx);
+  }
+
+  String _escape(String v) => v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
   /// 验证SVG基本结构
   bool _isValidSVGStructure(String svgContent) {

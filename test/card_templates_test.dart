@@ -180,5 +180,36 @@ void main() {
       expect(svg, contains('stop-opacity'));
       expect(svg, contains('fill-opacity'));
     });
+
+    test('元数据与地点/天气渲染', () {
+      final svg = CardTemplates.knowledgeTemplate(
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+        location: '北京',
+        weather: '多云',
+        temperature: '28℃',
+        dayPeriod: 'night',
+      );
+      expect(svg, contains('北京'));
+      expect(svg, contains('多云'));
+      expect(svg, contains('28℃'));
+      // 夜晚应出现月亮或星星元素 (检测月亮缺口 或 星星circle)
+      expect(svg, anyOf(contains('月'), contains('circle cx="320" cy="90"')));
+      // 多云应出现 cloud 结构 ellipse/rect 组合
+      expect(svg, contains('ellipse'));
+    });
+
+    test('雨天渲染雨滴线条', () {
+      final svg = CardTemplates.knowledgeTemplate(
+        content: testContent,
+        date: testDate,
+        weather: '小雨',
+        dayPeriod: 'afternoon',
+      );
+      // 雨滴 line 元素
+      expect(svg, contains('<line'));
+      expect(svg, contains('stroke="#60a5fa"'));
+    });
   });
 }

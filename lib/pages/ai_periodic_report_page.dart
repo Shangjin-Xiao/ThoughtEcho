@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/svg_to_image_service.dart';
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../services/database_service.dart';
@@ -1072,6 +1073,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       final imageBytes = await card.toImageBytes(
         width: 800,
         height: 1200,
+        context: context,
+        scaleFactor: 2.0,
+        renderMode: ExportRenderMode.contain,
       );
 
       final tempDir = await getTemporaryDirectory();

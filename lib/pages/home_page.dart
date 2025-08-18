@@ -28,6 +28,7 @@ import '../models/generated_card.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../services/svg_to_image_service.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -765,8 +766,11 @@ class _HomePageState extends State<HomePage>
 
       // 生成高质量图片
       final imageBytes = await card.toImageBytes(
-        width: 800, // 更高分辨率用于分享
+        width: 800,
         height: 1200,
+        context: context,
+        scaleFactor: 2.0,
+        renderMode: ExportRenderMode.contain,
       );
 
       final tempDir = await getTemporaryDirectory();
@@ -846,8 +850,11 @@ class _HomePageState extends State<HomePage>
       // 保存高质量图片
       final filePath = await _aiCardService!.saveCardAsImage(
         card,
-        width: 800, // 更高分辨率
+        width: 800,
         height: 1200,
+        context: context,
+        scaleFactor: 2.0,
+        renderMode: ExportRenderMode.contain,
       );
 
       if (mounted) {

@@ -1,7 +1,16 @@
 /// AI卡片生成提示词常量
 class AICardPrompts {
   /// 智能内容相关SVG卡片生成提示词
-  static String randomStylePosterPrompt({required String content}) {
+  static String randomStylePosterPrompt({
+    required String content,
+    String? author,
+    String? date,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+    String? source,
+  }) {
     return '''
 您是一位专业的平面设计师和SVG开发专家，擅长根据文本内容创造相关的视觉元素和图形设计。
 
@@ -82,7 +91,12 @@ class AICardPrompts {
 待处理内容：
 $content
 
-请直接输出包含相关视觉元素的SVG代码，文字部分只显示上述笔记内容：
+可用元数据（可用于底部小字号展示与视觉元素选择，不算“额外说明”）：
+${author != null ? '作者: $author\n' : ''}${source != null ? '来源: $source\n' : ''}${date != null ? '日期: $date\n' : ''}${location != null ? '地点: $location\n' : ''}${weather != null ? '天气: $weather${temperature != null ? ' $temperature' : ''}\n' : ''}${dayPeriod != null ? '时间段: $dayPeriod\n' : ''}
+
+视觉元素可以结合地点/天气/时间段（例如 夜晚→月亮/星星，雨→云和雨滴，雪→雪花，morning→柔和暖光）。
+
+请直接输出包含相关视觉元素的SVG代码，文字部分只显示：原始笔记内容 + 上述元数据（底部小字号） + “心迹”。
 ''';
   }
 
@@ -91,6 +105,11 @@ $content
     required String content,
     String? author,
     String? date,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+    String? source,
   }) {
     return '''
 您是一位专业的平面设计师和SVG开发专家，擅长根据文本内容创造相关的视觉元素和符号。
@@ -100,7 +119,11 @@ $content
 ##待处理内容
 $content
 ${author != null ? '作者：$author' : ''}
+${source != null ? '来源：$source' : ''}
 ${date != null ? '日期：$date' : ''}
+${location != null ? '地点：$location' : ''}
+${weather != null ? '天气：$weather${temperature != null ? ' $temperature' : ''}' : ''}
+${dayPeriod != null ? '时间段：$dayPeriod' : ''}
 
 ##内容分析和视觉元素匹配
 请根据内容特征添加相应的视觉元素：
@@ -164,13 +187,11 @@ ${date != null ? '日期：$date' : ''}
 - 字体使用：system-ui, Arial, sans-serif
 
 ##文字内容严格要求（必须遵守！）
-- **文字内容只能是提供的笔记内容，一字不能改**
-- **绝对禁止添加任何标题、分类、标签或说明文字**
-- **不要添加"学习笔记"、"工作总结"、"生活感悟"等分类标题**
-- **不要添加"内容"、"摘要"、"要点"、"思考"等标签前缀**
-- **不要添加任何解释、总结或补充说明**
-- 如果笔记内容较长，可以合理分行，但不能删减内容
-- 保持原始笔记的语言风格和表达方式
+- 主体文本：只能显示原始笔记内容（可分行，不可改写）
+- 允许的元数据（底部小字号，不算违规）：作者、来源、日期、地点、天气/温度、时间段、应用名“心迹”
+- 禁止出现除上列之外的标题、标签、说明、总结词汇
+- 不添加“内容：”“摘要：”“要点：”“思考：”等前缀
+- 不新增主题分类文字
 
 ##输出要求
 - 只输出完整的SVG代码，不包含任何其他内容
@@ -188,12 +209,21 @@ ${date != null ? '日期：$date' : ''}
   <!-- 心迹应用名 -->
 </svg>
 
-请直接输出包含相关视觉元素的SVG代码，文字严格按照上述要求：
+请直接输出包含相关视觉元素的SVG代码：
 ''';
   }
 
   /// 内容相关视觉元素增强提示词
-  static String contentAwareVisualPrompt({required String content}) {
+  static String contentAwareVisualPrompt({
+    required String content,
+    String? author,
+    String? date,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+    String? source,
+  }) {
     return '''
 您是一位专业的视觉设计师，擅长将文字内容转化为相关的视觉符号和图形元素。
 
@@ -201,6 +231,12 @@ ${date != null ? '日期：$date' : ''}
 
 ##内容分析
 $content
+${author != null ? '作者：$author' : ''}
+${source != null ? '来源：$source' : ''}
+${date != null ? '日期：$date' : ''}
+${location != null ? '地点：$location' : ''}
+${weather != null ? '天气：$weather${temperature != null ? ' $temperature' : ''}' : ''}
+${dayPeriod != null ? '时间段：$dayPeriod' : ''}
 
 ##视觉元素创作要求
 
@@ -249,13 +285,10 @@ $content
 - 字体：system-ui, Arial, sans-serif
 
 ##文字内容绝对要求（核心规则！）
-- **文字内容必须且只能是提供的笔记内容**
-- **严格禁止添加任何形式的标题、标签、分类或说明**
-- **不允许添加"学习"、"工作"、"生活"、"思考"等分类词汇**
-- **不允许添加"内容："、"笔记："、"要点："等前缀**
-- **不允许添加"总结"、"感悟"、"心得"等后缀**
-- **不允许对原文进行任何形式的修改、总结或解释**
-- 原文是什么就显示什么，保持100%的原始性
+- 只能显示原始笔记正文（可智能换行）
+- 底部允许附加元数据：作者/来源/日期/地点/天气(+温度)/时间段/“心迹” 应用名
+- 不允许添加其余标题、总结、说明、分类标签
+- 不改写正文、不增删语义
 
 ##输出要求
 - 只输出完整的SVG代码
@@ -264,7 +297,7 @@ $content
 - SVG代码必须有效且可渲染
 - 文字部分只显示：笔记内容 + 元数据 + "心迹"
 
-请直接输出包含丰富相关视觉元素的SVG代码，文字严格按照上述要求：
+请直接输出包含丰富相关视觉元素的SVG代码：
 ''';
   }
 }
