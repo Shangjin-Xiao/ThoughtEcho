@@ -114,20 +114,30 @@ class CardTemplates {
   static String? _normalizeWeatherType(String? weather) {
     if (weather == null) return null;
     final w = weather.toLowerCase();
-    if (w.contains('晴') || w.contains('sun') || w.contains('clear'))
+    if (w.contains('晴') || w.contains('sun') || w.contains('clear')) {
       return 'sunny';
-    if (w.contains('多云') || w.contains('云') || w.contains('cloud'))
+    }
+    if (w.contains('多云') || w.contains('云') || w.contains('cloud')) {
       return 'cloudy';
-    if (w.contains('雨') || w.contains('drizzle') || w.contains('showers'))
+    }
+    if (w.contains('雨') || w.contains('drizzle') || w.contains('showers')) {
       return 'rain';
-    if (w.contains('雪') || w.contains('snow')) return 'snow';
+    }
+    if (w.contains('雪') || w.contains('snow')) {
+      return 'snow';
+    }
     if (w.contains('雾') ||
         w.contains('fog') ||
         w.contains('霾') ||
-        w.contains('mist')) return 'fog';
-    if (w.contains('雷') || w.contains('storm') || w.contains('电'))
+        w.contains('mist')) {
+      return 'fog';
+    }
+    if (w.contains('雷') || w.contains('storm') || w.contains('电')) {
       return 'storm';
-    if (w.contains('风') || w.contains('wind')) return 'windy';
+    }
+    if (w.contains('风') || w.contains('wind')) {
+      return 'windy';
+    }
     return null;
   }
 
