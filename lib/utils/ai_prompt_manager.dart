@@ -30,17 +30,23 @@ class AIPromptManager {
 生成要求：
 1. 提示应该简洁有力，通常在15-30字之间
 2. 结合时间、天气、位置等环境因素，让提示更有针对性和情境感
-3. 避免陈词滥调，要有新意和深度
-4. 能够激发用户的情感共鸣和深度思考
-5. 语言要温暖、启发性强，带有一定的诗意
-6. 直接返回一个提示问题，不要任何前缀、解释或多余的文字
+3. 如果你确切知道当前时间对应的节日（如春节、中秋节、圣诞节、情人节等），可以在提示中融入节日元素
+4. 如果确切知道节日的特殊意义或文化内涵，可以适当提及相关内容
+5. 避免陈词滥调，要有新意和深度
+6. 能够激发用户的情感共鸣和深度思考
+7. 语言要温暖、启发性强，带有一定的诗意
+8. 尽可能生成积极正面的内容，引导用户关注美好、希望、成长和感恩
+9. 即使在困难时期，也要引导用户发现积极的方面或成长的机会
+10. 直接返回一个提示问题，不要任何前缀、解释或多余的文字
 
 示例风格：
 - 早晨晴天：此刻的阳光正好，什么想法也在你心中发芽？
-- 雨夜：听着雨声的夜晚，有什么心事想要诉说？
+- 雨夜：听着雨声的夜晚，有什么温暖的回忆想要珍藏？
 - 午后：这个慵懒的午后，你最想感谢什么？
+- 春节期间：新年的钟声即将响起，什么美好愿望正在心中绽放？
+- 中秋节：明月当空，什么温馨的时刻让你倍感幸福？
 
-请只返回一个精心设计的思考提示，不要包含任何其他内容。''';
+请只返回一个精心设计的积极向上的思考提示，不要包含任何其他内容。''';
 
   /// 连接测试提示词
   static const String connectionTestPrompt = '''你是一个AI助手。请简单回复"连接测试成功"。''';
@@ -301,21 +307,25 @@ $question''';
     final now = DateTime.now();
     final hour = now.hour;
     final minute = now.minute;
+    final month = now.month;
+    final day = now.day;
 
-    // 格式化时间信息
+    // 格式化完整的时间信息，包含日期以便AI识别节日
     String timeInfo;
+    String dateInfo = '$month月$day日';
+    
     if (hour >= 5 && hour < 12) {
       timeInfo =
-          '早晨 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          '$dateInfo 早晨 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } else if (hour >= 12 && hour < 18) {
       timeInfo =
-          '下午 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          '$dateInfo 下午 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } else if (hour >= 18 && hour < 23) {
       timeInfo =
-          '晚上 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          '$dateInfo 晚上 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } else {
       timeInfo =
-          '深夜 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          '$dateInfo 深夜 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     }
 
     // 格式化天气信息
