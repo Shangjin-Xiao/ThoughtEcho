@@ -28,80 +28,166 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('分类管理')),
+      appBar: AppBar(title: const Text('标签管理')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '分类管理',
+              '标签管理',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _categoryController,
-                    decoration: const InputDecoration(
-                      labelText: '新分类名称',
-                      hintText: '输入分类名称',
-                      border: OutlineInputBorder(),
+            // 输入与添加区域卡片化
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _categoryController,
+                          maxLength: 50,
+                          decoration: InputDecoration(
+                            labelText: '新标签名称',
+                            hintText: '输入标签名称（最多50字）',
+                            counterText: '',
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: '选择图标',
+                        child: InkWell(
+                          onTap: () => _showIconSelector(context),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.cardRadius),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                            ),
+                            child: _selectedIconName != null
+                                ? (IconUtils.isEmoji(_selectedIconName)
+                                    ? Text(
+                                        IconUtils.getDisplayIcon(
+                                          _selectedIconName!,
+                                        ),
+                                        style:
+                                            const TextStyle(fontSize: 20),
+                                      )
+                                    : Icon(
+                                        IconUtils.getIconData(
+                                          _selectedIconName,
+                                        ),
+                                      ))
+                                : const Icon(Icons.add_circle_outline),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.check),
+                        label: Text(_isLoading ? '添加中' : '添加'),
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                final text = _categoryController.text.trim();
+                                if (text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('请输入标签名称')),
+                                  );
+                                  return;
+                                }
+                                setState(() => _isLoading = true);
+                                try {
+                                  final db = context.read<DatabaseService>();
+                                  await db.addCategory(
+                                    text,
+                                    iconName: _selectedIconName,
+                                  );
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('标签添加成功')),
+                                  );
+                                  _categoryController.clear();
+                                  setState(() => _selectedIconName = null);
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('添加标签失败：$e')),
+                                  );
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _isLoading = false);
+                                  }
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  AnimatedOpacity(
+                    opacity: _selectedIconName != null ? 1 : 0.6,
+                    duration: const Duration(milliseconds: 200),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _selectedIconName != null &&
+                                  !IconUtils.isEmoji(_selectedIconName)
+                              ? IconUtils.getIconData(_selectedIconName)
+                              : Icons.info_outline,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            _selectedIconName == null
+                                ? '可选一个图标或直接输入一个Emoji作为标签图标'
+                                : '已选择图标：${_selectedIconName!}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        if (_selectedIconName != null)
+                          TextButton(
+                            onPressed: () => setState(() => _selectedIconName = null),
+                            child: const Text('清除'),
+                          ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // 添加图标选择按钮
-                IconButton(
-                  onPressed: () {
-                    _showIconSelector(context);
-                  },
-                  icon: _selectedIconName != null
-                      ? Icon(IconUtils.getIconData(_selectedIconName))
-                      : const Icon(Icons.add_circle_outline),
-                  tooltip: '选择图标',
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          if (_categoryController.text.isEmpty) return;
-
-                          setState(() => _isLoading = true);
-                          try {
-                            if (!context.mounted) return;
-                            await context.read<DatabaseService>().addCategory(
-                                  _categoryController.text,
-                                  iconName: _selectedIconName,
-                                );
-                            if (!mounted) return;
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('分类添加成功')),
-                              );
-                            }
-                            _categoryController.clear();
-                            setState(() {
-                              _selectedIconName = null;
-                            });
-                          } catch (e) {
-                            if (!mounted) return;
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('添加分类失败：$e')),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isLoading = false);
-                            }
-                          }
-                        },
-                  child: const Text('添加'),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             StreamBuilder<List<NoteCategory>>(
@@ -112,22 +198,37 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('加载分类失败: ${snapshot.error}'));
+                  return Center(child: Text('加载标签失败: ${snapshot.error}'));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('暂无分类'));
+                  return const Center(child: Text('暂无标签'));
                 }
 
                 final categories = snapshot.data!;
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    return _buildCategoryItem(category);
-                  },
+                return Card(
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: categories.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      thickness: 0.6,
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+                      return _buildCategoryItem(category, index, categories.length);
+                    },
+                  ),
                 );
               },
             ),
@@ -445,12 +546,14 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+      // 修正：此处应为“编辑分类”而非“编辑标签”
           title: const Text('编辑标签'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
+                // 改为“标签名称”以匹配统一用语
                 decoration: const InputDecoration(labelText: '标签名称'),
               ),
               const SizedBox(height: 12),
@@ -511,26 +614,95 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     );
   }
 
-  Widget _buildCategoryItem(NoteCategory category) {
-    return ListTile(
-      leading: IconUtils.getCategoryIcon(category.iconName),
-      title: Text(category.name),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: '编辑',
-            onPressed: () => _editCategory(context, category),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            tooltip: '删除',
-            onPressed: () => _deleteCategory(context, category),
-          ),
-        ],
-      ),
+  Widget _buildCategoryItem(NoteCategory category, int index, int total) {
+    final isDefault = category.isDefault;
+    return InkWell(
       onTap: () => _editCategory(context, category),
+      onLongPress: () => _deleteCategory(context, category),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: IconUtils.getCategoryIcon(category.iconName),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          category.name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isDefault)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '默认',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '点击编辑，长按删除',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              tooltip: '编辑',
+              onPressed: () => _editCategory(context, category),
+            ),
+            if (!isDefault)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20),
+                tooltip: '删除',
+                onPressed: () => _deleteCategory(context, category),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -539,7 +711,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除分类"${category.name}"吗？相关联的笔记将保留，但不再关联此分类。'),
+  content: Text('确定要删除标签"${category.name}"吗？相关联的笔记将保留，但不再关联此标签。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -562,7 +734,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('分类删除成功')));
+            ).showSnackBar(const SnackBar(content: Text('标签删除成功')));
           }
         } catch (e) {
           // 修复内存泄露：在异步操作后检查mounted状态
@@ -570,7 +742,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text('删除分类失败：$e')));
+            ).showSnackBar(SnackBar(content: Text('删除标签失败：$e')));
           }
         }
       }
