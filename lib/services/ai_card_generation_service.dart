@@ -12,6 +12,7 @@ import '../utils/app_logger.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
 import 'svg_to_image_service.dart';
+import 'package:flutter/widgets.dart'; // 为新增的BuildContext参数添加导入
 
 /// AI卡片生成服务
 class AICardGenerationService {
@@ -337,6 +338,7 @@ class AICardGenerationService {
     String? customName,
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
+  BuildContext? context,
   }) async {
     try {
       AppLogger.i('开始保存卡片图片: ${card.id}', source: 'AICardGeneration');
@@ -349,19 +351,19 @@ class AICardGenerationService {
       if (width > 4000 || height > 4000) {
         throw ArgumentError('图片尺寸过大，最大支持4000x4000');
       }
+      // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
+      final safeContext = (context is Element && !context.mounted) ? null : context;
+      final imageBytes = await card.toImageBytes(
+          width: width,
+          height: height,
+          scaleFactor: scaleFactor,
+          renderMode: renderMode,
+          context: safeContext);
 
-      // 检查相册权限
+      // 再检查/申请相册权限并保存（与渲染解耦，避免 context 跨 await）
       if (!await _checkGalleryPermission()) {
         throw Exception('没有相册访问权限，请在设置中开启权限');
       }
-
-      // 使用卡片的toImageBytes方法获取图片数据
-      final imageBytes = await card.toImageBytes(
-        width: width,
-        height: height,
-        scaleFactor: scaleFactor,
-        renderMode: renderMode,
-      );
 
       // 生成唯一文件名，避免重复
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -422,6 +424,7 @@ class AICardGenerationService {
     Function(int current, int total)? onProgress,
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
+  BuildContext? context,
   }) async {
     final savedFiles = <String>[];
 
@@ -433,6 +436,7 @@ class AICardGenerationService {
           height: height,
           scaleFactor: scaleFactor,
           renderMode: renderMode,
+          context: context,
           customName:
               '心迹_Card_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
         );

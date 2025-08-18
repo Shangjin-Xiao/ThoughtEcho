@@ -854,6 +854,7 @@ class _HomePageState extends State<HomePage>
         height: 1200,
         scaleFactor: 2.0,
         renderMode: ExportRenderMode.contain,
+  context: context,
       );
 
       if (mounted) {
