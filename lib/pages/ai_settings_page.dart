@@ -1139,18 +1139,26 @@ class _AISettingsPageState extends State<AISettingsPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '启用后可以为笔记生成精美的分享卡片',
+                              '为笔记生成SVG分享卡片：开启=使用AI智能设计，关闭=使用内置模板（功能仍可用）',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(color: Colors.grey[600]),
                             ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '提示：建议使用支持 ≥4K tokens、具备良好指令遵循与文本→SVG生成能力的中大型模型，小模型可能出现布局混乱/元素缺失。',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: Colors.orange[600], fontSize: 11),
+                            ),
                             const SizedBox(height: 12),
                             Consumer<SettingsService>(
                               builder: (context, settingsService, child) {
                                 return SwitchListTile(
-                                  title: const Text('启用AI卡片生成'),
-                                  subtitle: const Text('生成SVG格式的精美卡片用于分享'),
+                                  title: const Text('AI增强生成'),
+                                  subtitle: const Text('关闭后改用本地模板，不再调用模型'),
                                   value:
                                       settingsService.aiCardGenerationEnabled,
                                   onChanged: (value) {

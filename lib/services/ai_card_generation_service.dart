@@ -25,9 +25,22 @@ class AICardGenerationService {
     required Quote note,
     String? customStyle,
   }) async {
+    // 如果用户关闭了 AI 生成功能，则直接使用模板（功能仍可用，只是没有AI增强）
+    if (!isEnabled) {
+      AppLogger.i('AI卡片生成已关闭，使用本地模板生成', source: 'AICardGeneration');
+      return _buildFallbackCard(note);
+    }
+
     try {
-      // 1. 智能选择最适合的提示词
-      final prompt = _selectBestPrompt(note, customStyle);
+    // 1. 智能选择最适合的提示词
+    var prompt = _selectBestPrompt(note, customStyle);
+
+    // 1.1 根据笔记语言追加语言统一指令，避免出现 rain/Morning 等英文混杂
+    final isChineseNote = _containsChinese(note.content);
+    final langDirective = isChineseNote
+      ? '使用全中文作为所有底部元数据（日期、天气、时间段等），不要出现英文单词（例如用“雨”“晨间”“夜晚”而不是 rain/Morning）。如果某项信息缺失可以省略，不要编造。'
+      : 'Use the same language as the note for any footer metadata (date, weather, period). Keep language consistent and do not mix Chinese unless original content is Chinese.';
+    prompt = '$prompt\n\n### 语言 / Language Constraint\n$langDirective';
 
       AppLogger.i('开始AI生成SVG卡片，内容长度: ${note.content.length}',
           source: 'AICardGeneration');
@@ -38,7 +51,7 @@ class AICardGenerationService {
       // 3. 清理和验证SVG
       var cleanedSVG = _cleanSVGContent(svgContent);
 
-      // 3. 补全缺失的底部元数据（AI 可能忽略）
+      // 4. 补全缺失的底部元数据（AI 可能忽略）
       cleanedSVG = _ensureMetadataPresence(
         cleanedSVG,
         date: _formatDate(note.date),
@@ -53,13 +66,13 @@ class AICardGenerationService {
       AppLogger.i('AI生成SVG成功，长度: ${cleanedSVG.length}',
           source: 'AICardGeneration');
 
-      // 4. 创建卡片对象
+      // 5. 创建卡片对象（AI生成默认类型：knowledge）
       return GeneratedCard(
         id: const Uuid().v4(),
         noteId: note.id!,
         originalContent: note.content,
         svgContent: cleanedSVG,
-        type: CardType.knowledge, // AI生成的默认为knowledge类型
+        type: CardType.knowledge,
         createdAt: DateTime.now(),
         author: note.sourceAuthor,
         source: note.fullSource,
@@ -71,37 +84,40 @@ class AICardGenerationService {
       );
     } catch (e) {
       AppLogger.w('AI生成失败，使用回退模板: $e', source: 'AICardGeneration');
-
-      // AI生成失败时，使用预设模板作为回退方案
-      final cardType = _analyzeContentTypeByKeywords(note);
-      final fallbackSVG = CardTemplates.getTemplateByType(
-        type: cardType,
-        content: note.content,
-        author: note.sourceAuthor,
-        date: _formatDate(note.date),
-        source: note.fullSource,
-        location: note.location,
-        weather: note.weather,
-        temperature: note.temperature,
-        dayPeriod: note.dayPeriod,
-      );
-
-      return GeneratedCard(
-        id: const Uuid().v4(),
-        noteId: note.id!,
-        originalContent: note.content,
-        svgContent: fallbackSVG,
-        type: cardType,
-        createdAt: DateTime.now(),
-        author: note.sourceAuthor,
-        source: note.fullSource,
-        location: note.location,
-        weather: note.weather,
-        temperature: note.temperature,
-        date: note.date,
-        dayPeriod: note.dayPeriod,
-      );
+      return _buildFallbackCard(note);
     }
+  }
+
+  /// 本地模板回退封装（AI关闭或失败时使用）
+  GeneratedCard _buildFallbackCard(Quote note) {
+    final cardType = _analyzeContentTypeByKeywords(note);
+    final fallbackSVG = CardTemplates.getTemplateByType(
+      type: cardType,
+      content: note.content,
+      author: note.sourceAuthor,
+      date: _formatDate(note.date),
+      source: note.fullSource,
+      location: note.location,
+      weather: note.weather,
+      temperature: note.temperature,
+      dayPeriod: note.dayPeriod,
+    );
+
+    return GeneratedCard(
+      id: const Uuid().v4(),
+      noteId: note.id!,
+      originalContent: note.content,
+      svgContent: fallbackSVG,
+      type: cardType,
+      createdAt: DateTime.now(),
+      author: note.sourceAuthor,
+      source: note.fullSource,
+      location: note.location,
+      weather: note.weather,
+      temperature: note.temperature,
+      date: note.date,
+      dayPeriod: note.dayPeriod,
+    );
   }
 
   /// 批量生成（用于周期报告）
@@ -576,24 +592,20 @@ class AICardGenerationService {
     }
     // 简单插入在 </svg> 前
     final metaParts = <String>[];
-    if (date != null) {
-      metaParts.add(date);
+    // 规则：程序自动补全 -> 统一中文本地化
+    final localizedWeather = _localizeWeather(weather);
+    final localizedDayPeriod = _localizeDayPeriod(dayPeriod);
+
+    if (date != null) metaParts.add(date); // 已是中文格式化
+    if (location != null) metaParts.add(location); // 用户输入不改动
+    if (localizedWeather != null) {
+      metaParts.add(temperature != null
+          ? '$localizedWeather $temperature'
+          : localizedWeather);
     }
-    if (location != null) {
-      metaParts.add(location);
-    }
-    if (weather != null) {
-      metaParts.add(temperature != null ? '$weather $temperature' : weather);
-    }
-    if (author != null) {
-      metaParts.add(author);
-    }
-    if (source != null && source != author) {
-      metaParts.add(source);
-    }
-    if (dayPeriod != null) {
-      metaParts.add(dayPeriod);
-    }
+    if (author != null) metaParts.add(author);
+    if (source != null && source != author) metaParts.add(source);
+    if (localizedDayPeriod != null) metaParts.add(localizedDayPeriod);
     metaParts.add('心迹');
     final meta = metaParts.join(' · ');
     final injection =
@@ -609,6 +621,55 @@ class AICardGenerationService {
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
+
+  // 检测是否包含中文
+  bool _containsChinese(String text) => RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
+
+  // 天气本地化映射
+  static const Map<String, String> _weatherMap = {
+    'rain': '雨',
+    'light rain': '小雨',
+    'moderate rain': '中雨',
+    'heavy rain': '大雨',
+    'drizzle': '小雨',
+    'thunderstorm': '雷暴',
+    'sunny': '晴',
+    'clear': '晴',
+    'cloudy': '多云',
+    'overcast': '阴',
+    'snow': '雪',
+    'light snow': '小雪',
+    'heavy snow': '大雪',
+    'sleet': '雨夹雪',
+    'fog': '雾',
+    'haze': '霾',
+    'windy': '有风',
+  };
+
+  String? _localizeWeather(String? weather) {
+    if (weather == null || weather.trim().isEmpty) return null;
+    final w = weather.toLowerCase();
+    return _weatherMap[w] ?? weather; // 未命中保持原样（可能已是中文）
+  }
+
+  // 时间段本地化
+  static const Map<String, String> _dayPeriodMap = {
+    'moring': '晨间', // 兼容常见拼写错误
+    'morning': '晨间',
+    'noon': '正午',
+    'afternoon': '午后',
+    'evening': '傍晚',
+    'night': '夜晚',
+    'dawn': '黎明',
+    'dusk': '黄昏',
+    'late night': '深夜',
+  };
+
+  String? _localizeDayPeriod(String? period) {
+    if (period == null || period.trim().isEmpty) return null;
+    final p = period.toLowerCase();
+    return _dayPeriodMap[p] ?? period; // 未命中保持原样（可能已是中文）
+  }
 
   /// 验证SVG基本结构
   bool _isValidSVGStructure(String svgContent) {
