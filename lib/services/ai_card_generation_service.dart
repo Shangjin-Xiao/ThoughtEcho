@@ -571,22 +571,37 @@ class AICardGenerationService {
         location != null && lower.contains(location.toLowerCase());
     final hasWeather = weather != null && lower.contains(weather.toLowerCase());
     final need = !(hasDate || hasLocation || hasWeather);
-    if (!need) return svg; // 已有至少一个信息
+    if (!need) {
+      return svg; // 已有至少一个信息
+    }
     // 简单插入在 </svg> 前
     final metaParts = <String>[];
-    if (date != null) metaParts.add(date);
-    if (location != null) metaParts.add(location);
-    if (weather != null)
+    if (date != null) {
+      metaParts.add(date);
+    }
+    if (location != null) {
+      metaParts.add(location);
+    }
+    if (weather != null) {
       metaParts.add(temperature != null ? '$weather $temperature' : weather);
-    if (author != null) metaParts.add(author);
-    if (source != null && source != author) metaParts.add(source);
-    if (dayPeriod != null) metaParts.add(dayPeriod);
+    }
+    if (author != null) {
+      metaParts.add(author);
+    }
+    if (source != null && source != author) {
+      metaParts.add(source);
+    }
+    if (dayPeriod != null) {
+      metaParts.add(dayPeriod);
+    }
     metaParts.add('心迹');
     final meta = metaParts.join(' · ');
     final injection =
         '<text x="200" y="590" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#ffffff" fill-opacity="0.75">${_escape(meta)}</text>';
     final idx = svg.lastIndexOf('</svg>');
-    if (idx == -1) return svg; // 非法结构保持原样
+    if (idx == -1) {
+      return svg; // 非法结构保持原样
+    }
     return svg.substring(0, idx) + injection + svg.substring(idx);
   }
 
