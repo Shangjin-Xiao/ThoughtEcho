@@ -53,6 +53,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   bool _showLocation = false;
   bool _showWeather = false;
 
+  // 保存进度状态
+  bool _isSaving = false; // 是否显示保存遮罩
+  double _saveProgress = 0.0; // 整体进度 (媒体文件处理进度主导)
+  String? _saveStatus; // 当前状态描述
+
   // 标签搜索控制器和过滤状态
   final TextEditingController _tagSearchController = TextEditingController();
   String _tagSearchQuery = '';
@@ -621,9 +626,31 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final db = Provider.of<DatabaseService>(context, listen: false);
 
     logDebug('开始保存笔记内容...');
+    if (mounted) {
+      setState(() {
+        _isSaving = true;
+        _saveProgress = 0.0;
+        _saveStatus = '准备处理中...';
+      });
+    }
 
-    // 处理临时媒体文件，将其移动到永久目录
-    await _processTemporaryMediaFiles();
+    // 处理临时媒体文件，带进度
+    try {
+      await _processTemporaryMediaFiles(onProgress: (p, status) {
+        if (mounted) {
+          setState(() {
+            _saveProgress = p.clamp(0.0, 1.0);
+            if (status != null) _saveStatus = status;
+          });
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('媒体文件处理失败: $e'), backgroundColor: Colors.orange),
+        );
+      }
+    }
 
     // 获取纯文本内容
     String plainTextContent = '';
@@ -700,6 +727,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         '笔记内容长度: ${quote.content.length}, 富文本长度: ${quote.deltaContent?.length ?? 0}',
       );
 
+      if (mounted) {
+        setState(() {
+          _saveStatus = '写入数据库...';
+          _saveProgress = _saveProgress < 0.9 ? 0.9 : _saveProgress;
+        });
+      }
+
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
@@ -728,6 +762,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saveProgress = 1.0;
+          _saveStatus = '完成';
+        });
+        Future.delayed(const Duration(milliseconds: 320), () {
+          if (mounted) {
+            setState(() {
+              _isSaving = false;
+            });
+          }
+        });
       }
     }
   }
@@ -1029,13 +1077,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       appBar: AppBar(
         title: const SizedBox.shrink(),
         actions: [
-          // 使用悬浮按钮展示元数据编辑弹窗
           IconButton(
             icon: const Icon(Icons.edit_note),
             tooltip: '编辑元数据',
             onPressed: () => _showMetadataDialog(context),
           ),
-          // AI助手按钮
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'AI助手',
@@ -1045,11 +1091,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             icon: const Icon(Icons.save),
             tooltip: '保存',
             onPressed: () async {
-              // 确保所有媒体播放器暂停，避免视频层拦截点击或导致资源竞争
-              try {
-                await pauseAllMediaPlayers();
-              } catch (_) {}
-
+              try { await pauseAllMediaPlayers(); } catch (_) {}
               await _saveContent();
             },
           ),
@@ -1057,134 +1099,188 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         automaticallyImplyLeading: true,
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // 统一的增强工具栏
-            UnifiedQuillToolbar(controller: _controller),
-            // 显示已选元数据指示条
-            if (_selectedTagIds.isNotEmpty ||
-                _selectedColorHex != null ||
-                _showLocation ||
-                _showWeather)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: theme.colorScheme.outlineVariant.applyOpacity(
-                        0.1,
-                      ),
-                      width: 1,
+            Column(
+              children: [
+                UnifiedQuillToolbar(controller: _controller),
+                if (_selectedTagIds.isNotEmpty ||
+                    _selectedColorHex != null ||
+                    _showLocation ||
+                    _showWeather)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    if (_selectedTagIds.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Chip(
-                          visualDensity: VisualDensity.compact,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          label: Text('${_selectedTagIds.length}个标签'),
-                          avatar: const Icon(Icons.tag, size: 16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: theme.colorScheme.outlineVariant.applyOpacity(0.1),
+                          width: 1,
                         ),
                       ),
-                    if (_selectedColorHex != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: Color(
-                              int.parse(
-                                    _selectedColorHex!.substring(1),
-                                    radix: 16,
-                                  ) |
-                                  0xFF000000,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                            // 添加边框以增加可见性
-                            border: Border.all(
-                              color: theme.colorScheme.outline.applyOpacity(
-                                0.2,
-                              ),
-                              width: 1,
+                    ),
+                    child: Row(
+                      children: [
+                        if (_selectedTagIds.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Chip(
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              label: Text('${_selectedTagIds.length}个标签'),
+                              avatar: const Icon(Icons.tag, size: 16),
                             ),
                           ),
-                          // 添加关键的key使Flutter强制重建此widget
-                          key: ValueKey('color-indicator-$_selectedColorHex'),
+                        if (_selectedColorHex != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: Color(
+                                  int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: theme.colorScheme.outline.applyOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              key: ValueKey('color-indicator-$_selectedColorHex'),
+                            ),
+                          ),
+                        if (_showLocation && _location != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Icon(
+                              Icons.location_on,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        if (_showWeather && _weather != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Icon(
+                              _getWeatherIcon(_weather!),
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => _showMetadataDialog(context),
+                          child: const Text(
+                            '编辑元数据',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         ),
-                      ),
-                    if (_showLocation && _location != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    if (_showWeather && _weather != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Icon(
-                          _getWeatherIcon(_weather!),
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => _showMetadataDialog(context),
-                      child: const Text(
-                        '编辑元数据',
-                        style: TextStyle(fontSize: 12),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(16),
+                    child: quill.QuillEditor(
+                      controller: _controller,
+                      scrollController: ScrollController(),
+                      focusNode: FocusNode(),
+                      config: quill.QuillEditorConfig(
+                        embedBuilders: kIsWeb
+                            ? FlutterQuillEmbeds.editorWebBuilders()
+                            : QuillEditorExtensions.getEmbedBuilders(),
+                        placeholder: '开始编写你的想法...',
+                        padding: const EdgeInsets.all(16),
+                        autoFocus: false,
+                        expands: false,
+                        scrollable: true,
+                        enableInteractiveSelection: true,
+                        enableSelectionToolbar: true,
+                        showCursor: true,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            // 编辑器主体 - 使用增强配置，保持白色背景
-            Expanded(
-              child: Container(
-                color: Colors.white, // 固定使用白色背景，不受主题影响
-                padding: const EdgeInsets.all(16),
-                // 使用增强配置支持图片、视频等嵌入内容
-                child: quill.QuillEditor(
-                  controller: _controller,
-                  scrollController: ScrollController(),
-                  focusNode: FocusNode(),
-                  config: quill.QuillEditorConfig(
-                    // 添加扩展的嵌入构建器
-                    embedBuilders: kIsWeb
-                        ? FlutterQuillEmbeds.editorWebBuilders()
-                        : QuillEditorExtensions.getEmbedBuilders(),
-                    // 启用全屏编辑的相关配置
-                    placeholder: '开始编写你的想法...',
-                    padding: const EdgeInsets.all(16),
-                    autoFocus: false,
-                    expands: false,
-                    scrollable: true,
-                    // 支持各种交互
-                    enableInteractiveSelection: true,
-                    enableSelectionToolbar: true,
-                    showCursor: true,
+              ],
+            ),
+            if (_isSaving)
+              Positioned.fill(
+                child: Container(
+                  color: theme.colorScheme.surface.withOpacity(0.72),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 18,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    value: _saveProgress >= 0.99
+                                        ? 1.0
+                                        : (_saveProgress <= 0 ? null : _saveProgress),
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _saveProgress < 1.0 ? '正在保存' : '完成',
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            LinearProgressIndicator(
+                              value: _saveProgress.clamp(0.0, 1.0),
+                              minHeight: 6,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            const SizedBox(height: 12),
+                            if (_saveStatus != null)
+                              Text(
+                                _saveStatus!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${(_saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                              style: theme.textTheme.labelMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
-      // 移除全屏编辑器中的问笔记悬浮按钮
-      // floatingActionButton: null,
     );
   }
 
@@ -2145,7 +2241,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   /// 修复：处理临时媒体文件，增加事务安全性和错误恢复
-  Future<void> _processTemporaryMediaFiles() async {
+  Future<void> _processTemporaryMediaFiles({
+    void Function(double progress, String? status)? onProgress,
+  }) async {
     try {
       logDebug('开始处理临时媒体文件...');
 
@@ -2155,6 +2253,62 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       final originalDeltaData = _deepCopy(deltaData) as List;
       bool hasChanges = false;
       final processedFiles = <String, String>{}; // 记录已处理的文件映射
+
+      // 预扫描：统计需要处理的临时媒体文件
+      final mediaEntries = <Map<String, dynamic>>[];
+      for (final op in deltaData) {
+        if (op.containsKey('insert')) {
+          final insert = op['insert'];
+          if (insert is Map) {
+            if (insert.containsKey('image')) {
+              mediaEntries.add({'ref': insert, 'key': 'image', 'type': '图片'});
+            }
+            if (insert.containsKey('video')) {
+              mediaEntries.add({'ref': insert, 'key': 'video', 'type': '视频'});
+            }
+            if (insert.containsKey('custom')) {
+              final custom = insert['custom'];
+              if (custom is Map && custom.containsKey('audio')) {
+                mediaEntries.add({'ref': custom, 'key': 'audio', 'type': '音频'});
+              }
+            }
+          }
+        }
+      }
+      final total = mediaEntries.length;
+      var done = 0;
+      if (total == 0) {
+        onProgress?.call(1.0, '无需处理媒体文件');
+      } else {
+        onProgress?.call(0.0, '发现 $total 个媒体文件');
+      }
+
+      for (final entry in mediaEntries) {
+        final ref = entry['ref'] as Map;
+        final key = entry['key'] as String;
+        final typeLabel = entry['type'] as String;
+        final pathVal = ref[key] as String?;
+        if (pathVal != null && await TemporaryMediaService.isTemporaryFile(pathVal)) {
+          final newPath = await _moveMediaFileSafely(
+            pathVal,
+            processedFiles,
+            onFileProgress: (fileProg) {
+              if (total > 0) {
+                final overall = (done + fileProg) / total;
+                onProgress?.call(overall, '复制$typeLabel ${done + 1}/$total');
+              }
+            },
+          );
+          if (newPath != null) {
+            ref[key] = newPath;
+            hasChanges = true;
+          }
+        }
+        done++;
+        if (total > 0) {
+          onProgress?.call(done / total, '已处理 $done / $total');
+        }
+      }
 
       // 遍历Delta内容，查找临时媒体文件
       for (final op in deltaData) {
@@ -2236,15 +2390,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   /// 修复：安全移动媒体文件，避免重复处理
   Future<String?> _moveMediaFileSafely(
-      String sourcePath, Map<String, String> processedFiles) async {
+    String sourcePath,
+    Map<String, String> processedFiles, {
+    Function(double progress)? onFileProgress,
+  }) async {
     try {
       // 检查是否已经处理过这个文件
       if (processedFiles.containsKey(sourcePath)) {
         return processedFiles[sourcePath];
       }
 
-      final permanentPath =
-          await TemporaryMediaService.moveToPermament(sourcePath);
+      final permanentPath = await TemporaryMediaService.moveToPermament(
+        sourcePath,
+        onProgress: onFileProgress,
+      );
       if (permanentPath != null) {
         processedFiles[sourcePath] = permanentPath;
       }

@@ -3187,18 +3187,28 @@ class DatabaseService extends ChangeNotifier {
         await MediaReferenceService.removeAllReferencesForQuote(id);
 
         // 检查并清理孤儿媒体文件
-        for (final filePath in referencedFiles) {
-          final refCount =
-              await MediaReferenceService.getReferenceCount(filePath);
+        for (final storedPath in referencedFiles) {
+          final refCount = await MediaReferenceService.getReferenceCount(storedPath);
           if (refCount == 0) {
             try {
-              final file = File(filePath);
+              // storedPath 可能是相对路径（相对于应用文档目录）
+              String absolutePath = storedPath;
+              try {
+                if (!absolutePath.startsWith('/')) { // 简单判断相对路径
+                  final appDir = await getApplicationDocumentsDirectory();
+                  absolutePath = join(appDir.path, storedPath);
+                }
+              } catch (_) {}
+
+              final file = File(absolutePath);
               if (await file.exists()) {
                 await file.delete();
-                logDebug('已清理孤儿媒体文件: $filePath');
+                logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
+              } else {
+                logDebug('孤儿媒体文件不存在或已被删除: $absolutePath');
               }
             } catch (e) {
-              logDebug('清理孤儿媒体文件失败: $filePath, 错误: $e');
+              logDebug('清理孤儿媒体文件失败: $storedPath, 错误: $e');
             }
           }
         }
