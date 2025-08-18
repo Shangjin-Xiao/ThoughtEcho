@@ -100,33 +100,40 @@ class TimeUtils {
     }
   } */
 
-  // TODO: 优化：formatTime 函数同时处理日期和时间格式化，职责可能过于混淆。考虑拆分为更具体的函数，例如 formatQuoteDate 和 formatQuoteTime。
-  /// 智能格式化时间，根据时间距离现在的远近显示不同格式
-  /// - 今天：显示时间 (HH:mm)
-  /// - 昨天：显示"昨天 HH:mm"
-  /// - 一周内：显示星期和时间 (EEEE HH:mm)
-  /// - 今年：显示月日和时间 (MM-dd HH:mm)
-  /// - 往年：显示完整日期时间 (yyyy-MM-dd HH:mm)
-  static String formatTime(DateTime dateTime) {
+  /// 相对时间格式（仅日期范围 + 时间），用于列表场景
+  /// - 今天：HH:mm
+  /// - 昨天：昨天 HH:mm
+  /// - 7天内：EEE HH:mm
+  /// - 当年：MM-dd HH:mm
+  /// - 往年：yyyy-MM-dd HH:mm
+  static String formatRelativeDateTime(DateTime dateTime) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
-    final aWeekAgo = now.subtract(const Duration(days: 7));
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekAgo = now.subtract(const Duration(days: 7));
+    final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
-    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
-
-    if (date.isAtSameMomentAs(today)) {
-      return DateFormat('HH:mm').format(dateTime); // 今天，显示时间
-    } else if (date.isAtSameMomentAs(yesterday)) {
-      return '昨天 ${DateFormat('HH:mm').format(dateTime)}'; // 昨天
-    } else if (dateTime.isAfter(aWeekAgo)) {
-      return DateFormat('EEEE HH:mm', 'zh_CN').format(dateTime); // 一周内，显示星期和时间
+    if (dateOnly == today) {
+      return DateFormat('HH:mm').format(dateTime);
+    } else if (dateOnly == yesterday) {
+      return '昨天 ${DateFormat('HH:mm').format(dateTime)}';
+    } else if (dateTime.isAfter(weekAgo)) {
+      return DateFormat('EEE HH:mm', 'zh_CN').format(dateTime);
     } else if (dateTime.year == now.year) {
-      return DateFormat('MM-dd HH:mm').format(dateTime); // 今年，显示月日和时间
+      return DateFormat('MM-dd HH:mm').format(dateTime);
     } else {
-      return DateFormat('yyyy-MM-dd HH:mm').format(dateTime); // 往年，显示年月日和时间
+      return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
     }
   }
+
+  /// 仅返回时间部分（HH:mm），用于需要和日期分离显示的场景
+  static String formatQuoteTime(DateTime dateTime) =>
+      DateFormat('HH:mm').format(dateTime);
+
+  /// 兼容旧代码：调用 formatRelativeDateTime
+  @Deprecated('请使用 formatRelativeDateTime 或 formatQuoteTime 拆分后的方法')
+  static String formatTime(DateTime dateTime) =>
+      formatRelativeDateTime(dateTime);
 
   /// 格式化日期（仅日期部分）
   /// 格式：2025年6月21日

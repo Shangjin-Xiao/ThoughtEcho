@@ -12,6 +12,7 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  meta: ^1.12.0 # 用于 @visibleForTesting 等注解
   cupertino_icons: ^1.0.6
   provider: ^6.1.2
   sqflite: ^2.3.2

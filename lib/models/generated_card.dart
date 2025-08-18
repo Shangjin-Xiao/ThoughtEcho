@@ -36,13 +36,13 @@ class GeneratedCard {
     required this.svgContent,
     required this.type,
     required this.createdAt,
-  this.author,
-  this.source,
-  this.location,
-  this.weather,
-  this.temperature,
-  this.date,
-  this.dayPeriod,
+    this.author,
+    this.source,
+    this.location,
+    this.weather,
+    this.temperature,
+    this.date,
+    this.dayPeriod,
   });
 
   /// 转换为可分享的图片字节数组
@@ -81,13 +81,13 @@ class GeneratedCard {
         orElse: () => CardType.knowledge,
       ),
       createdAt: DateTime.parse(json['createdAt'] as String),
-  author: json['author'] as String?,
-  source: json['source'] as String?,
-  location: json['location'] as String?,
-  weather: json['weather'] as String?,
-  temperature: json['temperature'] as String?,
-  date: json['date'] as String?,
-  dayPeriod: json['dayPeriod'] as String?,
+      author: json['author'] as String?,
+      source: json['source'] as String?,
+      location: json['location'] as String?,
+      weather: json['weather'] as String?,
+      temperature: json['temperature'] as String?,
+      date: json['date'] as String?,
+      dayPeriod: json['dayPeriod'] as String?,
     );
   }
 
@@ -100,13 +100,13 @@ class GeneratedCard {
       'svgContent': svgContent,
       'type': type.toString(),
       'createdAt': createdAt.toIso8601String(),
-  'author': author,
-  'source': source,
-  'location': location,
-  'weather': weather,
-  'temperature': temperature,
-  'date': date,
-  'dayPeriod': dayPeriod,
+      'author': author,
+      'source': source,
+      'location': location,
+      'weather': weather,
+      'temperature': temperature,
+      'date': date,
+      'dayPeriod': dayPeriod,
     };
   }
 
@@ -152,14 +152,14 @@ class GeneratedCard {
         other.originalContent == originalContent &&
         other.svgContent == svgContent &&
         other.type == type &&
-  other.createdAt == createdAt &&
-  other.author == author &&
-  other.source == source &&
-  other.location == location &&
-  other.weather == weather &&
-  other.temperature == temperature &&
-  other.date == date &&
-  other.dayPeriod == dayPeriod;
+        other.createdAt == createdAt &&
+        other.author == author &&
+        other.source == source &&
+        other.location == location &&
+        other.weather == weather &&
+        other.temperature == temperature &&
+        other.date == date &&
+        other.dayPeriod == dayPeriod;
   }
 
   @override
@@ -171,19 +171,19 @@ class GeneratedCard {
       svgContent,
       type,
       createdAt,
-  author,
-  source,
-  location,
-  weather,
-  temperature,
-  date,
-  dayPeriod,
+      author,
+      source,
+      location,
+      weather,
+      temperature,
+      date,
+      dayPeriod,
     );
   }
 
   @override
   String toString() {
-  return 'GeneratedCard(id: $id, noteId: $noteId, type: $type, createdAt: $createdAt, author: $author, location: $location, weather: $weather, dayPeriod: $dayPeriod)';
+    return 'GeneratedCard(id: $id, noteId: $noteId, type: $type, createdAt: $createdAt, author: $author, location: $location, weather: $weather, dayPeriod: $dayPeriod)';
   }
 }
 

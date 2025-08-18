@@ -30,7 +30,7 @@ class SvgOffscreenRenderer {
     }
 
     final boundaryKey = GlobalKey();
-  // 使用 Overlay + RepaintBoundary 捕获
+    // 使用 Overlay + RepaintBoundary 捕获
 
     final boxFit = _mapFit(mode);
     // Svg widget
@@ -71,13 +71,16 @@ class SvgOffscreenRenderer {
     overlayState.insert(entry);
 
     void cleanup() {
-      try { entry.remove(); } catch (_) {}
+      try {
+        entry.remove();
+      } catch (_) {}
     }
 
     // 等待两帧，确保解析 + 布局 + 绘制完成
     await _pumpFrames(count: 2);
     try {
-      final boundary = boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = boundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
       if (boundary == null) {
         throw StateError('未获取到 RenderRepaintBoundary');
       }
@@ -90,7 +93,8 @@ class SvgOffscreenRenderer {
       return byteData.buffer.asUint8List();
     } catch (e, st) {
       cleanup();
-      AppLogger.e('离屏渲染失败: $e', error: e, stackTrace: st, source: 'SvgOffscreenRenderer');
+      AppLogger.e('离屏渲染失败: $e',
+          error: e, stackTrace: st, source: 'SvgOffscreenRenderer');
       rethrow;
     }
   }

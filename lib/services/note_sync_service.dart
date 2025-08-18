@@ -168,16 +168,13 @@ class NoteSyncService extends ChangeNotifier {
             }
           }
         },
-    onReceiveSessionCreated: (sid, totalBytes, alias) {
+        onReceiveSessionCreated: (sid, totalBytes, alias) {
           _currentReceiveSessionId = sid;
           _receiveSenderAlias = alias;
           _receiveStartTime = DateTime.now();
           if (_syncStatus == SyncStatus.idle) {
-      // 审批前不展示总大小，简化文案
-      _updateSyncStatus(
-        SyncStatus.receiving,
-        '等待 $alias 发送数据...',
-        0.02);
+            // 审批前不展示总大小，简化文案
+            _updateSyncStatus(SyncStatus.receiving, '等待 $alias 发送数据...', 0.02);
           }
         },
         onApprovalNeeded: (sid, totalBytes, alias) async {
@@ -185,7 +182,7 @@ class NoteSyncService extends ChangeNotifier {
           _awaitingUserApproval = true;
           _pendingReceiveTotalBytes = totalBytes;
           _currentReceiveSessionId = sid;
-            _receiveSenderAlias = alias;
+          _receiveSenderAlias = alias;
           notifyListeners();
           // 等待 UI 调用 approve 或 reject
           final completer = Completer<bool>();
@@ -233,7 +230,8 @@ class NoteSyncService extends ChangeNotifier {
       final c = _approvalWaiters.remove(_currentReceiveSessionId!);
       c?.complete(false);
       _awaitingUserApproval = false;
-      _updateSyncStatus(SyncStatus.failed, '已拒绝来自$_receiveSenderAlias 的同步', 0.0);
+      _updateSyncStatus(
+          SyncStatus.failed, '已拒绝来自$_receiveSenderAlias 的同步', 0.0);
     }
   }
 
@@ -285,16 +283,18 @@ class NoteSyncService extends ChangeNotifier {
   /// 发送笔记数据到指定设备（统一使用createSyncPackage）
   Future<void> sendNotesToDevice(Device targetDevice) async {
     // 使用统一的createSyncPackage方法
-  await createSyncPackage(targetDevice); // 使用默认包含媒体文件
+    await createSyncPackage(targetDevice); // 使用默认包含媒体文件
   }
 
   /// (Deprecated) 旧receiveAndMerge逻辑已废弃，直接调用processSyncPackage
-  @Deprecated('Legacy receive logic replaced by processSyncPackage; will be removed in future release')
+  @Deprecated(
+      'Legacy receive logic replaced by processSyncPackage; will be removed in future release')
   Future<void> receiveAndMergeNotes(String backupFilePath) =>
       processSyncPackage(backupFilePath);
 
   // 旧的重复检测与合并逻辑已不再需要 (LWW直接覆盖)。保留方法体空实现以避免潜在调用崩溃。
-  @Deprecated('Legacy duplicate merge removed; kept as no-op for binary compatibility')
+  @Deprecated(
+      'Legacy duplicate merge removed; kept as no-op for binary compatibility')
   // ignore: unused_element
   Future<void> _mergeNoteData() async {}
 
@@ -426,7 +426,8 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 创建同步包并发送到指定设备（若对方需要先审批，先走意向握手，再打包发送）
   /// [includeMediaFiles] 是否包含媒体文件（默认包含）
-  Future<String> createSyncPackage(Device targetDevice, {bool includeMediaFiles = true}) async {
+  Future<String> createSyncPackage(Device targetDevice,
+      {bool includeMediaFiles = true}) async {
     if (_localSendProvider == null) {
       throw Exception('同步服务未初始化');
     }
@@ -442,8 +443,8 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('对方拒绝同步请求');
       }
 
-  // 1. 更新状态：开始打包（不显示大小/数量）
-  _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
+      // 1. 更新状态：开始打包（不显示大小/数量）
+      _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
       _currentSendSessionId = null;
 
       // 2. 使用备份服务创建数据包（隐藏具体数量，仅显示百分比）
@@ -451,11 +452,9 @@ class NoteSyncService extends ChangeNotifier {
         includeMediaFiles: includeMediaFiles,
         onProgress: (current, total) {
           final ratio = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
-            final progress = 0.1 + ratio * 0.4; // 10%-50%
-          _updateSyncStatus(
-              SyncStatus.packaging,
-              '正在打包数据... ${(ratio * 100).toStringAsFixed(0)}%',
-              progress);
+          final progress = 0.1 + ratio * 0.4; // 10%-50%
+          _updateSyncStatus(SyncStatus.packaging,
+              '正在打包数据... ${(ratio * 100).toStringAsFixed(0)}%', progress);
         },
       );
       // 额外：打包完成后立即获取文件大小并校验
@@ -540,7 +539,8 @@ class NoteSyncService extends ChangeNotifier {
   Future<bool> _sendSyncIntent(Device target) async {
     if (skipSyncConfirmation) return true; // 全局跳过确认
     try {
-      final uri = Uri.parse('http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent');
+      final uri = Uri.parse(
+          'http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent');
       final fp = await DeviceIdentityManager.I.getFingerprint();
       // 动态 alias：优先使用发现服务中的真实设备型号
       String alias = 'ThoughtEcho';
@@ -607,7 +607,8 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 取消接收（如果正在接收且尚未进入合并阶段）
   void cancelReceiving() {
-    if (_syncStatus != SyncStatus.receiving || _currentReceiveSessionId == null) {
+    if (_syncStatus != SyncStatus.receiving ||
+        _currentReceiveSessionId == null) {
       return;
     }
     try {
@@ -658,8 +659,8 @@ class NoteSyncService extends ChangeNotifier {
   Future<void> processSyncPackage(String backupFilePath) async {
     try {
       // 1. 更新状态：开始合并
-  // 文案简化：去掉专业术语 LWW，避免用户困惑
-  _updateSyncStatus(SyncStatus.merging, '正在合并数据...', 0.1);
+      // 文案简化：去掉专业术语 LWW，避免用户困惑
+      _updateSyncStatus(SyncStatus.merging, '正在合并数据...', 0.1);
 
       // 2. 使用新的统一 importData 接口（merge=true）
       final mergeReport = await _backupService.importData(
@@ -679,10 +680,10 @@ class NoteSyncService extends ChangeNotifier {
       final summary = mergeReport?.summary ?? '无报告';
       if (mergeReport?.hasErrors == true) {
         _updateSyncStatus(SyncStatus.failed, '合并出现错误: $summary', 0.0);
-  debugPrint('合并错误: ${mergeReport?.errors}');
+        debugPrint('合并错误: ${mergeReport?.errors}');
       } else {
         _updateSyncStatus(SyncStatus.completed, '合并完成: $summary', 1.0);
-  debugPrint('合并成功: $summary');
+        debugPrint('合并成功: $summary');
         try {
           _databaseService.refreshAllData();
         } catch (e) {
@@ -699,15 +700,19 @@ class NoteSyncService extends ChangeNotifier {
   /// 更新同步状态
   void _updateSyncStatus(SyncStatus status, String message, double progress) {
     // 约束 progress 合法区间
-    if (progress.isNaN || progress.isInfinite) progress = 0.0;
+    if (progress.isNaN || progress.isInfinite) {
+      progress = 0.0;
+    }
     if (progress < 0) {
       progress = 0;
-    } else if (progress > 1) progress = 1;
+    } else if (progress > 1) {
+      progress = 1;
+    }
 
     final now = DateTime.now();
     final statusChanged = status != _syncStatus;
     final messageChanged = message != _syncStatusMessage;
-  final progressDelta = (progress - _syncProgress).abs();
+    final progressDelta = (progress - _syncProgress).abs();
     final timeDeltaMs = now.difference(_lastUiNotify).inMilliseconds;
 
     _syncStatus = status;
@@ -715,11 +720,11 @@ class NoteSyncService extends ChangeNotifier {
     _syncProgress = progress;
 
     // 通知策略：
-  // 1. 状态或消息变化立即通知
-  // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
+    // 1. 状态或消息变化立即通知
+    // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
     final shouldNotify = statusChanged ||
         messageChanged ||
-  progressDelta >= 0.002 || // 0.2% 进度变化就刷新
+        progressDelta >= 0.002 || // 0.2% 进度变化就刷新
         timeDeltaMs >= _minUiNotifyIntervalMs ||
         progress >= 1.0 ||
         status == SyncStatus.failed ||
@@ -729,7 +734,8 @@ class NoteSyncService extends ChangeNotifier {
       notifyListeners();
     }
     if (shouldNotify || statusChanged) {
-      debugPrint('同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)');
+      debugPrint(
+          '同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)');
     }
   }
 

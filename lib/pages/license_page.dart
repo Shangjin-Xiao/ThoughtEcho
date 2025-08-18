@@ -587,14 +587,17 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                             icon: const Icon(Icons.copy),
                             tooltip: '复制许可证',
                             onPressed: () async {
-                              final full = await compute(_joinParagraphs,
-                                  entry.paragraphs.map((p) => p.text).toList());
+                              final messenger = ScaffoldMessenger.of(context);
+                              final paragraphs =
+                                  entry.paragraphs.map((p) => p.text).toList();
+                              final full =
+                                  await compute(_joinParagraphs, paragraphs);
+                              if (!mounted) return;
                               await Clipboard.setData(
                                   ClipboardData(text: full));
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('已复制许可证内容')));
-                              }
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                  const SnackBar(content: Text('已复制许可证内容')));
                             },
                           ),
                         ],
@@ -726,12 +729,12 @@ class _ProgressiveSystemLicensesPageState
                               : preview,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.color
-                  ?.withValues(alpha: 0.85)),
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.color
+                                  ?.withValues(alpha: 0.85)),
                         ),
                       ],
                     ),

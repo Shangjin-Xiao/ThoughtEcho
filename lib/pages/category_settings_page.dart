@@ -91,8 +91,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                         IconUtils.getDisplayIcon(
                                           _selectedIconName!,
                                         ),
-                                        style:
-                                            const TextStyle(fontSize: 20),
+                                        style: const TextStyle(fontSize: 20),
                                       )
                                     : Icon(
                                         IconUtils.getIconData(
@@ -109,7 +108,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.check),
                         label: Text(_isLoading ? '添加中' : '添加'),
@@ -123,6 +123,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   );
                                   return;
                                 }
+                                final messenger = ScaffoldMessenger.of(context);
                                 setState(() => _isLoading = true);
                                 try {
                                   final db = context.read<DatabaseService>();
@@ -130,17 +131,19 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                     text,
                                     iconName: _selectedIconName,
                                   );
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('标签添加成功')),
-                                  );
-                                  _categoryController.clear();
-                                  setState(() => _selectedIconName = null);
+                                  if (mounted) {
+                                    messenger.showSnackBar(
+                                      const SnackBar(content: Text('标签添加成功')),
+                                    );
+                                    _categoryController.clear();
+                                    setState(() => _selectedIconName = null);
+                                  }
                                 } catch (e) {
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('添加标签失败：$e')),
-                                  );
+                                  if (mounted) {
+                                    messenger.showSnackBar(
+                                      SnackBar(content: Text('添加标签失败：$e')),
+                                    );
+                                  }
                                 } finally {
                                   if (mounted) {
                                     setState(() => _isLoading = false);
@@ -180,7 +183,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         ),
                         if (_selectedIconName != null)
                           TextButton(
-                            onPressed: () => setState(() => _selectedIconName = null),
+                            onPressed: () =>
+                                setState(() => _selectedIconName = null),
                             child: const Text('清除'),
                           ),
                       ],
@@ -226,7 +230,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     ),
                     itemBuilder: (context, index) {
                       final category = categories[index];
-                      return _buildCategoryItem(category, index, categories.length);
+                      return _buildCategoryItem(
+                          category, index, categories.length);
                     },
                   ),
                 );
@@ -546,7 +551,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-      // 修正：此处应为“编辑分类”而非“编辑标签”
+          // 修正：此处应为“编辑分类”而非“编辑标签”
           title: const Text('编辑标签'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -658,9 +663,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer,
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -680,9 +684,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     '点击编辑，长按删除',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -711,7 +713,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-  content: Text('确定要删除标签"${category.name}"吗？相关联的笔记将保留，但不再关联此标签。'),
+        content: Text('确定要删除标签"${category.name}"吗？相关联的笔记将保留，但不再关联此标签。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

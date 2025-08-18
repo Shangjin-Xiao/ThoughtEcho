@@ -19,10 +19,12 @@ class ReceiveController {
   final Function(String filePath)? onFileReceived;
   final void Function(int received, int total)? onReceiveProgress;
   final void Function(String sessionId, int totalBytes, String senderAlias)?
-    onSessionCreated; // 通知有新的会话（等待审批）
-  final Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-    onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
-  final bool Function(String? fingerprint)? consumePreApproval; // 若返回true表示已存在预批准并已消费
+      onSessionCreated; // 通知有新的会话（等待审批）
+  final Future<bool> Function(
+          String sessionId, int totalBytes, String senderAlias)?
+      onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
+  final bool Function(String? fingerprint)?
+      consumePreApproval; // 若返回true表示已存在预批准并已消费
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;

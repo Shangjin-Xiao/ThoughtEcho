@@ -8,7 +8,7 @@ import 'image_cache_service.dart';
 /// 导出渲染模式
 enum ExportRenderMode {
   contain, // 等比完整显示（可能留边）
-  cover,   // 等比填满（可能裁切）
+  cover, // 等比填满（可能裁切）
   stretch, // 拉伸填满（可能变形）
 }
 
@@ -27,7 +27,7 @@ class SvgToImageService {
     bool useCache = true,
     double scaleFactor = 1.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-  BuildContext? context,
+    BuildContext? context,
   }) async {
     try {
       // 验证输入参数
@@ -72,8 +72,8 @@ class SvgToImageService {
         backgroundColor,
         maintainAspectRatio,
         scaleFactor,
-  renderMode,
-  context,
+        renderMode,
+        context,
       );
 
       // 缓存结果
@@ -163,8 +163,8 @@ class SvgToImageService {
     Color backgroundColor,
     bool maintainAspectRatio,
     double scaleFactor,
-  ExportRenderMode renderMode,
-  BuildContext? buildContext,
+    ExportRenderMode renderMode,
+    BuildContext? buildContext,
   ) async {
     try {
       // 直接使用Canvas渲染SVG
@@ -174,9 +174,9 @@ class SvgToImageService {
         height,
         format,
         backgroundColor,
-  scaleFactor,
-  renderMode,
-  buildContext,
+        scaleFactor,
+        renderMode,
+        buildContext,
       );
     } catch (e) {
       AppLogger.w('SVG渲染失败，使用回退方案: $e', error: e, source: 'SvgToImageService');
@@ -200,14 +200,14 @@ class SvgToImageService {
     Color backgroundColor,
     double scaleFactor,
     ExportRenderMode renderMode,
-  BuildContext? buildContext,
+    BuildContext? buildContext,
   ) async {
     // 优先尝试离屏Flutter渲染（与预览一致）
     try {
-    if (buildContext != null) {
+      if (buildContext != null) {
         final bytes = await SvgOffscreenRenderer.instance.renderSvgString(
           svgContent,
-      context: buildContext,
+          context: buildContext,
           width: targetWidth,
           height: targetHeight,
           scaleFactor: scaleFactor,

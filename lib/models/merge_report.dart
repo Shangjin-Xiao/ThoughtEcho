@@ -109,11 +109,13 @@ class MergeReport {
   }
 
   /// 兼容旧API：添加成功应用的笔记（默认视为更新）
-  @Deprecated('Use addInsertedQuote or addUpdatedQuote; this wrapper will be removed')
+  @Deprecated(
+      'Use addInsertedQuote or addUpdatedQuote; this wrapper will be removed')
   MergeReport addAppliedQuote() => addUpdatedQuote();
 
   /// 兼容旧API：添加成功应用的分类（默认视为更新）
-  @Deprecated('Use addInsertedCategory or addUpdatedCategory; this wrapper will be removed')
+  @Deprecated(
+      'Use addInsertedCategory or addUpdatedCategory; this wrapper will be removed')
   MergeReport addAppliedCategory() => addUpdatedCategory();
 
   /// 添加错误信息
