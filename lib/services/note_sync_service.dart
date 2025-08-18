@@ -700,7 +700,9 @@ class NoteSyncService extends ChangeNotifier {
   void _updateSyncStatus(SyncStatus status, String message, double progress) {
     // 约束 progress 合法区间
     if (progress.isNaN || progress.isInfinite) progress = 0.0;
-    if (progress < 0) progress = 0; else if (progress > 1) progress = 1;
+    if (progress < 0) {
+      progress = 0;
+    } else if (progress > 1) progress = 1;
 
     final now = DateTime.now();
     final statusChanged = status != _syncStatus;

@@ -20,6 +20,14 @@ class GeneratedCard {
   final String svgContent; // SVG代码
   final CardType type;
   final DateTime createdAt;
+  // 新增元数据（可选，用于再渲染与展示）
+  final String? author;
+  final String? source;
+  final String? location;
+  final String? weather;
+  final String? temperature;
+  final String? date; // 原始日期字符串（格式化后 SVG 内展示的可能不同）
+  final String? dayPeriod;
 
   const GeneratedCard({
     required this.id,
@@ -28,6 +36,13 @@ class GeneratedCard {
     required this.svgContent,
     required this.type,
     required this.createdAt,
+  this.author,
+  this.source,
+  this.location,
+  this.weather,
+  this.temperature,
+  this.date,
+  this.dayPeriod,
   });
 
   /// 转换为可分享的图片字节数组
@@ -37,6 +52,9 @@ class GeneratedCard {
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
     Color backgroundColor = Colors.white,
     bool maintainAspectRatio = true,
+    BuildContext? context,
+    double scaleFactor = 1.0,
+    ExportRenderMode renderMode = ExportRenderMode.contain,
   }) async {
     return await SvgToImageService.convertSvgToImage(
       svgContent,
@@ -45,6 +63,9 @@ class GeneratedCard {
       format: format,
       backgroundColor: backgroundColor,
       maintainAspectRatio: maintainAspectRatio,
+      context: context,
+      scaleFactor: scaleFactor,
+      renderMode: renderMode,
     );
   }
 
@@ -60,6 +81,13 @@ class GeneratedCard {
         orElse: () => CardType.knowledge,
       ),
       createdAt: DateTime.parse(json['createdAt'] as String),
+  author: json['author'] as String?,
+  source: json['source'] as String?,
+  location: json['location'] as String?,
+  weather: json['weather'] as String?,
+  temperature: json['temperature'] as String?,
+  date: json['date'] as String?,
+  dayPeriod: json['dayPeriod'] as String?,
     );
   }
 
@@ -72,6 +100,13 @@ class GeneratedCard {
       'svgContent': svgContent,
       'type': type.toString(),
       'createdAt': createdAt.toIso8601String(),
+  'author': author,
+  'source': source,
+  'location': location,
+  'weather': weather,
+  'temperature': temperature,
+  'date': date,
+  'dayPeriod': dayPeriod,
     };
   }
 
@@ -83,6 +118,13 @@ class GeneratedCard {
     String? svgContent,
     CardType? type,
     DateTime? createdAt,
+    String? author,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? date,
+    String? dayPeriod,
   }) {
     return GeneratedCard(
       id: id ?? this.id,
@@ -91,6 +133,13 @@ class GeneratedCard {
       svgContent: svgContent ?? this.svgContent,
       type: type ?? this.type,
       createdAt: createdAt ?? this.createdAt,
+      author: author ?? this.author,
+      source: source ?? this.source,
+      location: location ?? this.location,
+      weather: weather ?? this.weather,
+      temperature: temperature ?? this.temperature,
+      date: date ?? this.date,
+      dayPeriod: dayPeriod ?? this.dayPeriod,
     );
   }
 
@@ -103,7 +152,14 @@ class GeneratedCard {
         other.originalContent == originalContent &&
         other.svgContent == svgContent &&
         other.type == type &&
-        other.createdAt == createdAt;
+  other.createdAt == createdAt &&
+  other.author == author &&
+  other.source == source &&
+  other.location == location &&
+  other.weather == weather &&
+  other.temperature == temperature &&
+  other.date == date &&
+  other.dayPeriod == dayPeriod;
   }
 
   @override
@@ -115,12 +171,19 @@ class GeneratedCard {
       svgContent,
       type,
       createdAt,
+  author,
+  source,
+  location,
+  weather,
+  temperature,
+  date,
+  dayPeriod,
     );
   }
 
   @override
   String toString() {
-    return 'GeneratedCard(id: $id, noteId: $noteId, type: $type, createdAt: $createdAt)';
+  return 'GeneratedCard(id: $id, noteId: $noteId, type: $type, createdAt: $createdAt, author: $author, location: $location, weather: $weather, dayPeriod: $dayPeriod)';
   }
 }
 
