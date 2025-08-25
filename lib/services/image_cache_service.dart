@@ -107,10 +107,10 @@ class ImageCacheService {
       }
     }
 
-    if (oldestKey != null) {
+      if (oldestKey != null) {
       _removeCacheEntry(oldestKey);
       if (kDebugMode) {
-        print('移除最旧缓存条目: $oldestKey');
+        AppLogger.d('移除最旧缓存条目: $oldestKey', source: 'ImageCacheService');
       }
     }
   }
@@ -126,7 +126,7 @@ class ImageCacheService {
     _memoryCache.clear();
     _cacheTimestamps.clear();
     if (kDebugMode) {
-      print('已清空所有图片缓存');
+      AppLogger.d('已清空所有图片缓存', source: 'ImageCacheService');
     }
   }
 

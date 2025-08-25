@@ -115,9 +115,8 @@ class SvgToImageService {
 
         onProgress?.call(i + 1, svgContents.length);
       } catch (e) {
-        if (kDebugMode) {
-          print('批量转换第${i + 1}个SVG失败: $e');
-        }
+        // 使用统一日志服务记录批量转换错误
+        AppLogger.w('批量转换第${i + 1}个SVG失败: $e', error: e, source: 'SvgToImageService');
         // 添加错误图片
         final errorImage =
             await _generateErrorImage(width, height, format, e.toString());
@@ -493,9 +492,8 @@ class SvgToImageService {
 
         textPainter.paint(canvas, Offset(x, y));
       } catch (e) {
-        if (kDebugMode) {
-          print('解析文本元素失败: $e');
-        }
+        // 使用统一日志服务记录文本解析失败
+        AppLogger.w('解析文本元素失败: $e', error: e, source: 'SvgToImageService');
       }
     }
   }
