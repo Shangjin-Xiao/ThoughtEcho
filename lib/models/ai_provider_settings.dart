@@ -26,8 +26,8 @@ class AIProviderSettings implements AIConfig {
     this.apiKey = '', // 默认为空，实际API Key通过APIKeyManager管理
     required this.apiUrl,
     required this.model,
-    this.temperature = 0.7,
-    this.maxTokens = 1000,
+  this.temperature = 0.7,
+  this.maxTokens = 32000,
     this.hostOverride,
     this.isEnabled = true,
   });
@@ -136,7 +136,7 @@ class AIProviderSettings implements AIConfig {
       apiUrl: '',
       model: '',
       temperature: 0.7,
-      maxTokens: 1000,
+  maxTokens: 32000,
       isEnabled: false,
     );
   }

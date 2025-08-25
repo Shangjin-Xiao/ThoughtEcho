@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../utils/color_utils.dart';
+import '../services/ai_service.dart';
+import '../services/settings_service.dart';
 
 class AnnualReportPage extends StatefulWidget {
   final int year;
@@ -27,6 +30,17 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   // 数据统计
   AnnualStats? _stats;
+
+  // 新增：最常见项与洞察状态
+  String? _mostDayPeriod; // 晨曦/午后/黄昏/夜晚
+  String? _mostWeather; // 晴/雨/多云
+  String? _mostTopTag; // 标签名
+  int _totalWordCount = 0;
+  String? _notesPreview;
+
+  String _insightText = '';
+  bool _insightLoading = false;
+  StreamSubscription<String>? _insightSub;
 
   @override
   void initState() {
@@ -53,6 +67,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     _controller.dispose();
     _slideController.dispose();
     _pageController.dispose();
+  _insightSub?.cancel();
     super.dispose();
   }
 
@@ -72,6 +87,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         _stats = resolvedStats;
       });
     }
+
+  // 计算额外指标并生成洞察
+  _computeExtras(yearQuotes, resolvedStats);
+  _maybeStartInsight();
   }
 
   Future<AnnualStats> _resolveTagNames(AnnualStats stats) async {
@@ -110,6 +129,154 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     Future.delayed(const Duration(milliseconds: 500), () {
       _controller.forward();
     });
+  }
+
+  void _computeExtras(List<Quote> quotes, AnnualStats stats) {
+    // 总字数
+    final totalWords = quotes.fold<int>(0, (sum, q) => sum + q.content.length);
+
+    // 最常见时间段
+    final Map<String, int> periodCounts = {};
+    for (final q in quotes) {
+      final p = q.dayPeriod?.trim();
+      if (p != null && p.isNotEmpty) {
+        periodCounts[p] = (periodCounts[p] ?? 0) + 1;
+      }
+    }
+    final mostPeriod = periodCounts.entries.isNotEmpty
+        ? periodCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+        : null;
+
+    // 最常见天气
+    final Map<String, int> weatherCounts = {};
+    for (final q in quotes) {
+      final w = q.weather?.trim();
+      if (w != null && w.isNotEmpty) {
+        weatherCounts[w] = (weatherCounts[w] ?? 0) + 1;
+      }
+    }
+    final mostWeather = weatherCounts.entries.isNotEmpty
+        ? weatherCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+        : null;
+
+    // 最常用标签名（topTags 已解析名称）
+    final topTagName = stats.topTags.isNotEmpty ? stats.topTags.first.name : null;
+
+    // 笔记片段预览（最多5条，每条截断80字）
+    final samples = quotes.take(5).map((q) {
+      var t = q.content.trim().replaceAll('\n', ' ');
+      if (t.length > 80) t = '${t.substring(0, 80)}…';
+      return '- $t';
+    }).join('\n');
+
+    if (mounted) {
+      setState(() {
+        _totalWordCount = totalWords;
+        _mostDayPeriod = mostPeriod;
+        _mostWeather = mostWeather;
+        _mostTopTag = topTagName;
+        _notesPreview = samples.isEmpty ? null : samples;
+      });
+    } else {
+      _totalWordCount = totalWords;
+      _mostDayPeriod = mostPeriod;
+      _mostWeather = mostWeather;
+      _mostTopTag = topTagName;
+      _notesPreview = samples.isEmpty ? null : samples;
+    }
+  }
+
+  void _maybeStartInsight() {
+    if (_stats == null) return;
+    final periodLabel = '${widget.year}年度';
+    final useAI = context.read<SettingsService>().reportInsightsUseAI;
+
+    _insightSub?.cancel();
+    if (useAI) {
+      setState(() {
+        _insightText = '';
+        _insightLoading = true;
+      });
+      final ai = context.read<AIService>();
+      
+      // 准备完整的笔记内容用于AI分析  
+      final fullNotesContent = widget.quotes.map((quote) {
+        final date = DateTime.parse(quote.date);
+        final dateStr = '${date.month}月${date.day}日';
+        var content = quote.content.trim();
+        
+        // 添加位置信息
+        if (quote.location != null && quote.location!.isNotEmpty) {
+          content = '【$dateStr·${quote.location}】$content';
+        } else {
+          content = '【$dateStr】$content';
+        }
+        
+        // 添加天气信息
+        if (quote.weather != null && quote.weather!.isNotEmpty) {
+          content += ' （天气：${quote.weather}）';
+        }
+        
+        return content;
+      }).join('\n\n');
+      
+      _insightSub = ai
+          .streamReportInsight(
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriod,
+            mostWeather: _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: _stats!.activeDays,
+            noteCount: _stats!.totalNotes,
+            totalWordCount: _totalWordCount,
+            notesPreview: _notesPreview,
+            fullNotesContent: fullNotesContent, // 传递完整内容
+          )
+          .listen(
+        (chunk) {
+          if (!mounted) return;
+          setState(() {
+            _insightText += chunk;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
+          final local = context.read<AIService>().buildLocalReportInsight(
+                periodLabel: periodLabel,
+                mostTimePeriod: _mostDayPeriod,
+                mostWeather: _mostWeather,
+                topTag: _mostTopTag,
+                activeDays: _stats!.activeDays,
+                noteCount: _stats!.totalNotes,
+                totalWordCount: _totalWordCount,
+              );
+          setState(() {
+            _insightText = local;
+            _insightLoading = false;
+          });
+        },
+        onDone: () {
+          if (!mounted) return;
+          setState(() {
+            _insightLoading = false;
+          });
+        },
+      );
+    } else {
+      final local = context.read<AIService>().buildLocalReportInsight(
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriod,
+            mostWeather: _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: _stats!.activeDays,
+            noteCount: _stats!.totalNotes,
+            totalWordCount: _totalWordCount,
+          );
+      setState(() {
+        _insightText = local;
+        _insightLoading = false;
+      });
+    }
   }
 
   void _nextPage() {
@@ -493,6 +660,30 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               icon: Icons.article,
               color: const Color(0xFF84CC16),
             ),
+            const SizedBox(height: 20),
+            // 新增：最常见时间段
+            _buildHabitCard(
+              title: '最常见时间段',
+              content: _mostDayPeriod ?? '暂无数据',
+              icon: Icons.timelapse,
+              color: const Color(0xFF8B5CF6),
+            ),
+            const SizedBox(height: 20),
+            // 新增：最常见天气
+            _buildHabitCard(
+              title: '最常见天气',
+              content: _mostWeather ?? '暂无数据',
+              icon: Icons.cloud_queue,
+              color: const Color(0xFF06B6D4),
+            ),
+            const SizedBox(height: 20),
+            // 新增：最常用标签
+            _buildHabitCard(
+              title: '最常用标签',
+              content: _mostTopTag ?? '暂无数据',
+              icon: Icons.local_offer_outlined,
+              color: const Color(0xFFEF4444),
+            ),
           ],
         ),
       ),
@@ -732,6 +923,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
+            _buildInsightBulbBar(),
+            const SizedBox(height: 20),
             Expanded(
               child: Column(
                 children: [
@@ -760,6 +953,42 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInsightBulbBar() {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        boxShadow: AppTheme.lightShadow,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.lightbulb,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _insightLoading
+                ? Text(
+                    '正在生成本期洞察…',
+                    style: TextStyle(
+                      color: ColorUtils.withOpacitySafe(
+                          theme.colorScheme.onSurface, 0.7),
+                    ),
+                  )
+                : Text(
+                    _insightText.isEmpty ? '暂无洞察' : _insightText,
+                    style: const TextStyle(fontSize: 15, height: 1.5),
+                  ),
+          ),
+        ],
       ),
     );
   }

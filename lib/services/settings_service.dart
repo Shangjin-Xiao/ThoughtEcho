@@ -45,6 +45,14 @@ class SettingsService extends ChangeNotifier {
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
 
+  // 周期报告洞察是否使用AI（流式）
+  bool get reportInsightsUseAI => _appSettings.reportInsightsUseAI;
+  Future<void> setReportInsightsUseAI(bool enabled) async {
+    _appSettings = _appSettings.copyWith(reportInsightsUseAI: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法
@@ -469,5 +477,17 @@ class SettingsService extends ChangeNotifier {
         '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
     _mmkv.setString(_deviceIdKey, newId);
     return newId;
+  }
+
+  /// 获取自定义字符串设置
+  Future<String?> getCustomString(String key) async {
+    await _mmkv.init();
+    return _mmkv.getString(key);
+  }
+
+  /// 设置自定义字符串设置
+  Future<void> setCustomString(String key, String value) async {
+    await _mmkv.init();
+    await _mmkv.setString(key, value);
   }
 }

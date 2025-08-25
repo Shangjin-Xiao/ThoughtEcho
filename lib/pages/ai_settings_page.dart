@@ -23,7 +23,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
   final _apiUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
   final _modelController = TextEditingController();
-  final _maxTokensController = TextEditingController();
+  // 最大令牌数不再对用户暴露，内部使用较大默认值
+  final _maxTokensController = TextEditingController(text: '32000');
   String? _hostOverride;
   final _hostOverrideController = TextEditingController();
 
@@ -271,12 +272,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _modelController.text = '';
           _apiUrlController.text = '';
           _apiKeyController.text = '';
-          _maxTokensController.text = '1000';
+          _maxTokensController.text = '32000';
           _hostOverride = null;
           _hostOverrideController.text = '';
           _selectedPreset = null;
         }
       });
+
+  // 预加载一次reportInsightsUseAI状态，确保UI响应
+  // 使用SettingsService提供的getter
     } catch (e) {
       logError('加载AI设置失败: $e',
           error: e, source: 'AISettingsPage._loadSettings');
@@ -332,8 +336,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // 解析最大令牌数
-    final maxTokensText = _maxTokensController.text.trim();
-    int maxTokens = int.parse(maxTokensText); // 现在可以安全解析，因为已通过验证
+  // 统一采用较大安全上限，底层会按provider能力裁剪
+  int maxTokens = 32000;
 
     try {
       // 创建新的provider
@@ -757,7 +761,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             _apiUrlController.clear();
             _apiKeyController.clear();
             _modelController.clear();
-            _maxTokensController.text = '1000';
+            _maxTokensController.text = '32000';
             _hostOverrideController.clear();
           }
         }
@@ -979,6 +983,23 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
   }
 
+  Widget _buildReportInsightSwitch() {
+    final settingsService = Provider.of<SettingsService>(context);
+    final enabled = settingsService.reportInsightsUseAI;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: SwitchListTile(
+        title: const Text('周期报告洞察使用AI'),
+        subtitle: const Text('打开后进入报告页自动生成“诗意洞察”，关闭则使用本地生成'),
+        value: enabled,
+        onChanged: (val) async {
+          await settingsService.setReportInsightsUseAI(val);
+        },
+        secondary: const Icon(Icons.lightbulb_outline),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1004,6 +1025,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             children: [
               // Provider选择器
               _buildProviderSelector(),
+              _buildReportInsightSwitch(),
 
               DropdownButtonFormField<String>(
                 value: _selectedPreset,
@@ -1088,18 +1110,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   prefixIcon: const Icon(Icons.psychology),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _maxTokensController,
-                decoration: const InputDecoration(
-                  labelText: '最大令牌数',
-                  hintText: '例如: 2048',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.numbers),
-                ),
-                keyboardType: TextInputType.number,
-                validator: _validateMaxTokens,
-              ),
+              // 最大令牌数配置已内置管理，不在此暴露输入项
               const SizedBox(height: 16),
               TextField(
                 controller: _hostOverrideController,
@@ -1236,21 +1247,5 @@ class _AISettingsPageState extends State<AISettingsPage> {
     return null;
   }
 
-  // 验证最大令牌数
-  String? _validateMaxTokens(String? value) {
-    if (value == null || value.isEmpty) {
-      return '最大令牌数不能为空';
-    }
-
-    final intValue = int.tryParse(value);
-    if (intValue == null) {
-      return '请输入有效的数字';
-    }
-
-    if (intValue < 1 || intValue > 100000) {
-      return '令牌数应在1-100000之间';
-    }
-
-    return null;
-  }
+  // 最大令牌数校验已移除（不再暴露给用户）
 }
