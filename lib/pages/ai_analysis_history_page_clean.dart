@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../constants/app_constants.dart';
 import '../models/ai_analysis_model.dart';
 import '../services/ai_analysis_database_service.dart';
 import '../services/database_service.dart';
@@ -122,7 +123,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('服务未初始化，删除失败')));
+          ).showSnackBar(const SnackBar(
+            content: Text('服务未初始化，删除失败'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
         return;
       }
@@ -133,14 +137,20 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('删除成功')));
+          ).showSnackBar(const SnackBar(
+            content: Text('删除成功'),
+            duration: AppConstants.snackBarDurationImportant,
+          ));
         }
       } catch (e) {
         AppLogger.e('删除分析记录失败', error: e);
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('删除失败')));
+          ).showSnackBar(const SnackBar(
+            content: Text('删除失败'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
       }
     }
@@ -171,7 +181,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('服务未初始化，删除失败')));
+          ).showSnackBar(const SnackBar(
+            content: Text('服务未初始化，删除失败'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
         return;
       }
@@ -186,14 +199,20 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('所有记录已删除')));
+          ).showSnackBar(const SnackBar(
+            content: Text('所有记录已删除'),
+            duration: AppConstants.snackBarDurationImportant,
+          ));
         }
       } catch (e) {
         AppLogger.e('删除所有分析记录失败', error: e);
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('删除失败')));
+          ).showSnackBar(const SnackBar(
+            content: Text('删除失败'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
       }
     }
@@ -503,7 +522,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('生成年度报告失败')));
+        ).showSnackBar(const SnackBar(
+          content: Text('生成年度报告失败'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }

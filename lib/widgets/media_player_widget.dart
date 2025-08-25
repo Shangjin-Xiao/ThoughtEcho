@@ -5,6 +5,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:video_player/video_player.dart';
+import '../constants/app_constants.dart';
 import '../utils/lottie_animation_manager.dart';
 
 /// 统一的媒体播放器组件
@@ -97,7 +98,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       if (!await file.exists()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('视频文件不存在: ${widget.filePath}')),
+            SnackBar(
+              content: Text('视频文件不存在: ${widget.filePath}'),
+              duration: AppConstants.snackBarDurationError,
+            ),
           );
         }
         return;
@@ -135,7 +139,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('视频加载时间过长，请尝试使用较小的视频文件'),
-              duration: Duration(seconds: 5),
+              // 归一化为错误信息时长
+              duration: AppConstants.snackBarDurationError,
             ),
           );
         }
@@ -247,7 +252,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                 ],
               ],
             ),
-            duration: const Duration(seconds: 8),
+            duration: AppConstants.snackBarDurationError,
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: '重试',
@@ -303,7 +308,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               ),
             ],
           ),
-          duration: const Duration(seconds: 10),
+          duration: AppConstants.snackBarDurationError,
           backgroundColor: Colors.orange,
           action: SnackBarAction(
             label: '重试',
@@ -341,7 +346,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       if (!await file.exists()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('音频文件不存在: ${widget.filePath}')),
+            SnackBar(
+              content: Text('音频文件不存在: ${widget.filePath}'),
+              duration: AppConstants.snackBarDurationError,
+            ),
           );
         }
         return;
@@ -379,7 +387,12 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('音频加载失败: $e')));
+        ).showSnackBar(
+          SnackBar(
+            content: Text('音频加载失败: $e'),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -728,7 +741,12 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     // 实现视频分享功能
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('分享功能开发中...')));
+    ).showSnackBar(
+      const SnackBar(
+        content: Text('分享功能开发中...'),
+        duration: AppConstants.snackBarDurationNormal,
+      ),
+    );
   }
 
   void _showVideoInfo() {
@@ -772,7 +790,12 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       case 'share':
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('分享功能开发中...')));
+        ).showSnackBar(
+          const SnackBar(
+            content: Text('分享功能开发中...'),
+            duration: AppConstants.snackBarDurationNormal,
+          ),
+        );
         break;
       case 'info':
         _showAudioInfo();

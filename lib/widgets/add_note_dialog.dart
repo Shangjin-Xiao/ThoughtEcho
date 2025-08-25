@@ -16,6 +16,7 @@ import '../utils/color_utils.dart'; // Import color_utils
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../constants/app_constants.dart';
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -944,14 +945,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           await db.updateQuote(quote);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('笔记已更新')),
+                            const SnackBar(
+                              content: Text('笔记已更新'),
+                              duration: AppConstants.snackBarDurationImportant,
+                            ),
                           );
                         } else {
                           // 添加新笔记
                           await db.addQuote(quote);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('笔记已保存')),
+                            const SnackBar(
+                              content: Text('笔记已保存'),
+                              duration: AppConstants.snackBarDurationImportant,
+                            ),
                           );
                         }
 
@@ -969,6 +976,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('保存失败: $e'),
+                              duration: AppConstants.snackBarDurationError,
                               backgroundColor: Colors.red,
                             ),
                           );

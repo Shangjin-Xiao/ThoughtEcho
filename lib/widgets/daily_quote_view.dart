@@ -6,6 +6,7 @@ import '../services/settings_service.dart';
 import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../constants/app_constants.dart';
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -76,6 +77,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('获取一言失败: $e'),
+            duration: AppConstants.snackBarDurationError,
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: '重试',
@@ -192,7 +194,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                   Clipboard.setData(ClipboardData(text: formattedQuote));
                   ScaffoldMessenger.of(
                     context,
-                  ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
+                  ).showSnackBar(const SnackBar(
+                    content: Text('已复制到剪贴板'),
+                    duration: AppConstants.snackBarDurationNormal,
+                  ));
                 },
                 onDoubleTap: () {
                   // 双击添加到笔记，同时传递完整的一言数据以便根据类型添加标签

@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../constants/app_constants.dart';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:file_picker/file_picker.dart';
@@ -630,7 +631,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             content: Text('数据还原成功！所有数据已更新。'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 5),
+            duration: AppConstants.snackBarDurationImportant,
           ),
         );
       }
@@ -806,7 +807,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         content: Text(message),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+        duration: AppConstants.snackBarDurationImportant,
       ),
     );
   }

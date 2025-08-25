@@ -25,6 +25,7 @@ import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 import '../services/temporary_media_service.dart';
 import '../widgets/media_player_widget.dart';
+import '../constants/app_constants.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -578,7 +579,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('无法获取位置权限')));
+          ).showSnackBar(const SnackBar(
+            content: Text('无法获取位置权限'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
         return;
       }
@@ -648,7 +652,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('媒体文件处理失败: $e'), backgroundColor: Colors.orange),
+            content: Text('媒体文件处理失败: $e'),
+            backgroundColor: Colors.orange,
+            duration: AppConstants.snackBarDurationError,
+          ),
         );
       }
     }
@@ -676,6 +683,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           SnackBar(
             content: Text('处理富文本时出现问题，尝试以纯文本保存: $e'),
             backgroundColor: Colors.orange,
+            duration: AppConstants.snackBarDurationError,
           ),
         );
       }
@@ -742,7 +750,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('笔记已保存')));
+          ).showSnackBar(const SnackBar(
+            content: Text('笔记已保存'),
+            duration: AppConstants.snackBarDurationImportant,
+          ));
           // 成功更新后，关闭页面并返回
           Navigator.of(context).pop(true); // 返回true表示更新成功
         }
@@ -753,7 +764,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('笔记已保存')));
+          ).showSnackBar(const SnackBar(
+            content: Text('笔记已保存'),
+            duration: AppConstants.snackBarDurationImportant,
+          ));
           // 成功添加后，关闭页面并返回
           Navigator.of(context).pop(true); // 返回true表示保存成功
         }
@@ -761,7 +775,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('保存失败: $e'),
+            backgroundColor: Colors.red,
+            duration: AppConstants.snackBarDurationError,
+          ),
         );
       }
     } finally {

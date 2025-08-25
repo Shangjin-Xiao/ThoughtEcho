@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/chat_markdown_styles.dart';
+import '../constants/app_constants.dart';
 
 /// 支持Markdown的聊天消息气泡组件
 class MarkdownMessageBubble extends StatelessWidget {
@@ -150,7 +151,7 @@ class MarkdownMessageBubble extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('消息已复制到剪贴板'),
-                    duration: Duration(seconds: 1),
+                    duration: AppConstants.snackBarDurationNormal,
                   ),
                 );
               },
@@ -165,7 +166,7 @@ class MarkdownMessageBubble extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('分享功能开发中'),
-                      duration: Duration(seconds: 1),
+                      duration: AppConstants.snackBarDurationNormal,
                     ),
                   );
                 },

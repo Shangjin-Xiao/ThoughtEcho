@@ -6,6 +6,7 @@ import '../models/quote_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/streaming_text_dialog.dart';
 import '../pages/note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import '../constants/app_constants.dart';
 
 class AddNoteAIMenu extends StatefulWidget {
   final TextEditingController contentController;
@@ -127,7 +128,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationNormal,
+      ));
       return;
     }
 
@@ -219,7 +223,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));
+          ).showSnackBar(SnackBar(
+            content: Text('解析结果失败: $e'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
       }
     } catch (e) {
@@ -232,7 +239,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
+        ).showSnackBar(SnackBar(
+          content: Text('分析失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -242,7 +252,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationNormal,
+      ));
       return;
     }
 
@@ -278,7 +291,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('润色失败: $e')));
+        ).showSnackBar(SnackBar(
+          content: Text('润色失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -288,7 +304,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationNormal,
+      ));
       return;
     }
 
@@ -324,7 +343,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('续写失败: $e')));
+        ).showSnackBar(SnackBar(
+          content: Text('续写失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -334,7 +356,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationNormal,
+      ));
       return;
     }
 
@@ -368,13 +393,19 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('分析完成')));
+        ).showSnackBar(const SnackBar(
+          content: Text('分析完成'),
+          duration: AppConstants.snackBarDurationImportant,
+        ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
+        ).showSnackBar(SnackBar(
+          content: Text('分析失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -384,7 +415,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationNormal,
+      ));
       return;
     }
 
