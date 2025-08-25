@@ -30,6 +30,7 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
+import 'package:thoughtecho/services/insight_history_service.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -289,6 +290,15 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
+              ChangeNotifierProxyProvider<SettingsService, InsightHistoryService>(
+                create: (context) => InsightHistoryService(
+                  settingsService: context.read<SettingsService>(),
+                ),
+                update: (context, settingsService, insightHistoryService) =>
+                    insightHistoryService ?? InsightHistoryService(
+                      settingsService: settingsService,
+                    ),
+              ),
               Provider.value(
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService

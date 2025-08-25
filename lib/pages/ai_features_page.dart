@@ -17,7 +17,7 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 0); // 默认显示第一个tab（周期报告）
   }
 
   @override
@@ -48,8 +48,8 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
             child: TabBar(
               controller: _tabController,
               tabs: const [
-                Tab(text: 'AI洞察'),
                 Tab(text: '周期报告'),
+                Tab(text: '智能洞察'),
               ],
               labelColor: theme.primaryColor,
               unselectedLabelColor:
@@ -68,8 +68,8 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
             child: TabBarView(
               controller: _tabController,
               children: const [
-                InsightsPage(),
                 AIPeriodicReportPage(),
+                InsightsPage(),
               ],
             ),
           ),

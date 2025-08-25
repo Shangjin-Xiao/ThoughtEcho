@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -11,6 +12,7 @@ import '../services/database_service.dart';
 import '../services/ai_card_generation_service.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
+import '../services/insight_history_service.dart';
 import '../widgets/svg_card_widget.dart';
 import '../utils/app_logger.dart';
 
@@ -36,6 +38,17 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;
   int? _selectedCardIndex;
+
+  // 新增：周期“最多”统计与洞察
+  String? _mostDayPeriod; // 晨曦/午后/黄昏/夜晚
+  String? _mostWeather; // 晴/雨/多云
+  String? _mostTopTag; // 标签名
+  int _totalWordCount = 0;
+  String? _notesPreview;
+
+  String _insightText = '';
+  bool _insightLoading = false;
+  StreamSubscription<String>? _insightSub;
 
   // 服务
   AICardGenerationService? _aiCardService;
@@ -73,6 +86,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
+  _insightSub?.cancel();
     super.dispose();
   }
 
@@ -94,7 +108,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _isLoadingData = false;
       });
 
-      // 移除自动生成逻辑，改为用户手动触发
+      // 计算“最多”指标并触发洞察
+      await _computeExtrasAndInsight();
     } catch (e) {
       setState(() {
         _isLoadingData = false;
@@ -105,6 +120,174 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           context,
         ).showSnackBar(SnackBar(content: Text('加载数据失败: $e')));
       }
+    }
+  }
+
+  Future<void> _computeExtrasAndInsight() async {
+    // 计算总字数
+    final totalWords = _periodQuotes.fold<int>(0, (sum, q) => sum + q.content.length);
+
+    // 最常见时间段
+    final Map<String, int> periodCounts = {};
+    for (final q in _periodQuotes) {
+      final p = q.dayPeriod?.trim();
+      if (p != null && p.isNotEmpty) {
+        periodCounts[p] = (periodCounts[p] ?? 0) + 1;
+      }
+    }
+    final mostPeriod = periodCounts.entries.isNotEmpty
+        ? periodCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+        : null;
+
+    // 最常见天气
+    final Map<String, int> weatherCounts = {};
+    for (final q in _periodQuotes) {
+      final w = q.weather?.trim();
+      if (w != null && w.isNotEmpty) {
+        weatherCounts[w] = (weatherCounts[w] ?? 0) + 1;
+      }
+    }
+    final mostWeather = weatherCounts.entries.isNotEmpty
+        ? weatherCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+        : null;
+
+    // 最常用标签（根据tagIds统计，然后映射为名称）
+    String? topTagName;
+    try {
+      final Map<String, int> tagCounts = {};
+      for (final q in _periodQuotes) {
+        for (final tagId in q.tagIds) {
+          tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
+        }
+      }
+      if (tagCounts.isNotEmpty) {
+        final topTagId = tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        final db = context.read<DatabaseService>();
+        final cats = await db.getCategories();
+        final map = {for (var c in cats) c.id: c.name};
+        topTagName = map[topTagId] ?? topTagId;
+      }
+    } catch (_) {
+      // 如解析失败，保持null
+    }
+
+    // 笔记片段预览（最多5条，每条截断80字）
+    final samples = _periodQuotes.take(5).map((q) {
+      var t = q.content.trim().replaceAll('\n', ' ');
+      if (t.length > 80) t = '${t.substring(0, 80)}…';
+      return '- $t';
+    }).join('\n');
+
+    if (!mounted) return;
+    setState(() {
+      _totalWordCount = totalWords;
+      _mostDayPeriod = mostPeriod;
+      _mostWeather = mostWeather;
+      _mostTopTag = topTagName;
+      _notesPreview = samples.isEmpty ? null : samples;
+    });
+
+    _maybeStartInsight();
+  }
+
+  void _maybeStartInsight() {
+    if (!mounted) return;
+    final settings = context.read<SettingsService>();
+    final useAI = settings.reportInsightsUseAI;
+    final periodLabel = '本${_getPeriodName()}';
+    final activeDays = _getActiveDays();
+    final noteCount = _periodQuotes.length;
+
+    _insightSub?.cancel();
+    if (useAI) {
+      setState(() {
+        _insightText = '';
+        _insightLoading = true;
+      });
+      final ai = context.read<AIService>();
+      
+      // 准备完整的笔记内容用于AI分析
+      final fullNotesContent = _periodQuotes.map((quote) {
+        final date = DateTime.parse(quote.date);
+        final dateStr = '${date.month}月${date.day}日';
+        var content = quote.content.trim();
+        
+        // 添加位置信息
+        if (quote.location != null && quote.location!.isNotEmpty) {
+          content = '【$dateStr·${quote.location}】$content';
+        } else {
+          content = '【$dateStr】$content';
+        }
+        
+        // 添加天气信息
+        if (quote.weather != null && quote.weather!.isNotEmpty) {
+          content += ' （天气：${quote.weather}）';
+        }
+        
+        return content;
+      }).join('\n\n');
+      
+      _insightSub = ai
+          .streamReportInsight(
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriod,
+            mostWeather: _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: activeDays,
+            noteCount: noteCount,
+            totalWordCount: _totalWordCount,
+            notesPreview: _notesPreview,
+            fullNotesContent: fullNotesContent, // 传递完整内容
+          )
+          .listen(
+        (chunk) {
+          if (!mounted) return;
+          setState(() {
+            _insightText += chunk;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
+          final local = context.read<AIService>().buildLocalReportInsight(
+                periodLabel: periodLabel,
+                mostTimePeriod: _mostDayPeriod,
+                mostWeather: _mostWeather,
+                topTag: _mostTopTag,
+                activeDays: activeDays,
+                noteCount: noteCount,
+                totalWordCount: _totalWordCount,
+              );
+          setState(() {
+            _insightText = local;
+            _insightLoading = false;
+          });
+        },
+        onDone: () {
+          if (!mounted) return;
+          setState(() {
+            _insightLoading = false;
+          });
+          
+          // 保存洞察到历史记录
+          if (_insightText.isNotEmpty) {
+            _saveInsightToHistory();
+          }
+        },
+      );
+    } else {
+      final local = context.read<AIService>().buildLocalReportInsight(
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriod,
+            mostWeather: _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: activeDays,
+            noteCount: noteCount,
+            totalWordCount: _totalWordCount,
+          );
+      setState(() {
+        _insightText = local;
+        _insightLoading = false;
+      });
     }
   }
 
@@ -140,6 +323,40 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       return quoteDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
           quoteDate.isBefore(endDate.add(const Duration(days: 1)));
     }).toList();
+  }
+
+  /// 保存洞察到历史记录
+  Future<void> _saveInsightToHistory() async {
+    try {
+      final insightService = context.read<InsightHistoryService>();
+      
+      // 获取当前周期的标签
+      String periodLabel = '';
+      switch (_selectedPeriod) {
+        case 'week':
+          periodLabel = '本周';
+          break;
+        case 'month':
+          periodLabel = '本月';
+          break;
+        case 'year':
+          periodLabel = '${_selectedDate.year}年';
+          break;
+        default:
+          periodLabel = _selectedPeriod;
+      }
+      
+      await insightService.addInsight(
+        insight: _insightText,
+        periodType: _selectedPeriod,
+        periodLabel: periodLabel,
+        isAiGenerated: true,
+      );
+      
+      logDebug('已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...', source: 'AIPeriodicReportPage');
+    } catch (e) {
+      logError('保存洞察到历史记录失败: $e', error: e, source: 'AIPeriodicReportPage');
+    }
   }
 
   /// 生成精选卡片
@@ -466,7 +683,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     );
     final avgWords = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
-    return SingleChildScrollView(
+  return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,6 +729,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 20),
 
+          // 洞察小灯泡
+          _buildInsightBulbBar(),
+          const SizedBox(height: 16),
+
           // 统计卡片网格
           Row(
             children: [
@@ -534,6 +755,27 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               Expanded(
                 child: _buildStatCard('活跃天数', '${_getActiveDays()}', '天',
                     Icons.calendar_today_outlined),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 新增：三个“最多”指标
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                    '最常见时间段', _mostDayPeriod ?? '暂无', '', Icons.timelapse),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                    '最常见天气', _mostWeather ?? '暂无', '', Icons.cloud_queue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard('最常用标签', _mostTopTag ?? '暂无', '',
+                    Icons.local_offer_outlined),
               ),
             ],
           ),
@@ -564,6 +806,40 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             _buildEmptyState(),
           ],
         ],
+      ),
+    );
+  }
+
+  // 洞察小灯泡组件
+  Widget _buildInsightBulbBar() {
+    return Card(
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.lightbulb, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _insightLoading
+                  ? Text(
+                      '正在生成本${_getPeriodName()}洞察…',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant),
+                    )
+                  : Text(
+                      _insightText.isEmpty ? '暂无洞察' : _insightText,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(height: 1.4),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -271,11 +271,108 @@ class AIService extends ChangeNotifier {
     );
   }
 
+  /// 周期/年度报告：流式生成“诗意洞察”
+  Stream<String> streamReportInsight({
+    required String periodLabel,
+    String? mostTimePeriod,
+    String? mostWeather,
+    String? topTag,
+    required int activeDays,
+    required int noteCount,
+    required int totalWordCount,
+    String? notesPreview,
+    String? fullNotesContent, // 新增：完整笔记内容用于深度分析
+  }) {
+    final controller = _requestHelper.createStreamController();
+
+  _requestHelper.executeStreamOperation(
+      operation: (innerController) async {
+        try {
+          if (!await hasValidApiKeyAsync()) {
+            innerController.addError(Exception('请先在设置中配置 API Key'));
+            return;
+          }
+
+          await _validateSettings();
+          final provider = await _getCurrentProviderWithApiKey();
+
+          final prompt = _promptManager.getReportInsightSystemPrompt('poetic');
+          final user = _promptManager.buildReportInsightUserMessage(
+            periodLabel: periodLabel,
+            mostTimePeriod: mostTimePeriod,
+            mostWeather: mostWeather,
+            topTag: topTag,
+            activeDays: activeDays,
+            noteCount: noteCount,
+            totalWordCount: totalWordCount,
+            notesPreview: notesPreview,
+            fullNotesContent: fullNotesContent, // 传递完整内容
+          );
+
+          await _requestHelper.makeStreamRequestWithProvider(
+            url: provider.apiUrl,
+            systemPrompt: prompt,
+            userMessage: user,
+            provider: provider,
+            onData: (text) => _requestHelper.handleStreamResponse(
+              controller: innerController,
+              chunk: text,
+            ),
+            onComplete: (fullText) => _requestHelper.handleStreamComplete(
+              controller: innerController,
+              fullText: fullText,
+            ),
+            onError: (error) => _requestHelper.handleStreamError(
+              controller: innerController,
+              error: error,
+              context: '报告洞察流式',
+            ),
+          );
+        } catch (e) {
+          _requestHelper.handleStreamError(
+            controller: innerController,
+            error: e,
+            context: '报告洞察流式异常',
+          );
+        }
+  },
+  context: '报告洞察流式',
+    ).listen(
+      (chunk) => controller.add(chunk),
+      onError: controller.addError,
+      onDone: controller.close,
+    );
+
+    return controller.stream;
+  }
+
+  /// 本地生成报告洞察（不开启AI时）
+  String buildLocalReportInsight({
+    required String periodLabel,
+    String? mostTimePeriod,
+    String? mostWeather,
+    String? topTag,
+    required int activeDays,
+    required int noteCount,
+    required int totalWordCount,
+  }) {
+    return _promptManager.formatLocalReportInsight(
+      periodLabel: periodLabel,
+      mostTimePeriod: mostTimePeriod,
+      mostWeather: mostWeather,
+      topTag: topTag,
+      activeDays: activeDays,
+      noteCount: noteCount,
+      totalWordCount: totalWordCount,
+    );
+  }
+
   // 新增：流式生成每日提示
   Stream<String> streamGenerateDailyPrompt({
     String? city,
     String? weather,
     String? temperature,
+    String? historicalInsights, // 新增：历史洞察参考
   }) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
@@ -311,6 +408,7 @@ class AIService extends ChangeNotifier {
             city: city,
             weather: weather,
             temperature: temperature,
+            historicalInsights: historicalInsights, // 传递历史洞察
           );
 
           final userMessage = _promptManager.buildDailyPromptUserMessage(

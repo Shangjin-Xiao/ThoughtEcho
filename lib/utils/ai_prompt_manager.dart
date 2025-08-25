@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 /// AI提示词管理器
 ///
 /// 统一管理所有AI服务使用的系统提示词，避免重复代码
@@ -303,6 +304,7 @@ $question''';
     String? city,
     String? weather,
     String? temperature,
+    String? historicalInsights, // 新增：历史洞察参考
   }) {
     final now = DateTime.now();
     final hour = now.hour;
@@ -328,19 +330,224 @@ $question''';
           '$dateInfo 深夜 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     }
 
-    // 格式化天气信息
-    String weatherInfo = weather ?? '未知';
-    if (temperature != null) {
-      weatherInfo += '，温度$temperature';
+    String environmentInfo = '';
+    
+    // 处理环境信息
+    if (city != null || weather != null || temperature != null) {
+      String envDetails = '';
+      if (city != null && city.isNotEmpty) {
+        envDetails += '地点：$city ';
+      }
+      if (weather != null && weather.isNotEmpty) {
+        envDetails += '天气：$weather ';
+      }
+      if (temperature != null && temperature.isNotEmpty) {
+        envDetails += '温度：$temperature°C';
+      }
+      
+      if (envDetails.isNotEmpty) {
+        environmentInfo = '\n当前环境信息：$envDetails';
+      }
     }
 
-    // 格式化位置信息
-    String locationInfo = city ?? '未知地点';
+    // 处理历史洞察信息
+    String insightContext = '';
+    if (historicalInsights != null && historicalInsights.isNotEmpty) {
+      insightContext = '\n\n【历史洞察参考】\n以下是用户最近的一些思考洞察，你可以选择性地引用这些内容来启发今日的思考提示，也可以完全不引用：\n$historicalInsights\n注意：这些历史洞察仅供参考，请根据当前时间和环境情况，生成符合当下情境的独特思考提示。';
+    }
 
-    // 替换模板中的占位符
-    return dailyPromptGeneratorPrompt
-        .replaceAll('{时间信息}', timeInfo)
-        .replaceAll('{天气信息}', weatherInfo)
-        .replaceAll('{位置信息}', locationInfo);
+    return '''你是一个富有诗意和哲思的写作助手，专门为用户生成每日思考提示词。
+
+【时间背景】$timeInfo$environmentInfo$insightContext
+
+【生成要求】
+1. 深度思考：提示词应当引导用户进行深层次的自我反思，而非表面的记录
+2. 情境融合：巧妙结合当前的时间、天气等环境因素，让提示词具有时空的真实感
+3. 情感共鸣：用温暖而富有诗意的语言，触动用户内心深处的思考
+4. 行动导向：不仅要引发思考，更要激发用户记录和分享的欲望
+5. 个性化：根据时间段特点调整提示的情感色调和思考角度
+
+【风格特点】
+- 语言优美，富有意境和情感张力
+- 避免说教和直白，多用隐喻和象征
+- 长度控制在50-80字之间
+- 语气亲切温暖，如挚友般的陪伴
+
+【特殊考虑】
+- 若当前是特殊节日或节气，可适当融入相关元素
+- 不同时间段应有不同的情感基调：晨曦充满希望，午后温暖平静，黄昏富有诗意，深夜适合内省
+- 天气状况可作为情感隐喻：阳光代表希望，雨天适合内省，雪天象征纯净等
+
+现在，请为用户生成一个符合当前时空背景的思考提示词。直接输出提示词内容，无需额外解释。''';
+  }
+
+  // ========================= 报告洞察（周期看板） =========================
+  /// 报告洞察：提供多种风格（固定模板池），进入页面时可随机选择一种
+  static const List<String> _reportInsightStyles = [
+    'poetic', // 仅保留诗意/文学风格
+  ];
+
+  /// 随机选择一种报告洞察风格（可传入seed以保持同一周期稳定）
+  String pickRandomReportInsightStyle({int? seed}) {
+    final rng = seed != null ? math.Random(seed) : math.Random();
+    return _reportInsightStyles[rng.nextInt(_reportInsightStyles.length)];
+  }
+
+  /// 获取报告洞察的系统提示词（根据风格切换语气与表达）
+  String getReportInsightSystemPrompt(String style) {
+    const base = '''你是一位善于捕捉生活细节的文学洞察助手。请仔细阅读用户的笔记内容，智能生成个性化的中文洞察。
+
+分析步骤：
+1. 深度分析笔记内容，判断是否存在特殊情境线索：
+   - 地理位置信息（城市、区域、地标）+ 文学引用 → 可生成诗意地名表达
+   - 经典文学作品句子、名著引用（3条以上）→ 可描述"在书香中行走"
+   - 动漫台词、二次元内容、ACG文化（多处出现）→ 可描述"在动漫世界中游历"
+   - 古诗词引用、文言文（明显特征）→ 可用古典意境描述
+   - 特定主题场景频繁出现 → 可提炼场景氛围
+   - 明显的情感色彩或共同主题 → 可用文学化语言描述
+
+2. 情境描述生成原则：
+   - 仅在笔记内容确实具备明显特征时才生成情境描述
+   - 情境描述应基于笔记内容的真实元素，不可臆造
+   - 示例转化：
+     * "苏州" + "寒山寺" → "在姑苏城外听钟声悠远"
+     * "南京" + "雨天" + "南朝四百八十寺" → "于金陵烟雨中寻古迹"
+     * 大量名著引用 → "在书香中行走，与文字为伴"
+     * 动漫相关内容丰富 → "游走于二次元的幻想天地"
+
+3. 输出要求：
+   - 如果笔记内容具备明显特征：[情境描述] + [数据洞察] + [可选的温暖总结]
+   - 如果笔记内容特征不明显：直接生成[数据洞察] + [温暖总结]
+   - 语言自然优美，避免生硬模板化表达
+   - 不暴露具体个人隐私信息''';
+
+    switch (style) {
+      case 'poetic':
+        return '$base\n\n风格：文学诗意，用古典美学和现代感悟相结合，营造温暖而有深度的表达';
+      default:
+        return '$base\n\n风格：文学诗意，用古典美学和现代感悟相结合，营造温暖而有深度的表达';
+    }
+  }
+
+  /// 构建报告洞察的用户消息（提供统计 + 完整笔记内容，让AI深度分析）
+  String buildReportInsightUserMessage({
+    required String periodLabel, // 如：本周/本月/本季度/本年度 或具体日期范围
+    String? mostTimePeriod, // 晨曦/午后/黄昏/夜晚
+    String? mostWeather, // 晴/多云/雨/雪/阴/雾/风 等归一
+    String? topTag, // 已映射为标签名
+    required int activeDays, // 记录了几天
+    required int noteCount, // 笔记数量
+    required int totalWordCount, // 总字数（纯文本）
+    String? notesPreview, // 选填：拼接后的笔记内容片段（可部分）
+    String? fullNotesContent, // 新增：完整的笔记内容用于深度分析
+  }) {
+    final timeText = mostTimePeriod ?? '—';
+    final weatherText = mostWeather ?? '—';
+    final tagText = topTag != null && topTag.trim().isNotEmpty ? '#$topTag' : '—';
+
+    final stats = [
+      '周期：$periodLabel',
+      '记录天数：$activeDays',
+      '笔记数量：$noteCount',
+      '总字数：$totalWordCount',
+      '高频时段：$timeText',
+      '常见天气：$weatherText',
+      '高频标签：$tagText',
+    ].join('｜');
+
+    // 优先使用完整内容，其次使用预览内容
+    final contentForAnalysis = fullNotesContent ?? notesPreview;
+    final contentSection = (contentForAnalysis == null || contentForAnalysis.trim().isEmpty)
+        ? '（无可用笔记内容）'
+        : contentForAnalysis;
+
+    return '''【统计数据】
+$stats
+
+【笔记内容分析】
+请仔细分析以下笔记内容，寻找地理位置、文学引用、主题特征等线索：
+
+$contentSection
+
+请根据上述统计数据和笔记内容，生成个性化的洞察文案。重点关注笔记内容中的独特元素，如地名与诗词的结合、文学作品引用、动漫文化、古典诗词等，将这些元素转化为富有情境感的表达。''';
+  }
+
+  /// 本地生成报告洞察（不开启AI时使用）。
+  /// 会根据缺失项替换为中性描述，确保总长适中（约40-60字）。
+  String formatLocalReportInsight({
+    required String periodLabel,
+    String? mostTimePeriod,
+    String? mostWeather,
+    String? topTag,
+    required int activeDays,
+    required int noteCount,
+    required int totalWordCount,
+  }) {
+    final time = mostTimePeriod ?? '本期时段分布较均衡';
+    final weather = mostWeather ?? '天气因素不明显';
+    final tag = (topTag != null && topTag.trim().isNotEmpty)
+        ? '#$topTag'
+        : '主题尚未收敛';
+
+    // 4种风格模板（除了简约数据型），随机挑选
+    final rng = math.Random();
+    final styleIndex = rng.nextInt(4);
+    
+    switch (styleIndex) {
+      case 0: // 温暖陪伴型
+        return _generateWarmCompanionInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+      case 1: // 诗意文艺型
+        return _generatePoeticInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+      case 2: // 成长导师型
+        return _generateGrowthMentorInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+      case 3: // 极简禅意型
+        return _generateMinimalistInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+      default:
+        return _generateWarmCompanionInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+    }
+  }
+
+  /// 温暖陪伴型洞察
+  String _generateWarmCompanionInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+    final templates = [
+      '这$periodLabel你坚持了$activeDays天记录，共写下$noteCount篇温暖的文字。看起来你更喜欢在$time书写，$weather是你的创作伙伴，$tag充满了你的思绪。',
+      '一个$periodLabel来，你用$activeDays天时光记录了生活的点滴。$time的时候，你写得最多，$weather见证着$tag的绽放。',
+      '你在这$periodLabel里坚持了$activeDays天，留下$noteCount篇共$totalWordCount字的珍贵记忆。$time是你最爱的创作时光，$tag在你心中流淌。',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
+  }
+
+  /// 诗意文艺型洞察
+  String _generatePoeticInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+    final templates = [
+      '时光如水，你用$activeDays个日夜编织了$noteCount个故事片段。$time是你的缪斯时刻，$weather见证着$tag的绽放。',
+      '一$periodLabel光阴里，你在$activeDays个日子种下文字的种子。$time最懂你的心思，$tag在笔尖流淌。',
+      '岁月不居，时节如流。这$periodLabel你以$activeDays日为纸，写下$noteCount篇心语。$time时分，$tag与$weather共舞。',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
+  }
+
+  /// 成长导师型洞察
+  String _generateGrowthMentorInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+    final templates = [
+      '本$periodLabel你保持了$activeDays天的记录习惯，积累了$totalWordCount字的思考财富。$time的安静最适合你深度思考，$tag值得进一步探索。',
+      '这一$periodLabel你在思考的路上走了$activeDays天，留下了$noteCount篇成长足迹。$time激发你的灵感，$tag或许是下一个突破点。',
+      '你用$activeDays天的坚持证明了成长的决心，$noteCount篇记录见证着进步。$time是你的黄金思考时段，$tag展现了你的关注焦点。',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
+  }
+
+  /// 极简禅意型洞察
+  String _generateMinimalistInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+    final templates = [
+      '一$periodLabel，$activeDays日，$noteCount记。$time时，思绪最清澈。',
+      '$activeDays日$periodLabel光，$noteCount篇心语。$time，是你与文字的约定。',
+      '$periodLabel中，$activeDays天记录，$noteCount篇思考。$time静，$tag现。',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
   }
 }

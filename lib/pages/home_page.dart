@@ -19,6 +19,7 @@ import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
+import '../services/insight_history_service.dart'; // Import InsightHistoryService
 import '../utils/lottie_animation_manager.dart';
 import '../utils/app_logger.dart';
 import '../utils/daily_prompt_generator.dart';
@@ -116,11 +117,17 @@ class _HomePageState extends State<HomePage>
         return;
       }
 
-      // Call the new stream method with environment context
+      // 获取最近的周期洞察（本周、上周、本月、上月）
+      final insightHistoryService = context.read<InsightHistoryService>();
+      final recentInsights = await insightHistoryService.formatRecentInsightsForDailyPrompt();
+      logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
+      
+      // Call the new stream method with environment context and historical insights
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
         city: city,
         weather: weather,
         temperature: temperature,
+        historicalInsights: recentInsights,
       );
 
       if (!mounted) {
@@ -1307,7 +1314,7 @@ class _HomePageState extends State<HomePage>
                     Icons.auto_awesome,
                     color: theme.colorScheme.primary,
                   ),
-                  label: 'AI',
+                  label: '洞察',
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.settings_outlined),
