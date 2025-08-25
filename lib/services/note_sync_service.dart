@@ -80,14 +80,14 @@ class NoteSyncService extends ChangeNotifier {
   })  : _backupService = backupService,
         _databaseService = databaseService,
         _settingsService = settingsService {
-    debugPrint('NoteSyncService 构造函数完成');
+  AppLogger.d('NoteSyncService 构造函数完成', source: 'NoteSyncService');
   }
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
 
   /// 初始化同步服务
   Future<void> initialize() async {
     // 在打开同步页面时才启动服务器
-    debugPrint(
+  AppLogger.d(
         'NoteSyncService initialized, server will start when sync page opens');
   }
 
@@ -95,18 +95,18 @@ class NoteSyncService extends ChangeNotifier {
   Future<void> startServer() async {
     // 检查是否已经启动
     if (_localSendServer?.isRunning == true) {
-      debugPrint('同步服务器已经启动，跳过重复启动');
+  AppLogger.i('同步服务器已经启动，跳过重复启动', source: 'NoteSyncService');
       return;
     }
 
     // Check if we're running on web platform
     if (kIsWeb) {
-      debugPrint('Note sync servers not supported on web platform');
+  AppLogger.w('Note sync servers not supported on web platform', source: 'NoteSyncService');
       return;
     }
 
     try {
-      debugPrint('开始初始化同步服务组件...');
+  AppLogger.i('开始初始化同步服务组件...', source: 'NoteSyncService');
 
       // 确保先清理之前的资源
       await stopServer();
@@ -127,7 +127,8 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('LocalSendProvider创建失败');
       }
 
-      debugPrint('所有服务组件创建成功，开始启动服务器...');
+  AppLogger.i('所有服务组件创建成功，开始启动服务器...', source: 'NoteSyncService');
+  AppLogger.i('所有服务组件创建成功，开始启动服务器...', source: 'NoteSyncService');
 
       // 启动LocalSend服务器
       // ensure fingerprint ready before server start
@@ -190,19 +191,17 @@ class NoteSyncService extends ChangeNotifier {
           return completer.future;
         },
       );
-      final actualPort = _localSendServer!.port;
-      debugPrint('LocalSendServer启动成功，端口: $actualPort');
+    final actualPort = _localSendServer!.port;
+  AppLogger.i('LocalSendServer启动成功，端口: $actualPort', source: 'NoteSyncService');
       logInfo('sync_server_started port=$actualPort', source: 'LocalSend');
 
       // 设置设备发现服务的实际端口
       _discoveryService!.setServerPort(actualPort);
 
       // 启动设备发现
-      await _discoveryService!.startDiscovery();
-      debugPrint('设备发现服务启动成功');
-
-      debugPrint(
-          'ThoughtEcho sync server started on port ${_localSendServer?.port}');
+    await _discoveryService!.startDiscovery();
+  AppLogger.i('设备发现服务启动成功', source: 'NoteSyncService');
+  AppLogger.i('ThoughtEcho sync server started on port ${_localSendServer?.port}', source: 'NoteSyncService');
     } catch (e) {
       logError('sync_server_start_fail $e', source: 'LocalSend');
       // Clean up on failure
@@ -237,39 +236,48 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 停止服务器（在关闭同步页面时调用）
   Future<void> stopServer() async {
-    debugPrint('开始停止同步服务器...');
+  AppLogger.i('开始停止同步服务器...', source: 'NoteSyncService');
 
     try {
       // 停止LocalSendServer
       if (_localSendServer != null) {
-        debugPrint('停止LocalSendServer...');
+  AppLogger.d('停止LocalSendServer...', source: 'NoteSyncService');
+  AppLogger.d('停止LocalSendServer...', source: 'NoteSyncService');
         await _localSendServer!.stop();
-        debugPrint('LocalSendServer已停止');
+  AppLogger.i('LocalSendServer已停止', source: 'NoteSyncService');
+  AppLogger.i('LocalSendServer已停止', source: 'NoteSyncService');
       }
     } catch (e) {
-      debugPrint('停止LocalSendServer时出错: $e');
+  AppLogger.e('停止LocalSendServer时出错: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('停止LocalSendServer时出错: $e', error: e, source: 'NoteSyncService');
     }
 
     try {
       // 停止设备发现服务
       if (_discoveryService != null) {
-        debugPrint('停止设备发现服务...');
+  AppLogger.d('停止设备发现服务...', source: 'NoteSyncService');
+  AppLogger.d('停止设备发现服务...', source: 'NoteSyncService');
         await _discoveryService!.stopDiscovery();
-        debugPrint('设备发现服务已停止');
+  AppLogger.i('设备发现服务已停止', source: 'NoteSyncService');
+  AppLogger.i('设备发现服务已停止', source: 'NoteSyncService');
       }
     } catch (e) {
-      debugPrint('停止设备发现服务时出错: $e');
+  AppLogger.e('停止设备发现服务时出错: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('停止设备发现服务时出错: $e', error: e, source: 'NoteSyncService');
     }
 
     try {
       // 清理LocalSend发送服务
       if (_localSendProvider != null) {
-        debugPrint('清理LocalSend发送服务...');
+  AppLogger.d('清理LocalSend发送服务...', source: 'NoteSyncService');
+  AppLogger.d('清理LocalSend发送服务...', source: 'NoteSyncService');
         _localSendProvider!.dispose();
-        debugPrint('LocalSend发送服务已清理');
+  AppLogger.i('LocalSend发送服务已清理', source: 'NoteSyncService');
+  AppLogger.i('LocalSend发送服务已清理', source: 'NoteSyncService');
       }
     } catch (e) {
-      debugPrint('清理LocalSend发送服务时出错: $e');
+  AppLogger.e('清理LocalSend发送服务时出错: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('清理LocalSend发送服务时出错: $e', error: e, source: 'NoteSyncService');
     }
 
     // 清空所有引用
@@ -277,7 +285,8 @@ class NoteSyncService extends ChangeNotifier {
     _discoveryService = null;
     _localSendProvider = null;
 
-    debugPrint('ThoughtEcho sync servers stopped and cleaned up');
+  AppLogger.i('ThoughtEcho sync servers stopped and cleaned up', source: 'NoteSyncService');
+  AppLogger.i('ThoughtEcho sync servers stopped and cleaned up', source: 'NoteSyncService');
   }
 
   /// 发送笔记数据到指定设备（统一使用createSyncPackage）
@@ -415,8 +424,7 @@ class NoteSyncService extends ChangeNotifier {
     final keepQuote = duplicates.first;
     final duplicatesToDelete = duplicates.skip(1).toList();
 
-    debugPrint(
-        '保留笔记: ${keepQuote.id}, 删除重复: ${duplicatesToDelete.map((q) => q.id).join(', ')}');
+  AppLogger.d('保留笔记: ${keepQuote.id}, 删除重复: ${duplicatesToDelete.map((q) => q.id).join(', ')}', source: 'NoteSyncService');
 
     // 删除重复笔记
     for (final duplicate in duplicatesToDelete) {
@@ -525,7 +533,8 @@ class NoteSyncService extends ChangeNotifier {
       try {
         await backupFile.delete();
       } catch (e) {
-        debugPrint('清理临时文件失败: $e');
+  AppLogger.w('清理临时文件失败: $e', error: e, source: 'NoteSyncService');
+  AppLogger.w('清理临时文件失败: $e', error: e, source: 'NoteSyncService');
       }
 
       return sessionId;
@@ -601,7 +610,8 @@ class NoteSyncService extends ChangeNotifier {
       _localSendProvider?.cancelSession(_currentSendSessionId!);
       _updateSyncStatus(SyncStatus.failed, '发送已取消', 0.0);
     } catch (e) {
-      debugPrint('取消发送失败: $e');
+  AppLogger.e('取消发送失败: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('取消发送失败: $e', error: e, source: 'NoteSyncService');
     }
   }
 
@@ -616,7 +626,8 @@ class NoteSyncService extends ChangeNotifier {
       rc?.cancelSession(_currentReceiveSessionId!);
       _updateSyncStatus(SyncStatus.failed, '接收已取消', 0.0);
     } catch (e) {
-      debugPrint('取消接收失败: $e');
+  AppLogger.e('取消接收失败: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('取消接收失败: $e', error: e, source: 'NoteSyncService');
     }
   }
 
@@ -645,9 +656,11 @@ class NoteSyncService extends ChangeNotifier {
         }
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        debugPrint('Preflight OK: ${resp.statusCode}');
+  AppLogger.d('Preflight OK: ${resp.statusCode}', source: 'NoteSyncService');
+  AppLogger.d('Preflight OK: ${resp.statusCode}', source: 'NoteSyncService');
       } else {
-        debugPrint('Preflight warn: ${resp.statusCode}');
+  AppLogger.w('Preflight warn: ${resp.statusCode}', source: 'NoteSyncService');
+  AppLogger.w('Preflight warn: ${resp.statusCode}', source: 'NoteSyncService');
       }
     } finally {
       client.close();
@@ -680,19 +693,23 @@ class NoteSyncService extends ChangeNotifier {
       final summary = mergeReport?.summary ?? '无报告';
       if (mergeReport?.hasErrors == true) {
         _updateSyncStatus(SyncStatus.failed, '合并出现错误: $summary', 0.0);
-        debugPrint('合并错误: ${mergeReport?.errors}');
+  AppLogger.e('合并错误: ${mergeReport?.errors}', source: 'NoteSyncService');
+  AppLogger.e('合并错误: ${mergeReport?.errors}', source: 'NoteSyncService');
       } else {
         _updateSyncStatus(SyncStatus.completed, '合并完成: $summary', 1.0);
-        debugPrint('合并成功: $summary');
+  AppLogger.i('合并成功: $summary', source: 'NoteSyncService');
+  AppLogger.i('合并成功: $summary', source: 'NoteSyncService');
         try {
           _databaseService.refreshAllData();
         } catch (e) {
-          debugPrint('刷新数据库数据流失败: $e');
+          AppLogger.w('刷新数据库数据流失败: $e', error: e, source: 'NoteSyncService');
+          AppLogger.w('刷新数据库数据流失败: $e', error: e, source: 'NoteSyncService');
         }
       }
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '合并失败: $e', 0.0);
-      debugPrint('processSyncPackage失败: $e');
+  AppLogger.e('processSyncPackage失败: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('processSyncPackage失败: $e', error: e, source: 'NoteSyncService');
       rethrow;
     }
   }
@@ -734,8 +751,7 @@ class NoteSyncService extends ChangeNotifier {
       notifyListeners();
     }
     if (shouldNotify || statusChanged) {
-      debugPrint(
-          '同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)');
+    AppLogger.d('同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)', source: 'NoteSyncService');
     }
   }
 
@@ -745,7 +761,8 @@ class NoteSyncService extends ChangeNotifier {
   /// `defaultDiscoveryTimeout`，在较慢或不稳定网络上建议增加该值。
   Future<List<Device>> discoverNearbyDevices({int? timeout}) async {
     if (_discoveryService == null) {
-      debugPrint('Discovery service not initialized');
+  AppLogger.w('Discovery service not initialized', source: 'NoteSyncService');
+  AppLogger.w('Discovery service not initialized', source: 'NoteSyncService');
       return [];
     }
 
@@ -762,7 +779,8 @@ class NoteSyncService extends ChangeNotifier {
 
       return _discoveryService!.devices;
     } catch (e) {
-      debugPrint('发现附近设备失败: $e');
+  AppLogger.e('发现附近设备失败: $e', error: e, source: 'NoteSyncService');
+  AppLogger.e('发现附近设备失败: $e', error: e, source: 'NoteSyncService');
       return [];
     }
   }
