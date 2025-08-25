@@ -37,6 +37,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
   // API Key状态显示
   String _apiKeyStatus = '';
   bool _isCheckingApiKey = false;
+  bool _obscureApiKey = true; // API Key显示切换
 
   // Updated presets list based on verification
   final List<Map<String, String>> aiPresets = [
@@ -1027,189 +1028,262 @@ class _AISettingsPageState extends State<AISettingsPage> {
               _buildProviderSelector(),
               _buildReportInsightSwitch(),
 
-              DropdownButtonFormField<String>(
-                value: _selectedPreset,
-                isExpanded: true,
-                items: aiPresets.map((preset) {
-                  return DropdownMenuItem(
-                    value: preset['name'],
-                    child: Text(
-                      preset['name']!,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() {
-                    _selectedPreset = value;
-                    final preset = aiPresets.firstWhere(
-                      (p) => p['name'] == value,
-                    );
-                    _apiUrlController.text = preset['apiUrl']!;
-                    _modelController.text = preset['model']!;
-                    // 保留当前的API Key，不要清空
-                    // _apiKeyController.text 保持不变
-                  });
-                  logDebug('切换预设到: $value, 保留现有API Key');
-                },
-                decoration: const InputDecoration(
-                  labelText: '快速选择AI服务预设',
-                  border: OutlineInputBorder(),
-                ),
-                hint: const Text('选择或手动配置'),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'API 设置 (${_currentProvider?.name ?? _selectedPreset ?? '自定义'})',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _apiUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'API URL',
-                  hintText: '服务接口地址',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.link),
-                ),
-                keyboardType: TextInputType.url,
-                onChanged: (_) => setState(() {
-                  _selectedPreset = null;
-                }),
-                validator: _validateUrl,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _apiKeyController,
-                decoration: const InputDecoration(
-                  labelText: 'API Key',
-                  hintText: '服务所需的密钥',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.key),
-                ),
-                obscureText: true,
-                validator: _validateApiKey,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _modelController,
-                decoration: InputDecoration(
-                  labelText: '模型名称',
-                  hintText: _selectedPreset != null &&
-                          aiPresets
-                              .firstWhere(
-                                (p) => p['name'] == _selectedPreset,
-                              )['model']!
-                              .isEmpty
-                      ? '请输入模型名称'
-                      : '使用默认模型或自定义',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.psychology),
-                ),
-              ),
-              // 最大令牌数配置已内置管理，不在此暴露输入项
-              const SizedBox(height: 16),
-              TextField(
-                controller: _hostOverrideController,
-                decoration: const InputDecoration(
-                  labelText: '主机覆盖 (Host Override)',
-                  hintText: '可选，用于代理设置',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.dns),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      '温度固定为 0.7',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // AI卡片生成功能开关
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AI卡片生成',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+              // 预设选择
+              Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.auto_awesome,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            '快速预设',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedPreset,
+                        isExpanded: true,
+                        items: aiPresets.map((preset) {
+                          return DropdownMenuItem(
+                            value: preset['name'],
+                            child: Text(
+                              preset['name']!,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '为笔记生成SVG分享卡片：开启=使用AI智能设计，关闭=使用内置模板（功能仍可用）',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: Colors.grey[600]),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '提示：建议使用支持 ≥4K tokens、具备良好指令遵循与文本→SVG生成能力的中大型模型，小模型可能出现布局混乱/元素缺失。',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: Colors.orange[600], fontSize: 11),
-                            ),
-                            const SizedBox(height: 12),
-                            Consumer<SettingsService>(
-                              builder: (context, settingsService, child) {
-                                return SwitchListTile(
-                                  title: const Text('AI增强生成'),
-                                  subtitle: const Text('关闭后改用本地模板，不再调用模型'),
-                                  value:
-                                      settingsService.aiCardGenerationEnabled,
-                                  onChanged: (value) {
-                                    settingsService.setAICardGenerationEnabled(
-                                      value,
-                                    );
-                                  },
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              },
-                            ),
-                          ],
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedPreset = value;
+                            final preset = aiPresets.firstWhere(
+                              (p) => p['name'] == value,
+                            );
+                            _apiUrlController.text = preset['apiUrl']!;
+                            _modelController.text = preset['model']!;
+                            // 保留当前的API Key，不要清空
+                          });
+                          logDebug('切换预设到: $value, 保留现有API Key');
+                        },
+                        decoration: const InputDecoration(
+                          labelText: '选择服务商预设',
+                          hintText: '或手动配置下方连接参数',
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: _saveSettings,
-                          icon: const Icon(Icons.add),
-                          label: const Text('创建新预设'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
+                    ],
+                  ),
+                ),
+              ),
+
+              // 连接配置
+              Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.cloud_outlined,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            '连接配置 (${_currentProvider?.name ?? _selectedPreset ?? '自定义'})',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _apiUrlController,
+                        decoration: const InputDecoration(
+                          labelText: 'API URL',
+                          hintText: '例如 https://api.xxx.com/v1/chat/completions',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.link),
+                          helperText: '必须为 http/https 地址',
+                        ),
+                        keyboardType: TextInputType.url,
+                        onChanged: (_) => setState(() {
+                          _selectedPreset = null;
+                        }),
+                        validator: _validateUrl,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _apiKeyController,
+                        decoration: InputDecoration(
+                          labelText: 'API Key',
+                          hintText: '服务所需的密钥（可留空）',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.key),
+                          suffixIcon: IconButton(
+                            tooltip:
+                                _obscureApiKey ? '显示' : '隐藏',
+                            icon: Icon(
+                              _obscureApiKey
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () => setState(() {
+                              _obscureApiKey = !_obscureApiKey;
+                            }),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        OutlinedButton.icon(
-                          onPressed: _testConnection,
-                          icon: const Icon(Icons.network_check),
-                          label: const Text('测试连接'),
+                        obscureText: _obscureApiKey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 模型与高级
+              Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.tune,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            '模型与高级',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _modelController,
+                        decoration: InputDecoration(
+                          labelText: '模型名称',
+                          hintText: _selectedPreset != null &&
+                                  aiPresets
+                                      .firstWhere(
+                                        (p) => p['name'] == _selectedPreset,
+                                      )['model']!
+                                      .isEmpty
+                              ? '请输入模型名称'
+                              : '使用默认模型或自定义',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.psychology),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _hostOverrideController,
+                        decoration: const InputDecoration(
+                          labelText: '主机覆盖 (Host Override)',
+                          hintText: '可选，用于代理/反向代理场景',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.dns),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '温度固定为 0.7（全局设置，适配大多数对话/生成场景）',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // AI卡片生成功能开关 + 操作按钮
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.image_outlined,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'AI 卡片生成',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '为笔记生成 SVG 分享卡片：开启=使用 AI 智能设计，关闭=使用内置模板（功能仍可用）',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '提示：建议使用支持 ≥4K tokens、具备良好指令遵循与文本→SVG 生成能力的中大型模型。',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.orange[600], fontSize: 11),
+                      ),
+                      const SizedBox(height: 12),
+                      Consumer<SettingsService>(
+                        builder: (context, settingsService, child) {
+                          return SwitchListTile(
+                            title: const Text('AI 增强生成'),
+                            subtitle: const Text('关闭后改用本地模板，不再调用模型'),
+                            value: settingsService.aiCardGenerationEnabled,
+                            onChanged: (value) {
+                              settingsService.setAICardGenerationEnabled(value);
+                            },
+                            contentPadding: EdgeInsets.zero,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _saveSettings,
+                            icon: const Icon(Icons.add),
+                            label: const Text('创建新预设'),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: _testConnection,
+                            icon: const Icon(Icons.network_check),
+                            label: const Text('测试连接'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1229,19 +1303,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
       return '请输入有效的HTTP/HTTPS URL';
-    }
-
-    return null;
-  }
-
-  // 验证API Key
-  String? _validateApiKey(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'API Key不能为空';
-    }
-
-    if (value.length < 10) {
-      return 'API Key长度不足，请检查是否完整';
     }
 
     return null;
