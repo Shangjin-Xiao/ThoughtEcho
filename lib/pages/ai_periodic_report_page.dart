@@ -8,13 +8,17 @@ import 'package:share_plus/share_plus.dart';
 import '../services/svg_to_image_service.dart';
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
+import '../models/weather_data.dart';
 import '../services/database_service.dart';
 import '../services/ai_card_generation_service.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
 import '../services/insight_history_service.dart';
+import '../services/weather_service.dart';
 import '../widgets/svg_card_widget.dart';
 import '../utils/app_logger.dart';
+import '../utils/time_utils.dart';
+import '../utils/icon_utils.dart';
 
 /// AI周期报告页面
 class AIPeriodicReportPage extends StatefulWidget {
@@ -27,6 +31,9 @@ class AIPeriodicReportPage extends StatefulWidget {
 class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  
+  // 折叠状态
+  bool _isTimeSelectorCollapsed = false;
 
   // 时间范围选择
   String _selectedPeriod = 'week'; // week, month, year
@@ -39,12 +46,19 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   bool _isGeneratingCards = false;
   int? _selectedCardIndex;
 
-  // 新增：周期“最多”统计与洞察
+    // 新增：周期"最多"统计与洞察
   String? _mostDayPeriod; // 晨曦/午后/黄昏/夜晚
   String? _mostWeather; // 晴/雨/多云
   String? _mostTopTag; // 标签名
   int _totalWordCount = 0;
   String? _notesPreview;
+
+  // 新增：用于显示的中文文本和图标
+  String? _mostDayPeriodDisplay; // 时段的中文显示
+  IconData? _mostDayPeriodIcon; // 时段图标
+  String? _mostWeatherDisplay; // 天气的中文显示
+  IconData? _mostWeatherIcon; // 天气图标
+  dynamic _mostTopTagIcon; // 标签图标（可能是IconData或emoji字符串）
 
   String _insightText = '';
   bool _insightLoading = false;
@@ -139,20 +153,32 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         ? periodCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
         : null;
 
-    // 最常见天气
-    final Map<String, int> weatherCounts = {};
+    // 最常见天气 - 按分类统计（小雨、大雨、雷雨归为"雨"类）
+    final Map<String, int> weatherCategoryCounts = {};
     for (final q in _periodQuotes) {
       final w = q.weather?.trim();
       if (w != null && w.isNotEmpty) {
-        weatherCounts[w] = (weatherCounts[w] ?? 0) + 1;
+        // 先尝试通过key获取分类，如果失败则直接用原值
+        String? category = WeatherService.getFilterCategoryByWeatherKey(w);
+        if (category == null) {
+          // 如果是中文描述，尝试反查key再获取分类
+          final key = WeatherCodeMapper.getKeyByDescription(w);
+          if (key != null) {
+            category = WeatherService.getFilterCategoryByWeatherKey(key);
+          }
+        }
+        final finalCategory = category ?? w; // 如果找不到分类就用原值
+        weatherCategoryCounts[finalCategory] = (weatherCategoryCounts[finalCategory] ?? 0) + 1;
       }
     }
-    final mostWeather = weatherCounts.entries.isNotEmpty
-        ? weatherCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+    final mostWeather = weatherCategoryCounts.entries.isNotEmpty
+        ? weatherCategoryCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
         : null;
 
     // 最常用标签（根据tagIds统计，然后映射为名称）
     String? topTagName;
+    String? topTagId;
+    dynamic topTagIcon;
     try {
       final Map<String, int> tagCounts = {};
       for (final q in _periodQuotes) {
@@ -161,11 +187,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         }
       }
       if (tagCounts.isNotEmpty) {
-        final topTagId = tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        topTagId = tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
         final db = context.read<DatabaseService>();
         final cats = await db.getCategories();
-        final map = {for (var c in cats) c.id: c.name};
-        topTagName = map[topTagId] ?? topTagId;
+        final category = cats.firstWhere((c) => c.id == topTagId, orElse: () => cats.first);
+        topTagName = category.name;
+        topTagIcon = IconUtils.getDisplayIcon(category.iconName);
       }
     } catch (_) {
       // 如解析失败，保持null
@@ -178,13 +205,51 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       return '- $t';
     }).join('\n');
 
-    if (!mounted) return;
+    // 处理时段显示：转换为中文标签
+    String? dayPeriodDisplay;
+    IconData? dayPeriodIcon;
+    if (mostPeriod != null) {
+      dayPeriodDisplay = TimeUtils.getDayPeriodLabel(mostPeriod);
+      dayPeriodIcon = TimeUtils.getDayPeriodIcon(dayPeriodDisplay);
+    }
+
+    // 处理天气显示：转换为中文
+    String? weatherDisplay;
+    IconData? weatherIcon;
+    if (mostWeather != null) {
+      // 如果是筛选分类key，直接使用分类标签
+      if (WeatherService.filterCategoryToLabel.containsKey(mostWeather)) {
+        weatherDisplay = WeatherService.filterCategoryToLabel[mostWeather];
+        weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
+      } else {
+        // 否则按原逻辑处理
+        weatherDisplay = WeatherCodeMapper.getDescription(mostWeather);
+        weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
+        
+        // 如果返回的是"未知"，说明mostWeather可能已经是中文描述
+        if (weatherDisplay == '未知') {
+          weatherDisplay = mostWeather;
+          // 反向匹配：根据中文描述找到key以获取更准确的图标
+          final key = WeatherCodeMapper.getKeyByDescription(mostWeather);
+          weatherIcon = key != null
+              ? WeatherCodeMapper.getIcon(key)
+              : Icons.cloud_queue;
+        }
+      }
+    }    if (!mounted) return;
     setState(() {
       _totalWordCount = totalWords;
       _mostDayPeriod = mostPeriod;
       _mostWeather = mostWeather;
       _mostTopTag = topTagName;
       _notesPreview = samples.isEmpty ? null : samples;
+      
+      // 设置显示用的中文文本和图标
+      _mostDayPeriodDisplay = dayPeriodDisplay;
+      _mostDayPeriodIcon = dayPeriodIcon;
+      _mostWeatherDisplay = weatherDisplay;
+      _mostWeatherIcon = weatherIcon;
+      _mostTopTagIcon = topTagIcon;
     });
 
     _maybeStartInsight();
@@ -221,17 +286,21 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         
         // 添加天气信息
         if (quote.weather != null && quote.weather!.isNotEmpty) {
-          content += ' （天气：${quote.weather}）';
+          final w = quote.weather!.trim();
+          // 优先把英文key映射为中文描述
+          final wDesc = WeatherCodeMapper.getDescription(w);
+          final display = wDesc == '未知' ? w : wDesc;
+          content += ' （天气：$display）';
         }
         
         return content;
       }).join('\n\n');
       
-      _insightSub = ai
+  _insightSub = ai
           .streamReportInsight(
             periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriod,
-            mostWeather: _mostWeather,
+    mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+    mostWeather: _mostWeatherDisplay ?? _mostWeather,
             topTag: _mostTopTag,
             activeDays: activeDays,
             noteCount: noteCount,
@@ -248,10 +317,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         },
         onError: (_) {
           if (!mounted) return;
-          final local = context.read<AIService>().buildLocalReportInsight(
+      final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
-                mostTimePeriod: _mostDayPeriod,
-                mostWeather: _mostWeather,
+        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+        mostWeather: _mostWeatherDisplay ?? _mostWeather,
                 topTag: _mostTopTag,
                 activeDays: activeDays,
                 noteCount: noteCount,
@@ -275,10 +344,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         },
       );
     } else {
-      final local = context.read<AIService>().buildLocalReportInsight(
+  final local = context.read<AIService>().buildLocalReportInsight(
             periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriod,
-            mostWeather: _mostWeather,
+    mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+    mostWeather: _mostWeatherDisplay ?? _mostWeather,
             topTag: _mostTopTag,
             activeDays: activeDays,
             noteCount: noteCount,
@@ -474,16 +543,40 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             ],
           ),
         ),
-        // 时间选择器
-        _buildTimeSelector(),
+        // 可折叠的时间选择器
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          height: _isTimeSelectorCollapsed ? 60 : null,
+          child: _buildTimeSelector(),
+        ),
         // 内容区域
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildDataOverview(),
-              _buildFeaturedCards(),
-            ],
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollUpdateNotification) {
+                // 向上滚动时折叠
+                if (notification.scrollDelta! > 10 && !_isTimeSelectorCollapsed) {
+                  setState(() {
+                    _isTimeSelectorCollapsed = true;
+                  });
+                }
+                // 向下滚动时展开
+                else if (notification.scrollDelta! < -10 && _isTimeSelectorCollapsed) {
+                  setState(() {
+                    _isTimeSelectorCollapsed = false;
+                  });
+                }
+              }
+              return false;
+            },
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDataOverview(),
+                _buildFeaturedCards(),
+              ],
+            ),
           ),
         ),
       ],
@@ -549,8 +642,65 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建时间选择器
   Widget _buildTimeSelector() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isTimeSelectorCollapsed = !_isTimeSelectorCollapsed;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: AnimatedCrossFade(
+          duration: const Duration(milliseconds: 300),
+          crossFadeState: _isTimeSelectorCollapsed 
+              ? CrossFadeState.showFirst 
+              : CrossFadeState.showSecond,
+          firstChild: _buildCollapsedTimeSelector(),
+          secondChild: _buildExpandedTimeSelector(),
+        ),
+      ),
+    );
+  }
+
+  /// 构建折叠状态的时间选择器
+  Widget _buildCollapsedTimeSelector() {
     return Container(
-      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.date_range,
+            size: 20,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${_getPeriodName()} - ${_getDateRangeText()}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+          const Spacer(),
+          Icon(
+            Icons.expand_more,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建展开状态的时间选择器
+  Widget _buildExpandedTimeSelector() {
+    return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -591,6 +741,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   tooltip: '选择具体日期',
                   iconSize: 20,
                 ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.expand_less,
+                size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),
@@ -760,22 +916,27 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 24),
 
-          // 新增：三个“最多”指标
-          Row(
+          // 新增：三个"最多"指标
+      Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                    '最常见时间段', _mostDayPeriod ?? '暂无', '', Icons.timelapse),
+                child: _buildStatCardWithCustomIcon(
+          '常见时段', 
+                    _mostDayPeriodDisplay ?? '暂无', 
+                    '', 
+                    _mostDayPeriodIcon ?? Icons.timelapse),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                    '最常见天气', _mostWeather ?? '暂无', '', Icons.cloud_queue),
+                child: _buildStatCardWithCustomIcon(
+          '常见天气', 
+                    _mostWeatherDisplay ?? '暂无', 
+                    '', 
+                    _mostWeatherIcon ?? Icons.cloud_queue),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard('最常用标签', _mostTopTag ?? '暂无', '',
-                    Icons.local_offer_outlined),
+        child: _buildStatCardWithTagIcon('常用标签', _mostTopTag ?? '暂无', ''),
               ),
             ],
           ),
@@ -901,7 +1062,129 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     );
   }
 
-  /// 构建空状态
+  /// 构建带自定义图标的统计卡片
+  Widget _buildStatCardWithCustomIcon(String title, String value, String unit, IconData icon) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  unit,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建带标签图标的统计卡片
+  Widget _buildStatCardWithTagIcon(String title, String value, String unit) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // 显示标签图标
+                if (_mostTopTagIcon != null) ...[
+                  if (_mostTopTagIcon is IconData) 
+                    Icon(
+                      _mostTopTagIcon as IconData,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  else
+                    Text(
+                      _mostTopTagIcon.toString(),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  const SizedBox(width: 6),
+                ] else ...[
+                  Icon(
+                    Icons.local_offer_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  unit,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(32),
