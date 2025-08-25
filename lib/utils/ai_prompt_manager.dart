@@ -395,18 +395,29 @@ $question''';
 
   /// 获取报告洞察的系统提示词（根据风格切换语气与表达）
   String getReportInsightSystemPrompt(String style) {
-    const base = '''你是一位善于捕捉生活细节的文学洞察助手。请仔细阅读用户的笔记内容，智能生成个性化的中文洞察。
+    const base = '''你是一位善于捕捉生活细节的文学洞察助手。请仔细阅读用户的统计数据和笔记内容，智能生成个性化的中文洞察。
+
+重要要求：
+- 可以参考统计数据来理解用户的记录习惯，但在生成洞察时不要直接重复具体数字
+- 输出一段完整连贯的文字，不要分成多个部分或段落
+- 结合统计特征和笔记内容，从情感色彩、主题特征和生活轨迹角度进行洞察
 
 分析步骤：
-1. 深度分析笔记内容，判断是否存在特殊情境线索：
+1. 基于统计数据理解用户习惯：
+   - 记录频率反映的坚持程度和生活节奏
+   - 时间偏好体现的个人特质（如夜晚思考者、晨间记录者）
+   - 天气偏好暗示的情感状态和环境敏感度
+   - 标签偏好显示的关注焦点和兴趣方向
+
+2. 深度分析笔记内容，寻找特殊情境线索：
    - 地理位置信息（城市、区域、地标）+ 文学引用 → 可生成诗意地名表达
-   - 经典文学作品句子、名著引用（3条以上）→ 可描述"在书香中行走"
-   - 动漫台词、二次元内容、ACG文化（多处出现）→ 可描述"在动漫世界中游历"
+   - 经典文学作品句子、名著引用（多处出现）→ 可描述"在书香中行走"
+   - 动漫台词、二次元内容、ACG文化（多处出现）→ 可描述"在动漫世界中游历"  
    - 古诗词引用、文言文（明显特征）→ 可用古典意境描述
    - 特定主题场景频繁出现 → 可提炼场景氛围
    - 明显的情感色彩或共同主题 → 可用文学化语言描述
 
-2. 情境描述生成原则：
+3. 情境描述生成原则：
    - 仅在笔记内容确实具备明显特征时才生成情境描述
    - 情境描述应基于笔记内容的真实元素，不可臆造
    - 示例转化：
@@ -415,10 +426,11 @@ $question''';
      * 大量名著引用 → "在书香中行走，与文字为伴"
      * 动漫相关内容丰富 → "游走于二次元的幻想天地"
 
-3. 输出要求：
-   - 如果笔记内容具备明显特征：[情境描述] + [数据洞察] + [可选的温暖总结]
-   - 如果笔记内容特征不明显：直接生成[数据洞察] + [温暖总结]
-   - 语言自然优美，避免生硬模板化表达
+4. 输出要求：
+   - 生成一段自然流畅的洞察文字（80-150字为宜）
+   - 将统计特征转化为性格描述和生活态度的洞察，而非直接引用数字
+   - 如有明显特征可融入情境描述，如无特征则重点描述思维轨迹和情感色彩
+   - 语言优美自然，具有温度和深度
    - 不暴露具体个人隐私信息''';
 
     switch (style) {
@@ -465,11 +477,11 @@ $question''';
 $stats
 
 【笔记内容分析】
-请仔细分析以下笔记内容，寻找地理位置、文学引用、主题特征等线索：
+请仔细分析以下笔记内容，结合统计数据理解用户的记录习惯和特征，寻找地理位置、文学引用、主题特征等线索：
 
 $contentSection
 
-请根据上述统计数据和笔记内容，生成个性化的洞察文案。重点关注笔记内容中的独特元素，如地名与诗词的结合、文学作品引用、动漫文化、古典诗词等，将这些元素转化为富有情境感的表达。''';
+请基于统计数据体现的记录习惯和笔记内容的深度特征，生成一段流畅的个性化洞察。将数据特征转化为对用户性格和生活态度的理解，重点关注笔记内容中的独特元素，如地名与诗词的结合、文学作品引用、动漫文化、古典诗词等，将这些元素转化为富有情境感的表达。记住不要在输出中直接重复具体的数字。''';
   }
 
   /// 本地生成报告洞察（不开启AI时使用）。
@@ -489,9 +501,9 @@ $contentSection
         ? '#$topTag'
         : '主题尚未收敛';
 
-    // 4种风格模板（除了简约数据型），随机挑选
+    // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
     final rng = math.Random();
-    final styleIndex = rng.nextInt(4);
+    final styleIndex = rng.nextInt(3);
     
     switch (styleIndex) {
       case 0: // 温暖陪伴型
@@ -500,8 +512,6 @@ $contentSection
         return _generatePoeticInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
       case 2: // 成长导师型
         return _generateGrowthMentorInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
-      case 3: // 极简禅意型
-        return _generateMinimalistInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
       default:
         return _generateWarmCompanionInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
     }
@@ -535,17 +545,6 @@ $contentSection
       '本$periodLabel你保持了$activeDays天的记录习惯，积累了$totalWordCount字的思考财富。$time的安静最适合你深度思考，$tag值得进一步探索。',
       '这一$periodLabel你在思考的路上走了$activeDays天，留下了$noteCount篇成长足迹。$time激发你的灵感，$tag或许是下一个突破点。',
       '你用$activeDays天的坚持证明了成长的决心，$noteCount篇记录见证着进步。$time是你的黄金思考时段，$tag展现了你的关注焦点。',
-    ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
-  }
-
-  /// 极简禅意型洞察
-  String _generateMinimalistInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
-    final templates = [
-      '一$periodLabel，$activeDays日，$noteCount记。$time时，思绪最清澈。',
-      '$activeDays日$periodLabel光，$noteCount篇心语。$time，是你与文字的约定。',
-      '$periodLabel中，$activeDays天记录，$noteCount篇思考。$time静，$tag现。',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];

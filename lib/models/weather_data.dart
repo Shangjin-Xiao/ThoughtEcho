@@ -178,6 +178,17 @@ class WeatherCodeMapper {
     'error': 'error',
   };
 
+  /// 通过中文描述反查天气key
+  /// 返回null表示未找到匹配
+  static String? getKeyByDescription(String description) {
+    try {
+      for (final entry in _keyToDescription.entries) {
+        if (entry.value == description) return entry.key;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// 根据OpenMeteo天气代码获取天气key
   static String getWeatherKey(int weatherCode) {
     if (weatherCode == 0) return 'clear';
