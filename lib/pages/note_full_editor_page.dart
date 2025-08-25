@@ -822,36 +822,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     return result;
   }
 
-  // 判断是否为表情符号
-  bool _isEmoji(String? iconName) {
-    if (iconName == null) return false;
-    return iconName.startsWith('emoji:');
-  }
-
-  // 获取显示图标
-  String _getDisplayIcon(String? iconName) {
-    if (iconName == null) return '🏷️';
-    if (iconName.startsWith('emoji:')) {
-      return iconName.substring(6); // 移除'emoji:'前缀
+  // 统一使用 IconUtils 渲染标签图标，确保 Emoji 与系统图标显示一致
+  Widget _tagAvatarSmall(String? iconName) {
+    if (IconUtils.isEmoji(iconName)) {
+      return Text(
+        IconUtils.getDisplayIcon(iconName),
+        style: const TextStyle(fontSize: 16),
+      );
     }
-    return '🏷️'; // 默认标签图标
-  }
-
-  // 获取图标数据
-  IconData _getIconData(String? iconName) {
-    if (iconName == null) return Icons.label;
-    if (iconName.startsWith('emoji:')) {
-      // 表情符号由Text组件处理，这里不需要返回IconData
-      return Icons.emoji_emotions;
-    }
-
-    // 使用IconUtils转换图标名到图标数据
-    try {
-      final iconData = IconUtils.getIconData(iconName);
-      return iconData;
-    } catch (e) {
-      return Icons.label;
-    }
+    return Icon(IconUtils.getIconData(iconName), size: 16);
   }
 
   // 自定义颜色选择器
@@ -1395,6 +1374,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   controller: _authorController,
                                   decoration: const InputDecoration(
                                     hintText: '作者/人物',
+                                    prefixIcon: Icon(Icons.person_outline),
                                     border: OutlineInputBorder(),
                                     contentPadding: EdgeInsets.symmetric(
                                       vertical: 10,
@@ -1410,6 +1390,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   controller: _workController,
                                   decoration: const InputDecoration(
                                     hintText: '作品/来源',
+                                    prefixIcon: Icon(Icons.menu_book_outlined),
                                     border: OutlineInputBorder(),
                                     contentPadding: EdgeInsets.symmetric(
                                       vertical: 10,
@@ -1454,6 +1435,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             ),
                             child: ExpansionTile(
                               title: const Text('选择标签'),
+                              leading: const Icon(Icons.sell_outlined),
                               shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
@@ -1523,21 +1505,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             return FilterChip(
                                               selected: selected,
                                               label: Text(tag.name),
-                                              avatar: _isEmoji(tag.iconName)
-                                                  ? Text(
-                                                      _getDisplayIcon(
-                                                        tag.iconName,
-                                                      ),
-                                                      style: const TextStyle(
-                                                        fontSize: 16,
-                                                      ),
-                                                    )
-                                                  : Icon(
-                                                      _getIconData(
-                                                        tag.iconName,
-                                                      ),
-                                                      size: 16,
-                                                    ),
+                                              avatar: _tagAvatarSmall(
+                                                tag.iconName,
+                                              ),
                                               onSelected: (bool value) {
                                                 setState(() {
                                                   if (value) {
@@ -1844,14 +1814,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   Widget _buildTagIcon(NoteCategory tag) {
-    if (_isEmoji(tag.iconName)) {
-      return Text(
-        _getDisplayIcon(tag.iconName),
-        style: const TextStyle(fontSize: 16),
-      );
-    } else {
-      return Icon(_getIconData(tag.iconName), size: 16);
-    }
+  return _tagAvatarSmall(tag.iconName);
   }
 
   // 显示AI选项菜单
