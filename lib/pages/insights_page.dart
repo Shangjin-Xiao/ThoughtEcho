@@ -12,6 +12,7 @@ import 'ai_analysis_history_page_clean.dart';
 import 'ai_settings_page.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
+import '../constants/app_constants.dart';
 import 'dart:async'; // Import for StreamSubscription
 import '../utils/app_logger.dart';
 
@@ -241,7 +242,7 @@ class _InsightsPageState extends State<InsightsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('分析结果已保存'),
-          duration: const Duration(seconds: 2), // 缩短显示时间
+          duration: AppConstants.snackBarDurationImportant, // 统一常量
           action: SnackBarAction(
             label: '查看历史',
             onPressed: () {
@@ -265,7 +266,7 @@ class _InsightsPageState extends State<InsightsPage> {
         SnackBar(
           content: Text('保存分析失败: $e'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          duration: AppConstants.snackBarDurationError,
           action: SnackBarAction(
             label: '重试',
             textColor: Colors.white,
@@ -300,11 +301,18 @@ class _InsightsPageState extends State<InsightsPage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('已保存为新笔记')));
+      ).showSnackBar(const SnackBar(
+        content: Text('已保存为新笔记'),
+        duration: AppConstants.snackBarDurationImportant,
+      ));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存为笔记失败: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('保存为笔记失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -321,14 +329,21 @@ class _InsightsPageState extends State<InsightsPage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('分析结果已复制到剪贴板，可以粘贴分享')));
+      ).showSnackBar(const SnackBar(
+        content: Text('分析结果已复制到剪贴板，可以粘贴分享'),
+         duration: AppConstants.snackBarDurationNormal,
+      ));
 
       // TODO: 如果需要使用分享插件，可以在这里添加
       // 目前先简化为复制到剪贴板
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('分享失败: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('分享失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
