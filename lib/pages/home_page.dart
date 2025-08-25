@@ -696,13 +696,6 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    if (!_aiCardService!.isEnabled) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('AI卡片生成功能未启用')));
-      return;
-    }
-
     // 显示加载对话框
     showDialog(
       context: context,

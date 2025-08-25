@@ -843,8 +843,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
-              else if (_featuredCards.isEmpty &&
-                  _aiCardService?.isEnabled == true)
+              else if (_featuredCards.isEmpty)
                 FilledButton.icon(
                   onPressed: _generateFeaturedCards,
                   icon: const Icon(Icons.auto_awesome, size: 18),
@@ -854,8 +853,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                 )
-              else if (_featuredCards.isNotEmpty &&
-                  _aiCardService?.isEnabled == true)
+              else if (_featuredCards.isNotEmpty)
                 FilledButton.icon(
                   onPressed: () {
                     setState(() {
@@ -908,7 +906,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               ),
               const SizedBox(height: 24),
               Text(
-                _aiCardService?.isEnabled == true ? '暂无精选卡片' : 'AI功能未启用',
+                _featuredCards.isEmpty ? '暂无精选卡片' : '精选卡片',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -916,38 +914,24 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               ),
               const SizedBox(height: 12),
               Text(
-                _aiCardService?.isEnabled == true
-                    ? '基于您的笔记内容，AI将为您生成精美的分享卡片'
-                    : '请在设置中配置AI服务以使用此功能',
+                '可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              if (_aiCardService?.isEnabled == true) ...[
-                // AI服务已启用，显示生成卡片按钮
-                FilledButton.icon(
-                  onPressed:
-                      _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('生成卡片'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                  ),
+              // 显示生成卡片按钮（无论AI开关，都会在服务内降级到模板）
+              FilledButton.icon(
+                onPressed:
+                    _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('生成卡片'),
+                style: FilledButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-              ] else ...[
-                // AI服务未启用，显示前往设置按钮
-                OutlinedButton.icon(
-                  onPressed: () {
-                    // 跳转到设置页面
-                    Navigator.pushNamed(context, '/settings');
-                  },
-                  icon: const Icon(Icons.settings),
-                  label: const Text('前往设置'),
-                ),
-              ],
+              ),
             ],
           ),
         ),
