@@ -67,25 +67,23 @@ class QuoteContent extends StatelessWidget {
           }
         }
 
-        // 如果有加粗内容，处理行数限制
+        // 如果有加粗内容，显示所有加粗内容（与普通折叠保持一致的限制）
         if (boldOps.isNotEmpty) {
           List<Map<String, dynamic>> finalOps = [];
-          int currentLines = 0;
           String allBoldText = '';
 
-          // 收集所有加粗文本
+          // 收集所有加粗文本，保持原始换行
           for (var op in boldOps) {
             String insert = op['insert'].toString();
             allBoldText += insert;
           }
 
-          // 按行分割并限制行数
+          // 按行分割并限制行数，与普通折叠保持一致
           final lines = allBoldText.split('\n');
           List<String> limitedLines = [];
-          
-          for (int i = 0; i < lines.length && currentLines < maxLines; i++) {
+
+          for (int i = 0; i < lines.length && i < maxLines; i++) {
             limitedLines.add(lines[i]);
-            currentLines++;
           }
 
           // 如果超过了行数限制，添加省略号
@@ -171,7 +169,7 @@ class QuoteContent extends StatelessWidget {
         // 如果开启了优先显示加粗内容且需要折叠
         quill.Document displayDocument = document;
         bool usedBoldOnlyMode = false;
-        
+
         if (!showFullContent && maxLines != null && prioritizeBoldContent) {
           final needsExpansion = _needsExpansionForRichText(quote.deltaContent!);
           if (needsExpansion) {

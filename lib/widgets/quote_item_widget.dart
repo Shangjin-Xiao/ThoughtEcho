@@ -3,6 +3,7 @@ import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
 import 'dart:convert';
+import 'dart:ui' as ui;
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
@@ -284,22 +285,27 @@ class QuoteItemWidget extends StatelessWidget {
                         showFullContent: isExpanded,
                       ),
                     ),
-                    // 折叠状态下的提示文字（不加阴影，只是模糊提示）
                     if (!isExpanded && _needsExpansion(quote))
                       Positioned(
-                        bottom: 0,
                         left: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            '双击查看全文',
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                              fontSize: 11,
-                              fontStyle: FontStyle.italic,
+                        bottom: 0,
+                        height: 28,
+                        child: ClipRect(
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                            child: Container(
+                              alignment: Alignment.center,
+                              color: theme.colorScheme.surface.withValues(alpha: 0.08),
+                              child: Text(
+                                '双击查看全文',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -342,251 +348,195 @@ class QuoteItemWidget extends StatelessWidget {
               ),
             ],
 
-            // 底部工具栏 - 恢复并排布局
+            // 底部工具栏 - 标签、心形和更多按钮在同一行
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  // 主要工具栏：标签、心形按钮、操作按钮并排
-                  Row(
-                    children: [
-                      // 标签区域 - 横向滚动
-                      if (quote.tagIds.isNotEmpty) ...[
-                        Icon(
-                          Icons.label_outline,
-                          size: 16,
-                          color: theme.colorScheme.onSurface.applyOpacity(0.6),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: SizedBox(
-                            height: 32,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: quote.tagIds.length,
-                              itemBuilder: (context, index) {
-                                final tagId = quote.tagIds[index];
-                                final tag = tags.firstWhere(
-                                  (t) => t.id == tagId,
-                                  orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-                                );
-                                
-                                return Container(
-                                  margin: EdgeInsets.only(
-                                    right: index < quote.tagIds.length - 1 ? 8 : 0,
-                                  ),
-                                  child: tagBuilder != null
-                                      ? tagBuilder!(tag)
-                                      : Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.primary.applyOpacity(0.12),
-                                            borderRadius: BorderRadius.circular(14),
-                                            border: Border.all(
-                                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                                              width: 0.5,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (tag.iconName?.isNotEmpty == true) ...[
-                                                if (IconUtils.isEmoji(tag.iconName!)) ...[
-                                                  Text(
-                                                    IconUtils.getDisplayIcon(tag.iconName!),
-                                                    style: const TextStyle(fontSize: 12),
-                                                  ),
-                                                  const SizedBox(width: 3),
-                                                ] else ...[
-                                                  Icon(
-                                                    IconUtils.getIconData(tag.iconName!),
-                                                    size: 12,
-                                                    color: theme.colorScheme.primary,
-                                                  ),
-                                                  const SizedBox(width: 3),
-                                                ],
-                                              ],
-                                              Text(
-                                                tag.name,
-                                                style: theme.textTheme.bodySmall?.copyWith(
-                                                  color: theme.colorScheme.primary,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                  if (quote.tagIds.isNotEmpty) ...[
+                    Icon(
+                      Icons.label_outline,
+                      size: 16,
+                      color: theme.colorScheme.onSurface.applyOpacity(0.6),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: SizedBox(
+                        height: 32,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: quote.tagIds.length,
+                          itemBuilder: (context, index) {
+                            final tagId = quote.tagIds[index];
+                            final tag = tags.firstWhere(
+                              (t) => t.id == tagId,
+                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                            );
 
-                      // 添加Spacer确保右侧按钮对齐
-                      const Spacer(),
-
-                      // 心形按钮（如果启用）
-                      if (onFavorite != null) ...[
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: onFavorite,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Stack(
-                                children: [
-                                  Icon(
-                                    quote.favoriteCount > 0 
-                                        ? Icons.favorite 
-                                        : Icons.favorite_border,
-                                    size: 20,
-                                    color: quote.favoriteCount > 0 
-                                        ? Colors.red.shade400 
-                                        : theme.colorScheme.onSurface.applyOpacity(0.6),
-                                  ),
-                                  // 显示点击次数（如果大于0）
-                                  if (quote.favoriteCount > 0)
-                                    Positioned(
-                                      right: -2,
-                                      top: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade600,
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: (quote.colorHex == null || quote.colorHex!.isEmpty)
-                                                ? theme.colorScheme.surfaceContainerLowest
-                                                : cardColor,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 16,
-                                          minHeight: 16,
-                                        ),
-                                        child: Text(
-                                          quote.favoriteCount > 99 ? '99+' : '${quote.favoriteCount}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.0,
-                                          ),
-                                          textAlign: TextAlign.center,
+                            return Container(
+                              margin: EdgeInsets.only(
+                                right: index < quote.tagIds.length - 1 ? 8 : 0,
+                              ),
+                              child: tagBuilder != null
+                                  ? tagBuilder!(tag)
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary.applyOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                          width: 0.5,
                                         ),
                                       ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (tag.iconName?.isNotEmpty == true) ...[
+                                            if (IconUtils.isEmoji(tag.iconName!)) ...[
+                                              Text(
+                                                IconUtils.getDisplayIcon(tag.iconName!),
+                                                style: const TextStyle(fontSize: 12),
+                                              ),
+                                              const SizedBox(width: 3),
+                                            ] else ...[
+                                              Icon(
+                                                IconUtils.getIconData(tag.iconName!),
+                                                size: 12,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                              const SizedBox(width: 3),
+                                            ],
+                                          ],
+                                          Text(
+                                            tag.name,
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.primary,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-
-                      // 操作按钮
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: theme.colorScheme.onSurface.applyOpacity(0.7),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        onSelected: (value) {
-                          if (value == 'ask') {
-                            onAskAI();
-                          } else if (value == 'edit') {
-                            onEdit();
-                          } else if (value == 'generate_card') {
-                            onGenerateCard?.call();
-                          } else if (value == 'delete') {
-                            onDelete();
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.edit,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('编辑笔记'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'ask',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.question_answer,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('向AI提问'),
-                              ],
-                            ),
-                          ),
-                          if (onGenerateCard != null)
-                            PopupMenuItem<String>(
-                              value: 'generate_card',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text('生成卡片分享'),
-                                ],
-                              ),
-                            ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.delete, color: Colors.red),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '删除笔记',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.error,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  
-                  // 折叠状态提示（当内容被折叠时显示）
-                  if (!isExpanded && _needsExpansion(quote))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '双击展开查看完整内容',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                          fontSize: 10,
-                          fontStyle: FontStyle.italic,
+                            );
+                          },
                         ),
                       ),
                     ),
+                  ] else ...[
+                    const Expanded(child: SizedBox.shrink()),
+                  ],
+
+                  // 心形按钮（如果启用）
+                  if (onFavorite != null) ...[
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onFavorite,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Stack(
+                            children: [
+                              Icon(
+                                quote.favoriteCount > 0 ? Icons.favorite : Icons.favorite_border,
+                                size: 20,
+                                color: quote.favoriteCount > 0 ? Colors.red.shade400 : theme.colorScheme.onSurface.applyOpacity(0.6),
+                              ),
+                              if (quote.favoriteCount > 0)
+                                Positioned(
+                                  right: -2,
+                                  top: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade600,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: (quote.colorHex == null || quote.colorHex!.isEmpty) ? theme.colorScheme.surfaceContainerLowest : cardColor,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                    child: Text(
+                                      quote.favoriteCount > 99 ? '99+' : '${quote.favoriteCount}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, height: 1.0),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+
+                  // 更多操作按钮
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: theme.colorScheme.onSurface.applyOpacity(0.7),
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    onSelected: (value) {
+                      if (value == 'ask') {
+                        onAskAI();
+                      } else if (value == 'edit') {
+                        onEdit();
+                      } else if (value == 'generate_card') {
+                        onGenerateCard?.call();
+                      } else if (value == 'delete') {
+                        onDelete();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: theme.colorScheme.primary),
+                            const SizedBox(width: 8),
+                            const Text('编辑笔记'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'ask',
+                        child: Row(
+                          children: [
+                            Icon(Icons.question_answer, color: theme.colorScheme.primary),
+                            const SizedBox(width: 8),
+                            const Text('向AI提问'),
+                          ],
+                        ),
+                      ),
+                      if (onGenerateCard != null)
+                        PopupMenuItem<String>(
+                          value: 'generate_card',
+                          child: Row(
+                            children: [
+                              Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+                              const SizedBox(width: 8),
+                              const Text('生成卡片分享'),
+                            ],
+                          ),
+                        ),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text('删除笔记', style: TextStyle(color: theme.colorScheme.error)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
