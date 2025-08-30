@@ -97,12 +97,18 @@ class QuoteContent extends StatelessWidget {
 
           // 重新构建操作列表
           String finalText = limitedLines.join('\n');
-          if (finalText.isNotEmpty) {
-            finalOps.add({
-              'insert': finalText,
-              'attributes': {'bold': true}
-            });
+          if (finalText.isEmpty) {
+            try {
+              return quill.Document.fromJson(jsonDecode(deltaContent));
+            } catch (_) {
+              return quill.Document()..insert(0, quote.content);
+            }
           }
+
+          finalOps.add({
+            'insert': finalText,
+            'attributes': {'bold': true}
+          });
 
           // 确保文档以换行符结尾（Quill要求）
           if (!finalText.endsWith('\n')) {
@@ -127,29 +133,14 @@ class QuoteContent extends StatelessWidget {
   /// 判断富文本内容是否需要折叠
   bool _needsExpansionForRichText(String deltaContent) {
     try {
-      final decoded = jsonDecode(deltaContent);
-      if (decoded is List) {
-        int lineCount = 0;
-        int totalLength = 0;
-        for (var op in decoded) {
-          if (op is Map && op['insert'] != null) {
-            final String insert = op['insert'].toString();
-            // 每个\n算一行，且最后一段如果不是\n结尾也算一行
-            final lines = insert.split('\n');
-            lineCount += lines.length - 1;
-            if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
-            totalLength += insert.length;
-          }
-        }
-        // 超过3行或内容长度超过150字符时需要折叠
-        return lineCount > 3 || totalLength > 150;
-      }
+      final doc = quill.Document.fromJson(jsonDecode(deltaContent));
+      final plain = doc.toPlainText();
+      final int lineCount = 1 + '\n'.allMatches(plain).length;
+      return lineCount > 3 || plain.length > 150;
     } catch (_) {
-      // 富文本解析失败，回退到纯文本判断
       final int lineCount = 1 + '\n'.allMatches(quote.content).length;
       return lineCount > 3 || quote.content.length > 150;
     }
-    return false;
   }
 
   @override
@@ -216,7 +207,15 @@ class QuoteContent extends StatelessWidget {
         if (!showFullContent && maxLines != null && needsExpansion) {
           // 如果使用了加粗优先模式，直接显示（已经在_createBoldOnlyDocument中处理了截断）
           if (usedBoldOnlyMode) {
-            return richTextEditor;
+            final estimatedLineHeight =
+                (style?.height ?? 1.5) * (style?.fontSize ?? 14);
+            final maxHeight = estimatedLineHeight * maxLines!;
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: ClipRect(
+                child: richTextEditor,
+              ),
+            );
           }
           
           // 普通模式或没有加粗内容时，使用高度限制
