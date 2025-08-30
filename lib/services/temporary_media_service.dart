@@ -155,6 +155,7 @@ class TemporaryMediaService {
     String tempPath, {
     Function(double progress)? onProgress,
     lfm.CancelToken? cancelToken,
+    bool deleteSource = true,
   }) async {
     try {
       logDebug('开始移动临时文件到永久目录: $tempPath');
@@ -223,8 +224,10 @@ class TemporaryMediaService {
         throw Exception('文件移动验证失败');
       }
 
-      // 删除临时文件
-      await tempFile.delete();
+      // 删除临时文件（可配置）
+      if (deleteSource) {
+        await tempFile.delete();
+      }
 
       logDebug('文件已移动到永久目录: $permanentPath');
       return permanentPath;

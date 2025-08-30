@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -639,6 +640,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
 
     // 处理临时媒体文件，带进度
+    // 为了在保存失败时回滚，记录本次从临时目录移动到永久目录的文件
+    final List<String> _movedToPermanentForThisSave = [];
     try {
       await _processTemporaryMediaFiles(onProgress: (p, status) {
         if (mounted) {
@@ -646,6 +649,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             _saveProgress = p.clamp(0.0, 1.0);
             if (status != null) _saveStatus = status;
           });
+        }
+      }, onFileMoved: (permanentPath) {
+        // 仅记录位于应用永久媒体目录下的路径
+        if (permanentPath.isNotEmpty) {
+          _movedToPermanentForThisSave.add(permanentPath);
         }
       });
     } catch (e) {
@@ -743,7 +751,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         });
       }
 
-      if (widget.initialQuote != null && widget.initialQuote?.id != null) {
+  if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
         await db.updateQuote(quote);
@@ -773,6 +781,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       }
     } catch (e) {
+      // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
+      try {
+        for (final p in _movedToPermanentForThisSave) {
+          final f = File(p);
+          if (await f.exists()) {
+            await f.delete();
+            logDebug('因保存失败，回滚删除永久媒体文件: $p');
+          }
+        }
+      } catch (rollbackErr) {
+        logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2236,6 +2256,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 修复：处理临时媒体文件，增加事务安全性和错误恢复
   Future<void> _processTemporaryMediaFiles({
     void Function(double progress, String? status)? onProgress,
+    void Function(String permanentPath)? onFileMoved,
   }) async {
     try {
       logDebug('开始处理临时媒体文件...');
@@ -2296,6 +2317,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           if (newPath != null) {
             ref[key] = newPath;
             hasChanges = true;
+            onFileMoved?.call(newPath);
           }
         }
         done++;
@@ -2320,6 +2342,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   insert['image'] = permanentPath;
                   hasChanges = true;
                   logDebug('临时图片已移动: $imagePath -> $permanentPath');
+                  onFileMoved?.call(permanentPath);
                 }
               }
             }
@@ -2335,6 +2358,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   insert['video'] = permanentPath;
                   hasChanges = true;
                   logDebug('临时视频已移动: $videoPath -> $permanentPath');
+                  onFileMoved?.call(permanentPath);
                 }
               }
             }
@@ -2352,6 +2376,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                     custom['audio'] = permanentPath;
                     hasChanges = true;
                     logDebug('临时音频已移动: $audioPath -> $permanentPath');
+                    onFileMoved?.call(permanentPath);
                   }
                 }
               }
@@ -2397,6 +2422,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       final permanentPath = await TemporaryMediaService.moveToPermament(
         sourcePath,
         onProgress: onFileProgress,
+  deleteSource: false,
       );
       if (permanentPath != null) {
         processedFiles[sourcePath] = permanentPath;

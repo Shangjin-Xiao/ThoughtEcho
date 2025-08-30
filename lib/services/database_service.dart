@@ -3203,9 +3203,24 @@ class DatabaseService extends ChangeNotifier {
           return; // 笔记不存在，直接返回
         }
 
-        // 先获取笔记引用的媒体文件列表
+        // 先获取笔记引用的媒体文件列表（来自引用表）
         final referencedFiles =
             await MediaReferenceService.getReferencedFiles(id);
+
+        // 同时从笔记内容本身提取媒体路径，避免引用表不同步导致遗漏
+        final Set<String> mediaPathsToCheck = {
+          ...referencedFiles,
+        };
+        try {
+          final quoteRow = existingQuote.first;
+          final quoteFromDb = Quote.fromJson(quoteRow);
+          final extracted =
+              await MediaReferenceService.extractMediaPathsFromQuote(
+                  quoteFromDb);
+          mediaPathsToCheck.addAll(extracted);
+        } catch (e) {
+          logDebug('从笔记内容提取媒体路径失败，继续使用引用表: $e');
+        }
 
         await db.transaction((txn) async {
           // 由于设置了 ON DELETE CASCADE，quote_tags 表中的相关条目会自动删除
@@ -3214,11 +3229,11 @@ class DatabaseService extends ChangeNotifier {
           await txn.delete('quotes', where: 'id = ?', whereArgs: [id]);
         });
 
-        // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
+  // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
         await MediaReferenceService.removeAllReferencesForQuote(id);
 
-        // 检查并清理孤儿媒体文件
-        for (final storedPath in referencedFiles) {
+  // 检查并清理孤儿媒体文件（合并来源：引用表 + 内容提取）
+  for (final storedPath in mediaPathsToCheck) {
           final refCount =
               await MediaReferenceService.getReferenceCount(storedPath);
           if (refCount == 0) {
@@ -3284,9 +3299,12 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-    return _executeWithLock('updateQuote_${quote.id}', () async {
+  return _executeWithLock('updateQuote_${quote.id}', () async {
       try {
         final db = await safeDatabase;
+    // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
+    final List<String> oldReferencedFiles =
+      await MediaReferenceService.getReferencedFiles(quote.id!);
         await db.transaction((txn) async {
           final quoteMap = quote.toJson();
 
@@ -3351,6 +3369,31 @@ class DatabaseService extends ChangeNotifier {
 
         // 同步媒体文件引用
         await MediaReferenceService.syncQuoteMediaReferences(quote);
+
+        // 清理因内容变更而不再被引用的媒体文件
+        for (final storedPath in oldReferencedFiles) {
+          final refCount =
+              await MediaReferenceService.getReferenceCount(storedPath);
+          if (refCount == 0) {
+            try {
+              String absolutePath = storedPath;
+              try {
+                if (!absolutePath.startsWith('/')) {
+                  final appDir = await getApplicationDocumentsDirectory();
+                  absolutePath = join(appDir.path, storedPath);
+                }
+              } catch (_) {}
+
+              final file = File(absolutePath);
+              if (await file.exists()) {
+                await file.delete();
+                logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
+              }
+            } catch (e) {
+              logDebug('清理无引用媒体文件失败: $storedPath, 错误: $e');
+            }
+          }
+        }
 
         // 更新内存中的笔记列表
         final index = _currentQuotes.indexWhere((q) => q.id == quote.id);
