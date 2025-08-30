@@ -31,7 +31,7 @@ class AIPeriodicReportPage extends StatefulWidget {
 class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   // 折叠状态
   bool _isTimeSelectorCollapsed = false;
 
@@ -46,7 +46,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   bool _isGeneratingCards = false;
   int? _selectedCardIndex;
 
-    // 新增：周期"最多"统计与洞察
+  // 新增：周期"最多"统计与洞察
   String? _mostDayPeriod; // 晨曦/午后/黄昏/夜晚
   String? _mostWeather; // 晴/雨/多云
   String? _mostTopTag; // 标签名
@@ -100,7 +100,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
-  _insightSub?.cancel();
+    _insightSub?.cancel();
     super.dispose();
   }
 
@@ -139,7 +139,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   Future<void> _computeExtrasAndInsight() async {
     // 计算总字数
-    final totalWords = _periodQuotes.fold<int>(0, (sum, q) => sum + q.content.length);
+    final totalWords =
+        _periodQuotes.fold<int>(0, (sum, q) => sum + q.content.length);
 
     // 最常见时间段
     final Map<String, int> periodCounts = {};
@@ -168,11 +169,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           }
         }
         final finalCategory = category ?? w; // 如果找不到分类就用原值
-        weatherCategoryCounts[finalCategory] = (weatherCategoryCounts[finalCategory] ?? 0) + 1;
+        weatherCategoryCounts[finalCategory] =
+            (weatherCategoryCounts[finalCategory] ?? 0) + 1;
       }
     }
     final mostWeather = weatherCategoryCounts.entries.isNotEmpty
-        ? weatherCategoryCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+        ? weatherCategoryCounts.entries
+            .reduce((a, b) => a.value >= b.value ? a : b)
+            .key
         : null;
 
     // 最常用标签（根据tagIds统计，然后映射为名称）
@@ -187,10 +191,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         }
       }
       if (tagCounts.isNotEmpty) {
-        topTagId = tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        topTagId =
+            tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
         final db = context.read<DatabaseService>();
         final cats = await db.getCategories();
-        final category = cats.firstWhere((c) => c.id == topTagId, orElse: () => cats.first);
+        final category =
+            cats.firstWhere((c) => c.id == topTagId, orElse: () => cats.first);
         topTagName = category.name;
         topTagIcon = IconUtils.getDisplayIcon(category.iconName);
       }
@@ -225,25 +231,25 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         // 否则按原逻辑处理
         weatherDisplay = WeatherCodeMapper.getDescription(mostWeather);
         weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
-        
+
         // 如果返回的是"未知"，说明mostWeather可能已经是中文描述
         if (weatherDisplay == '未知') {
           weatherDisplay = mostWeather;
           // 反向匹配：根据中文描述找到key以获取更准确的图标
           final key = WeatherCodeMapper.getKeyByDescription(mostWeather);
-          weatherIcon = key != null
-              ? WeatherCodeMapper.getIcon(key)
-              : Icons.cloud_queue;
+          weatherIcon =
+              key != null ? WeatherCodeMapper.getIcon(key) : Icons.cloud_queue;
         }
       }
-    }    if (!mounted) return;
+    }
+    if (!mounted) return;
     setState(() {
       _totalWordCount = totalWords;
       _mostDayPeriod = mostPeriod;
       _mostWeather = mostWeather;
       _mostTopTag = topTagName;
       _notesPreview = samples.isEmpty ? null : samples;
-      
+
       // 设置显示用的中文文本和图标
       _mostDayPeriodDisplay = dayPeriodDisplay;
       _mostDayPeriodIcon = dayPeriodIcon;
@@ -270,20 +276,20 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _insightLoading = true;
       });
       final ai = context.read<AIService>();
-      
+
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {
         final date = DateTime.parse(quote.date);
         final dateStr = '${date.month}月${date.day}日';
         var content = quote.content.trim();
-        
+
         // 添加位置信息
         if (quote.location != null && quote.location!.isNotEmpty) {
           content = '【$dateStr·${quote.location}】$content';
         } else {
           content = '【$dateStr】$content';
         }
-        
+
         // 添加天气信息
         if (quote.weather != null && quote.weather!.isNotEmpty) {
           final w = quote.weather!.trim();
@@ -292,22 +298,22 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           final display = wDesc == '未知' ? w : wDesc;
           content += ' （天气：$display）';
         }
-        
+
         return content;
       }).join('\n\n');
-      
-  _insightSub = ai
+
+      _insightSub = ai
           .streamReportInsight(
-            periodLabel: periodLabel,
-    mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-    mostWeather: _mostWeatherDisplay ?? _mostWeather,
-            topTag: _mostTopTag,
-            activeDays: activeDays,
-            noteCount: noteCount,
-            totalWordCount: _totalWordCount,
-            notesPreview: _notesPreview,
-            fullNotesContent: fullNotesContent, // 传递完整内容
-          )
+        periodLabel: periodLabel,
+        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+        mostWeather: _mostWeatherDisplay ?? _mostWeather,
+        topTag: _mostTopTag,
+        activeDays: activeDays,
+        noteCount: noteCount,
+        totalWordCount: _totalWordCount,
+        notesPreview: _notesPreview,
+        fullNotesContent: fullNotesContent, // 传递完整内容
+      )
           .listen(
         (chunk) {
           if (!mounted) return;
@@ -317,10 +323,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         },
         onError: (_) {
           if (!mounted) return;
-      final local = context.read<AIService>().buildLocalReportInsight(
+          final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
-        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-        mostWeather: _mostWeatherDisplay ?? _mostWeather,
+                mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+                mostWeather: _mostWeatherDisplay ?? _mostWeather,
                 topTag: _mostTopTag,
                 activeDays: activeDays,
                 noteCount: noteCount,
@@ -336,7 +342,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           setState(() {
             _insightLoading = false;
           });
-          
+
           // 保存洞察到历史记录
           if (_insightText.isNotEmpty) {
             _saveInsightToHistory();
@@ -344,10 +350,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         },
       );
     } else {
-  final local = context.read<AIService>().buildLocalReportInsight(
+      final local = context.read<AIService>().buildLocalReportInsight(
             periodLabel: periodLabel,
-    mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-    mostWeather: _mostWeatherDisplay ?? _mostWeather,
+            mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+            mostWeather: _mostWeatherDisplay ?? _mostWeather,
             topTag: _mostTopTag,
             activeDays: activeDays,
             noteCount: noteCount,
@@ -398,7 +404,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   Future<void> _saveInsightToHistory() async {
     try {
       final insightService = context.read<InsightHistoryService>();
-      
+
       // 获取当前周期的标签
       String periodLabel = '';
       switch (_selectedPeriod) {
@@ -414,15 +420,17 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         default:
           periodLabel = _selectedPeriod;
       }
-      
+
       await insightService.addInsight(
         insight: _insightText,
         periodType: _selectedPeriod,
         periodLabel: periodLabel,
         isAiGenerated: true,
       );
-      
-      logDebug('已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...', source: 'AIPeriodicReportPage');
+
+      logDebug(
+          '已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
+          source: 'AIPeriodicReportPage');
     } catch (e) {
       logError('保存洞察到历史记录失败: $e', error: e, source: 'AIPeriodicReportPage');
     }
@@ -556,13 +564,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             onNotification: (notification) {
               if (notification is ScrollUpdateNotification) {
                 // 向上滚动时折叠
-                if (notification.scrollDelta! > 10 && !_isTimeSelectorCollapsed) {
+                if (notification.scrollDelta! > 10 &&
+                    !_isTimeSelectorCollapsed) {
                   setState(() {
                     _isTimeSelectorCollapsed = true;
                   });
                 }
                 // 向下滚动时展开
-                else if (notification.scrollDelta! < -10 && _isTimeSelectorCollapsed) {
+                else if (notification.scrollDelta! < -10 &&
+                    _isTimeSelectorCollapsed) {
                   setState(() {
                     _isTimeSelectorCollapsed = false;
                   });
@@ -652,8 +662,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         margin: const EdgeInsets.symmetric(horizontal: 16),
         child: AnimatedCrossFade(
           duration: const Duration(milliseconds: 300),
-          crossFadeState: _isTimeSelectorCollapsed 
-              ? CrossFadeState.showFirst 
+          crossFadeState: _isTimeSelectorCollapsed
+              ? CrossFadeState.showFirst
               : CrossFadeState.showSecond,
           firstChild: _buildCollapsedTimeSelector(),
           secondChild: _buildExpandedTimeSelector(),
@@ -839,7 +849,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     );
     final avgWords = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
-  return SingleChildScrollView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -917,26 +927,27 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           const SizedBox(height: 24),
 
           // 新增：三个"最多"指标
-      Row(
+          Row(
             children: [
               Expanded(
                 child: _buildStatCardWithCustomIcon(
-          '常见时段', 
-                    _mostDayPeriodDisplay ?? '暂无', 
-                    '', 
+                    '常见时段',
+                    _mostDayPeriodDisplay ?? '暂无',
+                    '',
                     _mostDayPeriodIcon ?? Icons.timelapse),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCardWithCustomIcon(
-          '常见天气', 
-                    _mostWeatherDisplay ?? '暂无', 
-                    '', 
+                    '常见天气',
+                    _mostWeatherDisplay ?? '暂无',
+                    '',
                     _mostWeatherIcon ?? Icons.cloud_queue),
               ),
               const SizedBox(width: 12),
               Expanded(
-        child: _buildStatCardWithTagIcon('常用标签', _mostTopTag ?? '暂无', ''),
+                child:
+                    _buildStatCardWithTagIcon('常用标签', _mostTopTag ?? '暂无', ''),
               ),
             ],
           ),
@@ -987,9 +998,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   ? Text(
                       '正在生成本${_getPeriodName()}洞察…',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant),
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                     )
                   : Text(
                       _insightText.isEmpty ? '暂无洞察' : _insightText,
@@ -1063,7 +1073,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   /// 构建带自定义图标的统计卡片
-  Widget _buildStatCardWithCustomIcon(String title, String value, String unit, IconData icon) {
+  Widget _buildStatCardWithCustomIcon(
+      String title, String value, String unit, IconData icon) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -1129,7 +1140,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               children: [
                 // 显示标签图标
                 if (_mostTopTagIcon != null) ...[
-                  if (_mostTopTagIcon is IconData) 
+                  if (_mostTopTagIcon is IconData)
                     Icon(
                       _mostTopTagIcon as IconData,
                       size: 16,
@@ -1185,6 +1196,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       ),
     );
   }
+
   Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(32),
@@ -1706,7 +1718,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         width: 800,
         height: 1200,
         customName: '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
-  context: context,
+        context: context,
       );
 
       if (mounted) {

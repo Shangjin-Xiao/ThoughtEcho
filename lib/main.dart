@@ -290,12 +290,14 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
-              ChangeNotifierProxyProvider<SettingsService, InsightHistoryService>(
+              ChangeNotifierProxyProvider<SettingsService,
+                  InsightHistoryService>(
                 create: (context) => InsightHistoryService(
                   settingsService: context.read<SettingsService>(),
                 ),
                 update: (context, settingsService, insightHistoryService) =>
-                    insightHistoryService ?? InsightHistoryService(
+                    insightHistoryService ??
+                    InsightHistoryService(
                       settingsService: settingsService,
                     ),
               ),

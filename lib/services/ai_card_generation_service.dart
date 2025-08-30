@@ -33,15 +33,15 @@ class AICardGenerationService {
     }
 
     try {
-    // 1. 智能选择最适合的提示词
-    var prompt = _selectBestPrompt(note, customStyle);
+      // 1. 智能选择最适合的提示词
+      var prompt = _selectBestPrompt(note, customStyle);
 
-    // 1.1 根据笔记语言追加语言统一指令，避免出现 rain/Morning 等英文混杂
-    final isChineseNote = _containsChinese(note.content);
-    final langDirective = isChineseNote
-      ? '使用全中文作为所有底部元数据（日期、天气、时间段等），不要出现英文单词（例如用“雨”“晨间”“夜晚”而不是 rain/Morning）。如果某项信息缺失可以省略，不要编造。'
-      : 'Use the same language as the note for any footer metadata (date, weather, period). Keep language consistent and do not mix Chinese unless original content is Chinese.';
-    prompt = '$prompt\n\n### 语言 / Language Constraint\n$langDirective';
+      // 1.1 根据笔记语言追加语言统一指令，避免出现 rain/Morning 等英文混杂
+      final isChineseNote = _containsChinese(note.content);
+      final langDirective = isChineseNote
+          ? '使用全中文作为所有底部元数据（日期、天气、时间段等），不要出现英文单词（例如用“雨”“晨间”“夜晚”而不是 rain/Morning）。如果某项信息缺失可以省略，不要编造。'
+          : 'Use the same language as the note for any footer metadata (date, weather, period). Keep language consistent and do not mix Chinese unless original content is Chinese.';
+      prompt = '$prompt\n\n### 语言 / Language Constraint\n$langDirective';
 
       AppLogger.i('开始AI生成SVG卡片，内容长度: ${note.content.length}',
           source: 'AICardGeneration');
@@ -338,7 +338,7 @@ class AICardGenerationService {
     String? customName,
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-  BuildContext? context,
+    BuildContext? context,
   }) async {
     try {
       AppLogger.i('开始保存卡片图片: ${card.id}', source: 'AICardGeneration');
@@ -352,7 +352,8 @@ class AICardGenerationService {
         throw ArgumentError('图片尺寸过大，最大支持4000x4000');
       }
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
-      final safeContext = (context is Element && !context.mounted) ? null : context;
+      final safeContext =
+          (context is Element && !context.mounted) ? null : context;
       final imageBytes = await card.toImageBytes(
           width: width,
           height: height,
@@ -424,7 +425,7 @@ class AICardGenerationService {
     Function(int current, int total)? onProgress,
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-  BuildContext? context,
+    BuildContext? context,
   }) async {
     final savedFiles = <String>[];
 
@@ -627,7 +628,8 @@ class AICardGenerationService {
       .replaceAll('>', '&gt;');
 
   // 检测是否包含中文
-  bool _containsChinese(String text) => RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
+  bool _containsChinese(String text) =>
+      RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
 
   // 天气本地化映射
   static const Map<String, String> _weatherMap = {

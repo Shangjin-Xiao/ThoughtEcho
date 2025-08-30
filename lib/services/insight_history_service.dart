@@ -44,7 +44,7 @@ class PeriodicInsight {
 class InsightHistoryService extends ChangeNotifier {
   static const String _storageKey = 'periodic_insights_history';
   static const int _maxInsights = 50; // 最多保存50条洞察
-  
+
   final SettingsService _settingsService;
   List<PeriodicInsight> _insights = [];
 
@@ -61,10 +61,9 @@ class InsightHistoryService extends ChangeNotifier {
       final jsonString = await _settingsService.getCustomString(_storageKey);
       if (jsonString != null && jsonString.isNotEmpty) {
         final List<dynamic> jsonList = json.decode(jsonString);
-        _insights = jsonList
-            .map((json) => PeriodicInsight.fromJson(json))
-            .toList();
-        
+        _insights =
+            jsonList.map((json) => PeriodicInsight.fromJson(json)).toList();
+
         // 按时间倒序排列
         _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         notifyListeners();
@@ -85,7 +84,7 @@ class InsightHistoryService extends ChangeNotifier {
     try {
       // 只保存AI生成的洞察
       if (!isAiGenerated) return;
-      
+
       final newInsight = PeriodicInsight(
         insight: insight,
         periodType: periodType,
@@ -126,11 +125,11 @@ class InsightHistoryService extends ChangeNotifier {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
     final monthAgo = DateTime(now.year, now.month - 1, now.day);
-    
+
     // 查找最近的周期洞察
     for (final insight in _insights) {
       if (!insight.isAiGenerated) continue;
-      
+
       // 检查是否是最近的周期（本周、上周、本月、上月）
       if (insight.createdAt.isAfter(monthAgo)) {
         // 优先返回周期类型为week或month的洞察
@@ -142,9 +141,10 @@ class InsightHistoryService extends ChangeNotifier {
 
     // 如果没有找到周或月的洞察，返回最近的任何AI洞察
     final recentAiInsight = _insights
-        .where((insight) => insight.isAiGenerated && insight.createdAt.isAfter(weekAgo))
+        .where((insight) =>
+            insight.isAiGenerated && insight.createdAt.isAfter(weekAgo))
         .firstOrNull;
-    
+
     return recentAiInsight?.insight;
   }
 
@@ -153,7 +153,7 @@ class InsightHistoryService extends ChangeNotifier {
     if (insight == null || insight.isEmpty) {
       return '';
     }
-    
+
     return '''
 
 【参考洞察】
@@ -169,7 +169,7 @@ class InsightHistoryService extends ChangeNotifier {
     if (_insights.isEmpty) {
       await _loadInsights();
     }
-    
+
     final recentInsight = getRecentPeriodInsight();
     return formatInsightForPrompt(recentInsight);
   }
@@ -178,9 +178,10 @@ class InsightHistoryService extends ChangeNotifier {
   Future<void> cleanOldInsights() async {
     final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
     final originalLength = _insights.length;
-    
-    _insights.removeWhere((insight) => insight.createdAt.isBefore(threeMonthsAgo));
-    
+
+    _insights
+        .removeWhere((insight) => insight.createdAt.isBefore(threeMonthsAgo));
+
     if (_insights.length != originalLength) {
       await _saveInsights();
       notifyListeners();

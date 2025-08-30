@@ -1814,7 +1814,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   Widget _buildTagIcon(NoteCategory tag) {
-  return _tagAvatarSmall(tag.iconName);
+    return _tagAvatarSmall(tag.iconName);
   }
 
   // 显示AI选项菜单

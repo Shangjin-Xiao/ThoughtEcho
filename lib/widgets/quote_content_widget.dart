@@ -5,6 +5,8 @@ import '../models/quote_model.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
+import 'package:provider/provider.dart';
+import '../services/settings_service.dart';
 
 /// 统一显示Quote内容的组件，支持富文本和普通文本
 class QuoteContent extends StatelessWidget {
@@ -20,6 +22,147 @@ class QuoteContent extends StatelessWidget {
     this.maxLines,
     this.showFullContent = false,
   });
+
+  /// 提取加粗文本内容，用于优先显示
+  List<String> _extractBoldText(String deltaContent) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        List<String> boldTexts = [];
+        for (var op in decoded) {
+          if (op is Map && op['insert'] != null) {
+            final String insert = op['insert'].toString();
+            final Map<String, dynamic>? attributes = op['attributes'];
+
+            // 检查是否有加粗属性
+            if (attributes != null && attributes['bold'] == true) {
+              boldTexts.add(insert);
+            }
+          }
+        }
+        return boldTexts;
+      }
+    } catch (_) {
+      // 解析失败，返回空列表
+    }
+    return [];
+  }
+
+  /// 创建优先显示加粗内容的截断版本
+  quill.Document _createBoldPriorityDocument(
+      String deltaContent, int maxLines) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        List<Map<String, dynamic>> prioritizedOps = [];
+        List<Map<String, dynamic>> regularOps = [];
+
+        // 分离加粗和普通内容
+        for (var op in decoded) {
+          if (op is Map && op['insert'] != null) {
+            final Map<String, dynamic>? attributes = op['attributes'];
+
+            if (attributes != null && attributes['bold'] == true) {
+              prioritizedOps.add(Map<String, dynamic>.from(op));
+            } else {
+              regularOps.add(Map<String, dynamic>.from(op));
+            }
+          }
+        }
+
+        // 如果有加粗内容，优先显示加粗内容
+        if (prioritizedOps.isNotEmpty) {
+          List<Map<String, dynamic>> finalOps = [];
+          int currentLines = 0;
+          int targetLines = maxLines;
+
+          // 首先添加加粗内容
+          for (var op in prioritizedOps) {
+            if (currentLines >= targetLines) break;
+
+            String insert = op['insert'].toString();
+            int lineCount = '\n'.allMatches(insert).length;
+            if (insert.isNotEmpty && !insert.endsWith('\n')) lineCount++;
+
+            if (currentLines + lineCount <= targetLines) {
+              finalOps.add(op);
+              currentLines += lineCount;
+            } else {
+              // 截断内容以适应剩余行数
+              int remainingLines = targetLines - currentLines;
+              if (remainingLines > 0) {
+                List<String> lines = insert.split('\n');
+                if (lines.length > remainingLines) {
+                  String truncatedInsert =
+                      lines.take(remainingLines).join('\n');
+                  if (remainingLines < lines.length) {
+                    truncatedInsert += '...';
+                  }
+                  var truncatedOp = Map<String, dynamic>.from(op);
+                  truncatedOp['insert'] = truncatedInsert;
+                  finalOps.add(truncatedOp);
+                }
+              }
+              break;
+            }
+          }
+
+          // 如果还有空间，添加部分普通内容
+          if (currentLines < targetLines && regularOps.isNotEmpty) {
+            for (var op in regularOps) {
+              if (currentLines >= targetLines) break;
+
+              String insert = op['insert'].toString();
+              int lineCount = '\n'.allMatches(insert).length;
+              if (insert.isNotEmpty && !insert.endsWith('\n')) lineCount++;
+
+              if (currentLines + lineCount <= targetLines) {
+                finalOps.add(op);
+                currentLines += lineCount;
+              } else {
+                // 截断内容
+                int remainingLines = targetLines - currentLines;
+                if (remainingLines > 0) {
+                  List<String> lines = insert.split('\n');
+                  if (lines.length > remainingLines) {
+                    String truncatedInsert =
+                        lines.take(remainingLines).join('\n');
+                    truncatedInsert += '...';
+                    var truncatedOp = Map<String, dynamic>.from(op);
+                    truncatedOp['insert'] = truncatedInsert;
+                    finalOps.add(truncatedOp);
+                  }
+                }
+                break;
+              }
+            }
+          }
+
+          // 确保文档以换行符结尾（Quill要求）
+          if (finalOps.isNotEmpty) {
+            var lastOp = finalOps.last;
+            String lastInsert = lastOp['insert'].toString();
+            if (!lastInsert.endsWith('\n')) {
+              finalOps.add({'insert': '\n'});
+            }
+          } else {
+            finalOps.add({'insert': '\n'});
+          }
+
+          return quill.Document.fromJson(finalOps);
+        }
+      }
+    } catch (_) {
+      // 解析失败，回退到原始文档
+    }
+
+    // 回退到原始文档的普通截断
+    try {
+      return quill.Document.fromJson(jsonDecode(deltaContent));
+    } catch (_) {
+      return quill.Document()..insert(0, quote.content);
+    }
+  }
 
   /// 判断富文本内容是否需要折叠
   bool _needsExpansionForRichText(String deltaContent) {
@@ -51,15 +194,41 @@ class QuoteContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settingsService = Provider.of<SettingsService>(context);
+    final prioritizeBoldContent =
+        settingsService.prioritizeBoldContentInCollapse;
+
     // 如果有富文本内容且来源是全屏编辑器，使用QuillEditor显示富文本
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       try {
         // 解析富文本内容
         final document = quill.Document.fromJson(
           jsonDecode(quote.deltaContent!),
-        ); // 创建只读QuillController
+        );
+
+        // 如果开启了优先显示加粗内容且需要折叠，使用优化后的文档
+        quill.Document displayDocument;
+        if (!showFullContent && maxLines != null && prioritizeBoldContent) {
+          final needsExpansion =
+              _needsExpansionForRichText(quote.deltaContent!);
+          if (needsExpansion) {
+            final boldTexts = _extractBoldText(quote.deltaContent!);
+            if (boldTexts.isNotEmpty) {
+              displayDocument =
+                  _createBoldPriorityDocument(quote.deltaContent!, maxLines!);
+            } else {
+              displayDocument = document;
+            }
+          } else {
+            displayDocument = document;
+          }
+        } else {
+          displayDocument = document;
+        }
+
+        // 创建只读QuillController
         final controller = quill.QuillController(
-          document: document,
+          document: displayDocument,
           selection: const TextSelection.collapsed(offset: 0),
         );
 

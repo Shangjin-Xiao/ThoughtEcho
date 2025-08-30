@@ -331,7 +331,7 @@ class _InsightsPageState extends State<InsightsPage> {
         context,
       ).showSnackBar(const SnackBar(
         content: Text('分析结果已复制到剪贴板，可以粘贴分享'),
-         duration: AppConstants.snackBarDurationNormal,
+        duration: AppConstants.snackBarDurationNormal,
       ));
 
       // TODO: 如果需要使用分享插件，可以在这里添加

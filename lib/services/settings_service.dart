@@ -53,6 +53,16 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 折叠时优先显示加粗内容
+  bool get prioritizeBoldContentInCollapse =>
+      _appSettings.prioritizeBoldContentInCollapse;
+  Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {
+    _appSettings =
+        _appSettings.copyWith(prioritizeBoldContentInCollapse: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

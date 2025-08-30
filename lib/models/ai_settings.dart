@@ -11,7 +11,7 @@ class AISettings {
     this.apiUrl = '',
     this.model = '',
     this.temperature = 0.7,
-  this.maxTokens = 32000,
+    this.maxTokens = 32000,
     this.hostOverride,
   });
 
@@ -34,9 +34,8 @@ class AISettings {
       temperature: map['temperature'] != null
           ? (map['temperature'] as num).toDouble()
           : 0.7,
-    maxTokens: map['maxTokens'] != null
-      ? (map['maxTokens'] as num).toInt()
-      : 32000,
+      maxTokens:
+          map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 32000,
       hostOverride: map['hostOverride'],
     );
   }
@@ -46,7 +45,7 @@ class AISettings {
         apiUrl: '',
         model: '',
         temperature: 0.7,
-  maxTokens: 32000,
+        maxTokens: 32000,
       );
 
   AISettings copyWith({

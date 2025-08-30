@@ -285,63 +285,66 @@ class AIService extends ChangeNotifier {
   }) {
     final controller = _requestHelper.createStreamController();
 
-  _requestHelper.executeStreamOperation(
-      operation: (innerController) async {
-        try {
-          if (!await hasValidApiKeyAsync()) {
-            innerController.addError(Exception('请先在设置中配置 API Key'));
-            return;
-          }
+    _requestHelper
+        .executeStreamOperation(
+          operation: (innerController) async {
+            try {
+              if (!await hasValidApiKeyAsync()) {
+                innerController.addError(Exception('请先在设置中配置 API Key'));
+                return;
+              }
 
-          await _validateSettings();
-          final provider = await _getCurrentProviderWithApiKey();
+              await _validateSettings();
+              final provider = await _getCurrentProviderWithApiKey();
 
-          final prompt = _promptManager.getReportInsightSystemPrompt('poetic');
-          final user = _promptManager.buildReportInsightUserMessage(
-            periodLabel: periodLabel,
-            mostTimePeriod: mostTimePeriod,
-            mostWeather: mostWeather,
-            topTag: topTag,
-            activeDays: activeDays,
-            noteCount: noteCount,
-            totalWordCount: totalWordCount,
-            notesPreview: notesPreview,
-            fullNotesContent: fullNotesContent, // 传递完整内容
-          );
+              final prompt =
+                  _promptManager.getReportInsightSystemPrompt('poetic');
+              final user = _promptManager.buildReportInsightUserMessage(
+                periodLabel: periodLabel,
+                mostTimePeriod: mostTimePeriod,
+                mostWeather: mostWeather,
+                topTag: topTag,
+                activeDays: activeDays,
+                noteCount: noteCount,
+                totalWordCount: totalWordCount,
+                notesPreview: notesPreview,
+                fullNotesContent: fullNotesContent, // 传递完整内容
+              );
 
-          await _requestHelper.makeStreamRequestWithProvider(
-            url: provider.apiUrl,
-            systemPrompt: prompt,
-            userMessage: user,
-            provider: provider,
-            onData: (text) => _requestHelper.handleStreamResponse(
-              controller: innerController,
-              chunk: text,
-            ),
-            onComplete: (fullText) => _requestHelper.handleStreamComplete(
-              controller: innerController,
-              fullText: fullText,
-            ),
-            onError: (error) => _requestHelper.handleStreamError(
-              controller: innerController,
-              error: error,
-              context: '报告洞察流式',
-            ),
-          );
-        } catch (e) {
-          _requestHelper.handleStreamError(
-            controller: innerController,
-            error: e,
-            context: '报告洞察流式异常',
-          );
-        }
-  },
-  context: '报告洞察流式',
-    ).listen(
-      (chunk) => controller.add(chunk),
-      onError: controller.addError,
-      onDone: controller.close,
-    );
+              await _requestHelper.makeStreamRequestWithProvider(
+                url: provider.apiUrl,
+                systemPrompt: prompt,
+                userMessage: user,
+                provider: provider,
+                onData: (text) => _requestHelper.handleStreamResponse(
+                  controller: innerController,
+                  chunk: text,
+                ),
+                onComplete: (fullText) => _requestHelper.handleStreamComplete(
+                  controller: innerController,
+                  fullText: fullText,
+                ),
+                onError: (error) => _requestHelper.handleStreamError(
+                  controller: innerController,
+                  error: error,
+                  context: '报告洞察流式',
+                ),
+              );
+            } catch (e) {
+              _requestHelper.handleStreamError(
+                controller: innerController,
+                error: e,
+                context: '报告洞察流式异常',
+              );
+            }
+          },
+          context: '报告洞察流式',
+        )
+        .listen(
+          (chunk) => controller.add(chunk),
+          onError: controller.addError,
+          onDone: controller.close,
+        );
 
     return controller.stream;
   }

@@ -280,8 +280,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       });
 
-  // 预加载一次reportInsightsUseAI状态，确保UI响应
-  // 使用SettingsService提供的getter
+      // 预加载一次reportInsightsUseAI状态，确保UI响应
+      // 使用SettingsService提供的getter
     } catch (e) {
       logError('加载AI设置失败: $e',
           error: e, source: 'AISettingsPage._loadSettings');
@@ -337,8 +337,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // 解析最大令牌数
-  // 统一采用较大安全上限，底层会按provider能力裁剪
-  int maxTokens = 32000;
+    // 统一采用较大安全上限，底层会按provider能力裁剪
+    int maxTokens = 32000;
 
     try {
       // 创建新的provider
@@ -1114,7 +1114,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         controller: _apiUrlController,
                         decoration: const InputDecoration(
                           labelText: 'API URL',
-                          hintText: '例如 https://api.xxx.com/v1/chat/completions',
+                          hintText:
+                              '例如 https://api.xxx.com/v1/chat/completions',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.link),
                           helperText: '必须为 http/https 地址',
@@ -1134,8 +1135,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           border: const OutlineInputBorder(),
                           prefixIcon: const Icon(Icons.key),
                           suffixIcon: IconButton(
-                            tooltip:
-                                _obscureApiKey ? '显示' : '隐藏',
+                            tooltip: _obscureApiKey ? '显示' : '隐藏',
                             icon: Icon(
                               _obscureApiKey
                                   ? Icons.visibility_off
