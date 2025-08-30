@@ -393,7 +393,7 @@ class DatabaseService extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 16, // 版本号升级至16，为分类表新增 last_modified 字段
+      version: 17, // 版本号升级至17，为笔记表新增 favorite_count 字段
       onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -425,8 +425,9 @@ class DatabaseService extends ChangeNotifier {
             temperature TEXT,
             edit_source TEXT,
             delta_content TEXT,
-      day_period TEXT,
-      last_modified TEXT
+            day_period TEXT,
+            last_modified TEXT,
+            favorite_count INTEGER DEFAULT 0
           )
         ''');
 
@@ -460,6 +461,9 @@ class DatabaseService extends ChangeNotifier {
         // 新增：last_modified 索引用于同步增量查询
         await _createIndexSafely(
             db, 'quotes', 'last_modified', 'idx_quotes_last_modified');
+        // 新增：favorite_count 索引用于按喜爱度排序
+        await _createIndexSafely(
+            db, 'quotes', 'favorite_count', 'idx_quotes_favorite_count');
 
         // 创建新的 quote_tags 关联表
         await db.execute('''
@@ -776,6 +780,29 @@ class DatabaseService extends ChangeNotifier {
             'CREATE INDEX IF NOT EXISTS idx_categories_last_modified ON categories(last_modified)');
       } catch (e) {
         logError('categories表 last_modified 字段升级失败: $e',
+            error: e, source: 'DatabaseUpgrade');
+      }
+    }
+
+    // 版本17：为笔记表添加favorite_count字段
+    if (oldVersion < 17) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，为笔记表添加 favorite_count 字段',
+      );
+      try {
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasColumn = columns.any((col) => col['name'] == 'favorite_count');
+        if (!hasColumn) {
+          await txn
+              .execute('ALTER TABLE quotes ADD COLUMN favorite_count INTEGER DEFAULT 0');
+          logDebug('数据库升级：quotes表 favorite_count 字段添加完成');
+        } else {
+          logDebug('数据库升级：quotes表 favorite_count 字段已存在，跳过添加');
+        }
+        await txn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)');
+      } catch (e) {
+        logError('quotes表 favorite_count 字段升级失败: $e',
             error: e, source: 'DatabaseUpgrade');
       }
     }
@@ -2502,7 +2529,7 @@ class DatabaseService extends ChangeNotifier {
               .toList();
         }
 
-        // 排序
+        // 排序（支持日期、喜爱度、名称）
         filtered.sort((a, b) {
           if (orderBy.startsWith('date')) {
             final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
@@ -2510,6 +2537,10 @@ class DatabaseService extends ChangeNotifier {
             return orderBy.contains('ASC')
                 ? dateA.compareTo(dateB)
                 : dateB.compareTo(dateA);
+          } else if (orderBy.startsWith('favorite_count')) {
+            return orderBy.contains('ASC')
+                ? a.favoriteCount.compareTo(b.favoriteCount)
+                : b.favoriteCount.compareTo(a.favoriteCount);
           } else {
             return orderBy.contains('ASC')
                 ? a.content.compareTo(b.content)
@@ -3335,6 +3366,97 @@ class DatabaseService extends ChangeNotifier {
         rethrow; // 重新抛出异常，让调用者处理
       }
     });
+  }
+
+  /// 增加笔记的心形点击次数
+  Future<void> incrementFavoriteCount(String quoteId) async {
+    if (quoteId.isEmpty) {
+      throw ArgumentError('笔记ID不能为空');
+    }
+
+    if (kIsWeb) {
+      final index = _memoryStore.indexWhere((q) => q.id == quoteId);
+      if (index != -1) {
+        _memoryStore[index] = _memoryStore[index].copyWith(
+          favoriteCount: _memoryStore[index].favoriteCount + 1,
+        );
+        // 同步更新当前流缓存并推送
+        final curIndex = _currentQuotes.indexWhere((q) => q.id == quoteId);
+        if (curIndex != -1) {
+          _currentQuotes[curIndex] = _currentQuotes[curIndex].copyWith(
+            favoriteCount: _currentQuotes[curIndex].favoriteCount + 1,
+          );
+          if (_quotesController != null && !_quotesController!.isClosed) {
+            _quotesController!.add(List.from(_currentQuotes));
+          }
+        }
+        notifyListeners();
+      }
+      return;
+    }
+
+    return _executeWithLock('incrementFavorite_$quoteId', () async {
+      try {
+        final db = await safeDatabase;
+        await db.transaction((txn) async {
+          // 原子性地增加计数
+          await txn.rawUpdate(
+            'UPDATE quotes SET favorite_count = favorite_count + 1, last_modified = ? WHERE id = ?',
+            [DateTime.now().toUtc().toIso8601String(), quoteId],
+          );
+        });
+
+        // 更新内存中的笔记列表
+        final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
+        if (index != -1) {
+          _currentQuotes[index] = _currentQuotes[index].copyWith(
+            favoriteCount: _currentQuotes[index].favoriteCount + 1,
+          );
+        }
+        if (_quotesController != null && !_quotesController!.isClosed) {
+          _quotesController!.add(List.from(_currentQuotes));
+        }
+        notifyListeners();
+      } catch (e) {
+        logError('增加心形点击次数时出错: $e', error: e, source: 'IncrementFavorite');
+        rethrow;
+      }
+    });
+  }
+
+  /// 获取本周期内点心最多的笔记
+  Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5}) async {
+    if (kIsWeb) {
+      final now = DateTime.now();
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      final weekStartString = weekStart.toIso8601String().substring(0, 10);
+      
+      return _memoryStore
+          .where((q) => q.date.compareTo(weekStartString) >= 0 && q.favoriteCount > 0)
+          .toList()
+        ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount))
+        ..take(limit).toList();
+    }
+
+    try {
+      final db = await safeDatabase;
+      final now = DateTime.now();
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      final weekStartString = weekStart.toIso8601String().substring(0, 10);
+
+      final List<Map<String, dynamic>> results = await db.query(
+        'quotes',
+        where: 'date >= ? AND favorite_count > 0',
+        whereArgs: [weekStartString],
+        orderBy: 'favorite_count DESC, date DESC',
+        limit: limit,
+      );
+
+      return results.map((map) => Quote.fromJson(map)).toList();
+    } catch (e) {
+      logError('获取本周最受喜爱笔记时出错: $e', error: e, source: 'GetMostFavorited');
+      return [];
+    }
   }
 
   /// 监听笔记列表，支持分页加载和筛选

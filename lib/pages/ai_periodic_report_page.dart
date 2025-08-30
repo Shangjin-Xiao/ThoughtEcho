@@ -953,6 +953,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 24),
 
+          // 本周期收藏最多（放在最近笔记上面）
+          if (_periodQuotes.isNotEmpty) ...[
+            _buildPeriodTopFavoritesSection(),
+            const SizedBox(height: 16),
+          ],
+
           // 最近笔记部分
           if (_periodQuotes.isNotEmpty) ...[
             Row(
@@ -977,6 +983,111 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             // 空状态优化
             _buildEmptyState(),
           ],
+        ],
+      ),
+    );
+  }
+
+  // 构建“本周期收藏最多”的展示区域
+  Widget _buildPeriodTopFavoritesSection() {
+    // 过滤出有心形点击的笔记，并按次数排序
+    final List<Quote> favorited = _periodQuotes
+        .where((q) => q.favoriteCount > 0)
+        .toList()
+      ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
+
+    if (favorited.isEmpty) {
+      // 若本周期没有心形点击，显示一个轻量提示
+      return Row(
+        children: [
+          Icon(
+            Icons.favorite_outline,
+            size: 20,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '本周期暂无喜爱记录，去给喜欢的笔记点个心吧！',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.favorite,
+              size: 20,
+              color: Colors.red.shade400,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '本周期收藏最多',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...favorited.take(3).map((q) => _buildFavoritePreviewChip(q)).toList(),
+      ],
+    );
+  }
+
+  // 一个紧凑的收藏预览块
+  Widget _buildFavoritePreviewChip(Quote quote) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade100, width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.red.shade400,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.favorite, color: Colors.white, size: 12),
+                const SizedBox(width: 4),
+                Text(
+                  '${quote.favoriteCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              quote.content.length > 80
+                  ? '${quote.content.substring(0, 80)}...'
+                  : quote.content,
+              style: theme.textTheme.bodyMedium,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

@@ -32,6 +32,7 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
   final Function(Quote)? onGenerateCard;
+  final Function(Quote)? onFavorite; // 新增：心形按钮点击回调
   final bool isLoadingTags; // 新增标签加载状态参数
   final List<String> selectedWeathers; // 新增天气筛选参数
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
@@ -51,6 +52,7 @@ class NoteListView extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
+    this.onFavorite, // 新增：心形按钮点击回调
     this.isLoadingTags = false, // 默认为false
     this.selectedWeathers = const [],
     this.selectedDayPeriods = const [],
@@ -148,7 +150,9 @@ class NoteListViewState extends State<NoteListView> {
       limit: _pageSize,
       orderBy: widget.sortType == 'time'
           ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+          : widget.sortType == 'favorite'
+              ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
+              : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
       searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
       selectedWeathers:
           widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
@@ -289,7 +293,9 @@ class NoteListViewState extends State<NoteListView> {
       limit: _pageSize, // 初始加载限制
       orderBy: widget.sortType == 'time'
           ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
+          : widget.sortType == 'favorite'
+              ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
+              : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
       searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
       selectedWeathers:
           widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
@@ -554,6 +560,9 @@ class NoteListViewState extends State<NoteListView> {
               onGenerateCard: widget.onGenerateCard != null
                   ? () => widget.onGenerateCard!(quote)
                   : null,
+              onFavorite: widget.onFavorite != null
+                  ? () => widget.onFavorite!(quote)
+                  : null, // 新增：心形按钮回调
               tagBuilder: (tag) {
                 return Container(
                   padding: const EdgeInsets.symmetric(
