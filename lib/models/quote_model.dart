@@ -19,6 +19,7 @@ class Quote {
   final String? deltaContent; // 新增：用于存储富文本格式(Delta JSON)
   final String? dayPeriod; // 新增：时间段标识(晨曦、午后、黄昏、夜晚等)
   final String? lastModified;
+  final int favoriteCount; // 新增：心形点击次数
 
   const Quote({
     this.id,
@@ -41,6 +42,7 @@ class Quote {
     this.deltaContent, // 新增：Delta JSON
     this.dayPeriod, // 新增：时间段
     this.lastModified,
+    this.favoriteCount = 0, // 新增：心形点击次数，默认为0
   });
 
   /// 修复：添加数据验证方法
@@ -84,6 +86,7 @@ class Quote {
     String? editSource,
     String? deltaContent,
     String? dayPeriod,
+    int favoriteCount = 0, // 新增：心形点击次数，默认为0
   }) {
     // 验证必填字段
     if (!isValidContent(content)) {
@@ -123,6 +126,7 @@ class Quote {
       editSource: editSource,
       deltaContent: deltaContent,
       dayPeriod: dayPeriod,
+      favoriteCount: favoriteCount, // 新增：心形点击次数
     );
   }
 
@@ -216,6 +220,7 @@ class Quote {
         deltaContent: json['delta_content']?.toString(),
         dayPeriod: json['day_period']?.toString(),
         lastModified: json['last_modified']?.toString(),
+        favoriteCount: (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
       );
     } catch (e) {
       throw FormatException('解析Quote JSON失败: $e, JSON: $json');
@@ -245,6 +250,7 @@ class Quote {
       'delta_content': deltaContent, // 新增：Delta JSON
       'day_period': dayPeriod, // 新增：时间段
       'last_modified': lastModified,
+      'favorite_count': favoriteCount, // 新增：心形点击次数
     };
     // 移除tag_ids字段，因为它不再直接存储在quotes表中
     json.remove('tag_ids');
@@ -273,6 +279,7 @@ class Quote {
     String? deltaContent, // 新增：Delta JSON
     String? dayPeriod, // 新增：时间段
     String? lastModified,
+    int? favoriteCount, // 新增：心形点击次数
   }) {
     return Quote(
       id: id ?? this.id,
@@ -295,6 +302,7 @@ class Quote {
       deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
       lastModified: lastModified ?? this.lastModified,
+      favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
     );
   }
 

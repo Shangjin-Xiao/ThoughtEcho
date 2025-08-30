@@ -688,6 +688,50 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  // 处理心形按钮点击
+  void _handleFavoriteClick(Quote quote) async {
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      await db.incrementFavoriteCount(quote.id!);
+      
+      // 检查mounted以确保widget还在树中
+      if (!mounted) return;
+      
+      // 显示简洁的反馈
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.favorite,
+                color: Colors.red,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text('收藏到心 ${quote.favoriteCount + 1} 次'),
+            ],
+          ),
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    } catch (e) {
+      // 检查mounted以确保widget还在树中
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('收藏失败，请重试'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
     Navigator.of(context).push(
@@ -1217,36 +1261,43 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           // 笔记列表页
-          Consumer<NoteSearchController>(
-            builder: (context, searchController, child) {
-              return NoteListView(
-                key: _noteListViewKey, // 绑定全局Key
-                tags: _tags,
-                selectedTagIds: _selectedTagIds,
-                onTagSelectionChanged: (tagIds) {
-                  setState(() {
-                    _selectedTagIds = tagIds;
-                  });
-                },
-                searchQuery: searchController.searchQuery,
-                sortType: _sortType,
-                sortAscending: _sortAscending,
-                onSortChanged: _handleSortChanged,
-                onSearchChanged: (query) {
-                  searchController.updateSearch(query);
-                },
-                onEdit: _showEditQuoteDialog,
-                onDelete: _showDeleteConfirmDialog,
-                onAskAI: _showAIQuestionDialog,
-                onGenerateCard: _generateAICard,
-                isLoadingTags: _isLoadingTags, // 传递标签加载状态
-                selectedWeathers: _selectedWeathers,
-                selectedDayPeriods: _selectedDayPeriods,
-                onFilterChanged: (weathers, dayPeriods) {
-                  setState(() {
-                    _selectedWeathers = weathers;
-                    _selectedDayPeriods = dayPeriods;
-                  });
+          Consumer<SettingsService>(
+            builder: (context, settingsService, child) {
+              return Consumer<NoteSearchController>(
+                builder: (context, searchController, child) {
+                  return NoteListView(
+                    key: _noteListViewKey, // 绑定全局Key
+                    tags: _tags,
+                    selectedTagIds: _selectedTagIds,
+                    onTagSelectionChanged: (tagIds) {
+                      setState(() {
+                        _selectedTagIds = tagIds;
+                      });
+                    },
+                    searchQuery: searchController.searchQuery,
+                    sortType: _sortType,
+                    sortAscending: _sortAscending,
+                    onSortChanged: _handleSortChanged,
+                    onSearchChanged: (query) {
+                      searchController.updateSearch(query);
+                    },
+                    onEdit: _showEditQuoteDialog,
+                    onDelete: _showDeleteConfirmDialog,
+                    onAskAI: _showAIQuestionDialog,
+                    onGenerateCard: _generateAICard,
+                    onFavorite: settingsService.showFavoriteButton 
+                        ? _handleFavoriteClick 
+                        : null, // 根据设置控制心形按钮显示
+                    isLoadingTags: _isLoadingTags, // 传递标签加载状态
+                    selectedWeathers: _selectedWeathers,
+                    selectedDayPeriods: _selectedDayPeriods,
+                    onFilterChanged: (weathers, dayPeriods) {
+                      setState(() {
+                        _selectedWeathers = weathers;
+                        _selectedDayPeriods = dayPeriods;
+                      });
+                    },
+                  );
                 },
               );
             },

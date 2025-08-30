@@ -527,6 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 // 添加折叠时优先显示加粗内容设置
                 _buildPrioritizeBoldContentItem(context),
+                _buildShowFavoriteButtonItem(context), // 新增：心形按钮显示设置
 
                 // 添加默认启动页面设置
                 _buildDefaultStartPageItem(context),
@@ -863,6 +864,22 @@ class _SettingsPageState extends State<SettingsPage> {
       onChanged: (value) {
         settingsService.setPrioritizeBoldContentInCollapse(value);
       },
+    );
+  }
+
+  // 构建心形按钮显示设置项
+  Widget _buildShowFavoriteButtonItem(BuildContext context) {
+    final settingsService = Provider.of<SettingsService>(context);
+    return ListTile(
+      leading: const Icon(Icons.favorite_outline),
+      title: const Text('显示喜爱按钮'),
+      subtitle: const Text('在笔记卡片上显示心形按钮，轻触即可表达喜爱并记录次数'),
+      trailing: Switch(
+        value: settingsService.showFavoriteButton,
+        onChanged: (value) {
+          settingsService.setShowFavoriteButton(value);
+        },
+      ),
     );
   }
 

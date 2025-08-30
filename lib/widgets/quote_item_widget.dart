@@ -19,6 +19,7 @@ class QuoteItemWidget extends StatelessWidget {
   final Function() onDelete;
   final Function() onAskAI;
   final Function()? onGenerateCard;
+  final Function()? onFavorite; // 新增：心形按钮点击回调
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
@@ -33,6 +34,7 @@ class QuoteItemWidget extends StatelessWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
+    this.onFavorite, // 新增：心形按钮点击回调
     this.tagBuilder,
   });
 
@@ -169,7 +171,7 @@ class QuoteItemWidget extends StatelessWidget {
               ? [
                   // 轻微增强阴影，提升展开时的质感
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -312,11 +314,11 @@ class QuoteItemWidget extends StatelessWidget {
                                     colors: [
                                       (quote.colorHex == null || quote.colorHex!.isEmpty)
                                           ? Colors.transparent
-                                          : cardColor.withOpacity(0.0),
+                                          : cardColor.withValues(alpha: 0.0),
                                       (quote.colorHex == null || quote.colorHex!.isEmpty)
                                           ? theme.colorScheme.surfaceContainerLowest
-                                              .withOpacity(0.9)
-                                          : cardColor.withOpacity(0.95),
+                                              .withValues(alpha: 0.9)
+                                          : cardColor.withValues(alpha: 0.95),
                                     ],
                                   ),
                                 ),
@@ -458,6 +460,67 @@ class QuoteItemWidget extends StatelessWidget {
 
                   // 添加Spacer确保更多按钮始终在右侧
                   const Spacer(),
+
+                  // 心形按钮（如果启用）
+                  if (onFavorite != null) ...[
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onFavorite,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Stack(
+                            children: [
+                              Icon(
+                                quote.favoriteCount > 0 
+                                    ? Icons.favorite 
+                                    : Icons.favorite_border,
+                                size: 20,
+                                color: quote.favoriteCount > 0 
+                                    ? Colors.red.shade400 
+                                    : theme.colorScheme.onSurface.applyOpacity(0.6),
+                              ),
+                              // 显示点击次数（如果大于0）
+                              if (quote.favoriteCount > 0)
+                                Positioned(
+                                  right: -2,
+                                  top: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade600,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: (quote.colorHex == null || quote.colorHex!.isEmpty)
+                                            ? theme.colorScheme.surfaceContainerLowest
+                                            : cardColor,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      quote.favoriteCount > 99 ? '99+' : '${quote.favoriteCount}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.0,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
 
                   // 操作按钮
                   PopupMenuButton<String>(

@@ -38,6 +38,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   static const Map<String, String> _sortTypeKeyToLabel = {
     'time': '按时间排序',
     'name': '按名称排序',
+    'favorite': '按喜爱度排序', // 新增：按心形次数排序
   };
 
   late List<String> _tempSelectedTagIds;

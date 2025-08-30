@@ -63,6 +63,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否显示心形按钮
+  bool get showFavoriteButton => _appSettings.showFavoriteButton;
+  Future<void> setShowFavoriteButton(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showFavoriteButton: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法
