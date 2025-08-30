@@ -224,21 +224,27 @@ class QuoteContent extends StatelessWidget {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    height: 24,
+                    height: 18,
                     child: IgnorePointer(
-                      child: BackdropFilter(
-                        filter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Theme.of(context)
-                                    .scaffoldBackgroundColor
-                                    .withValues(alpha: 0.18),
-                              ],
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Theme.of(context)
+                                      .scaffoldBackgroundColor
+                                      .withValues(alpha: 0.03),
+                                  Theme.of(context)
+                                      .scaffoldBackgroundColor
+                                      .withValues(alpha: 0.07),
+                                ],
+                                stops: const [0.0, 0.6, 1.0],
+                              ),
                             ),
                           ),
                         ),
@@ -266,21 +272,27 @@ class QuoteContent extends StatelessWidget {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  height: 24,
+                  height: 18,
                   child: IgnorePointer(
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Theme.of(context)
-                                  .scaffoldBackgroundColor
-                                  .withValues(alpha: 0.18),
-                            ],
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Theme.of(context)
+                                    .scaffoldBackgroundColor
+                                    .withValues(alpha: 0.03),
+                                Theme.of(context)
+                                    .scaffoldBackgroundColor
+                                    .withValues(alpha: 0.07),
+                              ],
+                              stops: const [0.0, 0.6, 1.0],
+                            ),
                           ),
                         ),
                       ),
