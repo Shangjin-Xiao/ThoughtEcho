@@ -94,10 +94,28 @@ class AppTheme with ChangeNotifier {
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
     if (_useCustomColor && _customColor != null) {
-      return ColorScheme.fromSeed(
+      // 使用自定义颜色时，确保在浅色模式下也不会产生紫色调
+      final colorScheme = ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.light,
       );
+
+      // 如果生成的颜色方案包含明显的紫色调，进行调整
+      if (_hasPurpleTint(colorScheme.primary)) {
+        // 使用更安全的颜色生成方式，避免紫色调
+        return ColorScheme.fromSeed(
+          seedColor: _customColor!,
+          brightness: Brightness.light,
+          // 强制使用更保守的调色策略
+        ).copyWith(
+          // 确保主要颜色不会太偏紫
+          primary: _adjustPurpleTint(_customColor!, Brightness.light),
+          secondary: _adjustPurpleTint(_customColor!, Brightness.light).withValues(alpha: 0.8),
+          tertiary: _adjustPurpleTint(_customColor!, Brightness.light).withValues(alpha: 0.6),
+        );
+      }
+
+      return colorScheme;
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _lightDynamicColorScheme != null) {
@@ -112,10 +130,28 @@ class AppTheme with ChangeNotifier {
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
-      return ColorScheme.fromSeed(
+      // 使用自定义颜色时，确保在深色模式下不会产生紫色调
+      final colorScheme = ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.dark,
       );
+
+      // 如果生成的颜色方案包含明显的紫色调，进行调整
+      if (_hasPurpleTint(colorScheme.primary)) {
+        // 使用更安全的颜色生成方式，避免紫色调
+        return ColorScheme.fromSeed(
+          seedColor: _customColor!,
+          brightness: Brightness.dark,
+          // 强制使用更保守的调色策略
+        ).copyWith(
+          // 确保主要颜色不会太偏紫
+          primary: _adjustPurpleTint(_customColor!, Brightness.dark),
+          secondary: _adjustPurpleTint(_customColor!, Brightness.dark).withValues(alpha: 0.8),
+          tertiary: _adjustPurpleTint(_customColor!, Brightness.dark).withValues(alpha: 0.6),
+        );
+      }
+
+      return colorScheme;
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _darkDynamicColorScheme != null) {
@@ -131,15 +167,52 @@ class AppTheme with ChangeNotifier {
   Color? get customColor => _customColor;
   ThemeMode get themeMode => _themeMode;
 
-  // 获取当前有效的主色调
-  Color get effectivePrimaryColor {
-    if (_useCustomColor && _customColor != null) {
-      return _customColor!;
+  // 强制刷新主题，确保所有UI组件正确更新
+  void forceRefreshTheme() {
+    logDebug('强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode');
+    notifyListeners();
+  }
+
+  // 判断颜色是否包含明显的紫色调
+  bool _hasPurpleTint(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    // 紫色在色相环上的范围大约是270-330度
+    // 另外，饱和度高的紫色也可能有问题
+    final hue = hsl.hue;
+    final saturation = hsl.saturation;
+
+    // 如果色相在紫色范围内且饱和度较高，认为是紫色调
+    if ((hue >= 270 && hue <= 330) && saturation > 0.3) {
+      return true;
     }
-    if (_useDynamicColor && _lightDynamicColorScheme != null) {
-      return _lightDynamicColorScheme!.primary;
+
+    // 另外检查RGB值，如果蓝色分量明显高于红色和绿色，也可能是紫色调
+    if (color.b > color.r * 1.2 && color.b > color.g * 1.2 && saturation > 0.2) {
+      return true;
     }
-    return Colors.blue;
+
+    return false;
+  }
+
+  // 调整紫色调的颜色，使其更适合深色主题
+  Color _adjustPurpleTint(Color color, Brightness brightness) {
+    final hsl = HSLColor.fromColor(color);
+
+    if (_hasPurpleTint(color)) {
+      // 如果是紫色调，将其调整为更安全的颜色
+      // 降低饱和度或改变色相
+      final adjustedHue = (hsl.hue + 30) % 360; // 向蓝色方向调整
+      final adjustedSaturation = hsl.saturation * 0.7; // 降低饱和度
+
+      return HSLColor.fromAHSL(
+        hsl.alpha,
+        adjustedHue,
+        adjustedSaturation,
+        hsl.lightness,
+      ).toColor();
+    }
+
+    return color;
   }
 
   // 判断当前是否为深色模式
@@ -204,24 +277,46 @@ class AppTheme with ChangeNotifier {
   ) {
     bool changed = false;
 
+    // 处理动态颜色方案，过滤掉紫色调
+    ColorScheme? processedLightScheme = lightScheme;
+    ColorScheme? processedDarkScheme = darkScheme;
+
+    if (lightScheme != null && _hasPurpleTint(lightScheme.primary)) {
+      processedLightScheme = lightScheme.copyWith(
+        primary: _adjustPurpleTint(lightScheme.primary, Brightness.light),
+        secondary: _adjustPurpleTint(lightScheme.secondary, Brightness.light),
+        tertiary: _adjustPurpleTint(lightScheme.tertiary, Brightness.light),
+      );
+      logDebug('检测到动态亮色方案包含紫色调，已自动调整');
+    }
+
+    if (darkScheme != null && _hasPurpleTint(darkScheme.primary)) {
+      processedDarkScheme = darkScheme.copyWith(
+        primary: _adjustPurpleTint(darkScheme.primary, Brightness.dark),
+        secondary: _adjustPurpleTint(darkScheme.secondary, Brightness.dark),
+        tertiary: _adjustPurpleTint(darkScheme.tertiary, Brightness.dark),
+      );
+      logDebug('检测到动态暗色方案包含紫色调，已自动调整');
+    }
+
     // 更新动态颜色方案
-    if (_lightDynamicColorScheme != lightScheme) {
-      _lightDynamicColorScheme = lightScheme;
+    if (_lightDynamicColorScheme != processedLightScheme) {
+      _lightDynamicColorScheme = processedLightScheme;
       changed = true;
     }
 
-    if (_darkDynamicColorScheme != darkScheme) {
-      _darkDynamicColorScheme = darkScheme;
+    if (_darkDynamicColorScheme != processedDarkScheme) {
+      _darkDynamicColorScheme = processedDarkScheme;
       changed = true;
     }
 
     // 检查系统是否支持动态取色
     bool systemSupportsDynamicColor =
-        (lightScheme != null || darkScheme != null);
+        (processedLightScheme != null || processedDarkScheme != null);
 
     // 如果系统不支持动态取色，我们仍然保持用户的 _useDynamicColor 设置不变。
     // useDynamicColor getter 会处理实际的颜色方案回退。
-    // 这样，即使用户的设备暂时无法获取动态颜色，他们“启用动态取色”的偏好设置仍然保留。
+    // 这样，即使用户的设备暂时无法获取动态颜色，他们"启用动态取色"的偏好设置仍然保留。
     // 当设备后续能够获取动态颜色时，应用将自动采用。
     if (!systemSupportsDynamicColor && _useDynamicColor) {
       // 仅在调试时打印信息，不再修改 _useDynamicColor 或持久化状态
@@ -436,6 +531,7 @@ class AppTheme with ChangeNotifier {
         fabRadius: buttonRadius,
       ),
       // 当使用自定义主色时关闭次/三色自动调和，避免某些动态调和链条残留导致偏紫
+      // 同时确保颜色方案本身已经过紫色调调整
       keyColors: usingCustom
           ? const FlexKeyColors(useSecondary: false, useTertiary: false)
           : const FlexKeyColors(useSecondary: true, useTertiary: true),
@@ -450,7 +546,7 @@ class AppTheme with ChangeNotifier {
       // 使用主题色系的基础暗色背景
       scaffoldBackgroundColor: colorScheme.surface,
 
-      // 对话框使用主题色系
+      // 对话框使用主题色系，确保不会出现紫色调
       dialogTheme: baseTheme.dialogTheme.copyWith(
         backgroundColor: colorScheme.surfaceContainerLow,
       ),
@@ -488,13 +584,13 @@ class AppTheme with ChangeNotifier {
         backgroundColor: colorScheme.surfaceContainer,
       ),
 
-      // 浮动操作按钮使用主题色系
+      // 浮动操作按钮使用主题色系，确保主色调正确应用
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),
 
-      // 列表项目使用主题色系
+      // 列表项目使用主题色系，避免紫色块状感
       listTileTheme: baseTheme.listTileTheme.copyWith(
         // 设为透明，避免 ListTile 再叠加一层带主色调的 surfaceContainerLow 造成紫色块状感
         tileColor: Colors.transparent,
