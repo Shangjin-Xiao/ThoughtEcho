@@ -7,6 +7,7 @@ import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
+import '../constants/app_constants.dart';
 
 /// 优化：使用StatelessWidget保持高性能，数据变化通过父组件管理
 class QuoteItemWidget extends StatelessWidget {
@@ -151,30 +152,45 @@ class QuoteItemWidget extends StatelessWidget {
       dayPeriod: quote.dayPeriod,
     );
 
-    return Container(
+    return AnimatedScale(
+      duration: AppConstants.defaultAnimationDuration,
+      curve: Curves.easeInOutCubic,
+      scale: isExpanded ? 1.0 : 0.997, // 细微缩放，提升过渡质感
+      child: AnimatedContainer(
       margin: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 6,
       ), // 减少水平边距从16到12，垂直从8到6
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        boxShadow: AppTheme.defaultShadow,
-        gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [cardColor, cardColor.withValues(alpha: 0.95)],
-              )
-            : null,
-        color: quote.colorHex == null || quote.colorHex!.isEmpty
-            ? cardColor
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12), // 减少内边距从16到12
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        duration: AppConstants.defaultAnimationDuration,
+        curve: Curves.easeInOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          boxShadow: isExpanded
+              ? [
+                  // 轻微增强阴影，提升展开时的质感
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : AppTheme.defaultShadow,
+          gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [cardColor, cardColor.withValues(alpha: 0.95)],
+                )
+              : null,
+          color: quote.colorHex == null || quote.colorHex!.isEmpty
+              ? cardColor
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12), // 减少内边距从16到12
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // 头部日期显示
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
@@ -241,17 +257,76 @@ class QuoteItemWidget extends StatelessWidget {
               ),
             ),
 
-            // 笔记内容 - 使用QuoteContent组件替换
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
-              child: QuoteContent(
-                quote: quote,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      height: 1.5,
-                    ),
-                maxLines: isExpanded ? null : 3,
-                showFullContent: isExpanded,
+            // 笔记内容 - 使用平滑展开/收起动画，并支持双击切换
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onDoubleTap: _needsExpansion(quote)
+                  ? () => onToggleExpanded(!isExpanded)
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
+                child: AnimatedSize(
+                  duration: AppConstants.defaultAnimationDuration,
+                  curve: Curves.easeInOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: Stack(
+                    children: [
+                      AnimatedSwitcher(
+                        duration: AppConstants.defaultAnimationDuration,
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        child: QuoteContent(
+                          key: ValueKey<bool>(isExpanded),
+                          quote: quote,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                height: 1.5,
+                              ),
+                          maxLines: isExpanded ? null : 3,
+                          showFullContent: isExpanded,
+                        ),
+                      ),
+                      // 折叠状态下的底部渐隐遮罩，提示可展开
+                      if (!isExpanded && _needsExpansion(quote))
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: IgnorePointer(
+                            ignoring: true,
+                            child: AnimatedOpacity(
+                              duration: AppConstants.defaultAnimationDuration,
+                              opacity: 1.0,
+                              child: Container(
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      (quote.colorHex == null || quote.colorHex!.isEmpty)
+                                          ? Colors.transparent
+                                          : cardColor.withOpacity(0.0),
+                                      (quote.colorHex == null || quote.colorHex!.isEmpty)
+                                          ? theme.colorScheme.surfaceContainerLowest
+                                              .withOpacity(0.9)
+                                          : cardColor.withOpacity(0.95),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -365,12 +440,15 @@ class QuoteItemWidget extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 2),
-                            Icon(
-                              isExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
-                              size: 14,
-                              color: theme.colorScheme.primary,
+                            AnimatedRotation(
+                              duration: AppConstants.defaultAnimationDuration,
+                              curve: Curves.easeInOutCubic,
+                              turns: isExpanded ? 0.5 : 0.0, // 180度旋转
+                              child: Icon(
+                                Icons.keyboard_arrow_down,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
                             ),
                           ],
                         ),
@@ -466,6 +544,7 @@ class QuoteItemWidget extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
