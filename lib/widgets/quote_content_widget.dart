@@ -210,42 +210,93 @@ class QuoteContent extends StatelessWidget {
         if (!showFullContent && maxLines != null && needsExpansion) {
           // 如果使用了加粗优先模式，直接显示（已经在_createBoldOnlyDocument中处理了截断）
           if (usedBoldOnlyMode) {
-            final estimatedLineHeight =
+            final double estimatedLineHeight =
                 (style?.height ?? 1.5) * (style?.fontSize ?? 14);
-            final maxHeight = estimatedLineHeight * maxLines!;
+            const int extraLines = 2;
+            final double maxHeightWithExtra =
+                estimatedLineHeight * (maxLines! + extraLines);
+            final double overlayHeight = estimatedLineHeight * extraLines;
+
+            final sharedScroll = ScrollController();
+            final fullController = quill.QuillController(
+              document: document,
+              selection: const TextSelection.collapsed(offset: 0),
+            );
+
+            final boldOnlyDoc = _createBoldOnlyDocument(
+                quote.deltaContent!, maxLines! + extraLines);
+            final boldController = quill.QuillController(
+              document: boldOnlyDoc,
+              selection: const TextSelection.collapsed(offset: 0),
+            );
+
+            final fullEditor = quill.QuillEditor(
+              controller: fullController,
+              scrollController: sharedScroll,
+              focusNode: FocusNode(),
+              config: quill.QuillEditorConfig(
+                enableInteractiveSelection: false,
+                enableSelectionToolbar: false,
+                showCursor: false,
+                embedBuilders: kIsWeb
+                    ? FlutterQuillEmbeds.editorWebBuilders()
+                    : QuillEditorExtensions.getEmbedBuilders(),
+                padding: EdgeInsets.zero,
+                expands: false,
+                scrollable: false,
+              ),
+            );
+
+            final boldEditor = quill.QuillEditor(
+              controller: boldController,
+              scrollController: sharedScroll,
+              focusNode: FocusNode(),
+              config: quill.QuillEditorConfig(
+                enableInteractiveSelection: false,
+                enableSelectionToolbar: false,
+                showCursor: false,
+                embedBuilders: kIsWeb
+                    ? FlutterQuillEmbeds.editorWebBuilders()
+                    : QuillEditorExtensions.getEmbedBuilders(),
+                padding: EdgeInsets.zero,
+                expands: false,
+                scrollable: false,
+              ),
+            );
+
             return ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
+              constraints: BoxConstraints(maxHeight: maxHeightWithExtra),
               child: Stack(
                 children: [
+                  // blurred full content beneath (only slight blur)
                   ClipRect(
-                    child: richTextEditor,
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 0.08, sigmaY: 0.08),
+                      child: fullEditor,
+                    ),
                   ),
+                  // clear bold text above so bold stays sharp
+                  IgnorePointer(
+                    child: ClipRect(
+                      child: boldEditor,
+                    ),
+                  ),
+                  // subtle gradient at fold edge
                   Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    height: 18,
+                    height: overlayHeight,
                     child: IgnorePointer(
-                      child: ClipRect(
-                        child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Theme.of(context)
-                                      .scaffoldBackgroundColor
-                                      .withValues(alpha: 0.03),
-                                  Theme.of(context)
-                                      .scaffoldBackgroundColor
-                                      .withValues(alpha: 0.07),
-                                ],
-                                stops: const [0.0, 0.6, 1.0],
-                              ),
-                            ),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Color(0x02000000),
+                            ],
                           ),
                         ),
                       ),
@@ -257,14 +308,18 @@ class QuoteContent extends StatelessWidget {
           }
 
           // 普通模式或没有加粗内容时，使用高度限制
-          final estimatedLineHeight =
+          final double estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
-          final maxHeight = estimatedLineHeight * maxLines!;
+          const int extraLines = 2;
+          final double maxHeight =
+              estimatedLineHeight * (maxLines! + extraLines);
+          final double overlayHeight = estimatedLineHeight * extraLines;
 
           return ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: Stack(
               children: [
+                // slightly blur only the folded area by overlaying a semi-transparent blurred layer
                 ClipRect(
                   child: richTextEditor,
                 ),
@@ -272,26 +327,20 @@ class QuoteContent extends StatelessWidget {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  height: 18,
+                  height: overlayHeight,
                   child: IgnorePointer(
                     child: ClipRect(
                       child: BackdropFilter(
-                        filter: ui.ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+                        filter: ui.ImageFilter.blur(sigmaX: 0.08, sigmaY: 0.08),
                         child: Container(
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.transparent,
-                                Theme.of(context)
-                                    .scaffoldBackgroundColor
-                                    .withValues(alpha: 0.03),
-                                Theme.of(context)
-                                    .scaffoldBackgroundColor
-                                    .withValues(alpha: 0.07),
+                                Color(0x02000000),
                               ],
-                              stops: const [0.0, 0.6, 1.0],
                             ),
                           ),
                         ),
