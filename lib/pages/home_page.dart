@@ -693,10 +693,10 @@ class _HomePageState extends State<HomePage>
     try {
       final db = Provider.of<DatabaseService>(context, listen: false);
       await db.incrementFavoriteCount(quote.id!);
-      
+
       // 检查mounted以确保widget还在树中
       if (!mounted) return;
-      
+
       // 显示简洁的反馈
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -720,7 +720,7 @@ class _HomePageState extends State<HomePage>
     } catch (e) {
       // 检查mounted以确保widget还在树中
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('收藏失败，请重试'),
@@ -1285,8 +1285,8 @@ class _HomePageState extends State<HomePage>
                     onDelete: _showDeleteConfirmDialog,
                     onAskAI: _showAIQuestionDialog,
                     onGenerateCard: _generateAICard,
-                    onFavorite: settingsService.showFavoriteButton 
-                        ? _handleFavoriteClick 
+                    onFavorite: settingsService.showFavoriteButton
+                        ? _handleFavoriteClick
                         : null, // 根据设置控制心形按钮显示
                     isLoadingTags: _isLoadingTags, // 传递标签加载状态
                     selectedWeathers: _selectedWeathers,

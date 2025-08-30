@@ -220,7 +220,8 @@ class Quote {
         deltaContent: json['delta_content']?.toString(),
         dayPeriod: json['day_period']?.toString(),
         lastModified: json['last_modified']?.toString(),
-        favoriteCount: (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
+        favoriteCount:
+            (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
       );
     } catch (e) {
       throw FormatException('解析Quote JSON失败: $e, JSON: $json');
