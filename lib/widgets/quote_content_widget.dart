@@ -81,7 +81,7 @@ class QuoteContent extends StatelessWidget {
           int currentLines = 0;
 
           // 工具：计算op可视行数（基于换行 + 末尾未闭合行）
-          int _opLineCount(String s) {
+          int opLineCount0(String s) {
             final newlineCount = '\n'.allMatches(s).length;
             final hasText = s.replaceAll('\n', '').isNotEmpty;
             if (hasText) {
@@ -94,7 +94,7 @@ class QuoteContent extends StatelessWidget {
 
           for (var op in boldOps) {
             String insert = op['insert'].toString();
-            final int opLineCount = _opLineCount(insert);
+            final int opLineCount = opLineCount0(insert);
 
             // 尚未达到限制，完整加入
             if (currentLines + opLineCount <= maxLines) {
@@ -125,7 +125,7 @@ class QuoteContent extends StatelessWidget {
                 linesBudget -= 1;
                 if (linesBudget > 0) {
                   // 仍有预算，保留换行进入文本
-                  kept[kept.length - 1] = kept.last + '\n';
+                  kept[kept.length - 1] = '${kept.last}\n';
                 }
               } else {
                 // 最后一段（无后续显式换行），如果该段非空，显示为一行
@@ -168,11 +168,8 @@ class QuoteContent extends StatelessWidget {
 
           return quill.Document.fromJson(finalOps);
         } else {
-          // 没有加粗内容，显示省略提示
-          return quill.Document.fromJson([
-            {'insert': '(无加粗内容，点击展开查看全文)', 'attributes': {'italic': true}},
-            {'insert': '\n'}
-          ]);
+          // 没有加粗内容，回退到原始文档
+          return quill.Document.fromJson(jsonDecode(deltaContent));
         }
       }
     } catch (_) {
@@ -217,7 +214,7 @@ class QuoteContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  final settingsService = Provider.of<SettingsService>(context);
+    final settingsService = Provider.of<SettingsService>(context);
     final prioritizeBoldContent =
         settingsService.prioritizeBoldContentInCollapse;
 
@@ -230,8 +227,9 @@ class QuoteContent extends StatelessWidget {
         );
 
         // 如果开启了优先显示加粗内容且需要折叠
-    quill.Document displayDocument;
-    bool usedBoldOnlyMode = false;
+        quill.Document displayDocument = document;
+        bool usedBoldOnlyMode = false;
+        
         if (!showFullContent && maxLines != null && prioritizeBoldContent) {
           final needsExpansion =
               _needsExpansionForRichText(quote.deltaContent!);
@@ -239,18 +237,12 @@ class QuoteContent extends StatelessWidget {
             final boldTexts = _extractBoldText(quote.deltaContent!);
             if (boldTexts.isNotEmpty) {
               // 有加粗内容，只显示加粗内容
-        displayDocument =
-          _createBoldOnlyDocument(quote.deltaContent!, maxLines!);
-        usedBoldOnlyMode = true;
-            } else {
-              // 没有加粗内容，使用原来的逻辑（显示前面几行）
-              displayDocument = document;
+              displayDocument =
+                  _createBoldOnlyDocument(quote.deltaContent!, maxLines!);
+              usedBoldOnlyMode = true;
             }
-          } else {
-            displayDocument = document;
+            // 没有加粗内容时，使用原始document的普通截断逻辑
           }
-        } else {
-          displayDocument = document;
         }
 
         // 创建只读QuillController
@@ -281,10 +273,15 @@ class QuoteContent extends StatelessWidget {
         );
 
         // 只有当内容确实需要折叠且处于折叠状态时，才应用高度限制
-    final bool needsExpansion =
-      _needsExpansionForRichText(quote.deltaContent!);
-    if (!usedBoldOnlyMode && !showFullContent && maxLines != null && needsExpansion) {
-          // 计算最大高度（每行大约24像素，根据实际字体大小调整）
+        final bool needsExpansion =
+            _needsExpansionForRichText(quote.deltaContent!);
+        if (!showFullContent && maxLines != null && needsExpansion) {
+          // 如果使用了加粗优先模式，直接显示（已经在_createBoldOnlyDocument中处理了截断）
+          if (usedBoldOnlyMode) {
+            return richTextEditor;
+          }
+          
+          // 普通模式或没有加粗内容时，使用高度限制
           final estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
           final maxHeight = estimatedLineHeight * maxLines!;
@@ -297,7 +294,7 @@ class QuoteContent extends StatelessWidget {
           );
         }
 
-        // 展开状态，显示完整内容
+        // 展开状态或无需折叠，显示完整内容
         return richTextEditor;
       } catch (e) {
         // 富文本解析失败，回退到普通文本显示

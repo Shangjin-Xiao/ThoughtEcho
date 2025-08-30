@@ -1036,7 +1036,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ],
         ),
         const SizedBox(height: 12),
-        ...favorited.take(3).map((q) => _buildFavoritePreviewChip(q)).toList(),
+        ...favorited.take(3).map((q) => _buildFavoritePreviewChip(q)),
       ],
     );
   }

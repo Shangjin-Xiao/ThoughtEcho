@@ -641,7 +641,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 处理临时媒体文件，带进度
     // 为了在保存失败时回滚，记录本次从临时目录移动到永久目录的文件
-    final List<String> _movedToPermanentForThisSave = [];
+    final List<String> movedToPermanentForThisSave = [];
     try {
       await _processTemporaryMediaFiles(onProgress: (p, status) {
         if (mounted) {
@@ -653,7 +653,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }, onFileMoved: (permanentPath) {
         // 仅记录位于应用永久媒体目录下的路径
         if (permanentPath.isNotEmpty) {
-          _movedToPermanentForThisSave.add(permanentPath);
+          movedToPermanentForThisSave.add(permanentPath);
         }
       });
     } catch (e) {
@@ -783,7 +783,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
       try {
-        for (final p in _movedToPermanentForThisSave) {
+        for (final p in movedToPermanentForThisSave) {
           final f = File(p);
           if (await f.exists()) {
             await f.delete();
