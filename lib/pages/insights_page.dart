@@ -629,9 +629,9 @@ class _InsightsPageState extends State<InsightsPage> {
         children: [
           // 本周最受喜爱的笔记
           _buildWeeklyFavoritesSection(theme),
-          
+
           const SizedBox(height: 24),
-          
+
           Text(
             '选择分析方式',
             style: theme.textTheme.titleMedium?.copyWith(
@@ -836,7 +836,7 @@ class _InsightsPageState extends State<InsightsPage> {
   // 构建本周最受喜爱的笔记部分
   Widget _buildWeeklyFavoritesSection(ThemeData theme) {
     final databaseService = Provider.of<DatabaseService>(context);
-    
+
     return FutureBuilder<List<Quote>>(
       future: databaseService.getMostFavoritedQuotesThisWeek(limit: 3),
       builder: (context, snapshot) {
@@ -912,58 +912,58 @@ class _InsightsPageState extends State<InsightsPage> {
             ),
             const SizedBox(height: 12),
             ...favorites.map((quote) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.red.shade100,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade400,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.favorite,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${quote.favoriteCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.red.shade100,
+                      width: 1,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      quote.content.length > 50 
-                          ? '${quote.content.substring(0, 50)}...'
-                          : quote.content,
-                      style: theme.textTheme.bodyMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.favorite,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${quote.favoriteCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          quote.content.length > 50
+                              ? '${quote.content.substring(0, 50)}...'
+                              : quote.content,
+                          style: theme.textTheme.bodyMedium,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
           ],
         );
       },

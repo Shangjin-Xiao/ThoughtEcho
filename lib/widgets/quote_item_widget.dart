@@ -157,392 +157,441 @@ class QuoteItemWidget extends StatelessWidget {
     );
 
     return AnimatedScale(
-      duration: AppConstants.defaultAnimationDuration,
-      curve: Curves.easeInOutCubic,
-      scale: isExpanded ? 1.0 : 0.997, // 细微缩放，提升过渡质感
-      child: AnimatedContainer(
-        margin: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ), // 减少水平边距从16到12，垂直从8到6
         duration: AppConstants.defaultAnimationDuration,
         curve: Curves.easeInOutCubic,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          boxShadow: isExpanded
-              ? [
-                  // 轻微增强阴影，提升展开时的质感
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : AppTheme.defaultShadow,
-          gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [cardColor, cardColor.withValues(alpha: 0.95)],
-                )
-              : null,
-          color: quote.colorHex == null || quote.colorHex!.isEmpty
-              ? cardColor
-              : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12), // 减少内边距从16到12
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            // 头部日期显示
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    formattedDate,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.applyOpacity(
-                        0.7,
-                      ), // MODIFIED
+        scale: isExpanded ? 1.0 : 0.997, // 细微缩放，提升过渡质感
+        child: AnimatedContainer(
+          margin: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ), // 减少水平边距从16到12，垂直从8到6
+          duration: AppConstants.defaultAnimationDuration,
+          curve: Curves.easeInOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            boxShadow: isExpanded
+                ? [
+                    // 轻微增强阴影，提升展开时的质感
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
                     ),
-                  ),
-                  if (quote.location != null || quote.weather != null)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (quote.location != null) ...[
-                          Icon(
-                            Icons.location_on,
-                            size: 14,
-                            color: theme.colorScheme.secondary.applyOpacity(
-                              // MODIFIED
-                              0.7,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            quote.location!.split(',').length >= 3
-                                ? (quote.location!.split(',').length >= 4
-                                    ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
-                                    : quote.location!.split(',')[2]) // 只有城市
-                                : quote.location!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.secondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                        if (quote.location != null && quote.weather != null)
-                          const SizedBox(width: 8),
-                        if (quote.weather != null) ...[
-                          Icon(
-                            _getWeatherIcon(quote.weather!),
-                            size: 14,
-                            color: theme.colorScheme.secondary.applyOpacity(
-                              // MODIFIED
-                              0.7,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${WeatherService.getWeatherDescription(quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.secondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                ],
-              ),
-            ),
-
-            // 笔记内容 - 支持双击展开/折叠
-            GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onDoubleTap: _needsExpansion(quote)
-                  ? () => onToggleExpanded(!isExpanded)
-                  : null,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                child: Stack(
-                  children: [
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeInOutCubicEmphasized,
-                      alignment: Alignment.topCenter,
-                      child: QuoteContent(
-                        quote: quote,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              height: 1.5,
-                            ),
-                        maxLines: isExpanded ? null : 3,
-                        showFullContent: isExpanded,
+                  ]
+                : AppTheme.defaultShadow,
+            gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [cardColor, cardColor.withValues(alpha: 0.95)],
+                  )
+                : null,
+            color: quote.colorHex == null || quote.colorHex!.isEmpty
+                ? cardColor
+                : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12), // 减少内边距从16到12
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 头部日期显示
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        formattedDate,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.applyOpacity(
+                            0.7,
+                          ), // MODIFIED
+                        ),
                       ),
-                    ),
-                    if (!isExpanded && _needsExpansion(quote))
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: 28,
-                        child: ClipRect(
-                          child: BackdropFilter(
-                            filter: ui.ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-                            child: Container(
-                              alignment: Alignment.center,
-                              color: theme.colorScheme.surface.withValues(alpha: 0.08),
-                              child: Text(
-                                '双击查看全文',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                  fontSize: 11,
-                                  fontStyle: FontStyle.italic,
+                      if (quote.location != null || quote.weather != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (quote.location != null) ...[
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: theme.colorScheme.secondary.applyOpacity(
+                                  // MODIFIED
+                                  0.7,
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 2),
+                              Text(
+                                quote.location!.split(',').length >= 3
+                                    ? (quote.location!.split(',').length >= 4
+                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
+                                        : quote.location!.split(',')[2]) // 只有城市
+                                    : quote.location!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.secondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                            if (quote.location != null && quote.weather != null)
+                              const SizedBox(width: 8),
+                            if (quote.weather != null) ...[
+                              Icon(
+                                _getWeatherIcon(quote.weather!),
+                                size: 14,
+                                color: theme.colorScheme.secondary.applyOpacity(
+                                  // MODIFIED
+                                  0.7,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${WeatherService.getWeatherDescription(quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.secondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+
+                // 笔记内容 - 支持双击展开/折叠
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onDoubleTap: _needsExpansion(quote)
+                      ? () => onToggleExpanded(!isExpanded)
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                    child: Stack(
+                      children: [
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeInOutCubicEmphasized,
+                          alignment: Alignment.topCenter,
+                          child: QuoteContent(
+                            quote: quote,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  height: 1.5,
+                                ),
+                            maxLines: isExpanded ? null : 3,
+                            showFullContent: isExpanded,
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // 来源信息（如果有）
-            if ((quote.sourceAuthor != null &&
-                    quote.sourceAuthor!.isNotEmpty) ||
-                (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-                child: Text(
-                  _formatSource(
-                    quote.sourceAuthor ?? '',
-                    quote.sourceWork ?? '',
-                  ),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.75,
-                    ), // MODIFIED
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-                child: Text(
-                  quote.source!,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.75,
-                    ), // MODIFIED
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-
-            // 底部工具栏 - 标签、心形和更多按钮在同一行
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-              child: Row(
-                children: [
-                  if (quote.tagIds.isNotEmpty) ...[
-                    Icon(
-                      Icons.label_outline,
-                      size: 16,
-                      color: theme.colorScheme.onSurface.applyOpacity(0.6),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: SizedBox(
-                        height: 32,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: quote.tagIds.length,
-                          itemBuilder: (context, index) {
-                            final tagId = quote.tagIds[index];
-                            final tag = tags.firstWhere(
-                              (t) => t.id == tagId,
-                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-                            );
-
-                            return Container(
-                              margin: EdgeInsets.only(
-                                right: index < quote.tagIds.length - 1 ? 8 : 0,
-                              ),
-                              child: tagBuilder != null
-                                  ? tagBuilder!(tag)
-                                  : Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary.applyOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                                          width: 0.5,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (tag.iconName?.isNotEmpty == true) ...[
-                                            if (IconUtils.isEmoji(tag.iconName!)) ...[
-                                              Text(
-                                                IconUtils.getDisplayIcon(tag.iconName!),
-                                                style: const TextStyle(fontSize: 12),
-                                              ),
-                                              const SizedBox(width: 3),
-                                            ] else ...[
-                                              Icon(
-                                                IconUtils.getIconData(tag.iconName!),
-                                                size: 12,
-                                                color: theme.colorScheme.primary,
-                                              ),
-                                              const SizedBox(width: 3),
-                                            ],
-                                          ],
-                                          Text(
-                                            tag.name,
-                                            style: theme.textTheme.bodySmall?.copyWith(
-                                              color: theme.colorScheme.primary,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ] else ...[
-                    const Expanded(child: SizedBox.shrink()),
-                  ],
-
-                  // 心形按钮（如果启用）
-                  if (onFavorite != null) ...[
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onFavorite,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Stack(
-                            children: [
-                              Icon(
-                                quote.favoriteCount > 0 ? Icons.favorite : Icons.favorite_border,
-                                size: 20,
-                                color: quote.favoriteCount > 0 ? Colors.red.shade400 : theme.colorScheme.onSurface.applyOpacity(0.6),
-                              ),
-                              if (quote.favoriteCount > 0)
-                                Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade600,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: (quote.colorHex == null || quote.colorHex!.isEmpty) ? theme.colorScheme.surfaceContainerLowest : cardColor,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                                    child: Text(
-                                      quote.favoriteCount > 99 ? '99+' : '${quote.favoriteCount}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, height: 1.0),
-                                      textAlign: TextAlign.center,
+                        if (!isExpanded && _needsExpansion(quote))
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: 28,
+                            child: ClipRect(
+                              child: BackdropFilter(
+                                filter: ui.ImageFilter.blur(
+                                    sigmaX: 3.0, sigmaY: 3.0),
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  color: theme.colorScheme.surface
+                                      .withValues(alpha: 0.08),
+                                  child: Text(
+                                    '双击查看全文',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
                                 ),
-                            ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                  ],
+                  ),
+                ),
 
-                  // 更多操作按钮
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_vert,
-                      color: theme.colorScheme.onSurface.applyOpacity(0.7),
+                // 来源信息（如果有）
+                if ((quote.sourceAuthor != null &&
+                        quote.sourceAuthor!.isNotEmpty) ||
+                    (quote.sourceWork != null &&
+                        quote.sourceWork!.isNotEmpty)) ...[
+                  Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
+                    child: Text(
+                      _formatSource(
+                        quote.sourceAuthor ?? '',
+                        quote.sourceWork ?? '',
+                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.applyOpacity(
+                          0.75,
+                        ), // MODIFIED
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    onSelected: (value) {
-                      if (value == 'ask') {
-                        onAskAI();
-                      } else if (value == 'edit') {
-                        onEdit();
-                      } else if (value == 'generate_card') {
-                        onGenerateCard?.call();
-                      } else if (value == 'delete') {
-                        onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, color: theme.colorScheme.primary),
-                            const SizedBox(width: 8),
-                            const Text('编辑笔记'),
-                          ],
-                        ),
+                  ),
+                ] else if (quote.source != null &&
+                    quote.source!.isNotEmpty) ...[
+                  Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
+                    child: Text(
+                      quote.source!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.applyOpacity(
+                          0.75,
+                        ), // MODIFIED
+                        fontStyle: FontStyle.italic,
                       ),
-                      PopupMenuItem<String>(
-                        value: 'ask',
-                        child: Row(
-                          children: [
-                            Icon(Icons.question_answer, color: theme.colorScheme.primary),
-                            const SizedBox(width: 8),
-                            const Text('向AI提问'),
-                          ],
+                    ),
+                  ),
+                ],
+
+                // 底部工具栏 - 标签、心形和更多按钮在同一行
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                  child: Row(
+                    children: [
+                      if (quote.tagIds.isNotEmpty) ...[
+                        Icon(
+                          Icons.label_outline,
+                          size: 16,
+                          color: theme.colorScheme.onSurface.applyOpacity(0.6),
                         ),
-                      ),
-                      if (onGenerateCard != null)
-                        PopupMenuItem<String>(
-                          value: 'generate_card',
-                          child: Row(
-                            children: [
-                              Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
-                              const SizedBox(width: 8),
-                              const Text('生成卡片分享'),
-                            ],
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: SizedBox(
+                            height: 32,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: quote.tagIds.length,
+                              itemBuilder: (context, index) {
+                                final tagId = quote.tagIds[index];
+                                final tag = tags.firstWhere(
+                                  (t) => t.id == tagId,
+                                  orElse: () =>
+                                      NoteCategory(id: tagId, name: '未知标签'),
+                                );
+
+                                return Container(
+                                  margin: EdgeInsets.only(
+                                    right:
+                                        index < quote.tagIds.length - 1 ? 8 : 0,
+                                  ),
+                                  child: tagBuilder != null
+                                      ? tagBuilder!(tag)
+                                      : Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.primary
+                                                .applyOpacity(0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: 0.3),
+                                              width: 0.5,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (tag.iconName?.isNotEmpty ==
+                                                  true) ...[
+                                                if (IconUtils.isEmoji(
+                                                    tag.iconName!)) ...[
+                                                  Text(
+                                                    IconUtils.getDisplayIcon(
+                                                        tag.iconName!),
+                                                    style: const TextStyle(
+                                                        fontSize: 12),
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                ] else ...[
+                                                  Icon(
+                                                    IconUtils.getIconData(
+                                                        tag.iconName!),
+                                                    size: 12,
+                                                    color: theme
+                                                        .colorScheme.primary,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                ],
+                                              ],
+                                              Text(
+                                                tag.name,
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Text('删除笔记', style: TextStyle(color: theme.colorScheme.error)),
-                          ],
+                      ] else ...[
+                        const Expanded(child: SizedBox.shrink()),
+                      ],
+
+                      // 心形按钮（如果启用）
+                      if (onFavorite != null) ...[
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onFavorite,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Stack(
+                                children: [
+                                  Icon(
+                                    quote.favoriteCount > 0
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    size: 20,
+                                    color: quote.favoriteCount > 0
+                                        ? Colors.red.shade400
+                                        : theme.colorScheme.onSurface
+                                            .applyOpacity(0.6),
+                                  ),
+                                  if (quote.favoriteCount > 0)
+                                    Positioned(
+                                      right: -2,
+                                      top: -2,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade600,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: (quote.colorHex == null ||
+                                                    quote.colorHex!.isEmpty)
+                                                ? theme.colorScheme
+                                                    .surfaceContainerLowest
+                                                : cardColor,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        constraints: const BoxConstraints(
+                                            minWidth: 16, minHeight: 16),
+                                        child: Text(
+                                          quote.favoriteCount > 99
+                                              ? '99+'
+                                              : '${quote.favoriteCount}',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              height: 1.0),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 4),
+                      ],
+
+                      // 更多操作按钮
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: theme.colorScheme.onSurface.applyOpacity(0.7),
+                        ),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        onSelected: (value) {
+                          if (value == 'ask') {
+                            onAskAI();
+                          } else if (value == 'edit') {
+                            onEdit();
+                          } else if (value == 'generate_card') {
+                            onGenerateCard?.call();
+                          } else if (value == 'delete') {
+                            onDelete();
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit,
+                                    color: theme.colorScheme.primary),
+                                const SizedBox(width: 8),
+                                const Text('编辑笔记'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'ask',
+                            child: Row(
+                              children: [
+                                Icon(Icons.question_answer,
+                                    color: theme.colorScheme.primary),
+                                const SizedBox(width: 8),
+                                const Text('向AI提问'),
+                              ],
+                            ),
+                          ),
+                          if (onGenerateCard != null)
+                            PopupMenuItem<String>(
+                              value: 'generate_card',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.auto_awesome,
+                                      color: theme.colorScheme.primary),
+                                  const SizedBox(width: 8),
+                                  const Text('生成卡片分享'),
+                                ],
+                              ),
+                            ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.delete, color: Colors.red),
+                                const SizedBox(width: 8),
+                                Text('删除笔记',
+                                    style: TextStyle(
+                                        color: theme.colorScheme.error)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
   }
 }

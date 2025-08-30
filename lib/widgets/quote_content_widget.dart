@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'dart:convert';
+import 'dart:ui' as ui;
 import '../models/quote_model.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -162,12 +163,14 @@ class QuoteContent extends StatelessWidget {
         bool usedBoldOnlyMode = false;
 
         if (!showFullContent && maxLines != null && prioritizeBoldContent) {
-          final needsExpansion = _needsExpansionForRichText(quote.deltaContent!);
+          final needsExpansion =
+              _needsExpansionForRichText(quote.deltaContent!);
           if (needsExpansion) {
             final boldTexts = _extractBoldText(quote.deltaContent!);
             if (boldTexts.isNotEmpty) {
               // 有加粗内容，只显示加粗内容
-              displayDocument = _createBoldOnlyDocument(quote.deltaContent!, maxLines!);
+              displayDocument =
+                  _createBoldOnlyDocument(quote.deltaContent!, maxLines!);
               usedBoldOnlyMode = true;
             }
             // 注意：没有加粗内容时，保持使用原始document，稍后会应用普通的高度限制
@@ -212,12 +215,41 @@ class QuoteContent extends StatelessWidget {
             final maxHeight = estimatedLineHeight * maxLines!;
             return ConstrainedBox(
               constraints: BoxConstraints(maxHeight: maxHeight),
-              child: ClipRect(
-                child: richTextEditor,
+              child: Stack(
+                children: [
+                  ClipRect(
+                    child: richTextEditor,
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 24,
+                    child: IgnorePointer(
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Theme.of(context)
+                                    .scaffoldBackgroundColor
+                                    .withValues(alpha: 0.18),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }
-          
+
           // 普通模式或没有加粗内容时，使用高度限制
           final estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
@@ -225,8 +257,37 @@ class QuoteContent extends StatelessWidget {
 
           return ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ClipRect(
-              child: richTextEditor,
+            child: Stack(
+              children: [
+                ClipRect(
+                  child: richTextEditor,
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 24,
+                  child: IgnorePointer(
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Theme.of(context)
+                                  .scaffoldBackgroundColor
+                                  .withValues(alpha: 0.18),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }

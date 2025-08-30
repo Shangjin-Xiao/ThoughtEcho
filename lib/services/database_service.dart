@@ -793,8 +793,8 @@ class DatabaseService extends ChangeNotifier {
         final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
         final hasColumn = columns.any((col) => col['name'] == 'favorite_count');
         if (!hasColumn) {
-          await txn
-              .execute('ALTER TABLE quotes ADD COLUMN favorite_count INTEGER DEFAULT 0');
+          await txn.execute(
+              'ALTER TABLE quotes ADD COLUMN favorite_count INTEGER DEFAULT 0');
           logDebug('数据库升级：quotes表 favorite_count 字段添加完成');
         } else {
           logDebug('数据库升级：quotes表 favorite_count 字段已存在，跳过添加');
@@ -3229,11 +3229,11 @@ class DatabaseService extends ChangeNotifier {
           await txn.delete('quotes', where: 'id = ?', whereArgs: [id]);
         });
 
-  // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
+        // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
         await MediaReferenceService.removeAllReferencesForQuote(id);
 
-  // 检查并清理孤儿媒体文件（合并来源：引用表 + 内容提取）
-  for (final storedPath in mediaPathsToCheck) {
+        // 检查并清理孤儿媒体文件（合并来源：引用表 + 内容提取）
+        for (final storedPath in mediaPathsToCheck) {
           final refCount =
               await MediaReferenceService.getReferenceCount(storedPath);
           if (refCount == 0) {
@@ -3299,12 +3299,12 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
-  return _executeWithLock('updateQuote_${quote.id}', () async {
+    return _executeWithLock('updateQuote_${quote.id}', () async {
       try {
         final db = await safeDatabase;
-    // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
-    final List<String> oldReferencedFiles =
-      await MediaReferenceService.getReferencedFiles(quote.id!);
+        // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
+        final List<String> oldReferencedFiles =
+            await MediaReferenceService.getReferencedFiles(quote.id!);
         await db.transaction((txn) async {
           final quoteMap = quote.toJson();
 
@@ -3473,9 +3473,10 @@ class DatabaseService extends ChangeNotifier {
       final now = DateTime.now();
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       final weekStartString = weekStart.toIso8601String().substring(0, 10);
-      
+
       return _memoryStore
-          .where((q) => q.date.compareTo(weekStartString) >= 0 && q.favoriteCount > 0)
+          .where((q) =>
+              q.date.compareTo(weekStartString) >= 0 && q.favoriteCount > 0)
           .toList()
         ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount))
         ..take(limit).toList();

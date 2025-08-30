@@ -433,14 +433,14 @@ class NoteListViewState extends State<NoteListView> {
       // 方法1：使用index计算滚动位置（更可靠）
       const double estimatedItemHeight = 200.0; // 估算的笔记卡片高度
       final double targetPosition = index * estimatedItemHeight;
-      
+
       // 获取当前滚动位置
       final double currentPosition = _scrollController.offset;
       final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-      
+
       // 计算安全的滚动位置
       final double safePosition = targetPosition.clamp(0.0, maxScrollExtent);
-      
+
       // 只有当目标位置与当前位置差距较大时才滚动
       if ((safePosition - currentPosition).abs() > 50) {
         _scrollController.animateTo(
@@ -594,7 +594,7 @@ class NoteListViewState extends State<NoteListView> {
                   setState(() {
                     _expandedItems[quote.id!] = expanded;
                   });
-                  
+
                   // 折叠后滚动到笔记顶部
                   if (!expanded) {
                     _scrollToItem(quote.id!, index);

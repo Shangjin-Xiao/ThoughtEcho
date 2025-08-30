@@ -110,8 +110,10 @@ class AppTheme with ChangeNotifier {
         ).copyWith(
           // 确保主要颜色不会太偏紫
           primary: _adjustPurpleTint(_customColor!, Brightness.light),
-          secondary: _adjustPurpleTint(_customColor!, Brightness.light).withValues(alpha: 0.8),
-          tertiary: _adjustPurpleTint(_customColor!, Brightness.light).withValues(alpha: 0.6),
+          secondary: _adjustPurpleTint(_customColor!, Brightness.light)
+              .withValues(alpha: 0.8),
+          tertiary: _adjustPurpleTint(_customColor!, Brightness.light)
+              .withValues(alpha: 0.6),
         );
       }
 
@@ -146,8 +148,10 @@ class AppTheme with ChangeNotifier {
         ).copyWith(
           // 确保主要颜色不会太偏紫
           primary: _adjustPurpleTint(_customColor!, Brightness.dark),
-          secondary: _adjustPurpleTint(_customColor!, Brightness.dark).withValues(alpha: 0.8),
-          tertiary: _adjustPurpleTint(_customColor!, Brightness.dark).withValues(alpha: 0.6),
+          secondary: _adjustPurpleTint(_customColor!, Brightness.dark)
+              .withValues(alpha: 0.8),
+          tertiary: _adjustPurpleTint(_customColor!, Brightness.dark)
+              .withValues(alpha: 0.6),
         );
       }
 
@@ -169,7 +173,8 @@ class AppTheme with ChangeNotifier {
 
   // 强制刷新主题，确保所有UI组件正确更新
   void forceRefreshTheme() {
-    logDebug('强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode');
+    logDebug(
+        '强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode');
     notifyListeners();
   }
 
@@ -187,7 +192,9 @@ class AppTheme with ChangeNotifier {
     }
 
     // 另外检查RGB值，如果蓝色分量明显高于红色和绿色，也可能是紫色调
-    if (color.b > color.r * 1.2 && color.b > color.g * 1.2 && saturation > 0.2) {
+    if (color.b > color.r * 1.2 &&
+        color.b > color.g * 1.2 &&
+        saturation > 0.2) {
       return true;
     }
 

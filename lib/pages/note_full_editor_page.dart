@@ -751,7 +751,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         });
       }
 
-  if (widget.initialQuote != null && widget.initialQuote?.id != null) {
+      if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
         await db.updateQuote(quote);
@@ -2422,7 +2422,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       final permanentPath = await TemporaryMediaService.moveToPermament(
         sourcePath,
         onProgress: onFileProgress,
-  deleteSource: false,
+        deleteSource: false,
       );
       if (permanentPath != null) {
         processedFiles[sourcePath] = permanentPath;
