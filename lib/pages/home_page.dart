@@ -119,9 +119,10 @@ class _HomePageState extends State<HomePage>
 
       // 获取最近的周期洞察（本周、上周、本月、上月）
       final insightHistoryService = context.read<InsightHistoryService>();
-      final recentInsights = await insightHistoryService.formatRecentInsightsForDailyPrompt();
+      final recentInsights =
+          await insightHistoryService.formatRecentInsightsForDailyPrompt();
       logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
-      
+
       // Call the new stream method with environment context and historical insights
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
         city: city,
@@ -854,7 +855,7 @@ class _HomePageState extends State<HomePage>
         height: 1200,
         scaleFactor: 2.0,
         renderMode: ExportRenderMode.contain,
-  context: context,
+        context: context,
       );
 
       if (mounted) {

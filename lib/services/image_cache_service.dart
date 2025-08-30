@@ -107,7 +107,7 @@ class ImageCacheService {
       }
     }
 
-      if (oldestKey != null) {
+    if (oldestKey != null) {
       _removeCacheEntry(oldestKey);
       if (kDebugMode) {
         AppLogger.d('移除最旧缓存条目: $oldestKey', source: 'ImageCacheService');

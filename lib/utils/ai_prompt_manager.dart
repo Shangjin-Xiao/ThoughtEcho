@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 /// AI提示词管理器
 ///
 /// 统一管理所有AI服务使用的系统提示词，避免重复代码
@@ -315,7 +316,7 @@ $question''';
     // 格式化完整的时间信息，包含日期以便AI识别节日
     String timeInfo;
     String dateInfo = '$month月$day日';
-    
+
     if (hour >= 5 && hour < 12) {
       timeInfo =
           '$dateInfo 早晨 ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
@@ -331,7 +332,7 @@ $question''';
     }
 
     String environmentInfo = '';
-    
+
     // 处理环境信息
     if (city != null || weather != null || temperature != null) {
       String envDetails = '';
@@ -344,7 +345,7 @@ $question''';
       if (temperature != null && temperature.isNotEmpty) {
         envDetails += '温度：$temperature°C';
       }
-      
+
       if (envDetails.isNotEmpty) {
         environmentInfo = '\n当前环境信息：$envDetails';
       }
@@ -353,7 +354,8 @@ $question''';
     // 处理历史洞察信息
     String insightContext = '';
     if (historicalInsights != null && historicalInsights.isNotEmpty) {
-      insightContext = '\n\n【历史洞察参考】\n以下是用户最近的一些思考洞察，你可以选择性地引用这些内容来启发今日的思考提示，也可以完全不引用：\n$historicalInsights\n注意：这些历史洞察仅供参考，请根据当前时间和环境情况，生成符合当下情境的独特思考提示。';
+      insightContext =
+          '\n\n【历史洞察参考】\n以下是用户最近的一些思考洞察，你可以选择性地引用这些内容来启发今日的思考提示，也可以完全不引用：\n$historicalInsights\n注意：这些历史洞察仅供参考，请根据当前时间和环境情况，生成符合当下情境的独特思考提示。';
     }
 
     return '''你是一个富有诗意和哲思的写作助手，专门为用户生成每日思考提示词。
@@ -455,7 +457,8 @@ $question''';
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
-    final tagText = topTag != null && topTag.trim().isNotEmpty ? '#$topTag' : '—';
+    final tagText =
+        topTag != null && topTag.trim().isNotEmpty ? '#$topTag' : '—';
 
     final stats = [
       '周期：$periodLabel',
@@ -469,9 +472,10 @@ $question''';
 
     // 优先使用完整内容，其次使用预览内容
     final contentForAnalysis = fullNotesContent ?? notesPreview;
-    final contentSection = (contentForAnalysis == null || contentForAnalysis.trim().isEmpty)
-        ? '（无可用笔记内容）'
-        : contentForAnalysis;
+    final contentSection =
+        (contentForAnalysis == null || contentForAnalysis.trim().isEmpty)
+            ? '（无可用笔记内容）'
+            : contentForAnalysis;
 
     return '''【统计数据】
 $stats
@@ -497,28 +501,38 @@ $contentSection
   }) {
     final time = mostTimePeriod ?? '本期时段分布较均衡';
     final weather = mostWeather ?? '天气因素不明显';
-    final tag = (topTag != null && topTag.trim().isNotEmpty)
-        ? '#$topTag'
-        : '主题尚未收敛';
+    final tag =
+        (topTag != null && topTag.trim().isNotEmpty) ? '#$topTag' : '主题尚未收敛';
 
     // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
     final rng = math.Random();
     final styleIndex = rng.nextInt(3);
-    
+
     switch (styleIndex) {
       case 0: // 温暖陪伴型
-        return _generateWarmCompanionInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+        return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
+            activeDays, noteCount, totalWordCount);
       case 1: // 诗意文艺型
-        return _generatePoeticInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+        return _generatePoeticInsight(periodLabel, time, weather, tag,
+            activeDays, noteCount, totalWordCount);
       case 2: // 成长导师型
-        return _generateGrowthMentorInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+        return _generateGrowthMentorInsight(periodLabel, time, weather, tag,
+            activeDays, noteCount, totalWordCount);
       default:
-        return _generateWarmCompanionInsight(periodLabel, time, weather, tag, activeDays, noteCount, totalWordCount);
+        return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
+            activeDays, noteCount, totalWordCount);
     }
   }
 
   /// 温暖陪伴型洞察
-  String _generateWarmCompanionInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+  String _generateWarmCompanionInsight(
+      String periodLabel,
+      String time,
+      String weather,
+      String tag,
+      int activeDays,
+      int noteCount,
+      int totalWordCount) {
     final templates = [
       '这$periodLabel你坚持了$activeDays天记录，共写下$noteCount篇温暖的文字。看起来你更喜欢在$time书写，$weather是你的创作伙伴，$tag充满了你的思绪。',
       '一个$periodLabel来，你用$activeDays天时光记录了生活的点滴。$time的时候，你写得最多，$weather见证着$tag的绽放。',
@@ -529,7 +543,8 @@ $contentSection
   }
 
   /// 诗意文艺型洞察
-  String _generatePoeticInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+  String _generatePoeticInsight(String periodLabel, String time, String weather,
+      String tag, int activeDays, int noteCount, int totalWordCount) {
     final templates = [
       '时光如水，你用$activeDays个日夜编织了$noteCount个故事片段。$time是你的缪斯时刻，$weather见证着$tag的绽放。',
       '一$periodLabel光阴里，你在$activeDays个日子种下文字的种子。$time最懂你的心思，$tag在笔尖流淌。',
@@ -540,7 +555,14 @@ $contentSection
   }
 
   /// 成长导师型洞察
-  String _generateGrowthMentorInsight(String periodLabel, String time, String weather, String tag, int activeDays, int noteCount, int totalWordCount) {
+  String _generateGrowthMentorInsight(
+      String periodLabel,
+      String time,
+      String weather,
+      String tag,
+      int activeDays,
+      int noteCount,
+      int totalWordCount) {
     final templates = [
       '本$periodLabel你保持了$activeDays天的记录习惯，积累了$totalWordCount字的思考财富。$time的安静最适合你深度思考，$tag值得进一步探索。',
       '这一$periodLabel你在思考的路上走了$activeDays天，留下了$noteCount篇成长足迹。$time激发你的灵感，$tag或许是下一个突破点。',

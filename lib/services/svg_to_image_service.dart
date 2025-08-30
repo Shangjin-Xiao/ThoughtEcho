@@ -116,7 +116,8 @@ class SvgToImageService {
         onProgress?.call(i + 1, svgContents.length);
       } catch (e) {
         // 使用统一日志服务记录批量转换错误
-        AppLogger.w('批量转换第${i + 1}个SVG失败: $e', error: e, source: 'SvgToImageService');
+        AppLogger.w('批量转换第${i + 1}个SVG失败: $e',
+            error: e, source: 'SvgToImageService');
         // 添加错误图片
         final errorImage =
             await _generateErrorImage(width, height, format, e.toString());

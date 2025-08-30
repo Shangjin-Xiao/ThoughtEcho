@@ -525,6 +525,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 // 添加剪贴板监控设置
                 _buildClipboardMonitoringItem(context),
 
+                // 添加折叠时优先显示加粗内容设置
+                _buildPrioritizeBoldContentItem(context),
+
                 // 添加默认启动页面设置
                 _buildDefaultStartPageItem(context),
 
@@ -846,6 +849,19 @@ class _SettingsPageState extends State<SettingsPage> {
       value: clipboardService.enableClipboardMonitoring,
       onChanged: (value) {
         clipboardService.setEnableClipboardMonitoring(value);
+      },
+    );
+  }
+
+  // 构建折叠时优先显示加粗内容设置项
+  Widget _buildPrioritizeBoldContentItem(BuildContext context) {
+    final settingsService = Provider.of<SettingsService>(context);
+    return SwitchListTile(
+      title: const Text('优先显示加粗内容'),
+      subtitle: const Text('在笔记卡片折叠时优先显示加粗的文字内容'),
+      value: settingsService.prioritizeBoldContentInCollapse,
+      onChanged: (value) {
+        settingsService.setPrioritizeBoldContentInCollapse(value);
       },
     );
   }

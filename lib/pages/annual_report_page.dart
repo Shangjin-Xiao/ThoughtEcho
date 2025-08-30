@@ -67,7 +67,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     _controller.dispose();
     _slideController.dispose();
     _pageController.dispose();
-  _insightSub?.cancel();
+    _insightSub?.cancel();
     super.dispose();
   }
 
@@ -88,9 +88,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       });
     }
 
-  // 计算额外指标并生成洞察
-  _computeExtras(yearQuotes, resolvedStats);
-  _maybeStartInsight();
+    // 计算额外指标并生成洞察
+    _computeExtras(yearQuotes, resolvedStats);
+    _maybeStartInsight();
   }
 
   Future<AnnualStats> _resolveTagNames(AnnualStats stats) async {
@@ -160,7 +160,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         : null;
 
     // 最常用标签名（topTags 已解析名称）
-    final topTagName = stats.topTags.isNotEmpty ? stats.topTags.first.name : null;
+    final topTagName =
+        stats.topTags.isNotEmpty ? stats.topTags.first.name : null;
 
     // 笔记片段预览（最多5条，每条截断80字）
     final samples = quotes.take(5).map((q) {
@@ -198,40 +199,40 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         _insightLoading = true;
       });
       final ai = context.read<AIService>();
-      
-      // 准备完整的笔记内容用于AI分析  
+
+      // 准备完整的笔记内容用于AI分析
       final fullNotesContent = widget.quotes.map((quote) {
         final date = DateTime.parse(quote.date);
         final dateStr = '${date.month}月${date.day}日';
         var content = quote.content.trim();
-        
+
         // 添加位置信息
         if (quote.location != null && quote.location!.isNotEmpty) {
           content = '【$dateStr·${quote.location}】$content';
         } else {
           content = '【$dateStr】$content';
         }
-        
+
         // 添加天气信息
         if (quote.weather != null && quote.weather!.isNotEmpty) {
           content += ' （天气：${quote.weather}）';
         }
-        
+
         return content;
       }).join('\n\n');
-      
+
       _insightSub = ai
           .streamReportInsight(
-            periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriod,
-            mostWeather: _mostWeather,
-            topTag: _mostTopTag,
-            activeDays: _stats!.activeDays,
-            noteCount: _stats!.totalNotes,
-            totalWordCount: _totalWordCount,
-            notesPreview: _notesPreview,
-            fullNotesContent: fullNotesContent, // 传递完整内容
-          )
+        periodLabel: periodLabel,
+        mostTimePeriod: _mostDayPeriod,
+        mostWeather: _mostWeather,
+        topTag: _mostTopTag,
+        activeDays: _stats!.activeDays,
+        noteCount: _stats!.totalNotes,
+        totalWordCount: _totalWordCount,
+        notesPreview: _notesPreview,
+        fullNotesContent: fullNotesContent, // 传递完整内容
+      )
           .listen(
         (chunk) {
           if (!mounted) return;

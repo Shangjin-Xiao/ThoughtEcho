@@ -17,7 +17,8 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this, initialIndex: 0); // 默认显示第一个tab（周期报告）
+    _tabController = TabController(
+        length: 2, vsync: this, initialIndex: 0); // 默认显示第一个tab（周期报告）
   }
 
   @override

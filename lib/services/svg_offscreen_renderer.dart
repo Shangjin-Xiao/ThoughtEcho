@@ -23,8 +23,8 @@ class SvgOffscreenRenderer {
   _SvgIntrinsicSize _parseSvgIntrinsicSize(String svg) {
     try {
       // 匹配 <svg ... width="123" height="456" ...>
-      final tagMatch = RegExp(r'<svg[^>]*>', caseSensitive: false)
-          .firstMatch(svg);
+      final tagMatch =
+          RegExp(r'<svg[^>]*>', caseSensitive: false).firstMatch(svg);
       if (tagMatch == null) return const _SvgIntrinsicSize();
       final tag = tagMatch.group(0)!;
       double? parseLength(String? v) {
@@ -34,11 +34,13 @@ class SvgOffscreenRenderer {
         v = v.replaceAll(RegExp(r'px', caseSensitive: false), '');
         return double.tryParse(v);
       }
+
       String? attr(String name) {
-        final m = RegExp('$name="([^"]+)"', caseSensitive: false)
-            .firstMatch(tag);
+        final m =
+            RegExp('$name="([^"]+)"', caseSensitive: false).firstMatch(tag);
         return m?.group(1);
       }
+
       final w = parseLength(attr('width'));
       final h = parseLength(attr('height'));
       // 如果没有 width/height，尝试 viewBox 推导
@@ -46,11 +48,11 @@ class SvgOffscreenRenderer {
         final vb = attr('viewBox');
         if (vb != null) {
           final parts = vb.split(RegExp(r'[ ,]+'));
-            if (parts.length == 4) {
-              final vbW = double.tryParse(parts[2]);
-              final vbH = double.tryParse(parts[3]);
-              return _SvgIntrinsicSize(width: w ?? vbW, height: h ?? vbH);
-            }
+          if (parts.length == 4) {
+            final vbW = double.tryParse(parts[2]);
+            final vbH = double.tryParse(parts[3]);
+            return _SvgIntrinsicSize(width: w ?? vbW, height: h ?? vbH);
+          }
         }
       }
       return _SvgIntrinsicSize(width: w, height: h);
@@ -69,17 +71,17 @@ class SvgOffscreenRenderer {
     ExportRenderMode mode = ExportRenderMode.contain,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
     Duration timeout = const Duration(seconds: 10),
-  bool devicePixelRatioAware = true,
+    bool devicePixelRatioAware = true,
   }) async {
     final overlayState = Overlay.maybeOf(context, rootOverlay: true);
     if (overlayState == null) {
       throw StateError('未找到 Overlay，无法执行离屏渲染');
     }
 
-  // 在任何异步等待之前获取设备像素比，避免异步后再次访问 context 触发 lint
-  final preComputedDevicePixelRatio = devicePixelRatioAware
-    ? (MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0)
-    : 1.0;
+    // 在任何异步等待之前获取设备像素比，避免异步后再次访问 context 触发 lint
+    final preComputedDevicePixelRatio = devicePixelRatioAware
+        ? (MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0)
+        : 1.0;
 
     final boundaryKey = GlobalKey();
     // 解析SVG内在尺寸（若有），用于更精确的缩放与裁剪
@@ -141,11 +143,11 @@ class SvgOffscreenRenderer {
       if (boundary == null) {
         throw StateError('未获取到 RenderRepaintBoundary');
       }
-    // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
-  double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;
-    // 限制最大像素比（4.0 已足够大部分需求）
-    if (effectivePixelRatio > 4.0) effectivePixelRatio = 4.0;
-    final image = await boundary.toImage(pixelRatio: effectivePixelRatio);
+      // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
+      double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;
+      // 限制最大像素比（4.0 已足够大部分需求）
+      if (effectivePixelRatio > 4.0) effectivePixelRatio = 4.0;
+      final image = await boundary.toImage(pixelRatio: effectivePixelRatio);
       final byteData = await image.toByteData(format: format);
       if (byteData == null) {
         throw StateError('无法获取图片字节');
