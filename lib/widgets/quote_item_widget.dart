@@ -7,6 +7,7 @@ import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
+import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
 import '../constants/app_constants.dart';
 
 /// 优化：使用StatelessWidget保持高性能，数据变化通过父组件管理
@@ -259,78 +260,103 @@ class QuoteItemWidget extends StatelessWidget {
               ),
             ),
 
-            // 笔记内容 - 使用增强的平滑展开/收起动画，并支持双击切换
+            // 展开/折叠按钮（移到内容区域上方，避免与标签冲突）
+            if (_needsExpansion(quote))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    InkWell(
+                      onTap: () => onToggleExpanded(!isExpanded),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isExpanded ? '收起' : '展开',
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            AnimatedRotation(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOutCubicEmphasized,
+                              turns: isExpanded ? 0.5 : 0.0,
+                              child: Icon(
+                                Icons.expand_more_rounded,
+                                size: 16,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // 笔记内容 - 优化动画性能和视觉效果
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onDoubleTap: _needsExpansion(quote)
                   ? () => onToggleExpanded(!isExpanded)
                   : null,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
                 child: AnimatedSize(
-                  duration: const Duration(milliseconds: 450), // 增加动画时长
-                  curve: Curves.easeInOutCubicEmphasized, // 使用更现代的缓动曲线
+                  duration: const Duration(milliseconds: 350), // 优化动画时长
+                  curve: Curves.easeInOutCubicEmphasized,
                   alignment: Alignment.topCenter,
                   child: Stack(
                     children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 380),
-                        switchInCurve: Curves.easeOutQuart, // 更平滑的进入曲线
-                        switchOutCurve: Curves.easeInQuart, // 更平滑的退出曲线
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 0.03), // 轻微的垂直滑动
-                                end: Offset.zero,
-                              ).animate(CurvedAnimation(
-                                parent: animation,
-                                curve: Curves.easeOutCubic,
-                              )),
-                              child: child,
+                      QuoteContent(
+                        quote: quote,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              height: 1.5,
                             ),
-                          );
-                        },
-                        child: QuoteContent(
-                          key: ValueKey<bool>(isExpanded),
-                          quote: quote,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                height: 1.5,
-                              ),
-                          maxLines: isExpanded ? null : 3,
-                          showFullContent: isExpanded,
-                        ),
+                        maxLines: isExpanded ? null : 3,
+                        showFullContent: isExpanded,
                       ),
-                      // 折叠状态下的底部渐隐遮罩，提示可展开
+                      // 优化的底部渐隐遮罩 - 降低透明度，避免遮挡重要内容
                       if (!isExpanded && _needsExpansion(quote))
                         Positioned(
                           left: 0,
                           right: 0,
                           bottom: 0,
                           child: IgnorePointer(
-                            ignoring: true,
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 320),
-                              curve: Curves.easeInOut,
-                              opacity: 1.0,
-                              child: Container(
-                                height: 32, // 增加遮罩高度
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      (quote.colorHex == null || quote.colorHex!.isEmpty)
-                                          ? Colors.transparent
-                                          : cardColor.withValues(alpha: 0.0),
-                                      (quote.colorHex == null || quote.colorHex!.isEmpty)
-                                          ? theme.colorScheme.surfaceContainerLowest
-                                              .withValues(alpha: 0.95) // 增加不透明度
-                                          : cardColor.withValues(alpha: 0.98), // 增加不透明度
-                                    ],
-                                  ),
+                            child: Container(
+                              height: 24, // 减少遮罩高度
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    (quote.colorHex == null || quote.colorHex!.isEmpty)
+                                        ? theme.colorScheme.surfaceContainerLowest
+                                            .withValues(alpha: 0.7) // 降低不透明度
+                                        : cardColor.withValues(alpha: 0.8), // 降低不透明度
+                                  ],
+                                  stops: const [0.0, 0.8], // 渐变更自然
                                 ),
                               ),
                             ),
@@ -376,99 +402,90 @@ class QuoteItemWidget extends StatelessWidget {
               ),
             ],
 
-            // 底部工具栏
+            // 底部工具栏 - 优化标签展示为横向滚动
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                4,
-                0,
-                4,
-                4,
-              ), // 减少左边距从16到4，右边距从0到4，底部从8到4
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
               child: Row(
                 children: [
-                  // 标签信息
+                  // 标签区域 - 改为横向滚动
                   if (quote.tagIds.isNotEmpty) ...[
                     Icon(
                       Icons.label_outline,
                       size: 16,
-                      color: theme.colorScheme.onSurface.applyOpacity(
-                        0.6,
-                      ), // MODIFIED
+                      color: theme.colorScheme.onSurface.applyOpacity(0.6),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Expanded(
-                      child: Wrap(
-                        spacing: 6.0, // 标签之间的水平间距
-                        runSpacing: 4.0, // 行与行之间的垂直间距
-                        children: quote.tagIds.map((tagId) {
-                          final tag = tags.firstWhere(
-                            (t) => t.id == tagId,
-                            orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-                          );
-                          return tagBuilder != null
-                              ? tagBuilder!(tag)
-                              : Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary
-                                        .applyOpacity(0.1), // MODIFIED
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    tag.name,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.primary,
+                      child: SizedBox(
+                        height: 32, // 固定高度确保滚动区域稳定
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: quote.tagIds.length,
+                          itemBuilder: (context, index) {
+                            final tagId = quote.tagIds[index];
+                            final tag = tags.firstWhere(
+                              (t) => t.id == tagId,
+                              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                            );
+                            
+                            return Container(
+                              margin: EdgeInsets.only(
+                                right: index < quote.tagIds.length - 1 ? 6 : 0,
+                              ),
+                              child: tagBuilder != null
+                                  ? tagBuilder!(tag)
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary.applyOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                          width: 0.5,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (tag.iconName?.isNotEmpty == true) ...[
+                                            if (IconUtils.isEmoji(tag.iconName!)) ...[
+                                              Text(
+                                                IconUtils.getDisplayIcon(tag.iconName!),
+                                                style: const TextStyle(fontSize: 12),
+                                              ),
+                                              const SizedBox(width: 3),
+                                            ] else ...[
+                                              Icon(
+                                                IconUtils.getIconData(tag.iconName!),
+                                                size: 12,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                              const SizedBox(width: 3),
+                                            ],
+                                          ],
+                                          Text(
+                                            tag.name,
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.primary,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-
-                  // 展开/折叠按钮（如果内容较长）
-                  if (_needsExpansion(quote)) ...[
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () => onToggleExpanded(!isExpanded),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isExpanded ? '收起' : '展开',
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            AnimatedRotation(
-                              duration: AppConstants.defaultAnimationDuration,
-                              curve: Curves.easeInOutCubic,
-                              turns: isExpanded ? 0.5 : 0.0, // 180度旋转
-                              child: Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 14,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
                     ),
                   ],
 
-                  // 添加Spacer确保更多按钮始终在右侧
+                  // 添加Spacer确保操作按钮始终在右侧
                   const Spacer(),
 
                   // 心形按钮（如果启用）
@@ -536,9 +553,7 @@ class QuoteItemWidget extends StatelessWidget {
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_vert,
-                      color: theme.colorScheme.onSurface.applyOpacity(
-                        0.7,
-                      ), // MODIFIED
+                      color: theme.colorScheme.onSurface.applyOpacity(0.7),
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

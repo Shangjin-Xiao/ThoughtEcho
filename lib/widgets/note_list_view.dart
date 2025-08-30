@@ -66,7 +66,9 @@ class NoteListView extends StatefulWidget {
 class NoteListViewState extends State<NoteListView> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
+  final ScrollController _scrollController = ScrollController(); // 添加滚动控制器
   final Map<String, bool> _expandedItems = {};
+  final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
   // 移除AnimatedList相关的Key，改用ListView.builder
 
   // 分页和懒加载状态
@@ -403,6 +405,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     _searchController.dispose();
+    _scrollController.dispose(); // 清理滚动控制器
 
     // 安全地清理焦点节点和监听器
     try {
@@ -420,6 +423,35 @@ class NoteListViewState extends State<NoteListView> {
     _quotes.clear();
     _hasMore = true;
     _loadMore();
+  }
+
+  /// 滚动到指定笔记的顶部
+  void _scrollToItem(String quoteId, int index) {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    try {
+      // 方法1：使用index计算滚动位置（更可靠）
+      const double estimatedItemHeight = 200.0; // 估算的笔记卡片高度
+      final double targetPosition = index * estimatedItemHeight;
+      
+      // 获取当前滚动位置
+      final double currentPosition = _scrollController.offset;
+      final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+      
+      // 计算安全的滚动位置
+      final double safePosition = targetPosition.clamp(0.0, maxScrollExtent);
+      
+      // 只有当目标位置与当前位置差距较大时才滚动
+      if ((safePosition - currentPosition).abs() > 50) {
+        _scrollController.animateTo(
+          safePosition,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    } catch (e) {
+      logDebug('滚动到笔记失败: $e', source: 'NoteListView');
+    }
   }
 
   Future<void> _loadMore() async {
@@ -536,6 +568,7 @@ class NoteListViewState extends State<NoteListView> {
         return true;
       },
       child: ListView.builder(
+        controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: _quotes.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
@@ -544,64 +577,78 @@ class NoteListViewState extends State<NoteListView> {
             // 获取展开状态，如果不存在则默认为折叠状态
             final bool isExpanded = _expandedItems[quote.id] ?? false;
 
+            // 为每个笔记生成一个唯一的key用于滚动定位
+            final String itemKey = 'quote_${quote.id}_$index';
+            if (!_itemKeys.containsKey(quote.id)) {
+              _itemKeys[quote.id!] = GlobalKey(debugLabel: itemKey);
+            }
+
             // 直接返回QuoteItemWidget，移除动画
-            return QuoteItemWidget(
-              quote: quote,
-              tags: widget.tags,
-              isExpanded: isExpanded,
-              onToggleExpanded: (expanded) {
-                setState(() {
-                  _expandedItems[quote.id!] = expanded;
-                });
-              },
-              onEdit: () => widget.onEdit(quote),
-              onDelete: () => widget.onDelete(quote),
-              onAskAI: () => widget.onAskAI(quote),
-              onGenerateCard: widget.onGenerateCard != null
-                  ? () => widget.onGenerateCard!(quote)
-                  : null,
-              onFavorite: widget.onFavorite != null
-                  ? () => widget.onFavorite!(quote)
-                  : null, // 新增：心形按钮回调
-              tagBuilder: (tag) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.applyOpacity(
-                      0.1,
-                    ), // MODIFIED
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (IconUtils.isEmoji(tag.iconName)) ...[
+            return Container(
+              key: _itemKeys[quote.id],
+              child: QuoteItemWidget(
+                quote: quote,
+                tags: widget.tags,
+                isExpanded: isExpanded,
+                onToggleExpanded: (expanded) {
+                  setState(() {
+                    _expandedItems[quote.id!] = expanded;
+                  });
+                  
+                  // 折叠后滚动到笔记顶部
+                  if (!expanded) {
+                    _scrollToItem(quote.id!, index);
+                  }
+                },
+                onEdit: () => widget.onEdit(quote),
+                onDelete: () => widget.onDelete(quote),
+                onAskAI: () => widget.onAskAI(quote),
+                onGenerateCard: widget.onGenerateCard != null
+                    ? () => widget.onGenerateCard!(quote)
+                    : null,
+                onFavorite: widget.onFavorite != null
+                    ? () => widget.onFavorite!(quote)
+                    : null, // 新增：心形按钮回调
+                tagBuilder: (tag) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.applyOpacity(
+                        0.1,
+                      ), // MODIFIED
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (IconUtils.isEmoji(tag.iconName)) ...[
+                          Text(
+                            IconUtils.getDisplayIcon(tag.iconName),
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(width: 4),
+                        ] else ...[
+                          Icon(
+                            IconUtils.getIconData(tag.iconName),
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                         Text(
-                          IconUtils.getDisplayIcon(tag.iconName),
-                          style: const TextStyle(fontSize: 14),
+                          tag.name,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                      ] else ...[
-                        Icon(
-                          IconUtils.getIconData(tag.iconName),
-                          size: 14,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 4),
                       ],
-                      Text(
-                        tag.name,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             );
           }
           // 底部加载指示器
