@@ -259,7 +259,7 @@ class QuoteItemWidget extends StatelessWidget {
               ),
             ),
 
-            // 笔记内容 - 使用平滑展开/收起动画，并支持双击切换
+            // 笔记内容 - 使用增强的平滑展开/收起动画，并支持双击切换
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onDoubleTap: _needsExpansion(quote)
@@ -268,19 +268,28 @@ class QuoteItemWidget extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(4, 8, 4, 8), // 减少左右边距从16到4
                 child: AnimatedSize(
-                  duration: AppConstants.defaultAnimationDuration,
-                  curve: Curves.easeInOutCubic,
+                  duration: const Duration(milliseconds: 450), // 增加动画时长
+                  curve: Curves.easeInOutCubicEmphasized, // 使用更现代的缓动曲线
                   alignment: Alignment.topCenter,
                   child: Stack(
                     children: [
                       AnimatedSwitcher(
-                        duration: AppConstants.defaultAnimationDuration,
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
+                        duration: const Duration(milliseconds: 380),
+                        switchInCurve: Curves.easeOutQuart, // 更平滑的进入曲线
+                        switchOutCurve: Curves.easeInQuart, // 更平滑的退出曲线
                         transitionBuilder: (child, animation) {
                           return FadeTransition(
                             opacity: animation,
-                            child: child,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.03), // 轻微的垂直滑动
+                                end: Offset.zero,
+                              ).animate(CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                              )),
+                              child: child,
+                            ),
                           );
                         },
                         child: QuoteContent(
@@ -303,10 +312,11 @@ class QuoteItemWidget extends StatelessWidget {
                           child: IgnorePointer(
                             ignoring: true,
                             child: AnimatedOpacity(
-                              duration: AppConstants.defaultAnimationDuration,
+                              duration: const Duration(milliseconds: 320),
+                              curve: Curves.easeInOut,
                               opacity: 1.0,
                               child: Container(
-                                height: 28,
+                                height: 32, // 增加遮罩高度
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.topCenter,
@@ -317,8 +327,8 @@ class QuoteItemWidget extends StatelessWidget {
                                           : cardColor.withValues(alpha: 0.0),
                                       (quote.colorHex == null || quote.colorHex!.isEmpty)
                                           ? theme.colorScheme.surfaceContainerLowest
-                                              .withValues(alpha: 0.9)
-                                          : cardColor.withValues(alpha: 0.95),
+                                              .withValues(alpha: 0.95) // 增加不透明度
+                                          : cardColor.withValues(alpha: 0.98), // 增加不透明度
                                     ],
                                   ),
                                 ),
