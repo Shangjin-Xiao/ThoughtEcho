@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'dart:convert';
-import 'dart:ui' as ui;
 import '../models/quote_model.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -24,24 +23,47 @@ class QuoteContent extends StatelessWidget {
     this.showFullContent = false,
   });
 
-  /// 提取加粗文本内容，用于优先显示
-  List<String> _extractBoldText(String deltaContent) {
+  /// 检查是否为媒体软连接或其他应该过滤的内容
+  bool _shouldFilterBoldContent(String content) {
+    // 去除空白字符进行检查
+    final trimmed = content.trim();
+
+    // 过滤空内容
+    if (trimmed.isEmpty) return true;
+
+    // 过滤只包含换行符的内容
+    if (trimmed == '\n' || trimmed.replaceAll('\n', '').isEmpty) return true;
+
+    // 过滤媒体软连接模式 (通常是特殊字符或占位符)
+    if (trimmed.length == 1 && trimmed.codeUnitAt(0) > 127) return true;
+
+    // 过滤包含媒体占位符的内容
+    if (trimmed.contains('�') || trimmed.contains('\uFFFC')) return true;
+
+    return false;
+  }
+
+  /// 提取有效的加粗文本内容，过滤媒体软连接
+  List<Map<String, dynamic>> _extractValidBoldOps(String deltaContent) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
-        List<String> boldTexts = [];
+        List<Map<String, dynamic>> validBoldOps = [];
+
         for (var op in decoded) {
           if (op is Map && op['insert'] != null) {
             final String insert = op['insert'].toString();
             final Map<String, dynamic>? attributes = op['attributes'];
 
-            // 检查是否有加粗属性
-            if (attributes != null && attributes['bold'] == true) {
-              boldTexts.add(insert);
+            // 检查是否有加粗属性且内容有效
+            if (attributes != null &&
+                attributes['bold'] == true &&
+                !_shouldFilterBoldContent(insert)) {
+              validBoldOps.add(Map<String, dynamic>.from(op));
             }
           }
         }
-        return boldTexts;
+        return validBoldOps;
       }
     } catch (_) {
       // 解析失败，返回空列表
@@ -49,81 +71,207 @@ class QuoteContent extends StatelessWidget {
     return [];
   }
 
-  /// 创建仅显示加粗内容的Document（用户需求：只显示加粗，其余折叠）
-  quill.Document _createBoldOnlyDocument(String deltaContent, int maxLines) {
+  /// 获取非加粗的正文内容
+  List<Map<String, dynamic>> _extractNonBoldOps(String deltaContent) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
-        List<Map<String, dynamic>> boldOps = [];
+        List<Map<String, dynamic>> nonBoldOps = [];
 
-        // 提取所有加粗内容
         for (var op in decoded) {
           if (op is Map && op['insert'] != null) {
+            final String insert = op['insert'].toString();
             final Map<String, dynamic>? attributes = op['attributes'];
 
-            // 只保留加粗文本
-            if (attributes != null && attributes['bold'] == true) {
-              boldOps.add(Map<String, dynamic>.from(op));
+            // 非加粗内容或没有加粗属性的内容
+            if (attributes == null || attributes['bold'] != true) {
+              // 跳过空内容
+              if (insert.trim().isNotEmpty) {
+                nonBoldOps.add(Map<String, dynamic>.from(op));
+              }
             }
           }
         }
+        return nonBoldOps;
+      }
+    } catch (_) {
+      // 解析失败，返回空列表
+    }
+    return [];
+  }
 
-        // 如果有加粗内容，显示所有加粗内容（与普通折叠保持一致的限制）
-        if (boldOps.isNotEmpty) {
-          List<Map<String, dynamic>> finalOps = [];
-          String allBoldText = '';
+  /// 创建优先显示加粗内容的Document
+  quill.Document _createBoldPriorityDocument(
+      String deltaContent, int maxLines) {
+    try {
+      final validBoldOps = _extractValidBoldOps(deltaContent);
 
-          // 收集所有加粗文本，保持原始换行
-          for (var op in boldOps) {
-            String insert = op['insert'].toString();
-            allBoldText += insert;
-          }
+      if (validBoldOps.isNotEmpty) {
+        List<Map<String, dynamic>> finalOps = [];
 
-          // 按行分割并限制行数，与普通折叠保持一致
-          final lines = allBoldText.split('\n');
-          List<String> limitedLines = [];
+        // 先添加所有有效的加粗内容，保持原始格式
+        for (var op in validBoldOps) {
+          finalOps.add(op);
+        }
 
-          for (int i = 0; i < lines.length && i < maxLines; i++) {
-            limitedLines.add(lines[i]);
-          }
+        // 计算加粗内容的行数
+        String allBoldText = '';
+        for (var op in validBoldOps) {
+          allBoldText += op['insert'].toString();
+        }
 
-          // 如果超过了行数限制，添加省略号
-          if (lines.length > maxLines) {
-            if (limitedLines.isNotEmpty) {
-              limitedLines[limitedLines.length - 1] += '...';
-            } else {
-              limitedLines.add('...');
-            }
-          }
+        final boldLines = allBoldText.split('\n');
+        int boldLineCount = 0;
+        for (String line in boldLines) {
+          if (line.trim().isNotEmpty) boldLineCount++;
+        }
 
-          // 重新构建操作列表
-          String finalText = limitedLines.join('\n');
-          if (finalText.isEmpty) {
-            try {
-              return quill.Document.fromJson(jsonDecode(deltaContent));
-            } catch (_) {
-              return quill.Document()..insert(0, quote.content);
-            }
-          }
-
-          finalOps.add({
-            'insert': finalText,
-            'attributes': {'bold': true}
-          });
-
-          // 确保文档以换行符结尾（Quill要求）
-          if (!finalText.endsWith('\n')) {
+        // 如果加粗内容少于maxLines，添加连接到正文的内容
+        if (boldLineCount < maxLines) {
+          // 添加连接提示
+          if (!allBoldText.endsWith('\n')) {
             finalOps.add({'insert': '\n'});
           }
+          finalOps.add({
+            'insert': '...\n',
+            'attributes': {'italic': true, 'color': '#888888'}
+          });
 
-          return quill.Document.fromJson(finalOps);
+          // 添加部分正文内容
+          final nonBoldOps = _extractNonBoldOps(deltaContent);
+          int addedLines = 0;
+          final remainingLines =
+              maxLines - boldLineCount - 1; // -1 for the "..." line
+
+          for (var op in nonBoldOps) {
+            if (addedLines >= remainingLines) break;
+
+            final String insert = op['insert'].toString();
+            final lines = insert.split('\n');
+
+            for (String line in lines) {
+              if (addedLines >= remainingLines) break;
+              if (line.trim().isNotEmpty) {
+                final Map<String, dynamic> attributes =
+                    Map<String, dynamic>.from(op['attributes'] ?? {});
+                finalOps.add({'insert': '$line\n', 'attributes': attributes});
+                addedLines++;
+              }
+            }
+          }
+        } else {
+          // 加粗内容超过maxLines，截断并添加省略号
+          List<Map<String, dynamic>> truncatedOps = [];
+          int currentLines = 0;
+
+          for (var op in validBoldOps) {
+            if (currentLines >= maxLines) break;
+
+            final String insert = op['insert'].toString();
+            final lines = insert.split('\n');
+            String truncatedInsert = '';
+
+            for (String line in lines) {
+              if (currentLines >= maxLines) break;
+              truncatedInsert += '$line\n';
+              if (line.trim().isNotEmpty) currentLines++;
+            }
+
+            if (truncatedInsert.isNotEmpty) {
+              final Map<String, dynamic> attributes =
+                  Map<String, dynamic>.from(op['attributes'] ?? {});
+              truncatedOps
+                  .add({'insert': truncatedInsert, 'attributes': attributes});
+            }
+          }
+
+          finalOps = truncatedOps;
+
+          // 添加省略号
+          if (finalOps.isNotEmpty) {
+            final lastOp = finalOps.last;
+            final lastInsert = lastOp['insert'].toString();
+            lastOp['insert'] = '${lastInsert.trimRight()}...';
+          }
         }
+
+        // 确保文档以换行符结尾
+        if (finalOps.isNotEmpty) {
+          final lastOp = finalOps.last;
+          if (lastOp['insert'] != null &&
+              !lastOp['insert'].toString().endsWith('\n')) {
+            finalOps.add({'insert': '\n'});
+          }
+        }
+
+        return quill.Document.fromJson(finalOps);
       }
     } catch (e) {
       // 解析失败，回退到原始文档
     }
 
-    // 没有加粗内容或解析失败，回退到原始文档
+    // 没有有效加粗内容，回退到原始文档
+    try {
+      return quill.Document.fromJson(jsonDecode(deltaContent));
+    } catch (_) {
+      return quill.Document()..insert(0, quote.content);
+    }
+  }
+
+  /// 创建普通折叠模式的Document (限制高度)
+  quill.Document _createTruncatedDocument(String deltaContent, int maxLines) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        List<Map<String, dynamic>> finalOps = [];
+        int currentLines = 0;
+
+        for (var op in decoded) {
+          if (op is Map && op['insert'] != null) {
+            if (currentLines >= maxLines) break;
+
+            final String insert = op['insert'].toString();
+            final Map<String, dynamic>? attributes = op['attributes'];
+            final lines = insert.split('\n');
+            String truncatedInsert = '';
+
+            for (String line in lines) {
+              if (currentLines >= maxLines) break;
+              truncatedInsert += '$line\n';
+              if (line.trim().isNotEmpty) currentLines++;
+            }
+
+            if (truncatedInsert.isNotEmpty) {
+              finalOps.add({
+                'insert': truncatedInsert,
+                'attributes': Map<String, dynamic>.from(attributes ?? {})
+              });
+            }
+          }
+        }
+
+        // 添加省略号
+        if (finalOps.isNotEmpty) {
+          final lastOp = finalOps.last;
+          final lastInsert = lastOp['insert'].toString();
+          lastOp['insert'] = '${lastInsert.trimRight()}...';
+        }
+
+        // 确保文档以换行符结尾
+        if (finalOps.isNotEmpty) {
+          final lastOp = finalOps.last;
+          if (!lastOp['insert'].toString().endsWith('\n')) {
+            finalOps.add({'insert': '\n'});
+          }
+        }
+
+        return quill.Document.fromJson(finalOps);
+      }
+    } catch (e) {
+      // 解析失败，回退到原始文档
+    }
+
+    // 解析失败，回退到原始文档
     try {
       return quill.Document.fromJson(jsonDecode(deltaContent));
     } catch (_) {
@@ -153,28 +301,39 @@ class QuoteContent extends StatelessWidget {
     // 如果有富文本内容且来源是全屏编辑器，使用QuillEditor显示富文本
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       try {
-        // 解析富文本内容
-        final document = quill.Document.fromJson(
-          jsonDecode(quote.deltaContent!),
-        );
+        quill.Document displayDocument;
 
-        // 如果开启了优先显示加粗内容且需要折叠
-        quill.Document displayDocument = document;
-        bool usedBoldOnlyMode = false;
-
-        if (!showFullContent && maxLines != null && prioritizeBoldContent) {
+        if (!showFullContent && maxLines != null) {
           final needsExpansion =
               _needsExpansionForRichText(quote.deltaContent!);
+
           if (needsExpansion) {
-            final boldTexts = _extractBoldText(quote.deltaContent!);
-            if (boldTexts.isNotEmpty) {
-              // 有加粗内容，只显示加粗内容
+            if (prioritizeBoldContent) {
+              // 检查是否有有效的加粗内容
+              final validBoldOps = _extractValidBoldOps(quote.deltaContent!);
+              if (validBoldOps.isNotEmpty) {
+                // 使用加粗优先模式
+                displayDocument =
+                    _createBoldPriorityDocument(quote.deltaContent!, maxLines!);
+              } else {
+                // 没有有效加粗内容，使用普通截断模式
+                displayDocument =
+                    _createTruncatedDocument(quote.deltaContent!, maxLines!);
+              }
+            } else {
+              // 不启用加粗优先，使用普通截断模式
               displayDocument =
-                  _createBoldOnlyDocument(quote.deltaContent!, maxLines!);
-              usedBoldOnlyMode = true;
+                  _createTruncatedDocument(quote.deltaContent!, maxLines!);
             }
-            // 注意：没有加粗内容时，保持使用原始document，稍后会应用普通的高度限制
+          } else {
+            // 不需要折叠，显示完整内容
+            displayDocument =
+                quill.Document.fromJson(jsonDecode(quote.deltaContent!));
           }
+        } else {
+          // 展开状态或无行数限制，显示完整内容
+          displayDocument =
+              quill.Document.fromJson(jsonDecode(quote.deltaContent!));
         }
 
         // 创建只读QuillController
@@ -183,7 +342,7 @@ class QuoteContent extends StatelessWidget {
           selection: const TextSelection.collapsed(offset: 0),
         );
 
-        // 使用Container包装QuillEditor以控制高度和实现展开/折叠功能
+        // 创建QuillEditor
         Widget richTextEditor = quill.QuillEditor(
           controller: controller,
           scrollController: ScrollController(),
@@ -204,156 +363,51 @@ class QuoteContent extends StatelessWidget {
           ),
         );
 
-        // 只有当内容确实需要折叠且处于折叠状态时，才应用高度限制
+        // 如果内容被截断且处于折叠状态，添加渐变遮罩
         final bool needsExpansion =
             _needsExpansionForRichText(quote.deltaContent!);
         if (!showFullContent && maxLines != null && needsExpansion) {
-          // 如果使用了加粗优先模式，直接显示（已经在_createBoldOnlyDocument中处理了截断）
-          if (usedBoldOnlyMode) {
-            final double estimatedLineHeight =
-                (style?.height ?? 1.5) * (style?.fontSize ?? 14);
-            const int extraLines = 2;
-            final double maxHeightWithExtra =
-                estimatedLineHeight * (maxLines! + extraLines);
-            final double overlayHeight = estimatedLineHeight * extraLines;
-
-            final sharedScroll = ScrollController();
-            final fullController = quill.QuillController(
-              document: document,
-              selection: const TextSelection.collapsed(offset: 0),
-            );
-
-            final boldOnlyDoc = _createBoldOnlyDocument(
-                quote.deltaContent!, maxLines! + extraLines);
-            final boldController = quill.QuillController(
-              document: boldOnlyDoc,
-              selection: const TextSelection.collapsed(offset: 0),
-            );
-
-            final fullEditor = quill.QuillEditor(
-              controller: fullController,
-              scrollController: sharedScroll,
-              focusNode: FocusNode(),
-              config: quill.QuillEditorConfig(
-                enableInteractiveSelection: false,
-                enableSelectionToolbar: false,
-                showCursor: false,
-                embedBuilders: kIsWeb
-                    ? FlutterQuillEmbeds.editorWebBuilders()
-                    : QuillEditorExtensions.getEmbedBuilders(),
-                padding: EdgeInsets.zero,
-                expands: false,
-                scrollable: false,
-              ),
-            );
-
-            final boldEditor = quill.QuillEditor(
-              controller: boldController,
-              scrollController: sharedScroll,
-              focusNode: FocusNode(),
-              config: quill.QuillEditorConfig(
-                enableInteractiveSelection: false,
-                enableSelectionToolbar: false,
-                showCursor: false,
-                embedBuilders: kIsWeb
-                    ? FlutterQuillEmbeds.editorWebBuilders()
-                    : QuillEditorExtensions.getEmbedBuilders(),
-                padding: EdgeInsets.zero,
-                expands: false,
-                scrollable: false,
-              ),
-            );
-
-            return ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeightWithExtra),
-              child: Stack(
-                children: [
-                  // blurred full content beneath (only slight blur)
-                  ClipRect(
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 0.08, sigmaY: 0.08),
-                      child: fullEditor,
-                    ),
-                  ),
-                  // clear bold text above so bold stays sharp
-                  IgnorePointer(
-                    child: ClipRect(
-                      child: boldEditor,
-                    ),
-                  ),
-                  // subtle gradient at fold edge
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: overlayHeight,
-                    child: IgnorePointer(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Color(0x02000000),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // 普通模式或没有加粗内容时，使用高度限制
           final double estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
-          const int extraLines = 2;
-          final double maxHeight =
-              estimatedLineHeight * (maxLines! + extraLines);
-          final double overlayHeight = estimatedLineHeight * extraLines;
+          final double fadeHeight = estimatedLineHeight * 0.8; // 渐变高度约0.8行
 
-          return ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: Stack(
-              children: [
-                // slightly blur only the folded area by overlaying a semi-transparent blurred layer
-                ClipRect(
-                  child: richTextEditor,
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: overlayHeight,
-                  child: IgnorePointer(
-                    child: ClipRect(
-                      child: BackdropFilter(
-                        filter: ui.ImageFilter.blur(sigmaX: 0.08, sigmaY: 0.08),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Color(0x02000000),
-                              ],
-                            ),
-                          ),
-                        ),
+          return Stack(
+            children: [
+              richTextEditor,
+              // 底部渐变遮罩
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: fadeHeight,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withValues(alpha: 0.1),
+                          Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withValues(alpha: 0.3),
+                        ],
+                        stops: const [0.0, 0.3, 1.0],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         }
 
-        // 展开状态或无需折叠，显示完整内容
+        // 展开状态或无需折叠，直接显示
         return richTextEditor;
       } catch (e) {
         // 富文本解析失败，回退到普通文本显示
@@ -368,7 +422,6 @@ class QuoteContent extends StatelessWidget {
     }
 
     // 使用普通文本显示
-    // 判断普通文本是否需要折叠
     final int lineCount = 1 + '\n'.allMatches(quote.content).length;
     final bool needsExpansion = lineCount > 3 || quote.content.length > 150;
 
