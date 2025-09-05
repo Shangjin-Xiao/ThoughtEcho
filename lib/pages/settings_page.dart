@@ -594,6 +594,20 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
+                // 仅使用本地笔记设置
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, child) {
+                    return SwitchListTile(
+                      title: const Text('仅使用本地笔记'),
+                      subtitle: const Text('关闭后，无网络时自动使用本地记录'),
+                      secondary: const Icon(Icons.offline_bolt_outlined),
+                      value: settingsService.useLocalQuotesOnly,
+                      onChanged: (bool value) {
+                        settingsService.setUseLocalQuotesOnly(value);
+                      },
+                    );
+                  },
+                ),
                 // End of Hitokoto attribution text
                 // Add Logs Settings entry below
                 ListTile(

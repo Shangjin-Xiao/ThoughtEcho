@@ -4795,4 +4795,120 @@ class DatabaseService extends ChangeNotifier {
       }
     }
   }
+
+  /// 获取适合作为每日一言的本地笔记
+  /// 优先选择带有"每日一言"标签的笔记，然后选择较短的笔记
+  Future<Map<String, dynamic>?> getLocalDailyQuote() async {
+    try {
+      if (!_isInitialized) {
+        await init();
+      }
+
+      if (kIsWeb) {
+        return _getLocalQuoteFromMemory();
+      }
+
+      final db = database;
+
+      // 首先尝试获取带有"每日一言"标签的笔记
+      final dailyQuoteCategory = await _getDailyQuoteCategoryId();
+      List<Map<String, dynamic>> results = [];
+
+      if (dailyQuoteCategory != null) {
+        results = await db.rawQuery('''
+          SELECT DISTINCT q.* FROM quotes q
+          INNER JOIN quote_tags qt ON q.id = qt.quote_id
+          INNER JOIN categories c ON qt.tag_id = c.id
+          WHERE c.id = ? AND length(q.content) <= 100
+          ORDER BY RANDOM()
+          LIMIT 1
+        ''', [dailyQuoteCategory]);
+      }
+
+      // 如果没有找到带"每日一言"标签的笔记，选择较短的其他笔记
+      if (results.isEmpty) {
+        results = await db.rawQuery('''
+          SELECT * FROM quotes
+          WHERE length(content) <= 80 AND content NOT LIKE '%\n%'
+          ORDER BY RANDOM()
+          LIMIT 1
+        ''');
+      }
+
+      if (results.isNotEmpty) {
+        final quote = results.first;
+        return {
+          'content': quote['content'],
+          'source': quote['source_work'] ?? '',
+          'author': quote['source_author'] ?? '',
+          'type': 'local',
+          'from_who': quote['source_author'] ?? '',
+          'from': quote['source_work'] ?? '',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      logDebug('获取本地每日一言失败: $e');
+      return null;
+    }
+  }
+
+  /// Web平台从内存中获取本地一言
+  Map<String, dynamic>? _getLocalQuoteFromMemory() {
+    try {
+      // 首先尝试获取带有"每日一言"标签的笔记
+      var candidates = _memoryStore.where((quote) => 
+        quote.tagIds.any((tagId) => 
+          _categoryStore.any((cat) => 
+            cat.id == tagId && cat.name == '每日一言'
+          )
+        ) && quote.content.length <= 100
+      ).toList();
+
+      // 如果没有找到，选择较短的其他笔记
+      if (candidates.isEmpty) {
+        candidates = _memoryStore.where((quote) => 
+          quote.content.length <= 80 && !quote.content.contains('\n')
+        ).toList();
+      }
+
+      if (candidates.isNotEmpty) {
+        final random = DateTime.now().millisecondsSinceEpoch % candidates.length;
+        final quote = candidates[random];
+        return {
+          'content': quote.content,
+          'source': quote.sourceWork ?? '',
+          'author': quote.sourceAuthor ?? '',
+          'type': 'local',
+          'from_who': quote.sourceAuthor ?? '',
+          'from': quote.sourceWork ?? '',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      logDebug('从内存获取本地每日一言失败: $e');
+      return null;
+    }
+  }
+
+  /// 获取"每日一言"分类的ID
+  Future<String?> _getDailyQuoteCategoryId() async {
+    try {
+      final db = database;
+
+      final results = await db.query(
+        'categories',
+        where: 'name = ?',
+        whereArgs: ['每日一言'],
+        limit: 1,
+      );
+
+      return results.isNotEmpty ? results.first['id'] as String : null;
+    } catch (e) {
+      logDebug('获取每日一言分类ID失败: $e');
+      return null;
+    }
+  }
 }

@@ -71,6 +71,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否仅使用本地笔记作为一言
+  bool get useLocalQuotesOnly => _appSettings.useLocalQuotesOnly;
+  Future<void> setUseLocalQuotesOnly(bool enabled) async {
+    _appSettings = _appSettings.copyWith(useLocalQuotesOnly: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

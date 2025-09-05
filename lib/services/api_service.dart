@@ -1,5 +1,7 @@
 import 'dart:convert';
 import '../services/network_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/database_service.dart';
 import '../utils/app_logger.dart';
 
 class Request {
@@ -28,9 +30,27 @@ class ApiService {
   // 添加一个常量定义请求超时时间
   static const int _timeoutSeconds = 10;
 
-  // 获取一言API数据
-  static Future<Map<String, dynamic>> getDailyQuote(String type) async {
+  // 获取一言API数据，支持本地笔记回退
+  static Future<Map<String, dynamic>> getDailyQuote(
+    String type, {
+    bool useLocalOnly = false,
+    DatabaseService? databaseService,
+  }) async {
     try {
+      // 如果设置了仅使用本地笔记，直接返回本地一言
+      if (useLocalOnly) {
+        return await _getLocalQuoteOrDefault(databaseService);
+      }
+
+      // 检查网络连接状态
+      final connectivityService = ConnectivityService();
+      final isConnected = await connectivityService.checkConnectionNow();
+
+      if (!isConnected) {
+        logDebug('网络未连接，使用本地笔记');
+        return await _getLocalQuoteOrDefault(databaseService, isOffline: true);
+      }
+
       // 处理多类型选择的情况
       String apiUrl = 'https://v1.hitokoto.cn/';
 
@@ -69,20 +89,54 @@ class ApiService {
             };
           } else {
             logDebug('一言API返回数据格式错误: $data');
-            return _getDefaultQuote();
+            return await _getLocalQuoteOrDefault(databaseService);
           }
         } catch (e) {
           logDebug('一言API JSON解析失败: $e, 响应体: ${response.body}');
-          return _getDefaultQuote();
+          return await _getLocalQuoteOrDefault(databaseService);
         }
       } else {
         logDebug('一言API请求失败: ${response.statusCode}, 响应体: ${response.body}');
-        return _getDefaultQuote();
+        return await _getLocalQuoteOrDefault(databaseService);
       }
     } catch (e) {
       logDebug('获取一言异常: $e');
-      return _getDefaultQuote();
+      return await _getLocalQuoteOrDefault(databaseService);
     }
+  }
+
+  // 获取本地一言或默认一言
+  static Future<Map<String, dynamic>> _getLocalQuoteOrDefault(
+    DatabaseService? databaseService, {
+    bool isOffline = false,
+  }) async {
+    try {
+      if (databaseService != null) {
+        final localQuote = await databaseService.getLocalDailyQuote();
+        if (localQuote != null) {
+          logDebug('使用本地笔记作为一言');
+          return localQuote;
+        }
+      }
+    } catch (e) {
+      logDebug('获取本地笔记失败: $e');
+    }
+    
+    // 如果是离线状态且没有本地笔记，返回网络错误提示
+    if (isOffline) {
+      return {
+        'content': '无网络连接',
+        'source': '',
+        'author': '',
+        'type': 'offline',
+        'from_who': '',
+        'from': '',
+      };
+    }
+    
+    // 如果不是离线状态但本地笔记获取失败，使用默认一言
+    logDebug('使用默认一言');
+    return _getDefaultQuote();
   }
 
   // 提供默认引言，在网络请求失败时使用

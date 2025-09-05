@@ -7,6 +7,7 @@ class AppSettings {
   final bool reportInsightsUseAI; // 新增：周期报告洞察是否使用AI（流式）
   final bool prioritizeBoldContentInCollapse; // 新增：折叠时优先显示加粗内容
   final bool showFavoriteButton; // 新增：是否显示心形按钮
+  final bool useLocalQuotesOnly; // 新增：仅使用本地笔记作为一言，不请求API
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -17,6 +18,7 @@ class AppSettings {
     this.reportInsightsUseAI = false, // 默认关闭AI洞察，使用本地生成
     this.prioritizeBoldContentInCollapse = false, // 默认关闭优先显示加粗内容
     this.showFavoriteButton = true, // 默认显示心形按钮
+    this.useLocalQuotesOnly = false, // 默认允许请求一言API
   });
 
   Map<String, dynamic> toJson() {
@@ -28,7 +30,8 @@ class AppSettings {
       'aiCardGenerationEnabled': aiCardGenerationEnabled,
       'reportInsightsUseAI': reportInsightsUseAI,
       'prioritizeBoldContentInCollapse': prioritizeBoldContentInCollapse,
-      'showFavoriteButton': showFavoriteButton, // 新增
+      'showFavoriteButton': showFavoriteButton,
+      'useLocalQuotesOnly': useLocalQuotesOnly, // 新增
     };
   }
 
@@ -42,7 +45,8 @@ class AppSettings {
       reportInsightsUseAI: map['reportInsightsUseAI'] ?? false,
       prioritizeBoldContentInCollapse:
           map['prioritizeBoldContentInCollapse'] ?? false,
-      showFavoriteButton: map['showFavoriteButton'] ?? true, // 新增
+      showFavoriteButton: map['showFavoriteButton'] ?? true,
+      useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false, // 新增
     );
   }
 
@@ -54,7 +58,8 @@ class AppSettings {
         aiCardGenerationEnabled: true,
         reportInsightsUseAI: false,
         prioritizeBoldContentInCollapse: false,
-        showFavoriteButton: true, // 新增
+        showFavoriteButton: true,
+        useLocalQuotesOnly: false, // 新增
       );
 
   AppSettings copyWith({
@@ -65,7 +70,8 @@ class AppSettings {
     bool? aiCardGenerationEnabled,
     bool? reportInsightsUseAI,
     bool? prioritizeBoldContentInCollapse,
-    bool? showFavoriteButton, // 新增
+    bool? showFavoriteButton,
+    bool? useLocalQuotesOnly, // 新增
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -79,7 +85,8 @@ class AppSettings {
       reportInsightsUseAI: reportInsightsUseAI ?? this.reportInsightsUseAI,
       prioritizeBoldContentInCollapse: prioritizeBoldContentInCollapse ??
           this.prioritizeBoldContentInCollapse,
-      showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton, // 新增
+      showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton,
+      useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly, // 新增
     );
   }
 }

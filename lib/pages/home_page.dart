@@ -7,6 +7,7 @@ import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
+import '../services/connectivity_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -980,7 +981,21 @@ class _HomePageState extends State<HomePage>
           ? null // 记录页不需要标题栏
           : _currentIndex == 0
               ? AppBar(
-                  title: const Text('心迹'),
+                  title: Consumer<ConnectivityService>(
+                    builder: (context, connectivityService, child) {
+                      if (!connectivityService.isConnected) {
+                        return const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.wifi_off, size: 16, color: Colors.red),
+                            SizedBox(width: 4),
+                            Text('心迹 - 无网络'),
+                          ],
+                        );
+                      }
+                      return const Text('心迹');
+                    },
+                  ),
                   actions: [
                     // 显示服务初始化状态指示器
                     if (!servicesInitialized)
