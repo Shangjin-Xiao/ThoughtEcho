@@ -31,6 +31,7 @@ import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
+import 'package:thoughtecho/services/connectivity_service.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -267,6 +268,7 @@ Future<void> main() async {
         final clipboardService = ClipboardService(); // 创建统一日志服务
         final unifiedLogService = UnifiedLogService.instance;
         final aiAnalysisDbService = AIAnalysisDatabaseService();
+        final connectivityService = ConnectivityService();
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
@@ -289,6 +291,7 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => unifiedLogService),
               ChangeNotifierProvider(create: (_) => appTheme),
               ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
+              ChangeNotifierProvider(create: (_) => connectivityService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
               ChangeNotifierProxyProvider<SettingsService,
                   InsightHistoryService>(
@@ -386,6 +389,14 @@ Future<void> main() async {
         Future.delayed(initDelay, () async {
           try {
             logInfo('UI已显示，正在后台初始化服务...', source: 'BackgroundInit');
+
+            // 初始化连接服务
+            try {
+              await connectivityService.init();
+              logInfo('连接服务初始化完成', source: 'BackgroundInit');
+            } catch (e) {
+              logWarning('连接服务初始化失败: $e', source: 'BackgroundInit');
+            }
 
             // Windows平台缩短超时时间，避免长时间等待
             final timeoutDuration = (!kIsWeb && Platform.isWindows)

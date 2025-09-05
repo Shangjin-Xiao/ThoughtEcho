@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
+import '../services/database_service.dart';
+import '../services/connectivity_service.dart';
 import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -38,18 +40,50 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         context,
         listen: false,
       );
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
+      final connectivityService = Provider.of<ConnectivityService>(
+        context,
+        listen: false,
+      );
+      
       final hitokotoType = settingsService.appSettings.hitokotoType;
+      final useLocalOnly = settingsService.appSettings.useLocalQuotesOnly;
+      final isConnected = connectivityService.isConnected;
 
       setState(() {
-        dailyQuote = {
-          'content': '加载中...',
-          'source': '',
-          'author': '',
-          'type': 'a',
-        };
+        if (useLocalOnly) {
+          dailyQuote = {
+            'content': '从本地记录加载中...',
+            'source': '',
+            'author': '',
+            'type': 'local',
+          };
+        } else if (!isConnected) {
+          dailyQuote = {
+            'content': '网络未连接，从本地记录加载中...',
+            'source': '',
+            'author': '',
+            'type': 'offline',
+          };
+        } else {
+          dailyQuote = {
+            'content': '加载中...',
+            'source': '',
+            'author': '',
+            'type': 'a',
+          };
+        }
       });
 
-      final quote = await ApiService.getDailyQuote(hitokotoType);
+      final quote = await ApiService.getDailyQuote(
+        hitokotoType,
+        useLocalOnly: useLocalOnly,
+        databaseService: databaseService,
+      );
+      
       if (mounted) {
         setState(() {
           dailyQuote = quote;
@@ -57,13 +91,27 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       }
     } catch (e) {
       if (mounted) {
+        final isConnected = Provider.of<ConnectivityService>(
+          context,
+          listen: false,
+        ).isConnected;
+        
         setState(() {
-          dailyQuote = {
-            'content': '获取一言失败，点击重试',
-            'source': '',
-            'author': '',
-            'type': 'error',
-          };
+          if (!isConnected) {
+            dailyQuote = {
+              'content': '无网络连接且无本地记录，点击重试',
+              'source': '',
+              'author': '',
+              'type': 'error',
+            };
+          } else {
+            dailyQuote = {
+              'content': '获取一言失败，点击重试',
+              'source': '',
+              'author': '',
+              'type': 'error',
+            };
+          }
         });
 
         // 添加重试机制，3秒后自动重试一次
