@@ -895,90 +895,169 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 20),
 
-          // 洞察小灯泡
-          _buildInsightBulbBar(),
-          const SizedBox(height: 16),
-
-          // 统计卡片网格
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard(
-                      '笔记数量', '$totalNotes', '条', Icons.note_alt_outlined)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildStatCard(
-                      '总字数', '$totalWords', '字', Icons.text_fields)),
-            ],
+          // 统计卡片网格 - 添加淡入动画
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 600),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: _buildStatCard(
+                              '笔记数量', '$totalNotes', '条', Icons.note_alt_outlined)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _buildStatCard(
+                              '总字数', '$totalWords', '字', Icons.text_fields)),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard(
-                      '平均字数', '$avgWords', '字/条', Icons.calculate_outlined)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard('活跃天数', '${_getActiveDays()}', '天',
-                    Icons.calendar_today_outlined),
-              ),
-            ],
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 800),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: _buildStatCard(
+                              '平均字数', '$avgWords', '字/条', Icons.calculate_outlined)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard('活跃天数', '${_getActiveDays()}', '天',
+                            Icons.calendar_today_outlined),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
 
-          // 新增：三个"最多"指标
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCardWithCustomIcon(
-                    '常见时段',
-                    _mostDayPeriodDisplay ?? '暂无',
-                    '',
-                    _mostDayPeriodIcon ?? Icons.timelapse),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCardWithCustomIcon(
-                    '常见天气',
-                    _mostWeatherDisplay ?? '暂无',
-                    '',
-                    _mostWeatherIcon ?? Icons.cloud_queue),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child:
-                    _buildStatCardWithTagIcon('常用标签', _mostTopTag ?? '暂无', ''),
-              ),
-            ],
+          // 新增：三个"最多"指标 - 添加淡入动画
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 1000),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCardWithCustomIcon(
+                            '常见时段',
+                            _mostDayPeriodDisplay ?? '暂无',
+                            '',
+                            _mostDayPeriodIcon ?? Icons.timelapse),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCardWithCustomIcon(
+                            '常见天气',
+                            _mostWeatherDisplay ?? '暂无',
+                            '',
+                            _mostWeatherIcon ?? Icons.cloud_queue),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child:
+                            _buildStatCardWithTagIcon('常用标签', _mostTopTag ?? '暂无', ''),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
+          const SizedBox(height: 16),
+
+          // 洞察小灯泡（移到常用标签下面）
+          _buildInsightBulbBar(),
           const SizedBox(height: 24),
 
-          // 本周期收藏最多（放在最近笔记上面）
+          // 本周期收藏最多（放在洞察下面，最近笔记上面）- 添加动画
           if (_periodQuotes.isNotEmpty) ...[
-            _buildPeriodTopFavoritesSection(),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 800),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: _buildPeriodTopFavoritesSection(),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 16),
           ],
 
-          // 最近笔记部分
+          // 最近笔记部分 - 添加动画
           if (_periodQuotes.isNotEmpty) ...[
-            Row(
-              children: [
-                Icon(
-                  Icons.history,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '最近笔记',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 1000),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '最近笔记',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ..._periodQuotes.take(3).map((quote) => 
+                          TweenAnimationBuilder<double>(
+                            duration: Duration(milliseconds: 600 + (_periodQuotes.indexOf(quote) * 200)),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            builder: (context, animValue, child) {
+                              return Transform.translate(
+                                offset: Offset(0, 15 * (1 - animValue)),
+                                child: Opacity(
+                                  opacity: animValue,
+                                  child: _buildQuotePreview(quote),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            ..._periodQuotes.take(3).map((quote) => _buildQuotePreview(quote)),
           ] else ...[
             // 空状态优化
             _buildEmptyState(),
@@ -998,102 +1077,170 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
-      return Row(
-        children: [
-          Icon(
-            Icons.favorite_outline,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '本周期暂无喜爱记录，去给喜欢的笔记点个心吧！',
-              style: Theme.of(context).textTheme.bodyMedium,
+      return TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 600),
+        tween: Tween(begin: 0.0, end: 1.0),
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, 10 * (1 - value)),
+            child: Opacity(
+              opacity: value,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.favorite_outline,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '本周期暂无喜爱记录，去给喜欢的笔记点个心吧！',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.favorite,
-              size: 20,
-              color: Colors.red.shade400,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '本周期收藏最多',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
+        TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 500),
+          tween: Tween(begin: 0.0, end: 1.0),
+          builder: (context, value, child) {
+            return Transform.translate(
+              offset: Offset(0, 10 * (1 - value)),
+              child: Opacity(
+                opacity: value,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.favorite,
+                      size: 20,
+                      color: Colors.red.shade400,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '本周期收藏最多',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 12),
-        ...favorited.take(3).map((q) => _buildFavoritePreviewChip(q)),
+        ...favorited.take(3).map((q) => 
+          TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 600 + (favorited.indexOf(q) * 150)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 15 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: _buildFavoritePreviewChip(q),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
 
-  // 一个紧凑的收藏预览块
+  // 一个紧凑的收藏预览块 - 优化视觉效果
   Widget _buildFavoritePreviewChip(Quote quote) {
     final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
+      child: Material(
+        elevation: 1,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade100, width: 1),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            // 可以添加跳转到笔记详情的逻辑
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.red.shade400,
-              borderRadius: BorderRadius.circular(10),
+              color: theme.colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade100, width: 1),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.favorite, color: Colors.white, size: 12),
-                const SizedBox(width: 4),
-                Text(
-                  '${quote.favoriteCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 800),
+                  tween: Tween(begin: 0.8, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.shade200,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite, color: Colors.white, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${quote.favoriteCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    quote.content.length > 80
+                        ? '${quote.content.substring(0, 80)}...'
+                        : quote.content,
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.3),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              quote.content.length > 80
-                  ? '${quote.content.substring(0, 80)}...'
-                  : quote.content,
-              style: theme.textTheme.bodyMedium,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // 洞察小灯泡组件
+  // 洞察小灯泡组件 - 支持流式显示
   Widget _buildInsightBulbBar() {
     return Card(
       elevation: 1,
@@ -1102,23 +1249,100 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.lightbulb, color: Theme.of(context).colorScheme.primary),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              child: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 1500),
+                tween: Tween(begin: 0.8, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: _insightLoading ? value : 1.0,
+                    child: Icon(
+                      Icons.lightbulb,
+                      color: _insightLoading 
+                          ? Colors.amber.withValues(alpha: value)
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+                  );
+                },
+              ),
+            ),
             const SizedBox(width: 8),
             Expanded(
-              child: _insightLoading
-                  ? Text(
-                      '正在生成本${_getPeriodName()}洞察…',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant),
-                    )
-                  : Text(
-                      _insightText.isEmpty ? '暂无洞察' : _insightText,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(height: 1.4),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.0, 0.3),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
+                  );
+                },
+                child: _insightLoading
+                    ? Column(
+                        key: const ValueKey('loading'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '正在生成本${_getPeriodName()}洞察…',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 8),
+                          TweenAnimationBuilder<double>(
+                            duration: const Duration(milliseconds: 2000),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            builder: (context, value, child) {
+                              return LinearProgressIndicator(
+                                value: _insightLoading ? null : 1.0,
+                                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).colorScheme.primary,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      )
+                    : Container(
+                        key: ValueKey('content-${_insightText.length}'),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          child: _insightText.isEmpty 
+                              ? Text(
+                                  '暂无洞察',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        height: 1.4,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                )
+                              : TweenAnimationBuilder<double>(
+                                  duration: const Duration(milliseconds: 200),
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Text(
+                                        _insightText,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(height: 1.4),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
+              ),
             ),
           ],
         ),
@@ -1309,36 +1533,78 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.note_add_outlined,
-            size: 64,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurfaceVariant
-                .withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '本${_getPeriodName()}暂无笔记',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '开始记录您的思考吧',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withValues(alpha: 0.7),
-                ),
-          ),
-        ],
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 800),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(
+                    opacity: value,
+                    child: Icon(
+                      Icons.note_add_outlined,
+                      size: 64,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.5),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 600),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: Text(
+                      '本${_getPeriodName()}暂无笔记',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 400),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: Text(
+                      '开始记录您的思考吧',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.7),
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1352,7 +1618,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     return dates.length;
   }
 
-  /// 构建笔记预览
+  /// 构建笔记预览 - 优化交互效果
   Widget _buildQuotePreview(Quote quote) {
     final date = DateTime.parse(quote.date);
     final formattedDate =
@@ -1360,15 +1626,26 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Card(
+      child: Material(
         elevation: 1,
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
+            // 添加点击反馈
+            HapticFeedback.lightImpact();
             // 可以添加跳转到笔记详情的逻辑
           },
-          child: Padding(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1399,12 +1676,19 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                           ),
                     ),
                     const Spacer(),
-                    Text(
-                      '${quote.content.length} 字',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${quote.content.length} 字',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
                     ),
                   ],
                 ),
@@ -1423,21 +1707,51 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
 
     if (_periodQuotes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.note_alt_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              '本${_getPeriodName()}暂无笔记记录',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
+      return Expanded(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 800),
+                tween: Tween(begin: 0.0, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Opacity(
+                      opacity: value,
+                      child: Icon(
+                        Icons.note_alt_outlined, 
+                        size: 64, 
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 600),
+                tween: Tween(begin: 0.0, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: Text(
+                        '本${_getPeriodName()}暂无笔记记录',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       );
     }

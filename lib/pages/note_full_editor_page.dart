@@ -1210,7 +1210,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ),
                 Expanded(
                   child: Container(
-                    color: Colors.white,
+                    color: theme.colorScheme.surface,
                     padding: const EdgeInsets.all(16),
                     child: quill.QuillEditor(
                       controller: _controller,
@@ -1320,9 +1320,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: theme.brightness == Brightness.light
-          ? Colors.white
-          : theme.colorScheme.surface,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1843,9 +1841,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: theme.brightness == Brightness.light
-          ? Colors.white
-          : theme.colorScheme.surface,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(12), // 使用圆角

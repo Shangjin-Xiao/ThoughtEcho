@@ -121,7 +121,7 @@ class ApiService {
     } catch (e) {
       logDebug('获取本地笔记失败: $e');
     }
-    
+
     // 如果是离线状态且没有本地笔记，返回网络错误提示
     if (isOffline) {
       return {
@@ -133,7 +133,7 @@ class ApiService {
         'from': '',
       };
     }
-    
+
     // 如果不是离线状态但本地笔记获取失败，使用默认一言
     logDebug('使用默认一言');
     return _getDefaultQuote();
