@@ -218,7 +218,7 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  /// 创建普通折叠模式的Document (限制高度)
+  /// 创建普通折叠模式的Document (仅限制行数，保留媒体内容)
   quill.Document _createTruncatedDocument(String deltaContent, int maxLines) {
     try {
       final decoded = jsonDecode(deltaContent);
@@ -228,6 +228,12 @@ class QuoteContent extends StatelessWidget {
 
         for (var op in decoded) {
           if (op is Map && op['insert'] != null) {
+            // 如果是嵌入内容（图片、视频等），直接保留
+            if (op['insert'] is Map) {
+              finalOps.add(Map<String, dynamic>.from(op));
+              continue;
+            }
+
             if (currentLines >= maxLines) break;
 
             final String insert = op['insert'].toString();
@@ -250,17 +256,32 @@ class QuoteContent extends StatelessWidget {
           }
         }
 
-        // 添加省略号
-        if (finalOps.isNotEmpty) {
+        // 检查是否真的需要截断
+        int totalLines = 0;
+        for (var op in decoded) {
+          if (op is Map && op['insert'] != null && op['insert'] is String) {
+            final String insert = op['insert'].toString();
+            final lines = insert.split('\n');
+            for (String line in lines) {
+              if (line.trim().isNotEmpty) totalLines++;
+            }
+          }
+        }
+
+        // 只有在真正需要截断时才添加省略号
+        if (totalLines > maxLines && finalOps.isNotEmpty) {
           final lastOp = finalOps.last;
-          final lastInsert = lastOp['insert'].toString();
-          lastOp['insert'] = '${lastInsert.trimRight()}...';
+          if (lastOp['insert'] is String) {
+            final lastInsert = lastOp['insert'].toString();
+            lastOp['insert'] = '${lastInsert.trimRight()}...';
+          }
         }
 
         // 确保文档以换行符结尾
         if (finalOps.isNotEmpty) {
           final lastOp = finalOps.last;
-          if (!lastOp['insert'].toString().endsWith('\n')) {
+          if (lastOp['insert'] is String &&
+              !lastOp['insert'].toString().endsWith('\n')) {
             finalOps.add({'insert': '\n'});
           }
         }
@@ -279,16 +300,16 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  /// 判断富文本内容是否需要折叠
+  /// 判断富文本内容是否需要折叠（仅检查行数）
   bool _needsExpansionForRichText(String deltaContent) {
     try {
       final doc = quill.Document.fromJson(jsonDecode(deltaContent));
       final plain = doc.toPlainText();
       final int lineCount = 1 + '\n'.allMatches(plain).length;
-      return lineCount > 3 || plain.length > 150;
+      return lineCount > 4;
     } catch (_) {
       final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-      return lineCount > 3 || quote.content.length > 150;
+      return lineCount > 4;
     }
   }
 
@@ -363,18 +384,18 @@ class QuoteContent extends StatelessWidget {
           ),
         );
 
-        // 如果内容被截断且处于折叠状态，添加渐变遮罩
+        // 如果内容被截断且处于折叠状态，添加极轻的渐变遮罩
         final bool needsExpansion =
             _needsExpansionForRichText(quote.deltaContent!);
         if (!showFullContent && maxLines != null && needsExpansion) {
           final double estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
-          final double fadeHeight = estimatedLineHeight * 0.8; // 渐变高度约0.8行
+          final double fadeHeight = estimatedLineHeight * 0.4; // 渐变高度约0.4行
 
           return Stack(
             children: [
               richTextEditor,
-              // 底部渐变遮罩
+              // 极轻的底部渐变遮罩
               Positioned(
                 left: 0,
                 right: 0,
@@ -391,13 +412,13 @@ class QuoteContent extends StatelessWidget {
                           Theme.of(context)
                               .colorScheme
                               .surface
-                              .withValues(alpha: 0.1),
+                              .withValues(alpha: 0.015),
                           Theme.of(context)
                               .colorScheme
                               .surface
-                              .withValues(alpha: 0.3),
+                              .withValues(alpha: 0.035),
                         ],
-                        stops: const [0.0, 0.3, 1.0],
+                        stops: const [0.0, 0.7, 1.0],
                       ),
                     ),
                   ),
@@ -421,9 +442,9 @@ class QuoteContent extends StatelessWidget {
       }
     }
 
-    // 使用普通文本显示
+    // 使用普通文本显示（仅检查行数）
     final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-    final bool needsExpansion = lineCount > 3 || quote.content.length > 150;
+    final bool needsExpansion = lineCount > 4;
 
     return Text(
       quote.content,
