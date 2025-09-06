@@ -48,7 +48,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         context,
         listen: false,
       );
-      
+
       final hitokotoType = settingsService.appSettings.hitokotoType;
       final useLocalOnly = settingsService.appSettings.useLocalQuotesOnly;
       final isConnected = connectivityService.isConnected;
@@ -83,7 +83,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         useLocalOnly: useLocalOnly,
         databaseService: databaseService,
       );
-      
+
       if (mounted) {
         setState(() {
           dailyQuote = quote;
@@ -95,7 +95,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
           context,
           listen: false,
         ).isConnected;
-        
+
         setState(() {
           if (!isConnected) {
             dailyQuote = {

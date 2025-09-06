@@ -94,30 +94,11 @@ class AppTheme with ChangeNotifier {
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
     if (_useCustomColor && _customColor != null) {
-      // 使用自定义颜色时，确保在浅色模式下也不会产生紫色调
-      final colorScheme = ColorScheme.fromSeed(
+      // 直接使用用户选择的颜色，减少不必要的调整
+      return ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.light,
       );
-
-      // 如果生成的颜色方案包含明显的紫色调，进行调整
-      if (_hasPurpleTint(colorScheme.primary)) {
-        // 使用更安全的颜色生成方式，避免紫色调
-        return ColorScheme.fromSeed(
-          seedColor: _customColor!,
-          brightness: Brightness.light,
-          // 强制使用更保守的调色策略
-        ).copyWith(
-          // 确保主要颜色不会太偏紫
-          primary: _adjustPurpleTint(_customColor!, Brightness.light),
-          secondary: _adjustPurpleTint(_customColor!, Brightness.light)
-              .withValues(alpha: 0.8),
-          tertiary: _adjustPurpleTint(_customColor!, Brightness.light)
-              .withValues(alpha: 0.6),
-        );
-      }
-
-      return colorScheme;
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _lightDynamicColorScheme != null) {
@@ -132,30 +113,11 @@ class AppTheme with ChangeNotifier {
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
-      // 使用自定义颜色时，确保在深色模式下不会产生紫色调
-      final colorScheme = ColorScheme.fromSeed(
+      // 直接使用用户选择的颜色，减少不必要的调整
+      return ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.dark,
       );
-
-      // 如果生成的颜色方案包含明显的紫色调，进行调整
-      if (_hasPurpleTint(colorScheme.primary)) {
-        // 使用更安全的颜色生成方式，避免紫色调
-        return ColorScheme.fromSeed(
-          seedColor: _customColor!,
-          brightness: Brightness.dark,
-          // 强制使用更保守的调色策略
-        ).copyWith(
-          // 确保主要颜色不会太偏紫
-          primary: _adjustPurpleTint(_customColor!, Brightness.dark),
-          secondary: _adjustPurpleTint(_customColor!, Brightness.dark)
-              .withValues(alpha: 0.8),
-          tertiary: _adjustPurpleTint(_customColor!, Brightness.dark)
-              .withValues(alpha: 0.6),
-        );
-      }
-
-      return colorScheme;
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _darkDynamicColorScheme != null) {
@@ -181,20 +143,12 @@ class AppTheme with ChangeNotifier {
   // 判断颜色是否包含明显的紫色调
   bool _hasPurpleTint(Color color) {
     final hsl = HSLColor.fromColor(color);
-    // 紫色在色相环上的范围大约是270-330度
-    // 另外，饱和度高的紫色也可能有问题
     final hue = hsl.hue;
     final saturation = hsl.saturation;
 
-    // 如果色相在紫色范围内且饱和度较高，认为是紫色调
-    if ((hue >= 270 && hue <= 330) && saturation > 0.3) {
-      return true;
-    }
-
-    // 另外检查RGB值，如果蓝色分量明显高于红色和绿色，也可能是紫色调
-    if (color.b > color.r * 1.2 &&
-        color.b > color.g * 1.2 &&
-        saturation > 0.2) {
+    // 更宽松的紫色检测，只在极端情况下才认为是紫色调
+    // 紫色在色相环上的范围大约是280-320度，且饱和度要很高
+    if ((hue >= 280 && hue <= 320) && saturation > 0.6) {
       return true;
     }
 
@@ -511,7 +465,6 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
-    final bool usingCustom = _useCustomColor && _customColor != null;
     final baseTheme = FlexThemeData.dark(
       colorScheme: darkColorScheme,
       useMaterial3: true,
@@ -537,11 +490,14 @@ class AppTheme with ChangeNotifier {
         textButtonRadius: buttonRadius,
         fabRadius: buttonRadius,
       ),
-      // 当使用自定义主色时关闭次/三色自动调和，避免某些动态调和链条残留导致偏紫
-      // 同时确保颜色方案本身已经过紫色调调整
-      keyColors: usingCustom
-          ? const FlexKeyColors(useSecondary: false, useTertiary: false)
-          : const FlexKeyColors(useSecondary: true, useTertiary: true),
+      // 禁用自动颜色调和以确保用户选择的颜色得到准确呈现
+      keyColors: const FlexKeyColors(
+        useSecondary: false,
+        useTertiary: false,
+        keepPrimary: true,
+        keepSecondary: true,
+        keepTertiary: true,
+      ),
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );

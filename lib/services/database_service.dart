@@ -4858,23 +4858,24 @@ class DatabaseService extends ChangeNotifier {
   Map<String, dynamic>? _getLocalQuoteFromMemory() {
     try {
       // 首先尝试获取带有"每日一言"标签的笔记
-      var candidates = _memoryStore.where((quote) => 
-        quote.tagIds.any((tagId) => 
-          _categoryStore.any((cat) => 
-            cat.id == tagId && cat.name == '每日一言'
-          )
-        ) && quote.content.length <= 100
-      ).toList();
+      var candidates = _memoryStore
+          .where((quote) =>
+              quote.tagIds.any((tagId) => _categoryStore
+                  .any((cat) => cat.id == tagId && cat.name == '每日一言')) &&
+              quote.content.length <= 100)
+          .toList();
 
       // 如果没有找到，选择较短的其他笔记
       if (candidates.isEmpty) {
-        candidates = _memoryStore.where((quote) => 
-          quote.content.length <= 80 && !quote.content.contains('\n')
-        ).toList();
+        candidates = _memoryStore
+            .where((quote) =>
+                quote.content.length <= 80 && !quote.content.contains('\n'))
+            .toList();
       }
 
       if (candidates.isNotEmpty) {
-        final random = DateTime.now().millisecondsSinceEpoch % candidates.length;
+        final random =
+            DateTime.now().millisecondsSinceEpoch % candidates.length;
         final quote = candidates[random];
         return {
           'content': quote.content,

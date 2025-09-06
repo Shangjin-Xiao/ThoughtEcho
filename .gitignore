@@ -265,3 +265,4 @@ android/local.properties
 .kilocode/mcp.json
 .claude/settings.local.json
 forge.yaml
+.claude-code-router/config.json

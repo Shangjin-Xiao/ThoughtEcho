@@ -11,7 +11,7 @@ class ConnectivityService extends ChangeNotifier {
 
   bool _isConnected = true;
   Timer? _connectivityTimer;
-  
+
   bool get isConnected => _isConnected;
 
   /// 初始化连接检查
@@ -32,7 +32,7 @@ class ConnectivityService extends ChangeNotifier {
   /// 检查网络连接状态
   Future<void> _checkConnectivity() async {
     bool wasConnected = _isConnected;
-    
+
     try {
       if (kIsWeb) {
         // Web平台假设有网络连接
@@ -50,7 +50,8 @@ class ConnectivityService extends ChangeNotifier {
 
     // 如果连接状态发生变化，通知监听器
     if (wasConnected != _isConnected) {
-      logDebug('网络连接状态变化: ${wasConnected ? '已连接' : '未连接'} -> ${_isConnected ? '已连接' : '未连接'}');
+      logDebug(
+          '网络连接状态变化: ${wasConnected ? '已连接' : '未连接'} -> ${_isConnected ? '已连接' : '未连接'}');
       notifyListeners();
     }
   }
