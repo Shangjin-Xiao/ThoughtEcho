@@ -914,40 +914,31 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('选择默认启动页面'),
             content: StatefulBuilder(
               builder: (context, setState) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    RadioListTile<int>(
-                      title: const Text('首页（每日一言）'),
-                      value: 0,
-                      groupValue: currentValue,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settingsService.updateAppSettings(
-                            settingsService.appSettings.copyWith(
-                              defaultStartPage: value,
-                            ),
-                          );
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                    RadioListTile<int>(
-                      title: const Text('记录（笔记列表）'),
-                      value: 1,
-                      groupValue: currentValue,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settingsService.updateAppSettings(
-                            settingsService.appSettings.copyWith(
-                              defaultStartPage: value,
-                            ),
-                          );
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                  ],
+                return RadioGroup<int>(
+                  groupValue: currentValue,
+                  onChanged: (value) {
+                    if (value != null) {
+                      settingsService.updateAppSettings(
+                        settingsService.appSettings.copyWith(
+                          defaultStartPage: value,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      RadioListTile<int>(
+                        title: Text('首页（每日一言）'),
+                        value: 0,
+                      ),
+                      RadioListTile<int>(
+                        title: Text('记录（笔记列表）'),
+                        value: 1,
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

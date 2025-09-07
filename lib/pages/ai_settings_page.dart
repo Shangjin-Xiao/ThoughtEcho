@@ -1052,7 +1052,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _selectedPreset,
+                        initialValue: _selectedPreset,
                         isExpanded: true,
                         items: aiPresets.map((preset) {
                           return DropdownMenuItem(

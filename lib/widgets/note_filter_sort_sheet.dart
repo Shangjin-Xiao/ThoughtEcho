@@ -419,17 +419,21 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   Widget _buildSortOptions(ThemeData theme) {
     return Column(
       children: [
-        ..._sortTypeKeyToLabel.entries.map(
-          (entry) => RadioListTile<String>(
-            title: Text(entry.value),
-            value: entry.key,
-            groupValue: _tempSortType,
-            contentPadding: EdgeInsets.zero,
-            onChanged: (value) {
-              setState(() {
-                _tempSortType = value!;
-              });
-            },
+        RadioGroup<String>(
+          groupValue: _tempSortType,
+          onChanged: (value) {
+            setState(() {
+              _tempSortType = value!;
+            });
+          },
+          child: Column(
+            children: _sortTypeKeyToLabel.entries.map(
+              (entry) => RadioListTile<String>(
+                title: Text(entry.value),
+                value: entry.key,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ).toList(),
           ),
         ),
         SwitchListTile(

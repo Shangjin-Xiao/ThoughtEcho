@@ -240,7 +240,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             ),
           ),
         ),
-        activeColor: theme.colorScheme.primary,
+        activeThumbColor: theme.colorScheme.primary,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       ),
     );
@@ -275,30 +275,34 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
               ),
             ),
             const SizedBox(height: 16),
-            ...options.map((option) {
-              return RadioListTile<int>(
-                value: option.value as int,
-                groupValue: value,
-                onChanged: (newValue) {
-                  if (newValue != null) {
-                    widget.onPreferenceChanged(preference.key, newValue);
-                  }
-                },
-                title: Text(option.label),
-                subtitle: option.description != null
-                    ? Text(
-                        option.description!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
-                        ),
-                      )
-                    : null,
-                contentPadding: EdgeInsets.zero,
-                activeColor: theme.colorScheme.primary,
-              );
-            }),
+            RadioGroup<int>(
+              groupValue: value,
+              onChanged: (newValue) {
+                if (newValue != null) {
+                  widget.onPreferenceChanged(preference.key, newValue);
+                }
+              },
+              child: Column(
+                children: options.map((option) {
+                  return RadioListTile<int>(
+                    value: option.value as int,
+                    title: Text(option.label),
+                    subtitle: option.description != null
+                        ? Text(
+                            option.description!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                          )
+                        : null,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: theme.colorScheme.primary,
+                  );
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
