@@ -183,7 +183,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           appTheme.setUseDynamicColor(value);
                         },
                         // 当使用自定义颜色时禁用此开关
-                        activeColor: appTheme.useCustomColor
+                        activeThumbColor: appTheme.useCustomColor
                             ? Theme.of(
                                 context,
                               ).colorScheme.surfaceContainerHighest

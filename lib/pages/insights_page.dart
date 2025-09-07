@@ -335,7 +335,7 @@ class _InsightsPageState extends State<InsightsPage> {
       ));
 
       // TODO: 如果需要使用分享插件，可以在这里添加
-      // 目前先简化为复制到剪贴板
+      // 用户可以在任何支持粘贴的应用中分享这些内容
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

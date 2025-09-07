@@ -4,7 +4,7 @@ import 'multicast_dto.dart';
 
 /// Used only for /prepare-upload to be compatible with v1.
 /// The [fingerprint] does not exist in v1, so it is nullable here.
-/// TODO: replace with [RegisterDto] when v1 compatibility is removed
+/// TODO: 当v1兼容性被移除时，替换为[RegisterDto]
 class InfoRegisterDto {
   final String alias;
   final String? version; // v2, format: major.minor

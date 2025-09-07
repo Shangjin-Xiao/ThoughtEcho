@@ -541,27 +541,26 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             return StatefulBuilder(builder: (ctx, setLocal) {
               return AlertDialog(
                 title: const Text('选择导入模式'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RadioListTile<String>(
-                      title: const Text('覆盖导入 (清空现有数据)'),
-                      subtitle: const Text('删除当前所有数据，以备份内容替换'),
-                      value: 'overwrite',
-                      groupValue: selected,
-                      onChanged: (v) => setLocal(() => selected = v!),
-                      dense: true,
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('合并导入 (LWW策略)'),
-                      subtitle: const Text('保留现有数据，与备份数据按更新时间合并'),
-                      value: 'merge',
-                      groupValue: selected,
-                      onChanged: (v) => setLocal(() => selected = v!),
-                      dense: true,
-                    ),
-                  ],
+                content: RadioGroup<String>(
+                  groupValue: selected,
+                  onChanged: (v) => setLocal(() => selected = v!),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RadioListTile<String>(
+                        title: Text('覆盖导入 (清空现有数据)'),
+                        subtitle: Text('删除当前所有数据，以备份内容替换'),
+                        value: 'overwrite',
+                        dense: true,
+                      ),
+                      RadioListTile<String>(
+                        title: Text('合并导入 (LWW策略)'),
+                        subtitle: Text('保留现有数据，与备份数据按更新时间合并'),
+                        value: 'merge',
+                      ),
+                    ],
+                  ),
                 ),
                 actions: [
                   TextButton(

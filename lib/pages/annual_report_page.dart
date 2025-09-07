@@ -1283,9 +1283,36 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   void _shareReport() {
     // TODO: 实现分享功能
     HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('分享功能即将上线'), duration: Duration(seconds: 2)),
-    );
+    
+    try {
+      // 生成分享文本
+      final year = widget.year.toString();
+      final totalQuotes = widget.quotes.length;
+      final shareText = '''我的$year年心迹回顾
+
+📝 记录了 $totalQuotes 条心迹
+💭 见证了一年的成长与思考
+
+在ThoughtEcho中记录生活的点点滴滴
+#心迹 #年度回顾 #ThoughtEcho''';
+
+      // 复制到剪贴板
+      Clipboard.setData(ClipboardData(text: shareText));
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('年度报告已复制到剪贴板'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('分享失败，请稍后重试'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }
 

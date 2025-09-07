@@ -24,7 +24,7 @@ permissions:
   checks: write
 
 env:
-  FLUTTER_VERSION: '3.29.2'
+  FLUTTER_VERSION: '3.35.3'
   PUB_CACHE: ~/.pub-cache
 
 jobs:

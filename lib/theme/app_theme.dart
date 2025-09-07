@@ -140,42 +140,7 @@ class AppTheme with ChangeNotifier {
     notifyListeners();
   }
 
-  // 判断颜色是否包含明显的紫色调
-  bool _hasPurpleTint(Color color) {
-    final hsl = HSLColor.fromColor(color);
-    final hue = hsl.hue;
-    final saturation = hsl.saturation;
-
-    // 更宽松的紫色检测，只在极端情况下才认为是紫色调
-    // 紫色在色相环上的范围大约是280-320度，且饱和度要很高
-    if ((hue >= 280 && hue <= 320) && saturation > 0.6) {
-      return true;
-    }
-
-    return false;
-  }
-
-  // 调整紫色调的颜色，使其更适合深色主题
-  Color _adjustPurpleTint(Color color, Brightness brightness) {
-    final hsl = HSLColor.fromColor(color);
-
-    if (_hasPurpleTint(color)) {
-      // 如果是紫色调，将其调整为更安全的颜色
-      // 降低饱和度或改变色相
-      final adjustedHue = (hsl.hue + 30) % 360; // 向蓝色方向调整
-      final adjustedSaturation = hsl.saturation * 0.7; // 降低饱和度
-
-      return HSLColor.fromAHSL(
-        hsl.alpha,
-        adjustedHue,
-        adjustedSaturation,
-        hsl.lightness,
-      ).toColor();
-    }
-
-    return color;
-  }
-
+  
   // 判断当前是否为深色模式
   bool get isDarkMode {
     // 仅根据用户显式选择返回，ThemeMode.system 的实际亮度应由外部通过 MediaQuery/Theme.of 来判断；
@@ -238,27 +203,9 @@ class AppTheme with ChangeNotifier {
   ) {
     bool changed = false;
 
-    // 处理动态颜色方案，过滤掉紫色调
+    // 直接使用系统提供的动态颜色方案，不进行紫色过滤
     ColorScheme? processedLightScheme = lightScheme;
     ColorScheme? processedDarkScheme = darkScheme;
-
-    if (lightScheme != null && _hasPurpleTint(lightScheme.primary)) {
-      processedLightScheme = lightScheme.copyWith(
-        primary: _adjustPurpleTint(lightScheme.primary, Brightness.light),
-        secondary: _adjustPurpleTint(lightScheme.secondary, Brightness.light),
-        tertiary: _adjustPurpleTint(lightScheme.tertiary, Brightness.light),
-      );
-      logDebug('检测到动态亮色方案包含紫色调，已自动调整');
-    }
-
-    if (darkScheme != null && _hasPurpleTint(darkScheme.primary)) {
-      processedDarkScheme = darkScheme.copyWith(
-        primary: _adjustPurpleTint(darkScheme.primary, Brightness.dark),
-        secondary: _adjustPurpleTint(darkScheme.secondary, Brightness.dark),
-        tertiary: _adjustPurpleTint(darkScheme.tertiary, Brightness.dark),
-      );
-      logDebug('检测到动态暗色方案包含紫色调，已自动调整');
-    }
 
     // 更新动态颜色方案
     if (_lightDynamicColorScheme != processedLightScheme) {
@@ -490,13 +437,13 @@ class AppTheme with ChangeNotifier {
         textButtonRadius: buttonRadius,
         fabRadius: buttonRadius,
       ),
-      // 禁用自动颜色调和以确保用户选择的颜色得到准确呈现
+      // 简化颜色键配置，避免颜色偏移
       keyColors: const FlexKeyColors(
-        useSecondary: false,
-        useTertiary: false,
-        keepPrimary: true,
-        keepSecondary: true,
-        keepTertiary: true,
+        useSecondary: true,
+        useTertiary: true,
+        keepPrimary: false,
+        keepSecondary: false,
+        keepTertiary: false,
       ),
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
