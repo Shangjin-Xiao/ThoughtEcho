@@ -623,7 +623,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     final isDefault = category.isDefault;
     return InkWell(
       onTap: () => _editCategory(context, category),
-      onLongPress: () => _deleteCategory(context, category),
+      onLongPress: isDefault ? null : () => _deleteCategory(context, category), // 修复：默认标签不能长按删除
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -681,10 +681,12 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '点击编辑，长按删除',
+                    isDefault ? '系统默认标签' : '点击编辑，长按删除',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: isDefault 
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
