@@ -393,7 +393,7 @@ class DatabaseService extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 17, // 版本号升级至17，为笔记表新增 favorite_count 字段
+      version: 18, // 版本号升级至18，更新默认标签图标为emoji
       onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -803,6 +803,46 @@ class DatabaseService extends ChangeNotifier {
             'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)');
       } catch (e) {
         logError('quotes表 favorite_count 字段升级失败: $e',
+            error: e, source: 'DatabaseUpgrade');
+      }
+    }
+
+    // 版本18：更新默认标签图标为emoji
+    if (oldVersion < 18) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，更新默认标签图标为emoji',
+      );
+      try {
+        // 定义图标映射：旧图标 -> 新emoji
+        final Map<String, String> iconMigration = {
+          'format_quote': '💭', // 每日一言
+          'movie': '🎬',        // 动画
+          'menu_book': '📚',    // 漫画
+          'sports_esports': '🎮', // 游戏
+          'auto_stories': '📖', // 文学
+          'create': '✨',       // 原创
+          'public': '🌐',      // 来自网络
+          'category': '📝',    // 其他
+          'theaters': '🎥',    // 影视 (Minimal)
+          'brush': '✒️',       // 诗词 (Minimal)
+          'music_note': '🎧',  // 网易云 (Playful)
+          'psychology': '🤔',  // 哲学
+        };
+
+        // 更新默认标签的图标
+        for (final entry in iconMigration.entries) {
+          final oldIcon = entry.key;
+          final newIcon = entry.value;
+          
+          await txn.execute(
+            'UPDATE categories SET icon_name = ? WHERE icon_name = ? AND is_default = 1',
+            [newIcon, oldIcon],
+          );
+        }
+        
+        logDebug('数据库升级：默认标签图标更新完成');
+      } catch (e) {
+        logError('默认标签图标更新失败: $e',
             error: e, source: 'DatabaseUpgrade');
       }
     }
@@ -1591,73 +1631,73 @@ class DatabaseService extends ChangeNotifier {
         id: defaultCategoryIdHitokoto, // 使用固定 ID
         name: '每日一言',
         isDefault: true,
-        iconName: 'format_quote',
+        iconName: '💭',
       ),
       NoteCategory(
         id: defaultCategoryIdAnime, // 使用固定 ID
         name: '动画',
         isDefault: true,
-        iconName: 'movie',
+        iconName: '🎬',
       ),
       NoteCategory(
         id: defaultCategoryIdComic, // 使用固定 ID
         name: '漫画',
         isDefault: true,
-        iconName: 'menu_book',
+        iconName: '📚',
       ),
       NoteCategory(
         id: defaultCategoryIdGame, // 使用固定 ID
         name: '游戏',
         isDefault: true,
-        iconName: 'sports_esports',
+        iconName: '🎮',
       ),
       NoteCategory(
         id: defaultCategoryIdNovel, // 使用固定 ID
         name: '文学',
         isDefault: true,
-        iconName: 'auto_stories',
+        iconName: '📖',
       ),
       NoteCategory(
         id: defaultCategoryIdOriginal, // 使用固定 ID
         name: '原创',
         isDefault: true,
-        iconName: 'create',
+        iconName: '✨',
       ),
       NoteCategory(
         id: defaultCategoryIdInternet, // 使用固定 ID
         name: '来自网络',
         isDefault: true,
-        iconName: 'public',
+        iconName: '🌐',
       ),
       NoteCategory(
         id: defaultCategoryIdOther, // 使用固定 ID
         name: '其他',
         isDefault: true,
-        iconName: 'category',
+        iconName: '📝',
       ),
       NoteCategory(
         id: defaultCategoryIdMovie, // 使用固定 ID
         name: '影视',
         isDefault: true,
-        iconName: 'theaters',
+        iconName: '🎥',
       ),
       NoteCategory(
         id: defaultCategoryIdPoem, // 使用固定 ID
         name: '诗词',
         isDefault: true,
-        iconName: 'brush',
+        iconName: '✒️',
       ),
       NoteCategory(
         id: defaultCategoryIdMusic, // 使用固定 ID
         name: '网易云',
         isDefault: true,
-        iconName: 'music_note',
+        iconName: '🎧',
       ),
       NoteCategory(
         id: defaultCategoryIdPhilosophy, // 使用固定 ID
         name: '哲学',
         isDefault: true,
-        iconName: 'psychology',
+        iconName: '🤔',
       ),
     ];
   }

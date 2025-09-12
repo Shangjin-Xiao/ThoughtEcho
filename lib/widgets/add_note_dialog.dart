@@ -226,7 +226,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       String? dailyQuoteTagId = await _ensureTagExists(
         db,
         '每日一言',
-        'format_quote',
+        '💭',
       );
       if (dailyQuoteTagId != null &&
           !_selectedTagIds.contains(dailyQuoteTagId)) {
@@ -307,21 +307,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 为不同类型的一言选择对应的图标
   String _getIconForHitokotoType(String typeCode) {
     const Map<String, String> iconMap = {
-      'a': 'movie',
-      'b': 'menu_book',
-      'c': 'sports_esports',
-      'd': 'auto_stories',
-      'e': 'create',
-      'f': 'public',
-      'g': 'category',
-      'h': 'theaters',
-      'i': 'article',
-      'j': 'music_note',
-      'k': 'psychology',
-      'l': 'mood',
+      'a': '🎬', // 动画
+      'b': '📚', // 漫画
+      'c': '🎮', // 游戏
+      'd': '📖', // 文学
+      'e': '✨', // 原创
+      'f': '🌐', // 来自网络
+      'g': '📝', // 其他
+      'h': '🎭', // 影视
+      'i': '🌸', // 诗词
+      'j': '🎵', // 网易云
+      'k': '🤔', // 哲学
+      'l': '😄', // 抖机灵
     };
 
-    return iconMap[typeCode] ?? 'format_quote';
+    return iconMap[typeCode] ?? '💭';
   }
 
   // 确保标签存在，如果不存在则创建
