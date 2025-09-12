@@ -95,6 +95,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme get lightColorScheme {
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
+      logDebug('使用自定义颜色(浅色模式): ${_customColor!.toARGB32().toRadixString(16)}');
       return ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.light,
@@ -102,8 +103,10 @@ class AppTheme with ChangeNotifier {
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _lightDynamicColorScheme != null) {
+      logDebug('使用动态颜色(浅色模式)');
       return _lightDynamicColorScheme!;
     }
+    logDebug('使用默认蓝色(浅色模式)');
     return ColorScheme.fromSeed(
       seedColor: Colors.blue,
       brightness: Brightness.light,
@@ -114,7 +117,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
-      logDebug('使用自定义颜色(深色模式): ${_customColor!.toHexString()}');
+      logDebug('使用自定义颜色(深色模式): ${_customColor!.toARGB32().toRadixString(16)}');
       return ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.dark,
@@ -415,8 +418,31 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
+    // 直接创建基础颜色方案，避免FlexColorScheme的扭曲
+    ColorScheme baseColorScheme = darkColorScheme;
+    
+    // 只有在使用动态颜色或自定义颜色有特殊处理需求时才使用FlexColorScheme
+    if (!_useCustomColor && !_useDynamicColor) {
+      // 默认蓝色：直接创建ThemeData以避免不必要的色偏
+      return ThemeData.dark().copyWith(
+        colorScheme: baseColorScheme,
+        scaffoldBackgroundColor: baseColorScheme.surface,
+        cardTheme: CardThemeData(color: baseColorScheme.surfaceContainerLow),
+        dialogTheme: DialogThemeData(backgroundColor: baseColorScheme.surfaceContainerLow),
+        appBarTheme: AppBarTheme(
+          backgroundColor: baseColorScheme.surfaceContainerHigh,
+          foregroundColor: baseColorScheme.onSurface,
+          elevation: 0,
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: baseColorScheme.primary,
+          foregroundColor: baseColorScheme.onPrimary,
+        ),
+      );
+    }
+
     final baseTheme = FlexThemeData.dark(
-      colorScheme: darkColorScheme,
+      colorScheme: baseColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 0,
@@ -440,14 +466,8 @@ class AppTheme with ChangeNotifier {
         textButtonRadius: buttonRadius,
         fabRadius: buttonRadius,
       ),
-      // 简化颜色键配置，避免颜色偏移
-      keyColors: const FlexKeyColors(
-        useSecondary: true,
-        useTertiary: true,
-        keepPrimary: false,
-        keepSecondary: false,
-        keepTertiary: false,
-      ),
+      // 禁用颜色键配置来避免深色模式下的色偏
+      keyColors: const FlexKeyColors(), // 默认配置，避免色偏
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
