@@ -116,11 +116,22 @@ class AppTheme with ChangeNotifier {
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
-      // 直接使用用户选择的颜色，减少不必要的调整
+      // 直接使用用户选择的颜色，但避免深色模式下产生紫色调
       logDebug('使用自定义颜色(深色模式): ${_customColor!.toARGB32().toRadixString(16)}');
-      return ColorScheme.fromSeed(
-        seedColor: _customColor!,
-        brightness: Brightness.dark,
+      
+      // 绕过 Material 3 的 ColorScheme.fromSeed 算法，手动创建颜色方案
+      // 避免自定义颜色被自动转换为紫色调
+      return ColorScheme.dark(
+        primary: _customColor!,
+        onPrimary: _getContrastColor(_customColor!),
+        secondary: _customColor!.withValues(alpha: 0.8),
+        onSecondary: _getContrastColor(_customColor!.withValues(alpha: 0.8)),
+        surface: const Color(0xFF121212), // Dark surface
+        onSurface: Colors.white,
+        surfaceContainerHighest: _customColor!.withValues(alpha: 0.1), // 淡化的自定义颜色作为背景
+        onSurfaceVariant: Colors.white70,
+        error: Colors.red[700]!,
+        onError: Colors.white,
       );
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
@@ -133,6 +144,11 @@ class AppTheme with ChangeNotifier {
       seedColor: Colors.blue,
       brightness: Brightness.dark,
     );
+  }
+  
+  // 获取对比色 - 用于确保文字在背景上的可读性
+  Color _getContrastColor(Color backgroundColor) {
+    return backgroundColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
   }
 
   bool get useCustomColor => _useCustomColor;
@@ -421,111 +437,31 @@ class AppTheme with ChangeNotifier {
     // 直接创建基础颜色方案，避免FlexColorScheme的扭曲
     ColorScheme baseColorScheme = darkColorScheme;
     
-    // 只有在使用动态颜色或自定义颜色有特殊处理需求时才使用FlexColorScheme
-    if (!_useCustomColor && !_useDynamicColor) {
-      // 默认蓝色：直接创建ThemeData以避免不必要的色偏
-      return ThemeData.dark().copyWith(
-        colorScheme: baseColorScheme,
-        scaffoldBackgroundColor: baseColorScheme.surface,
-        cardTheme: CardThemeData(color: baseColorScheme.surfaceContainerLow),
-        dialogTheme: DialogThemeData(backgroundColor: baseColorScheme.surfaceContainerLow),
-        appBarTheme: AppBarTheme(
-          backgroundColor: baseColorScheme.surfaceContainerHigh,
-          foregroundColor: baseColorScheme.onSurface,
-          elevation: 0,
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: baseColorScheme.primary,
-          foregroundColor: baseColorScheme.onPrimary,
-        ),
-      );
-    }
-
-    final baseTheme = FlexThemeData.dark(
+    // 所有情况都使用简化的 ThemeData.dark 创建，避免 FlexColorScheme 的紫色问题
+    return ThemeData.dark(useMaterial3: true).copyWith(
       colorScheme: baseColorScheme,
-      useMaterial3: true,
-      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 0,
-      subThemesData: const FlexSubThemesData(
-        blendOnLevel: 0,
-        blendOnColors: false,
-        useMaterial3Typography: true,
-        useM2StyleDividerInM3: true,
-        alignedDropdown: true,
-        useInputDecoratorThemeInDialogs: true,
-        interactionEffects: true,
-        tintedDisabledControls: true,
-        elevatedButtonSchemeColor: SchemeColor.primary,
-        elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
-        cardRadius: cardRadius,
-        inputDecoratorRadius: inputRadius,
-        dialogRadius: dialogRadius,
-        timePickerDialogRadius: dialogRadius,
-        outlinedButtonRadius: buttonRadius,
-        filledButtonRadius: buttonRadius,
-        textButtonRadius: buttonRadius,
-        fabRadius: buttonRadius,
-      ),
-      // 禁用颜色键配置来避免深色模式下的色偏
-      keyColors: const FlexKeyColors(), // 默认配置，避免色偏
-      tones: FlexTones.material(Brightness.dark),
-      visualDensity: FlexColorScheme.comfortablePlatformDensity,
-    );
-
-    // 使用主题色系的深色调，确保用户选择的颜色能够正确应用
-    final colorScheme = baseTheme.colorScheme;
-
-    return baseTheme.copyWith(
-      // 使用主题色系的基础暗色背景
-      scaffoldBackgroundColor: colorScheme.surface,
-
-      // 对话框使用主题色系，确保不会出现紫色调
-      dialogTheme: baseTheme.dialogTheme.copyWith(
-        backgroundColor: colorScheme.surfaceContainerLow,
-      ),
-
-      // 卡片使用主题色系
-      cardTheme: baseTheme.cardTheme.copyWith(
-        color: colorScheme.surfaceContainerLow,
-      ),
-
-      // 底部表单使用主题色系
-      bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
-        backgroundColor: colorScheme.surfaceContainer,
-      ),
-
-      // 抽屉使用主题色系
-      drawerTheme: baseTheme.drawerTheme.copyWith(
-        backgroundColor: colorScheme.surfaceContainerLow,
-      ),
-
-      // AppBar使用略深的色调，增强标题区分度
-      appBarTheme: baseTheme.appBarTheme.copyWith(
-        backgroundColor: colorScheme.surfaceContainerHigh,
-        foregroundColor: colorScheme.onSurface,
+      scaffoldBackgroundColor: baseColorScheme.surface,
+      cardTheme: CardThemeData(color: baseColorScheme.surfaceContainerHighest),
+      dialogTheme: DialogThemeData(backgroundColor: baseColorScheme.surfaceContainerHighest),
+      appBarTheme: AppBarTheme(
+        backgroundColor: baseColorScheme.surfaceContainerHighest,
+        foregroundColor: baseColorScheme.onSurface,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600, // 增强标题字重
-          fontSize: 20, // 适当增大字号
-        ),
       ),
-
-      // 导航栏使用主题色系
-      navigationBarTheme: baseTheme.navigationBarTheme.copyWith(
-        backgroundColor: colorScheme.surfaceContainer,
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHighest,
       ),
-
-      // 浮动操作按钮使用主题色系，确保主色调正确应用
-      floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHighest,
       ),
-
-      // 列表项目使用主题色系，避免紫色块状感
-      listTileTheme: baseTheme.listTileTheme.copyWith(
-        // 设为透明，避免 ListTile 再叠加一层带主色调的 surfaceContainerLow 造成紫色块状感
+      drawerTheme: DrawerThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHighest,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: baseColorScheme.primary,
+        foregroundColor: baseColorScheme.onPrimary,
+      ),
+      listTileTheme: const ListTileThemeData(
         tileColor: Colors.transparent,
       ),
     );
