@@ -825,10 +825,12 @@ class DatabaseService extends ChangeNotifier {
           'auto_stories': '📖', // 文学
           'create': '✨',       // 原创
           'public': '🌐',      // 来自网络
-          'category': '📝',    // 其他
+          'category': '📦',    // 其他
+          '📝': '📦',          // 历史 emoji -> 新 emoji
           'theaters': '🎞️',    // 影视 -> 随机 emoji
           'brush': '🪶',       // 诗词 -> 随机 emoji
-          'music_note': '🎶',  // 网易云 -> 随机 emoji
+          'music_note': '🎧',  // 网易云 -> 🎧
+          '🎶': '🎧',          // 历史 emoji -> 🎧
           'psychology': '🤔',  // 哲学
         };
 
@@ -1676,7 +1678,7 @@ class DatabaseService extends ChangeNotifier {
         id: defaultCategoryIdOther, // 使用固定 ID
         name: '其他',
         isDefault: true,
-        iconName: '📝',
+        iconName: '📦',
       ),
       NoteCategory(
         id: defaultCategoryIdMovie, // 使用固定 ID
@@ -1694,7 +1696,7 @@ class DatabaseService extends ChangeNotifier {
         id: defaultCategoryIdMusic, // 使用固定 ID
         name: '网易云',
         isDefault: true,
-        iconName: '🎶',
+        iconName: '🎧',
       ),
       NoteCategory(
         id: defaultCategoryIdPhilosophy, // 使用固定 ID
