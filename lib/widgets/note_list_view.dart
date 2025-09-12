@@ -91,6 +91,9 @@ class NoteListViewState extends State<NoteListView> {
     // 添加焦点节点监听器，用于Web平台的焦点管理
     _searchFocusNode.addListener(_onFocusChanged);
 
+    // 添加滚动控制器监听器，用于检测用户滑动状态
+    _scrollController.addListener(_onScroll);
+
     // 优化：延迟初始化数据流订阅，避免build过程中的副作用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDataStream();
@@ -102,6 +105,26 @@ class NoteListViewState extends State<NoteListView> {
     if (!mounted) return;
     // 可以在这里添加焦点变化时的逻辑
     logDebug('搜索框焦点状态: ${_searchFocusNode.hasFocus}');
+  }
+
+  /// 滚动监听器，用于检测用户滑动状态
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    // 用户正在滑动（通过滚动事件检测）
+    _isUserScrolling = true;
+    
+    // 重置定时器
+    _userScrollingTimer?.cancel();
+    
+    // 设置定时器，滑动停止后1秒重置状态
+    _userScrollingTimer = Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _isUserScrolling = false;
+        });
+      }
+    });
   }
 
   /// 数据库服务变化监听器
@@ -405,7 +428,14 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     _searchController.dispose();
-    _scrollController.dispose(); // 清理滚动控制器
+    
+    // 清理滚动控制器和监听器
+    try {
+      _scrollController.removeListener(_onScroll);
+      _scrollController.dispose();
+    } catch (e) {
+      logDebug('清理滚动控制器时出错: $e');
+    }
 
     // 安全地清理焦点节点和监听器
     try {
@@ -416,6 +446,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
+    _userScrollingTimer?.cancel(); // 清理用户滑动定时器
     super.dispose();
   }
 
@@ -425,29 +456,63 @@ class NoteListViewState extends State<NoteListView> {
     _loadMore();
   }
 
+  // 添加滚动状态标志，防止在用户滑动时触发自动滚动
+  bool _isUserScrolling = false;
+  Timer? _userScrollingTimer;
+
   /// 滚动到指定笔记的顶部
   void _scrollToItem(String quoteId, int index) {
     if (!mounted || !_scrollController.hasClients) return;
 
     try {
-      // 方法1：使用index计算滚动位置（更可靠）
-      const double estimatedItemHeight = 200.0; // 估算的笔记卡片高度
-      final double targetPosition = index * estimatedItemHeight;
+      // 如果用户正在滑动或者正在执行动画，不执行自动滚动
+      if (_isUserScrolling) {
+        return;
+      }
 
-      // 获取当前滚动位置
-      final double currentPosition = _scrollController.offset;
-      final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-
-      // 计算安全的滚动位置
-      final double safePosition = targetPosition.clamp(0.0, maxScrollExtent);
-
-      // 只有当目标位置与当前位置差距较大时才滚动
-      if ((safePosition - currentPosition).abs() > 50) {
-        _scrollController.animateTo(
-          safePosition,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOutCubic,
-        );
+      // 方法1：使用GlobalKey直接获取实际位置（更准确）
+      final GlobalKey? itemKey = _itemKeys[quoteId];
+      if (itemKey != null && itemKey.currentContext != null) {
+        final RenderBox itemRenderBox = itemKey.currentContext!.findRenderObject() as RenderBox;
+        final double itemPosition = itemRenderBox.localToGlobal(Offset.zero).dy;
+        final double listPosition = _scrollController.position.minScrollExtent;
+        final double targetOffset = itemPosition - listPosition;
+        
+        // 获取当前滚动位置
+        final double currentPosition = _scrollController.offset;
+        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+        
+        // 计算安全的滚动位置
+        final double safePosition = targetOffset.clamp(0.0, maxScrollExtent);
+        
+        // 只有当目标位置与当前位置差距较大时才滚动
+        if ((safePosition - currentPosition).abs() > 30) {
+          _scrollController.animateTo(
+            safePosition,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+      } else {
+        // 降级方案：使用index计算滚动位置（仅在GlobalKey不可用时）
+        const double estimatedItemHeight = 200.0; // 估算的笔记卡片高度
+        final double targetPosition = index * estimatedItemHeight;
+        
+        // 获取当前滚动位置
+        final double currentPosition = _scrollController.offset;
+        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+        
+        // 计算安全的滚动位置
+        final double safePosition = targetPosition.clamp(0.0, maxScrollExtent);
+        
+        // 只有当目标位置与当前位置差距较大时才滚动
+        if ((safePosition - currentPosition).abs() > 30) {
+          _scrollController.animateTo(
+            safePosition,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOutCubic,
+          );
+        }
       }
     } catch (e) {
       logDebug('滚动到笔记失败: $e', source: 'NoteListView');

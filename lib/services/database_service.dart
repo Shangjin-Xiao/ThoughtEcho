@@ -815,7 +815,10 @@ class DatabaseService extends ChangeNotifier {
       try {
         // 定义图标映射：旧图标 -> 新emoji
         final Map<String, String> iconMigration = {
-          'format_quote': '💭', // 每日一言
+          // 历史值 -> 目标值（将旧的 emoji 或临时名统一回到 format_quote）
+          'flutter_dash': 'format_quote',
+          '💭': 'format_quote',
+          'format_quote': 'format_quote',
           'movie': '🎬',        // 动画
           'menu_book': '📚',    // 漫画
           'sports_esports': '🎮', // 游戏
@@ -823,9 +826,9 @@ class DatabaseService extends ChangeNotifier {
           'create': '✨',       // 原创
           'public': '🌐',      // 来自网络
           'category': '📝',    // 其他
-          'theaters': '🎥',    // 影视 (Minimal)
-          'brush': '✒️',       // 诗词 (Minimal)
-          'music_note': '🎧',  // 网易云 (Playful)
+          'theaters': '🎞️',    // 影视 -> 随机 emoji
+          'brush': '🪶',       // 诗词 -> 随机 emoji
+          'music_note': '🎶',  // 网易云 -> 随机 emoji
           'psychology': '🤔',  // 哲学
         };
 
@@ -1631,7 +1634,7 @@ class DatabaseService extends ChangeNotifier {
         id: defaultCategoryIdHitokoto, // 使用固定 ID
         name: '每日一言',
         isDefault: true,
-        iconName: '💭',
+        iconName: 'format_quote',
       ),
       NoteCategory(
         id: defaultCategoryIdAnime, // 使用固定 ID
@@ -1679,19 +1682,19 @@ class DatabaseService extends ChangeNotifier {
         id: defaultCategoryIdMovie, // 使用固定 ID
         name: '影视',
         isDefault: true,
-        iconName: '🎥',
+        iconName: '🎞️',
       ),
       NoteCategory(
         id: defaultCategoryIdPoem, // 使用固定 ID
         name: '诗词',
         isDefault: true,
-        iconName: '✒️',
+        iconName: '🪶',
       ),
       NoteCategory(
         id: defaultCategoryIdMusic, // 使用固定 ID
         name: '网易云',
         isDefault: true,
-        iconName: '🎧',
+        iconName: '🎶',
       ),
       NoteCategory(
         id: defaultCategoryIdPhilosophy, // 使用固定 ID
