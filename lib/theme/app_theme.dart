@@ -114,6 +114,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
+      logDebug('使用自定义颜色(深色模式): ${_customColor!.toHexString()}');
       return ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.dark,
@@ -121,8 +122,10 @@ class AppTheme with ChangeNotifier {
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _darkDynamicColorScheme != null) {
+      logDebug('使用动态颜色(深色模式)');
       return _darkDynamicColorScheme!;
     }
+    logDebug('使用默认蓝色(深色模式)');
     return ColorScheme.fromSeed(
       seedColor: Colors.blue,
       brightness: Brightness.dark,
