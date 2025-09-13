@@ -202,15 +202,14 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
           });
 
-          // 首批数据加载完成再开启自动滚动，避免初次进入页面被回顶
+          // 首批数据加载完成，立即启用自动滚动但设置保护期
           if (!_initialDataLoaded) {
             _initialDataLoaded = true;
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (mounted) {
-                _autoScrollEnabled = true;
-                logDebug('首批数据加载完成，自动滚动功能已启用', source: 'NoteListView');
-              }
-            });
+            // 立即启用自动滚动，但设置更长的保护期防止误触发
+            _autoScrollEnabled = true;
+            // 设置较长的保护期，避免首次进入时的滚动冲突
+            _lastUserScrollTime = DateTime.now();
+            logDebug('首批数据加载完成，自动滚动功能已启用（保护期2秒）', source: 'NoteListView');
           }
 
           // 通知搜索控制器数据加载完成
@@ -279,6 +278,12 @@ class NoteListViewState extends State<NoteListView> {
     final bool shouldUpdate = _shouldUpdateSubscription(oldWidget);
 
     if (shouldUpdate) {
+      // 如果是首次加载期间（初始数据还未加载完成），避免重置滚动位置
+      if (!_initialDataLoaded) {
+        logDebug('跳过更新订阅：首次数据加载中', source: 'NoteListView');
+        return;
+      }
+      
       // 更新流订阅
       _updateStreamSubscription();
     }
@@ -312,6 +317,13 @@ class NoteListViewState extends State<NoteListView> {
     if (!mounted) return; // 确保组件仍然挂载
 
     logDebug('更新数据流订阅，当前加载状态: $_isLoading', source: 'NoteListView');
+
+    // 保存当前滚动位置（仅在有数据且用户已滚动时）
+    double? savedScrollOffset;
+    if (_scrollController.hasClients && _quotes.isNotEmpty && _initialDataLoaded) {
+      savedScrollOffset = _scrollController.offset;
+      logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
+    }
 
     setState(() {
       _isLoading = true; // 开始加载
@@ -349,6 +361,24 @@ class NoteListViewState extends State<NoteListView> {
       (list) {
         if (mounted) {
           // 确保组件仍然挂载
+          setState(() {
+            _quotes.clear();
+            _quotes.addAll(list);
+            _hasMore = list.length >= _pageSize;
+            _isLoading = false;
+          });
+
+          // 恢复滚动位置（在数据加载完成后）
+          if (savedScrollOffset != null && _scrollController.hasClients) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final offset = savedScrollOffset;
+              if (_scrollController.hasClients && offset != null &&
+                  offset <= _scrollController.position.maxScrollExtent) {
+                _scrollController.jumpTo(offset);
+                logDebug('恢复滚动位置: $offset', source: 'NoteListView');
+              }
+            });
+          }
           setState(() {
             _quotes.clear();
             _quotes.addAll(list);
@@ -491,8 +521,8 @@ class NoteListViewState extends State<NoteListView> {
     }
     if (_lastUserScrollTime != null &&
         DateTime.now().difference(_lastUserScrollTime!) <
-            const Duration(milliseconds: 500)) {
-      logDebug('跳过自动滚动：用户刚刚滚动 (<500ms)', source: 'NoteListView');
+            const Duration(milliseconds: 2000)) { // 增加保护期到2秒
+      logDebug('跳过自动滚动：用户刚刚滚动 (<2000ms)', source: 'NoteListView');
       return;
     }
     if (_isAutoScrolling) {

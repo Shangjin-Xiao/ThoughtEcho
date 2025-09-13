@@ -71,7 +71,7 @@ class QuoteContent extends StatelessWidget {
     return [];
   }
 
-  /// 获取非加粗的正文内容
+  /// 获取非加粗的正文内容（包括媒体嵌入）
   List<Map<String, dynamic>> _extractNonBoldOps(String deltaContent) {
     try {
       final decoded = jsonDecode(deltaContent);
@@ -80,6 +80,12 @@ class QuoteContent extends StatelessWidget {
 
         for (var op in decoded) {
           if (op is Map && op['insert'] != null) {
+            // 如果是嵌入内容（图片、视频等），直接保留
+            if (op['insert'] is Map) {
+              nonBoldOps.add(Map<String, dynamic>.from(op));
+              continue;
+            }
+            
             final String insert = op['insert'].toString();
             final Map<String, dynamic>? attributes = op['attributes'];
 
@@ -129,13 +135,27 @@ class QuoteContent extends StatelessWidget {
         bool truncated = false;
 
         if (boldLineCount < maxLines) {
-          // 还可以补充普通内容，填满到 maxLines
+          // 加粗内容不足maxLines，需要添加换行分隔，然后补充非加粗内容
+          // 确保加粗内容以换行结尾
+          if (!allBoldText.endsWith('\n')) {
+            finalOps.add({'insert': '\n'});
+          }
+          
+          // 添加一个额外换行作为分隔
+          finalOps.add({'insert': '\n'});
+          int currentLines = boldLineCount + 1; // +1 for the separator line
+          
+          // 补充非加粗内容
           final nonBoldOps = _extractNonBoldOps(deltaContent);
-          int currentLines = boldLineCount;
-
-          // 遍历非加粗 ops，逐行添加直到达到 maxLines
           for (var op in nonBoldOps) {
             if (currentLines >= maxLines) break;
+            
+            // 处理媒体嵌入内容
+            if (op['insert'] is Map) {
+              finalOps.add(Map<String, dynamic>.from(op));
+              continue; // 媒体不计入行数，但保留显示
+            }
+            
             final String insert = op['insert'].toString();
             final lines = insert.split('\n');
             final Map<String, dynamic> attributes =
@@ -143,17 +163,13 @@ class QuoteContent extends StatelessWidget {
 
             String buffer = '';
             for (String line in lines) {
-              // 添加这一行
+              if (currentLines >= maxLines) break;
               if (line.trim().isNotEmpty) {
-                if (currentLines >= maxLines) break;
                 buffer += '$line\n';
                 currentLines++;
-              }
-              // 空行：如果之前已经有内容，也保留一个换行保证段落结构
-              else {
+              } else {
                 buffer += '\n';
               }
-              if (currentLines >= maxLines) break;
             }
 
             if (buffer.isNotEmpty) {
@@ -161,9 +177,8 @@ class QuoteContent extends StatelessWidget {
             }
           }
 
-          // 判断是否还有未显示的正文（如果非加粗 ops 没被完全添加完，且仍有剩余的非空行）
+          // 判断是否还有未显示的正文
           if (nonBoldOps.isNotEmpty) {
-            // 粗略判断：如果最后一个非加粗 op 没被完整利用就视为截断
             int totalNonBoldLines = 0;
             for (var op in nonBoldOps) {
               final text = op['insert'].toString();
@@ -171,7 +186,7 @@ class QuoteContent extends StatelessWidget {
                 if (l.trim().isNotEmpty) totalNonBoldLines++;
               }
             }
-            if (totalNonBoldLines + boldLineCount > maxLines) {
+            if (totalNonBoldLines + boldLineCount + 1 > maxLines) { // +1 for separator
               truncated = true;
             }
           }
