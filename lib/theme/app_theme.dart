@@ -451,71 +451,34 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
-    final scheme = darkColorScheme;
-
-    return ThemeData.dark().copyWith(
-      colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
-      appBarTheme: AppBarTheme(
-        backgroundColor: scheme.surfaceContainerHighest,
-        foregroundColor: scheme.onSurface,
+    return FlexThemeData.dark(
+      colorScheme: darkColorScheme,
+      useMaterial3: true,
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+      blendLevel: 10,
+      subThemesData: const FlexSubThemesData(
+        blendOnLevel: 15,
+        useMaterial3Typography: true,
+        useM2StyleDividerInM3: false,
+        alignedDropdown: true,
+        useInputDecoratorThemeInDialogs: true,
+        elevatedButtonSchemeColor: SchemeColor.primary,
+        elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
+        cardRadius: cardRadius,
+        inputDecoratorRadius: inputRadius,
+        dialogRadius: dialogRadius,
+        timePickerDialogRadius: dialogRadius,
+        outlinedButtonRadius: buttonRadius,
+        filledButtonRadius: buttonRadius,
+        textButtonRadius: buttonRadius,
+        fabRadius: buttonRadius,
       ),
-      cardTheme: CardThemeData(
-        color: scheme.surfaceContainerHighest,
-        elevation: 0,
+      keyColors: const FlexKeyColors(
+        useSecondary: true,
+        useTertiary: true,
       ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: scheme.surfaceContainerHighest,
-        elevation: 0,
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: scheme.surfaceContainerHighest,
-        elevation: 0,
-      ),
-      drawerTheme: DrawerThemeData(
-        backgroundColor: scheme.surfaceContainerHighest,
-        elevation: 0,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surfaceContainerHighest,
-        elevation: 0,
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: scheme.primary,
-          side: BorderSide(color: scheme.primary),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: scheme.primary,
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: scheme.surfaceContainerHighest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: BorderSide(color: scheme.outline),
-        ),
-      ),
-      listTileTheme: const ListTileThemeData(
-        tileColor: Colors.transparent,
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: scheme.surfaceContainerHighest,
-        selectedColor: scheme.primary.withValues(alpha: 0.3),
-      ),
+      tones: FlexTones.material(Brightness.dark),
+      visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
   }
 }
