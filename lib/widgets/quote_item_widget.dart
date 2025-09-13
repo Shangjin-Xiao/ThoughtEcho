@@ -315,7 +315,7 @@ class QuoteItemWidget extends StatelessWidget {
                                       sigmaX: 1.2, sigmaY: 1.2),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      // 上浅下深渐变：顶部几乎透明，底部加强以提示还有内容
+                                      // 上浅下深渐变：顶部透明，底部明显以提示还有内容
                                       gradient: LinearGradient(
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
@@ -323,11 +323,11 @@ class QuoteItemWidget extends StatelessWidget {
                                           theme.colorScheme.surface
                                               .withValues(alpha: 0.0),
                                           theme.colorScheme.surface
-                                              .withValues(alpha: 0.04),
-                                          theme.colorScheme.surface
                                               .withValues(alpha: 0.08),
+                                          theme.colorScheme.surface
+                                              .withValues(alpha: 0.18),
                                         ],
-                                        stops: const [0.0, 0.55, 1.0],
+                                        stops: const [0.0, 0.4, 1.0],
                                       ),
                                     ),
                                     alignment: Alignment.center,
