@@ -819,36 +819,35 @@ class DatabaseService extends ChangeNotifier {
           'flutter_dash': 'format_quote',
           '💭': 'format_quote',
           'format_quote': 'format_quote',
-          'movie': '🎬',        // 动画
-          'menu_book': '📚',    // 漫画
+          'movie': '🎬', // 动画
+          'menu_book': '📚', // 漫画
           'sports_esports': '🎮', // 游戏
           'auto_stories': '📖', // 文学
-          'create': '✨',       // 原创
-          'public': '🌐',      // 来自网络
-          'category': '📦',    // 其他
-          '📝': '📦',          // 历史 emoji -> 新 emoji
-          'theaters': '🎞️',    // 影视 -> 随机 emoji
-          'brush': '🪶',       // 诗词 -> 随机 emoji
-          'music_note': '🎧',  // 网易云 -> 🎧
-          '🎶': '🎧',          // 历史 emoji -> 🎧
-          'psychology': '🤔',  // 哲学
+          'create': '✨', // 原创
+          'public': '🌐', // 来自网络
+          'category': '📦', // 其他
+          '📝': '📦', // 历史 emoji -> 新 emoji
+          'theaters': '🎞️', // 影视 -> 随机 emoji
+          'brush': '🪶', // 诗词 -> 随机 emoji
+          'music_note': '🎧', // 网易云 -> 🎧
+          '🎶': '🎧', // 历史 emoji -> 🎧
+          'psychology': '🤔', // 哲学
         };
 
         // 更新默认标签的图标
         for (final entry in iconMigration.entries) {
           final oldIcon = entry.key;
           final newIcon = entry.value;
-          
+
           await txn.execute(
             'UPDATE categories SET icon_name = ? WHERE icon_name = ? AND is_default = 1',
             [newIcon, oldIcon],
           );
         }
-        
+
         logDebug('数据库升级：默认标签图标更新完成');
       } catch (e) {
-        logError('默认标签图标更新失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError('默认标签图标更新失败: $e', error: e, source: 'DatabaseUpgrade');
       }
     }
   }

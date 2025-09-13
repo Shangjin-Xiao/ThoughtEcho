@@ -116,39 +116,57 @@ class AppTheme with ChangeNotifier {
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
-      // 直接使用用户选择的颜色，但避免深色模式下产生紫色调
       logDebug('使用自定义颜色(深色模式): ${_customColor!.toARGB32().toRadixString(16)}');
-      
-      // 绕过 Material 3 的 ColorScheme.fromSeed 算法，手动创建颜色方案
-      // 避免自定义颜色被自动转换为紫色调
-      return ColorScheme.dark(
-        primary: _customColor!,
-        onPrimary: _getContrastColor(_customColor!),
-        secondary: _customColor!.withValues(alpha: 0.8),
-        onSecondary: _getContrastColor(_customColor!.withValues(alpha: 0.8)),
-        surface: const Color(0xFF121212), // Dark surface
-        onSurface: Colors.white,
-        surfaceContainerHighest: _customColor!.withValues(alpha: 0.1), // 淡化的自定义颜色作为背景
-        onSurfaceVariant: Colors.white70,
-        error: Colors.red[700]!,
-        onError: Colors.white,
-      );
+      return _createSafeDarkColorScheme(_customColor!);
     }
-    // 只有在启用动态取色且有可用的动态颜色方案时才使用
+
     if (_useDynamicColor && _darkDynamicColorScheme != null) {
-      logDebug('使用动态颜色(深色模式)');
       return _darkDynamicColorScheme!;
     }
-    logDebug('使用默认蓝色(深色模式)');
+
+    return _buildModernDarkScheme();
+  }
+
+  // 创建安全的深色颜色方案，避免紫色调
+  ColorScheme _createSafeDarkColorScheme(Color seedColor) {
+    return ColorScheme.dark(
+      primary: seedColor,
+      onPrimary: _getContrastColor(seedColor),
+      secondary: seedColor.withValues(alpha: 0.8),
+      onSecondary: _getContrastColor(seedColor.withValues(alpha: 0.8)),
+      tertiary: seedColor.withValues(alpha: 0.6),
+      onTertiary: _getContrastColor(seedColor.withValues(alpha: 0.6)),
+      surface: const Color(0xFF121212),
+      onSurface: Colors.white,
+      surfaceContainerHighest: seedColor.withValues(alpha: 0.1), // 淡化的自定义颜色
+      surfaceContainerHigh: seedColor.withValues(alpha: 0.08),
+      surfaceContainer: const Color(0xFF121212),
+      surfaceContainerLow: const Color(0xFF121212),
+      surfaceContainerLowest: seedColor.withValues(alpha: 0.05),
+      surfaceDim: const Color(0xFF121212),
+      surfaceBright: const Color(0xFF1E1E1E),
+      onSurfaceVariant: Colors.white70,
+      outline: const Color(0xFF404040),
+      outlineVariant: const Color(0xFF303030),
+      error: Colors.red[700]!,
+      onError: Colors.white,
+      scrim: Colors.black.withValues(alpha: 0.7),
+    );
+  }
+
+  // 获取对比色 - 确保文字在背景上的可读性
+  Color _getContrastColor(Color backgroundColor) {
+    return backgroundColor.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
+  }
+
+  // 默认的现代深色方案
+  ColorScheme _buildModernDarkScheme() {
     return ColorScheme.fromSeed(
       seedColor: Colors.blue,
       brightness: Brightness.dark,
     );
-  }
-  
-  // 获取对比色 - 用于确保文字在背景上的可读性
-  Color _getContrastColor(Color backgroundColor) {
-    return backgroundColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
   }
 
   bool get useCustomColor => _useCustomColor;
@@ -162,7 +180,6 @@ class AppTheme with ChangeNotifier {
     notifyListeners();
   }
 
-  
   // 判断当前是否为深色模式
   bool get isDarkMode {
     // 仅根据用户显式选择返回，ThemeMode.system 的实际亮度应由外部通过 MediaQuery/Theme.of 来判断；
@@ -434,35 +451,70 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
-    // 直接创建基础颜色方案，避免FlexColorScheme的扭曲
-    ColorScheme baseColorScheme = darkColorScheme;
-    
-    // 所有情况都使用简化的 ThemeData.dark 创建，避免 FlexColorScheme 的紫色问题
-    return ThemeData.dark(useMaterial3: true).copyWith(
-      colorScheme: baseColorScheme,
-      scaffoldBackgroundColor: baseColorScheme.surface,
-      cardTheme: CardThemeData(color: baseColorScheme.surfaceContainerHighest),
-      dialogTheme: DialogThemeData(backgroundColor: baseColorScheme.surfaceContainerHighest),
+    final scheme = darkColorScheme;
+
+    return ThemeData.dark().copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(
-        backgroundColor: baseColorScheme.surfaceContainerHighest,
-        foregroundColor: baseColorScheme.onSurface,
+        backgroundColor: scheme.surfaceContainerHighest,
+        foregroundColor: scheme.onSurface,
+      ),
+      cardTheme: CardThemeData(
+        color: scheme.surfaceContainerHighest,
+        elevation: 0,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerHighest,
+        elevation: 0,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surfaceContainerHighest,
+        elevation: 0,
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: scheme.surfaceContainerHighest,
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: baseColorScheme.surfaceContainerHighest,
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: baseColorScheme.surfaceContainerHighest,
-      ),
-      drawerTheme: DrawerThemeData(
-        backgroundColor: baseColorScheme.surfaceContainerHighest,
+        backgroundColor: scheme.surfaceContainerHighest,
+        elevation: 0,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: baseColorScheme.primary,
-        foregroundColor: baseColorScheme.onPrimary,
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: scheme.primary,
+          side: BorderSide(color: scheme.primary),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: scheme.primary,
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide(color: scheme.outline),
+        ),
       ),
       listTileTheme: const ListTileThemeData(
         tileColor: Colors.transparent,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: scheme.surfaceContainerHighest,
+        selectedColor: scheme.primary.withValues(alpha: 0.3),
       ),
     );
   }
