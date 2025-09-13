@@ -109,97 +109,119 @@ class QuoteContent extends StatelessWidget {
       if (validBoldOps.isNotEmpty) {
         List<Map<String, dynamic>> finalOps = [];
 
-        // 先添加所有有效的加粗内容，保持原始格式
+        // 收集加粗文本（按原顺序）
         for (var op in validBoldOps) {
           finalOps.add(op);
         }
 
-        // 计算加粗内容的行数
+        // 统计加粗的非空逻辑行数
         String allBoldText = '';
         for (var op in validBoldOps) {
           allBoldText += op['insert'].toString();
         }
-
         final boldLines = allBoldText.split('\n');
         int boldLineCount = 0;
         for (String line in boldLines) {
           if (line.trim().isNotEmpty) boldLineCount++;
         }
 
-        // 如果加粗内容少于maxLines，添加连接到正文的内容
+        // 标记是否最终需要截断
+        bool truncated = false;
+
         if (boldLineCount < maxLines) {
-          // 添加连接提示
-          if (!allBoldText.endsWith('\n')) {
-            finalOps.add({'insert': '\n'});
-          }
-          finalOps.add({
-            'insert': '...\n',
-            'attributes': {'italic': true, 'color': '#888888'}
-          });
-
-          // 添加部分正文内容
+          // 还可以补充普通内容，填满到 maxLines
           final nonBoldOps = _extractNonBoldOps(deltaContent);
-          int addedLines = 0;
-          final remainingLines =
-              maxLines - boldLineCount - 1; // -1 for the "..." line
+          int currentLines = boldLineCount;
 
+          // 遍历非加粗 ops，逐行添加直到达到 maxLines
           for (var op in nonBoldOps) {
-            if (addedLines >= remainingLines) break;
-
+            if (currentLines >= maxLines) break;
             final String insert = op['insert'].toString();
             final lines = insert.split('\n');
+            final Map<String, dynamic> attributes =
+                Map<String, dynamic>.from(op['attributes'] ?? {});
 
+            String buffer = '';
             for (String line in lines) {
-              if (addedLines >= remainingLines) break;
+              // 添加这一行
               if (line.trim().isNotEmpty) {
-                final Map<String, dynamic> attributes =
-                    Map<String, dynamic>.from(op['attributes'] ?? {});
-                finalOps.add({'insert': '$line\n', 'attributes': attributes});
-                addedLines++;
+                if (currentLines >= maxLines) break;
+                buffer += '$line\n';
+                currentLines++;
               }
+              // 空行：如果之前已经有内容，也保留一个换行保证段落结构
+              else {
+                buffer += '\n';
+              }
+              if (currentLines >= maxLines) break;
+            }
+
+            if (buffer.isNotEmpty) {
+              finalOps.add({'insert': buffer, 'attributes': attributes});
+            }
+          }
+
+          // 判断是否还有未显示的正文（如果非加粗 ops 没被完全添加完，且仍有剩余的非空行）
+          if (nonBoldOps.isNotEmpty) {
+            // 粗略判断：如果最后一个非加粗 op 没被完整利用就视为截断
+            int totalNonBoldLines = 0;
+            for (var op in nonBoldOps) {
+              final text = op['insert'].toString();
+              for (var l in text.split('\n')) {
+                if (l.trim().isNotEmpty) totalNonBoldLines++;
+              }
+            }
+            if (totalNonBoldLines + boldLineCount > maxLines) {
+              truncated = true;
             }
           }
         } else {
-          // 加粗内容超过maxLines，截断并添加省略号
+          // 加粗内容已经 >= maxLines，需要截断加粗内容
           List<Map<String, dynamic>> truncatedOps = [];
           int currentLines = 0;
 
           for (var op in validBoldOps) {
             if (currentLines >= maxLines) break;
-
             final String insert = op['insert'].toString();
             final lines = insert.split('\n');
             String truncatedInsert = '';
-
             for (String line in lines) {
               if (currentLines >= maxLines) break;
               truncatedInsert += '$line\n';
               if (line.trim().isNotEmpty) currentLines++;
             }
-
             if (truncatedInsert.isNotEmpty) {
               final Map<String, dynamic> attributes =
                   Map<String, dynamic>.from(op['attributes'] ?? {});
-              truncatedOps
-                  .add({'insert': truncatedInsert, 'attributes': attributes});
+              truncatedOps.add({
+                'insert': truncatedInsert,
+                'attributes': attributes,
+              });
             }
           }
-
           finalOps = truncatedOps;
+          truncated = true; // 肯定截断
+        }
 
-          // 添加省略号
-          if (finalOps.isNotEmpty) {
-            final lastOp = finalOps.last;
+        // 如果截断，则在最后一段尾部追加省略号（不新起一行）
+        if (truncated && finalOps.isNotEmpty) {
+          final lastOp = finalOps.last;
+          if (lastOp['insert'] != null) {
             final lastInsert = lastOp['insert'].toString();
-            lastOp['insert'] = '${lastInsert.trimRight()}...';
+            // 去除尾部多余换行，只在内容末尾追加 ... 再补一个换行
+            String normalized = lastInsert;
+            while (normalized.endsWith('\n')) {
+              normalized = normalized.substring(0, normalized.length - 1);
+            }
+            lastOp['insert'] = '${normalized.trimRight()}...\n';
           }
         }
 
-        // 确保文档以换行符结尾
+        // 确保文档以换行结尾（符合 quill Document 习惯）
         if (finalOps.isNotEmpty) {
-          final lastOp = finalOps.last;
-          if (lastOp['insert'] != null &&
-              !lastOp['insert'].toString().endsWith('\n')) {
+          final last = finalOps.last;
+          if (last['insert'] is String &&
+              !last['insert'].toString().endsWith('\n')) {
             finalOps.add({'insert': '\n'});
           }
         }
@@ -207,10 +229,10 @@ class QuoteContent extends StatelessWidget {
         return quill.Document.fromJson(finalOps);
       }
     } catch (e) {
-      // 解析失败，回退到原始文档
+      // 解析失败，回退
     }
 
-    // 没有有效加粗内容，回退到原始文档
+    // 回退：原始文档
     try {
       return quill.Document.fromJson(jsonDecode(deltaContent));
     } catch (_) {
@@ -302,10 +324,14 @@ class QuoteContent extends StatelessWidget {
 
   /// 判断富文本内容是否需要折叠（仅检查行数）
   bool _needsExpansionForRichText(String deltaContent) {
+    // 折叠策略（与外层保持一致）：只有当逻辑行数 > 4 时才进入折叠模式；
+    // 折叠后外层 Text/QuoteContent 统一展示 4 行（或等价的截断文档）。
+    // 这里的“逻辑行”基于 plain text 的换行符，不代表视觉自动换行数。
     try {
       final doc = quill.Document.fromJson(jsonDecode(deltaContent));
       final plain = doc.toPlainText();
       final int lineCount = 1 + '\n'.allMatches(plain).length;
+      // 策略：>4 行才折叠，折叠后展示 4 行（外层 maxLines=4）
       return lineCount > 4;
     } catch (_) {
       final int lineCount = 1 + '\n'.allMatches(quote.content).length;
@@ -444,7 +470,7 @@ class QuoteContent extends StatelessWidget {
 
     // 使用普通文本显示（仅检查行数）
     final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-    final bool needsExpansion = lineCount > 4;
+    final bool needsExpansion = lineCount > 3; // MODIFIED
 
     return Text(
       quote.content,
