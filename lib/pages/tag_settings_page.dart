@@ -27,7 +27,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -113,9 +113,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // 添加新标签卡片
             Container(
               width: double.infinity,
@@ -160,13 +160,13 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                       // 图标选择按钮
                       Container(
                         decoration: BoxDecoration(
-                          color: _selectedIconName != null 
-                              ? colorScheme.primary.withAlpha(20) 
+                          color: _selectedIconName != null
+                              ? colorScheme.primary.withAlpha(20)
                               : colorScheme.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: _selectedIconName != null 
-                                ? colorScheme.primary 
+                            color: _selectedIconName != null
+                                ? colorScheme.primary
                                 : colorScheme.outline.withAlpha(50),
                           ),
                         ),
@@ -175,7 +175,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
                                   ? Text(
-                                      IconUtils.getDisplayIcon(_selectedIconName!),
+                                      IconUtils.getDisplayIcon(
+                                          _selectedIconName!),
                                       style: const TextStyle(fontSize: 20),
                                     )
                                   : Icon(
@@ -207,38 +208,40 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               : () async {
                                   if (_tagController.text.isEmpty) return;
 
-                          // 在异步操作前获取上下文的参数和服务
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          final dbService = context.read<DatabaseService>();
+                                  // 在异步操作前获取上下文的参数和服务
+                                  final scaffoldMessenger =
+                                      ScaffoldMessenger.of(
+                                    context,
+                                  );
+                                  final dbService =
+                                      context.read<DatabaseService>();
 
-                          setState(() => _isLoading = true);
-                          try {
-                            await dbService.addCategory(
-                              _tagController.text,
-                              iconName: _selectedIconName,
-                            ); // 替换 addTag 为 addCategory
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    await dbService.addCategory(
+                                      _tagController.text,
+                                      iconName: _selectedIconName,
+                                    ); // 替换 addTag 为 addCategory
 
-                            if (!mounted) return;
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(content: Text('标签添加成功')),
-                            );
-                            _tagController.clear();
-                            setState(() {
-                              _selectedIconName = null;
-                            });
-                          } catch (e) {
-                            if (!mounted) return;
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(content: Text('添加标签失败：$e')),
-                            );
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isLoading = false);
-                            }
-                          }
-                        },
+                                    if (!mounted) return;
+                                    scaffoldMessenger.showSnackBar(
+                                      const SnackBar(content: Text('标签添加成功')),
+                                    );
+                                    _tagController.clear();
+                                    setState(() {
+                                      _selectedIconName = null;
+                                    });
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(content: Text('添加标签失败：$e')),
+                                    );
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoading = false);
+                                    }
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -270,9 +273,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // 现有标签列表
             Container(
               width: double.infinity,
@@ -298,308 +301,328 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                     ),
                   ),
                   StreamBuilder<List<NoteCategory>>(
-              // 替换 StreamBuilder<List<NoteTag>> 为 StreamBuilder<List<NoteCategory>>
-              stream: context
-                  .read<DatabaseService>()
-                  .watchCategories(), // 替换 watchTags 为 watchCategories
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Container(
-                    padding: const EdgeInsets.all(40),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          CircularProgressIndicator(
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '加载标签中...',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Container(
-                    padding: const EdgeInsets.all(40),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.error_outline_rounded,
-                            size: 48,
-                            color: colorScheme.error,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '加载标签失败',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: colorScheme.error,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${snapshot.error}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(40),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.label_off_outlined,
-                            size: 48,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '暂无标签',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '创建您的第一个标签来开始整理思想',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final List<NoteCategory> tags =
-                    snapshot.data as List<NoteCategory>; // 添加类型转换
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: tags.length,
-                  separatorBuilder: (context, index) => Divider(
-                    color: colorScheme.outline.withAlpha(30),
-                    height: 1,
-                    indent: 20,
-                    endIndent: 20,
-                  ),
-                  itemBuilder: (context, index) {
-                    final NoteCategory tag =
-                        tags[index]; // 替换 NoteTag 为 NoteCategory
-                    return Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: tag.isDefault 
-                            ? colorScheme.primaryContainer.withAlpha(50)
-                            : null,
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        leading: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: tag.isDefault 
-                                ? colorScheme.primary.withAlpha(20)
-                                : colorScheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: tag.isDefault 
-                                  ? colorScheme.primary.withAlpha(50)
-                                  : colorScheme.outline.withAlpha(30),
-                            ),
-                          ),
+                    // 替换 StreamBuilder<List<NoteTag>> 为 StreamBuilder<List<NoteCategory>>
+                    stream: context
+                        .read<DatabaseService>()
+                        .watchCategories(), // 替换 watchTags 为 watchCategories
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Container(
+                          padding: const EdgeInsets.all(40),
                           child: Center(
-                            child: IconUtils.isEmoji(tag.iconName)
-                                ? Text(
-                                    IconUtils.getDisplayIcon(tag.iconName),
-                                    style: const TextStyle(fontSize: 20),
-                                  )
-                                : Icon(
-                                    IconUtils.getIconData(tag.iconName),
-                                    color: tag.isDefault 
-                                        ? colorScheme.primary
-                                        : colorScheme.onSurfaceVariant,
+                            child: Column(
+                              children: [
+                                CircularProgressIndicator(
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '加载标签中...',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        title: Text(
-                          tag.name,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: tag.isDefault 
-                                ? FontWeight.w600 
-                                : FontWeight.w500,
-                            color: tag.isDefault 
-                                ? colorScheme.primary
-                                : colorScheme.onSurface,
-                          ),
-                        ),
-                        subtitle: tag.isDefault 
-                            ? Text(
-                                '系统默认标签',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.primary.withAlpha(150),
-                                ),
-                              )
-                            : null,
-                        trailing: tag.isDefault
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.primary.withAlpha(20),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: colorScheme.primary.withAlpha(50),
-                                  ),
-                                ),
-                                child: Text(
-                                  '默认',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              )
-                            : IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline_rounded,
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return Container(
+                          padding: const EdgeInsets.all(40),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 48,
                                   color: colorScheme.error,
                                 ),
-                                onPressed: () async {
-                                  // 在异步操作前获取上下文的参数和服务
-                                  final scaffoldMessenger =
-                                      ScaffoldMessenger.of(context);
-                                  final dbService =
-                                      context.read<DatabaseService>();
+                                const SizedBox(height: 16),
+                                Text(
+                                  '加载标签失败',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.error,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${snapshot.error}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
 
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      title: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.warning_amber_rounded,
-                                            color: colorScheme.error,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Text('确认删除'),
-                                        ],
-                                      ),
-                                      content: Text(
-                                        '确定要删除标签"${tag.name}"吗？\n\n删除后，使用此标签的笔记将不再显示该标签。',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(
-                                            context,
-                                            false,
-                                          ),
-                                          child: Text(
-                                            '取消',
-                                            style: TextStyle(
-                                              color: colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ),
-                                        FilledButton(
-                                          onPressed: () => Navigator.pop(
-                                            context,
-                                            true,
-                                          ),
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: colorScheme.error,
-                                          ),
-                                          child: const Text('删除'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(40),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.label_off_outlined,
+                                  size: 48,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '暂无标签',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '创建您的第一个标签来开始整理思想',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
 
-                                  if (confirmed == true) {
-                                    try {
-                                      await dbService.deleteCategory(tag.id);
-
-                                      if (!mounted) return;
-                                      scaffoldMessenger.showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.check_circle_outline_rounded,
-                                                color: colorScheme.onInverseSurface,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              const Text('标签删除成功'),
-                                            ],
-                                          ),
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (!mounted) return;
-                                      scaffoldMessenger.showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.error_outline_rounded,
-                                                color: colorScheme.onErrorContainer,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text('删除标签失败：$e'),
-                                            ],
-                                          ),
-                                          backgroundColor: colorScheme.errorContainer,
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
+                      final List<NoteCategory> tags =
+                          snapshot.data as List<NoteCategory>; // 添加类型转换
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: tags.length,
+                        separatorBuilder: (context, index) => Divider(
+                          color: colorScheme.outline.withAlpha(30),
+                          height: 1,
+                          indent: 20,
+                          endIndent: 20,
+                        ),
+                        itemBuilder: (context, index) {
+                          final NoteCategory tag =
+                              tags[index]; // 替换 NoteTag 为 NoteCategory
+                          return Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: tag.isDefault
+                                  ? colorScheme.primaryContainer.withAlpha(50)
+                                  : null,
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
                               ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                              leading: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: tag.isDefault
+                                      ? colorScheme.primary.withAlpha(20)
+                                      : colorScheme.surfaceContainerHigh,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: tag.isDefault
+                                        ? colorScheme.primary.withAlpha(50)
+                                        : colorScheme.outline.withAlpha(30),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: IconUtils.isEmoji(tag.iconName)
+                                      ? Text(
+                                          IconUtils.getDisplayIcon(
+                                              tag.iconName),
+                                          style: const TextStyle(fontSize: 20),
+                                        )
+                                      : Icon(
+                                          IconUtils.getIconData(tag.iconName),
+                                          color: tag.isDefault
+                                              ? colorScheme.primary
+                                              : colorScheme.onSurfaceVariant,
+                                        ),
+                                ),
+                              ),
+                              title: Text(
+                                tag.name,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: tag.isDefault
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: tag.isDefault
+                                      ? colorScheme.primary
+                                      : colorScheme.onSurface,
+                                ),
+                              ),
+                              subtitle: tag.isDefault
+                                  ? Text(
+                                      '系统默认标签',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            colorScheme.primary.withAlpha(150),
+                                      ),
+                                    )
+                                  : null,
+                              trailing: tag.isDefault
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            colorScheme.primary.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color:
+                                              colorScheme.primary.withAlpha(50),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '默认',
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: colorScheme.error,
+                                      ),
+                                      onPressed: () async {
+                                        // 在异步操作前获取上下文的参数和服务
+                                        final scaffoldMessenger =
+                                            ScaffoldMessenger.of(context);
+                                        final dbService =
+                                            context.read<DatabaseService>();
+
+                                        final confirmed =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            title: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.warning_amber_rounded,
+                                                  color: colorScheme.error,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Text('确认删除'),
+                                              ],
+                                            ),
+                                            content: Text(
+                                              '确定要删除标签"${tag.name}"吗？\n\n删除后，使用此标签的笔记将不再显示该标签。',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                                child: Text(
+                                                  '取消',
+                                                  style: TextStyle(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor:
+                                                      colorScheme.error,
+                                                ),
+                                                child: const Text('删除'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirmed == true) {
+                                          try {
+                                            await dbService
+                                                .deleteCategory(tag.id);
+
+                                            if (!mounted) return;
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .check_circle_outline_rounded,
+                                                      color: colorScheme
+                                                          .onInverseSurface,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    const Text('标签删除成功'),
+                                                  ],
+                                                ),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            if (!mounted) return;
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .error_outline_rounded,
+                                                      color: colorScheme
+                                                          .onErrorContainer,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text('删除标签失败：$e'),
+                                                  ],
+                                                ),
+                                                backgroundColor:
+                                                    colorScheme.errorContainer,
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

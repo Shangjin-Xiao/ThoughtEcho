@@ -427,13 +427,15 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             });
           },
           child: Column(
-            children: _sortTypeKeyToLabel.entries.map(
-              (entry) => RadioListTile<String>(
-                title: Text(entry.value),
-                value: entry.key,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ).toList(),
+            children: _sortTypeKeyToLabel.entries
+                .map(
+                  (entry) => RadioListTile<String>(
+                    title: Text(entry.value),
+                    value: entry.key,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                )
+                .toList(),
           ),
         ),
         SwitchListTile(

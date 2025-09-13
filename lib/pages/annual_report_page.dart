@@ -1283,7 +1283,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   void _shareReport() {
     // TODO: 实现分享功能
     HapticFeedback.mediumImpact();
-    
+
     try {
       // 生成分享文本
       final year = widget.year.toString();
@@ -1298,7 +1298,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
       // 复制到剪贴板
       Clipboard.setData(ClipboardData(text: shareText));
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('年度报告已复制到剪贴板'),

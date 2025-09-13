@@ -44,6 +44,8 @@ Codebase conventions and patterns
 - Services are split between lightweight (MMKV) initialized at startup and heavier services (Database, AI DB) initialized asynchronously in background
 - Platform-specific handling: Windows desktop uses sqflite_common_ffi and has shorter timeouts in main.dart
 - Tests use flutter_test + test packages; mockito and fake_async are available for unit tests
+- Database uses dual-format storage: content (plain text) + deltaContent (Quill JSON) for rich text
+- Memory management: LargeFileManager for streaming large files, IntelligentMemoryManager for dynamic memory handling
 
 Developer workflows for Claude Code
 - Always run flutter pub get before making code changes that touch dependencies
@@ -53,14 +55,31 @@ Developer workflows for Claude Code
 
 Files worth checking first when triaging issues
 - lib/main.dart: startup/init behavior and service wiring (lib/main.dart:1)
-- lib/services/database_service.dart: database lifecycle and migrations
+- lib/services/database_service.dart: database lifecycle and migrations (dual-format: content + deltaContent)
 - lib/services/note_sync_service.dart: note sync logic and device discovery
-- lib/services/backup_service.dart: backup creation and validation
+- lib/services/backup_service.dart: backup creation and validation (ZIP format with streaming)
 - test/all_tests.dart: test grouping and execution
+- lib/services/multi_ai_settings.dart: multi-provider AI configuration
+
+Key architecture patterns
+- Multi-AI provider support with failover between OpenAI, Anthropic, DeepSeek, etc.
+- Asynchronous service initialization: lightweight services first, heavy services in background
+- Platform adaptation: databaseFactoryFfi for Windows, SafeMMKV wrapper for ARM compatibility
+- Stream processing for AI responses and large file operations
+- Comprehensive error handling with emergency recovery pages
 
 CI/automation hints
 - Tests run in two shards; if adding long-running tests, mark them to avoid slowing both shards
 - Formatting and analysis are enforced in CI; run locally to prevent failures
+- Integration tests run on Linux with flutter config --enable-linux-desktop and Xvfb
+
+Common development tasks specific to this codebase
+- Adding new AI providers: update AIProviderSettings.getPresetProviders() and add to multi_ai_settings.dart
+- Modifying database schema: increment version in DatabaseService and add migration logic
+- Platform-specific code: use kIsWeb and Platform.isXxx checks, handle sqfliteFfiInit() for Windows
+- Rich text features: use NoteFullEditorPage instead of simple text fields to support dual-format storage
+- Large file operations: use LargeFileManager for streaming to prevent OutOfMemoryError
+- AI functionality: prefer streaming responses using StreamingTextDialog for better UX
 
 If CLAUDE.md exists: suggest edits
 - If you update this file, avoid repeating README content. Focus on developer commands, architecture, and files to inspect for common tasks.

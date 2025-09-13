@@ -113,10 +113,10 @@ class NoteListViewState extends State<NoteListView> {
 
     // 用户正在滑动（通过滚动事件检测）
     _isUserScrolling = true;
-    
+
     // 重置定时器
     _userScrollingTimer?.cancel();
-    
+
     // 设置定时器，滑动停止后1秒重置状态
     _userScrollingTimer = Timer(const Duration(seconds: 1), () {
       if (mounted) {
@@ -428,7 +428,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     _searchController.dispose();
-    
+
     // 清理滚动控制器和监听器
     try {
       _scrollController.removeListener(_onScroll);
@@ -473,18 +473,20 @@ class NoteListViewState extends State<NoteListView> {
       // 方法1：使用GlobalKey直接获取实际位置（更准确）
       final GlobalKey? itemKey = _itemKeys[quoteId];
       if (itemKey != null && itemKey.currentContext != null) {
-        final RenderBox itemRenderBox = itemKey.currentContext!.findRenderObject() as RenderBox;
+        final RenderBox itemRenderBox =
+            itemKey.currentContext!.findRenderObject() as RenderBox;
         final double itemPosition = itemRenderBox.localToGlobal(Offset.zero).dy;
         final double listPosition = _scrollController.position.minScrollExtent;
         final double targetOffset = itemPosition - listPosition;
-        
+
         // 获取当前滚动位置
         final double currentPosition = _scrollController.offset;
-        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-        
+        final double maxScrollExtent =
+            _scrollController.position.maxScrollExtent;
+
         // 计算安全的滚动位置
         final double safePosition = targetOffset.clamp(0.0, maxScrollExtent);
-        
+
         // 只有当目标位置与当前位置差距较大时才滚动
         if ((safePosition - currentPosition).abs() > 30) {
           _scrollController.animateTo(
@@ -497,14 +499,15 @@ class NoteListViewState extends State<NoteListView> {
         // 降级方案：使用index计算滚动位置（仅在GlobalKey不可用时）
         const double estimatedItemHeight = 200.0; // 估算的笔记卡片高度
         final double targetPosition = index * estimatedItemHeight;
-        
+
         // 获取当前滚动位置
         final double currentPosition = _scrollController.offset;
-        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-        
+        final double maxScrollExtent =
+            _scrollController.position.maxScrollExtent;
+
         // 计算安全的滚动位置
         final double safePosition = targetPosition.clamp(0.0, maxScrollExtent);
-        
+
         // 只有当目标位置与当前位置差距较大时才滚动
         if ((safePosition - currentPosition).abs() > 30) {
           _scrollController.animateTo(
