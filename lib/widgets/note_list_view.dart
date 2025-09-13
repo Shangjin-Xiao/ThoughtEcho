@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart'; // For RenderAbstractViewport
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -80,6 +81,11 @@ class NoteListViewState extends State<NoteListView> {
 
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
+  // ---- 自动滚动控制新增状态 ----
+  bool _autoScrollEnabled = false; // 首批数据加载完成后再允许自动滚动
+  bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
+  bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
+  DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
 
   @override
   void initState() {
@@ -113,6 +119,7 @@ class NoteListViewState extends State<NoteListView> {
 
     // 用户正在滑动（通过滚动事件检测）
     _isUserScrolling = true;
+    _lastUserScrollTime = DateTime.now();
 
     // 重置定时器
     _userScrollingTimer?.cancel();
@@ -195,6 +202,17 @@ class NoteListViewState extends State<NoteListView> {
             _hasMore = list.length >= _pageSize;
             _isLoading = false;
           });
+
+          // 首批数据加载完成再开启自动滚动，避免初次进入页面被回顶
+          if (!_initialDataLoaded) {
+            _initialDataLoaded = true;
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                _autoScrollEnabled = true;
+                logDebug('首批数据加载完成，自动滚动功能已启用', source: 'NoteListView');
+              }
+            });
+          }
 
           // 通知搜索控制器数据加载完成
           try {
@@ -463,62 +481,60 @@ class NoteListViewState extends State<NoteListView> {
   /// 滚动到指定笔记的顶部
   void _scrollToItem(String quoteId, int index) {
     if (!mounted || !_scrollController.hasClients) return;
+    // 多重保护条件
+    if (!_autoScrollEnabled) {
+      logDebug('跳过自动滚动（未启用 _autoScrollEnabled）', source: 'NoteListView');
+      return;
+    }
+    if (_isUserScrolling) {
+      logDebug('跳过自动滚动：用户正在滑动', source: 'NoteListView');
+      return;
+    }
+    if (_lastUserScrollTime != null &&
+        DateTime.now().difference(_lastUserScrollTime!) <
+            const Duration(milliseconds: 500)) {
+      logDebug('跳过自动滚动：用户刚刚滚动 (<500ms)', source: 'NoteListView');
+      return;
+    }
+    if (_isAutoScrolling) {
+      logDebug('跳过自动滚动：已有动画', source: 'NoteListView');
+      return;
+    }
 
     try {
-      // 如果用户正在滑动或者正在执行动画，不执行自动滚动
-      if (_isUserScrolling) {
+      final key = _itemKeys[quoteId];
+      if (key == null || key.currentContext == null) return;
+      final renderObject = key.currentContext!.findRenderObject();
+      if (renderObject == null) return;
+      final viewport = RenderAbstractViewport.of(renderObject);
+      double targetOffset;
+      try {
+        final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
+        targetOffset = reveal.offset;
+      } catch (_) {
+        logDebug('获取Viewport偏移失败，使用估算位置', source: 'NoteListView');
+        const estimatedItemHeight = 200.0;
+        targetOffset = index * estimatedItemHeight;
+      }
+      final current = _scrollController.offset;
+      final max = _scrollController.position.maxScrollExtent;
+      final safe = targetOffset.clamp(0.0, max);
+      if ((safe - current).abs() < 48) {
+        logDebug('偏移差 <48，跳过滚动 diff=${(safe - current).abs().toStringAsFixed(1)}', source: 'NoteListView');
         return;
       }
-
-      // 方法1：使用GlobalKey直接获取实际位置（更准确）
-      final GlobalKey? itemKey = _itemKeys[quoteId];
-      if (itemKey != null && itemKey.currentContext != null) {
-        final RenderBox itemRenderBox =
-            itemKey.currentContext!.findRenderObject() as RenderBox;
-        final double itemPosition = itemRenderBox.localToGlobal(Offset.zero).dy;
-        final double listPosition = _scrollController.position.minScrollExtent;
-        final double targetOffset = itemPosition - listPosition;
-
-        // 获取当前滚动位置
-        final double currentPosition = _scrollController.offset;
-        final double maxScrollExtent =
-            _scrollController.position.maxScrollExtent;
-
-        // 计算安全的滚动位置
-        final double safePosition = targetOffset.clamp(0.0, maxScrollExtent);
-
-        // 只有当目标位置与当前位置差距较大时才滚动
-        if ((safePosition - currentPosition).abs() > 30) {
-          _scrollController.animateTo(
-            safePosition,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOutCubic,
-          );
-        }
-      } else {
-        // 降级方案：使用index计算滚动位置（仅在GlobalKey不可用时）
-        const double estimatedItemHeight = 200.0; // 估算的笔记卡片高度
-        final double targetPosition = index * estimatedItemHeight;
-
-        // 获取当前滚动位置
-        final double currentPosition = _scrollController.offset;
-        final double maxScrollExtent =
-            _scrollController.position.maxScrollExtent;
-
-        // 计算安全的滚动位置
-        final double safePosition = targetPosition.clamp(0.0, maxScrollExtent);
-
-        // 只有当目标位置与当前位置差距较大时才滚动
-        if ((safePosition - currentPosition).abs() > 30) {
-          _scrollController.animateTo(
-            safePosition,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutCubic,
-          );
-        }
-      }
-    } catch (e) {
-      logDebug('滚动到笔记失败: $e', source: 'NoteListView');
+      _isAutoScrolling = true;
+      logDebug('执行自动滚动: current=${current.toStringAsFixed(1)} -> target=${safe.toStringAsFixed(1)}', source: 'NoteListView');
+      _scrollController
+          .animateTo(
+            safe,
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeOutCubic,
+          )
+          .whenComplete(() => _isAutoScrolling = false);
+    } catch (e, st) {
+      logDebug('滚动到笔记失败: $e\n$st', source: 'NoteListView');
+      _isAutoScrolling = false;
     }
   }
 
@@ -665,7 +681,9 @@ class NoteListViewState extends State<NoteListView> {
 
                   // 折叠后滚动到笔记顶部
                   if (!expanded) {
-                    _scrollToItem(quote.id!, index);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToItem(quote.id!, index);
+                    });
                   }
                 },
                 onEdit: () => widget.onEdit(quote),
