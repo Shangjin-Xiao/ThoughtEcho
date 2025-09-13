@@ -297,9 +297,16 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                             .surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        analysis.content,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      child: MarkdownBody(
+                        data: analysis.content,
+                        styleSheet:
+                            MarkdownStyleSheet.fromTheme(Theme.of(context))
+                                .copyWith(
+                          p: Theme.of(context).textTheme.bodyMedium,
+                          h1: Theme.of(context).textTheme.titleLarge,
+                          h2: Theme.of(context).textTheme.titleMedium,
+                          h3: Theme.of(context).textTheme.titleSmall,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -317,7 +324,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: MarkdownBody(
-                        data: analysis.title,
+                        data: analysis.content,
                         styleSheet:
                             MarkdownStyleSheet.fromTheme(Theme.of(context))
                                 .copyWith(
@@ -325,6 +332,49 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                           h1: Theme.of(context).textTheme.titleLarge,
                           h2: Theme.of(context).textTheme.titleMedium,
                           h3: Theme.of(context).textTheme.titleSmall,
+                          code:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHigh,
+                                    fontFamily: 'monospace',
+                                    fontSize: 14,
+                                  ),
+                          codeblockPadding: const EdgeInsets.all(12),
+                          codeblockDecoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          blockquote:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontStyle: FontStyle.italic,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.8),
+                                  ),
+                          blockquotePadding: const EdgeInsets.all(12),
+                          blockquoteDecoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border(
+                              left: BorderSide(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 4,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),

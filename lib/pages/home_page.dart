@@ -710,7 +710,7 @@ class _HomePageState extends State<HomePage>
                 size: 16,
               ),
               const SizedBox(width: 8),
-              Text('收藏到心 ${quote.favoriteCount + 1} 次'),
+              Text('已珍藏 (${quote.favoriteCount + 1})'),
             ],
           ),
           duration: const Duration(milliseconds: 1500),

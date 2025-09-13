@@ -29,7 +29,7 @@ class AIPeriodicReportPage extends StatefulWidget {
 }
 
 class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
 
   // 折叠状态
@@ -64,6 +64,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
 
+  // 新增：流式显示动画控制器
+  AnimationController? _animatedTextController;
+
   // 服务
   AICardGenerationService? _aiCardService;
 
@@ -72,6 +75,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
+
+    // 初始化流式文本动画控制器
+    _animatedTextController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
     _loadPeriodData();
   }
 
@@ -101,6 +110,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _insightSub?.cancel();
+    _animatedTextController?.dispose();
     super.dispose();
   }
 
@@ -320,6 +330,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           setState(() {
             _insightText += chunk;
           });
+
+          // 触发文字动画，让新内容渐进显示
+          _animatedTextController?.reset();
+          _animatedTextController?.forward();
         },
         onError: (_) {
           if (!mounted) return;
@@ -336,6 +350,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             _insightText = local;
             _insightLoading = false;
           });
+
+          // 本地洞察也需要动画
+          _animatedTextController?.reset();
+          _animatedTextController?.forward();
         },
         onDone: () {
           if (!mounted) return;
@@ -907,8 +925,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Row(
                     children: [
                       Expanded(
-                          child: _buildStatCard(
-                              '笔记数量', '$totalNotes', '条', Icons.note_alt_outlined)),
+                          child: _buildStatCard('笔记数量', '$totalNotes', '条',
+                              Icons.note_alt_outlined)),
                       const SizedBox(width: 12),
                       Expanded(
                           child: _buildStatCard(
@@ -931,12 +949,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Row(
                     children: [
                       Expanded(
-                          child: _buildStatCard(
-                              '平均字数', '$avgWords', '字/条', Icons.calculate_outlined)),
+                          child: _buildStatCard('平均字数', '$avgWords', '字/条',
+                              Icons.calculate_outlined)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildStatCard('活跃天数', '${_getActiveDays()}', '天',
-                            Icons.calendar_today_outlined),
+                        child: _buildStatCard('活跃天数', '${_getActiveDays()}',
+                            '天', Icons.calendar_today_outlined),
                       ),
                     ],
                   ),
@@ -974,8 +992,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child:
-                            _buildStatCardWithTagIcon('常用标签', _mostTopTag ?? '暂无', ''),
+                        child: _buildStatCardWithTagIcon(
+                            '常用标签', _mostTopTag ?? '暂无', ''),
                       ),
                     ],
                   ),
@@ -1030,28 +1048,33 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                             const SizedBox(width: 8),
                             Text(
                               '最近笔记',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        ..._periodQuotes.take(3).map((quote) => 
-                          TweenAnimationBuilder<double>(
-                            duration: Duration(milliseconds: 600 + (_periodQuotes.indexOf(quote) * 200)),
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            builder: (context, animValue, child) {
-                              return Transform.translate(
-                                offset: Offset(0, 15 * (1 - animValue)),
-                                child: Opacity(
-                                  opacity: animValue,
-                                  child: _buildQuotePreview(quote),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
+                        ..._periodQuotes.take(3).map(
+                              (quote) => TweenAnimationBuilder<double>(
+                                duration: Duration(
+                                    milliseconds: 600 +
+                                        (_periodQuotes.indexOf(quote) * 200)),
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                builder: (context, animValue, child) {
+                                  return Transform.translate(
+                                    offset: Offset(0, 15 * (1 - animValue)),
+                                    child: Opacity(
+                                      opacity: animValue,
+                                      child: _buildQuotePreview(quote),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                       ],
                     ),
                   ),
@@ -1139,21 +1162,22 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           },
         ),
         const SizedBox(height: 12),
-        ...favorited.take(3).map((q) => 
-          TweenAnimationBuilder<double>(
-            duration: Duration(milliseconds: 600 + (favorited.indexOf(q) * 150)),
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 15 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: _buildFavoritePreviewChip(q),
-                ),
-              );
-            },
-          ),
-        ),
+        ...favorited.take(3).map(
+              (q) => TweenAnimationBuilder<double>(
+                duration:
+                    Duration(milliseconds: 600 + (favorited.indexOf(q) * 150)),
+                tween: Tween(begin: 0.0, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 15 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: _buildFavoritePreviewChip(q),
+                    ),
+                  );
+                },
+              ),
+            ),
       ],
     );
   }
@@ -1190,7 +1214,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     return Transform.scale(
                       scale: value,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.red.shade400,
                           borderRadius: BorderRadius.circular(10),
@@ -1205,7 +1230,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.favorite, color: Colors.white, size: 12),
+                            const Icon(Icons.favorite,
+                                color: Colors.white, size: 12),
                             const SizedBox(width: 4),
                             Text(
                               '${quote.favoriteCount}',
@@ -1259,7 +1285,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     scale: _insightLoading ? value : 1.0,
                     child: Icon(
                       Icons.lightbulb,
-                      color: _insightLoading 
+                      color: _insightLoading
                           ? Colors.amber.withValues(alpha: value)
                           : Theme.of(context).colorScheme.primary,
                     ),
@@ -1290,8 +1316,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         children: [
                           Text(
                             '正在生成本${_getPeriodName()}洞察…',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
                           ),
                           const SizedBox(height: 8),
                           TweenAnimationBuilder<double>(
@@ -1300,7 +1331,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                             builder: (context, value, child) {
                               return LinearProgressIndicator(
                                 value: _insightLoading ? null : 1.0,
-                                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   Theme.of(context).colorScheme.primary,
                                 ),
@@ -1313,30 +1346,56 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         key: ValueKey('content-${_insightText.length}'),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
-                          child: _insightText.isEmpty 
-                              ? Text(
-                                  '暂无洞察',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        height: 1.4,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          child: _insightText.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHigh,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        size: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
                                       ),
-                                )
-                              : TweenAnimationBuilder<double>(
-                                  duration: const Duration(milliseconds: 200),
-                                  tween: Tween(begin: 0.0, end: 1.0),
-                                  builder: (context, value, child) {
-                                    return Opacity(
-                                      opacity: value,
-                                      child: Text(
-                                        _insightText,
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '暂无洞察',
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(height: 1.4),
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                              height: 1.4,
+                                            ),
                                       ),
+                                    ],
+                                  ),
+                                )
+                              : AnimatedBuilder(
+                                  animation: _animatedTextController!,
+                                  builder: (context, child) {
+                                    final animatedText = _insightText.substring(
+                                        0,
+                                        (_insightText.length *
+                                                _animatedTextController!.value)
+                                            .round());
+                                    return Text(
+                                      animatedText,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(height: 1.5),
                                     );
                                   },
                                 ),
@@ -1572,7 +1631,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: Text(
                       '本${_getPeriodName()}暂无笔记',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -1642,7 +1702,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -1677,7 +1740,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(10),
@@ -1685,7 +1749,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       child: Text(
                         '${quote.content.length} 字',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
                               fontWeight: FontWeight.w500,
                             ),
                       ),
@@ -1722,8 +1788,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: Opacity(
                       opacity: value,
                       child: Icon(
-                        Icons.note_alt_outlined, 
-                        size: 64, 
+                        Icons.note_alt_outlined,
+                        size: 64,
                         color: Colors.grey[400],
                       ),
                     ),
@@ -1741,9 +1807,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       opacity: value,
                       child: Text(
                         '本${_getPeriodName()}暂无笔记记录',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
                         textAlign: TextAlign.center,
                       ),
                     ),
