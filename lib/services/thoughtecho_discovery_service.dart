@@ -16,6 +16,15 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   bool _isScanning = false;
   final List<RawDatagramSocket> _sockets = [];
   Timer? _announcementTimer;
+  Timer? _healthTimer; // 周期性健康检查
+  DateTime _lastMessageTime = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastAnnouncementSend = DateTime.fromMillisecondsSinceEpoch(0);
+  static const Duration _socketInactivityRestart = Duration(seconds: 25); // 超过该时间未收到消息则重启监听
+  static const Duration _announcementInterval = Duration(seconds: 5);
+  static const Duration _minAnnouncementGap = Duration(seconds: 2);
+  static const Duration _healthCheckInterval = Duration(seconds: 6);
+  static const Duration _deviceExpiry = Duration(seconds: 40); // 设备超时移除
+  final Map<String, DateTime> _deviceLastSeen = {}; // 指纹->最近见到时间
   int _actualServerPort = defaultPort; // 实际服务器端口
   String _deviceFingerprint = 'initializing'; // 设备指纹，异步获取
   bool _fingerprintReady = false; // 指纹是否已获取
@@ -130,15 +139,55 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         await _ensureDeviceInfo();
       }
 
-      // 启动UDP组播监听
+      // 启动UDP组播监听（若失败自动重试一次）
       await _startMulticastListener();
+      if (_sockets.isEmpty) {
+        logWarning('discovery_no_socket_first_try retrying...', source: 'LocalSend');
+        await Future.delayed(const Duration(milliseconds: 400));
+        await _startMulticastListener();
+      }
 
-      // 发送公告消息
-      await _sendAnnouncement();
+      // 首次公告
+      await _sendAnnouncement(force: true);
 
-      // 定期发送公告
-      _announcementTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      // 定期发送公告 + 自愈机制
+      _announcementTimer = Timer.periodic(_announcementInterval, (_) {
         _sendAnnouncement();
+      });
+
+      // 健康检查：检测长期无消息、设备过期、套接字是否关闭
+      _healthTimer?.cancel();
+      _healthTimer = Timer.periodic(_healthCheckInterval, (_) async {
+        if (!_isScanning) return;
+        final now = DateTime.now();
+        // 1. 长时间无消息 => 重启监听
+        if (now.difference(_lastMessageTime) > _socketInactivityRestart) {
+          logWarning('discovery_inactive_restart', source: 'LocalSend');
+          await _restartSockets();
+          await _sendAnnouncement(force: true);
+        }
+        // 2. 移除过期设备（不改变功能：只是去掉不再在线的幽灵设备）
+        final removed = <String>[];
+        _deviceLastSeen.forEach((fp, ts) {
+          if (now.difference(ts) > _deviceExpiry) {
+            removed.add(fp);
+          }
+        });
+        if (removed.isNotEmpty) {
+          _devices.removeWhere((d) => removed.contains(d.fingerprint));
+          for (final r in removed) {
+            _deviceLastSeen.remove(r);
+          }
+          if (removed.isNotEmpty) {
+            notifyListeners();
+            logInfo('discovery_prune old=${removed.length}', source: 'LocalSend');
+          }
+        }
+        // 3. 套接字数量为0 => 重启
+        if (_sockets.isEmpty) {
+          await _restartSockets();
+          await _sendAnnouncement(force: true);
+        }
       });
 
       debugPrint('ThoughtEcho设备发现已启动');
@@ -155,6 +204,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   Future<void> stopDiscovery() async {
     _isScanning = false;
     _announcementTimer?.cancel();
+    _healthTimer?.cancel();
 
     for (final socket in _sockets) {
       socket.close();
@@ -218,8 +268,17 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             if (event == RawSocketEvent.read) {
               final datagram = socket.receive();
               if (datagram != null) {
+                _lastMessageTime = DateTime.now();
                 _handleMulticastMessage(datagram);
               }
+            } else if (event == RawSocketEvent.closed) {
+              debugPrint('❌ 套接字被关闭，标记自愈');
+              // 延迟触发一个自愈（不直接重启，避免多次触发）
+              Future.microtask(() async {
+                if (_isScanning) {
+                  await _restartSockets();
+                }
+              });
             }
           }, onError: (error) {
             debugPrint('❌ 套接字监听错误: $error');
@@ -285,6 +344,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
       if (existingIndex == -1) {
         _devices.add(device);
+        _deviceLastSeen[device.fingerprint] = DateTime.now();
         notifyListeners();
         debugPrint('✓ 发现新设备: ${device.alias} (${device.ip}:${device.port})');
         debugPrint(
@@ -296,6 +356,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           _respondToAnnouncement(device);
         }
       } else {
+        // 更新 last seen
+        _deviceLastSeen[device.fingerprint] = DateTime.now();
         debugPrint('设备已存在: ${device.alias} (${device.ip}:${device.port})');
       }
     } catch (e, stack) {
@@ -306,9 +368,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   }
 
   /// 发送公告消息
-  Future<void> _sendAnnouncement() async {
+  Future<void> _sendAnnouncement({bool force = false}) async {
     if (_sockets.isEmpty) {
       debugPrint('❌ 没有可用的套接字发送公告');
+      return;
+    }
+    final now = DateTime.now();
+    if (!force && now.difference(_lastAnnouncementSend) < _minAnnouncementGap) {
+      // 防抖：避免外部频繁调用导致广播风暴
       return;
     }
 
@@ -365,6 +432,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       }
     }
 
+    _lastAnnouncementSend = now;
+
     if (successCount > 0) {
       debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
       logInfo(
@@ -412,6 +481,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 清空设备列表
   void clearDevices() {
     _devices.clear();
+    _deviceLastSeen.clear();
     notifyListeners();
     debugPrint('已清空设备列表');
   }
@@ -499,5 +569,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   void dispose() {
     stopDiscovery();
     super.dispose();
+  }
+
+  // 重启套接字监听（保持外部功能一致，仅内部自愈）
+  Future<void> _restartSockets() async {
+    for (final s in _sockets) {
+      try {
+        s.close();
+      } catch (_) {}
+    }
+    _sockets.clear();
+    await _startMulticastListener();
   }
 }

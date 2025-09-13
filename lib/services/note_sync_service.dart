@@ -129,7 +129,6 @@ class NoteSyncService extends ChangeNotifier {
       }
 
       AppLogger.i('所有服务组件创建成功，开始启动服务器...', source: 'NoteSyncService');
-      AppLogger.i('所有服务组件创建成功，开始启动服务器...', source: 'NoteSyncService');
 
       // 启动LocalSend服务器
       // ensure fingerprint ready before server start
@@ -246,14 +245,10 @@ class NoteSyncService extends ChangeNotifier {
       // 停止LocalSendServer
       if (_localSendServer != null) {
         AppLogger.d('停止LocalSendServer...', source: 'NoteSyncService');
-        AppLogger.d('停止LocalSendServer...', source: 'NoteSyncService');
         await _localSendServer!.stop();
-        AppLogger.i('LocalSendServer已停止', source: 'NoteSyncService');
         AppLogger.i('LocalSendServer已停止', source: 'NoteSyncService');
       }
     } catch (e) {
-      AppLogger.e('停止LocalSendServer时出错: $e',
-          error: e, source: 'NoteSyncService');
       AppLogger.e('停止LocalSendServer时出错: $e',
           error: e, source: 'NoteSyncService');
     }
@@ -262,13 +257,10 @@ class NoteSyncService extends ChangeNotifier {
       // 停止设备发现服务
       if (_discoveryService != null) {
         AppLogger.d('停止设备发现服务...', source: 'NoteSyncService');
-        AppLogger.d('停止设备发现服务...', source: 'NoteSyncService');
         await _discoveryService!.stopDiscovery();
-        AppLogger.i('设备发现服务已停止', source: 'NoteSyncService');
         AppLogger.i('设备发现服务已停止', source: 'NoteSyncService');
       }
     } catch (e) {
-      AppLogger.e('停止设备发现服务时出错: $e', error: e, source: 'NoteSyncService');
       AppLogger.e('停止设备发现服务时出错: $e', error: e, source: 'NoteSyncService');
     }
 
@@ -276,14 +268,10 @@ class NoteSyncService extends ChangeNotifier {
       // 清理LocalSend发送服务
       if (_localSendProvider != null) {
         AppLogger.d('清理LocalSend发送服务...', source: 'NoteSyncService');
-        AppLogger.d('清理LocalSend发送服务...', source: 'NoteSyncService');
         _localSendProvider!.dispose();
-        AppLogger.i('LocalSend发送服务已清理', source: 'NoteSyncService');
         AppLogger.i('LocalSend发送服务已清理', source: 'NoteSyncService');
       }
     } catch (e) {
-      AppLogger.e('清理LocalSend发送服务时出错: $e',
-          error: e, source: 'NoteSyncService');
       AppLogger.e('清理LocalSend发送服务时出错: $e',
           error: e, source: 'NoteSyncService');
     }
@@ -293,8 +281,6 @@ class NoteSyncService extends ChangeNotifier {
     _discoveryService = null;
     _localSendProvider = null;
 
-    AppLogger.i('ThoughtEcho sync servers stopped and cleaned up',
-        source: 'NoteSyncService');
     AppLogger.i('ThoughtEcho sync servers stopped and cleaned up',
         source: 'NoteSyncService');
   }
@@ -310,139 +296,6 @@ class NoteSyncService extends ChangeNotifier {
       'Legacy receive logic replaced by processSyncPackage; will be removed in future release')
   Future<void> receiveAndMergeNotes(String backupFilePath) =>
       processSyncPackage(backupFilePath);
-
-  // 旧的重复检测与合并逻辑已不再需要 (LWW直接覆盖)。保留方法体空实现以避免潜在调用崩溃。
-  @Deprecated(
-      'Legacy duplicate merge removed; kept as no-op for binary compatibility')
-  // ignore: unused_element
-  Future<void> _mergeNoteData() async {}
-
-  /// 高级重复检测算法
-  @Deprecated('Legacy advanced duplicate detection not used after LWW strategy')
-  // ignore: unused_element
-  Future<List<List<dynamic>>> _detectDuplicatesAdvanced(
-      List<dynamic> quotes) async {
-    final duplicateGroups = <List<dynamic>>[];
-    final processed = <String>{};
-
-    for (final quote in quotes) {
-      if (processed.contains(quote.id)) continue;
-
-      final duplicates = await _findSimilarQuotes(quote, quotes);
-      if (duplicates.length > 1) {
-        duplicateGroups.add(duplicates);
-        processed.addAll(duplicates.map((q) => q.id));
-      }
-    }
-
-    return duplicateGroups;
-  }
-
-  /// 查找相似笔记
-  Future<List<dynamic>> _findSimilarQuotes(
-      dynamic target, List<dynamic> allQuotes) async {
-    final similar = [target];
-
-    for (final quote in allQuotes) {
-      if (quote.id == target.id) continue;
-
-      if (await _areDuplicates(target, quote)) {
-        similar.add(quote);
-      }
-    }
-
-    return similar;
-  }
-
-  /// 判断两个笔记是否重复
-  Future<bool> _areDuplicates(dynamic quote1, dynamic quote2) async {
-    // 1. 精确内容匹配
-    final normalizedContent1 = _normalizeContent(quote1.content);
-    final normalizedContent2 = _normalizeContent(quote2.content);
-
-    if (normalizedContent1 == normalizedContent2) {
-      return true;
-    }
-
-    // 2. 富文本内容匹配
-    if (quote1.deltaContent != null && quote2.deltaContent != null) {
-      if (quote1.deltaContent == quote2.deltaContent) {
-        return true;
-      }
-    }
-
-    // 3. 内容相似度检测（90%以上相似度认为重复）
-    final similarity =
-        _calculateContentSimilarity(quote1.content, quote2.content);
-    if (similarity > 0.9) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /// 标准化内容（去除空白字符和标点差异）
-  String _normalizeContent(String content) {
-    return content
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll(RegExp(r'[^\w\s\u4e00-\u9fa5]'), '') // 保留中文字符
-        .toLowerCase()
-        .trim();
-  }
-
-  /// 计算内容相似度（Jaccard相似度）
-  double _calculateContentSimilarity(String content1, String content2) {
-    final words1 = _normalizeContent(content1)
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .toSet();
-    final words2 = _normalizeContent(content2)
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .toSet();
-
-    if (words1.isEmpty && words2.isEmpty) return 1.0;
-    if (words1.isEmpty || words2.isEmpty) return 0.0;
-
-    final intersection = words1.intersection(words2).length;
-    final union = words1.union(words2).length;
-
-    return intersection / union;
-  }
-
-  /// 合并一组重复笔记
-  @Deprecated('Legacy merge duplicates function unused after LWW strategy')
-  // ignore: unused_element
-  Future<void> _mergeQuoteGroup(List<dynamic> duplicates) async {
-    // 按优先级排序（最新时间、最丰富内容）
-    duplicates.sort((a, b) {
-      // 1. 优先保留有富文本内容的
-      if (a.deltaContent != null && b.deltaContent == null) return -1;
-      if (a.deltaContent == null && b.deltaContent != null) return 1;
-
-      // 2. 优先保留内容更丰富的
-      final aLength = a.content.length + (a.deltaContent?.length ?? 0);
-      final bLength = b.content.length + (b.deltaContent?.length ?? 0);
-      if (aLength != bLength) return bLength.compareTo(aLength);
-
-      // 3. 优先保留更新时间的
-      final timeA = DateTime.tryParse(a.date) ?? DateTime(1970);
-      final timeB = DateTime.tryParse(b.date) ?? DateTime(1970);
-      return timeB.compareTo(timeA);
-    });
-
-    final keepQuote = duplicates.first;
-    final duplicatesToDelete = duplicates.skip(1).toList();
-
-    AppLogger.d(
-        '保留笔记: ${keepQuote.id}, 删除重复: ${duplicatesToDelete.map((q) => q.id).join(', ')}',
-        source: 'NoteSyncService');
-
-    // 删除重复笔记
-    for (final duplicate in duplicatesToDelete) {
-      await _databaseService.deleteQuote(duplicate.id);
-    }
-  }
 
   /// 创建同步包并发送到指定设备（若对方需要先审批，先走意向握手，再打包发送）
   /// [includeMediaFiles] 是否包含媒体文件（默认包含）
@@ -546,7 +399,6 @@ class NoteSyncService extends ChangeNotifier {
         await backupFile.delete();
       } catch (e) {
         AppLogger.w('清理临时文件失败: $e', error: e, source: 'NoteSyncService');
-        AppLogger.w('清理临时文件失败: $e', error: e, source: 'NoteSyncService');
       }
 
       return sessionId;
@@ -623,7 +475,6 @@ class NoteSyncService extends ChangeNotifier {
       _updateSyncStatus(SyncStatus.failed, '发送已取消', 0.0);
     } catch (e) {
       AppLogger.e('取消发送失败: $e', error: e, source: 'NoteSyncService');
-      AppLogger.e('取消发送失败: $e', error: e, source: 'NoteSyncService');
     }
   }
 
@@ -638,7 +489,6 @@ class NoteSyncService extends ChangeNotifier {
       rc?.cancelSession(_currentReceiveSessionId!);
       _updateSyncStatus(SyncStatus.failed, '接收已取消', 0.0);
     } catch (e) {
-      AppLogger.e('取消接收失败: $e', error: e, source: 'NoteSyncService');
       AppLogger.e('取消接收失败: $e', error: e, source: 'NoteSyncService');
     }
   }
@@ -670,11 +520,7 @@ class NoteSyncService extends ChangeNotifier {
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         AppLogger.d('Preflight OK: ${resp.statusCode}',
             source: 'NoteSyncService');
-        AppLogger.d('Preflight OK: ${resp.statusCode}',
-            source: 'NoteSyncService');
       } else {
-        AppLogger.w('Preflight warn: ${resp.statusCode}',
-            source: 'NoteSyncService');
         AppLogger.w('Preflight warn: ${resp.statusCode}',
             source: 'NoteSyncService');
       }
@@ -710,22 +556,17 @@ class NoteSyncService extends ChangeNotifier {
       if (mergeReport?.hasErrors == true) {
         _updateSyncStatus(SyncStatus.failed, '合并出现错误: $summary', 0.0);
         AppLogger.e('合并错误: ${mergeReport?.errors}', source: 'NoteSyncService');
-        AppLogger.e('合并错误: ${mergeReport?.errors}', source: 'NoteSyncService');
       } else {
         _updateSyncStatus(SyncStatus.completed, '合并完成: $summary', 1.0);
-        AppLogger.i('合并成功: $summary', source: 'NoteSyncService');
         AppLogger.i('合并成功: $summary', source: 'NoteSyncService');
         try {
           _databaseService.refreshAllData();
         } catch (e) {
           AppLogger.w('刷新数据库数据流失败: $e', error: e, source: 'NoteSyncService');
-          AppLogger.w('刷新数据库数据流失败: $e', error: e, source: 'NoteSyncService');
         }
       }
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '合并失败: $e', 0.0);
-      AppLogger.e('processSyncPackage失败: $e',
-          error: e, source: 'NoteSyncService');
       AppLogger.e('processSyncPackage失败: $e',
           error: e, source: 'NoteSyncService');
       rethrow;
@@ -783,8 +624,6 @@ class NoteSyncService extends ChangeNotifier {
     if (_discoveryService == null) {
       AppLogger.w('Discovery service not initialized',
           source: 'NoteSyncService');
-      AppLogger.w('Discovery service not initialized',
-          source: 'NoteSyncService');
       return [];
     }
 
@@ -801,7 +640,6 @@ class NoteSyncService extends ChangeNotifier {
 
       return _discoveryService!.devices;
     } catch (e) {
-      AppLogger.e('发现附近设备失败: $e', error: e, source: 'NoteSyncService');
       AppLogger.e('发现附近设备失败: $e', error: e, source: 'NoteSyncService');
       return [];
     }
@@ -826,6 +664,7 @@ class NoteSyncService extends ChangeNotifier {
     bool cancelled = false;
     Timer? periodic;
     Timer? endTimer;
+    Timer? fastTimer; // 快速轮询定时器
 
     // 清空 & 首次公告
     _discoveryService!.clearDevices();
@@ -840,17 +679,27 @@ class NoteSyncService extends ChangeNotifier {
     // 周期性广播（提升发现概率）和推送更新
     periodic = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (cancelled) return;
-      await _discoveryService!.announceDevice();
-      emit();
+      try {
+        await _discoveryService!.announceDevice();
+        emit();
+      } catch (e) {
+        // 忽略公告错误，避免中断流
+      }
     });
 
     // 快速轮询前几秒（前 5 秒每 1s 更新一次）
     int fastTicks = 0;
-    Timer.periodic(const Duration(seconds: 1), (t) {
-      if (cancelled || t.isActive == false) return;
+    fastTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (cancelled) {
+        t.cancel();
+        return;
+      }
       fastTicks++;
       emit();
-      if (fastTicks >= 5) t.cancel();
+      if (fastTicks >= 5) {
+        t.cancel();
+        fastTimer = null;
+      }
     });
 
     // 最终超时结束
@@ -860,6 +709,7 @@ class NoteSyncService extends ChangeNotifier {
       emit();
       controller.close();
       periodic?.cancel();
+      fastTimer?.cancel();
     });
 
     // 初始立即一次
@@ -870,6 +720,7 @@ class NoteSyncService extends ChangeNotifier {
       cancelled = true;
       periodic?.cancel();
       endTimer?.cancel();
+      fastTimer?.cancel();
       if (!controller.isClosed) {
         emit();
         controller.close();

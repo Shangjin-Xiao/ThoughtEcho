@@ -607,23 +607,34 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 color: Colors.white,
                               ),
                             ),
-                            title: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                    child: Text(
-                                  // 需求：设备名称直接使用当前下面小字（型号）那个。优先型号，其次 alias
-                                  (device.deviceModel?.isNotEmpty == true
-                                          ? device.deviceModel!
-                                          : device.alias)
-                                      .trim(),
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
-                                )),
-                                const SizedBox(width: 4),
-                                _buildShortFingerprint(device.fingerprint),
-                              ],
+                            title: LayoutBuilder(
+                              builder: (ctx, constraints) {
+                                final name = (device.deviceModel?.isNotEmpty == true
+                                        ? device.deviceModel!
+                                        : device.alias)
+                                    .trim();
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // 预留指纹+间距 ~70px，限制最大宽度防止被挤
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: (constraints.maxWidth - 70)
+                                            .clamp(80.0, constraints.maxWidth),
+                                      ),
+                                      child: Text(
+                                        name,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600),
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    _buildShortFingerprint(device.fingerprint),
+                                  ],
+                                );
+                              },
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
