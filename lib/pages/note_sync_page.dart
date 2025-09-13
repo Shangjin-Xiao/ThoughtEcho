@@ -512,14 +512,35 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 style: const TextStyle(
                                     color: Colors.red, fontSize: 12))),
                       ] else if (_isScanning) ...[
-                        const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const CircularProgressIndicator(strokeWidth: 2),
+                              if (_discoveryRemainingMs > 0)
+                                Text(
+                                  '${(_discoveryRemainingMs / 1000).ceil()}',
+                                  style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                                ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: 8),
-                        Text('搜索中... ${_nearbyDevices.length} 台'),
+                        Expanded(
+                          child: Text(
+                            _discoveryRemainingMs > 0
+                                ? '搜索中... ${_nearbyDevices.length} 台 (${(_discoveryRemainingMs / 1000).ceil()}s)'
+                                : '搜索中... ${_nearbyDevices.length} 台',
+                          ),
+                        ),
                       ] else ...[
-                        const Icon(Icons.devices, size: 18),
+                        Icon(
+                          _nearbyDevices.isNotEmpty ? Icons.devices : Icons.search,
+                          size: 18,
+                          color: _nearbyDevices.isNotEmpty ? Colors.green : null,
+                        ),
                         const SizedBox(width: 6),
                         Text('发现 ${_nearbyDevices.length} 台设备'),
                       ],
@@ -616,37 +637,27 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 return Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    // 预留指纹+间距 ~70px，限制最大宽度防止被挤
-                                    ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxWidth: (constraints.maxWidth - 70)
-                                            .clamp(80.0, constraints.maxWidth),
-                                      ),
-                                      child: Text(
-                                        name,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600),
-                                        maxLines: 1,
-                                      ),
+                                    // 使用 Expanded 让设备名称占据大部分空间
+                                    Expanded(
+                                      child: name.length > 20
+                                          ? _buildScrollingText(name)
+                                          : Text(
+                                              name,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w600),
+                                              maxLines: 1,
+                                            ),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 8),
                                     _buildShortFingerprint(device.fingerprint),
                                   ],
                                 );
                               },
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // 第一行保持原有纯文本格式，兼容现有测试 (find.text('192.168.x.x:port'))
-                                Text(ipLine,
-                                    style: const TextStyle(fontSize: 12)),
-                                // 去除平台 + 型号 + 发现方式徽章，仅保留必要信息
-                              ],
-                            ),
-                            isThreeLine: true,
+                            subtitle: Text(ipLine,
+                                style: const TextStyle(fontSize: 12)),
+                            isThreeLine: false, // 修正为 false，因为只有一行 subtitle
                             trailing: (_sendingFingerprint ==
                                     device.fingerprint)
                                 ? const SizedBox(
@@ -1046,6 +1057,83 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   String _shortFingerprint(String full) {
     if (full.length <= 6) return full.toUpperCase();
     return full.substring(full.length - 6).toUpperCase();
+  }
+
+  /// 构建滚动文本组件，用于显示长设备名称
+  Widget _buildScrollingText(String text) {
+    return SizedBox(
+      height: 20, // 固定高度
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 测量文本宽度
+          final textPainter = TextPainter(
+            text: TextSpan(
+              text: text,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            textDirection: TextDirection.ltr,
+          );
+          textPainter.layout();
+          
+          final textWidth = textPainter.size.width;
+          final containerWidth = constraints.maxWidth;
+          
+          // 如果文本宽度小于容器宽度，直接显示
+          if (textWidth <= containerWidth) {
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                text,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                maxLines: 1,
+              ),
+            );
+          }
+          
+          // 否则显示省略文本，鼠标悬停或长按时触发滚动
+          return GestureDetector(
+            onLongPress: () {
+              // 长按时显示完整文本在提示框中
+              final overlay = Overlay.of(context);
+              final renderBox = context.findRenderObject() as RenderBox;
+              final position = renderBox.localToGlobal(Offset.zero);
+              
+              final overlayEntry = OverlayEntry(
+                builder: (context) => Positioned(
+                  left: position.dx,
+                  top: position.dy - 40,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: Text(
+                        text,
+                        style: const TextStyle(fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+              
+              overlay.insert(overlayEntry);
+              Timer(const Duration(seconds: 3), () {
+                overlayEntry.remove();
+              });
+            },
+            child: Text(
+              text,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // 平台标签显示已移除
