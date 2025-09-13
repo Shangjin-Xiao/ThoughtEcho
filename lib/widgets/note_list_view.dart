@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart'; // For RenderAbstractViewport
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -478,7 +477,7 @@ class NoteListViewState extends State<NoteListView> {
   bool _isUserScrolling = false;
   Timer? _userScrollingTimer;
 
-  /// 滚动到指定笔记的顶部
+  /// 滚动到指定笔记的顶部 - 使用 ensureVisible 确保多展开笔记时定位准确
   void _scrollToItem(String quoteId, int index) {
     if (!mounted || !_scrollController.hasClients) return;
     // 多重保护条件
@@ -503,35 +502,27 @@ class NoteListViewState extends State<NoteListView> {
 
     try {
       final key = _itemKeys[quoteId];
-      if (key == null || key.currentContext == null) return;
-      final renderObject = key.currentContext!.findRenderObject();
-      if (renderObject == null) return;
-      final viewport = RenderAbstractViewport.of(renderObject);
-      double targetOffset;
-      try {
-        final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
-        targetOffset = reveal.offset;
-      } catch (_) {
-        logDebug('获取Viewport偏移失败，使用估算位置', source: 'NoteListView');
-        const estimatedItemHeight = 200.0;
-        targetOffset = index * estimatedItemHeight;
-      }
-      final current = _scrollController.offset;
-      final max = _scrollController.position.maxScrollExtent;
-      final safe = targetOffset.clamp(0.0, max);
-      if ((safe - current).abs() < 48) {
-        logDebug('偏移差 <48，跳过滚动 diff=${(safe - current).abs().toStringAsFixed(1)}', source: 'NoteListView');
+      if (key == null || key.currentContext == null) {
+        logDebug('笔记Key或Context不存在，跳过滚动', source: 'NoteListView');
         return;
       }
+
       _isAutoScrolling = true;
-      logDebug('执行自动滚动: current=${current.toStringAsFixed(1)} -> target=${safe.toStringAsFixed(1)}', source: 'NoteListView');
-      _scrollController
-          .animateTo(
-            safe,
-            duration: const Duration(milliseconds: 380),
-            curve: Curves.easeOutCubic,
-          )
-          .whenComplete(() => _isAutoScrolling = false);
+      logDebug('使用ensureVisible滚动到笔记: $quoteId (index: $index)', source: 'NoteListView');
+      
+      // 使用 Scrollable.ensureVisible 自动处理动态布局
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeOutCubic,
+        alignment: 0.0, // 滚动到顶部
+      ).then((_) {
+        _isAutoScrolling = false;
+        logDebug('ensureVisible滚动完成', source: 'NoteListView');
+      }).catchError((e) {
+        _isAutoScrolling = false;
+        logDebug('ensureVisible滚动失败: $e', source: 'NoteListView');
+      });
     } catch (e, st) {
       logDebug('滚动到笔记失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;
