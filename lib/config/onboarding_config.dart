@@ -9,7 +9,8 @@ class OnboardingConfig {
     // 第1页：欢迎页面
     OnboardingPageData(
       title: '欢迎使用心迹',
-      subtitle: '记录生活点滴，留存思想灵感',
+      subtitle: '你的专属灵感摘录本',
+      description: '让我们一起随心记录',
       type: OnboardingPageType.welcome,
     ),
 

@@ -108,32 +108,6 @@ class _WelcomePageViewState extends State<WelcomePageView>
                         textAlign: TextAlign.center,
                       ),
                     ],
-
-                    const SizedBox(height: 40),
-
-                    // Slogan
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primaryContainer,
-                            theme.colorScheme.secondaryContainer,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '让我们一起，随心迹录！',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

@@ -21,8 +21,8 @@
   </p>
 
   <p>
-    <b>📝 一款使用 Flutter 构建的本地优先笔记应用<br>
-    捕捉思绪轨迹，释放 AI 洞察的力量 ✨</b>
+    <b>📝 你的专属灵感摘录本<br>
+    让我们一起随心记录，释放 AI 洞察的力量 ✨</b>
   </p>
   
   <p>
@@ -203,6 +203,13 @@
 
 <details id="-english-version">
 <summary><h2>🇬🇧 English Version</h2></summary>
+
+<div align="center">
+  <p>
+    <b>📝 Your Personal Inspiration Notebook with AI Power<br>
+    Capture ideas effortlessly, unlock insights with AI ✨</b>
+  </p>
+</div>
 
 ## ✨ Current Features
 

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="心迹 - 追踪你的思想轨迹，释放AI洞察的力量。一款使用Flutter构建的本地优先笔记应用。">
-    <title>心迹 - 追踪你的思想轨迹，释放AI洞察的力量</title>
+    <meta name="description" content="心迹 - 你的专属灵感摘录本。让我们一起随心记录，释放AI洞察的力量。">
+    <title>心迹 - 你的专属灵感摘录本</title>
     <link rel="icon" type="image/png" href="icon.png"/>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,14 +165,15 @@
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: white;
             text-align: center;
-            padding: 6rem 1rem; /* 增大页头空间 */
+            padding: 3rem 1rem; /* 减少页头空间，让它更紧凑 */
             margin-top: 0;
             transition: background 0.3s ease;
             position: relative;
             overflow: hidden;
+            min-height: auto; /* 去掉最小高度限制 */
         }
 
-        /* 添加页头背景效果 */
+        /* 优化页头背景效果 - 更简洁的几何图案 */
         header::before {
             content: '';
             position: absolute;
@@ -180,15 +181,10 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 800 800"><g fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"><path d="M769 229L1037 260.9M927 880L731 737 520 660 309 538 40 599 295 764 126.5 879.5 40 599-197 493 102 382-31 229 126.5 79.5-69-63"/><path d="M-31 229L237 261 390 382 603 493 308.5 537.5 101.5 381.5M370 905L295 764"/><path d="M520 660L578 842 731 737 840 599 603 493 520 660 295 764 309 538 390 382 539 269 769 229 577.5 41.5 370 105 295 -36 126.5 79.5-69-63"/><path d="M520-140L578.5 42.5 731-63M603 493L539 269 237 261 370 105M902 382L539 269M390 382L102 382"/><path d="M-222 42L126.5 79.5 370 105 539 269 577.5 41.5 927 80 769 229 902 382 603 493 731 737M295-36L577.5 41.5M578 842L295 764M40-201L127 80M102 382L-261 269"/></g></svg>');
-            opacity: 0.3;
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
             z-index: 0;
-            animation: headerBgMove 60s linear infinite;
-        }
-
-        @keyframes headerBgMove {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 100% 100%; }
         }
 
         .container {
@@ -203,14 +199,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem; /* 减少底部间距 */
         }
 
         .logo {
-            width: 100px; /* 放大logo */
-            height: 100px;
-            margin-right: 1rem;
-            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25)); /* 增强阴影 */
+            width: 80px; /* 减小logo尺寸 */
+            height: 80px;
+            margin-right: 0.75rem; /* 减少右边距 */
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25)); /* 减轻阴影 */
             animation: pulse 3s infinite alternate; /* 添加缓慢脉动效果 */
         }
 
@@ -220,8 +216,8 @@
         }
 
         h1 {
-            font-size: 3rem; /* 增大标题字号 */
-            margin-bottom: 1.5rem;
+            font-size: 2.2rem; /* 减小标题字号 */
+            margin-bottom: 1rem; /* 减少底部间距 */
             font-weight: 700;
             position: relative;
             z-index: 1;
@@ -253,10 +249,10 @@
         }
 
         .tagline {
-            font-size: 1.4rem; /* 增大副标题字号 */
-            margin-bottom: 2.5rem;
+            font-size: 1.2rem; /* 减小副标题字号 */
+            margin-bottom: 1.5rem; /* 减少底部间距 */
             opacity: 0.95; /* 增加不透明度 */
-            max-width: 700px;
+            max-width: 600px; /* 减少最大宽度 */
             margin-left: auto;
             margin-right: auto;
             position: relative;
@@ -268,16 +264,17 @@
             display: inline-block;
             background-color: var(--primary-color);
             color: white;
-            padding: 16px 36px; /* 加大按钮 */
+            padding: 12px 28px; /* 减小按钮尺寸 */
             border-radius: 50px;
             text-decoration: none;
             font-weight: 500;
-            margin-top: 2rem;
+            margin-top: 1rem; /* 减少顶部间距 */
             transition: var(--transition);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 增强按钮阴影 */
             position: relative;
             z-index: 1;
             border: 2px solid transparent; /* 为悬停效果准备 */
+            font-size: 0.95rem; /* 减小字体 */
         }
 
         .cta-button:hover {
@@ -292,7 +289,7 @@
         }
 
         .section {
-            padding: 4rem 0;
+            padding: 2.5rem 0; /* 减少section的上下内边距 */
             border-bottom: 1px solid var(--border-color);
             transition: border-color 0.3s ease;
         }
@@ -302,7 +299,7 @@
 
         .section-title-container {
             text-align: center;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem; /* 减少标题容器的底部间距 */
         }
 
         .section-subtitle {
@@ -317,15 +314,15 @@
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
+            gap: 1.5rem; /* 减少网格间距 */
+            margin: 2rem 0; /* 减少上下外边距 */
         }
 
         /* 为功能卡片增加更精致的动画 */
         .feature {
             background-color: var(--surface-color);
             border-radius: 16px; /* 增加圆角 */
-            padding: 2rem;
+            padding: 1.5rem; /* 减少内边距 */
             box-shadow: var(--card-shadow);
             transition: var(--transition);
             cursor: pointer;
@@ -363,12 +360,12 @@
         }
 
         .feature-icon {
-            font-size: 2rem;
+            font-size: 1.8rem; /* 减小图标字体大小 */
             color: var(--primary-color);
             background-color: var(--primary-light);
             border-radius: 50%;
-            width: 60px; /* 增大图标尺寸 */
-            height: 60px;
+            width: 50px; /* 减小图标尺寸 */
+            height: 50px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1187,8 +1184,8 @@
                 <span class="content-en">ThoughtEcho</span>
             </h1>
             <p class="tagline animated" style="transition-delay: 0.2s;">
-                <span class="content-zh">追踪你的思想轨迹，释放AI洞察的力量</span>
-                <span class="content-en">Track your train of thought, unleash the power of AI insights</span>
+                <span class="content-zh">你的专属灵感摘录本</span>
+                <span class="content-en">Your Personal Inspiration Notebook with AI Power</span>
             </p>
             <div class="cta-buttons animated" style="transition-delay: 0.3s;">
                 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" class="cta-button">

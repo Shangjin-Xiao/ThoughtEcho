@@ -381,7 +381,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '让我们一起，随心迹录！',
+                '让我们一起随心记录',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onPrimaryContainer,
