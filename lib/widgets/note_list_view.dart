@@ -907,66 +907,47 @@ class NoteListViewState extends State<NoteListView> {
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Column(
                   children: [
-                    // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
+                    // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
                     Container(
                       padding: EdgeInsets.fromLTRB(
                         horizontalPadding,
-                        MediaQuery.of(context).padding.top +
-                            8.0, // 顶部安全区域 + 一些额外空间
+                        MediaQuery.of(context).padding.top + 8.0,
                         horizontalPadding,
                         0,
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _searchController,
-                              focusNode: _searchFocusNode, // 使用管理的焦点节点
-                              decoration: InputDecoration(
-                                hintText: '搜索笔记...',
-                                prefixIcon: searchController.isSearching
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: Padding(
-                                          padding: EdgeInsets.all(12.0),
-                                          child: EnhancedLottieAnimation(
-                                            type: LottieAnimationType
-                                                .searchLoading,
-                                            width: 16,
-                                            height: 16,
-                                          ),
-                                        ),
-                                      )
-                                    : const Icon(Icons.search),
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: constraints.maxWidth <
-                                          AppConstants.tabletMinWidth
-                                      ? 8.0
-                                      : 12.0,
-                                ),
-                                isDense: constraints.maxWidth <
-                                    AppConstants.tabletMinWidth, // 小屏幕更紧凑
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onChanged: _onSearchChanged,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          IconButton(
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: _onSearchChanged,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: '搜索笔记...',
+                          isDense: true,
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceContainerLowest,
+                          prefixIcon: searchController.isSearching
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: EnhancedLottieAnimation(
+                                      type:
+                                          LottieAnimationType.searchLoading,
+                                      width: 16,
+                                      height: 16,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.search),
+                          suffixIcon: IconButton(
                             icon: const Icon(Icons.tune),
                             tooltip: '筛选/排序',
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ), // 更紧凑的按钮
-                            visualDensity: VisualDensity.compact,
                             onPressed: () {
                               showModalBottomSheet(
                                 context: context,
-                                isScrollControlled: true, // 允许更大的底部表单
+                                isScrollControlled: true,
                                 backgroundColor: Theme.of(context)
                                     .colorScheme
                                     .surfaceContainerLowest,
@@ -982,13 +963,13 @@ class NoteListViewState extends State<NoteListView> {
                                   sortAscending: widget.sortAscending,
                                   selectedWeathers: widget.selectedWeathers,
                                   selectedDayPeriods:
-                                      widget.selectedDayPeriods, // 传递时间段筛选状态
+                                      widget.selectedDayPeriods,
                                   onApply: (
                                     tagIds,
                                     sortType,
                                     sortAscending,
                                     selectedWeathers,
-                                    selectedDayPeriods, // 接收时间段筛选结果
+                                    selectedDayPeriods,
                                   ) {
                                     widget.onTagSelectionChanged(tagIds);
                                     widget.onSortChanged(
@@ -999,14 +980,47 @@ class NoteListViewState extends State<NoteListView> {
                                       selectedWeathers,
                                       selectedDayPeriods,
                                     );
-                                    // 在状态更新后，立即触发数据库流的更新
                                     _updateStreamSubscription();
                                   },
                                 ),
                               );
                             },
                           ),
-                        ],
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.28),
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.20),
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.65),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
 
@@ -1147,52 +1161,67 @@ class NoteListViewState extends State<NoteListView> {
                   const SizedBox(height: 12),
                 ],
 
-                // 天气筛选器
+                // 天气筛选器（合并显示：按大类显示，如“雨”“雪”等）
                 if (widget.selectedWeathers.isNotEmpty) ...[
                   _buildFilterSection(
                     theme: theme,
                     title: '天气',
                     icon: Icons.wb_sunny_outlined,
                     color: theme.colorScheme.secondary,
-                    children: widget.selectedWeathers.map((weatherKey) {
-                      // 找到对应的天气分类
-                      String? categoryKey;
-                      for (final entry
-                          in WeatherService.filterCategoryToLabel.entries) {
-                        final categoryWeathers =
-                            WeatherService.getWeatherKeysByFilterCategory(
-                          entry.key,
-                        );
-                        if (categoryWeathers.contains(weatherKey)) {
-                          categoryKey = entry.key;
-                          break;
-                        }
+                    children: () {
+                      // 1) 将已选择的具体天气key映射为所属大类（如 rainy/snowy 等）
+                      final Set<String> categorySet = {};
+                      for (final key in widget.selectedWeathers) {
+                        final cat = WeatherService.getFilterCategoryByWeatherKey(key);
+                        if (cat != null) categorySet.add(cat);
                       }
 
-                      final weatherLabel =
-                          WeatherService.weatherKeyToLabel[weatherKey] ??
-                              weatherKey;
-                      final weatherIcon = categoryKey != null
-                          ? WeatherService.getFilterCategoryIcon(categoryKey)
-                          : Icons.wb_sunny;
+                      // 2) 为每个大类创建一个汇总Chip，点击删除时移除该大类下所有key
+                      final List<Widget> chips = categorySet.map((cat) {
+                        final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
+                        final icon = WeatherService.getFilterCategoryIcon(cat);
+                        return _buildModernFilterChip(
+                          theme: theme,
+                          label: label,
+                          icon: icon,
+                          color: theme.colorScheme.secondary,
+                          onDeleted: () {
+                            final keysToRemove = WeatherService.getWeatherKeysByFilterCategory(cat);
+                            final newWeathers = List<String>.from(widget.selectedWeathers)
+                              ..removeWhere((w) => keysToRemove.contains(w));
+                            widget.onFilterChanged(
+                              newWeathers,
+                              widget.selectedDayPeriods,
+                            );
+                            _updateStreamSubscription();
+                          },
+                        );
+                      }).toList();
 
-                      return _buildModernFilterChip(
-                        theme: theme,
-                        label: weatherLabel,
-                        icon: weatherIcon,
-                        color: theme.colorScheme.secondary,
-                        onDeleted: () {
-                          final newWeathers = List<String>.from(
-                            widget.selectedWeathers,
-                          )..remove(weatherKey);
-                          widget.onFilterChanged(
-                            newWeathers,
-                            widget.selectedDayPeriods,
-                          );
-                          _updateStreamSubscription();
-                        },
-                      );
-                    }).toList(),
+                      // 3) 若存在未归类的key（理论上不会发生），则单独显示
+                      final Set<String> knownKeys = categorySet
+                          .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
+                          .toSet();
+                      final List<String> others = widget.selectedWeathers
+                          .where((k) => !knownKeys.contains(k))
+                          .toList();
+                      for (final k in others) {
+                        final label = WeatherService.weatherKeyToLabel[k] ?? k;
+                        chips.add(
+                          _buildModernFilterChip(
+                            theme: theme,
+                            label: label,
+                            color: theme.colorScheme.secondary,
+                            onDeleted: () {
+                              final newWeathers = List<String>.from(widget.selectedWeathers)..remove(k);
+                              widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
+                              _updateStreamSubscription();
+                            },
+                          ),
+                        );
+                      }
+                      return chips;
+                    }(),
                   ),
                   const SizedBox(height: 12),
                 ],

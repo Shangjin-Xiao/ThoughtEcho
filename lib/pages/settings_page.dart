@@ -802,7 +802,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 },
                               ),
                               const SizedBox(height: 12),
-                              const Text('你的专属灵感摘录本。'),
+                              const Text('你的专属灵感摘录本'),
                               const SizedBox(height: 20),
                               _buildAboutLink(
                                 context: context,
