@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../services/location_service.dart';
+import '../services/weather_service.dart';
 import '../controllers/weather_search_controller.dart';
 import '../utils/lottie_animation_manager.dart';
 
@@ -106,6 +107,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
   @override
   Widget build(BuildContext context) {
     final locationService = Provider.of<LocationService>(context);
+    final weatherService = Provider.of<WeatherService>(context);
     final theme = Theme.of(context);
 
     return Consumer<WeatherSearchController>(
@@ -121,6 +123,54 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+
+            // 当前天气简要信息与刷新
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Card(
+                elevation: 0,
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                child: ListTile(
+                  leading: Icon(weatherService.getWeatherIconData()),
+                  title: const Text('当前天气'),
+                  subtitle: Text(
+                    (weatherService.currentWeather == null && weatherService.temperature == null)
+                        ? (locationService.currentAddress != null
+                            ? '城市：${locationService.currentAddress}（点击右侧按钮刷新）'
+                            : '尚未设置城市，先在下方搜索并选择')
+                        : (weatherService.currentWeather == '天气数据获取失败'
+                            ? '天气获取失败'
+                            : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}')
+                    ,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: IconButton(
+                    icon: controller.isLoading || weatherService.isLoading
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh),
+                    tooltip: '刷新天气',
+                    onPressed: (controller.isLoading || weatherService.isLoading)
+                        ? null
+                        : () async {
+                            final position = locationService.currentPosition;
+                            final messenger = ScaffoldMessenger.maybeOf(context);
+                            if (position != null) {
+                              await weatherService.getWeatherData(position.latitude, position.longitude);
+                              if (!mounted) return;
+                              if (weatherService.currentWeather != '天气数据获取失败') {
+                                messenger?.showSnackBar(const SnackBar(content: Text('天气已更新')));
+                              } else {
+                                messenger?.showSnackBar(const SnackBar(content: Text('天气更新失败，请稍后重试')));
+                              }
+                            } else {
+                              if (!mounted) return;
+                              messenger?.showSnackBar(const SnackBar(content: Text('请先选择城市或启用位置服务')));
+                            }
+                          },
+                  ),
+                ),
               ),
             ),
 

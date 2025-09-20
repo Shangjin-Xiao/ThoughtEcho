@@ -17,7 +17,6 @@ class AIRequestHelper {
 
   /// 标准请求参数
   static const Duration defaultTimeout = Duration(seconds: 300);
-  static const double defaultTemperature = 0.7;
   static const int defaultMaxTokens = 2500;
 
   /// 创建标准消息格式
@@ -41,8 +40,12 @@ class AIRequestHelper {
   }) {
     final body = <String, dynamic>{
       'messages': messages,
-      'temperature': temperature ?? defaultTemperature,
     };
+
+    // 仅当调用方显式提供时才包含，可让服务端使用默认值
+    if (temperature != null) {
+      body['temperature'] = temperature;
+    }
 
     if (maxTokens != null) {
       body['max_tokens'] = maxTokens;
@@ -78,7 +81,7 @@ class AIRequestHelper {
       messages: messages,
       temperature: temperature,
       maxTokens: maxTokens,
-      model: model ?? settings.model,
+      model: model, // 不强制注入settings.model，允许省略以使用服务端默认
     );
 
     return await AINetworkManager.makeRequest(
@@ -106,9 +109,9 @@ class AIRequestHelper {
 
     final body = createRequestBody(
       messages: messages,
-      temperature: temperature ?? provider.temperature,
-      maxTokens: maxTokens ?? provider.maxTokens,
-      model: model ?? provider.model,
+      temperature: temperature, // 仅当显式传入时包含
+      maxTokens: maxTokens, // 仅当显式传入时包含
+      model: model, // 不强制注入provider.model，允许省略
     );
 
     return await AINetworkManager.makeRequest(
@@ -142,7 +145,7 @@ class AIRequestHelper {
         messages: messages,
         temperature: temperature,
         maxTokens: maxTokens,
-        model: model ?? settings.model,
+        model: model, // 不强制注入settings.model
         stream: true,
       );
 
@@ -190,9 +193,9 @@ class AIRequestHelper {
 
     final body = createRequestBody(
       messages: messages,
-      temperature: temperature ?? provider.temperature,
-      maxTokens: maxTokens ?? provider.maxTokens,
-      model: model ?? provider.model,
+      temperature: temperature,
+      maxTokens: maxTokens,
+      model: model, // 不强制注入provider.model，允许省略
     );
 
     await AINetworkManager.makeStreamRequest(

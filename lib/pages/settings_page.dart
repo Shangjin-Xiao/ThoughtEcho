@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
-import '../services/clipboard_service.dart';
 import '../services/settings_service.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
@@ -24,6 +23,7 @@ import 'category_settings_page.dart';
 import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
+import 'preferences_detail_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -174,8 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final locationService = context.watch<LocationService>();
-    final weatherService = context.watch<WeatherService>();
+  final locationService = context.watch<LocationService>();
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -408,98 +407,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
 
-                // 天气信息 ListTile，增加 isLoading 判断
-                if (locationService.currentAddress != null)
-                  weatherService.isLoading
-                      ? const ListTile(
-                          leading: SizedBox(
-                            width: 24, // 与 Icon 大小一致
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          title: Text('正在加载天气...'),
-                        )
-                      : ListTile(
-                          title: const Text('当前天气'),
-                          subtitle: Text(
-                            (weatherService.currentWeather == null &&
-                                    weatherService.temperature == null)
-                                ? '点击右侧按钮刷新天气'
-                                : (weatherService.currentWeather == '天气数据获取失败'
-                                    ? '天气获取失败' // 直接显示错误信息
-                                    : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          leading: Icon(
-                            weatherService.getWeatherIconData(),
-                          ), // 图标会根据错误状态变化
-                          trailing: IconButton(
-                            icon: const Icon(Icons.refresh),
-                            tooltip: '刷新天气',
-                            onPressed: weatherService.isLoading
-                                ? null
-                                : () async {
-                                    // 正在加载时禁用按钮
-                                    final position =
-                                        locationService.currentPosition;
-                                    if (position != null) {
-                                      // 不需要手动显示 SnackBar，isLoading 会处理 UI
-                                      await weatherService.getWeatherData(
-                                        position.latitude,
-                                        position.longitude,
-                                      );
-                                      if (context.mounted &&
-                                          weatherService.currentWeather !=
-                                              '天气数据获取失败') {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('天气已更新'),
-                                          ),
-                                        );
-                                      } else if (context.mounted) {
-                                        final currentScaffoldMessenger =
-                                            ScaffoldMessenger.of(context);
-                                        currentScaffoldMessenger.showSnackBar(
-                                          const SnackBar(
-                                            content: Text('天气更新失败，请稍后重试'),
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      if (!context.mounted) return;
-                                      final currentScaffoldMessenger =
-                                          ScaffoldMessenger.of(context);
-                                      currentScaffoldMessenger.showSnackBar(
-                                        const SnackBar(
-                                          content: Text('无法获取位置信息以刷新天气'),
-                                        ),
-                                      );
-                                    }
-                                  },
-                          ),
-                          onTap: null,
-                        ),
-
-                // 添加天气数据来源信息
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: 16.0,
-                    right: 16.0,
-                    bottom: 8.0,
-                  ),
-                  child: Text(
-                    '天气数据由 OpenMeteo 提供',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withAlpha(
-                        (0.6 * 255).round(),
-                      ),
-                    ),
-                  ),
-                ),
-
+                // 当前天气信息已移动到“搜索并选择城市”对话框内
                 const SizedBox(height: 8.0),
               ],
             ),
@@ -522,12 +430,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
-                // 添加剪贴板监控设置
-                _buildClipboardMonitoringItem(context),
-
-                // 添加折叠时优先显示加粗内容设置
-                _buildPrioritizeBoldContentItem(context),
-                _buildShowFavoriteButtonItem(context), // 新增：心形按钮显示设置
+                // 二级页面入口：偏好设置
+                ListTile(
+                  title: const Text('偏好设置'),
+                  subtitle: const Text('剪贴板监控、喜爱按钮、加粗优先、本地笔记等'),
+                  leading: const Icon(Icons.tune),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PreferencesDetailPage(),
+                      ),
+                    );
+                  },
+                ),
 
                 // 添加默认启动页面设置
                 _buildDefaultStartPageItem(context),
@@ -594,20 +511,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
-                // 仅使用本地笔记设置
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, child) {
-                    return SwitchListTile(
-                      title: const Text('仅使用本地笔记'),
-                      subtitle: const Text('关闭后，无网络时自动使用本地记录'),
-                      secondary: const Icon(Icons.offline_bolt_outlined),
-                      value: settingsService.useLocalQuotesOnly,
-                      onChanged: (bool value) {
-                        settingsService.setUseLocalQuotesOnly(value);
-                      },
-                    );
-                  },
-                ),
+                // 移至偏好设置页
                 // End of Hitokoto attribution text
                 // Add Logs Settings entry below
                 ListTile(
@@ -855,47 +759,7 @@ class _SettingsPageState extends State<SettingsPage> {
         minimumSize: const Size.fromHeight(44),
       );
 
-  // 构建剪贴板监控设置项
-  Widget _buildClipboardMonitoringItem(BuildContext context) {
-    final clipboardService = Provider.of<ClipboardService>(context);
-    return SwitchListTile(
-      title: const Text('剪贴板监控'),
-      subtitle: const Text('自动检测剪贴板内容并提示添加笔记'),
-      value: clipboardService.enableClipboardMonitoring,
-      onChanged: (value) {
-        clipboardService.setEnableClipboardMonitoring(value);
-      },
-    );
-  }
-
-  // 构建折叠时优先显示加粗内容设置项
-  Widget _buildPrioritizeBoldContentItem(BuildContext context) {
-    final settingsService = Provider.of<SettingsService>(context);
-    return SwitchListTile(
-      title: const Text('优先显示加粗内容'),
-      subtitle: const Text('在笔记卡片折叠时优先显示加粗的文字内容'),
-      value: settingsService.prioritizeBoldContentInCollapse,
-      onChanged: (value) {
-        settingsService.setPrioritizeBoldContentInCollapse(value);
-      },
-    );
-  }
-
-  // 构建心形按钮显示设置项
-  Widget _buildShowFavoriteButtonItem(BuildContext context) {
-    final settingsService = Provider.of<SettingsService>(context);
-    return ListTile(
-      leading: const Icon(Icons.favorite_outline),
-      title: const Text('显示喜爱按钮'),
-      subtitle: const Text('在笔记卡片上显示心形按钮，轻触即可表达喜爱并记录次数'),
-      trailing: Switch(
-        value: settingsService.showFavoriteButton,
-        onChanged: (value) {
-          settingsService.setShowFavoriteButton(value);
-        },
-      ),
-    );
-  }
+  // 相关设置已移动到“偏好设置”二级页面
 
   // 构建默认启动页面设置项
   Widget _buildDefaultStartPageItem(BuildContext context) {

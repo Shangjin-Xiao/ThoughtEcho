@@ -343,7 +343,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
     try {
       // 创建新的provider
       await _createOrUpdateProvider(
-        0.7, // 固定温度值
         maxTokens,
         _hostOverrideController.text.trim(),
         settingsService,
@@ -382,7 +381,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 创建新的provider（每次保存都创建新的，不更新现有的）
   Future<void> _createOrUpdateProvider(
-    double temperature,
     int maxTokens,
     String hostOverride,
     SettingsService settingsService,
@@ -409,7 +407,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       apiKey: '', // 不再在配置中保存API Key
       apiUrl: _apiUrlController.text,
       model: _modelController.text,
-      temperature: temperature,
+      // 温度不再默认固定；此字段仅存储于预设，不会自动注入请求体
       maxTokens: maxTokens,
       hostOverride: hostOverride.isEmpty ? null : hostOverride,
       isEnabled: _apiKeyController.text.isNotEmpty,
@@ -472,7 +470,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
         model: _modelController.text,
         apiUrl: _apiUrlController.text,
         apiKey: '', // API Key is saved securely, not here
-        temperature: temperature,
         maxTokens: maxTokens,
         hostOverride: hostOverride.isEmpty ? null : hostOverride,
       ),
@@ -1026,8 +1023,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
             children: [
               // Provider选择器
               _buildProviderSelector(),
-              _buildReportInsightSwitch(),
-
               // 预设选择
               Card(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -1203,19 +1198,33 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        '温度固定为 0.7（全局设置，适配大多数对话/生成场景）',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Colors.grey[600]),
-                      ),
                     ],
                   ),
                 ),
               ),
+              // 操作按钮（与连接配置/模型设置关联）
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _saveSettings,
+                      icon: const Icon(Icons.add),
+                      label: const Text('创建新预设'),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: _testConnection,
+                      icon: const Icon(Icons.network_check),
+                      label: const Text('测试连接'),
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 8),
-              // AI卡片生成功能开关 + 操作按钮
+
+              // 将设置项移动到页面底部：AI 卡片生成 & 周期报告洞察使用AI
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -1266,26 +1275,31 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           );
                         },
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _saveSettings,
-                            icon: const Icon(Icons.add),
-                            label: const Text('创建新预设'),
-                          ),
-                          const SizedBox(width: 12),
-                          OutlinedButton.icon(
-                            onPressed: _testConnection,
-                            icon: const Icon(Icons.network_check),
-                            label: const Text('测试连接'),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
               ),
+
+              const SizedBox(height: 8),
+
+              // 今日思考使用AI
+              Consumer<SettingsService>(
+                builder: (context, settingsService, child) {
+                  return Card(
+                    child: SwitchListTile(
+                      title: const Text('今日思考使用AI'),
+                      subtitle: const Text('打开后将使用AI生成今日思考提示，关闭则使用本地生成'),
+                      value: settingsService.todayThoughtsUseAI,
+                      onChanged: (val) async {
+                        await settingsService.setTodayThoughtsUseAI(val);
+                      },
+                      secondary: const Icon(Icons.today),
+                    ),
+                  );
+                },
+              ),
+
+              _buildReportInsightSwitch(),
             ],
           ),
         ),
