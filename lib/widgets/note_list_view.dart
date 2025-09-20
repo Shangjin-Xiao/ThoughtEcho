@@ -85,6 +85,7 @@ class NoteListViewState extends State<NoteListView> {
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
   DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
+  bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
 
   @override
   void initState() {
@@ -92,6 +93,7 @@ class NoteListViewState extends State<NoteListView> {
     _searchController.text = widget.searchQuery;
     _hasMore = true;
     _isLoading = true;
+    _isInitializing = true; // 初始化状态标记
 
     // 添加焦点节点监听器，用于Web平台的焦点管理
     _searchFocusNode.addListener(_onFocusChanged);
@@ -115,6 +117,12 @@ class NoteListViewState extends State<NoteListView> {
   /// 滚动监听器，用于检测用户滑动状态
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;
+
+    // 如果正在初始化，忽略滚动事件以避免冲突
+    if (_isInitializing) {
+      logDebug('正在初始化，忽略滚动事件', source: 'NoteListView');
+      return;
+    }
 
     // 用户正在滑动（通过滚动事件检测）
     _isUserScrolling = true;
@@ -205,11 +213,17 @@ class NoteListViewState extends State<NoteListView> {
           // 首批数据加载完成，立即启用自动滚动但设置保护期
           if (!_initialDataLoaded) {
             _initialDataLoaded = true;
-            // 立即启用自动滚动，但设置更长的保护期防止误触发
-            _autoScrollEnabled = true;
-            // 设置较长的保护期，避免首次进入时的滚动冲突
+            // 延迟启用自动滚动，避免冷启动时的滚动冲突
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (mounted) {
+                _autoScrollEnabled = true;
+                _isInitializing = false; // 结束初始化状态
+                logDebug('延迟启用自动滚动功能', source: 'NoteListView');
+              }
+            });
+            // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
             _lastUserScrollTime = DateTime.now();
-            logDebug('首批数据加载完成，自动滚动功能已启用（保护期2秒）', source: 'NoteListView');
+            logDebug('首批数据加载完成，将延迟启用自动滚动', source: 'NoteListView');
           }
 
           // 通知搜索控制器数据加载完成
@@ -370,8 +384,11 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
           });
 
-          // 恢复滚动位置（在数据加载完成后）
-          if (savedScrollOffset != null && _scrollController.hasClients) {
+          // 恢复滚动位置（在数据加载完成后，且不在初始化状态）
+          if (savedScrollOffset != null &&
+              _scrollController.hasClients &&
+              !_isInitializing &&
+              _initialDataLoaded) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               final offset = savedScrollOffset;
               if (_scrollController.hasClients &&
@@ -382,17 +399,6 @@ class NoteListViewState extends State<NoteListView> {
               }
             });
           }
-          setState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-
-            // 修复：简化_hasMore逻辑，与line 137保持一致
-            // 如果返回的数据量大于等于页面大小，说明可能还有更多数据
-            _hasMore = list.length >= _pageSize;
-            _isLoading = false; // 加载完成
-            logDebug('数据更新：${list.length}条，_hasMore=$_hasMore',
-                source: 'NoteListView');
-          });
 
           // 通知搜索控制器数据加载完成
           try {
@@ -497,6 +503,9 @@ class NoteListViewState extends State<NoteListView> {
 
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _userScrollingTimer?.cancel(); // 清理用户滑动定时器
+
+    // 清理初始化状态
+    _isInitializing = false;
     super.dispose();
   }
 
@@ -514,6 +523,10 @@ class NoteListViewState extends State<NoteListView> {
   void _scrollToItem(String quoteId, int index) {
     if (!mounted || !_scrollController.hasClients) return;
     // 多重保护条件
+    if (_isInitializing) {
+      logDebug('跳过自动滚动：正在初始化', source: 'NoteListView');
+      return;
+    }
     if (!_autoScrollEnabled) {
       logDebug('跳过自动滚动（未启用 _autoScrollEnabled）', source: 'NoteListView');
       return;
@@ -524,9 +537,9 @@ class NoteListViewState extends State<NoteListView> {
     }
     if (_lastUserScrollTime != null &&
         DateTime.now().difference(_lastUserScrollTime!) <
-            const Duration(milliseconds: 2000)) {
-      // 增加保护期到2秒
-      logDebug('跳过自动滚动：用户刚刚滚动 (<2000ms)', source: 'NoteListView');
+            const Duration(milliseconds: 3000)) {
+      // 增加保护期到3秒，给冷启动更多时间
+      logDebug('跳过自动滚动：用户刚刚滚动 (<3000ms)', source: 'NoteListView');
       return;
     }
     if (_isAutoScrolling) {
