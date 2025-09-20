@@ -19,7 +19,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   Timer? _healthTimer; // 周期性健康检查
   DateTime _lastMessageTime = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastAnnouncementSend = DateTime.fromMillisecondsSinceEpoch(0);
-  static const Duration _socketInactivityRestart = Duration(seconds: 25); // 超过该时间未收到消息则重启监听
+  static const Duration _socketInactivityRestart =
+      Duration(seconds: 25); // 超过该时间未收到消息则重启监听
   static const Duration _announcementInterval = Duration(seconds: 5);
   static const Duration _minAnnouncementGap = Duration(seconds: 2);
   static const Duration _healthCheckInterval = Duration(seconds: 6);
@@ -142,7 +143,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       // 启动UDP组播监听（若失败自动重试一次）
       await _startMulticastListener();
       if (_sockets.isEmpty) {
-        logWarning('discovery_no_socket_first_try retrying...', source: 'LocalSend');
+        logWarning('discovery_no_socket_first_try retrying...',
+            source: 'LocalSend');
         await Future.delayed(const Duration(milliseconds: 400));
         await _startMulticastListener();
       }
@@ -180,7 +182,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           }
           if (removed.isNotEmpty) {
             notifyListeners();
-            logInfo('discovery_prune old=${removed.length}', source: 'LocalSend');
+            logInfo('discovery_prune old=${removed.length}',
+                source: 'LocalSend');
           }
         }
         // 3. 套接字数量为0 => 重启
