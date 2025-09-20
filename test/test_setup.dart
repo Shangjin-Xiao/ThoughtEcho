@@ -32,6 +32,7 @@ class MockPathProviderPlatform extends PathProviderPlatform {
 class TestSetup {
   static MockPathProviderPlatform? _mockPathProvider;
   static bool _isInitialized = false;
+  static bool _verboseLogging = false;
 
   /// Initialize all Flutter plugins for testing
   static Future<void> setupAll() async {
@@ -54,7 +55,25 @@ class TestSetup {
       databaseFactory = databaseFactoryFfi;
     }
 
+    // Create necessary mock directories
+    await _createMockDirectories();
+
     _isInitialized = true;
+  }
+
+  /// Create mock directories for testing
+  static Future<void> _createMockDirectories() async {
+    try {
+      await Directory('/tmp/test_app_docs').create(recursive: true);
+      await Directory('/tmp/test_app_support').create(recursive: true);
+      await Directory('/tmp/test_downloads').create(recursive: true);
+      await Directory('/tmp/test_temp').create(recursive: true);
+    } catch (e) {
+      // Ignore directory creation errors in test environment
+      if (_verboseLogging) {
+        print('Warning: Could not create mock directories: $e');
+      }
+    }
   }
 
   /// Setup for unit tests (lighter version)
