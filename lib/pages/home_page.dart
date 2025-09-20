@@ -593,7 +593,7 @@ class _HomePageState extends State<HomePage>
               _loadTags();
               // 新增：强制刷新NoteListView
               if (_noteListViewKey.currentState != null) {
-                _noteListViewKey.currentState!.resetAndLoad();
+                _noteListViewKey.currentState!.forceRefresh();
               }
             },
           ),

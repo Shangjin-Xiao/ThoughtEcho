@@ -22,6 +22,7 @@ class QuoteItemWidget extends StatelessWidget {
   final Function() onAskAI;
   final Function()? onGenerateCard;
   final Function()? onFavorite; // 新增：心形按钮点击回调
+  final String? searchQuery;
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
@@ -38,6 +39,7 @@ class QuoteItemWidget extends StatelessWidget {
     this.onGenerateCard,
     this.onFavorite, // 新增：心形按钮点击回调
     this.tagBuilder,
+    this.searchQuery,
   });
 
   // 优化：缓存计算结果，避免重复计算

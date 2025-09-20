@@ -165,6 +165,8 @@ class IconUtils {
       '🎊',
       '🎉',
     ],
+    '交通': ['🚗', '✈️', '🚢', '🚲', '🚀'],
+    '其他': ['💡', '🔥', '💧', '🌍', '⭐']
   };
 
   // 检查图标名称是否为emoji
@@ -204,6 +206,20 @@ class IconUtils {
 
     // 返回Material图标
     return categoryIcons[iconName] ?? Icons.label;
+  }
+
+  static Widget getIcon(String iconName, {Color? color, double? size}) {
+    if (categoryIcons.containsKey(iconName)) {
+      return Icon(categoryIcons[iconName], color: color, size: size);
+    }
+    // 检查是否是Emoji
+    for (var category in emojiCategories.values) {
+      if (category.contains(iconName)) {
+        return Text(iconName, style: TextStyle(fontSize: size ?? 24));
+      }
+    }
+    // 默认图标
+    return Icon(Icons.label, color: color, size: size);
   }
 
   // 获取所有可用图标
