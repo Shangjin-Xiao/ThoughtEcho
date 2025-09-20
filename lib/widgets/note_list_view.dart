@@ -275,8 +275,8 @@ class NoteListViewState extends State<NoteListView> {
         }
       },
     );
-    // 加载第一页
-    _loadMore();
+    // 注释掉重复的loadMore调用，因为watchQuotes已经会自动加载数据
+    // _loadMore(); // 这行导致双重加载和滚动位置混乱
   }
 
   @override
