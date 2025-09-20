@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 
 class AppEmptyView extends StatelessWidget {
-  final String svgAsset;
+  final String? svgAsset;
   final String text;
-  const AppEmptyView({required this.svgAsset, required this.text, super.key});
+  final String? message;
+  final Widget? animation;
+  final VoidCallback? onRefresh;
+
+  const AppEmptyView({
+    this.svgAsset,
+    required this.text,
+    this.message,
+    this.animation,
+    this.onRefresh,
+    super.key,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Center(

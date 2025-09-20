@@ -794,6 +794,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   /// 显示原生年度报告
+  // ignore: unused_element
   Future<void> _showNativeAnnualReport() async {
     try {
       final databaseService = Provider.of<DatabaseService>(
@@ -828,6 +829,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   /// 显示AI年度报告
+  // ignore: unused_element
   Future<void> _showAIAnnualReport() async {
     try {
       final databaseService = Provider.of<DatabaseService>(
@@ -951,6 +953,15 @@ class _SettingsPageState extends State<SettingsPage> {
               .reduce((a, b) => a.value > b.value ? a : b)
               .key;
 
+          // 修复：活跃记录天数应按“年月日”去重，而非仅按“日号”
+          final int uniqueActiveDays = thisYearQuotes
+              .map((q) {
+                final d = DateTime.parse(q.date);
+                return DateTime(d.year, d.month, d.day);
+              })
+              .toSet()
+              .length;
+
           final prompt = '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
 
 用户数据统计：
@@ -958,7 +969,7 @@ class _SettingsPageState extends State<SettingsPage> {
 - 总笔记数：$totalNotes 篇
 - 总字数：$totalWords 字
 - 平均每篇字数：$averageWordsPerNote 字
-- 活跃记录天数：${thisYearQuotes.map((q) => DateTime.parse(q.date).day).toSet().length} 天
+- 活跃记录天数：$uniqueActiveDays 天
 - 使用标签数：${tagCounts.length} 个
 
 月度分布数据：
@@ -1060,6 +1071,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
   }
 
   /// 测试AI年度报告功能
+  // ignore: unused_element
   Future<void> _testAIAnnualReport() async {
     try {
       AppLogger.i('开始测试AI年度报告功能');

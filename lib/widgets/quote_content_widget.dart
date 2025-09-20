@@ -395,8 +395,28 @@ class QuoteContent extends StatelessWidget {
           }
         } else {
           // 展开状态或无行数限制，显示完整内容
-          displayDocument =
-              quill.Document.fromJson(jsonDecode(quote.deltaContent!));
+          if (showFullContent) {
+            displayDocument =
+                quill.Document.fromJson(jsonDecode(quote.deltaContent!));
+          } else {
+            // 折叠状态，过滤掉图片
+            final decoded = jsonDecode(quote.deltaContent!);
+            if (decoded is List) {
+              final filteredOps = decoded.where((op) {
+                if (op is Map && op['insert'] is Map) {
+                  final embed = op['insert'];
+                  if (embed['image'] != null) {
+                    return false; // 过滤图片
+                  }
+                }
+                return true;
+              }).toList();
+              displayDocument = quill.Document.fromJson(filteredOps);
+            } else {
+              displayDocument =
+                  quill.Document.fromJson(jsonDecode(quote.deltaContent!));
+            }
+          }
         }
 
         // 创建只读QuillController
