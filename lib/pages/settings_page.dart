@@ -493,26 +493,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // Add Hitokoto attribution text here
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: 16.0,
-                    top: 4.0,
-                    right: 16.0,
-                    bottom: 8.0,
-                  ), // Added bottom padding
-                  child: Text(
-                    '一言服务由 Hitokoto 提供',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha((0.6 * 255).round()),
-                    ),
-                  ),
-                ),
                 // 移至偏好设置页
-                // End of Hitokoto attribution text
                 // Add Logs Settings entry below
                 ListTile(
                   title: const Text('日志设置'),
