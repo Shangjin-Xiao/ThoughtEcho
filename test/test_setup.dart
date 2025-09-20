@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 
 /// Mock Path Provider Platform for testing
@@ -32,7 +33,7 @@ class MockPathProviderPlatform extends PathProviderPlatform {
 class TestSetup {
   static MockPathProviderPlatform? _mockPathProvider;
   static bool _isInitialized = false;
-  static bool _verboseLogging = false;
+  static const bool _verboseLogging = false;
 
   /// Initialize all Flutter plugins for testing
   static Future<void> setupAll() async {
@@ -71,7 +72,7 @@ class TestSetup {
     } catch (e) {
       // Ignore directory creation errors in test environment
       if (_verboseLogging) {
-        print('Warning: Could not create mock directories: $e');
+        debugPrint('Warning: Could not create mock directories: $e');
       }
     }
   }

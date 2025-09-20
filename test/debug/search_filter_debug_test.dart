@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import '../test_config.dart';
@@ -22,7 +21,7 @@ void main() {
   tearDown(() async {
     // Proper cleanup
     try {
-      await databaseService.dispose();
+      databaseService.dispose();
     } catch (e) {
       debugPrint('Warning: cleanup error: $e');
     }
