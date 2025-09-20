@@ -106,7 +106,7 @@ class QuoteContent extends StatelessWidget {
     return [];
   }
 
-  /// 创建优先显示加粗内容的Document
+  /// 创建优先显示加粗内容的Document (基于高度预估)
   quill.Document _createBoldPriorityDocument(
       String deltaContent, int maxLines, {bool hideImages = false}) {
     try {
@@ -120,7 +120,7 @@ class QuoteContent extends StatelessWidget {
           finalOps.add(op);
         }
 
-        // 统计加粗的非空逻辑行数
+        // 统计加粗内容的逻辑行数和字符数
         String allBoldText = '';
         for (var op in validBoldOps) {
           allBoldText += op['insert'].toString();
@@ -131,34 +131,36 @@ class QuoteContent extends StatelessWidget {
           if (line.trim().isNotEmpty) boldLineCount++;
         }
 
-        // 标记是否最终需要截断
+        // 基于高度预估：假设每行约30像素，120像素约4行
+        // 如果加粗内容预估高度未超过限制，可以补充正文内容
+        const int maxEstimatedLines = 4;
         bool truncated = false;
 
-        if (boldLineCount < maxLines) {
-          // 加粗内容不足maxLines，需要添加换行分隔，然后补充非加粗内容
-          // 确保加粗内容以换行结尾
+        if (boldLineCount < maxEstimatedLines) {
+          // 加粗内容不足，添加换行分隔，然后补充非加粗内容
           if (!allBoldText.endsWith('\n')) {
             finalOps.add({'insert': '\n'});
           }
 
-          // 添加一个额外换行作为分隔
+          // 添加分隔换行
           finalOps.add({'insert': '\n'});
-          int currentLines = boldLineCount + 1; // +1 for the separator line
+          int currentLines = boldLineCount + 1; // +1 for separator
 
           // 补充非加粗内容
           final nonBoldOps = _extractNonBoldOps(deltaContent);
           for (var op in nonBoldOps) {
-            if (currentLines >= maxLines) break;
+            if (currentLines >= maxEstimatedLines) break;
 
-            // 处理媒体嵌入内容
+            // 处理媒体嵌入内容 - 现在不隐藏图片
             if (op['insert'] is Map) {
               final embed = op['insert'];
-              // 在折叠状态下过滤掉图片
-              if (hideImages && embed['image'] != null) {
-                continue; // 跳过图片
-              }
+              // 图片/媒体内容会占用一定高度，但不隐藏
               finalOps.add(Map<String, dynamic>.from(op));
-              continue; // 媒体不计入行数，但保留显示
+              // 图片大约占用1-2行的高度
+              if (embed['image'] != null) {
+                currentLines += 1; // 图片占用约1行空间
+              }
+              continue;
             }
 
             final String insert = op['insert'].toString();
@@ -168,7 +170,7 @@ class QuoteContent extends StatelessWidget {
 
             String buffer = '';
             for (String line in lines) {
-              if (currentLines >= maxLines) break;
+              if (currentLines >= maxEstimatedLines) break;
               if (line.trim().isNotEmpty) {
                 buffer += '$line\n';
                 currentLines++;
@@ -182,32 +184,22 @@ class QuoteContent extends StatelessWidget {
             }
           }
 
-          // 判断是否还有未显示的正文
-          if (nonBoldOps.isNotEmpty) {
-            int totalNonBoldLines = 0;
-            for (var op in nonBoldOps) {
-              final text = op['insert'].toString();
-              for (var l in text.split('\n')) {
-                if (l.trim().isNotEmpty) totalNonBoldLines++;
-              }
-            }
-            if (totalNonBoldLines + boldLineCount + 1 > maxLines) {
-              // +1 for separator
-              truncated = true;
-            }
+          // 检查是否需要截断标记
+          if (currentLines >= maxEstimatedLines) {
+            truncated = true;
           }
         } else {
-          // 加粗内容已经 >= maxLines，需要截断加粗内容
+          // 加粗内容已经超过预估高度限制，截断加粗内容
           List<Map<String, dynamic>> truncatedOps = [];
           int currentLines = 0;
 
           for (var op in validBoldOps) {
-            if (currentLines >= maxLines) break;
+            if (currentLines >= maxEstimatedLines) break;
             final String insert = op['insert'].toString();
             final lines = insert.split('\n');
             String truncatedInsert = '';
             for (String line in lines) {
-              if (currentLines >= maxLines) break;
+              if (currentLines >= maxEstimatedLines) break;
               truncatedInsert += '$line\n';
               if (line.trim().isNotEmpty) currentLines++;
             }
@@ -221,15 +213,14 @@ class QuoteContent extends StatelessWidget {
             }
           }
           finalOps = truncatedOps;
-          truncated = true; // 肯定截断
+          truncated = true;
         }
 
-        // 如果截断，则在最后一段尾部追加省略号（不新起一行）
+        // 如果截断，在末尾添加省略号
         if (truncated && finalOps.isNotEmpty) {
           final lastOp = finalOps.last;
           if (lastOp['insert'] != null) {
             final lastInsert = lastOp['insert'].toString();
-            // 去除尾部多余换行，只在内容末尾追加 ... 再补一个换行
             String normalized = lastInsert;
             while (normalized.endsWith('\n')) {
               normalized = normalized.substring(0, normalized.length - 1);
@@ -238,7 +229,7 @@ class QuoteContent extends StatelessWidget {
           }
         }
 
-        // 确保文档以换行结尾（符合 quill Document 习惯）
+        // 确保文档以换行结尾
         if (finalOps.isNotEmpty) {
           final last = finalOps.last;
           if (last['insert'] is String &&
@@ -261,29 +252,29 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  /// 创建普通折叠模式的Document (仅限制行数，折叠状态下过滤图片)
+  /// 创建普通折叠模式的Document (基于高度限制)
   quill.Document _createTruncatedDocument(String deltaContent, int maxLines, {bool hideImages = false}) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
         List<Map<String, dynamic>> finalOps = [];
         int currentLines = 0;
+        const int maxEstimatedLines = 4; // 对应120像素高度
 
         for (var op in decoded) {
           if (op is Map && op['insert'] != null) {
             // 如果是嵌入内容（图片、视频等）
             if (op['insert'] is Map) {
               final embed = op['insert'];
-              // 在折叠状态下过滤掉图片
-              if (hideImages && embed['image'] != null) {
-                continue; // 跳过图片
-              }
-              // 保留其他嵌入内容（如视频等）
+              // 现在不隐藏图片，但计算其占用的高度
               finalOps.add(Map<String, dynamic>.from(op));
+              if (embed['image'] != null) {
+                currentLines += 1; // 图片占用约1行空间
+              }
               continue;
             }
 
-            if (currentLines >= maxLines) break;
+            if (currentLines >= maxEstimatedLines) break;
 
             final String insert = op['insert'].toString();
             final Map<String, dynamic>? attributes = op['attributes'];
@@ -291,7 +282,7 @@ class QuoteContent extends StatelessWidget {
             String truncatedInsert = '';
 
             for (String line in lines) {
-              if (currentLines >= maxLines) break;
+              if (currentLines >= maxEstimatedLines) break;
               truncatedInsert += '$line\n';
               if (line.trim().isNotEmpty) currentLines++;
             }
@@ -305,20 +296,26 @@ class QuoteContent extends StatelessWidget {
           }
         }
 
-        // 检查是否真的需要截断
+        // 检查是否需要截断标记
         int totalLines = 0;
         for (var op in decoded) {
-          if (op is Map && op['insert'] != null && op['insert'] is String) {
-            final String insert = op['insert'].toString();
-            final lines = insert.split('\n');
-            for (String line in lines) {
-              if (line.trim().isNotEmpty) totalLines++;
+          if (op is Map && op['insert'] != null) {
+            if (op['insert'] is Map) {
+              final embed = op['insert'];
+              if (embed['image'] != null) {
+                totalLines += 1; // 图片计为1行
+              }
+            } else {
+              final String insert = op['insert'].toString();
+              final lines = insert.split('\n');
+              for (String line in lines) {
+                if (line.trim().isNotEmpty) totalLines++;
+              }
             }
           }
         }
 
-        // 只有在真正需要截断时才添加省略号
-        if (totalLines > maxLines && finalOps.isNotEmpty) {
+        if (totalLines > maxEstimatedLines && finalOps.isNotEmpty) {
           final lastOp = finalOps.last;
           if (lastOp['insert'] is String) {
             final lastInsert = lastOp['insert'].toString();
@@ -349,21 +346,40 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  /// 判断富文本内容是否需要折叠（仅检查行数）
+  /// 判断富文本内容是否需要折叠（基于高度预估）
   bool _needsExpansionForRichText(String deltaContent) {
-    // 折叠策略（与外层保持一致）：只有当逻辑行数 > 4 时才进入折叠模式；
-    // 折叠后外层 Text/QuoteContent 统一展示 4 行（或等价的截断文档）。
-    // 这里的“逻辑行”基于 plain text 的换行符，不代表视觉自动换行数。
+    // 基于内容特征预估高度来判断是否需要折叠
     try {
-      final doc = quill.Document.fromJson(jsonDecode(deltaContent));
-      final plain = doc.toPlainText();
-      final int lineCount = 1 + '\n'.allMatches(plain).length;
-      // 策略：>4 行才折叠，折叠后展示 4 行（外层 maxLines=4）
-      return lineCount > 4;
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        bool hasImage = false;
+        int lineCount = 0;
+        int totalLength = 0;
+
+        for (var op in decoded) {
+          if (op is Map) {
+            // 检查是否包含图片
+            if (op['insert'] is Map && op['insert']['image'] != null) {
+              hasImage = true;
+            } else if (op['insert'] != null) {
+              final String insert = op['insert'].toString();
+              final lines = insert.split('\n');
+              lineCount += lines.length - 1;
+              if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
+              totalLength += insert.length;
+            }
+          }
+        }
+
+        // 如果包含图片，默认需要折叠（因为图片会占用较大高度）
+        // 或者文本内容超过一定阈值（预估高度约120像素，约4-5行）
+        return hasImage || lineCount > 4 || totalLength > 150;
+      }
     } catch (_) {
       final int lineCount = 1 + '\n'.allMatches(quote.content).length;
       return lineCount > 4;
     }
+    return false;
   }
 
   @override
@@ -377,47 +393,30 @@ class QuoteContent extends StatelessWidget {
       try {
         quill.Document displayDocument;
 
-        if (!showFullContent && maxLines != null) {
-          final needsExpansion =
-              _needsExpansionForRichText(quote.deltaContent!);
+        if (!showFullContent && _needsExpansionForRichText(quote.deltaContent!)) {
+          const int maxLines = 4; // 固定使用4行作为折叠时的行数限制
 
-          if (needsExpansion) {
-            if (prioritizeBoldContent) {
-              // 检查是否有有效的加粗内容
-              final validBoldOps = _extractValidBoldOps(quote.deltaContent!);
-              if (validBoldOps.isNotEmpty) {
-                // 使用加粗优先模式，折叠状态下隐藏图片
-                displayDocument =
-                    _createBoldPriorityDocument(quote.deltaContent!, maxLines!, hideImages: true);
-              } else {
-                // 没有有效加粗内容，使用普通截断模式，折叠状态下隐藏图片
-                displayDocument =
-                    _createTruncatedDocument(quote.deltaContent!, maxLines!, hideImages: true);
-              }
-            } else {
-              // 不启用加粗优先，使用普通截断模式，折叠状态下隐藏图片
+          if (prioritizeBoldContent) {
+            // 检查是否有有效的加粗内容
+            final validBoldOps = _extractValidBoldOps(quote.deltaContent!);
+            if (validBoldOps.isNotEmpty) {
+              // 使用加粗优先模式，折叠状态下隐藏图片
               displayDocument =
-                  _createTruncatedDocument(quote.deltaContent!, maxLines!, hideImages: true);
+                  _createBoldPriorityDocument(quote.deltaContent!, maxLines, hideImages: false);
+            } else {
+              // 没有有效加粗内容，使用普通截断模式，折叠状态下隐藏图片
+              displayDocument =
+                  _createTruncatedDocument(quote.deltaContent!, maxLines, hideImages: false);
             }
           } else {
-            // 不需要折叠，但仍需隐藏图片（因为是折叠状态）
-            final decoded = jsonDecode(quote.deltaContent!);
-            if (decoded is List) {
-              final filteredOps = decoded.where((op) {
-                if (op is Map && op['insert'] is Map) {
-                  final embed = op['insert'];
-                  if (embed['image'] != null) {
-                    return false; // 过滤图片
-                  }
-                }
-                return true;
-              }).toList();
-              displayDocument = quill.Document.fromJson(filteredOps);
-            } else {
-              displayDocument =
-                  quill.Document.fromJson(jsonDecode(quote.deltaContent!));
-            }
+            // 不启用加粗优先，使用普通截断模式，折叠状态下隐藏图片
+            displayDocument =
+                _createTruncatedDocument(quote.deltaContent!, maxLines, hideImages: false);
           }
+        } else if (!showFullContent) {
+          // 折叠状态但不需要截断，显示完整内容（包括图片）
+          displayDocument =
+              quill.Document.fromJson(jsonDecode(quote.deltaContent!));
         } else {
           // 展开状态或无行数限制，显示完整内容（包括图片）
           displayDocument =
@@ -454,7 +453,7 @@ class QuoteContent extends StatelessWidget {
         // 如果内容被截断且处于折叠状态，添加极轻的渐变遮罩
         final bool needsExpansion =
             _needsExpansionForRichText(quote.deltaContent!);
-        if (!showFullContent && maxLines != null && needsExpansion) {
+        if (!showFullContent && needsExpansion) {
           final double estimatedLineHeight =
               (style?.height ?? 1.5) * (style?.fontSize ?? 14);
           final double fadeHeight = estimatedLineHeight * 0.4; // 渐变高度约0.4行
@@ -502,21 +501,21 @@ class QuoteContent extends StatelessWidget {
         return Text(
           quote.content,
           style: style,
-          maxLines: showFullContent ? null : maxLines,
+          maxLines: showFullContent ? null : 4,
           overflow:
               showFullContent ? TextOverflow.visible : TextOverflow.ellipsis,
         );
       }
     }
 
-    // 使用普通文本显示（仅检查行数）
+    // 使用普通文本显示（基于高度预估判断）
     final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-    final bool needsExpansion = lineCount > 3; // MODIFIED
+    final bool needsExpansion = lineCount > 4 || quote.content.length > 150;
 
     return Text(
       quote.content,
       style: style,
-      maxLines: showFullContent ? null : (needsExpansion ? maxLines : null),
+      maxLines: showFullContent ? null : (needsExpansion ? 4 : null),
       overflow: showFullContent
           ? TextOverflow.visible
           : (needsExpansion ? TextOverflow.ellipsis : TextOverflow.visible),

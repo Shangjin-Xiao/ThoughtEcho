@@ -46,13 +46,12 @@ class QuoteItemWidget extends StatelessWidget {
   static final Map<String, bool> _expansionCache = <String, bool>{};
   static int _cacheHitCount = 0; // 统计缓存命中次数
 
-  /// 优化：判断是否需要展开按钮（富文本或长文本）- 带缓存
+  /// 优化：基于高度判断是否需要展开按钮 - 带缓存
   /// 折叠策略说明：
-  /// 1. 触发阈值：逻辑行数 > 4 或 字符数 > 150 才会出现折叠/展开交互。
-  /// 2. 折叠展示：固定展示 4 行（maxLines=4）。
-  /// 3. 目的：避免折叠后比短内容更短造成突兀，同时不对稍长文本过早折叠。
-  /// 4. 逻辑行的统计方式：按换行符拆分，富文本拆分每个Delta insert段。
-  /// 5. 若富文本中包含换行较少但有长行自动换行，视觉行可能多于4，后续如需严格视觉裁剪再单独实现。
+  /// 1. 触发阈值：内容高度超过120像素时出现折叠/展开交互
+  /// 2. 折叠展示：固定展示约3-4行的高度（120像素）
+  /// 3. 目的：基于实际显示高度判断，解决图片导致的显示问题
+  /// 4. 包含图片的内容会正常显示，避免因图片隐藏造成的矛盾
   bool _needsExpansion(Quote quote) {
     final cacheKey =
         '${quote.id}_${quote.content.length}_${quote.deltaContent?.length ?? 0}';
@@ -64,25 +63,34 @@ class QuoteItemWidget extends StatelessWidget {
 
     bool needsExpansion = false;
 
-    // 新笔记（富文本）
+    // 基于内容特征预估高度来判断
+    // 对于包含图片的富文本内容，默认认为需要折叠
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       try {
         final decoded = jsonDecode(quote.deltaContent!);
         if (decoded is List) {
+          bool hasImage = false;
           int lineCount = 0;
           int totalLength = 0;
+
           for (var op in decoded) {
-            if (op is Map && op['insert'] != null) {
-              final String insert = op['insert'].toString();
-              // 每个\n算一行，且最后一段如果不是\n结尾也算一行
-              final lines = insert.split('\n');
-              lineCount += lines.length - 1;
-              if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
-              totalLength += insert.length;
+            if (op is Map) {
+              // 检查是否包含图片
+              if (op['insert'] is Map && op['insert']['image'] != null) {
+                hasImage = true;
+              } else if (op['insert'] != null) {
+                final String insert = op['insert'].toString();
+                final lines = insert.split('\n');
+                lineCount += lines.length - 1;
+                if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
+                totalLength += insert.length;
+              }
             }
           }
-          // 超过4行或内容长度超过150字符时显示折叠按钮（与富文本内部阈值保持一致）
-          needsExpansion = lineCount > 4 || totalLength > 150;
+
+          // 如果包含图片，默认需要折叠（因为图片会占用较大高度）
+          // 或者文本内容超过一定阈值（预估高度约120像素，约4-5行）
+          needsExpansion = hasImage || lineCount > 4 || totalLength > 150;
         }
       } catch (_) {
         // 富文本解析失败，回退到纯文本判断
@@ -90,7 +98,7 @@ class QuoteItemWidget extends StatelessWidget {
         needsExpansion = lineCount > 4 || quote.content.length > 150;
       }
     } else {
-      // 旧笔记（纯文本）
+      // 旧笔记（纯文本）- 基于行数和字符数预估
       final int lineCount = 1 + '\n'.allMatches(quote.content).length;
       needsExpansion = lineCount > 4 || quote.content.length > 150;
     }
@@ -280,22 +288,24 @@ class QuoteItemWidget extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
                     child: Stack(
                       children: [
-                        AnimatedSize(
+                        AnimatedContainer(
                           duration: const Duration(milliseconds: 350),
                           curve: Curves.easeInOutCubicEmphasized,
-                          alignment: Alignment.topCenter,
-                          child: QuoteContent(
-                            quote: quote,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  height: 1.5,
-                                ),
-                            maxLines: isExpanded ? null : 4,
-                            showFullContent: isExpanded,
+                          height: isExpanded ? null : (_needsExpansion(quote) ? 120 : null),
+                          child: SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: QuoteContent(
+                              quote: quote,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    height: 1.5,
+                                  ),
+                              showFullContent: isExpanded,
+                            ),
                           ),
                         ),
                         if (!isExpanded && _needsExpansion(quote))
@@ -308,7 +318,7 @@ class QuoteItemWidget extends StatelessWidget {
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            height: 22, // 渐变遮罩高度
+                            height: 30, // 增加渐变遮罩高度以适应高度限制
                             child: IgnorePointer(
                               // 不阻挡双击
                               child: ClipRect(
