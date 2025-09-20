@@ -23,13 +23,13 @@ permissions:
   checks: write
 
 env:
-  FLUTTER_VERSION: '3.35.3'
+  FLUTTER_VERSION: '3.35.4'
 
 jobs:
-  # Combined code quality and unit tests
-  test:
+  code-quality:
+    name: Code Quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
     - name: Checkout repository
@@ -45,17 +45,41 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
-    - name: Flutter doctor
-      run: flutter doctor
-
     - name: Check formatting
       run: dart format --set-exit-if-changed .
 
     - name: Analyze code
       run: flutter analyze --fatal-infos
 
-    - name: Run unit tests
-      run: flutter test --coverage --reporter expanded --timeout 300s
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: code-quality
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+
+    - name: Get dependencies
+      run: flutter pub get
+
+    - name: Run unit tests (shard 1)
+      run: flutter test --shard-index=0 --total-shards=2 --reporter compact --timeout 240s
+
+    - name: Run unit tests (shard 2)
+      run: flutter test --shard-index=1 --total-shards=2 --reporter compact --timeout 240s
+
+    - name: Generate test coverage
+      if: success()
+      run: flutter test --coverage --reporter compact --timeout 240s
 
     - name: Upload coverage
       uses: actions/upload-artifact@v4

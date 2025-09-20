@@ -307,7 +307,8 @@ class QuoteItemWidget extends StatelessWidget {
                             right: 0,
                             bottom: 0,
                             height: 22, // 渐变遮罩高度
-                            child: IgnorePointer( // 不阻挡双击
+                            child: IgnorePointer(
+                              // 不阻挡双击
                               child: ClipRect(
                                 child: BackdropFilter(
                                   // 降低模糊强度（3 -> 1.2），更轻柔
@@ -341,7 +342,8 @@ class QuoteItemWidget extends StatelessWidget {
                                       ),
                                       child: Text(
                                         '双击查看全文',
-                                        style: theme.textTheme.bodySmall?.copyWith(
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
                                           color: theme.colorScheme.onSurface
                                               .withValues(alpha: 0.65),
                                           fontSize: 11,
