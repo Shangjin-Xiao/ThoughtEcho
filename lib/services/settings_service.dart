@@ -53,6 +53,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 今日思考是否使用AI（默认开启）
+  bool get todayThoughtsUseAI => _appSettings.todayThoughtsUseAI;
+  Future<void> setTodayThoughtsUseAI(bool enabled) async {
+    _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 折叠时优先显示加粗内容
   bool get prioritizeBoldContentInCollapse =>
       _appSettings.prioritizeBoldContentInCollapse;

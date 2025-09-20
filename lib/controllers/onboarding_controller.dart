@@ -161,6 +161,15 @@ class OnboardingController extends ChangeNotifier {
           'clipboardMonitoring',
         ),
         hitokotoType: _state.getPreference<String>('hitokotoTypes'),
+        // 新增偏好持久化
+        showFavoriteButton:
+            _state.getPreference<bool>('showFavoriteButton') ?? true,
+        prioritizeBoldContentInCollapse:
+            _state.getPreference<bool>('prioritizeBoldContent') ?? false,
+        useLocalQuotesOnly:
+            _state.getPreference<bool>('useLocalOnly') ?? false,
+        aiCardGenerationEnabled:
+            _state.getPreference<bool>('aiCardGenerationEnabled') ?? true,
       );
 
       // 更新应用设置
@@ -179,6 +188,12 @@ class OnboardingController extends ChangeNotifier {
         // 这里只需要记录设置状态
         logInfo('位置服务已启用');
       }
+
+      // AI相关快捷开关
+      final todayAI = _state.getPreference<bool>('todayThoughtsUseAI') ?? false;
+      await _settingsService.setTodayThoughtsUseAI(todayAI);
+      final reportAI = _state.getPreference<bool>('reportInsightsUseAI') ?? false;
+      await _settingsService.setReportInsightsUseAI(reportAI);
 
       logDebug('用户偏好设置保存完成');
     } catch (e) {

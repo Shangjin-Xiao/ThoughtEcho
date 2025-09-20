@@ -100,8 +100,11 @@ class _HomePageState extends State<HomePage>
       String? weather = weatherService.currentWeather;
       String? temperature = weatherService.temperature;
 
-      // 检查是否有AI配置，如果没有则使用本地生成的提示
-      if (!aiService.hasValidApiKey()) {
+      // 检查是否启用今日思考AI，或是否有AI配置；不满足则使用本地生成
+      final settingsService = context.read<SettingsService>();
+      final aiEnabledForToday = settingsService.todayThoughtsUseAI;
+
+      if (!aiEnabledForToday || !aiService.hasValidApiKey()) {
         // 使用本地的每日提示生成器
         final localPrompt = DailyPromptGenerator.generatePromptBasedOnContext(
           city: city,
@@ -118,7 +121,7 @@ class _HomePageState extends State<HomePage>
         return;
       }
 
-      // 获取最近的周期洞察（本周、上周、本月、上月）
+  // 获取最近的周期洞察（本周、上周、本月、上月）
       final insightHistoryService = context.read<InsightHistoryService>();
       final recentInsights =
           await insightHistoryService.formatRecentInsightsForDailyPrompt();

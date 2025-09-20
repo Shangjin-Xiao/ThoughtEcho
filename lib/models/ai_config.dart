@@ -79,10 +79,24 @@ class LegacyAIConfigWrapper implements AIConfig {
   Map<String, dynamic> adjustData(Map<String, dynamic> data) {
     final adjustedData = Map<String, dynamic>.from(data);
 
-    // 确保包含必要的字段
-    adjustedData['model'] = adjustedData['model'] ?? model;
-    adjustedData['temperature'] = adjustedData['temperature'] ?? temperature;
-    adjustedData['max_tokens'] = adjustedData['max_tokens'] ?? maxTokens;
+    // 仅在调用方未提供且存在非空默认值时，才填充model
+    if (!adjustedData.containsKey('model') ||
+        (adjustedData['model'] is String &&
+            (adjustedData['model'] as String).isEmpty)) {
+      if (model.isNotEmpty) {
+        adjustedData['model'] = model;
+      }
+    }
+
+    // 不强制注入temperature和max_tokens，若调用方未提供则交由服务端默认
+    if (adjustedData.containsKey('temperature') &&
+        adjustedData['temperature'] == null) {
+      adjustedData.remove('temperature');
+    }
+    if (adjustedData.containsKey('max_tokens') &&
+        adjustedData['max_tokens'] == null) {
+      adjustedData.remove('max_tokens');
+    }
 
     // 确保stream参数是boolean类型
     if (adjustedData.containsKey('stream')) {
