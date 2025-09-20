@@ -19,6 +19,7 @@ import '../widgets/svg_card_widget.dart';
 import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
+import '../constants/app_constants.dart'; // 导入应用常量
 
 /// AI周期报告页面
 class AIPeriodicReportPage extends StatefulWidget {
@@ -142,7 +143,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载数据失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('加载数据失败: $e'), duration: AppConstants.snackBarDurationError));
       }
     }
   }
@@ -501,7 +502,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       AppLogger.e('生成精选卡片失败', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成卡片失败: $e')),
+          SnackBar(content: Text('生成卡片失败: $e'), duration: AppConstants.snackBarDurationError),
         );
       }
     }

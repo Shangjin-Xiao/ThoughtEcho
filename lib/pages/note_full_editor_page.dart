@@ -27,6 +27,8 @@ import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 import '../services/temporary_media_service.dart';
 import '../widgets/media_player_widget.dart';
 import '../constants/app_constants.dart';
+import '../services/media_file_service.dart';
+import '../services/media_reference_service.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -54,6 +56,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   String? _temperature; // 分离位置和天气控制
   bool _showLocation = false;
   bool _showWeather = false;
+
+  // 会话级媒体追踪：记录本编辑会话中通过导入对话框新增的媒体文件
+  final Set<String> _sessionImportedMedia = <String>{};
+  bool _didSaveSuccessfully = false; // 成功保存后不进行会话级清理
 
   // 保存进度状态
   bool _isSaving = false; // 是否显示保存遮罩
@@ -754,8 +760,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
-        await db.updateQuote(quote);
-        if (mounted) {
+  await db.updateQuote(quote);
+  _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
+  if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(
@@ -768,8 +775,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       } else {
         // 添加新笔记（初始Quote为null或无ID时）
         logDebug('添加新笔记');
-        await db.addQuote(quote);
-        if (mounted) {
+  await db.addQuote(quote);
+  _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
+  if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(
@@ -1123,7 +1131,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           children: [
             Column(
               children: [
-                UnifiedQuillToolbar(controller: _controller),
+                UnifiedQuillToolbar(
+                  controller: _controller,
+                  onMediaImported: (String filePath) {
+                    _sessionImportedMedia.add(filePath);
+                  },
+                ),
                 if (_selectedTagIds.isNotEmpty ||
                     _selectedColorHex != null ||
                     _showLocation ||
@@ -2432,6 +2445,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   @override
   void dispose() {
+    // 未保存退出时，清理本会话导入而未被引用的媒体文件
+    _cleanupSessionImportedMediaIfUnsaved();
     // 清理临时媒体文件（异步执行，不阻塞dispose）
     _cleanupTemporaryMedia();
 
@@ -2453,6 +2468,28 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       logDebug('临时媒体文件清理完成');
     } catch (e) {
       logDebug('清理临时媒体文件失败: $e');
+    }
+  }
+
+  /// 会话级清理：未保存退出时删除本次导入且未被任何笔记引用的媒体
+  Future<void> _cleanupSessionImportedMediaIfUnsaved() async {
+    try {
+      if (_didSaveSuccessfully || _sessionImportedMedia.isEmpty) return;
+      for (final p in _sessionImportedMedia) {
+        try {
+          final refCount = await MediaReferenceService.getReferenceCount(p);
+          if (refCount <= 0) {
+            final deleted = await MediaFileService.deleteMediaFile(p);
+            if (deleted) {
+              logDebug('未保存退出，已删除未引用媒体文件: $p');
+            }
+          }
+        } catch (e) {
+          logDebug('清理会话媒体失败: $p, 错误: $e');
+        }
+      }
+    } catch (e) {
+      logDebug('执行会话级媒体清理出错: $e');
     }
   }
 }

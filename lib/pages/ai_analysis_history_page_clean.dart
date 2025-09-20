@@ -772,7 +772,7 @@ $positiveQuotesText
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('AI返回格式异常，已使用备用模板生成报告'),
-                duration: Duration(seconds: 2),
+                duration: AppConstants.snackBarDurationImportant,
               ),
             );
           }

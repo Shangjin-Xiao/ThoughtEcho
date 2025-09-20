@@ -5,7 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
-import '../services/temporary_media_service.dart';
+import '../services/media_file_service.dart';
 import '../utils/stream_file_selector.dart';
 import '../services/large_file_manager.dart' as lfm;
 import '../utils/app_logger.dart';
@@ -58,7 +58,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         // 文件选择选项
         ListTile(
           leading: const Icon(Icons.folder_open),
-          title: Text('从文件选择${_getMediaTypeName(widget.mediaType)}'),
+          title: Text(_filePickTitle()),
           subtitle: const Text('支持大文件，内存安全处理'),
           onTap: () => _importFromFile(),
         ),
@@ -270,26 +270,26 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _progress = 0.3;
       });
 
-      // 使用内存保护的文件保存
+      // 使用内存保护的文件保存（直接保存到媒体目录）
       final String? savedPath =
           await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
               () async {
         switch (widget.mediaType) {
           case 'image':
-            return await TemporaryMediaService.saveImageToTemporary(
+            return await MediaFileService.saveImage(
               filePath,
               onProgress: _updateProgress,
               cancelToken: _cancelToken,
             );
           case 'video':
-            return await TemporaryMediaService.saveVideoToTemporary(
+            return await MediaFileService.saveVideo(
               filePath,
               onProgress: _updateProgress,
               onStatusUpdate: _updateStatus,
               cancelToken: _cancelToken,
             );
           case 'audio':
-            return await TemporaryMediaService.saveAudioToTemporary(
+            return await MediaFileService.saveAudio(
               filePath,
               onProgress: _updateProgress,
               cancelToken: _cancelToken,
@@ -364,15 +364,15 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _progress = 0.5;
       });
 
-      // 保存文件
+      // 保存文件（直接保存到媒体目录）
       final String? savedPath =
           await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
               () async {
         switch (widget.mediaType) {
           case 'image':
-            return await TemporaryMediaService.saveImageToTemporary(file!.path);
+            return await MediaFileService.saveImage(file!.path);
           case 'video':
-            return await TemporaryMediaService.saveVideoToTemporary(file!.path);
+            return await MediaFileService.saveVideo(file!.path);
           default:
             throw Exception('不支持的媒体类型');
         }
@@ -590,21 +590,34 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
     switch (widget.mediaType) {
       case 'image':
         return '• 支持 JPG、PNG、GIF、WebP 等格式\n'
-            '• 自动优化大图片以节省存储空间\n'
-            '• 使用内存保护技术，支持超大图片';
+            '• 直接保存到应用媒体库，减少重复复制\n'
+            '• 使用内存保护技术，支持超大图片\n'
+            '• 未保存笔记退出将自动清理未引用文件';
       case 'video':
         return '• 支持 MP4、MOV、AVI、MKV 等格式\n'
-            '• 智能处理大视频文件\n'
-            '• 流式处理技术，防止内存溢出';
+            '• 直接保存到应用媒体库，减少重复复制\n'
+            '• 流式处理技术，防止内存溢出\n'
+            '• 未保存笔记退出将自动清理未引用文件';
       case 'audio':
         return '• 支持 MP3、WAV、AAC、M4A 等格式\n'
-            '• 高质量音频保存\n'
-            '• 优化存储，快速加载';
+            '• 直接保存到应用媒体库，减少重复复制\n'
+            '• 优化存储，快速加载\n'
+            '• 未保存笔记退出将自动清理未引用文件';
       default:
         return '• 支持多种媒体格式\n'
-            '• 智能文件处理\n'
-            '• 内存安全保护';
+            '• 直接保存到应用媒体库\n'
+            '• 内存安全保护\n'
+            '• 未保存笔记退出将自动清理未引用文件';
     }
+  }
+
+  /// 根据平台与类型返回更贴近系统的标题
+  String _filePickTitle() {
+    final typeName = _getMediaTypeName(widget.mediaType);
+    if (!kIsWeb && Platform.isAndroid && (widget.mediaType == 'image' || widget.mediaType == 'video')) {
+      return '从系统相册/媒体库选择$typeName';
+    }
+    return '从文件选择$typeName';
   }
 
   /// 从URL下载媒体文件
@@ -646,18 +659,18 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _updateStatus('正在保存文件...');
         _updateProgress(0.9);
 
-        // 保存到应用目录
+        // 保存到应用目录（直接保存到媒体目录）
         String? savedPath;
         switch (widget.mediaType) {
           case 'image':
-            savedPath = await TemporaryMediaService.saveImageToTemporary(
+            savedPath = await MediaFileService.saveImage(
               tempFile.path,
               onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
               cancelToken: _cancelToken,
             );
             break;
           case 'video':
-            savedPath = await TemporaryMediaService.saveVideoToTemporary(
+            savedPath = await MediaFileService.saveVideo(
               tempFile.path,
               onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
               onStatusUpdate: _updateStatus,
@@ -665,7 +678,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
             );
             break;
           case 'audio':
-            savedPath = await TemporaryMediaService.saveAudioToTemporary(
+            savedPath = await MediaFileService.saveAudio(
               tempFile.path,
               onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
               cancelToken: _cancelToken,

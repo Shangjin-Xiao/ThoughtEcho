@@ -22,6 +22,7 @@ import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
 import '../services/insight_history_service.dart'; // Import InsightHistoryService
 import '../utils/lottie_animation_manager.dart';
+import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/daily_prompt_generator.dart';
 import '../services/ai_card_generation_service.dart';
@@ -593,7 +594,7 @@ class _HomePageState extends State<HomePage>
               _loadTags();
               // 新增：强制刷新NoteListView
               if (_noteListViewKey.currentState != null) {
-                _noteListViewKey.currentState!.forceRefresh();
+                _noteListViewKey.currentState!.resetAndLoad();
               }
             },
           ),
@@ -748,7 +749,10 @@ class _HomePageState extends State<HomePage>
     if (_aiCardService == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('AI卡片服务未初始化')));
+      ).showSnackBar(const SnackBar(
+        content: Text('AI卡片服务未初始化'),
+        duration: AppConstants.snackBarDurationError,
+      ));
       return;
     }
 
@@ -784,7 +788,11 @@ class _HomePageState extends State<HomePage>
       // 显示错误信息
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成卡片失败: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('生成卡片失败: $e'),
+            backgroundColor: Colors.red,
+            duration: AppConstants.snackBarDurationError,
+          ),
         );
       }
     }

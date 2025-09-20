@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_selector/file_selector.dart' as desktop_selector;
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
 import 'app_logger.dart';
 
 /// 流式文件选择器 - 彻底修复版
@@ -52,14 +54,28 @@ class StreamFileSelector {
           ]);
         }
       } else {
-        // 移动端使用 file_picker，关键是设置 withData: false
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
-          allowMultiple: false,
-          withData: false, // 关键：不读取文件内容，只返回路径
-          withReadStream: false, // 关键：不创建读取流
-        );
+        // 移动端：
+        // - Android 使用系统媒体选择器（ImagePicker -> Gallery）
+        // - iOS 保持使用 file_picker（更稳定的文件路径获取）
+        if (Platform.isAndroid) {
+          final picker = ImagePicker();
+          final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
+          if (file != null) {
+            final f = File(file.path);
+            final size = await f.exists() ? await f.length() : 0;
+            result = FilePickerResult([
+              PlatformFile(name: p.basename(file.path), path: file.path, size: size),
+            ]);
+          }
+        } else {
+          result = await FilePicker.platform.pickFiles(
+            type: FileType.custom,
+            allowedExtensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
+            allowMultiple: false,
+            withData: false,
+            withReadStream: false,
+          );
+        }
       }
 
       if (result != null && result.files.isNotEmpty) {
@@ -127,14 +143,27 @@ class StreamFileSelector {
           ]);
         }
       } else {
-        // 移动端使用 file_picker，关键是设置 withData: false
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
-          allowMultiple: false,
-          withData: false, // 关键：不读取文件内容，只返回路径
-          withReadStream: false, // 关键：不创建读取流
-        );
+        if (Platform.isAndroid) {
+          // Android 使用系统媒体选择器（图库）
+          final picker = ImagePicker();
+          final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+          if (file != null) {
+            final f = File(file.path);
+            final size = await f.exists() ? await f.length() : 0;
+            result = FilePickerResult([
+              PlatformFile(name: p.basename(file.path), path: file.path, size: size),
+            ]);
+          }
+        } else {
+          // iOS 等其他移动端保持 file_picker
+          result = await FilePicker.platform.pickFiles(
+            type: FileType.custom,
+            allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+            allowMultiple: false,
+            withData: false,
+            withReadStream: false,
+          );
+        }
       }
 
       if (result != null && result.files.isNotEmpty) {
