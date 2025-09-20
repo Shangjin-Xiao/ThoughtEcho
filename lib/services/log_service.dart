@@ -263,9 +263,11 @@ class LogService with ChangeNotifier {
   Future<void> _savePendingLogsToDatabase() async {
     if (_pendingLogs.isEmpty) return;
 
+    // 提前定义，确保在 catch 中可用
+    List<LogEntry> logsToSave = const <LogEntry>[];
     try {
       // 复制待处理日志列表，并清空原列表
-      final logsToSave = List<LogEntry>.from(_pendingLogs);
+      logsToSave = List<LogEntry>.from(_pendingLogs);
       _pendingLogs.clear();
 
       // 批量插入日志
@@ -278,7 +280,7 @@ class LogService with ChangeNotifier {
 
       // 保存失败时，将日志重新加入待处理队列（但避免队列过长）
       if (_pendingLogs.length < 100) {
-        _pendingLogs.addAll(_pendingLogs);
+        _pendingLogs.addAll(logsToSave);
       }
     }
   }

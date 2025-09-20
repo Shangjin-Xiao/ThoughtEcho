@@ -7,11 +7,15 @@ import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
+import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
+import '../utils/color_utils.dart'; // Import color_utils
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../services/weather_service.dart'; // 导入天气服务
+import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 
@@ -65,9 +69,7 @@ class NoteListViewState extends State<NoteListView> {
   final ScrollController _scrollController = ScrollController(); // 添加滚动控制器
   final Map<String, bool> _expandedItems = {};
   final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
-
-  // ---- 用户滑动状态 ----
-  Timer? _userScrollingTimer;
+  // 移除AnimatedList相关的Key，改用ListView.builder
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
@@ -79,10 +81,10 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
   // ---- 自动滚动控制新增状态 ----
-  // bool _autoScrollEnabled = false; // 首批数据加载完成后再允许自动滚动
+  bool _autoScrollEnabled = false; // 首批数据加载完成后再允许自动滚动
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
-  // bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
-  // DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
+  bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
+  DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
 
   @override
   void initState() {
@@ -114,13 +116,9 @@ class NoteListViewState extends State<NoteListView> {
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;
 
-    // 当滚动到列表底部时，加载更多数据
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _loadMore();
-    }
-
-    // _lastUserScrollTime = DateTime.now();
+    // 用户正在滑动（通过滚动事件检测）
+    _isUserScrolling = true;
+    _lastUserScrollTime = DateTime.now();
 
     // 重置定时器
     _userScrollingTimer?.cancel();
@@ -129,7 +127,7 @@ class NoteListViewState extends State<NoteListView> {
     _userScrollingTimer = Timer(const Duration(seconds: 1), () {
       if (mounted) {
         setState(() {
-          // 可以在这里添加滑动停止后的逻辑
+          _isUserScrolling = false;
         });
       }
     });
@@ -208,9 +206,9 @@ class NoteListViewState extends State<NoteListView> {
           if (!_initialDataLoaded) {
             _initialDataLoaded = true;
             // 立即启用自动滚动，但设置更长的保护期防止误触发
-            // _autoScrollEnabled = true;
+            _autoScrollEnabled = true;
             // 设置较长的保护期，避免首次进入时的滚动冲突
-            // _lastUserScrollTime = DateTime.now();
+            _lastUserScrollTime = DateTime.now();
             logDebug('首批数据加载完成，自动滚动功能已启用（保护期2秒）', source: 'NoteListView');
           }
 
@@ -502,194 +500,70 @@ class NoteListViewState extends State<NoteListView> {
     super.dispose();
   }
 
-  // 优化：将搜索框提取为独立组件
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: TextField(
-        controller: _searchController,
-        focusNode: _searchFocusNode,
-        decoration: InputDecoration(
-          hintText: '搜索笔记...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    widget.onSearchChanged('');
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Theme.of(context).scaffoldBackgroundColor,
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        ),
-        onChanged: (value) {
-          _searchDebounceTimer?.cancel();
-          _searchDebounceTimer = Timer(
-            const Duration(milliseconds: 500),
-            () => widget.onSearchChanged(value),
-          );
-        },
-      ),
-    );
+  Future<void> resetAndLoad() async {
+    _quotes.clear();
+    _hasMore = true;
+    _loadMore();
   }
 
-  // 优化：将筛选和排序栏提取为独立组件
-  Widget _buildFilterAndSortBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: _buildFilterChips(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: '筛选和排序',
-            onPressed: () => _showFilterSortSheet(context),
-          ),
-        ],
-      ),
-    );
-  }
+  // 添加滚动状态标志，防止在用户滑动时触发自动滚动
+  bool _isUserScrolling = false;
+  Timer? _userScrollingTimer;
 
-  // 优化：构建筛选标签的部分
-  Widget _buildFilterChips() {
-    if (widget.isLoadingTags) {
-      return const SizedBox(
-        height: 40,
-        child: Center(child: AppLoadingView(message: '加载标签...')),
-      );
+  /// 滚动到指定笔记的顶部 - 使用 ensureVisible 确保多展开笔记时定位准确
+  void _scrollToItem(String quoteId, int index) {
+    if (!mounted || !_scrollController.hasClients) return;
+    // 多重保护条件
+    if (!_autoScrollEnabled) {
+      logDebug('跳过自动滚动（未启用 _autoScrollEnabled）', source: 'NoteListView');
+      return;
+    }
+    if (_isUserScrolling) {
+      logDebug('跳过自动滚动：用户正在滑动', source: 'NoteListView');
+      return;
+    }
+    if (_lastUserScrollTime != null &&
+        DateTime.now().difference(_lastUserScrollTime!) <
+            const Duration(milliseconds: 2000)) {
+      // 增加保护期到2秒
+      logDebug('跳过自动滚动：用户刚刚滚动 (<2000ms)', source: 'NoteListView');
+      return;
+    }
+    if (_isAutoScrolling) {
+      logDebug('跳过自动滚动：已有动画', source: 'NoteListView');
+      return;
     }
 
-    if (widget.tags.isEmpty) {
-      return const SizedBox(height: 40);
-    }
+    try {
+      final key = _itemKeys[quoteId];
+      if (key == null || key.currentContext == null) {
+        logDebug('笔记Key或Context不存在，跳过滚动', source: 'NoteListView');
+        return;
+      }
 
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: widget.tags.length,
-        itemBuilder: (context, index) {
-          final tag = widget.tags[index];
-          final isSelected = widget.selectedTagIds.contains(tag.id);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: ChoiceChip(
-              label: Text(tag.name),
-              avatar: tag.icon != null
-                  ? IconUtils.getIcon(
-                      tag.icon!,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurface,
-                    )
-                  : null,
-              selected: isSelected,
-              onSelected: (selected) {
-                final newSelection = List<String>.from(widget.selectedTagIds);
-                if (selected) {
-                  newSelection.add(tag.id);
-                } else {
-                  newSelection.remove(tag.id);
-                }
-                widget.onTagSelectionChanged(newSelection);
-              },
-              selectedColor: Theme.of(context).colorScheme.primary,
-              labelStyle: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          );
-        },
-      ),
-    );
+      _isAutoScrolling = true;
+      logDebug('使用ensureVisible滚动到笔记: $quoteId (index: $index)',
+          source: 'NoteListView');
+
+      // 使用 Scrollable.ensureVisible 自动处理动态布局
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeOutCubic,
+        alignment: 0.0, // 滚动到顶部
+      ).then((_) {
+        _isAutoScrolling = false;
+        logDebug('ensureVisible滚动完成', source: 'NoteListView');
+      }).catchError((e) {
+        _isAutoScrolling = false;
+        logDebug('ensureVisible滚动失败: $e', source: 'NoteListView');
+      });
+    } catch (e, st) {
+      logDebug('滚动到笔记失败: $e\n$st', source: 'NoteListView');
+      _isAutoScrolling = false;
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildSearchBar(),
-        _buildFilterAndSortBar(),
-        Expanded(
-          child: _buildNoteList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNoteList() {
-    if (_isLoading && _quotes.isEmpty) {
-      return const AppLoadingView(message: '正在加载笔记...');
-    }
-
-    if (_quotes.isEmpty) {
-      return const AppEmptyView(
-        text: '没有找到相关笔记',
-        svgAsset: 'assets/empty.svg', // 请确保此资源存在
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        _updateStreamSubscription();
-      },
-      child: ListView.builder(
-        controller: _scrollController,
-        itemCount: _quotes.length + (_hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == _quotes.length) {
-            // 不再在这里调用 _loadMore()，由 _onScroll 统一处理
-            return _hasMore
-                ? const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : const SizedBox.shrink();
-          }
-
-          final quote = _quotes[index];
-          final key = _itemKeys.putIfAbsent(quote.id!, () => GlobalKey());
-          final isExpanded = _expandedItems[quote.id] ?? false;
-
-          return QuoteItemWidget(
-            key: key,
-            quote: quote,
-            tags: widget.tags,
-            isExpanded: isExpanded,
-            onToggleExpanded: (expanded) {
-              setState(() {
-                _expandedItems[quote.id!] = expanded;
-              });
-            },
-            onEdit: () => widget.onEdit(quote),
-            onDelete: () => widget.onDelete(quote),
-            onAskAI: () => widget.onAskAI(quote),
-            onGenerateCard: widget.onGenerateCard != null
-                ? () => widget.onGenerateCard!(quote)
-                : null,
-            onFavorite: widget.onFavorite != null
-                ? () => widget.onFavorite!(quote)
-                : null,
-            searchQuery: widget.searchQuery,
-          );
-        },
-      ),
-    );
-  }
-
-  /// 加载更多数据
   Future<void> _loadMore() async {
     // 防止重复加载
     if (!_hasMore || _isLoading) {
@@ -722,34 +596,755 @@ class NoteListViewState extends State<NoteListView> {
           _isLoading = false;
         });
       }
-      logError('加载更多笔记失败: $e', error: e, source: 'NoteListView');
+      logError('加载更多数据失败: $e', error: e, source: 'NoteListView');
+      rethrow;
     }
   }
 
-  void _showFilterSortSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return NoteFilterSortSheet(
-          allTags: widget.tags,
-          selectedTagIds: widget.selectedTagIds,
-          sortType: widget.sortType,
-          sortAscending: widget.sortAscending,
-          selectedWeathers: widget.selectedWeathers,
-          selectedDayPeriods: widget.selectedDayPeriods,
-          onApply: (tagIds, sortType, sortAscending, weathers, dayPeriods) {
-            widget.onTagSelectionChanged(tagIds);
-            widget.onSortChanged(sortType, sortAscending);
-            widget.onFilterChanged(weathers, dayPeriods);
-            Navigator.pop(context);
+  Widget _buildNoteList(DatabaseService db, ThemeData theme) {
+    if (_isLoading) {
+      // 搜索时用专属动画
+      if (widget.searchQuery.isNotEmpty) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final size = (constraints.maxHeight * 0.7).clamp(120.0, 400.0);
+            return Center(
+              child: EnhancedLottieAnimation(
+                type: LottieAnimationType.weatherSearchLoading,
+                width: size,
+                height: size,
+                semanticLabel: '搜索中',
+              ),
+            );
           },
         );
+      }
+      return const AppLoadingView();
+    }
+    if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
+      return const AppEmptyView(
+        svgAsset: 'assets/empty/empty_state.svg',
+        text: '还没有笔记，开始记录吧！',
+      );
+    }
+    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final size = (constraints.maxHeight * 0.5).clamp(80.0, 220.0);
+                return EnhancedLottieAnimation(
+                  type: LottieAnimationType.notFound,
+                  width: size,
+                  height: size,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '未找到相关笔记',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '尝试使用其他关键词或检查拼写',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) {
+        // 修复：优化预加载逻辑，减少频繁触发
+        if (notification is ScrollUpdateNotification) {
+          final metrics = notification.metrics;
+          // 修复：使用常量文件中的阈值，适应不同屏幕尺寸
+          final threshold =
+              metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
+          if (metrics.pixels > threshold &&
+              metrics.maxScrollExtent > 0 &&
+              !_isLoading &&
+              _hasMore) {
+            logDebug(
+                '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
+                source: 'NoteListView');
+            _loadMore();
+          }
+        }
+        return true;
+      },
+      child: ListView.builder(
+        controller: _scrollController, // 添加滚动控制器
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: _quotes.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index < _quotes.length) {
+            final quote = _quotes[index];
+            // 获取展开状态，如果不存在则默认为折叠状态
+            final bool isExpanded = _expandedItems[quote.id] ?? false;
+
+            // 为每个笔记生成一个唯一的key用于滚动定位
+            final String itemKey = 'quote_${quote.id}_$index';
+            if (!_itemKeys.containsKey(quote.id)) {
+              _itemKeys[quote.id!] = GlobalKey(debugLabel: itemKey);
+            }
+
+            // 直接返回QuoteItemWidget，移除动画
+            return Container(
+              key: _itemKeys[quote.id],
+              child: QuoteItemWidget(
+                quote: quote,
+                tags: widget.tags,
+                isExpanded: isExpanded,
+                onToggleExpanded: (expanded) {
+                  setState(() {
+                    _expandedItems[quote.id!] = expanded;
+                  });
+
+                  // 折叠后滚动到笔记顶部
+                  if (!expanded) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToItem(quote.id!, index);
+                    });
+                  }
+                },
+                onEdit: () => widget.onEdit(quote),
+                onDelete: () => widget.onDelete(quote),
+                onAskAI: () => widget.onAskAI(quote),
+                onGenerateCard: widget.onGenerateCard != null
+                    ? () => widget.onGenerateCard!(quote)
+                    : null,
+                onFavorite: widget.onFavorite != null
+                    ? () => widget.onFavorite!(quote)
+                    : null, // 新增：心形按钮回调
+                tagBuilder: (tag) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.applyOpacity(
+                        0.1,
+                      ), // MODIFIED
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (IconUtils.isEmoji(tag.iconName)) ...[
+                          Text(
+                            IconUtils.getDisplayIcon(tag.iconName),
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(width: 4),
+                        ] else ...[
+                          Icon(
+                            IconUtils.getIconData(tag.iconName),
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          tag.name,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            );
+          }
+          // 底部加载指示器
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: AppLoadingView(size: 32),
+          );
+        },
+      ),
+    );
+  }
+
+  // 优化：搜索内容变化回调，添加防抖机制
+  void _onSearchChanged(String value) {
+    // 取消之前的防抖定时器
+    _searchDebounceTimer?.cancel();
+
+    // 立即更新本地UI状态
+    setState(() {
+      // 如果搜索框被清空，立即重置加载状态
+      if (value.isEmpty && widget.searchQuery.isNotEmpty) {
+        _isLoading = true;
+        logDebug('搜索内容被清空，重置加载状态');
+        // 优化：只有当搜索内容长度>=2时才显示加载状态
+      } else if (value.isNotEmpty &&
+          value.length >= AppConstants.minSearchLength) {
+        // 优化：只有当搜索内容长度>=2时才显示加载状态
+        _isLoading = true;
+      }
+    });
+
+    // 对于清空操作，立即执行
+    if (value.isEmpty) {
+      _performSearch(value);
+      return;
+    }
+
+    // 优化：只有当搜索内容长度>=2时才使用防抖延迟
+    if (value.length >= AppConstants.minSearchLength) {
+      _searchDebounceTimer = Timer(AppConstants.searchDebounceDelay, () {
+        if (mounted) {
+          _performSearch(value);
+        }
+      });
+    } else {
+      // 长度小于2时直接执行，不触发实际搜索
+      _performSearch(value);
+    }
+  }
+
+  /// 优化：执行搜索的统一方法
+  void _performSearch(String value) {
+    if (!mounted) return;
+
+    logDebug('执行搜索: "$value"', source: 'NoteListView');
+
+    // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
+    if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
+      try {
+        final searchController = Provider.of<NoteSearchController>(
+          context,
+          listen: false,
+        );
+        searchController.setSearchState(true);
+      } catch (e) {
+        logDebug('设置搜索状态失败: $e');
+      }
+    }
+
+    // 直接调用父组件的搜索回调
+    widget.onSearchChanged(value);
+
+    // 优化：只有在实际搜索时才设置超时保护，使用常量配置的超时时间
+    if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
+      Timer(AppConstants.searchTimeout, () {
+        if (mounted && _isLoading) {
+          setState(() {
+            _isLoading = false;
+          });
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.resetSearchState();
+          } catch (e) {
+            logDebug('重置搜索状态失败: $e');
+          }
+          logDebug('搜索超时，已重置加载状态');
+
+          // 显示超时提示
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('搜索超时，请重试或检查网络连接'),
+                duration: AppConstants.snackBarDurationImportant,
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.orange,
+                action: SnackBarAction(
+                  label: '重试',
+                  textColor: Colors.white,
+                  onPressed: () => _performSearch(value),
+                ),
+              ),
+            );
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final db = Provider.of<DatabaseService>(context);
+    final searchController = Provider.of<NoteSearchController>(context);
+    final theme = Theme.of(context);
+
+    // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
+    if (searchController.searchError != null && _isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          searchController.resetSearchState();
+        }
+      });
+    }
+
+    // 响应式设计：根据屏幕宽度调整布局
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width > AppConstants.tabletMinWidth;
+    final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
+    final horizontalPadding = isTablet ? 16.0 : 8.0;
+
+    // 布局构建
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 主体内容 - 添加白色背景容器
+        return Container(
+            color: Colors.white, // 固定白色背景，不受主题影响
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Column(
+                  children: [
+                    // 搜索框 - 移到最顶部，增加上边距以适应没有AppBar的情况
+                    Container(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        MediaQuery.of(context).padding.top +
+                            8.0, // 顶部安全区域 + 一些额外空间
+                        horizontalPadding,
+                        0,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode, // 使用管理的焦点节点
+                              decoration: InputDecoration(
+                                hintText: '搜索笔记...',
+                                prefixIcon: searchController.isSearching
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: Padding(
+                                          padding: EdgeInsets.all(12.0),
+                                          child: EnhancedLottieAnimation(
+                                            type: LottieAnimationType
+                                                .searchLoading,
+                                            width: 16,
+                                            height: 16,
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(Icons.search),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: constraints.maxWidth <
+                                          AppConstants.tabletMinWidth
+                                      ? 8.0
+                                      : 12.0,
+                                ),
+                                isDense: constraints.maxWidth <
+                                    AppConstants.tabletMinWidth, // 小屏幕更紧凑
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onChanged: _onSearchChanged,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.tune),
+                            tooltip: '筛选/排序',
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ), // 更紧凑的按钮
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true, // 允许更大的底部表单
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLowest,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                ),
+                                builder: (context) => NoteFilterSortSheet(
+                                  allTags: widget.tags,
+                                  selectedTagIds: widget.selectedTagIds,
+                                  sortType: widget.sortType,
+                                  sortAscending: widget.sortAscending,
+                                  selectedWeathers: widget.selectedWeathers,
+                                  selectedDayPeriods:
+                                      widget.selectedDayPeriods, // 传递时间段筛选状态
+                                  onApply: (
+                                    tagIds,
+                                    sortType,
+                                    sortAscending,
+                                    selectedWeathers,
+                                    selectedDayPeriods, // 接收时间段筛选结果
+                                  ) {
+                                    widget.onTagSelectionChanged(tagIds);
+                                    widget.onSortChanged(
+                                      sortType,
+                                      sortAscending,
+                                    );
+                                    widget.onFilterChanged(
+                                      selectedWeathers,
+                                      selectedDayPeriods,
+                                    );
+                                    // 在状态更新后，立即触发数据库流的更新
+                                    _updateStreamSubscription();
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 筛选条件展示区域
+                    _buildFilterDisplay(theme, horizontalPadding),
+
+                    // 笔记列表
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                        ),
+                        child: _buildNoteList(db, theme),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ));
       },
     );
   }
 
-  void forceRefresh() {
-    _updateStreamSubscription();
+  /// 构建现代化的筛选条件展示区域
+  Widget _buildFilterDisplay(ThemeData theme, double horizontalPadding) {
+    final hasFilters = widget.selectedTagIds.isNotEmpty ||
+        widget.selectedWeathers.isNotEmpty ||
+        widget.selectedDayPeriods.isNotEmpty;
+
+    if (!hasFilters) return const SizedBox.shrink();
+
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 8.0,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.12),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 筛选条件标题栏
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.filter_alt_outlined,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '当前筛选条件',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    widget.onTagSelectionChanged([]);
+                    widget.onFilterChanged([], []);
+                    _updateStreamSubscription();
+                  },
+                  icon: Icon(
+                    Icons.clear_all,
+                    size: 16,
+                    color: theme.colorScheme.error,
+                  ),
+                  label: Text(
+                    '清除全部',
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 筛选条件内容
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标签筛选器
+                if (widget.selectedTagIds.isNotEmpty) ...[
+                  _buildFilterSection(
+                    theme: theme,
+                    title: '标签',
+                    icon: Icons.label_outline,
+                    color: theme.colorScheme.primary,
+                    children: widget.selectedTagIds.map((tagId) {
+                      final tag = widget.tags.firstWhere(
+                        (tag) => tag.id == tagId,
+                        orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                      );
+                      return _buildModernFilterChip(
+                        theme: theme,
+                        label: tag.name,
+                        color: theme.colorScheme.primary,
+                        onDeleted: () {
+                          final newSelectedTags = List<String>.from(
+                            widget.selectedTagIds,
+                          )..remove(tagId);
+                          widget.onTagSelectionChanged(newSelectedTags);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // 天气筛选器
+                if (widget.selectedWeathers.isNotEmpty) ...[
+                  _buildFilterSection(
+                    theme: theme,
+                    title: '天气',
+                    icon: Icons.wb_sunny_outlined,
+                    color: theme.colorScheme.secondary,
+                    children: widget.selectedWeathers.map((weatherKey) {
+                      // 找到对应的天气分类
+                      String? categoryKey;
+                      for (final entry
+                          in WeatherService.filterCategoryToLabel.entries) {
+                        final categoryWeathers =
+                            WeatherService.getWeatherKeysByFilterCategory(
+                          entry.key,
+                        );
+                        if (categoryWeathers.contains(weatherKey)) {
+                          categoryKey = entry.key;
+                          break;
+                        }
+                      }
+
+                      final weatherLabel =
+                          WeatherService.weatherKeyToLabel[weatherKey] ??
+                              weatherKey;
+                      final weatherIcon = categoryKey != null
+                          ? WeatherService.getFilterCategoryIcon(categoryKey)
+                          : Icons.wb_sunny;
+
+                      return _buildModernFilterChip(
+                        theme: theme,
+                        label: weatherLabel,
+                        icon: weatherIcon,
+                        color: theme.colorScheme.secondary,
+                        onDeleted: () {
+                          final newWeathers = List<String>.from(
+                            widget.selectedWeathers,
+                          )..remove(weatherKey);
+                          widget.onFilterChanged(
+                            newWeathers,
+                            widget.selectedDayPeriods,
+                          );
+                          _updateStreamSubscription();
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // 时间段筛选器
+                if (widget.selectedDayPeriods.isNotEmpty) ...[
+                  _buildFilterSection(
+                    theme: theme,
+                    title: '时间段',
+                    icon: Icons.schedule_outlined,
+                    color: theme.colorScheme.tertiary,
+                    children: widget.selectedDayPeriods.map((periodKey) {
+                      final periodLabel =
+                          TimeUtils.getDayPeriodLabel(periodKey);
+                      final periodIcon =
+                          TimeUtils.getDayPeriodIconByKey(periodKey);
+
+                      return _buildModernFilterChip(
+                        theme: theme,
+                        label: periodLabel,
+                        icon: periodIcon,
+                        color: theme.colorScheme.tertiary,
+                        onDeleted: () {
+                          final newDayPeriods = List<String>.from(
+                            widget.selectedDayPeriods,
+                          )..remove(periodKey);
+                          widget.onFilterChanged(
+                            widget.selectedWeathers,
+                            newDayPeriods,
+                          );
+                          _updateStreamSubscription();
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建筛选条件分组
+  Widget _buildFilterSection({
+    required ThemeData theme,
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: color,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: children,
+        ),
+      ],
+    );
+  }
+
+  /// 构建现代化的筛选条件芯片
+  Widget _buildModernFilterChip({
+    required ThemeData theme,
+    required String label,
+    required Color color,
+    required VoidCallback onDeleted,
+    IconData? icon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: IntrinsicWidth(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                left: 12,
+                top: 8,
+                bottom: 8,
+                right: icon != null ? 4 : 8,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 14,
+                      color: color,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    label,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onDeleted,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.close,
+                    size: 14,
+                    color: color.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

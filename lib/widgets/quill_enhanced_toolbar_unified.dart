@@ -11,8 +11,9 @@ import 'unified_media_import_dialog.dart';
 /// - 统一媒体导入逻辑
 class UnifiedQuillToolbar extends StatefulWidget {
   final quill.QuillController controller;
+  final void Function(String filePath)? onMediaImported;
 
-  const UnifiedQuillToolbar({super.key, required this.controller});
+  const UnifiedQuillToolbar({super.key, required this.controller, this.onMediaImported});
 
   @override
   State<UnifiedQuillToolbar> createState() => _UnifiedQuillToolbarState();
@@ -234,6 +235,8 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
         mediaType: mediaType,
         onMediaImported: (String filePath) {
           _insertMediaIntoEditor(filePath, mediaType);
+          // 将导入的媒体回传给上层（如编辑页）以便会话级追踪
+          widget.onMediaImported?.call(filePath);
         },
       ),
     );

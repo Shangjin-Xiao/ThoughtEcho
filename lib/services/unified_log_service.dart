@@ -155,7 +155,7 @@ class LogEntry {
 }
 
 /// 统一日志服务 - 整合 logging_flutter 和现有日志系统
-class UnifiedLogService with ChangeNotifier {
+class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   static const String _logLevelKey = 'log_level';
   static const int _maxInMemoryLogs = 300;
   static const int _maxStoredLogs = 500;
@@ -172,11 +172,15 @@ class UnifiedLogService with ChangeNotifier {
 
   UnifiedLogLevel _currentLevel = UnifiedLogLevel.info;
   bool _initialized = false;
+  // 初始化完成通知
+  Completer<void>? _initCompleter;
 
   // 内存中的日志缓存
   List<LogEntry> _memoryLogs = [];
   // 待写入数据库的日志
   final List<LogEntry> _pendingLogs = [];
+  // 初始化前暂存的日志，避免竞态
+  final List<LogEntry> _bufferDuringInit = [];
   // 批量写入计时器
   Timer? _batchSaveTimer;
 
@@ -215,13 +219,23 @@ class UnifiedLogService with ChangeNotifier {
   /// 创建统一日志服务实例
   UnifiedLogService() {
     _initialize();
+    // 监听应用生命周期，确保在后台/退出前刷新日志到数据库
+    WidgetsBinding.instance.addObserver(this);
   }
 
   /// 初始化统一日志服务
   Future<void> _initialize() async {
     if (_initialized) return;
+    // 并发保护：如果已在初始化，等待完成
+    if (_initCompleter != null) {
+      try {
+        await _initCompleter!.future;
+      } catch (_) {}
+      return;
+    }
 
     try {
+      _initCompleter = Completer<void>();
       // 初始化 logging_flutter
       await _initializeLoggingFlutter();
 
@@ -249,7 +263,17 @@ class UnifiedLogService with ChangeNotifier {
       // 从数据库加载最近的日志
       await _loadRecentLogs();
 
-      _initialized = true;
+  _initialized = true;
+      // 将初始化前缓存的日志入列
+      if (_bufferDuringInit.isNotEmpty) {
+        for (final entry in List<LogEntry>.from(_bufferDuringInit)) {
+          _addLogEntry(entry);
+        }
+        _bufferDuringInit.clear();
+      }
+      if (!(_initCompleter?.isCompleted ?? true)) {
+        _initCompleter!.complete();
+      }
 
       // 记录服务已启动的信息
       _addLogEntry(
@@ -269,6 +293,11 @@ class UnifiedLogService with ChangeNotifier {
 
       _initialized = true;
       _currentLevel = UnifiedLogLevel.info;
+
+      // 即使失败也要完成 completer，避免等待卡死
+      if (!(_initCompleter?.isCompleted ?? true)) {
+        _initCompleter!.complete();
+      }
 
       _addLogEntry(
         LogEntry(
@@ -462,6 +491,13 @@ class UnifiedLogService with ChangeNotifier {
         _notifyScheduled = false;
       });
     }
+
+    // 对错误级别的日志进行更积极的持久化，减少进程被杀前的丢失风险（Android常见）
+    if (entry.level == UnifiedLogLevel.error) {
+      // 忽略返回的 Future，避免阻塞 UI 线程
+      // ignore: discarded_futures
+      flushLogs();
+    }
   }
 
   /// 将待处理的日志保存到数据库
@@ -472,14 +508,31 @@ class UnifiedLogService with ChangeNotifier {
     _pendingLogs.clear();
 
     try {
+      // 确保数据库已准备好
+      await _logDb.ready;
+      
+      // 记录批量保存的统计信息
+      _logger.info('正在批量保存 ${logsToSave.length} 条日志到数据库');
+      
       await _logDb.insertLogs(logsToSave.map((log) => log.toMap()).toList());
-      await _logDb.deleteOldLogs(_maxStoredLogs);
-    } catch (e) {
-      _logger.warning('保存日志到数据库失败: $e');
+      
+      // 清理旧日志，但不要让清理失败影响新日志的保存
+      try {
+        await _logDb.deleteOldLogs(_maxStoredLogs);
+      } catch (cleanupError) {
+        _logger.warning('清理旧日志失败，但新日志已保存: $cleanupError');
+      }
+      
+      _logger.info('成功保存 ${logsToSave.length} 条日志到数据库');
+    } catch (e, stackTrace) {
+      _logger.severe('保存日志到数据库失败: $e', e, stackTrace);
 
-      // 如果保存失败，重新添加到待处理队列（但避免重复添加）
+      // 如果保存失败，重新添加到待处理队列（但避免无限积累）
       if (_pendingLogs.length < 100) {
         _pendingLogs.addAll(logsToSave);
+        _logger.warning('已将 ${logsToSave.length} 条日志重新加入待处理队列');
+      } else {
+        _logger.warning('待处理队列已满，丢弃 ${logsToSave.length} 条日志以防止内存溢出');
       }
     }
   }
@@ -626,15 +679,19 @@ class UnifiedLogService with ChangeNotifier {
   }) {
     // 确保已初始化
     if (!_initialized) {
-      _initialize().then((_) {
-        log(
-          level,
-          message,
-          source: source,
-          error: error,
-          stackTrace: stackTrace,
-        );
-      });
+      // 在初始化前将日志暂存，避免竞态导致flush时丢失
+      final entry = LogEntry(
+        timestamp: DateTime.now(),
+        level: level,
+        message: message,
+        source: source,
+        error: error?.toString(),
+        stackTrace: stackTrace?.toString(),
+      );
+      _bufferDuringInit.add(entry);
+      // 触发初始化（若尚未开始）
+      // ignore: discarded_futures
+      _initialize();
       return;
     }
 
@@ -674,6 +731,17 @@ class UnifiedLogService with ChangeNotifier {
 
   /// 立即刷新所有待处理的日志到数据库
   Future<void> flushLogs() async {
+    // 等待初始化完成，确保预初始化期间缓存的日志被转移
+    if (_initCompleter != null && !(_initCompleter!.isCompleted)) {
+      await _initCompleter!.future;
+    }
+    // 将初始化前的缓存也加入待持久化
+    if (_bufferDuringInit.isNotEmpty) {
+      for (final e in List<LogEntry>.from(_bufferDuringInit)) {
+        _addLogEntry(e);
+      }
+      _bufferDuringInit.clear();
+    }
     if (_pendingLogs.isNotEmpty) {
       await _savePendingLogsToDatabase();
     }
@@ -682,9 +750,33 @@ class UnifiedLogService with ChangeNotifier {
   /// 销毁时释放资源
   @override
   void dispose() {
+    try {
+      WidgetsBinding.instance.removeObserver(this);
+    } catch (_) {}
     _batchSaveTimer?.cancel();
+    // 虽然 dispose 不能等待，但仍尽量触发一次持久化
+    // 忽略等待，防止阻塞销毁流程
+    // ignore: discarded_futures
     _savePendingLogsToDatabase();
     super.dispose();
+  }
+
+  /// 监听应用生命周期变化，在进入后台或分离时刷新待写入日志
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // 主动持久化，避免在 Android 等平台上因进程被杀导致日志丢失
+        // ignore: discarded_futures
+        _savePendingLogsToDatabase();
+        break;
+      case AppLifecycleState.resumed:
+        // 无需处理
+        break;
+    }
   }
 
   // 提供便捷的日志记录方法
@@ -768,6 +860,18 @@ class UnifiedLogService with ChangeNotifier {
       'logStats': _logStats.map((k, v) => MapEntry(k.name, v)),
       'initialized': _initialized,
     };
+  }
+
+  /// 获取数据库状态信息（用于调试）
+  Future<Map<String, dynamic>> getDatabaseStatus() async {
+    try {
+      return await _logDb.getDatabaseStatus();
+    } catch (e) {
+      return {
+        'error': e.toString(),
+        'initialized': _initialized,
+      };
+    }
   }
 
   /// 重置日志统计信息

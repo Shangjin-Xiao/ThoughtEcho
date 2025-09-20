@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -5,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../services/settings_service.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
+import '../services/unified_log_service.dart';
 import '../utils/app_logger.dart';
 import '../models/note_category.dart';
 import 'ai_settings_page.dart';
@@ -15,6 +17,7 @@ import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/version_check_service.dart';
 import '../widgets/update_dialog.dart';
+import '../constants/app_constants.dart';
 import 'backup_restore_page.dart';
 import 'note_sync_page.dart';
 import '../widgets/city_search_widget.dart';
@@ -24,6 +27,8 @@ import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
+import '../services/image_cache_service.dart';
+import '../services/media_reference_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -42,6 +47,9 @@ class _SettingsPageState extends State<SettingsPage> {
   // --- 版本检查相关状态 ---
   bool _isCheckingUpdate = false;
   String? _updateCheckMessage;
+  
+  // --- 清除缓存相关状态 ---
+  bool _isClearingCache = false;
 
   @override
   void initState() {
@@ -75,7 +83,10 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(SnackBar(content: Text('无法打开链接: $url')));
+      messenger.showSnackBar(SnackBar(
+        content: Text('无法打开链接: $url'),
+        duration: AppConstants.snackBarDurationError,
+      ));
     }
   }
   // --- 启动 URL 辅助函数结束 ---
@@ -123,6 +134,74 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   // --- 版本检查方法结束 ---
+
+  // --- 清除缓存方法 ---
+  Future<void> _clearAppCache() async {
+    if (_isClearingCache) return;
+    setState(() {
+      _isClearingCache = true;
+    });
+
+    try {
+      // 清理图片缓存（SVG转图片等）
+      try {
+        // 延迟导入避免循环依赖（文件顶部已静态导入）
+        // ignore: unnecessary_statements
+        ImageCacheService().clearCache();
+      } catch (_) {}
+
+      // 清理天气缓存
+      try {
+        final weatherService = Provider.of<WeatherService>(context, listen: false);
+        await weatherService.clearCache();
+      } catch (_) {}
+
+      // 清理版本检查缓存
+      try {
+        VersionCheckService.clearCache();
+      } catch (_) {}
+
+      // 刷新数据库内存缓存（不删除数据）
+      try {
+        final db = Provider.of<DatabaseService>(context, listen: false);
+        db.refreshAllData();
+      } catch (_) {}
+
+      // 额外：清理无引用（孤儿）媒体文件
+      int orphanCleared = 0;
+      try {
+        orphanCleared = await MediaReferenceService.cleanupOrphanFiles();
+      } catch (_) {}
+
+      if (!mounted) return;
+      final msg = orphanCleared > 0
+          ? '缓存已清除，已清理$orphanCleared个无用媒体文件'
+          : '缓存已清除';
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          duration: AppConstants.snackBarDurationImportant,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('清除缓存失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isClearingCache = false;
+        });
+      }
+    }
+  }
+  // --- 清除缓存方法结束 ---
 
   // 显示城市搜索对话框
   void _showCitySearchDialog(BuildContext context) {
@@ -272,7 +351,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (!permissionGranted) {
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('无法获取位置权限')),
+                            const SnackBar(
+                              content: Text('无法获取位置权限'),
+                              duration: AppConstants.snackBarDurationError,
+                            ),
                           );
                         }
                         return;
@@ -334,7 +416,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
                           scaffoldMessenger.removeCurrentSnackBar();
                           scaffoldMessenger.showSnackBar(
-                            const SnackBar(content: Text('位置服务已启用，位置已更新')),
+                            const SnackBar(
+                              content: Text('位置服务已启用，位置已更新'),
+                              duration: AppConstants.snackBarDurationImportant,
+                            ),
                           );
                         }
                         setState(() {
@@ -349,7 +434,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
                           scaffoldMessenger.removeCurrentSnackBar();
                           scaffoldMessenger.showSnackBar(
-                            const SnackBar(content: Text('无法获取当前位置')),
+                            const SnackBar(
+                              content: Text('无法获取当前位置'),
+                              duration: AppConstants.snackBarDurationError,
+                            ),
                           );
                         }
                       }
@@ -358,7 +446,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       if (context.mounted) {
                         final scaffoldMessenger = ScaffoldMessenger.of(context);
                         scaffoldMessenger.showSnackBar(
-                          const SnackBar(content: Text('位置服务已禁用')),
+                          const SnackBar(
+                            content: Text('位置服务已禁用'),
+                            duration: AppConstants.snackBarDurationNormal,
+                          ),
                         );
                       }
                     }
@@ -511,6 +602,98 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
+                // 添加日志调试信息显示（仅在Debug模式下显示）
+                if (kDebugMode) ...[
+                  ListTile(
+                    title: const Text('日志调试信息'),
+                    subtitle: const Text('显示日志数据库状态和路径信息'),
+                    leading: const Icon(Icons.bug_report),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      final logService = Provider.of<UnifiedLogService>(
+                        context, 
+                        listen: false,
+                      );
+                      
+                      try {
+                        final dbStatus = await logService.getDatabaseStatus();
+                        final logSummary = logService.getLogSummary();
+                        
+                        if (!mounted) return;
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('日志调试信息'),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('数据库状态:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ...dbStatus.entries.map((e) => Text('${e.key}: ${e.value}')),
+                                  const SizedBox(height: 16),
+                                  const Text('日志统计:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ...logSummary.entries.map((e) => Text('${e.key}: ${e.value}')),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('关闭'),
+                              ),
+                            ],
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('获取调试信息失败: $e'),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+                // 清除缓存
+                ListTile(
+                  title: const Text('清除缓存'),
+                  subtitle: const Text('释放图片、天气与版本检查等缓存'),
+                  leading: const Icon(Icons.cleaning_services_outlined),
+                  trailing: _isClearingCache
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : null,
+                  onTap: _isClearingCache
+                      ? null
+                      : () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text('清除缓存'),
+                              content: const Text('将清除图片、天气与版本检查缓存，不会删除任何笔记数据。是否继续？'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('取消'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    Navigator.pop(dialogContext);
+                                    await _clearAppCache();
+                                  },
+                                  child: const Text('清除'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                ),
               ],
             ),
           ),
@@ -619,7 +802,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 },
                               ),
                               const SizedBox(height: 12),
-                              const Text('一款帮助你记录和分析思想的应用。'),
+                              const Text('你的专属灵感摘录本。'),
                               const SizedBox(height: 20),
                               _buildAboutLink(
                                 context: context,
@@ -823,7 +1006,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('生成年度报告失败')));
+        ).showSnackBar(const SnackBar(
+          content: Text('生成年度报告失败'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -1032,7 +1218,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             if (mounted) {
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('AI返回了空内容，请重试')));
+              ).showSnackBar(const SnackBar(
+                content: Text('AI返回了空内容，请重试'),
+                duration: AppConstants.snackBarDurationError,
+              ));
             }
           }
         } catch (e) {
@@ -1065,7 +1254,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('获取数据失败')));
+        ).showSnackBar(const SnackBar(
+          content: Text('获取数据失败'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -1231,7 +1423,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             Navigator.pop(context);
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('测试失败：AI返回了空内容')));
+            ).showSnackBar(const SnackBar(
+              content: Text('测试失败：AI返回了空内容'),
+              duration: AppConstants.snackBarDurationError,
+            ));
           }
         }
       } catch (e) {
@@ -1260,7 +1455,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('测试初始化失败')));
+        ).showSnackBar(const SnackBar(
+          content: Text('测试初始化失败'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }

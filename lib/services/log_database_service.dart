@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+// 为桌面平台启用 FFI 支持（Linux/macOS/Windows）
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -270,26 +272,107 @@ class NativeLogStorage implements LogStorage {
   Future<void> initialize() async {
     if (!kIsWeb) {
       try {
-        // FFI初始化已在main.dart中统一处理，这里不再重复初始化
-        // 确保数据库目录存在
-        final appDir = await getApplicationDocumentsDirectory();
-        final dbPath = join(appDir.path, 'databases');
+        // 修复：确保在桌面平台使用 FFI 数据库工厂（Linux/macOS/Windows）
+        if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+          // 如果当前数据库工厂不是 FFI，则进行初始化
+          if (databaseFactory != databaseFactoryFfi) {
+            sqfliteFfiInit();
+            databaseFactory = databaseFactoryFfi;
+          }
+        }
 
+        // 修复：使用与主数据库一致的路径策略
+        // 优先使用主数据库设置的路径，确保一致性
+        String dbPath;
+        try {
+          // 首选：获取主数据库设置的路径（与main.dart保持一致）
+          final appDir = await getApplicationDocumentsDirectory();
+          dbPath = join(appDir.path, 'databases');
+        } catch (e) {
+          // 回退：使用系统数据库路径
+          dbPath = await getDatabasesPath();
+          logDebug('无法获取应用文档目录，回退到系统数据库路径: $dbPath');
+        }
+        
+        // 确保目录存在
         await Directory(dbPath).create(recursive: true);
+        final logDbPath = join(dbPath, _logDbName);
+        
+        logDebug('Native平台：使用统一的日志数据库路径 $logDbPath');
 
-        final path = join(dbPath, _logDbName);
-        logDebug('Native平台：打开日志数据库 $path');
+        // 尝试从多个可能的位置迁移旧的日志数据库
+        await _migrateOldLogDatabase(logDbPath);
 
         _database = await openDatabase(
-          path,
+          logDbPath,
           version: _dbVersion,
           onCreate: _createDb,
+          onOpen: (db) async {
+            // 启用WAL以提升可靠性（特别是Android）
+            try {
+              await db.execute('PRAGMA journal_mode=WAL;');
+              await db.execute('PRAGMA synchronous=NORMAL;');
+            } catch (_) {}
+          },
         );
       } catch (e, stack) {
         logDebug('初始化日志数据库失败: $e');
         logDebug('$stack');
         rethrow;
       }
+    }
+  }
+
+  /// 迁移旧的日志数据库文件到新的统一路径
+  Future<void> _migrateOldLogDatabase(String targetPath) async {
+    try {
+      // 如果目标数据库已存在，无需迁移
+      if (await File(targetPath).exists()) {
+        return;
+      }
+
+      // 检查可能的旧路径
+      final List<String> possibleOldPaths = [];
+      
+      try {
+        // 旧路径1：系统数据库路径
+        final systemDbDir = await getDatabasesPath();
+        possibleOldPaths.add(join(systemDbDir, _logDbName));
+      } catch (_) {}
+
+      try {
+        // 旧路径2：应用文档目录（没有databases子目录）
+        final appDir = await getApplicationDocumentsDirectory();
+        possibleOldPaths.add(join(appDir.path, _logDbName));
+      } catch (_) {}
+
+      // 查找并迁移第一个存在的旧数据库
+      for (final oldPath in possibleOldPaths) {
+        if (await File(oldPath).exists()) {
+          logDebug('发现旧日志数据库，正在迁移：$oldPath -> $targetPath');
+          
+          try {
+            // 复制文件而非移动，确保安全
+            await File(oldPath).copy(targetPath);
+            
+            // 验证迁移是否成功
+            if (await File(targetPath).exists()) {
+              // 删除旧文件
+              await File(oldPath).delete();
+              logDebug('日志数据库迁移成功');
+              break;
+            }
+          } catch (e) {
+            logDebug('迁移日志数据库失败: $e，将使用新数据库');
+            // 迁移失败时删除可能损坏的目标文件
+            try {
+              await File(targetPath).delete();
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (e) {
+      logDebug('检查旧日志数据库迁移时出错: $e');
     }
   }
 
@@ -313,7 +396,7 @@ class NativeLogStorage implements LogStorage {
       );
       await db.execute('CREATE INDEX log_level_idx ON $_logTableName (level)');
 
-      logDebug('日志表创建完成');
+      logDebug('日志表创建完成，数据库路径: ${db.path}');
     } catch (e, stack) {
       logDebug('创建日志表失败: $e');
       logDebug('$stack');
@@ -327,17 +410,31 @@ class NativeLogStorage implements LogStorage {
     throw StateError('数据库尚未初始化');
   }
 
+  // 暴露数据库访问方法供状态检查使用
+  Future<Database> getDatabase() async {
+    return await _getDatabase();
+  }
+
   @override
   Future<int> insertLog(Map<String, dynamic> log) async {
     try {
       final db = await _getDatabase();
-      return await db.insert(
+      final result = await db.insert(
         _logTableName,
         log,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-    } catch (e) {
+      return result;
+    } catch (e, stackTrace) {
       logDebug('插入日志失败: $e');
+      logDebug('堆栈跟踪: $stackTrace');
+      
+      // 记录失败日志的详细信息
+      logDebug('失败日志详情: level=${log['level']}, '
+              'message长度=${log['message']?.toString().length ?? 0}, '
+              'timestamp=${log['timestamp']}, '
+              'source=${log['source']}');
+      
       return -1;
     }
   }
@@ -348,6 +445,10 @@ class NativeLogStorage implements LogStorage {
 
     try {
       final db = await _getDatabase();
+      
+      // 记录批量插入的统计信息
+      logDebug('开始批量插入 ${logs.length} 条日志记录');
+      
       final batch = db.batch();
 
       for (final log in logs) {
@@ -358,9 +459,38 @@ class NativeLogStorage implements LogStorage {
         );
       }
 
-      await batch.commit(noResult: true);
-    } catch (e) {
+      final results = await batch.commit(noResult: false);
+      logDebug('批量插入完成，成功插入 ${results.length} 条日志记录');
+    } catch (e, stackTrace) {
       logDebug('批量插入日志失败: $e');
+      logDebug('堆栈跟踪: $stackTrace');
+      
+      // 在Android上，尝试逐条插入以确定具体哪条日志有问题
+      if (!kIsWeb && Platform.isAndroid && logs.length > 1) {
+        logDebug('尝试逐条插入以诊断问题...');
+        int successCount = 0;
+        int failureCount = 0;
+        
+        for (int i = 0; i < logs.length; i++) {
+          try {
+            await insertLog(logs[i]);
+            successCount++;
+          } catch (singleError) {
+            failureCount++;
+            logDebug('第 ${i+1} 条日志插入失败: $singleError');
+            
+            // 记录问题日志的详细信息
+            final problemLog = logs[i];
+            logDebug('问题日志内容: level=${problemLog['level']}, '
+                    'message长度=${problemLog['message']?.toString().length ?? 0}, '
+                    'timestamp=${problemLog['timestamp']}');
+          }
+        }
+        
+        logDebug('逐条插入结果: 成功 $successCount 条, 失败 $failureCount 条');
+      }
+      
+      rethrow;
     }
   }
 
@@ -557,10 +687,36 @@ class LogDatabaseService {
     }
   }
 
-  /// 添加日志
-  Future<int> insertLog(Map<String, dynamic> log) async {
-    await _ensureInitialized();
-    return _storage!.insertLog(log);
+  /// 获取日志数据库的状态信息（用于调试）
+  Future<Map<String, dynamic>> getDatabaseStatus() async {
+    final status = <String, dynamic>{
+      'initialized': _initialized,
+      'storage_type': kIsWeb ? 'SharedPreferences' : 'SQLite',
+    };
+
+    if (_initialized && _storage != null) {
+      try {
+        final logCount = await _storage!.getLogCount();
+        status['log_count'] = logCount;
+
+        if (!kIsWeb && _storage is NativeLogStorage) {
+          final nativeStorage = _storage as NativeLogStorage;
+          final db = await nativeStorage.getDatabase();
+          status['database_path'] = db.path;
+          status['database_version'] = await db.getVersion();
+          
+          // 检查表是否存在
+          final tables = await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='app_logs'",
+          );
+          status['table_exists'] = tables.isNotEmpty;
+        }
+      } catch (e) {
+        status['error'] = e.toString();
+      }
+    }
+
+    return status;
   }
 
   /// 批量添加日志
