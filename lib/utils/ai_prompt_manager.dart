@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../models/weather_data.dart';
 
 /// AI提示词管理器
 ///
@@ -340,7 +341,10 @@ $question''';
         envDetails += '地点：$city ';
       }
       if (weather != null && weather.isNotEmpty) {
-        envDetails += '天气：$weather ';
+        // 将英文天气key转换为中文描述
+        final weatherDesc = WeatherCodeMapper.getDescription(weather);
+        final displayWeather = weatherDesc == '未知' ? weather : weatherDesc;
+        envDetails += '天气：$displayWeather ';
       }
       if (temperature != null && temperature.isNotEmpty) {
         envDetails += '温度：$temperature°C';
