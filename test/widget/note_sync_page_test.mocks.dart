@@ -34,6 +34,12 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
   }
 
   @override
+  bool get awaitingUserApproval => (super.noSuchMethod(
+        Invocation.getter(#awaitingUserApproval),
+        returnValue: false,
+      ) as bool);
+
+  @override
   _i2.SyncStatus get syncStatus => (super.noSuchMethod(
         Invocation.getter(#syncStatus),
         returnValue: _i2.SyncStatus.idle,
@@ -53,6 +59,12 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
         Invocation.getter(#syncProgress),
         returnValue: 0.0,
       ) as double);
+
+  @override
+  bool get skipSyncConfirmation => (super.noSuchMethod(
+        Invocation.getter(#skipSyncConfirmation),
+        returnValue: false,
+      ) as bool);
 
   @override
   bool get hasListeners => (super.noSuchMethod(
@@ -79,6 +91,24 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  void approveIncoming() => super.noSuchMethod(
+        Invocation.method(
+          #approveIncoming,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void rejectIncoming() => super.noSuchMethod(
+        Invocation.method(
+          #rejectIncoming,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 
   @override
   _i4.Future<void> stopServer() => (super.noSuchMethod(
@@ -113,8 +143,10 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<String> createSyncPackage(_i5.Device? targetDevice,
-          {bool includeMediaFiles = true}) =>
+  _i4.Future<String> createSyncPackage(
+    _i5.Device? targetDevice, {
+    bool? includeMediaFiles = true,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #createSyncPackage,
@@ -130,6 +162,34 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
           ),
         )),
       ) as _i4.Future<String>);
+
+  @override
+  _i4.Future<void> setSkipSyncConfirmation(bool? value) => (super.noSuchMethod(
+        Invocation.method(
+          #setSkipSyncConfirmation,
+          [value],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  void cancelOngoingSend() => super.noSuchMethod(
+        Invocation.method(
+          #cancelOngoingSend,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void cancelReceiving() => super.noSuchMethod(
+        Invocation.method(
+          #cancelReceiving,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 
   @override
   _i4.Future<void> processSyncPackage(String? backupFilePath) =>
@@ -152,6 +212,18 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
         ),
         returnValue: _i4.Future<List<_i5.Device>>.value(<_i5.Device>[]),
       ) as _i4.Future<List<_i5.Device>>);
+
+  @override
+  (_i4.Stream<List<_i5.Device>>, _i6.VoidCallback) discoverNearbyDevicesStream(
+          {int? timeout}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #discoverNearbyDevicesStream,
+          [],
+          {#timeout: timeout},
+        ),
+        returnValue: (_i4.Stream<List<_i5.Device>>.empty(), () {}),
+      ) as (_i4.Stream<List<_i5.Device>>, _i6.VoidCallback));
 
   @override
   void dispose() => super.noSuchMethod(
