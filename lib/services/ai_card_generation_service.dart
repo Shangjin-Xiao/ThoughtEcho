@@ -633,23 +633,64 @@ class AICardGenerationService {
 
   // 天气本地化映射
   static const Map<String, String> _weatherMap = {
-    'rain': '雨',
-    'light rain': '小雨',
-    'moderate rain': '中雨',
-    'heavy rain': '大雨',
-    'drizzle': '小雨',
-    'thunderstorm': '雷暴',
-    'sunny': '晴',
+    // 基础天气类型
     'clear': '晴',
+    'sunny': '晴',
+    'partly_cloudy': '少云',
     'cloudy': '多云',
     'overcast': '阴',
-    'snow': '雪',
-    'light snow': '小雪',
-    'heavy snow': '大雪',
-    'sleet': '雨夹雪',
     'fog': '雾',
     'haze': '霾',
     'windy': '有风',
+
+    // 雨类天气
+    'drizzle': '毛毛雨',
+    'light rain': '小雨',
+    'rain': '雨',
+    'moderate rain': '中雨',
+    'heavy rain': '大雨',
+    'freezing_rain': '冻雨',
+    'rain_shower': '阵雨',
+    'thunderstorm': '雷雨',
+    'thunderstorm_heavy': '雷暴雨',
+
+    // 雪类天气
+    'snow': '雪',
+    'light snow': '小雪',
+    'heavy snow': '大雪',
+    'snow_grains': '雪粒',
+    'snow_shower': '阵雪',
+    'sleet': '雨夹雪',
+
+    // 大写变体（AI可能生成的大小写不同）
+    'Clear': '晴',
+    'Sunny': '晴',
+    'Partly_cloudy': '少云',
+    'Cloudy': '多云',
+    'Overcast': '阴',
+    'Fog': '雾',
+    'Haze': '霾',
+    'Windy': '有风',
+    'Drizzle': '毛毛雨',
+    'Light rain': '小雨',
+    'Rain': '雨',
+    'Moderate rain': '中雨',
+    'Heavy rain': '大雨',
+    'Freezing_rain': '冻雨',
+    'Rain_shower': '阵雨',
+    'Thunderstorm': '雷雨',
+    'Thunderstorm_heavy': '雷暴雨',
+    'Snow': '雪',
+    'Light snow': '小雪',
+    'Heavy snow': '大雪',
+    'Snow_grains': '雪粒',
+    'Snow_shower': '阵雪',
+    'Sleet': '雨夹雪',
+
+    // 其他格式变体
+    'rainy': '雨',
+    'snowy': '雪',
+    'stormy': '暴风雨',
   };
 
   String? _localizeWeather(String? weather) {
