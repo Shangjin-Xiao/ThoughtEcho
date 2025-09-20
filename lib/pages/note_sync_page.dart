@@ -522,7 +522,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               if (_discoveryRemainingMs > 0)
                                 Text(
                                   '${(_discoveryRemainingMs / 1000).ceil()}',
-                                  style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontSize: 8, fontWeight: FontWeight.bold),
                                 ),
                             ],
                           ),
@@ -537,9 +538,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         ),
                       ] else ...[
                         Icon(
-                          _nearbyDevices.isNotEmpty ? Icons.devices : Icons.search,
+                          _nearbyDevices.isNotEmpty
+                              ? Icons.devices
+                              : Icons.search,
                           size: 18,
-                          color: _nearbyDevices.isNotEmpty ? Colors.green : null,
+                          color:
+                              _nearbyDevices.isNotEmpty ? Colors.green : null,
                         ),
                         const SizedBox(width: 6),
                         Text('发现 ${_nearbyDevices.length} 台设备'),
@@ -630,10 +634,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             ),
                             title: LayoutBuilder(
                               builder: (ctx, constraints) {
-                                final name = (device.deviceModel?.isNotEmpty == true
-                                        ? device.deviceModel!
-                                        : device.alias)
-                                    .trim();
+                                final name =
+                                    (device.deviceModel?.isNotEmpty == true
+                                            ? device.deviceModel!
+                                            : device.alias)
+                                        .trim();
                                 return Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
@@ -1074,10 +1079,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             textDirection: TextDirection.ltr,
           );
           textPainter.layout();
-          
+
           final textWidth = textPainter.size.width;
           final containerWidth = constraints.maxWidth;
-          
+
           // 如果文本宽度小于容器宽度，直接显示
           if (textWidth <= containerWidth) {
             return Align(
@@ -1089,7 +1094,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               ),
             );
           }
-          
+
           // 否则显示省略文本，鼠标悬停或长按时触发滚动
           return GestureDetector(
             onLongPress: () {
@@ -1097,7 +1102,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               final overlay = Overlay.of(context);
               final renderBox = context.findRenderObject() as RenderBox;
               final position = renderBox.localToGlobal(Offset.zero);
-              
+
               final overlayEntry = OverlayEntry(
                 builder: (context) => Positioned(
                   left: position.dx,
@@ -1106,7 +1111,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     elevation: 4,
                     borderRadius: BorderRadius.circular(4),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       constraints: const BoxConstraints(maxWidth: 300),
                       child: Text(
                         text,
@@ -1118,7 +1124,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   ),
                 ),
               );
-              
+
               overlay.insert(overlayEntry);
               Timer(const Duration(seconds: 3), () {
                 overlayEntry.remove();
