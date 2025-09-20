@@ -142,6 +142,10 @@ class _SettingsPageState extends State<SettingsPage> {
       _isClearingCache = true;
     });
 
+    // 在await之前获取所有需要的服务
+    final weatherService = Provider.of<WeatherService>(context, listen: false);
+    final db = Provider.of<DatabaseService>(context, listen: false);
+
     try {
       // 清理图片缓存（SVG转图片等）
       try {
@@ -152,7 +156,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 清理天气缓存
       try {
-        final weatherService = Provider.of<WeatherService>(context, listen: false);
         await weatherService.clearCache();
       } catch (_) {}
 
@@ -163,7 +166,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 刷新数据库内存缓存（不删除数据）
       try {
-        final db = Provider.of<DatabaseService>(context, listen: false);
         db.refreshAllData();
       } catch (_) {}
 
@@ -610,8 +612,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.bug_report),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
+                      // 保存context引用以避免async gap问题
+                      final currentContext = context;
                       final logService = Provider.of<UnifiedLogService>(
-                        context, 
+                        currentContext, 
                         listen: false,
                       );
                       
@@ -619,9 +623,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         final dbStatus = await logService.getDatabaseStatus();
                         final logSummary = logService.getLogSummary();
                         
-                        if (!mounted) return;
+                        if (!currentContext.mounted) return;
                         showDialog(
-                          context: context,
+                          context: currentContext,
                           builder: (context) => AlertDialog(
                             title: const Text('日志调试信息'),
                             content: SingleChildScrollView(
@@ -646,8 +650,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!currentContext.mounted) return;
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
                           SnackBar(
                             content: Text('获取调试信息失败: $e'),
                             duration: const Duration(seconds: 3),
