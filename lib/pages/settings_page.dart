@@ -180,53 +180,53 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('设置'),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.analytics_outlined),
-            tooltip: '年度报告',
-            onSelected: (value) {
-              if (value == 'native') {
-                _showNativeAnnualReport();
-              } else if (value == 'ai') {
-                _showAIAnnualReport();
-              } else if (value == 'test') {
-                _testAIAnnualReport();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'native',
-                child: Row(
-                  children: [
-                    Icon(Icons.analytics_outlined),
-                    SizedBox(width: 8),
-                    Text('年度报告'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'ai',
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome),
-                    SizedBox(width: 8),
-                    Text('AI 年度总结'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'test',
-                child: Row(
-                  children: [
-                    Icon(Icons.bug_report),
-                    SizedBox(width: 8),
-                    Text('测试AI报告'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        // actions: [
+        //   PopupMenuButton<String>(
+        //     icon: const Icon(Icons.analytics_outlined),
+        //     tooltip: '年度报告',
+        //     onSelected: (value) {
+        //       if (value == 'native') {
+        //         _showNativeAnnualReport();
+        //       } else if (value == 'ai') {
+        //         _showAIAnnualReport();
+        //       } else if (value == 'test') {
+        //         _testAIAnnualReport();
+        //       }
+        //     },
+        //     itemBuilder: (context) => [
+        //       const PopupMenuItem(
+        //         value: 'native',
+        //         child: Row(
+        //           children: [
+        //             Icon(Icons.analytics_outlined),
+        //             SizedBox(width: 8),
+        //             Text('年度报告'),
+        //           ],
+        //         ),
+        //       ),
+        //       const PopupMenuItem(
+        //         value: 'ai',
+        //         child: Row(
+        //           children: [
+        //             Icon(Icons.auto_awesome),
+        //             SizedBox(width: 8),
+        //             Text('AI 年度总结'),
+        //           ],
+        //         ),
+        //       ),
+        //       const PopupMenuItem(
+        //         value: 'test',
+        //         child: Row(
+        //           children: [
+        //             Icon(Icons.bug_report),
+        //             SizedBox(width: 8),
+        //             Text('测试AI报告'),
+        //           ],
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ],
       ),
       body: ListView(
         children: [
