@@ -26,7 +26,7 @@ class TestConfig {
   static Duration get testTimeout => isCI ? ciTimeout : localTimeout;
 
   /// Whether to enable verbose logging
-  static bool get verboseLogging => 
+  static bool get verboseLogging =>
       Platform.environment['VERBOSE_TESTS'] == 'true';
 
   /// Skip tests that are known to be problematic in CI
@@ -40,7 +40,7 @@ class TestConfig {
       'database migration performance',
     ];
 
-    return problematicTests
-        .any((pattern) => testName.toLowerCase().contains(pattern.toLowerCase()));
+    return problematicTests.any(
+        (pattern) => testName.toLowerCase().contains(pattern.toLowerCase()));
   }
 }
