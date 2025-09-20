@@ -368,6 +368,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         },
       );
     } else {
+      // 调试：记录本地生成洞察的参数
+      AppLogger.d('开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount');
+      AppLogger.d('本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag');
+
       final local = context.read<AIService>().buildLocalReportInsight(
             periodLabel: periodLabel,
             mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
@@ -377,10 +381,23 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             noteCount: noteCount,
             totalWordCount: _totalWordCount,
           );
+
+      // 调试：记录本地生成的结果
+      AppLogger.d('本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}');
+
       setState(() {
         _insightText = local;
         _insightLoading = false;
       });
+
+      // 本地洞察也需要动画
+      _animatedTextController?.reset();
+      _animatedTextController?.forward();
+
+      // 保存洞察到历史记录
+      if (_insightText.isNotEmpty) {
+        _saveInsightToHistory();
+      }
     }
   }
 
