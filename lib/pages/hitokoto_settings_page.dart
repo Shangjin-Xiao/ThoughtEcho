@@ -22,10 +22,11 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 200),
       vsync: this,
+      value: 1.0, // 初始值设为1.0，避免闪屏
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
 
@@ -36,8 +37,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     } else {
       _selectedTypes.add(_selectedType);
     }
-
-    _animationController.forward();
   }
 
   @override

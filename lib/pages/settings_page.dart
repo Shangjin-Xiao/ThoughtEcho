@@ -524,7 +524,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 // 二级页面入口：偏好设置
                 ListTile(
                   title: const Text('偏好设置'),
-                  subtitle: const Text('剪贴板监控、喜爱按钮、加粗优先、本地笔记等'),
+                  subtitle: const Text('个性化选项与AI功能'),
                   leading: const Icon(Icons.tune),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
