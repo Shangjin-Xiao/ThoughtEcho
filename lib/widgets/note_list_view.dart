@@ -283,7 +283,7 @@ class NoteListViewState extends State<NoteListView> {
         logDebug('跳过更新订阅：首次数据加载中', source: 'NoteListView');
         return;
       }
-      
+
       // 更新流订阅
       _updateStreamSubscription();
     }
@@ -320,7 +320,9 @@ class NoteListViewState extends State<NoteListView> {
 
     // 保存当前滚动位置（仅在有数据且用户已滚动时）
     double? savedScrollOffset;
-    if (_scrollController.hasClients && _quotes.isNotEmpty && _initialDataLoaded) {
+    if (_scrollController.hasClients &&
+        _quotes.isNotEmpty &&
+        _initialDataLoaded) {
       savedScrollOffset = _scrollController.offset;
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     }
@@ -372,7 +374,8 @@ class NoteListViewState extends State<NoteListView> {
           if (savedScrollOffset != null && _scrollController.hasClients) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               final offset = savedScrollOffset;
-              if (_scrollController.hasClients && offset != null &&
+              if (_scrollController.hasClients &&
+                  offset != null &&
                   offset <= _scrollController.position.maxScrollExtent) {
                 _scrollController.jumpTo(offset);
                 logDebug('恢复滚动位置: $offset', source: 'NoteListView');
@@ -521,7 +524,8 @@ class NoteListViewState extends State<NoteListView> {
     }
     if (_lastUserScrollTime != null &&
         DateTime.now().difference(_lastUserScrollTime!) <
-            const Duration(milliseconds: 2000)) { // 增加保护期到2秒
+            const Duration(milliseconds: 2000)) {
+      // 增加保护期到2秒
       logDebug('跳过自动滚动：用户刚刚滚动 (<2000ms)', source: 'NoteListView');
       return;
     }
@@ -538,8 +542,9 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       _isAutoScrolling = true;
-      logDebug('使用ensureVisible滚动到笔记: $quoteId (index: $index)', source: 'NoteListView');
-      
+      logDebug('使用ensureVisible滚动到笔记: $quoteId (index: $index)',
+          source: 'NoteListView');
+
       // 使用 Scrollable.ensureVisible 自动处理动态布局
       Scrollable.ensureVisible(
         key.currentContext!,

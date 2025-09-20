@@ -85,7 +85,7 @@ class QuoteContent extends StatelessWidget {
               nonBoldOps.add(Map<String, dynamic>.from(op));
               continue;
             }
-            
+
             final String insert = op['insert'].toString();
             final Map<String, dynamic>? attributes = op['attributes'];
 
@@ -140,22 +140,22 @@ class QuoteContent extends StatelessWidget {
           if (!allBoldText.endsWith('\n')) {
             finalOps.add({'insert': '\n'});
           }
-          
+
           // 添加一个额外换行作为分隔
           finalOps.add({'insert': '\n'});
           int currentLines = boldLineCount + 1; // +1 for the separator line
-          
+
           // 补充非加粗内容
           final nonBoldOps = _extractNonBoldOps(deltaContent);
           for (var op in nonBoldOps) {
             if (currentLines >= maxLines) break;
-            
+
             // 处理媒体嵌入内容
             if (op['insert'] is Map) {
               finalOps.add(Map<String, dynamic>.from(op));
               continue; // 媒体不计入行数，但保留显示
             }
-            
+
             final String insert = op['insert'].toString();
             final lines = insert.split('\n');
             final Map<String, dynamic> attributes =
@@ -186,7 +186,8 @@ class QuoteContent extends StatelessWidget {
                 if (l.trim().isNotEmpty) totalNonBoldLines++;
               }
             }
-            if (totalNonBoldLines + boldLineCount + 1 > maxLines) { // +1 for separator
+            if (totalNonBoldLines + boldLineCount + 1 > maxLines) {
+              // +1 for separator
               truncated = true;
             }
           }
