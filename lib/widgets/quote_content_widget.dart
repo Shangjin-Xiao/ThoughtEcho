@@ -108,7 +108,7 @@ class QuoteContent extends StatelessWidget {
 
   /// 创建优先显示加粗内容的Document
   quill.Document _createBoldPriorityDocument(
-      String deltaContent, int maxLines) {
+      String deltaContent, int maxLines, {bool hideImages = false}) {
     try {
       final validBoldOps = _extractValidBoldOps(deltaContent);
 
@@ -152,6 +152,11 @@ class QuoteContent extends StatelessWidget {
 
             // 处理媒体嵌入内容
             if (op['insert'] is Map) {
+              final embed = op['insert'];
+              // 在折叠状态下过滤掉图片
+              if (hideImages && embed['image'] != null) {
+                continue; // 跳过图片
+              }
               finalOps.add(Map<String, dynamic>.from(op));
               continue; // 媒体不计入行数，但保留显示
             }
@@ -256,8 +261,8 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  /// 创建普通折叠模式的Document (仅限制行数，保留媒体内容)
-  quill.Document _createTruncatedDocument(String deltaContent, int maxLines) {
+  /// 创建普通折叠模式的Document (仅限制行数，折叠状态下过滤图片)
+  quill.Document _createTruncatedDocument(String deltaContent, int maxLines, {bool hideImages = false}) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
@@ -266,8 +271,14 @@ class QuoteContent extends StatelessWidget {
 
         for (var op in decoded) {
           if (op is Map && op['insert'] != null) {
-            // 如果是嵌入内容（图片、视频等），直接保留
+            // 如果是嵌入内容（图片、视频等）
             if (op['insert'] is Map) {
+              final embed = op['insert'];
+              // 在折叠状态下过滤掉图片
+              if (hideImages && embed['image'] != null) {
+                continue; // 跳过图片
+              }
+              // 保留其他嵌入内容（如视频等）
               finalOps.add(Map<String, dynamic>.from(op));
               continue;
             }
@@ -375,31 +386,21 @@ class QuoteContent extends StatelessWidget {
               // 检查是否有有效的加粗内容
               final validBoldOps = _extractValidBoldOps(quote.deltaContent!);
               if (validBoldOps.isNotEmpty) {
-                // 使用加粗优先模式
+                // 使用加粗优先模式，折叠状态下隐藏图片
                 displayDocument =
-                    _createBoldPriorityDocument(quote.deltaContent!, maxLines!);
+                    _createBoldPriorityDocument(quote.deltaContent!, maxLines!, hideImages: true);
               } else {
-                // 没有有效加粗内容，使用普通截断模式
+                // 没有有效加粗内容，使用普通截断模式，折叠状态下隐藏图片
                 displayDocument =
-                    _createTruncatedDocument(quote.deltaContent!, maxLines!);
+                    _createTruncatedDocument(quote.deltaContent!, maxLines!, hideImages: true);
               }
             } else {
-              // 不启用加粗优先，使用普通截断模式
+              // 不启用加粗优先，使用普通截断模式，折叠状态下隐藏图片
               displayDocument =
-                  _createTruncatedDocument(quote.deltaContent!, maxLines!);
+                  _createTruncatedDocument(quote.deltaContent!, maxLines!, hideImages: true);
             }
           } else {
-            // 不需要折叠，显示完整内容
-            displayDocument =
-                quill.Document.fromJson(jsonDecode(quote.deltaContent!));
-          }
-        } else {
-          // 展开状态或无行数限制，显示完整内容
-          if (showFullContent) {
-            displayDocument =
-                quill.Document.fromJson(jsonDecode(quote.deltaContent!));
-          } else {
-            // 折叠状态，过滤掉图片
+            // 不需要折叠，但仍需隐藏图片（因为是折叠状态）
             final decoded = jsonDecode(quote.deltaContent!);
             if (decoded is List) {
               final filteredOps = decoded.where((op) {
@@ -417,6 +418,10 @@ class QuoteContent extends StatelessWidget {
                   quill.Document.fromJson(jsonDecode(quote.deltaContent!));
             }
           }
+        } else {
+          // 展开状态或无行数限制，显示完整内容（包括图片）
+          displayDocument =
+              quill.Document.fromJson(jsonDecode(quote.deltaContent!));
         }
 
         // 创建只读QuillController

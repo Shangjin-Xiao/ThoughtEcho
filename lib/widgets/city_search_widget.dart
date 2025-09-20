@@ -292,6 +292,29 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   onPressed: controller.isLoading ? null : _useCurrentLocation,
                 ),
               ),
+
+            // API提供商信息
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_outlined,
+                    size: 14,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '天气数据由 Open-Meteo 提供',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         );
       },
