@@ -411,6 +411,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   },
                   selectedColor: theme.colorScheme.primaryContainer,
                   checkmarkColor: theme.colorScheme.primary,
+                  backgroundColor: isSelected
+                    ? theme.colorScheme.primaryContainer
+                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
                   labelStyle: TextStyle(
                     color: isSelected
                         ? theme.colorScheme.onPrimaryContainer
@@ -418,6 +421,14 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  side: BorderSide(
+                    color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline.withValues(alpha: 0.5),
+                    width: isSelected ? 1.5 : 1.0,
+                  ),
+                  elevation: isSelected ? 2 : 1,
+                  shadowColor: theme.shadowColor.withValues(alpha: 0.2),
                 );
               }).toList(),
             ),
