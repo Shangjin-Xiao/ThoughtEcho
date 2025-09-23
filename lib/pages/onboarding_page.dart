@@ -344,53 +344,190 @@ class _OnboardingPageState extends State<OnboardingPage>
   Widget _buildCompletePage() {
     final theme = Theme.of(context);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle,
-              size: 80,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(height: 32),
-            Text(
-              '设置完成',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+    return Consumer<OnboardingController>(
+      builder: (context, controller, child) {
+        final hitokotoPreference = OnboardingConfig.preferences
+            .firstWhere((p) => p.key == 'hitokotoTypes');
+        final currentValue = controller.state.getPreference<String>('hitokotoTypes') ??
+            hitokotoPreference.defaultValue as String;
+        final selectedValues = currentValue.split(',').where((v) => v.isNotEmpty).toSet();
+        final options = hitokotoPreference.options ?? [];
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 每日一言类型选择 - 放在最上方
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.format_quote_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  hitokotoPreference.title,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '已选择 ${selectedValues.length} 种类型',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        hitokotoPreference.description,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 快速操作按钮
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final allValues = options.map((o) => o.value as String).join(',');
+                                _controller.updatePreference('hitokotoTypes', allValues);
+                              },
+                              icon: const Icon(Icons.select_all, size: 16),
+                              label: const Text('全选'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                // 至少保留一个选项
+                                final firstValue = options.isNotEmpty
+                                    ? options.first.value as String
+                                    : 'a';
+                                _controller.updatePreference('hitokotoTypes', firstValue);
+                              },
+                              icon: const Icon(Icons.clear_all, size: 16),
+                              label: const Text('清空'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 选项网格
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: options.map((option) {
+                          final isSelected = selectedValues.contains(option.value as String);
+                          return FilterChip(
+                            label: Text(option.label),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              final newSelectedValues = Set<String>.from(selectedValues);
+                              if (selected) {
+                                newSelectedValues.add(option.value as String);
+                              } else {
+                                newSelectedValues.remove(option.value as String);
+                                // 确保至少有一个选项被选中
+                                if (newSelectedValues.isEmpty) {
+                                  newSelectedValues.add(options.first.value as String);
+                                }
+                              }
+                              final newValue = newSelectedValues.join(',');
+                              _controller.updatePreference('hitokotoTypes', newValue);
+                            },
+                            backgroundColor: theme.colorScheme.surface,
+                            selectedColor: theme.colorScheme.primaryContainer,
+                            checkmarkColor: theme.colorScheme.primary,
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '您已完成所有设置\n现在可以开始记录您的思想',
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primaryContainer,
-                    theme.colorScheme.secondaryContainer,
+
+              const SizedBox(height: 32),
+
+              // 完成信息 - 放在下方
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: 80,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      '设置完成',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '您已完成所有设置\n现在可以开始记录您的思想',
+                      style: theme.textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primaryContainer,
+                            theme.colorScheme.secondaryContainer,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '让我们一起随心记录',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                '让我们一起随心记录',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
