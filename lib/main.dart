@@ -813,6 +813,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                         SnackBar(
                           content: Text('重新初始化失败: $e'),
                           backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 3),
                         ),
                       );
                     }
@@ -1099,6 +1100,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                             SnackBar(
                               content: Text('无法打开备份还原页面：$e'),
                               backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 3),
                             ),
                           );
                         }

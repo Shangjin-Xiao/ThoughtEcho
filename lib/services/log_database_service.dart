@@ -293,11 +293,11 @@ class NativeLogStorage implements LogStorage {
           dbPath = await getDatabasesPath();
           logDebug('无法获取应用文档目录，回退到系统数据库路径: $dbPath');
         }
-        
+
         // 确保目录存在
         await Directory(dbPath).create(recursive: true);
         final logDbPath = join(dbPath, _logDbName);
-        
+
         logDebug('Native平台：使用统一的日志数据库路径 $logDbPath');
 
         // 尝试从多个可能的位置迁移旧的日志数据库
@@ -333,7 +333,7 @@ class NativeLogStorage implements LogStorage {
 
       // 检查可能的旧路径
       final List<String> possibleOldPaths = [];
-      
+
       try {
         // 旧路径1：系统数据库路径
         final systemDbDir = await getDatabasesPath();
@@ -350,11 +350,11 @@ class NativeLogStorage implements LogStorage {
       for (final oldPath in possibleOldPaths) {
         if (await File(oldPath).exists()) {
           logDebug('发现旧日志数据库，正在迁移：$oldPath -> $targetPath');
-          
+
           try {
             // 复制文件而非移动，确保安全
             await File(oldPath).copy(targetPath);
-            
+
             // 验证迁移是否成功
             if (await File(targetPath).exists()) {
               // 删除旧文件
@@ -428,13 +428,13 @@ class NativeLogStorage implements LogStorage {
     } catch (e, stackTrace) {
       logDebug('插入日志失败: $e');
       logDebug('堆栈跟踪: $stackTrace');
-      
+
       // 记录失败日志的详细信息
       logDebug('失败日志详情: level=${log['level']}, '
-              'message长度=${log['message']?.toString().length ?? 0}, '
-              'timestamp=${log['timestamp']}, '
-              'source=${log['source']}');
-      
+          'message长度=${log['message']?.toString().length ?? 0}, '
+          'timestamp=${log['timestamp']}, '
+          'source=${log['source']}');
+
       return -1;
     }
   }
@@ -445,10 +445,10 @@ class NativeLogStorage implements LogStorage {
 
     try {
       final db = await _getDatabase();
-      
+
       // 记录批量插入的统计信息
       logDebug('开始批量插入 ${logs.length} 条日志记录');
-      
+
       final batch = db.batch();
 
       for (final log in logs) {
@@ -464,32 +464,32 @@ class NativeLogStorage implements LogStorage {
     } catch (e, stackTrace) {
       logDebug('批量插入日志失败: $e');
       logDebug('堆栈跟踪: $stackTrace');
-      
+
       // 在Android上，尝试逐条插入以确定具体哪条日志有问题
       if (!kIsWeb && Platform.isAndroid && logs.length > 1) {
         logDebug('尝试逐条插入以诊断问题...');
         int successCount = 0;
         int failureCount = 0;
-        
+
         for (int i = 0; i < logs.length; i++) {
           try {
             await insertLog(logs[i]);
             successCount++;
           } catch (singleError) {
             failureCount++;
-            logDebug('第 ${i+1} 条日志插入失败: $singleError');
-            
+            logDebug('第 ${i + 1} 条日志插入失败: $singleError');
+
             // 记录问题日志的详细信息
             final problemLog = logs[i];
             logDebug('问题日志内容: level=${problemLog['level']}, '
-                    'message长度=${problemLog['message']?.toString().length ?? 0}, '
-                    'timestamp=${problemLog['timestamp']}');
+                'message长度=${problemLog['message']?.toString().length ?? 0}, '
+                'timestamp=${problemLog['timestamp']}');
           }
         }
-        
+
         logDebug('逐条插入结果: 成功 $successCount 条, 失败 $failureCount 条');
       }
-      
+
       rethrow;
     }
   }
@@ -704,7 +704,7 @@ class LogDatabaseService {
           final db = await nativeStorage.getDatabase();
           status['database_path'] = db.path;
           status['database_version'] = await db.getVersion();
-          
+
           // 检查表是否存在
           final tables = await db.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='app_logs'",

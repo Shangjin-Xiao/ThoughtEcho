@@ -937,8 +937,9 @@ class NoteListViewState extends State<NoteListView> {
                           hintText: '搜索笔记...',
                           isDense: true,
                           filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.surfaceContainerLowest,
+                          fillColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLowest,
                           prefixIcon: searchController.isSearching
                               ? const SizedBox(
                                   width: 20,
@@ -946,8 +947,7 @@ class NoteListViewState extends State<NoteListView> {
                                   child: Padding(
                                     padding: EdgeInsets.all(12.0),
                                     child: EnhancedLottieAnimation(
-                                      type:
-                                          LottieAnimationType.searchLoading,
+                                      type: LottieAnimationType.searchLoading,
                                       width: 16,
                                       height: 16,
                                     ),
@@ -975,8 +975,7 @@ class NoteListViewState extends State<NoteListView> {
                                   sortType: widget.sortType,
                                   sortAscending: widget.sortAscending,
                                   selectedWeathers: widget.selectedWeathers,
-                                  selectedDayPeriods:
-                                      widget.selectedDayPeriods,
+                                  selectedDayPeriods: widget.selectedDayPeriods,
                                   onApply: (
                                     tagIds,
                                     sortType,
@@ -1185,13 +1184,15 @@ class NoteListViewState extends State<NoteListView> {
                       // 1) 将已选择的具体天气key映射为所属大类（如 rainy/snowy 等）
                       final Set<String> categorySet = {};
                       for (final key in widget.selectedWeathers) {
-                        final cat = WeatherService.getFilterCategoryByWeatherKey(key);
+                        final cat =
+                            WeatherService.getFilterCategoryByWeatherKey(key);
                         if (cat != null) categorySet.add(cat);
                       }
 
                       // 2) 为每个大类创建一个汇总Chip，点击删除时移除该大类下所有key
                       final List<Widget> chips = categorySet.map((cat) {
-                        final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
+                        final label =
+                            WeatherService.filterCategoryToLabel[cat] ?? cat;
                         final icon = WeatherService.getFilterCategoryIcon(cat);
                         return _buildModernFilterChip(
                           theme: theme,
@@ -1199,8 +1200,11 @@ class NoteListViewState extends State<NoteListView> {
                           icon: icon,
                           color: theme.colorScheme.secondary,
                           onDeleted: () {
-                            final keysToRemove = WeatherService.getWeatherKeysByFilterCategory(cat);
-                            final newWeathers = List<String>.from(widget.selectedWeathers)
+                            final keysToRemove =
+                                WeatherService.getWeatherKeysByFilterCategory(
+                                    cat);
+                            final newWeathers = List<String>.from(
+                                widget.selectedWeathers)
                               ..removeWhere((w) => keysToRemove.contains(w));
                             widget.onFilterChanged(
                               newWeathers,
@@ -1213,7 +1217,9 @@ class NoteListViewState extends State<NoteListView> {
 
                       // 3) 若存在未归类的key（理论上不会发生），则单独显示
                       final Set<String> knownKeys = categorySet
-                          .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
+                          .expand((cat) =>
+                              WeatherService.getWeatherKeysByFilterCategory(
+                                  cat))
                           .toSet();
                       final List<String> others = widget.selectedWeathers
                           .where((k) => !knownKeys.contains(k))
@@ -1226,8 +1232,11 @@ class NoteListViewState extends State<NoteListView> {
                             label: label,
                             color: theme.colorScheme.secondary,
                             onDeleted: () {
-                              final newWeathers = List<String>.from(widget.selectedWeathers)..remove(k);
-                              widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
+                              final newWeathers =
+                                  List<String>.from(widget.selectedWeathers)
+                                    ..remove(k);
+                              widget.onFilterChanged(
+                                  newWeathers, widget.selectedDayPeriods);
                               _updateStreamSubscription();
                             },
                           ),

@@ -13,7 +13,8 @@ class UnifiedQuillToolbar extends StatefulWidget {
   final quill.QuillController controller;
   final void Function(String filePath)? onMediaImported;
 
-  const UnifiedQuillToolbar({super.key, required this.controller, this.onMediaImported});
+  const UnifiedQuillToolbar(
+      {super.key, required this.controller, this.onMediaImported});
 
   @override
   State<UnifiedQuillToolbar> createState() => _UnifiedQuillToolbarState();
@@ -282,7 +283,10 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
       debugPrint('插入媒体文件失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('插入${_getMediaTypeName(mediaType)}失败: $e')),
+          SnackBar(
+            content: Text('插入${_getMediaTypeName(mediaType)}失败: $e'),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     }

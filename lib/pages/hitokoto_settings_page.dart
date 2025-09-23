@@ -55,6 +55,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     context.read<SettingsService>().updateHitokotoType(_selectedType);
 
     ScaffoldMessenger.of(context).showSnackBar(
+      // ignore: prefer_const_constructors
       SnackBar(
         content: Row(
           children: [
@@ -73,6 +74,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
           borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
         ),
         margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

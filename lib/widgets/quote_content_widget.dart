@@ -107,8 +107,8 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 创建优先显示加粗内容的Document (基于高度预估)
-  quill.Document _createBoldPriorityDocument(
-      String deltaContent, int maxLines, {bool hideImages = false}) {
+  quill.Document _createBoldPriorityDocument(String deltaContent, int maxLines,
+      {bool hideImages = false}) {
     try {
       final validBoldOps = _extractValidBoldOps(deltaContent);
 
@@ -253,7 +253,8 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 创建普通折叠模式的Document (基于高度限制)
-  quill.Document _createTruncatedDocument(String deltaContent, int maxLines, {bool hideImages = false}) {
+  quill.Document _createTruncatedDocument(String deltaContent, int maxLines,
+      {bool hideImages = false}) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
@@ -393,7 +394,8 @@ class QuoteContent extends StatelessWidget {
       try {
         quill.Document displayDocument;
 
-        if (!showFullContent && _needsExpansionForRichText(quote.deltaContent!)) {
+        if (!showFullContent &&
+            _needsExpansionForRichText(quote.deltaContent!)) {
           const int maxLines = 4; // 固定使用4行作为折叠时的行数限制
 
           if (prioritizeBoldContent) {
@@ -401,17 +403,20 @@ class QuoteContent extends StatelessWidget {
             final validBoldOps = _extractValidBoldOps(quote.deltaContent!);
             if (validBoldOps.isNotEmpty) {
               // 使用加粗优先模式，折叠状态下隐藏图片
-              displayDocument =
-                  _createBoldPriorityDocument(quote.deltaContent!, maxLines, hideImages: false);
+              displayDocument = _createBoldPriorityDocument(
+                  quote.deltaContent!, maxLines,
+                  hideImages: false);
             } else {
               // 没有有效加粗内容，使用普通截断模式，折叠状态下隐藏图片
-              displayDocument =
-                  _createTruncatedDocument(quote.deltaContent!, maxLines, hideImages: false);
+              displayDocument = _createTruncatedDocument(
+                  quote.deltaContent!, maxLines,
+                  hideImages: false);
             }
           } else {
             // 不启用加粗优先，使用普通截断模式，折叠状态下隐藏图片
-            displayDocument =
-                _createTruncatedDocument(quote.deltaContent!, maxLines, hideImages: false);
+            displayDocument = _createTruncatedDocument(
+                quote.deltaContent!, maxLines,
+                hideImages: false);
           }
         } else if (!showFullContent) {
           // 折叠状态但不需要截断，显示完整内容（包括图片）

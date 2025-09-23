@@ -291,7 +291,9 @@ class QuoteItemWidget extends StatelessWidget {
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 350),
                           curve: Curves.easeInOutCubicEmphasized,
-                          height: isExpanded ? null : (_needsExpansion(quote) ? 120 : null),
+                          height: isExpanded
+                              ? null
+                              : (_needsExpansion(quote) ? 120 : null),
                           child: SingleChildScrollView(
                             physics: const NeverScrollableScrollPhysics(),
                             child: QuoteContent(

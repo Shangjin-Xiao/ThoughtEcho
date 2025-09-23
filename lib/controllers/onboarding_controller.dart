@@ -166,8 +166,7 @@ class OnboardingController extends ChangeNotifier {
             _state.getPreference<bool>('showFavoriteButton') ?? true,
         prioritizeBoldContentInCollapse:
             _state.getPreference<bool>('prioritizeBoldContent') ?? false,
-        useLocalQuotesOnly:
-            _state.getPreference<bool>('useLocalOnly') ?? false,
+        useLocalQuotesOnly: _state.getPreference<bool>('useLocalOnly') ?? false,
         aiCardGenerationEnabled:
             _state.getPreference<bool>('aiCardGenerationEnabled') ?? true,
       );
@@ -192,7 +191,8 @@ class OnboardingController extends ChangeNotifier {
       // AI相关快捷开关
       final todayAI = _state.getPreference<bool>('todayThoughtsUseAI') ?? false;
       await _settingsService.setTodayThoughtsUseAI(todayAI);
-      final reportAI = _state.getPreference<bool>('reportInsightsUseAI') ?? false;
+      final reportAI =
+          _state.getPreference<bool>('reportInsightsUseAI') ?? false;
       await _settingsService.setReportInsightsUseAI(reportAI);
 
       logDebug('用户偏好设置保存完成');

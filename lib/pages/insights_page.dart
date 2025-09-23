@@ -380,7 +380,9 @@ class _InsightsPageState extends State<InsightsPage> {
       if (quotes.isEmpty) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('没有找到笔记，请先添加一些笔记'), duration: AppConstants.snackBarDurationNormal));
+        ).showSnackBar(const SnackBar(
+            content: Text('没有找到笔记，请先添加一些笔记'),
+            duration: AppConstants.snackBarDurationNormal));
         setState(() {
           _isLoading = false;
           _isGenerating = false;

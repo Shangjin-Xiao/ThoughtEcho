@@ -143,7 +143,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载数据失败: $e'), duration: AppConstants.snackBarDurationError));
+        ).showSnackBar(SnackBar(
+            content: Text('加载数据失败: $e'),
+            duration: AppConstants.snackBarDurationError));
       }
     }
   }
@@ -370,8 +372,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       );
     } else {
       // 调试：记录本地生成洞察的参数
-      AppLogger.d('开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount');
-      AppLogger.d('本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag');
+      AppLogger.d(
+          '开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount');
+      AppLogger.d(
+          '本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag');
 
       final local = context.read<AIService>().buildLocalReportInsight(
             periodLabel: periodLabel,
@@ -384,7 +388,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           );
 
       // 调试：记录本地生成的结果
-      AppLogger.d('本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}');
+      AppLogger.d(
+          '本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}');
 
       setState(() {
         _insightText = local;
@@ -502,7 +507,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       AppLogger.e('生成精选卡片失败', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成卡片失败: $e'), duration: AppConstants.snackBarDurationError),
+          SnackBar(
+              content: Text('生成卡片失败: $e'),
+              duration: AppConstants.snackBarDurationError),
         );
       }
     }

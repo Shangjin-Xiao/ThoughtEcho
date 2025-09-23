@@ -86,7 +86,8 @@ class PreferencesDetailPage extends StatelessWidget {
                         Text(
                           '根据您的使用习惯调整应用行为',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                            color: colorScheme.onPrimaryContainer
+                                .withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -128,7 +129,8 @@ class PreferencesDetailPage extends StatelessWidget {
                   subtitle: '折叠时优先显示加粗文字',
                   icon: Icons.format_bold,
                   value: settings.prioritizeBoldContentInCollapse,
-                  onChanged: (v) => settings.setPrioritizeBoldContentInCollapse(v),
+                  onChanged: (v) =>
+                      settings.setPrioritizeBoldContentInCollapse(v),
                 ),
                 _buildDivider(),
                 _buildSwitchTile(
@@ -145,7 +147,8 @@ class PreferencesDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // AI 快捷开关
-            _buildSectionHeader(context, 'AI 智能功能', Icons.auto_awesome_outlined),
+            _buildSectionHeader(
+                context, 'AI 智能功能', Icons.auto_awesome_outlined),
             const SizedBox(height: 12),
             _buildPreferenceCard(
               context,
@@ -174,7 +177,8 @@ class PreferencesDetailPage extends StatelessWidget {
                   subtitle: '为笔记生成可视化SVG卡片',
                   icon: Icons.image_outlined,
                   value: settings.aiCardGenerationEnabled,
-                  onChanged: (v) async => settings.setAICardGenerationEnabled(v),
+                  onChanged: (v) async =>
+                      settings.setAICardGenerationEnabled(v),
                 ),
                 _buildDivider(),
                 ListTile(
@@ -203,7 +207,7 @@ class PreferencesDetailPage extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -211,7 +215,8 @@ class PreferencesDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
+  Widget _buildSectionHeader(
+      BuildContext context, String title, IconData icon) {
     final theme = Theme.of(context);
     return Row(
       children: [
@@ -232,7 +237,8 @@ class PreferencesDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPreferenceCard(BuildContext context, {required List<Widget> children}) {
+  Widget _buildPreferenceCard(BuildContext context,
+      {required List<Widget> children}) {
     final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
@@ -270,16 +276,16 @@ class PreferencesDetailPage extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: value 
-            ? theme.colorScheme.primaryContainer 
-            : theme.colorScheme.surfaceContainerHighest,
+          color: value
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
-          color: value 
-            ? theme.colorScheme.onPrimaryContainer 
-            : theme.colorScheme.onSurfaceVariant,
+          color: value
+              ? theme.colorScheme.onPrimaryContainer
+              : theme.colorScheme.onSurfaceVariant,
           size: 20,
         ),
       ),

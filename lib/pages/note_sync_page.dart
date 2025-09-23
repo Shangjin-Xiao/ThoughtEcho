@@ -434,7 +434,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       final displayId =
           sessionId.length <= 8 ? sessionId : '${sessionId.substring(0, 8)}...';
       messenger.showSnackBar(
-        SnackBar(content: Text('笔记发送启动，会话ID: $displayId')),
+        SnackBar(
+            content: Text('笔记发送启动，会话ID: $displayId'),
+            duration: const Duration(seconds: 3)),
       );
     } catch (e) {
       debugPrint('发送笔记失败: $e');
@@ -558,7 +560,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             ClipboardData(text: _localFingerprint!));
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('已复制本机指纹: $_localFingerprint')),
+                              content: Text('已复制本机指纹: $_localFingerprint'),
+                              duration: const Duration(seconds: 2)),
                         );
                       }
                     },
@@ -959,13 +962,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       if (service.syncStatus == SyncStatus.completed) {
         // 成功提示
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('同步完成')),
+          const SnackBar(content: Text('同步完成'), duration: Duration(seconds: 2)),
         );
       } else if (service.syncStatus == SyncStatus.failed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(service.syncStatusMessage),
-              backgroundColor: Colors.red),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3)),
         );
       }
       // 不再自动关闭，由用户点击“关闭”按钮手动关闭，保留结果供查看

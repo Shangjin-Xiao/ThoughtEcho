@@ -122,7 +122,7 @@ class _HomePageState extends State<HomePage>
         return;
       }
 
-  // 获取最近的周期洞察（本周、上周、本月、上月）
+      // 获取最近的周期洞察（本周、上周、本月、上月）
       final insightHistoryService = context.read<InsightHistoryService>();
       final recentInsights =
           await insightHistoryService.formatRecentInsightsForDailyPrompt();

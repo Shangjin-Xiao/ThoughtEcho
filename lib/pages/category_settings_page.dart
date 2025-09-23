@@ -4,6 +4,7 @@ import '../services/database_service.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
+import '../constants/app_constants.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -119,7 +120,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 final text = _categoryController.text.trim();
                                 if (text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('请输入标签名称')),
+                                    const SnackBar(
+                                        content: Text('请输入标签名称'),
+                                        duration: AppConstants
+                                            .snackBarDurationNormal),
                                   );
                                   return;
                                 }
@@ -133,7 +137,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   );
                                   if (mounted) {
                                     messenger.showSnackBar(
-                                      const SnackBar(content: Text('标签添加成功')),
+                                      const SnackBar(
+                                          content: Text('标签添加成功'),
+                                          duration: AppConstants
+                                              .snackBarDurationNormal),
                                     );
                                     _categoryController.clear();
                                     setState(() => _selectedIconName = null);
@@ -141,7 +148,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 } catch (e) {
                                   if (mounted) {
                                     messenger.showSnackBar(
-                                      SnackBar(content: Text('添加标签失败：$e')),
+                                      SnackBar(
+                                          content: Text('添加标签失败：$e'),
+                                          duration: AppConstants
+                                              .snackBarDurationError),
                                     );
                                   }
                                 } finally {
@@ -740,7 +750,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('标签删除成功')));
+            ).showSnackBar(const SnackBar(
+                content: Text('标签删除成功'),
+                duration: AppConstants.snackBarDurationNormal));
           }
         } catch (e) {
           // 修复内存泄露：在异步操作后检查mounted状态
@@ -748,7 +760,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text('删除标签失败：$e')));
+            ).showSnackBar(SnackBar(
+                content: Text('删除标签失败：$e'),
+                duration: AppConstants.snackBarDurationError));
           }
         }
       }

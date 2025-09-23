@@ -263,7 +263,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       // 从数据库加载最近的日志
       await _loadRecentLogs();
 
-  _initialized = true;
+      _initialized = true;
       // 将初始化前缓存的日志入列
       if (_bufferDuringInit.isNotEmpty) {
         for (final entry in List<LogEntry>.from(_bufferDuringInit)) {
@@ -510,19 +510,19 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     try {
       // 确保数据库已准备好
       await _logDb.ready;
-      
+
       // 记录批量保存的统计信息
       _logger.info('正在批量保存 ${logsToSave.length} 条日志到数据库');
-      
+
       await _logDb.insertLogs(logsToSave.map((log) => log.toMap()).toList());
-      
+
       // 清理旧日志，但不要让清理失败影响新日志的保存
       try {
         await _logDb.deleteOldLogs(_maxStoredLogs);
       } catch (cleanupError) {
         _logger.warning('清理旧日志失败，但新日志已保存: $cleanupError');
       }
-      
+
       _logger.info('成功保存 ${logsToSave.length} 条日志到数据库');
     } catch (e, stackTrace) {
       _logger.severe('保存日志到数据库失败: $e', e, stackTrace);

@@ -51,7 +51,10 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('诊断失败: $e')),
+          SnackBar(
+            content: Text('诊断失败: $e'),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     } finally {
@@ -76,7 +79,10 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('启动设备发现失败: $e')),
+            SnackBar(
+              content: Text('启动设备发现失败: $e'),
+              duration: const Duration(seconds: 3),
+            ),
           );
         }
       }
@@ -88,13 +94,19 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
       await _discoveryService.announceDevice();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('设备公告已发送')),
+          const SnackBar(
+            content: Text('设备公告已发送'),
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('发送设备公告失败: $e')),
+          SnackBar(
+            content: Text('发送设备公告失败: $e'),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     }

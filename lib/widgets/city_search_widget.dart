@@ -131,42 +131,58 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Card(
                 elevation: 0,
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
                 child: ListTile(
                   leading: Icon(weatherService.getWeatherIconData()),
                   title: const Text('当前天气'),
                   subtitle: Text(
-                    (weatherService.currentWeather == null && weatherService.temperature == null)
+                    (weatherService.currentWeather == null &&
+                            weatherService.temperature == null)
                         ? (locationService.currentAddress != null
                             ? '城市：${locationService.currentAddress}（点击右侧按钮刷新）'
                             : '尚未设置城市，先在下方搜索并选择')
                         : (weatherService.currentWeather == '天气数据获取失败'
                             ? '天气获取失败'
-                            : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}')
-                    ,
+                            : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: IconButton(
                     icon: controller.isLoading || weatherService.isLoading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.refresh),
                     tooltip: '刷新天气',
-                    onPressed: (controller.isLoading || weatherService.isLoading)
+                    onPressed: (controller.isLoading ||
+                            weatherService.isLoading)
                         ? null
                         : () async {
                             final position = locationService.currentPosition;
-                            final messenger = ScaffoldMessenger.maybeOf(context);
+                            final messenger =
+                                ScaffoldMessenger.maybeOf(context);
                             if (position != null) {
-                              await weatherService.getWeatherData(position.latitude, position.longitude);
+                              await weatherService.getWeatherData(
+                                  position.latitude, position.longitude);
                               if (!mounted) return;
                               if (weatherService.currentWeather != '天气数据获取失败') {
-                                messenger?.showSnackBar(const SnackBar(content: Text('天气已更新')));
+                                messenger?.showSnackBar(const SnackBar(
+                                  content: Text('天气已更新'),
+                                  duration: Duration(seconds: 2),
+                                ));
                               } else {
-                                messenger?.showSnackBar(const SnackBar(content: Text('天气更新失败，请稍后重试')));
+                                messenger?.showSnackBar(const SnackBar(
+                                  content: Text('天气更新失败，请稍后重试'),
+                                  duration: Duration(seconds: 3),
+                                ));
                               }
                             } else {
                               if (!mounted) return;
-                              messenger?.showSnackBar(const SnackBar(content: Text('请先选择城市或启用位置服务')));
+                              messenger?.showSnackBar(const SnackBar(
+                                content: Text('请先选择城市或启用位置服务'),
+                                duration: Duration(seconds: 3),
+                              ));
                             }
                           },
                   ),
