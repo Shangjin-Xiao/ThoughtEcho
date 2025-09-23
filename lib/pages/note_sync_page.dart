@@ -514,21 +514,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 style: const TextStyle(
                                     color: Colors.red, fontSize: 12))),
                       ] else if (_isScanning) ...[
-                        SizedBox(
+                        const SizedBox(
                           width: 16,
                           height: 16,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              const CircularProgressIndicator(strokeWidth: 2),
-                              if (_discoveryRemainingMs > 0)
-                                Text(
-                                  '${(_discoveryRemainingMs / 1000).ceil()}',
-                                  style: const TextStyle(
-                                      fontSize: 8, fontWeight: FontWeight.bold),
-                                ),
-                            ],
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                         const SizedBox(width: 8),
                         Expanded(

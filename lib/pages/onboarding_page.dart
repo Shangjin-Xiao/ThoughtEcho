@@ -443,7 +443,6 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       const SizedBox(height: 16),
 
-                      // 选项网格
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -467,8 +466,20 @@ class _OnboardingPageState extends State<OnboardingPage>
                               _controller.updatePreference('hitokotoTypes', newValue);
                             },
                             backgroundColor: theme.colorScheme.surface,
-                            selectedColor: theme.colorScheme.primaryContainer,
+                            selectedColor: Colors.transparent,
                             checkmarkColor: theme.colorScheme.primary,
+                            labelStyle: TextStyle(
+                              color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface,
+                              fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                            ),
+                            side: BorderSide(
+                              color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.outline.withValues(alpha: 0.3),
+                              width: isSelected ? 2.0 : 1.0,
+                            ),
                           );
                         }).toList(),
                       ),
