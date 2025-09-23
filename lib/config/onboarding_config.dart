@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/onboarding_models.dart';
-import '../services/api_service.dart';
 
 /// 引导页面配置
 class OnboardingConfig {
@@ -150,22 +149,22 @@ class OnboardingConfig {
       type: OnboardingPreferenceType.toggle,
     ),
 
-    // 一言类型选择
-    OnboardingPreference<String>(
-      key: 'hitokotoTypes',
-      title: '每日一言类型',
-      description: '选择您感兴趣的内容类型',
-      defaultValue: 'a,b,c,d,e,f,g,h,i,j,k',
-      type: OnboardingPreferenceType.multiSelect,
-      options: ApiService.hitokotoTypes.entries
-          .map(
-            (entry) => OnboardingPreferenceOption<String>(
-              value: entry.key,
-              label: entry.value,
-            ),
-          )
-          .toList(),
-    ),
+    // 一言类型选择 - 移至完成页面
+    // OnboardingPreference<String>(
+    //   key: 'hitokotoTypes',
+    //   title: '每日一言类型',
+    //   description: '选择您感兴趣的内容类型',
+    //   defaultValue: 'a,b,c,d,e,f,g,h,i,j,k',
+    //   type: OnboardingPreferenceType.multiSelect,
+    //   options: ApiService.hitokotoTypes.entries
+    //       .map(
+    //         (entry) => OnboardingPreferenceOption<String>(
+    //           value: entry.key,
+    //           label: entry.value,
+    //         ),
+    //       )
+    //       .toList(),
+    // ),
   ];
 
   // 快速操作提示
