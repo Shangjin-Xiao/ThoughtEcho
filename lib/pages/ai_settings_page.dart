@@ -10,6 +10,7 @@ import '../utils/app_logger.dart';
 import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
 import '../utils/api_key_debugger.dart';
+import '../constants/app_constants.dart';
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -228,7 +229,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('检查失败: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('检查失败: $e'),
+            backgroundColor: Colors.red,
+            duration: AppConstants.snackBarDurationError),
       );
     } finally {
       if (mounted) {
@@ -325,6 +329,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             ],
           ),
           backgroundColor: Colors.red,
+          duration: AppConstants.snackBarDurationError,
         ),
       );
       return;
@@ -359,6 +364,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             ],
           ),
           backgroundColor: Colors.green,
+          duration: AppConstants.snackBarDurationNormal,
         ),
       );
       FocusScope.of(context).unfocus();
@@ -374,6 +380,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             ],
           ),
           backgroundColor: Colors.red,
+          duration: AppConstants.snackBarDurationError,
         ),
       );
     }
@@ -625,7 +632,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('已切换到 ${provider.name}')));
+    ).showSnackBar(SnackBar(
+        content: Text('已切换到 ${provider.name}'),
+        duration: AppConstants.snackBarDurationNormal));
   }
 
   // 重命名provider
@@ -689,7 +698,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
       });
 
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('预设已重命名为 "$result"')),
+        SnackBar(
+            content: Text('预设已重命名为 "$result"'),
+            duration: AppConstants.snackBarDurationNormal),
       );
     }
 
@@ -767,7 +778,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('预设 "${provider.name}" 已删除')),
+        SnackBar(
+            content: Text('预设 "${provider.name}" 已删除'),
+            duration: AppConstants.snackBarDurationNormal),
       );
     }
   }

@@ -614,7 +614,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   /// 根据平台与类型返回更贴近系统的标题
   String _filePickTitle() {
     final typeName = _getMediaTypeName(widget.mediaType);
-    if (!kIsWeb && Platform.isAndroid && (widget.mediaType == 'image' || widget.mediaType == 'video')) {
+    if (!kIsWeb &&
+        Platform.isAndroid &&
+        (widget.mediaType == 'image' || widget.mediaType == 'video')) {
       return '从相册选择$typeName';
     }
     return '从文件选择$typeName';

@@ -5,6 +5,7 @@ import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../widgets/streaming_text_dialog.dart';
 import '../theme/app_theme.dart';
+import '../constants/app_constants.dart';
 
 class AiDialogHelper {
   final BuildContext context;
@@ -334,7 +335,10 @@ class AiDialogHelper {
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ).showSnackBar(SnackBar(
+        content: Text(message),
+        duration: AppConstants.snackBarDurationError,
+      ));
     }
   }
 }

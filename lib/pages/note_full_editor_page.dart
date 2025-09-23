@@ -760,9 +760,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
-  await db.updateQuote(quote);
-  _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
-  if (mounted) {
+        await db.updateQuote(quote);
+        _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(
@@ -775,9 +775,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       } else {
         // 添加新笔记（初始Quote为null或无ID时）
         logDebug('添加新笔记');
-  await db.addQuote(quote);
-  _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
-  if (mounted) {
+        await db.addQuote(quote);
+        _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(
@@ -1949,7 +1949,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (plainText.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationError,
+      ));
       return;
     }
 
@@ -2063,7 +2066,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('解析结果失败: $e')));
+          ).showSnackBar(SnackBar(
+            content: Text('解析结果失败: $e'),
+            duration: AppConstants.snackBarDurationError,
+          ));
         }
       }
     } catch (e) {
@@ -2076,7 +2082,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('分析失败: $e')));
+        ).showSnackBar(SnackBar(
+          content: Text('分析失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }
@@ -2088,7 +2097,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+        ).showSnackBar(const SnackBar(
+          content: Text('请先输入内容'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
       return;
     }
@@ -2136,7 +2148,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+        ).showSnackBar(const SnackBar(
+          content: Text('请先输入内容'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
       return;
     }
@@ -2188,7 +2203,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+        ).showSnackBar(const SnackBar(
+          content: Text('请先输入内容'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
       return;
     }
@@ -2221,7 +2239,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               if (mounted) {
                 ScaffoldMessenger.of(
                   context,
-                ).showSnackBar(const SnackBar(content: Text('分析结果已复制到剪贴板')));
+                ).showSnackBar(const SnackBar(
+                  content: Text('分析结果已复制到剪贴板'),
+                  duration: AppConstants.snackBarDurationImportant,
+                ));
               }
             });
             Navigator.of(dialogContext).pop(); // 关闭对话框
@@ -2245,7 +2266,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (plainText.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请先输入内容')));
+      ).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationError,
+      ));
       return;
     }
 

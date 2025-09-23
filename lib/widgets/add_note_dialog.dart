@@ -635,12 +635,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   }
                                 }
                               } catch (e) {
-                                // 修复内存泄露：检查mounted状态
                                 if (mounted && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('打开全屏编辑器失败: $e'),
                                       backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 3),
                                     ),
                                   );
                                 }

@@ -47,7 +47,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // --- 版本检查相关状态 ---
   bool _isCheckingUpdate = false;
   String? _updateCheckMessage;
-  
+
   // --- 清除缓存相关状态 ---
   bool _isClearingCache = false;
 
@@ -176,9 +176,8 @@ class _SettingsPageState extends State<SettingsPage> {
       } catch (_) {}
 
       if (!mounted) return;
-      final msg = orphanCleared > 0
-          ? '缓存已清除，已清理$orphanCleared个无用媒体文件'
-          : '缓存已清除';
+      final msg =
+          orphanCleared > 0 ? '缓存已清除，已清理$orphanCleared个无用媒体文件' : '缓存已清除';
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -255,7 +254,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-  final locationService = context.watch<LocationService>();
+    final locationService = context.watch<LocationService>();
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -615,14 +614,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       // 保存context引用以避免async gap问题
                       final currentContext = context;
                       final logService = Provider.of<UnifiedLogService>(
-                        currentContext, 
+                        currentContext,
                         listen: false,
                       );
-                      
+
                       try {
                         final dbStatus = await logService.getDatabaseStatus();
                         final logSummary = logService.getLogSummary();
-                        
+
                         if (!currentContext.mounted) return;
                         showDialog(
                           context: currentContext,
@@ -633,11 +632,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text('数据库状态:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ...dbStatus.entries.map((e) => Text('${e.key}: ${e.value}')),
+                                  const Text('数据库状态:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  ...dbStatus.entries
+                                      .map((e) => Text('${e.key}: ${e.value}')),
                                   const SizedBox(height: 16),
-                                  const Text('日志统计:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ...logSummary.entries.map((e) => Text('${e.key}: ${e.value}')),
+                                  const Text('日志统计:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  ...logSummary.entries
+                                      .map((e) => Text('${e.key}: ${e.value}')),
                                 ],
                               ),
                             ),
@@ -680,7 +685,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             context: context,
                             builder: (dialogContext) => AlertDialog(
                               title: const Text('清除缓存'),
-                              content: const Text('将清除图片、天气与版本检查缓存，不会删除任何笔记数据。是否继续？'),
+                              content: const Text(
+                                  '将清除图片、天气与版本检查缓存，不会删除任何笔记数据。是否继续？'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(dialogContext),

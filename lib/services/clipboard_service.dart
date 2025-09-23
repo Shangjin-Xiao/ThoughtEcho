@@ -1,5 +1,6 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
 // ignore_for_file: unused_field
+import '../constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note_category.dart';
@@ -375,7 +376,10 @@ class ClipboardService extends ChangeNotifier {
             if (context.mounted) {
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('笔记已保存')));
+              ).showSnackBar(const SnackBar(
+                content: Text('笔记已保存'),
+                duration: AppConstants.snackBarDurationImportant,
+              ));
             }
           },
         ),
@@ -385,7 +389,10 @@ class ClipboardService extends ChangeNotifier {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+        ).showSnackBar(SnackBar(
+          content: Text('操作失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ));
       }
     }
   }

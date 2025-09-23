@@ -59,18 +59,28 @@ class StreamFileSelector {
         // - iOS 保持使用 file_picker（更稳定的文件路径获取）
         if (Platform.isAndroid) {
           final picker = ImagePicker();
-          final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
+          final XFile? file =
+              await picker.pickVideo(source: ImageSource.gallery);
           if (file != null) {
             final f = File(file.path);
             final size = await f.exists() ? await f.length() : 0;
             result = FilePickerResult([
-              PlatformFile(name: p.basename(file.path), path: file.path, size: size),
+              PlatformFile(
+                  name: p.basename(file.path), path: file.path, size: size),
             ]);
           }
         } else {
           result = await FilePicker.platform.pickFiles(
             type: FileType.custom,
-            allowedExtensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
+            allowedExtensions: [
+              'mp4',
+              'mov',
+              'avi',
+              'mkv',
+              'webm',
+              '3gp',
+              'm4v'
+            ],
             allowMultiple: false,
             withData: false,
             withReadStream: false,
@@ -146,12 +156,14 @@ class StreamFileSelector {
         if (Platform.isAndroid) {
           // Android 使用系统媒体选择器（图库）
           final picker = ImagePicker();
-          final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+          final XFile? file =
+              await picker.pickImage(source: ImageSource.gallery);
           if (file != null) {
             final f = File(file.path);
             final size = await f.exists() ? await f.length() : 0;
             result = FilePickerResult([
-              PlatformFile(name: p.basename(file.path), path: file.path, size: size),
+              PlatformFile(
+                  name: p.basename(file.path), path: file.path, size: size),
             ]);
           }
         } else {

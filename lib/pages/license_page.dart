@@ -596,8 +596,9 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                               await Clipboard.setData(
                                   ClipboardData(text: full));
                               if (!mounted) return;
-                              messenger.showSnackBar(
-                                  const SnackBar(content: Text('已复制许可证内容')));
+                              messenger.showSnackBar(const SnackBar(
+                                  content: Text('已复制许可证内容'),
+                                  duration: Duration(seconds: 2)));
                             },
                           ),
                         ],

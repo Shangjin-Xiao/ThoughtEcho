@@ -62,14 +62,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('分析记录已删除')));
+        ).showSnackBar(const SnackBar(
+            content: Text('分析记录已删除'), duration: Duration(seconds: 2)));
       }
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+      ).showSnackBar(
+          // ignore: prefer_const_constructors
+          SnackBar(content: Text('删除失败: $e'), duration: Duration(seconds: 3)));
     }
   }
 

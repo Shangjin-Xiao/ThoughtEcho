@@ -43,6 +43,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           SnackBar(
             content: Text('加载统计信息失败: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -72,6 +73,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           SnackBar(
             content: Text('$operation 完成'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -85,6 +87,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           SnackBar(
             content: Text('$operation 失败: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
