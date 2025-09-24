@@ -130,6 +130,32 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
 
           // 说明信息
           _buildInfoCard(theme),
+
+          // 新增：引导用户前往偏好设置查看更多
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Card(
+              color: theme.colorScheme.surfaceContainerHighest,
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.tune, color: theme.colorScheme.primary, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '更多个性化选项和AI功能可在「设置 > 偏好设置」中随时调整。',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -94,76 +94,11 @@ class OnboardingConfig {
         ),
       ],
     ),
-
-    // 剪贴板监控
-    const OnboardingPreference<bool>(
-      key: 'clipboardMonitoring',
-      title: '剪贴板监控',
-      description: '检测剪贴板内容，方便快速添加到笔记',
-      defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // 显示喜爱按钮（默认开启）
-    const OnboardingPreference<bool>(
-      key: 'showFavoriteButton',
-      title: '显示喜爱按钮',
-      description: '在笔记卡片上显示心形按钮',
-      defaultValue: true,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // 优先显示加粗内容（默认关闭）
-    const OnboardingPreference<bool>(
-      key: 'prioritizeBoldContent',
-      title: '优先显示加粗内容',
-      description: '折叠笔记时优先展示加粗文本',
-      defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // 仅使用本地笔记（默认关闭）
-    const OnboardingPreference<bool>(
-      key: 'useLocalOnly',
-      title: '仅使用本地笔记',
-      description: '每日一言优先使用本地记录',
-      defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // 位置服务
     const OnboardingPreference<bool>(
       key: 'locationService',
       title: '位置服务',
       description: '启用位置服务以自动记录笔记地点和获取天气信息',
       defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // 使用AI生成每日提示（默认关闭）
-    const OnboardingPreference<bool>(
-      key: 'todayThoughtsUseAI',
-      title: '使用AI生成每日提示',
-      description: '在主页显示AI生成的每日提示',
-      defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // 周期报告洞察（默认关闭）
-    const OnboardingPreference<bool>(
-      key: 'reportInsightsUseAI',
-      title: '周期报告洞察使用AI',
-      description: '生成周/月度报告时使用AI洞察',
-      defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
-    ),
-
-    // SVG 卡片生成（默认开启按现有默认设置）
-    const OnboardingPreference<bool>(
-      key: 'aiCardGenerationEnabled',
-      title: '启用AI卡片生成 (SVG)',
-      description: '为笔记生成可视化SVG卡片',
-      defaultValue: true,
       type: OnboardingPreferenceType.toggle,
     ),
   ];
