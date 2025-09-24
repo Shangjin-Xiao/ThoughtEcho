@@ -1194,43 +1194,63 @@ class NoteListViewState extends State<NoteListView> {
       ),
     );
 
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: 6.0,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.12),
-          width: 1,
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width > AppConstants.tabletMinWidth;
+    final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
+    // 为chip之间添加间距
+    List<Widget> spacedChips = [];
+    for (int i = 0; i < allChips.length; i++) {
+      spacedChips.add(allChips[i]);
+      if (i != allChips.length - 1) {
+        spacedChips.add(const SizedBox(width: 8));
+      }
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Container(
+        width: double.infinity,
+        margin: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          6.0,
+          horizontalPadding,
+          0,
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              // 筛选图标
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.12),
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                clearAllButton,
+                const SizedBox(width: 12),
+                // 筛选图标
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.filter_alt_outlined,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
-                child: Icon(
-                  Icons.filter_alt_outlined,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              ...allChips,
-              if (allChips.isNotEmpty) const SizedBox(width: 12),
-              clearAllButton,
-            ],
+                const SizedBox(width: 12),
+                ...spacedChips,
+              ],
+            ),
           ),
         ),
       ),
