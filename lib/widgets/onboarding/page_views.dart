@@ -85,27 +85,101 @@ class _WelcomePageViewState extends State<WelcomePageView>
                     ),
                     const SizedBox(height: 16),
 
-                    // 副标题
-                    Text(
-                      widget.pageData.subtitle,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.8,
+                    // 副标题 + 条带底座（不覆盖文字）
+                    Column(
+                      children: [
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // 条带底座，稍微下移
+                            Positioned(
+                              top: 18,
+                              left: 0,
+                              right: 0,
+                              child: FractionallySizedBox(
+                                widthFactor: 0.82,
+                                child: Container(
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        theme.colorScheme.primary.withValues(alpha: 0.18),
+                                        theme.colorScheme.secondary.withValues(alpha: 0.13),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: theme.colorScheme.primary.withValues(alpha: 0.13),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // 副标题文字悬浮于条带之上
+                            Text(
+                              widget.pageData.subtitle,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 23,
+                                letterSpacing: 1.1,
+                                shadows: [
+                                  Shadow(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.18),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
-                      ),
-                      textAlign: TextAlign.center,
+                        const SizedBox(height: 18),
+                      ],
                     ),
 
                     if (widget.pageData.description != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.pageData.description!,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface.withValues(alpha: 0.82),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                              blurRadius: 22,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                        textAlign: TextAlign.center,
+                        child: Text(
+                          widget.pageData.description!,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 19,
+                            letterSpacing: 1.1,
+                            fontFamily: 'Rounded',
+                            shadows: [
+                              Shadow(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.13),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ],
                   ],
