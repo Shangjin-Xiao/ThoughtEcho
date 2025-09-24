@@ -1232,8 +1232,6 @@ class NoteListViewState extends State<NoteListView> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                clearAllButton,
-                const SizedBox(width: 12),
                 // 筛选图标
                 Container(
                   padding: const EdgeInsets.all(6),
@@ -1243,12 +1241,14 @@ class NoteListViewState extends State<NoteListView> {
                   ),
                   child: Icon(
                     Icons.filter_alt_outlined,
-                    size: 16,
+                    size: 18,
                     color: theme.colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
                 ...spacedChips,
+                if (spacedChips.isNotEmpty) const SizedBox(width: 12),
+                clearAllButton,
               ],
             ),
           ),
