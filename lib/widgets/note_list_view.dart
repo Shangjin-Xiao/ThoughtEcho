@@ -92,8 +92,8 @@ class NoteListViewState extends State<NoteListView> {
     super.initState();
     _searchController.text = widget.searchQuery;
     _hasMore = true;
-    _isLoading = true;
-    _isInitializing = true; // 初始化状态标记
+    _isLoading = false; // Changed to false to avoid initial flash
+    _isInitializing = true;
 
     // 添加焦点节点监听器，用于Web平台的焦点管理
     _searchFocusNode.addListener(_onFocusChanged);
@@ -520,6 +520,8 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _userScrollingTimer;
 
   /// 滚动到指定笔记的顶部 - 使用 ensureVisible 确保多展开笔记时定位准确
+  /// 注意：目前未被使用，因为折叠时的自动滚动被禁用以改善用户体验
+  /// 如果将来需要重新启用，可以取消注释相关调用代码
   void _scrollToItem(String quoteId, int index) {
     if (!mounted || !_scrollController.hasClients) return;
     // 多重保护条件
@@ -555,24 +557,23 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       _isAutoScrolling = true;
-      logDebug('使用ensureVisible滚动到笔记: $quoteId (index: $index)',
+      logDebug('滚动到笔记: $quoteId (index: $index)',
           source: 'NoteListView');
 
-      // 使用 Scrollable.ensureVisible 自动处理动态布局
       Scrollable.ensureVisible(
         key.currentContext!,
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeOutCubic,
-        alignment: 0.0, // 滚动到顶部
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        alignment: 0.0, // Top alignment
       ).then((_) {
         _isAutoScrolling = false;
-        logDebug('ensureVisible滚动完成', source: 'NoteListView');
+        logDebug('滚动完成', source: 'NoteListView');
       }).catchError((e) {
         _isAutoScrolling = false;
-        logDebug('ensureVisible滚动失败: $e', source: 'NoteListView');
+        logDebug('滚动失败: $e', source: 'NoteListView');
       });
     } catch (e, st) {
-      logDebug('滚动到笔记失败: $e\n$st', source: 'NoteListView');
+      logDebug('滚动失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;
     }
   }
@@ -718,10 +719,11 @@ class NoteListViewState extends State<NoteListView> {
                     _expandedItems[quote.id!] = expanded;
                   });
 
-                  // 折叠后滚动到笔记顶部
                   if (!expanded) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _scrollToItem(quote.id!, index);
+                      Future.delayed(const Duration(milliseconds: 350), () {
+                        _scrollToItem(quote.id!, index);
+                      });
                     });
                   }
                 },
