@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:ui' as ui;
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
-import 'dart:convert';
-import 'dart:ui' as ui;
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
-import '../constants/app_constants.dart';
 
 /// 优化：使用StatelessWidget保持高性能，数据变化通过父组件管理
 class QuoteItemWidget extends StatelessWidget {
@@ -172,40 +171,36 @@ class QuoteItemWidget extends StatelessWidget {
       dayPeriod: quote.dayPeriod,
     );
 
-    return AnimatedScale(
-        duration: AppConstants.defaultAnimationDuration,
-        curve: Curves.easeInOutCubic,
-        scale: isExpanded ? 1.0 : 0.997, // 细微缩放，提升过渡质感
-        child: AnimatedContainer(
-          margin: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 6,
-          ), // 减少水平边距从16到12，垂直从8到6
-          duration: AppConstants.defaultAnimationDuration,
-          curve: Curves.easeInOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-            boxShadow: isExpanded
-                ? [
-                    // 轻微增强阴影，提升展开时的质感
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : AppTheme.defaultShadow,
-            gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [cardColor, cardColor.withValues(alpha: 0.95)],
-                  )
-                : null,
-            color: quote.colorHex == null || quote.colorHex!.isEmpty
-                ? cardColor
-                : null,
-          ),
+    return AnimatedContainer(
+        margin: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 6,
+        ), // 减少水平边距从16到12，垂直从8到6
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutQuad,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          boxShadow: isExpanded
+              ? [
+                  // 轻微增强阴影，提升展开时的质感
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : AppTheme.defaultShadow,
+          gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [cardColor, cardColor.withValues(alpha: 0.95)],
+                )
+              : null,
+          color: quote.colorHex == null || quote.colorHex!.isEmpty
+              ? cardColor
+              : null,
+        ),
           child: Padding(
             padding: const EdgeInsets.all(12), // 减少内边距从16到12
             child: Column(
@@ -288,25 +283,38 @@ class QuoteItemWidget extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
                     child: Stack(
                       children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeInOutCubicEmphasized,
-                          height: isExpanded
-                              ? null
-                              : (_needsExpansion(quote) ? 120 : null),
-                          child: SingleChildScrollView(
-                            physics: const NeverScrollableScrollPhysics(),
-                            child: QuoteContent(
-                              quote: quote,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    height: 1.5,
-                                  ),
-                              showFullContent: isExpanded,
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 300),
+                          tween: Tween(begin: 0.0, end: isExpanded ? 1.0 : 0.0),
+                          builder: (context, value, child) {
+                            return ClipRect(
+                              child: Transform.translate(
+                                offset: Offset(0, (1 - value) * 120),
+                                child: Opacity(
+                                  opacity: value,
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            height: _needsExpansion(quote) ? 120 : null,
+                            child: SingleChildScrollView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              child: QuoteContent(
+                                quote: quote,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.onSurface,
+                                      height: 1.5,
+                                    ),
+                                showFullContent: isExpanded,
+                              ),
                             ),
                           ),
                         ),
@@ -645,6 +653,6 @@ class QuoteItemWidget extends StatelessWidget {
               ],
             ),
           ),
-        ));
+        );
   }
 }
