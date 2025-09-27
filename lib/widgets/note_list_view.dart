@@ -1067,7 +1067,7 @@ class NoteListViewState extends State<NoteListView> {
     // 收集所有筛选chip
     final List<Widget> allChips = [];
 
-    // 添加标签chip
+    // 添加标签chip (带图标支持)
     if (widget.selectedTagIds.isNotEmpty) {
       allChips.addAll(widget.selectedTagIds.map((tagId) {
         final tag = widget.tags.firstWhere(
@@ -1077,6 +1077,10 @@ class NoteListViewState extends State<NoteListView> {
         return _buildModernFilterChip(
           theme: theme,
           label: tag.name,
+          icon: IconUtils.isEmoji(tag.iconName)
+            ? IconUtils.getDisplayIcon(tag.iconName)
+            : IconUtils.getIconData(tag.iconName),
+          isIconEmoji: IconUtils.isEmoji(tag.iconName),
           color: theme.colorScheme.primary,
           onDeleted: () {
             final newSelectedTags = List<String>.from(
@@ -1186,7 +1190,7 @@ class NoteListViewState extends State<NoteListView> {
             padding: const EdgeInsets.all(8),
             child: Icon(
               Icons.close,
-              size: 18,
+              size: 20,
               color: theme.colorScheme.error,
             ),
           ),
@@ -1238,7 +1242,7 @@ class NoteListViewState extends State<NoteListView> {
                 ),
                 child: Icon(
                   Icons.filter_alt_outlined,
-                  size: 18,
+                  size: 20,
                   color: theme.colorScheme.primary,
                 ),
               ),
@@ -1263,13 +1267,14 @@ class NoteListViewState extends State<NoteListView> {
   }
 
 
-  /// 构建现代化的筛选条件芯片
+  /// 构建现代化的筛选条件芯片 (支持图标显示)
   Widget _buildModernFilterChip({
     required ThemeData theme,
     required String label,
     required Color color,
     required VoidCallback onDeleted,
-    IconData? icon,
+    dynamic icon,
+    bool isIconEmoji = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -1295,11 +1300,18 @@ class NoteListViewState extends State<NoteListView> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(
-                      icon,
-                      size: 14,
-                      color: color,
-                    ),
+                    if (isIconEmoji) ...[
+                      Text(
+                        icon as String,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ] else ...[
+                      Icon(
+                        icon as IconData,
+                        size: 16,
+                        color: color,
+                      ),
+                    ],
                     const SizedBox(width: 6),
                   ],
                   Text(
@@ -1307,6 +1319,7 @@ class NoteListViewState extends State<NoteListView> {
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: color,
                       fontWeight: FontWeight.w500,
+                      fontSize: 16, // 稍微调大一点
                     ),
                   ),
                 ],
@@ -1324,7 +1337,7 @@ class NoteListViewState extends State<NoteListView> {
                   padding: const EdgeInsets.all(6),
                   child: Icon(
                     Icons.close,
-                    size: 14,
+                    size: 16, // 调大关闭图标
                     color: color.withValues(alpha: 0.7),
                   ),
                 ),
