@@ -168,20 +168,19 @@ class NoteListViewState extends State<NoteListView> {
 
   /// 修复：将数据流初始化分离到独立方法
   void _initializeDataStream() {
-    if (!mounted) return; // 确保组件仍然挂载
+    if (!mounted) return;
 
-    // 修复：安全取消现有订阅
     _quotesSub?.cancel();
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
-    // 修复：检查数据库是否已初始化，如果未初始化则等待
     if (!db.isInitialized) {
       logDebug('数据库未初始化，等待初始化完成后重新订阅');
-      // 监听数据库服务的变化，当初始化完成时重新订阅
       db.addListener(_onDatabaseServiceChanged);
       return;
     }
+
+    bool isFirstLoad = !_initialDataLoaded;
 
     _quotesSub = db
         .watchQuotes(
@@ -203,27 +202,29 @@ class NoteListViewState extends State<NoteListView> {
       (list) {
         if (mounted) {
           setState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-            // 修复：简化_hasMore逻辑，避免Web平台无限加载
+            if (isFirstLoad) {
+              _quotes.clear();
+            }
+            _quotes
+              ..clear()
+              ..addAll(list); // Simplified: always replace for consistency, but flag prevents extra sets
             _hasMore = list.length >= _pageSize;
             _isLoading = false;
           });
 
-          // 首批数据加载完成，立即启用自动滚动但设置保护期
-          if (!_initialDataLoaded) {
+          if (isFirstLoad) {
             _initialDataLoaded = true;
             // 延迟启用自动滚动，避免冷启动时的滚动冲突
             Future.delayed(const Duration(milliseconds: 1500), () {
               if (mounted) {
                 _autoScrollEnabled = true;
-                _isInitializing = false; // 结束初始化状态
-                logDebug('延迟启用自动滚动功能', source: 'NoteListView');
+                _isInitializing = false;
+                logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
               }
             });
             // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
             _lastUserScrollTime = DateTime.now();
-            logDebug('首批数据加载完成，将延迟启用自动滚动', source: 'NoteListView');
+            logDebug('首次数据加载完成', source: 'NoteListView');
           }
 
           // 通知搜索控制器数据加载完成
@@ -291,7 +292,7 @@ class NoteListViewState extends State<NoteListView> {
     // 优化：只有在筛选条件真正改变时才更新订阅
     final bool shouldUpdate = _shouldUpdateSubscription(oldWidget);
 
-    if (shouldUpdate) {
+    if (shouldUpdate && _initialDataLoaded && !_isInitializing) {
       // 如果是首次加载期间（初始数据还未加载完成），避免重置滚动位置
       if (!_initialDataLoaded) {
         logDebug('跳过更新订阅：首次数据加载中', source: 'NoteListView');
@@ -300,6 +301,8 @@ class NoteListViewState extends State<NoteListView> {
 
       // 更新流订阅
       _updateStreamSubscription();
+    } else if (shouldUpdate) {
+      logDebug('跳过更新：初始化中或数据未加载', source: 'NoteListView');
     }
   }
 
@@ -330,37 +333,31 @@ class NoteListViewState extends State<NoteListView> {
   void _updateStreamSubscription() {
     if (!mounted) return; // 确保组件仍然挂载
 
-    logDebug('更新数据流订阅，当前加载状态: $_isLoading', source: 'NoteListView');
+    logDebug('更新数据流订阅', source: 'NoteListView');
 
-    // 保存当前滚动位置（仅在有数据且用户已滚动时）
     double? savedScrollOffset;
-    if (_scrollController.hasClients &&
-        _quotes.isNotEmpty &&
-        _initialDataLoaded) {
+    if (_scrollController.hasClients && _quotes.isNotEmpty) {
       savedScrollOffset = _scrollController.offset;
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     }
 
-    setState(() {
-      _isLoading = true; // 开始加载
-      _hasMore = true; // 假设有更多数据
-      _quotes.clear(); // 清空当前列表
-    });
+    // Set loading only if not first load
+    if (_initialDataLoaded) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    _hasMore = true;
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
-    // 修复：安全取消现有订阅
-    try {
-      _quotesSub?.cancel();
-    } catch (e) {
-      logDebug('取消订阅时出错: $e');
-    }
+    _quotesSub?.cancel();
 
-    // 创建新的订阅 - 优化：减少不必要的参数传递
     _quotesSub = db
         .watchQuotes(
       tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize, // 初始加载限制
+      limit: _pageSize,
       orderBy: widget.sortType == 'time'
           ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
           : widget.sortType == 'favorite'
@@ -376,7 +373,6 @@ class NoteListViewState extends State<NoteListView> {
         .listen(
       (list) {
         if (mounted) {
-          // 确保组件仍然挂载
           setState(() {
             _quotes.clear();
             _quotes.addAll(list);
@@ -384,18 +380,18 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
           });
 
-          // 恢复滚动位置（在数据加载完成后，且不在初始化状态）
-          if (savedScrollOffset != null &&
-              _scrollController.hasClients &&
-              !_isInitializing &&
-              _initialDataLoaded) {
+          // Restore scroll position smoothly
+          if (savedScrollOffset != null && _scrollController.hasClients && _initialDataLoaded) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              final offset = savedScrollOffset;
-              if (_scrollController.hasClients &&
-                  offset != null &&
-                  offset <= _scrollController.position.maxScrollExtent) {
-                _scrollController.jumpTo(offset);
-                logDebug('恢复滚动位置: $offset', source: 'NoteListView');
+              if (savedScrollOffset != null && 
+                  _scrollController.hasClients && 
+                  savedScrollOffset <= _scrollController.position.maxScrollExtent) {
+                _scrollController.animateTo(
+                  savedScrollOffset,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                );
+                logDebug('平滑恢复滚动位置: $savedScrollOffset', source: 'NoteListView');
               }
             });
           }
