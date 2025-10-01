@@ -29,6 +29,7 @@ import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
 import '../services/image_cache_service.dart';
 import '../services/media_reference_service.dart';
+import '../utils/feature_guide_helper.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -50,12 +51,37 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // --- 清除缓存相关状态 ---
   bool _isClearingCache = false;
+  
+  // 功能引导 keys
+  final GlobalKey _preferencesGuideKey = GlobalKey();
+  final GlobalKey _startupPageGuideKey = GlobalKey();
+  final GlobalKey _themeGuideKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     // 初始化位置控制器
     _initLocationController();
+    
+    // 显示功能引导
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showSettingsGuides();
+    });
+  }
+
+  /// 显示设置页功能引导
+  void _showSettingsGuides() {
+    // 依次显示多个引导
+    FeatureGuideHelper.showSequence(
+      context: context,
+      guides: [
+        ('settings_preferences', _preferencesGuideKey),
+        ('settings_startup', _startupPageGuideKey),
+        ('settings_theme', _themeGuideKey),
+      ],
+      delayBetween: const Duration(milliseconds: 600),
+      autoDismissDuration: const Duration(seconds: 4),
+    );
   }
 
   void _initLocationController() {
@@ -524,6 +550,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 // 二级页面入口：偏好设置
                 ListTile(
+                  key: _preferencesGuideKey, // 功能引导 key
                   title: const Text('偏好设置'),
                   subtitle: const Text('个性化选项与AI功能'),
                   leading: const Icon(Icons.tune),
@@ -542,6 +569,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildDefaultStartPageItem(context),
 
                 ListTile(
+                  key: _themeGuideKey, // 功能引导 key
                   title: const Text('主题设置'),
                   subtitle: const Text('自定义应用的外观主题'),
                   leading: const Icon(Icons.color_lens_outlined),
@@ -942,6 +970,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final currentValue = settingsService.appSettings.defaultStartPage;
 
     return ListTile(
+      key: _startupPageGuideKey, // 功能引导 key
       title: const Text('默认启动页面'),
       subtitle: Text(currentValue == 0 ? '首页（每日一言）' : '记录（笔记列表）'),
       leading: const Icon(Icons.home_outlined),

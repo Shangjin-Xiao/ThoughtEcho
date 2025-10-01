@@ -1361,6 +1361,7 @@ class _HomePageState extends State<HomePage>
                         _selectedDayPeriods = dayPeriods;
                       });
                     },
+                    filterButtonKey: _noteFilterGuideKey, // 功能引导 key
                   );
                 },
               );
