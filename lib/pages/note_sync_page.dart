@@ -578,126 +578,142 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
             // 设备列表
             Expanded(
-              child: _nearbyDevices.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.devices_other,
-                              size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            '未发现附近设备',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: _nearbyDevices.isEmpty
+                    ? const Center(
+                        key: ValueKey('sync-empty'),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.devices_other,
+                                size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              '未发现附近设备',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '确保目标设备也打开了ThoughtEcho\n并且在同一网络中',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _nearbyDevices.length,
-                      itemBuilder: (context, index) {
-                        final device = _nearbyDevices[index];
-                        final displayIp = _resolveDeviceIp(device);
-                        final ipLine = displayIp != null
-                            ? '$displayIp:${device.port}'
-                            : 'IP未知${device.port > 0 ? ' ::${device.port}' : ''}';
-                        final isSendingToThis = _sendingFingerprint == device.fingerprint;
-                        
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
-                          ),
-                          elevation: isSendingToThis ? 4 : 1,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: isSendingToThis
-                                ? BorderSide(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    width: 2,
-                                  )
-                                : BorderSide.none,
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
+                            SizedBox(height: 8),
+                            Text(
+                              '确保目标设备也打开了ThoughtEcho\n并且在同一网络中',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        key: ValueKey(
+                            'sync-device-list-${_nearbyDevices.length}-${_sendingFingerprint ?? 'idle'}'),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        itemCount: _nearbyDevices.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 4),
+                        itemBuilder: (context, index) {
+                          final theme = Theme.of(context);
+                          final device = _nearbyDevices[index];
+                          final displayIp = _resolveDeviceIp(device);
+                          final ipLine = displayIp != null
+                              ? '${device.https ? 'https' : 'http'}://$displayIp:${device.port}'
+                              : '网络信息未知${device.port > 0 ? ' · 端口 ${device.port}' : ''}';
+                          final isSendingToThis =
+                              _sendingFingerprint == device.fingerprint;
+
+                          return AnimatedContainer(
+                            key: ValueKey(device.fingerprint),
+                            duration: const Duration(milliseconds: 240),
+                            curve: Curves.easeOutCubic,
+                            margin: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 8,
+                              vertical: 4,
                             ),
-                            leading: CircleAvatar(
-                              radius: 24,
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primaryContainer,
-                              child: Icon(
-                                _getDeviceIcon(device.deviceType),
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                size: 24,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              color: isSendingToThis
+                                  ? theme.colorScheme.primaryContainer
+                                      .withValues(alpha: 0.35)
+                                  : theme.colorScheme.surface,
+                              border: Border.all(
+                                color: isSendingToThis
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.outlineVariant,
+                                width: isSendingToThis ? 1.6 : 1,
                               ),
+                              boxShadow: isSendingToThis
+                                  ? [
+                                      BoxShadow(
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.25),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ]
+                                  : const [],
                             ),
-                            title: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // 使用 Flexible 让设备名称自适应，避免溢出
-                                Flexible(
-                                  child: _buildDeviceName(device),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildShortFingerprint(device.fingerprint),
-                              ],
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                ipLine,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
+                              ),
+                              leading: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: theme
+                                    .colorScheme.primaryContainer
+                                    .withValues(alpha: 0.65),
+                                child: Icon(
+                                  _getDeviceIcon(device.deviceType),
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  size: 24,
                                 ),
                               ),
-                            ),
-                            trailing: isSendingToThis
-                                ? Container(
-                                    width: 40,
-                                    height: 40,
-                                    alignment: Alignment.center,
-                                    child: const SizedBox(
-                                      width: 24,
-                                      height: 24,
+                              title: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildDeviceName(device),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildShortFingerprint(device.fingerprint),
+                                ],
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: _buildDeviceDetails(device, ipLine),
+                              ),
+                              trailing: isSendingToThis
+                                  ? const SizedBox(
+                                      width: 32,
+                                      height: 32,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2.5,
                                       ),
-                                    ),
-                                  )
-                                : FilledButton.tonalIcon(
-                                    icon: const Icon(Icons.send, size: 18),
-                                    label: const Text('发送'),
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
+                                    )
+                                  : FilledButton.tonalIcon(
+                                      icon: const Icon(Icons.send, size: 18),
+                                      label: const Text('发送'),
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
                                       ),
+                                      onPressed: _isSending
+                                          ? null
+                                          : () => _sendNotesToDevice(device),
                                     ),
-                                    onPressed: _isSending
-                                        ? null
-                                        : () => _sendNotesToDevice(device),
-                                  ),
-                            onLongPress: () => _copyIpPort(ipLine),
-                          ),
-                        );
-                      },
-                    ),
+                              onTap: _isSending
+                                  ? null
+                                  : () => _sendNotesToDevice(device),
+                              onLongPress: () => _copyIpPort(ipLine),
+                            ),
+                          );
+                        },
+                      ),
+              ),
             ),
 
             // 底部说明
@@ -889,9 +905,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                               ),
@@ -925,7 +940,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                               .colorScheme
                                               .primaryContainer
                                               .withValues(alpha: 0.3),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         child: Row(
                                           children: [
@@ -961,7 +977,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                           setLocal(() {});
                                         },
                                         dense: true,
-                                        contentPadding: const EdgeInsets.only(left: 0),
+                                        contentPadding:
+                                            const EdgeInsets.only(left: 0),
                                         title: const Text('以后不再提示',
                                             style: TextStyle(fontSize: 13)),
                                         subtitle: const Text(
@@ -1165,22 +1182,106 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     return full.substring(full.length - 6).toUpperCase();
   }
 
-  /// 构建设备名称组件，优化长名称显示
+  /// 构建设备名称组件，优先展示设备型号并允许多行展示
   Widget _buildDeviceName(Device device) {
-    final name = (device.deviceModel?.isNotEmpty == true
-            ? device.deviceModel!
-            : device.alias)
-        .trim();
-    
-    // 优化：使用 Tooltip 和省略号，提供更好的交互体验
+    final theme = Theme.of(context);
+    final alias = device.alias.trim();
+    final model = device.deviceModel?.trim() ?? '';
+    final displayName = model.isNotEmpty ? model : alias;
+    final showAlias = model.isNotEmpty &&
+        alias.isNotEmpty &&
+        alias.toLowerCase() != displayName.toLowerCase();
+
+    final tooltipMessage = showAlias ? '$displayName\n别名：$alias' : displayName;
+
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          height: 1.15,
+        ) ??
+        const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+          height: 1.15,
+        );
+
+    final aliasStyle = theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          height: 1.2,
+        ) ??
+        TextStyle(
+          fontSize: 12,
+          color: theme.colorScheme.onSurfaceVariant,
+          height: 1.2,
+        );
+
     return Tooltip(
-      message: name,
-      waitDuration: const Duration(milliseconds: 500),
-      child: Text(
-        name,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-        maxLines: 1,
+      message: tooltipMessage,
+      waitDuration: const Duration(milliseconds: 350),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            displayName,
+            style: titleStyle,
+            softWrap: true,
+          ),
+          if (showAlias)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                alias,
+                style: aliasStyle,
+                softWrap: true,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceDetails(Device device, String ipLine) {
+    final version = device.version.trim();
+    final transmissionLabels =
+        device.transmissionMethods.map((m) => m.label).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildMetaRow(Icons.wifi_tethering, '网络 $ipLine'),
+        if (version.isNotEmpty)
+          _buildMetaRow(Icons.inventory_2, '客户端版本 $version'),
+        if (transmissionLabels.isNotEmpty)
+          _buildMetaRow(
+              Icons.sync_alt, '传输方式 ${transmissionLabels.join(' / ')}'),
+      ],
+    );
+  }
+
+  Widget _buildMetaRow(IconData icon, String text) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: theme.colorScheme.primary.withValues(alpha: 0.75),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
