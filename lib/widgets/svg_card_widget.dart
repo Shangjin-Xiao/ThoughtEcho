@@ -67,19 +67,38 @@ class SVGCardWidget extends StatelessWidget {
         return _buildErrorWidget('无效的SVG格式');
       }
 
+      // 使用与导出完全一致的渲染配置
       return SvgPicture.string(
         svgContent,
         fit: fit,
+        width: width,
+        height: height,
+        allowDrawingOutsideViewBox: true, // 与offscreen renderer保持一致
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
                   color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text(
+                          '正在加载SVG...',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
                 )
             : null,
         errorBuilder: (context, error, stackTrace) {
           AppLogger.e('SVG渲染错误: $error',
               error: error, stackTrace: stackTrace, source: 'SvgCardWidget');
-          AppLogger.d('SVG内容: $svgContent', source: 'SvgCardWidget');
+          if (kDebugMode) {
+            AppLogger.d('SVG内容预览: ${svgContent.substring(0, svgContent.length > 200 ? 200 : svgContent.length)}...', 
+                source: 'SvgCardWidget');
+          }
           // 使用回退SVG模板而不是错误提示
           return _buildFallbackSVG();
         },

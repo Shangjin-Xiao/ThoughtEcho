@@ -351,9 +351,15 @@ class AICardGenerationService {
       if (width > 4000 || height > 4000) {
         throw ArgumentError('图片尺寸过大，最大支持4000x4000');
       }
+      
+      // 强烈建议传入BuildContext以使用精准渲染
+      if (context == null) {
+        AppLogger.w('未提供BuildContext，渲染可能与预览不一致', source: 'AICardGeneration');
+      }
+      
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
-          (context is Element && !context.mounted) ? null : context;
+          (context != null && context is Element && !context.mounted) ? null : context;
       final imageBytes = await card.toImageBytes(
           width: width,
           height: height,
@@ -370,7 +376,9 @@ class AICardGenerationService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = customName != null
           ? '${customName}_$timestamp'
-          : '心迹_Card_$timestamp'; // 保存到相册（仅移动端）
+          : '心迹_Card_$timestamp'; 
+          
+      // 保存到相册（仅移动端）
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
         await gal.Gal.putImageBytes(imageBytes, name: fileName);
       } else {
@@ -378,7 +386,8 @@ class AICardGenerationService {
         throw Exception('桌面端暂不支持直接保存到相册，建议使用分享功能');
       }
 
-      AppLogger.i('卡片图片保存成功: $fileName', source: 'AICardGeneration');
+      AppLogger.i('卡片图片保存成功: $fileName, 大小: ${imageBytes.length} bytes', 
+          source: 'AICardGeneration');
 
       return fileName;
     } catch (e) {

@@ -90,40 +90,53 @@ class SvgOffscreenRenderer {
     final intrinsicHeight = intrinsic.height ?? height.toDouble();
 
     final boxFit = _mapFit(mode);
-    // Svg widget (与预览保持一致)
+    
+    // 创建SVG widget，使用与预览完全一致的配置
     final svgWidget = SvgPicture.string(
       svgContent,
       allowDrawingOutsideViewBox: true,
       fit: boxFit,
       width: intrinsicWidth,
       height: intrinsicHeight,
+      placeholderBuilder: (context) => Container(
+        color: background,
+        width: intrinsicWidth,
+        height: intrinsicHeight,
+      ),
     );
 
-    // 使用与预览类似的结构：背景 -> Center/Alignment -> Svg
+    // 使用与预览类似的结构：背景 -> 对齐 -> 适配 -> SVG
     Widget child = Container(
       color: background,
       width: width.toDouble(),
       height: height.toDouble(),
       alignment: Alignment.center,
-      child: FittedBox(
-        fit: boxFit,
-        clipBehavior: Clip.hardEdge,
-        child: SizedBox(
-          width: intrinsicWidth,
-          height: intrinsicHeight,
-          child: svgWidget,
+      child: ClipRect(
+        child: FittedBox(
+          fit: boxFit,
+          clipBehavior: Clip.hardEdge,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: intrinsicWidth,
+            height: intrinsicHeight,
+            child: svgWidget,
+          ),
         ),
       ),
     );
 
     child = RepaintBoundary(key: boundaryKey, child: child);
 
-    // 放到屏幕外（或用 Offstage）
+    // 放到屏幕外（使用Offstage确保不可见）
     final entry = OverlayEntry(
       opaque: false,
       builder: (_) => Offstage(
         offstage: true,
-        child: Center(child: child),
+        child: Positioned(
+          left: -10000, // 移到屏幕外，确保完全不可见
+          top: -10000,
+          child: child,
+        ),
       ),
     );
 
@@ -132,28 +145,50 @@ class SvgOffscreenRenderer {
     void cleanup() {
       try {
         entry.remove();
-      } catch (_) {}
+        entry.dispose();
+      } catch (e) {
+        AppLogger.w('清理OverlayEntry失败: $e', source: 'SvgOffscreenRenderer');
+      }
     }
 
-    // 等待两帧，确保解析 + 布局 + 绘制完成
-    await _pumpFrames(count: 2);
     try {
+      // 等待多帧，确保SVG完全解析和渲染
+      // SVG解析通常需要2-3帧：布局 -> 解析 -> 绘制
+      await _pumpFrames(count: 3);
+      
       final boundary = boundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
       if (boundary == null) {
-        throw StateError('未获取到 RenderRepaintBoundary');
+        throw StateError('未获取到 RenderRepaintBoundary，SVG可能未完成渲染');
       }
+      
       // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
       double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;
-      // 限制最大像素比（4.0 已足够大部分需求）
-      if (effectivePixelRatio > 4.0) effectivePixelRatio = 4.0;
+      // 限制最大像素比（4.0 已足够大部分需求，避免OOM）
+      if (effectivePixelRatio > 4.0) {
+        AppLogger.w('像素比过高(${effectivePixelRatio.toStringAsFixed(1)})，限制为4.0',
+            source: 'SvgOffscreenRenderer');
+        effectivePixelRatio = 4.0;
+      }
+      
       final image = await boundary.toImage(pixelRatio: effectivePixelRatio);
       final byteData = await image.toByteData(format: format);
       if (byteData == null) {
-        throw StateError('无法获取图片字节');
+        throw StateError('无法获取图片字节数据');
       }
+      
+      final bytes = byteData.buffer.asUint8List();
+      
+      // 清理资源
+      image.dispose();
       cleanup();
-      return byteData.buffer.asUint8List();
+      
+      AppLogger.d(
+        'SVG离屏渲染成功: ${width}x$height, 像素比: ${effectivePixelRatio.toStringAsFixed(1)}, 大小: ${bytes.length} bytes',
+        source: 'SvgOffscreenRenderer',
+      );
+      
+      return bytes;
     } catch (e, st) {
       cleanup();
       AppLogger.e('离屏渲染失败: $e',
