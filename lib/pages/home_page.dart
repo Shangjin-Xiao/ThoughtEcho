@@ -70,6 +70,13 @@ class _HomePageState extends State<HomePage>
   
   // 功能引导：记录页的 Keys
   final GlobalKey _noteFilterGuideKey = GlobalKey();
+  final GlobalKey _noteFavoriteGuideKey = GlobalKey();
+  final GlobalKey _noteFoldGuideKey = GlobalKey();
+  final GlobalKey<SettingsPageState> _settingsPageKey =
+    GlobalKey<SettingsPageState>();
+  bool _homeGuidePending = false;
+  bool _noteGuidePending = false;
+  bool _settingsGuidePending = false;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -328,12 +335,11 @@ class _HomePageState extends State<HomePage>
       // 先初始化位置和天气，然后再获取每日提示
       _initLocationAndWeatherThenFetchPrompt();
     });
-    
-    // 延迟显示首页引导，确保页面完全加载
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted && _currentIndex == 0) {
-        _showHomePageGuides();
-      }
+
+    // 根据初始页面尝试触发对应的功能引导
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      _triggerGuideForCurrentIndex();
     });
   }
 
@@ -404,9 +410,9 @@ class _HomePageState extends State<HomePage>
     // 当切换到笔记列表页时，重新加载标签
     if (_currentIndex == 1) {
       _refreshTags();
-      // 显示记录页功能引导
-      _showNotePageGuides();
     }
+
+    _triggerGuideForCurrentIndex();
   }
 
   // 刷新标签列表
@@ -485,9 +491,118 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  /// 根据当前选中的标签页触发对应的功能引导
+  void _triggerGuideForCurrentIndex() {
+    switch (_currentIndex) {
+      case 0:
+        _scheduleHomeGuideIfNeeded();
+        break;
+      case 1:
+        _scheduleNoteGuideIfNeeded();
+        break;
+      case 3:
+        _scheduleSettingsGuideIfNeeded();
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _scheduleHomeGuideIfNeeded() {
+    if (_homeGuidePending) return;
+    if (FeatureGuideHelper.hasShown(context, 'homepage_daily_quote')) {
+      return;
+    }
+
+    _homeGuidePending = true;
+    Future.delayed(const Duration(milliseconds: 600), () async {
+      if (!mounted) {
+        _homeGuidePending = false;
+        return;
+      }
+
+      if (_currentIndex != 0) {
+        _homeGuidePending = false;
+        return;
+      }
+
+      await _showHomePageGuides();
+      _homeGuidePending = false;
+    });
+  }
+
+  void _scheduleNoteGuideIfNeeded({
+    Duration delay = const Duration(milliseconds: 700),
+  }) {
+    if (_noteGuidePending) return;
+
+    final filterShown =
+        FeatureGuideHelper.hasShown(context, 'note_page_filter');
+    final favoriteShown =
+        FeatureGuideHelper.hasShown(context, 'note_page_favorite');
+    final expandShown =
+        FeatureGuideHelper.hasShown(context, 'note_page_expand');
+
+    if (filterShown && favoriteShown && expandShown) {
+      return;
+    }
+
+    _noteGuidePending = true;
+    Future.delayed(delay, () async {
+      if (!mounted) {
+        _noteGuidePending = false;
+        return;
+      }
+
+      if (_currentIndex != 1) {
+        _noteGuidePending = false;
+        return;
+      }
+
+      await _showNotePageGuides();
+      _noteGuidePending = false;
+    });
+  }
+
+  void _handleNoteGuideTargetsReady() {
+    if (!mounted) return;
+    if (_currentIndex != 1) {
+      return;
+    }
+
+    _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 350));
+  }
+
+  void _scheduleSettingsGuideIfNeeded() {
+    if (_settingsGuidePending) return;
+
+    final allShown = FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
+    if (allShown) {
+      return;
+    }
+
+    _settingsGuidePending = true;
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) {
+        _settingsGuidePending = false;
+        return;
+      }
+
+      if (_currentIndex != 3) {
+        _settingsGuidePending = false;
+        return;
+      }
+
+      _settingsPageKey.currentState?.showGuidesIfNeeded();
+      _settingsGuidePending = false;
+    });
+  }
+
   /// 显示首页功能引导
-  void _showHomePageGuides() {
-    FeatureGuideHelper.show(
+  Future<void> _showHomePageGuides() {
+    return FeatureGuideHelper.show(
       context: context,
       guideId: 'homepage_daily_quote',
       targetKey: _dailyQuoteGuideKey,
@@ -495,17 +610,39 @@ class _HomePageState extends State<HomePage>
   }
 
   /// 显示记录页功能引导
-  void _showNotePageGuides() {
-    // 延迟更长时间，确保页面切换和渲染完成
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted && _currentIndex == 1) {
-        FeatureGuideHelper.show(
-          context: context,
-          guideId: 'note_page_filter',
-          targetKey: _noteFilterGuideKey,
-        );
-      }
-    });
+  Future<void> _showNotePageGuides() async {
+    final noteListState = _noteListViewKey.currentState;
+    if (noteListState == null) {
+      return;
+    }
+
+    final guides = <(String, GlobalKey?)>[];
+
+    if (!FeatureGuideHelper.hasShown(context, 'note_page_filter') &&
+        noteListState.isFilterGuideReady) {
+      guides.add(('note_page_filter', _noteFilterGuideKey));
+    }
+
+    if (!FeatureGuideHelper.hasShown(context, 'note_page_favorite') &&
+        noteListState.canShowFavoriteGuide) {
+      guides.add(('note_page_favorite', _noteFavoriteGuideKey));
+    }
+
+    if (!FeatureGuideHelper.hasShown(context, 'note_page_expand') &&
+        noteListState.canShowExpandGuide) {
+      guides.add(('note_page_expand', _noteFoldGuideKey));
+    }
+
+    if (guides.isEmpty) {
+      return;
+    }
+
+    await FeatureGuideHelper.showSequence(
+      context: context,
+      guides: guides,
+      delayBetween: const Duration(milliseconds: 700),
+      autoDismissDuration: const Duration(seconds: 4),
+    );
   }
 
   // 初始化位置和天气服务 - 简化优化版本
@@ -1364,6 +1501,9 @@ class _HomePageState extends State<HomePage>
                       });
                     },
                     filterButtonKey: _noteFilterGuideKey, // 功能引导 key
+                    favoriteButtonGuideKey: _noteFavoriteGuideKey,
+                    foldToggleGuideKey: _noteFoldGuideKey,
+                    onGuideTargetsReady: _handleNoteGuideTargetsReady,
                   );
                 },
               );
@@ -1372,7 +1512,7 @@ class _HomePageState extends State<HomePage>
           // AI页
           const AIFeaturesPage(),
           // 设置页
-          const SettingsPage(),
+          SettingsPage(key: _settingsPageKey),
         ],
       ),
       floatingActionButton: Container(

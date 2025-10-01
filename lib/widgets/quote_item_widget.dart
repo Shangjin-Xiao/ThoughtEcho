@@ -24,6 +24,8 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
+  final GlobalKey? favoriteButtonGuideKey;
+  final GlobalKey? foldToggleGuideKey;
 
   const QuoteItemWidget({
     super.key,
@@ -38,6 +40,8 @@ class QuoteItemWidget extends StatefulWidget {
     this.onFavorite, // 新增：心形按钮点击回调
     this.tagBuilder,
     this.searchQuery,
+    this.favoriteButtonGuideKey,
+    this.foldToggleGuideKey,
   });
 
   @override
@@ -313,7 +317,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
             // 笔记内容 - 支持双击展开/折叠
             GestureDetector(
-              key: const ValueKey('quote_item.double_tap_region'),
+        key: widget.foldToggleGuideKey ??
+          const ValueKey('quote_item.double_tap_region'),
               behavior: HitTestBehavior.translucent,
               onDoubleTap: _needsExpansion(quote)
                   ? () => _handleDoubleTap(isExpanded, quote)
@@ -611,6 +616,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
+                        key: widget.favoriteButtonGuideKey,
                         onTap: widget.onFavorite,
                         borderRadius: BorderRadius.circular(20),
                         child: Padding(

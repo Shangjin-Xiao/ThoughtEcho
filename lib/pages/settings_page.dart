@@ -35,10 +35,10 @@ class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  SettingsPageState createState() => SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class SettingsPageState extends State<SettingsPage> {
   // --- 定义链接地址 ---
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final String _websiteUrl = 'https://echo.shangjinyun.cn/';
@@ -56,18 +56,32 @@ class _SettingsPageState extends State<SettingsPage> {
   final GlobalKey _preferencesGuideKey = GlobalKey();
   final GlobalKey _startupPageGuideKey = GlobalKey();
   final GlobalKey _themeGuideKey = GlobalKey();
+  bool _guidesTriggered = false;
 
   @override
   void initState() {
     super.initState();
     // 初始化位置控制器
     _initLocationController();
-    
-    // 延迟显示功能引导
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        _showSettingsGuides();
-      }
+  }
+
+  /// 当设置页真正可见时触发功能引导
+  void showGuidesIfNeeded() {
+    if (_guidesTriggered) return;
+
+    final allShown = FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
+
+    if (allShown) {
+      _guidesTriggered = true;
+      return;
+    }
+
+    _guidesTriggered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showSettingsGuides();
     });
   }
 
