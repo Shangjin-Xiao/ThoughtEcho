@@ -632,9 +632,7 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    final bool showFullScreenLoading = _isLoading && _quotes.isEmpty;
-
-    if (showFullScreenLoading) {
+    if (_isLoading && _quotes.isEmpty) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(
