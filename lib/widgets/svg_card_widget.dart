@@ -388,16 +388,20 @@ class GeneratedCardWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               if (onShare != null)
-                _ActionButton(
-                  icon: Icons.share,
-                  label: '分享',
-                  onPressed: onShare!,
+                Builder(
+                  builder: (ctx) => _ActionButton(
+                    icon: Icons.share,
+                    label: '分享',
+                    onPressed: onShare!,
+                  ),
                 ),
               if (onSave != null)
-                _ActionButton(
-                  icon: Icons.save_alt,
-                  label: '保存',
-                  onPressed: onSave!,
+                Builder(
+                  builder: (ctx) => _ActionButton(
+                    icon: Icons.save_alt,
+                    label: '保存',
+                    onPressed: onSave!,
+                  ),
                 ),
             ],
           ),
