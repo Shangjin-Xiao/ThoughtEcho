@@ -169,34 +169,50 @@ class SvgToImageService {
       );
     }
 
-    // 提取或设置viewBox
-    if (!normalized.contains('viewBox=')) {
-      // 如果没有viewBox，尝试从width/height提取或使用默认值
-      final widthMatch = RegExp(r'width="(\d+)"').firstMatch(normalized);
-      final heightMatch = RegExp(r'height="(\d+)"').firstMatch(normalized);
-      
-      final svgWidth = widthMatch != null ? widthMatch.group(1) : width.toString();
-      final svgHeight = heightMatch != null ? heightMatch.group(1) : height.toString();
-      
-      normalized = normalized.replaceFirst(
-        '<svg',
-        '<svg viewBox="0 0 $svgWidth $svgHeight"',
-      );
+    // 提取现有的viewBox或从width/height推断
+    String? existingViewBox;
+    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(normalized);
+    if (viewBoxMatch != null) {
+      existingViewBox = viewBoxMatch.group(1);
+      AppLogger.d('使用现有viewBox: $existingViewBox', source: 'SvgToImageService');
     }
-
-    // 确保有width和height属性（用于正确缩放）
-    if (!normalized.contains('width=')) {
-      normalized = normalized.replaceFirst(
-        '<svg',
-        '<svg width="$width"',
-      );
+    
+    // 提取SVG内在尺寸
+    final widthMatch = RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+    final heightMatch = RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+    
+    String svgWidth;
+    String svgHeight;
+    
+    if (existingViewBox != null) {
+      // 有viewBox，从viewBox提取
+      final parts = existingViewBox.split(RegExp(r'[\s,]+'));
+      if (parts.length == 4) {
+        svgWidth = parts[2];
+        svgHeight = parts[3];
+      } else {
+        svgWidth = widthMatch?.group(1) ?? '400';
+        svgHeight = heightMatch?.group(1) ?? '600';
+      }
+    } else {
+      // 没有viewBox，从width/height提取或使用默认
+      svgWidth = widthMatch?.group(1) ?? '400';
+      svgHeight = heightMatch?.group(1) ?? '600';
     }
-    if (!normalized.contains('height=')) {
-      normalized = normalized.replaceFirst(
-        '<svg',
-        '<svg height="$height"',
-      );
-    }
+    
+    AppLogger.d('SVG内在尺寸: ${svgWidth}x$svgHeight', source: 'SvgToImageService');
+    
+    // 移除现有的width、height、viewBox属性
+    normalized = normalized
+        .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '');
+    
+    // 重新设置标准化的属性：保持SVG内在尺寸作为viewBox，物理尺寸由外层容器控制
+    normalized = normalized.replaceFirst(
+      '<svg',
+      '<svg viewBox="0 0 $svgWidth $svgHeight" width="$svgWidth" height="$svgHeight" preserveAspectRatio="xMidYMid meet"',
+    );
 
     return normalized;
   }
@@ -216,8 +232,9 @@ class SvgToImageService {
     // 策略：优先使用真实Flutter渲染，确保与预览一致
     if (buildContext != null) {
       try {
-        AppLogger.d('使用Flutter真实渲染（与预览一致）', source: 'SvgToImageService');
-        return await SvgOffscreenRenderer.instance.renderSvgString(
+        AppLogger.d('使用Flutter真实渲染（与预览一致）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode', 
+            source: 'SvgToImageService');
+        final result = await SvgOffscreenRenderer.instance.renderSvgString(
           svgContent,
           context: buildContext,
           width: width,
@@ -227,12 +244,16 @@ class SvgToImageService {
           mode: renderMode,
           format: format,
         );
+        AppLogger.i('Flutter真实渲染成功，图片大小: ${result.length} bytes', 
+            source: 'SvgToImageService');
+        return result;
       } catch (e) {
         AppLogger.w('Flutter真实渲染失败，尝试备用方案: $e', 
             error: e, source: 'SvgToImageService');
       }
     } else {
-      AppLogger.w('缺少BuildContext，无法使用真实渲染', source: 'SvgToImageService');
+      AppLogger.w('缺少BuildContext，无法使用真实渲染，将使用备用方案', 
+          source: 'SvgToImageService');
     }
 
     // 备用方案：使用flutter_svg直接渲染
