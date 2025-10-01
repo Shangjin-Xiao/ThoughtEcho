@@ -42,6 +42,9 @@ Quote _buildQuote({
   );
 }
 
+const String _longContentChunk =
+    '这是一个非常非常长的笔记内容，用于验证折叠逻辑是否生效，包含了足够的文字来超过默认的折叠高度。';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -50,10 +53,11 @@ void main() {
   group('QuoteItemWidget', () {
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
       final quote = _buildQuote(
-        content:
-            '第一段内容很长很长很长很长很长\n第二段内容也很长很长很长很长很长\n第三段继续很长很长很长很长很长\n第四段也不短\n第五段应该被截断',
+        content: List.filled(6, _longContentChunk).join('\n'),
         editSource: 'inline',
       );
+
+      expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
 
       await tester.pumpWidget(
         ChangeNotifierProvider<SettingsService>.value(
@@ -75,7 +79,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('第一段内容'), findsOneWidget);
+      expect(find.textContaining('非常长的笔记内容'), findsOneWidget);
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
@@ -112,8 +116,7 @@ void main() {
 
     testWidgets('双击触发展开回调', (tester) async {
       final quote = _buildQuote(
-        content:
-            '第一段内容很长很长很长很长很长\n第二段内容也很长很长很长很长很长\n第三段继续很长很长很长很长很长\n第四段也不短\n第五段应该被截断',
+        content: List.filled(6, _longContentChunk).join('\n'),
         editSource: 'inline',
       );
 
@@ -141,14 +144,61 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-  final contentGesture = find.byType(GestureDetector).first;
+      expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
 
-  await tester.tap(contentGesture);
-      await tester.pump(const Duration(milliseconds: 50));
-  await tester.tap(contentGesture);
-      await tester.pumpAndSettle();
+      final contentGesture =
+          find.byKey(const ValueKey('quote_item.double_tap_region'));
+
+      await tester.tap(contentGesture);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(contentGesture);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       expect(toggled, isTrue);
+    });
+
+    testWidgets('双击时显示高亮反馈', (tester) async {
+      final quote = _buildQuote(
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+      );
+
+      expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tags: const [],
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final gestureDetector =
+          find.byKey(const ValueKey('quote_item.double_tap_region'));
+
+      await tester.tap(gestureDetector);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(gestureDetector);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      expect(
+        find.byKey(const ValueKey('quote_item.double_tap_overlay')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('富文本默认显示 deltaContent', (tester) async {

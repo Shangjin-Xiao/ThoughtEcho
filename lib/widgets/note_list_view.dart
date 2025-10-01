@@ -70,6 +70,7 @@ class NoteListViewState extends State<NoteListView> {
   final ScrollController _scrollController = ScrollController(); // 添加滚动控制器
   final Map<String, bool> _expandedItems = {};
   final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
+  final Map<String, ValueNotifier<bool>> _expansionNotifiers = {};
   // 移除AnimatedList相关的Key，改用ListView.builder
 
   // 分页和懒加载状态
@@ -218,9 +219,12 @@ class NoteListViewState extends State<NoteListView> {
         if (mounted) {
           // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
           double? savedScrollOffset;
-          if (isFirstLoad && _scrollController.hasClients && _quotes.isNotEmpty) {
+          if (isFirstLoad &&
+              _scrollController.hasClients &&
+              _quotes.isNotEmpty) {
             savedScrollOffset = _scrollController.offset;
-            logDebug('首次加载期间保存滚动位置: $savedScrollOffset', source: 'NoteListView');
+            logDebug('首次加载期间保存滚动位置: $savedScrollOffset',
+                source: 'NoteListView');
           }
 
           setState(() {
@@ -229,9 +233,11 @@ class NoteListViewState extends State<NoteListView> {
             }
             _quotes
               ..clear()
-              ..addAll(list); // Simplified: always replace for consistency, but flag prevents extra sets
+              ..addAll(
+                  list); // Simplified: always replace for consistency, but flag prevents extra sets
             _hasMore = list.length >= _pageSize;
             _isLoading = false;
+            _pruneExpansionControllers();
           });
 
           // 修复：在首次加载期间恢复滚动位置
@@ -240,8 +246,8 @@ class NoteListViewState extends State<NoteListView> {
               !_isUserScrolling) {
             final offset = savedScrollOffset; // 捕获非空值
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && 
-                  _scrollController.hasClients && 
+              if (mounted &&
+                  _scrollController.hasClients &&
                   offset <= _scrollController.position.maxScrollExtent) {
                 _scrollController.jumpTo(offset);
                 logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
@@ -419,20 +425,25 @@ class NoteListViewState extends State<NoteListView> {
             _quotes.addAll(list);
             _hasMore = list.length >= _pageSize;
             _isLoading = false;
+            _pruneExpansionControllers();
           });
 
           // Restore scroll position smoothly
-          if (savedScrollOffset != null && _scrollController.hasClients && _initialDataLoaded) {
+          if (savedScrollOffset != null &&
+              _scrollController.hasClients &&
+              _initialDataLoaded) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (savedScrollOffset != null && 
-                  _scrollController.hasClients && 
-                  savedScrollOffset <= _scrollController.position.maxScrollExtent) {
+              if (savedScrollOffset != null &&
+                  _scrollController.hasClients &&
+                  savedScrollOffset <=
+                      _scrollController.position.maxScrollExtent) {
                 _scrollController.animateTo(
                   savedScrollOffset,
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOut,
                 );
-                logDebug('平滑恢复滚动位置: $savedScrollOffset', source: 'NoteListView');
+                logDebug('平滑恢复滚动位置: $savedScrollOffset',
+                    source: 'NoteListView');
               }
             });
           }
@@ -541,6 +552,11 @@ class NoteListViewState extends State<NoteListView> {
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _userScrollingTimer?.cancel(); // 清理用户滑动定时器
 
+    for (final notifier in _expansionNotifiers.values) {
+      notifier.dispose();
+    }
+    _expansionNotifiers.clear();
+
     // 清理初始化状态
     _isInitializing = false;
     super.dispose();
@@ -550,6 +566,28 @@ class NoteListViewState extends State<NoteListView> {
     _quotes.clear();
     _hasMore = true;
     _loadMore();
+  }
+
+  ValueNotifier<bool> _obtainExpansionNotifier(String quoteId) {
+    return _expansionNotifiers.putIfAbsent(
+      quoteId,
+      () => ValueNotifier<bool>(_expandedItems[quoteId] ?? false),
+    );
+  }
+
+  void _pruneExpansionControllers() {
+    final activeIds =
+        _quotes.map((quote) => quote.id).whereType<String>().toSet();
+
+    final removableIds = _expansionNotifiers.keys
+        .where((id) => !activeIds.contains(id))
+        .toList();
+
+    for (final id in removableIds) {
+      _expansionNotifiers.remove(id)?.dispose();
+      _expandedItems.remove(id);
+      _itemKeys.remove(id);
+    }
   }
 
   // 添加滚动状态标志，防止在用户滑动时触发自动滚动
@@ -613,8 +651,7 @@ class NoteListViewState extends State<NoteListView> {
       final currentOffset = position.pixels;
 
       if (viewportExtent > 0) {
-        final topVisible =
-            targetOffset >= currentOffset &&
+        final topVisible = targetOffset >= currentOffset &&
             targetOffset < currentOffset + viewportExtent;
         if (topVisible) {
           logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
@@ -625,9 +662,8 @@ class NoteListViewState extends State<NoteListView> {
       final minExtent = position.minScrollExtent;
       final maxExtent = position.maxScrollExtent;
 
-      double desiredOffset = (targetOffset - 12.0)
-          .clamp(minExtent, maxExtent)
-          .toDouble();
+      double desiredOffset =
+          (targetOffset - 12.0).clamp(minExtent, maxExtent).toDouble();
 
       if ((currentOffset - desiredOffset).abs() <= 4) {
         logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
@@ -642,19 +678,17 @@ class NoteListViewState extends State<NoteListView> {
 
       _scrollController
           .animateTo(
-            desiredOffset,
-            duration: QuoteItemWidget.expandCollapseDuration,
-            curve: Curves.easeOutCubic,
-          )
+        desiredOffset,
+        duration: QuoteItemWidget.expandCollapseDuration,
+        curve: Curves.easeOutCubic,
+      )
           .then((_) {
-            logDebug('滚动完成', source: 'NoteListView');
-          })
-          .catchError((e) {
-            logDebug('滚动失败: $e', source: 'NoteListView');
-          })
-          .whenComplete(() {
-            _isAutoScrolling = false;
-          });
+        logDebug('滚动完成', source: 'NoteListView');
+      }).catchError((e) {
+        logDebug('滚动失败: $e', source: 'NoteListView');
+      }).whenComplete(() {
+        _isAutoScrolling = false;
+      });
     } catch (e, st) {
       logDebug('滚动失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;
@@ -781,90 +815,98 @@ class NoteListViewState extends State<NoteListView> {
         itemBuilder: (context, index) {
           if (index < _quotes.length) {
             final quote = _quotes[index];
-            // 获取展开状态，如果不存在则默认为折叠状态
-            final bool isExpanded = _expandedItems[quote.id] ?? false;
-
-            // 为每个笔记生成一个唯一的key用于滚动定位
-            final String itemKey = 'quote_${quote.id}_$index';
-            if (!_itemKeys.containsKey(quote.id)) {
-              _itemKeys[quote.id!] = GlobalKey(debugLabel: itemKey);
+            if (quote.id == null) {
+              logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
+              return const SizedBox.shrink();
             }
 
-            // 直接返回QuoteItemWidget，移除动画
-            return Container(
-              key: _itemKeys[quote.id],
-              child: QuoteItemWidget(
-                quote: quote,
-                tags: widget.tags,
-                isExpanded: isExpanded,
-                onToggleExpanded: (expanded) {
-                  setState(() {
-                    _expandedItems[quote.id!] = expanded;
-                  });
+            final quoteId = quote.id!;
+            final String itemKey = 'quote_${quoteId}_$index';
+            _itemKeys.putIfAbsent(
+                quoteId, () => GlobalKey(debugLabel: itemKey));
 
-                  final bool requiresAlignment =
-                      QuoteItemWidget.needsExpansionFor(quote);
+            final expansionNotifier = _obtainExpansionNotifier(quoteId);
+            _expandedItems.putIfAbsent(quoteId, () => expansionNotifier.value);
 
-                  if (!expanded && requiresAlignment) {
-                    final waitDuration = QuoteItemWidget.expandCollapseDuration +
-                        const Duration(milliseconds: 80);
-                    Future.delayed(waitDuration, () {
-                      if (!mounted) return;
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
+            return RepaintBoundary(
+              key: _itemKeys[quoteId],
+              child: ValueListenableBuilder<bool>(
+                valueListenable: expansionNotifier,
+                builder: (context, isExpanded, child) => QuoteItemWidget(
+                  quote: quote,
+                  tags: widget.tags,
+                  isExpanded: isExpanded,
+                  onToggleExpanded: (expanded) {
+                    if (expansionNotifier.value != expanded) {
+                      expansionNotifier.value = expanded;
+                    }
+                    _expandedItems[quoteId] = expanded;
+
+                    final bool requiresAlignment =
+                        QuoteItemWidget.needsExpansionFor(quote);
+
+                    if (!expanded && requiresAlignment) {
+                      final waitDuration =
+                          QuoteItemWidget.expandCollapseDuration +
+                              const Duration(milliseconds: 80);
+                      Future.delayed(waitDuration, () {
                         if (!mounted) return;
-                        _scrollToItem(quote.id!, index);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _scrollToItem(quoteId, index);
+                        });
                       });
-                    });
-                  }
-                },
-                onEdit: () => widget.onEdit(quote),
-                onDelete: () => widget.onDelete(quote),
-                onAskAI: () => widget.onAskAI(quote),
-                onGenerateCard: widget.onGenerateCard != null
-                    ? () => widget.onGenerateCard!(quote)
-                    : null,
-                onFavorite: widget.onFavorite != null
-                    ? () => widget.onFavorite!(quote)
-                    : null, // 新增：心形按钮回调
-                tagBuilder: (tag) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.applyOpacity(
-                        0.1,
-                      ), // MODIFIED
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (IconUtils.isEmoji(tag.iconName)) ...[
-                          Text(
-                            IconUtils.getDisplayIcon(tag.iconName),
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(width: 4),
-                        ] else ...[
-                          Icon(
-                            IconUtils.getIconData(tag.iconName),
-                            size: 14,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                        ],
-                        Text(
-                          tag.name,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                          ),
+                    }
+                  },
+                  onEdit: () => widget.onEdit(quote),
+                  onDelete: () => widget.onDelete(quote),
+                  onAskAI: () => widget.onAskAI(quote),
+                  onGenerateCard: widget.onGenerateCard != null
+                      ? () => widget.onGenerateCard!(quote)
+                      : null,
+                  onFavorite: widget.onFavorite != null
+                      ? () => widget.onFavorite!(quote)
+                      : null,
+                  tagBuilder: (tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.applyOpacity(
+                          0.1,
                         ),
-                      ],
-                    ),
-                  );
-                },
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (IconUtils.isEmoji(tag.iconName)) ...[
+                            Text(
+                              IconUtils.getDisplayIcon(tag.iconName),
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                          ] else ...[
+                            Icon(
+                              IconUtils.getIconData(tag.iconName),
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            tag.name,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             );
           }
@@ -1170,8 +1212,8 @@ class NoteListViewState extends State<NoteListView> {
           theme: theme,
           label: tag.name,
           icon: IconUtils.isEmoji(tag.iconName)
-            ? IconUtils.getDisplayIcon(tag.iconName)
-            : IconUtils.getIconData(tag.iconName),
+              ? IconUtils.getDisplayIcon(tag.iconName)
+              : IconUtils.getIconData(tag.iconName),
           isIconEmoji: IconUtils.isEmoji(tag.iconName),
           color: theme.colorScheme.primary,
           onDeleted: () {
@@ -1201,7 +1243,8 @@ class NoteListViewState extends State<NoteListView> {
           icon: icon,
           color: theme.colorScheme.secondary,
           onDeleted: () {
-            final keysToRemove = WeatherService.getWeatherKeysByFilterCategory(cat);
+            final keysToRemove =
+                WeatherService.getWeatherKeysByFilterCategory(cat);
             final newWeathers = List<String>.from(widget.selectedWeathers)
               ..removeWhere((w) => keysToRemove.contains(w));
             widget.onFilterChanged(
@@ -1217,9 +1260,8 @@ class NoteListViewState extends State<NoteListView> {
       final Set<String> knownKeys = categorySet
           .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
           .toSet();
-      final List<String> others = widget.selectedWeathers
-          .where((k) => !knownKeys.contains(k))
-          .toList();
+      final List<String> others =
+          widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
       for (final k in others) {
         final label = WeatherService.weatherKeyToLabel[k] ?? k;
         allChips.add(
@@ -1228,7 +1270,8 @@ class NoteListViewState extends State<NoteListView> {
             label: label,
             color: theme.colorScheme.secondary,
             onDeleted: () {
-              final newWeathers = List<String>.from(widget.selectedWeathers)..remove(k);
+              final newWeathers = List<String>.from(widget.selectedWeathers)
+                ..remove(k);
               widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
               _updateStreamSubscription();
             },
@@ -1248,7 +1291,8 @@ class NoteListViewState extends State<NoteListView> {
           icon: periodIcon,
           color: theme.colorScheme.tertiary,
           onDeleted: () {
-            final newDayPeriods = List<String>.from(widget.selectedDayPeriods)..remove(periodKey);
+            final newDayPeriods = List<String>.from(widget.selectedDayPeriods)
+              ..remove(periodKey);
             widget.onFilterChanged(
               widget.selectedWeathers,
               newDayPeriods,
@@ -1364,7 +1408,6 @@ class NoteListViewState extends State<NoteListView> {
       ),
     );
   }
-
 
   /// 构建现代化的筛选条件芯片 (支持图标显示)
   Widget _buildModernFilterChip({
