@@ -41,13 +41,49 @@ class LogEntry {
 
   factory LogEntry.fromMap(Map<String, dynamic> map) {
     return LogEntry(
-      timestamp: map['timestamp'] as String,
+      timestamp: _parseTimestamp(map['timestamp']),
       level: map['level'] as String,
       message: map['message'] as String,
       source: map['source'] as String?,
       error: map['error'] as String?,
       stackTrace: map['stack_trace'] as String?,
     );
+  }
+
+  static String _parseTimestamp(dynamic raw) {
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return DateTime.fromMillisecondsSinceEpoch(0).toIso8601String();
+      }
+
+      if (DateTime.tryParse(trimmed) != null) {
+        return trimmed;
+      }
+
+      final isoCandidate = trimmed.replaceFirst(' ', 'T');
+      if (DateTime.tryParse(isoCandidate) != null) {
+        return isoCandidate;
+      }
+
+      final normalized = trimmed.replaceAll('/', '-');
+      if (DateTime.tryParse(normalized) != null) {
+        return normalized;
+      }
+
+      final millis = int.tryParse(trimmed);
+      if (millis != null) {
+        return DateTime.fromMillisecondsSinceEpoch(millis).toIso8601String();
+      }
+    } else if (raw is int) {
+      return DateTime.fromMillisecondsSinceEpoch(raw).toIso8601String();
+    } else if (raw is double) {
+      return DateTime.fromMillisecondsSinceEpoch(raw.toInt()).toIso8601String();
+    } else if (raw is DateTime) {
+      return raw.toIso8601String();
+    }
+
+    return DateTime.now().toIso8601String();
   }
 
   String toJson() => json.encode(toMap());
@@ -447,7 +483,9 @@ class NativeLogStorage implements LogStorage {
       final db = await _getDatabase();
 
       // 记录批量插入的统计信息
-      logDebug('开始批量插入 ${logs.length} 条日志记录');
+      if (kDebugMode) {
+        logDebug('开始批量插入 ${logs.length} 条日志记录');
+      }
 
       final batch = db.batch();
 
@@ -460,7 +498,9 @@ class NativeLogStorage implements LogStorage {
       }
 
       final results = await batch.commit(noResult: false);
-      logDebug('批量插入完成，成功插入 ${results.length} 条日志记录');
+      if (kDebugMode) {
+        logDebug('批量插入完成，成功插入 ${results.length} 条日志记录');
+      }
     } catch (e, stackTrace) {
       logDebug('批量插入日志失败: $e');
       logDebug('堆栈跟踪: $stackTrace');

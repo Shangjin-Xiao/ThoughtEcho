@@ -681,8 +681,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 ],
                               ),
                               subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: _buildDeviceDetails(device, ipLine),
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  ipLine,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
                               ),
                               trailing: isSendingToThis
                                   ? const SizedBox(
@@ -1235,52 +1242,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 softWrap: true,
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeviceDetails(Device device, String ipLine) {
-    final version = device.version.trim();
-    final transmissionLabels =
-        device.transmissionMethods.map((m) => m.label).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildMetaRow(Icons.wifi_tethering, '网络 $ipLine'),
-        if (version.isNotEmpty)
-          _buildMetaRow(Icons.inventory_2, '客户端版本 $version'),
-        if (transmissionLabels.isNotEmpty)
-          _buildMetaRow(
-              Icons.sync_alt, '传输方式 ${transmissionLabels.join(' / ')}'),
-      ],
-    );
-  }
-
-  Widget _buildMetaRow(IconData icon, String text) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: theme.colorScheme.primary.withValues(alpha: 0.75),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ),
         ],
       ),
     );

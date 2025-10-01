@@ -39,7 +39,7 @@ class LogEntry {
   /// 从数据库行创建日志条目
   factory LogEntry.fromMap(Map<String, dynamic> map) {
     return LogEntry(
-      timestamp: DateTime.parse(map['timestamp'] as String),
+      timestamp: _parseTimestamp(map['timestamp']),
       level: LogLevel.values.firstWhere(
         (l) => l.name == (map['level'] as String),
         orElse: () => LogLevel.info,
@@ -49,6 +49,51 @@ class LogEntry {
       error: map['error'] as String?,
       stackTrace: map['stack_trace'] as String?,
     );
+  }
+
+  static DateTime _parseTimestamp(dynamic raw) {
+    if (raw is DateTime) {
+      return raw;
+    }
+
+    if (raw is int) {
+      return DateTime.fromMillisecondsSinceEpoch(raw);
+    }
+
+    if (raw is double) {
+      return DateTime.fromMillisecondsSinceEpoch(raw.toInt());
+    }
+
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return DateTime.fromMillisecondsSinceEpoch(0);
+      }
+
+      DateTime? parsed = DateTime.tryParse(trimmed);
+      if (parsed != null) {
+        return parsed;
+      }
+
+      final isoCandidate = trimmed.replaceFirst(' ', 'T');
+      parsed = DateTime.tryParse(isoCandidate);
+      if (parsed != null) {
+        return parsed;
+      }
+
+      final normalized = trimmed.replaceAll('/', '-');
+      parsed = DateTime.tryParse(normalized);
+      if (parsed != null) {
+        return parsed;
+      }
+
+      final millis = int.tryParse(trimmed);
+      if (millis != null) {
+        return DateTime.fromMillisecondsSinceEpoch(millis);
+      }
+    }
+
+    return DateTime.now();
   }
 
   /// 转换为数据库可用的映射

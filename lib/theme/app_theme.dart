@@ -117,48 +117,20 @@ class AppTheme with ChangeNotifier {
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
       logDebug('使用自定义颜色(深色模式): ${_customColor!.toARGB32().toRadixString(16)}');
-      return _createSafeDarkColorScheme(_customColor!);
+      // 使用与浅色模式一致的方法，确保自定义颜色正确应用
+      return ColorScheme.fromSeed(
+        seedColor: _customColor!,
+        brightness: Brightness.dark,
+      );
     }
 
     if (_useDynamicColor && _darkDynamicColorScheme != null) {
+      logDebug('使用动态颜色(深色模式)');
       return _darkDynamicColorScheme!;
     }
 
+    logDebug('使用默认蓝色(深色模式)');
     return _buildModernDarkScheme();
-  }
-
-  // 创建安全的深色颜色方案，避免紫色调
-  ColorScheme _createSafeDarkColorScheme(Color seedColor) {
-    return ColorScheme.dark(
-      primary: seedColor,
-      onPrimary: _getContrastColor(seedColor),
-      secondary: seedColor.withValues(alpha: 0.8),
-      onSecondary: _getContrastColor(seedColor.withValues(alpha: 0.8)),
-      tertiary: seedColor.withValues(alpha: 0.6),
-      onTertiary: _getContrastColor(seedColor.withValues(alpha: 0.6)),
-      surface: const Color(0xFF121212),
-      onSurface: Colors.white,
-      surfaceContainerHighest: seedColor.withValues(alpha: 0.1), // 淡化的自定义颜色
-      surfaceContainerHigh: seedColor.withValues(alpha: 0.08),
-      surfaceContainer: const Color(0xFF121212),
-      surfaceContainerLow: const Color(0xFF121212),
-      surfaceContainerLowest: seedColor.withValues(alpha: 0.05),
-      surfaceDim: const Color(0xFF121212),
-      surfaceBright: const Color(0xFF1E1E1E),
-      onSurfaceVariant: Colors.white70,
-      outline: const Color(0xFF404040),
-      outlineVariant: const Color(0xFF303030),
-      error: Colors.red[700]!,
-      onError: Colors.white,
-      scrim: Colors.black.withValues(alpha: 0.7),
-    );
-  }
-
-  // 获取对比色 - 确保文字在背景上的可读性
-  Color _getContrastColor(Color backgroundColor) {
-    return backgroundColor.computeLuminance() > 0.5
-        ? Colors.black
-        : Colors.white;
   }
 
   // 默认的现代深色方案
@@ -451,13 +423,14 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
-    return FlexThemeData.dark(
+    final baseTheme = FlexThemeData.dark(
       colorScheme: darkColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 10,
+      blendLevel: 0, // 设置为0，避免混合修改自定义颜色
       subThemesData: const FlexSubThemesData(
-        blendOnLevel: 15,
+        blendOnLevel: 0, // 设置为0，避免修改自定义颜色
+        blendOnColors: false, // 禁用颜色混合
         useMaterial3Typography: true,
         useM2StyleDividerInM3: false,
         alignedDropdown: true,
@@ -479,6 +452,11 @@ class AppTheme with ChangeNotifier {
       ),
       tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
+    );
+
+    // 返回主题，确保使用原始的colorScheme
+    return baseTheme.copyWith(
+      colorScheme: darkColorScheme, // 重新应用原始colorScheme，确保自定义颜色不被修改
     );
   }
 }
