@@ -81,7 +81,7 @@ class LogEntry {
   /// 从数据库行创建日志条目
   factory LogEntry.fromMap(Map<String, dynamic> map) {
     return LogEntry(
-      timestamp: DateTime.parse(map['timestamp'] as String),
+      timestamp: _parseTimestamp(map['timestamp']),
       level: UnifiedLogLevel.values.firstWhere(
         (l) => l.name == (map['level'] as String),
         orElse: () => UnifiedLogLevel.info,
@@ -91,6 +91,52 @@ class LogEntry {
       error: map['error'] as String?,
       stackTrace: map['stack_trace'] as String?,
     );
+  }
+
+  static DateTime _parseTimestamp(dynamic raw) {
+    if (raw is DateTime) {
+      return raw;
+    }
+
+    if (raw is int) {
+      return DateTime.fromMillisecondsSinceEpoch(raw);
+    }
+
+    if (raw is double) {
+      return DateTime.fromMillisecondsSinceEpoch(raw.toInt());
+    }
+
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return DateTime.fromMillisecondsSinceEpoch(0);
+      }
+
+      DateTime? parsed = DateTime.tryParse(trimmed);
+      if (parsed != null) {
+        return parsed;
+      }
+
+      // 常见的非标准格式处理
+      final isoCandidate = trimmed.replaceFirst(' ', 'T');
+      parsed = DateTime.tryParse(isoCandidate);
+      if (parsed != null) {
+        return parsed;
+      }
+
+      final fallbackCandidate = trimmed.replaceAll('/', '-');
+      parsed = DateTime.tryParse(fallbackCandidate);
+      if (parsed != null) {
+        return parsed;
+      }
+
+      final millis = int.tryParse(trimmed);
+      if (millis != null) {
+        return DateTime.fromMillisecondsSinceEpoch(millis);
+      }
+    }
+
+    return DateTime.now();
   }
 
   /// 从旧的 LogEntry 创建
@@ -420,7 +466,19 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       final results = await _logDb.getRecentLogs(100);
 
       if (results.isNotEmpty) {
-        final loadedLogs = results.map((row) => LogEntry.fromMap(row)).toList();
+        final loadedLogs = <LogEntry>[];
+        int skipped = 0;
+
+        for (final row in results) {
+          try {
+            loadedLogs.add(LogEntry.fromMap(row));
+          } catch (e) {
+            skipped++;
+            if (kDebugMode) {
+              _logger.fine('跳过无法解析的日志记录: $e');
+            }
+          }
+        }
 
         loadedLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _memoryLogs = loadedLogs;
@@ -434,7 +492,13 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             _notifyScheduled = false;
           });
         }
-        _logger.info('从数据库加载了 ${_memoryLogs.length} 条日志');
+
+        if (kDebugMode) {
+          _logger.fine(
+            '从数据库加载了 ${_memoryLogs.length} 条日志'
+            '${skipped > 0 ? ", 跳过 $skipped 条损坏记录" : ""}',
+          );
+        }
       }
     } catch (e) {
       _logger.warning('从数据库加载日志失败: $e');
@@ -512,7 +576,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       await _logDb.ready;
 
       // 记录批量保存的统计信息
-      _logger.info('正在批量保存 ${logsToSave.length} 条日志到数据库');
+      if (kDebugMode) {
+        _logger.fine('正在批量保存 ${logsToSave.length} 条日志到数据库');
+      }
 
       await _logDb.insertLogs(logsToSave.map((log) => log.toMap()).toList());
 
@@ -523,7 +589,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         _logger.warning('清理旧日志失败，但新日志已保存: $cleanupError');
       }
 
-      _logger.info('成功保存 ${logsToSave.length} 条日志到数据库');
+      if (kDebugMode) {
+        _logger.fine('成功保存 ${logsToSave.length} 条日志到数据库');
+      }
     } catch (e, stackTrace) {
       _logger.severe('保存日志到数据库失败: $e', e, stackTrace);
 
