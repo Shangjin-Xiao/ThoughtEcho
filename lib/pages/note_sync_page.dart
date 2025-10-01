@@ -603,70 +603,92 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       ),
                     )
                   : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount: _nearbyDevices.length,
                       itemBuilder: (context, index) {
                         final device = _nearbyDevices[index];
                         final displayIp = _resolveDeviceIp(device);
                         final ipLine = displayIp != null
                             ? '$displayIp:${device.port}'
-                            : 'IP未知${device.port > 0 ? ' : :${device.port}' : ''}';
+                            : 'IP未知${device.port > 0 ? ' ::${device.port}' : ''}';
+                        final isSendingToThis = _sendingFingerprint == device.fingerprint;
+                        
                         return Card(
                           margin: const EdgeInsets.symmetric(
                             horizontal: 16,
-                            vertical: 4,
+                            vertical: 6,
+                          ),
+                          elevation: isSendingToThis ? 4 : 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: isSendingToThis
+                                ? BorderSide(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    width: 2,
+                                  )
+                                : BorderSide.none,
                           ),
                           child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             leading: CircleAvatar(
+                              radius: 24,
                               backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context).colorScheme.primaryContainer,
                               child: Icon(
                                 _getDeviceIcon(device.deviceType),
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                size: 24,
                               ),
                             ),
-                            title: LayoutBuilder(
-                              builder: (ctx, constraints) {
-                                final name =
-                                    (device.deviceModel?.isNotEmpty == true
-                                            ? device.deviceModel!
-                                            : device.alias)
-                                        .trim();
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // 使用 Expanded 让设备名称占据大部分空间
-                                    Expanded(
-                                      child: name.length > 20
-                                          ? _buildScrollingText(name)
-                                          : Text(
-                                              name,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w600),
-                                              maxLines: 1,
-                                            ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _buildShortFingerprint(device.fingerprint),
-                                  ],
-                                );
-                              },
+                            title: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // 使用 Flexible 让设备名称自适应，避免溢出
+                                Flexible(
+                                  child: _buildDeviceName(device),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildShortFingerprint(device.fingerprint),
+                              ],
                             ),
-                            subtitle: Text(ipLine,
-                                style: const TextStyle(fontSize: 12)),
-                            isThreeLine: false, // 修正为 false，因为只有一行 subtitle
-                            trailing: (_sendingFingerprint ==
-                                    device.fingerprint)
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                ipLine,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                            trailing: isSendingToThis
+                                ? Container(
+                                    width: 40,
+                                    height: 40,
+                                    alignment: Alignment.center,
+                                    child: const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                      ),
+                                    ),
                                   )
-                                : IconButton(
-                                    icon: const Icon(Icons.send),
-                                    tooltip:
-                                        _isSending ? '正在发送其它设备...' : '发送到此设备',
+                                : FilledButton.tonalIcon(
+                                    icon: const Icon(Icons.send, size: 18),
+                                    label: const Text('发送'),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                    ),
                                     onPressed: _isSending
                                         ? null
                                         : () => _sendNotesToDevice(device),
@@ -767,12 +789,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   // 平滑动画：状态 / 文本变化使用 AnimatedSwitcher
                   return AlertDialog(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                    titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                    contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                    actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                        borderRadius: BorderRadius.circular(20)),
+                    titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                    contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+                    actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     title: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 260),
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.1),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
                       child: Row(
                         key: ValueKey(
                             'title-${awaiting ? 'approval' : s.syncStatus.name}'),
@@ -792,22 +826,23 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     : s.syncStatus == SyncStatus.completed
                                         ? Colors.green
                                         : Theme.of(context).colorScheme.primary,
+                            size: 24,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               awaiting
                                   ? '接收同步请求'
                                   : _getSyncStatusText(s.syncStatus),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 16),
+                                  fontWeight: FontWeight.w600, fontSize: 18),
                             ),
                           ),
                         ],
                       ),
                     ),
                     content: SizedBox(
-                      width: 340,
+                      width: 360,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -817,9 +852,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             children: [
                               Expanded(
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                   child: LinearProgressIndicator(
-                                    minHeight: 6,
+                                    minHeight: 8,
                                     value: awaiting
                                         ? null
                                         : (inProgress
@@ -827,12 +862,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                                 ? null
                                                 : progress)
                                             : 1),
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest,
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 250),
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: ScaleTransition(
+                                      scale: animation,
+                                      child: child,
+                                    ),
+                                  );
+                                },
                                 child: Text(
                                   awaiting
                                       ? '等待'
@@ -840,29 +887,71 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   key: ValueKey(
                                       'pct-${s.syncStatus.name}-${(s.syncProgress * 100).toInt()}'),
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                     color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color,
+                                        .colorScheme
+                                        .primary,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 16),
                           AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 240),
+                            duration: const Duration(milliseconds: 280),
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 0.15),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
                             child: awaiting
                                 ? Column(
                                     key: const ValueKey('approval-body'),
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                          '设备 “${s.receiveSenderAlias ?? '对方'}” 想同步笔记，是否接受？',
-                                          style: const TextStyle(
-                                              fontSize: 13, height: 1.3)),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer
+                                              .withValues(alpha: 0.3),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.info_outline,
+                                              size: 20,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                '设备 "${s.receiveSenderAlias ?? '对方'}" 想同步笔记',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  height: 1.4,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                       const SizedBox(height: 12),
                                       CheckboxListTile(
                                         value: s.skipSyncConfirmation,
@@ -872,24 +961,43 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                           setLocal(() {});
                                         },
                                         dense: true,
-                                        contentPadding: EdgeInsets.zero,
+                                        contentPadding: const EdgeInsets.only(left: 0),
                                         title: const Text('以后不再提示',
-                                            style: TextStyle(fontSize: 12)),
+                                            style: TextStyle(fontSize: 13)),
+                                        subtitle: const Text(
+                                          '将自动接受来自其他设备的同步请求',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
                                       ),
                                     ],
                                   )
-                                : SizedBox(
+                                : Container(
                                     key: const ValueKey('progress-body'),
                                     width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest
+                                          .withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                     child: AnimatedSwitcher(
                                       duration:
-                                          const Duration(milliseconds: 200),
+                                          const Duration(milliseconds: 220),
+                                      transitionBuilder: (child, animation) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        );
+                                      },
                                       child: Text(
                                         s.syncStatusMessage,
                                         key: ValueKey(
                                             'msg-${s.syncStatusMessage.hashCode}'),
                                         style: const TextStyle(
-                                            fontSize: 13, height: 1.25),
+                                            fontSize: 14, height: 1.3),
                                       ),
                                     ),
                                   ),
@@ -1057,80 +1165,22 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     return full.substring(full.length - 6).toUpperCase();
   }
 
-  /// 构建滚动文本组件，用于显示长设备名称
-  Widget _buildScrollingText(String text) {
-    return SizedBox(
-      height: 20, // 固定高度
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // 测量文本宽度
-          final textPainter = TextPainter(
-            text: TextSpan(
-              text: text,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            textDirection: TextDirection.ltr,
-          );
-          textPainter.layout();
-
-          final textWidth = textPainter.size.width;
-          final containerWidth = constraints.maxWidth;
-
-          // 如果文本宽度小于容器宽度，直接显示
-          if (textWidth <= containerWidth) {
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                text,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-                maxLines: 1,
-              ),
-            );
-          }
-
-          // 否则显示省略文本，鼠标悬停或长按时触发滚动
-          return GestureDetector(
-            onLongPress: () {
-              // 长按时显示完整文本在提示框中
-              final overlay = Overlay.of(context);
-              final renderBox = context.findRenderObject() as RenderBox;
-              final position = renderBox.localToGlobal(Offset.zero);
-
-              final overlayEntry = OverlayEntry(
-                builder: (context) => Positioned(
-                  left: position.dx,
-                  top: position.dy - 40,
-                  child: Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      constraints: const BoxConstraints(maxWidth: 300),
-                      child: Text(
-                        text,
-                        style: const TextStyle(fontSize: 12),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
-              overlay.insert(overlayEntry);
-              Timer(const Duration(seconds: 3), () {
-                overlayEntry.remove();
-              });
-            },
-            child: Text(
-              text,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          );
-        },
+  /// 构建设备名称组件，优化长名称显示
+  Widget _buildDeviceName(Device device) {
+    final name = (device.deviceModel?.isNotEmpty == true
+            ? device.deviceModel!
+            : device.alias)
+        .trim();
+    
+    // 优化：使用 Tooltip 和省略号，提供更好的交互体验
+    return Tooltip(
+      message: name,
+      waitDuration: const Duration(milliseconds: 500),
+      child: Text(
+        name,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+        maxLines: 1,
       ),
     );
   }

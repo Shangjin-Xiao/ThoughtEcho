@@ -201,6 +201,13 @@ class NoteListViewState extends State<NoteListView> {
         .listen(
       (list) {
         if (mounted) {
+          // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
+          double? savedScrollOffset;
+          if (isFirstLoad && _scrollController.hasClients && _quotes.isNotEmpty) {
+            savedScrollOffset = _scrollController.offset;
+            logDebug('首次加载期间保存滚动位置: $savedScrollOffset', source: 'NoteListView');
+          }
+
           setState(() {
             if (isFirstLoad) {
               _quotes.clear();
@@ -211,6 +218,19 @@ class NoteListViewState extends State<NoteListView> {
             _hasMore = list.length >= _pageSize;
             _isLoading = false;
           });
+
+          // 修复：在首次加载期间恢复滚动位置
+          if (savedScrollOffset != null && savedScrollOffset > 0) {
+            final offset = savedScrollOffset; // 捕获非空值
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && 
+                  _scrollController.hasClients && 
+                  offset <= _scrollController.position.maxScrollExtent) {
+                _scrollController.jumpTo(offset);
+                logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
+              }
+            });
+          }
 
           if (isFirstLoad) {
             _initialDataLoaded = true;
@@ -612,7 +632,9 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    if (_isLoading) {
+    final bool showFullScreenLoading = _isLoading && _quotes.isEmpty;
+
+    if (showFullScreenLoading) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(
