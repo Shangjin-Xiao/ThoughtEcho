@@ -606,26 +606,43 @@ class NoteListViewState extends State<NoteListView> {
 
       final viewport = RenderAbstractViewport.of(renderObject);
 
-      final targetOffset = viewport.getOffsetToReveal(renderObject, 0.0).offset;
-      final minExtent = _scrollController.position.minScrollExtent;
-      final maxExtent = _scrollController.position.maxScrollExtent;
-      final clampedOffset = targetOffset.clamp(minExtent, maxExtent);
+      final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
+      final targetOffset = reveal.offset;
+      final position = _scrollController.position;
+      final viewportExtent = position.viewportDimension;
+      final currentOffset = position.pixels;
 
-      final currentOffset = _scrollController.offset;
-      if ((currentOffset - clampedOffset).abs() <= 6) {
+      if (viewportExtent > 0) {
+        final topVisible =
+            targetOffset >= currentOffset &&
+            targetOffset < currentOffset + viewportExtent;
+        if (topVisible) {
+          logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
+          return;
+        }
+      }
+
+      final minExtent = position.minScrollExtent;
+      final maxExtent = position.maxScrollExtent;
+
+      double desiredOffset = (targetOffset - 12.0)
+          .clamp(minExtent, maxExtent)
+          .toDouble();
+
+      if ((currentOffset - desiredOffset).abs() <= 4) {
         logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
         return;
       }
 
       _isAutoScrolling = true;
       logDebug(
-        '滚动到笔记: $quoteId (index: $index), target=${clampedOffset.toStringAsFixed(1)}',
+        '滚动到笔记: $quoteId (index: $index), target=${desiredOffset.toStringAsFixed(1)}',
         source: 'NoteListView',
       );
 
       _scrollController
           .animateTo(
-            clampedOffset,
+            desiredOffset,
             duration: QuoteItemWidget.expandCollapseDuration,
             curve: Curves.easeOutCubic,
           )
@@ -789,13 +806,14 @@ class NoteListViewState extends State<NoteListView> {
                       QuoteItemWidget.needsExpansionFor(quote);
 
                   if (!expanded && requiresAlignment) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Future.delayed(
-                        QuoteItemWidget.expandCollapseDuration,
-                        () {
-                          _scrollToItem(quote.id!, index);
-                        },
-                      );
+                    final waitDuration = QuoteItemWidget.expandCollapseDuration +
+                        const Duration(milliseconds: 80);
+                    Future.delayed(waitDuration, () {
+                      if (!mounted) return;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        _scrollToItem(quote.id!, index);
+                      });
                     });
                   }
                 },
