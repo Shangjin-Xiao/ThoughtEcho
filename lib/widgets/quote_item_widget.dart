@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -119,12 +118,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: 0.97)
+        tween: Tween<double>(begin: 1.0, end: 0.99)
             .chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 55,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 0.97, end: 1.0)
+        tween: Tween<double>(begin: 0.99, end: 1.0)
             .chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 45,
       ),
@@ -183,11 +182,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     _doubleTapController.forward(from: 0.0);
 
     Feedback.forTap(context);
-    try {
-      HapticFeedback.selectionClick().catchError((_) {});
-    } catch (_) {
-      // 在不支持触觉反馈的平台（包括测试环境）忽略异常
-    }
 
     widget.onToggleExpanded(!isExpanded);
   }
@@ -343,7 +337,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           final highlightOpacity = _highlightProgress.value;
                           final brightness = innerTheme.brightness;
                           final overlayStrength =
-                              brightness == Brightness.dark ? 0.18 : 0.08;
+                              brightness == Brightness.dark ? 0.12 : 0.05;
                           final overlayColor = Colors.white.withValues(
                             alpha: overlayStrength * highlightOpacity,
                           );
