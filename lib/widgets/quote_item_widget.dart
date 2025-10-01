@@ -10,8 +10,8 @@ import '../utils/time_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
 
-/// 优化：使用StatelessWidget保持高性能，数据变化通过父组件管理
-class QuoteItemWidget extends StatelessWidget {
+/// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
+class QuoteItemWidget extends StatefulWidget {
   final Quote quote;
   final List<NoteCategory> tags;
   final bool isExpanded;
@@ -41,13 +41,34 @@ class QuoteItemWidget extends StatelessWidget {
     this.searchQuery,
   });
 
-  static const Duration expandCollapseDuration = Duration(milliseconds: 190);
-  static const Duration _fadeDuration = Duration(milliseconds: 140);
+  @override
+  State<QuoteItemWidget> createState() => _QuoteItemWidgetState();
+
+  // 动画优化：缩短时长以提升"干脆"感，同时保持缓动曲线的丝滑
+  static const Duration expandCollapseDuration = Duration(milliseconds: 170);
+  static const Duration _fadeDuration = Duration(milliseconds: 130);
   static const Curve _expandCurve = Curves.easeOutCubic;
 
   // 优化：缓存计算结果，避免重复计算
   static final Map<String, bool> _expansionCache = <String, bool>{};
   static int _cacheHitCount = 0; // 统计缓存命中次数
+
+  /// 清理折叠判断缓存，常用于测试或手动刷新场景。
+  static void clearExpansionCache() {
+    _expansionCache.clear();
+    _cacheHitCount = 0;
+  }
+
+  /// 获取折叠缓存当前状态，便于调试观察命中率。
+  static Map<String, int> getCacheStats() {
+    return {
+      'cacheSize': _expansionCache.length,
+      'cacheHits': _cacheHitCount,
+    };
+  }
+
+  /// 测试辅助方法，等价于 [clearExpansionCache]。
+  static void clearExpansionCacheForTest() => clearExpansionCache();
 
   /// 优化：基于高度判断是否需要展开按钮 - 带缓存
   /// 折叠策略说明：
@@ -120,18 +141,19 @@ class QuoteItemWidget extends StatelessWidget {
     return needsExpansion;
   }
 
-  bool _needsExpansion(Quote quote) => needsExpansionFor(quote);
+}
 
-  /// 清理缓存的静态方法（可在适当时机调用）
-  static void clearExpansionCache() {
-    _expansionCache.clear();
-    _cacheHitCount = 0;
+class _QuoteItemWidgetState extends State<QuoteItemWidget> {
+  // 双击缩放反馈
+  final ValueNotifier<bool> _pulse = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
   }
 
-  /// 获取缓存统计信息
-  static Map<String, int> getCacheStats() {
-    return {'cacheSize': _expansionCache.length, 'cacheHits': _cacheHitCount};
-  }
+  bool _needsExpansion(Quote quote) => QuoteItemWidget.needsExpansionFor(quote);
 
   String _formatSource(String author, String work) {
     if (author.isEmpty && work.isEmpty) {
@@ -158,6 +180,8 @@ class QuoteItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final quote = widget.quote;
+    final isExpanded = widget.isExpanded;
     // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
 
     // Determine the background color of the card
@@ -283,7 +307,11 @@ class QuoteItemWidget extends StatelessWidget {
                 GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onDoubleTap: _needsExpansion(quote)
-                      ? () => onToggleExpanded(!isExpanded)
+                      ? () {
+                          _pulse.value = true;
+                          Future.microtask(() => _pulse.value = false);
+                          widget.onToggleExpanded(!isExpanded);
+                        }
                       : null,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
@@ -294,15 +322,23 @@ class QuoteItemWidget extends StatelessWidget {
                         final showFullContent = isExpanded || !needsExpansion;
 
                         return AnimatedSize(
-                          duration: expandCollapseDuration,
-                          curve: _expandCurve,
+                          duration: QuoteItemWidget.expandCollapseDuration,
+                          curve: QuoteItemWidget._expandCurve,
                           alignment: Alignment.topCenter,
                           clipBehavior: Clip.none,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
+                          child: ValueListenableBuilder<bool>(
+                            valueListenable: _pulse,
+                            builder: (context, pulse, child) => AnimatedScale(
+                              scale: pulse ? 0.985 : 1.0,
+                              duration: const Duration(milliseconds: 110),
+                              curve: Curves.easeOut,
+                              child: child,
+                            ),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
                               AnimatedSwitcher(
-                                duration: _fadeDuration,
+                                duration: QuoteItemWidget._fadeDuration,
                                 switchInCurve: Curves.easeOut,
                                 switchOutCurve: Curves.easeIn,
                                 layoutBuilder:
@@ -333,7 +369,7 @@ class QuoteItemWidget extends StatelessWidget {
                                 height: 30,
                                 child: IgnorePointer(
                                   child: AnimatedSwitcher(
-                                    duration: _fadeDuration,
+                                    duration: QuoteItemWidget._fadeDuration,
                                     switchInCurve: Curves.easeIn,
                                     switchOutCurve: Curves.easeOut,
                                     child: (!isExpanded && needsExpansion)
@@ -395,7 +431,8 @@ class QuoteItemWidget extends StatelessWidget {
                               ),
                             ],
                           ),
-                        );
+                        ),
+                      );
                       },
                     ),
                   ),
@@ -460,7 +497,7 @@ class QuoteItemWidget extends StatelessWidget {
                               itemCount: quote.tagIds.length,
                               itemBuilder: (context, index) {
                                 final tagId = quote.tagIds[index];
-                                final tag = tags.firstWhere(
+                                final tag = widget.tags.firstWhere(
                                   (t) => t.id == tagId,
                                   orElse: () =>
                                       NoteCategory(id: tagId, name: '未知标签'),
@@ -471,8 +508,8 @@ class QuoteItemWidget extends StatelessWidget {
                                     right:
                                         index < quote.tagIds.length - 1 ? 8 : 0,
                                   ),
-                                  child: tagBuilder != null
-                                      ? tagBuilder!(tag)
+                                  child: widget.tagBuilder != null
+                                      ? widget.tagBuilder!(tag)
                                       : Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 10, vertical: 4),
@@ -535,11 +572,11 @@ class QuoteItemWidget extends StatelessWidget {
                       ],
 
                       // 心形按钮（如果启用）
-                      if (onFavorite != null) ...[
+                      if (widget.onFavorite != null) ...[
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: onFavorite,
+                            onTap: widget.onFavorite,
                             borderRadius: BorderRadius.circular(20),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -607,13 +644,13 @@ class QuoteItemWidget extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12)),
                         onSelected: (value) {
                           if (value == 'ask') {
-                            onAskAI();
+                            widget.onAskAI();
                           } else if (value == 'edit') {
-                            onEdit();
+                            widget.onEdit();
                           } else if (value == 'generate_card') {
-                            onGenerateCard?.call();
+                            widget.onGenerateCard?.call();
                           } else if (value == 'delete') {
-                            onDelete();
+                            widget.onDelete();
                           }
                         },
                         itemBuilder: (context) => [
@@ -639,7 +676,7 @@ class QuoteItemWidget extends StatelessWidget {
                               ],
                             ),
                           ),
-                          if (onGenerateCard != null)
+                          if (widget.onGenerateCard != null)
                             PopupMenuItem<String>(
                               value: 'generate_card',
                               child: Row(
