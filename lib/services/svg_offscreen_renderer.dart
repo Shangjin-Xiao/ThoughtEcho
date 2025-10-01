@@ -110,7 +110,7 @@ class SvgOffscreenRenderer {
     final intrinsicHeight = intrinsic.height ?? height.toDouble();
 
     final boxFit = _mapFit(mode);
-    
+
     // 创建SVG widget，使用与预览完全一致的配置
     final svgWidget = SvgPicture.string(
       svgContent,
@@ -126,7 +126,7 @@ class SvgOffscreenRenderer {
     );
 
     // 使用与预览类似的结构：背景 -> 对齐 -> 适配 -> SVG
-    Widget child = Container(
+    final captureContent = Container(
       color: background,
       width: width.toDouble(),
       height: height.toDouble(),
@@ -145,19 +145,70 @@ class SvgOffscreenRenderer {
       ),
     );
 
-    child = RepaintBoundary(key: boundaryKey, child: child);
+    final mediaQueryData = MediaQuery.maybeOf(context);
+    TextDirection resolvedTextDirection;
+    try {
+      resolvedTextDirection = Directionality.of(context);
+    } catch (_) {
+      resolvedTextDirection = TextDirection.ltr;
+    }
+    ThemeData? themeData;
+    try {
+      themeData = Theme.of(context);
+    } catch (_) {
+      themeData = null;
+    }
 
-    // 放到屏幕外（使用Offstage确保不可见）
+    final repaintBoundary = RepaintBoundary(
+      key: boundaryKey,
+      child: captureContent,
+    );
+
+    final horizontalOffset = width.toDouble() + 200;
+    final verticalOffset = height.toDouble() + 200;
+
+    // 放到屏幕外，避免闪烁，同时保持渲染链路
     final entry = OverlayEntry(
       opaque: false,
-      builder: (_) => Offstage(
-        offstage: true,
-        child: Positioned(
-          left: -10000, // 移到屏幕外，确保完全不可见
-          top: -10000,
-          child: child,
-        ),
-      ),
+      builder: (_) {
+        Widget overlayChild = IgnorePointer(
+          ignoring: true,
+          child: Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                left: -horizontalOffset,
+                top: -verticalOffset,
+                width: width.toDouble(),
+                height: height.toDouble(),
+                child: repaintBoundary,
+              ),
+            ],
+          ),
+        );
+
+        if (themeData != null) {
+          overlayChild = Theme(
+            data: themeData,
+            child: overlayChild,
+          );
+        }
+
+        overlayChild = Directionality(
+          textDirection: resolvedTextDirection,
+          child: overlayChild,
+        );
+
+        if (mediaQueryData != null) {
+          overlayChild = MediaQuery(
+            data: mediaQueryData,
+            child: overlayChild,
+          );
+        }
+
+        return overlayChild;
+      },
     );
 
     overlayState.insert(entry);
