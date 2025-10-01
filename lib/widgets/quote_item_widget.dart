@@ -344,8 +344,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           final brightness = innerTheme.brightness;
                           final overlayStrength =
                               brightness == Brightness.dark ? 0.18 : 0.08;
-                          final overlayColor = Colors.white.withOpacity(
-                            overlayStrength * highlightOpacity,
+                          final overlayColor = Colors.white.withValues(
+                            alpha: overlayStrength * highlightOpacity,
                           );
 
                           return Transform.scale(
