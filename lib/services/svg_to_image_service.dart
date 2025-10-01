@@ -36,7 +36,7 @@ class SvgToImageService {
       }
 
       if (width > 4000 || height > 4000) {
-        logError('图片尺寸过大: ${width}x$height，可能导致内存问题',
+        AppLogger.w('图片尺寸过大: ${width}x$height，可能导致内存问题',
             source: 'SvgToImageService');
       }
 
@@ -63,9 +63,12 @@ class SvgToImageService {
         _cacheService.smartCleanup();
       }
 
-      // 创建一个简化的SVG渲染器
+      // 标准化SVG内容，确保正确的viewBox和尺寸属性
+      final normalizedSvg = _normalizeSvgForRendering(svgContent, width, height);
+
+      // 优先使用真实Flutter渲染（与预览完全一致）
       final imageBytes = await _renderSvgToBytes(
-        svgContent,
+        normalizedSvg,
         width,
         height,
         format,
@@ -154,6 +157,50 @@ class SvgToImageService {
     }
   }
 
+  /// 标准化SVG内容以确保正确渲染
+  static String _normalizeSvgForRendering(String svgContent, int width, int height) {
+    String normalized = svgContent.trim();
+
+    // 确保SVG有xmlns命名空间
+    if (!normalized.contains('xmlns=')) {
+      normalized = normalized.replaceFirst(
+        '<svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"',
+      );
+    }
+
+    // 提取或设置viewBox
+    if (!normalized.contains('viewBox=')) {
+      // 如果没有viewBox，尝试从width/height提取或使用默认值
+      final widthMatch = RegExp(r'width="(\d+)"').firstMatch(normalized);
+      final heightMatch = RegExp(r'height="(\d+)"').firstMatch(normalized);
+      
+      final svgWidth = widthMatch != null ? widthMatch.group(1) : width.toString();
+      final svgHeight = heightMatch != null ? heightMatch.group(1) : height.toString();
+      
+      normalized = normalized.replaceFirst(
+        '<svg',
+        '<svg viewBox="0 0 $svgWidth $svgHeight"',
+      );
+    }
+
+    // 确保有width和height属性（用于正确缩放）
+    if (!normalized.contains('width=')) {
+      normalized = normalized.replaceFirst(
+        '<svg',
+        '<svg width="$width"',
+      );
+    }
+    if (!normalized.contains('height=')) {
+      normalized = normalized.replaceFirst(
+        '<svg',
+        '<svg height="$height"',
+      );
+    }
+
+    return normalized;
+  }
+
   /// 渲染SVG为字节数组
   static Future<Uint8List> _renderSvgToBytes(
     String svgContent,
@@ -166,9 +213,32 @@ class SvgToImageService {
     ExportRenderMode renderMode,
     BuildContext? buildContext,
   ) async {
+    // 策略：优先使用真实Flutter渲染，确保与预览一致
+    if (buildContext != null) {
+      try {
+        AppLogger.d('使用Flutter真实渲染（与预览一致）', source: 'SvgToImageService');
+        return await SvgOffscreenRenderer.instance.renderSvgString(
+          svgContent,
+          context: buildContext,
+          width: width,
+          height: height,
+          scaleFactor: scaleFactor,
+          background: backgroundColor,
+          mode: renderMode,
+          format: format,
+        );
+      } catch (e) {
+        AppLogger.w('Flutter真实渲染失败，尝试备用方案: $e', 
+            error: e, source: 'SvgToImageService');
+      }
+    } else {
+      AppLogger.w('缺少BuildContext，无法使用真实渲染', source: 'SvgToImageService');
+    }
+
+    // 备用方案：使用flutter_svg直接渲染
     try {
-      // 直接使用Canvas渲染SVG
-      return await _renderSvgWithCanvas(
+      AppLogger.d('使用flutter_svg备用渲染', source: 'SvgToImageService');
+      return await _renderWithFlutterSvg(
         svgContent,
         width,
         height,
@@ -176,11 +246,11 @@ class SvgToImageService {
         backgroundColor,
         scaleFactor,
         renderMode,
-        buildContext,
       );
     } catch (e) {
-      AppLogger.w('SVG渲染失败，使用回退方案: $e', error: e, source: 'SvgToImageService');
-      // 如果SVG渲染失败，使用回退方案
+      AppLogger.w('flutter_svg渲染失败，使用最终回退: $e', 
+          error: e, source: 'SvgToImageService');
+      // 最终回退方案
       return await _renderFallbackImage(
         svgContent,
         width,
@@ -191,64 +261,48 @@ class SvgToImageService {
     }
   }
 
-  /// 使用Canvas渲染SVG（简化版本）
-  static Future<Uint8List> _renderSvgWithCanvas(
-    String svgContent,
-    int targetWidth,
-    int targetHeight,
-    ui.ImageByteFormat format,
-    Color backgroundColor,
-    double scaleFactor,
-    ExportRenderMode renderMode,
-    BuildContext? buildContext,
-  ) async {
-    // 优先尝试离屏Flutter渲染（与预览一致）
-    try {
-      if (buildContext != null) {
-        final bytes = await SvgOffscreenRenderer.instance.renderSvgString(
-          svgContent,
-          context: buildContext,
-          width: targetWidth,
-          height: targetHeight,
-          scaleFactor: scaleFactor,
-          background: backgroundColor,
-          mode: renderMode,
-        );
-        return bytes;
-      } else {
-        throw StateError('缺少BuildContext，无法执行精准渲染');
-      }
-    } catch (e) {
-      AppLogger.w('离屏真实渲染失败，使用简化回退: $e', error: e, source: 'SvgToImageService');
-      return _legacySimplifiedRender(
-        svgContent,
-        targetWidth,
-        targetHeight,
-        format,
-        backgroundColor,
-      );
-    }
-  }
-
-  /// 旧的简化渲染逻辑作为回退保留
-  static Future<Uint8List> _legacySimplifiedRender(
+  /// 使用flutter_svg库直接渲染（备用方案）
+  static Future<Uint8List> _renderWithFlutterSvg(
     String svgContent,
     int width,
     int height,
     ui.ImageByteFormat format,
     Color backgroundColor,
+    double scaleFactor,
+    ExportRenderMode renderMode,
   ) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final backgroundPaint = Paint()..color = backgroundColor;
-    canvas.drawRect(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-        backgroundPaint);
+    // 注意：flutter_svg 2.x 不支持直接渲染到canvas
+    // 这个备用方案使用简化的方式，主要用于无BuildContext的场景
+    AppLogger.w('使用简化SVG渲染（无BuildContext备用方案）', source: 'SvgToImageService');
+    
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+
+    // 绘制背景
+    final bgPaint = Paint()..color = backgroundColor;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+      bgPaint,
+    );
+
+    // 绘制SVG内容的简化版本
     await _drawSvgContent(canvas, svgContent, width, height);
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(width, height);
+
+    final picture = pictureRecorder.endRecording();
+    final image = await picture.toImage(
+      (width * scaleFactor).round(),
+      (height * scaleFactor).round(),
+    );
     final byteData = await image.toByteData(format: format);
+    
     picture.dispose();
-    return byteData!.buffer.asUint8List();
+    image.dispose();
+    
+    if (byteData == null) {
+      throw Exception('无法生成图片字节数据');
+    }
+    
+    return byteData.buffer.asUint8List();
   }
 
   /// 绘制SVG内容（基础解析）
