@@ -780,7 +780,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   void _maybeShowOrHideSyncDialog(NoteSyncService service) {
     // 统一：审批 + 进度 合并为一个弹窗
-    final active = service.awaitingUserApproval ||
+  final active = service.awaitingUserApproval ||
+    service.awaitingPeerApproval ||
         service.syncStatus == SyncStatus.packaging ||
         service.syncStatus == SyncStatus.sending ||
         service.syncStatus == SyncStatus.receiving ||
@@ -803,66 +804,69 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               return Consumer<NoteSyncService>(
                 builder: (context, s, _) {
                   final progress = s.syncProgress.clamp(0.0, 1.0);
+                  final waitingPeer = s.awaitingPeerApproval;
+                  final waitingUser = s.awaitingUserApproval;
                   final inProgress = s.syncStatus == SyncStatus.packaging ||
                       s.syncStatus == SyncStatus.sending ||
                       s.syncStatus == SyncStatus.receiving ||
                       s.syncStatus == SyncStatus.merging;
-                  final awaiting = s.awaitingUserApproval;
-                  // 审批阶段不再显示数据大小，简化文案
-                  // 平滑动画：状态 / 文本变化使用 AnimatedSwitcher
+
+                  final bool isFailure = s.syncStatus == SyncStatus.failed;
+                  final bool isSuccess = s.syncStatus == SyncStatus.completed;
+
+                  String titleText;
+                  IconData titleIcon;
+                  Color? titleColor;
+
+                  if (waitingUser) {
+                    titleText = '接收同步请求';
+                    titleIcon = Icons.handshake;
+                    titleColor = Theme.of(context).colorScheme.primary;
+                  } else if (waitingPeer) {
+                    titleText = '等待对方确认';
+                    titleIcon = Icons.handshake_outlined;
+                    titleColor = Theme.of(context).colorScheme.primary;
+                  } else if (isFailure) {
+                    titleText = _getSyncStatusText(s.syncStatus);
+                    titleIcon = Icons.error_outline;
+                    titleColor = Colors.red;
+                  } else if (isSuccess) {
+                    titleText = _getSyncStatusText(s.syncStatus);
+                    titleIcon = Icons.check_circle_outline;
+                    titleColor = Colors.green;
+                  } else {
+                    titleText = _getSyncStatusText(s.syncStatus);
+                    titleIcon = Icons.sync;
+                    titleColor = Theme.of(context).colorScheme.primary;
+                  }
+
+                  final String percentLabel = waitingPeer || waitingUser
+                      ? '等待'
+                      : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
+                  final double? progressValue =
+                      waitingPeer || waitingUser ? null : progress;
+                  final String progressMessage = waitingPeer
+                      ? '已向目标设备发送同步请求，请在对方确认后继续。'
+                      : s.syncStatusMessage;
+
                   return AlertDialog(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
                     titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                     contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
                     actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    title: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.1),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
+                    title: Row(
+                      children: [
+                        Icon(titleIcon, color: titleColor, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            titleText,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 18),
                           ),
-                        );
-                      },
-                      child: Row(
-                        key: ValueKey(
-                            'title-${awaiting ? 'approval' : s.syncStatus.name}'),
-                        children: [
-                          Icon(
-                            awaiting
-                                ? Icons.handshake
-                                : s.syncStatus == SyncStatus.failed
-                                    ? Icons.error_outline
-                                    : s.syncStatus == SyncStatus.completed
-                                        ? Icons.check_circle_outline
-                                        : Icons.sync,
-                            color: awaiting
-                                ? Theme.of(context).colorScheme.primary
-                                : s.syncStatus == SyncStatus.failed
-                                    ? Colors.red
-                                    : s.syncStatus == SyncStatus.completed
-                                        ? Colors.green
-                                        : Theme.of(context).colorScheme.primary,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              awaiting
-                                  ? '接收同步请求'
-                                  : _getSyncStatusText(s.syncStatus),
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 18),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     content: SizedBox(
                       width: 360,
@@ -870,7 +874,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 进度条 + 百分比
                           Row(
                             children: [
                               Expanded(
@@ -878,13 +881,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   borderRadius: BorderRadius.circular(8),
                                   child: LinearProgressIndicator(
                                     minHeight: 8,
-                                    value: awaiting
-                                        ? null
-                                        : (inProgress
-                                            ? (progress == 0 || progress == 1
-                                                ? null
-                                                : progress)
-                                            : 1),
+                                    value: progressValue,
                                     backgroundColor: Theme.of(context)
                                         .colorScheme
                                         .surfaceContainerHighest,
@@ -892,149 +889,103 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 250),
-                                transitionBuilder: (child, animation) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: ScaleTransition(
-                                      scale: animation,
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  awaiting
-                                      ? '等待'
-                                      : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                                  key: ValueKey(
-                                      'pct-${s.syncStatus.name}-${(s.syncProgress * 100).toInt()}'),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
+                              Text(
+                                percentLabel,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 280),
-                            transitionBuilder: (child, animation) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0, 0.15),
-                                    end: Offset.zero,
-                                  ).animate(animation),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: awaiting
-                                ? Column(
-                                    key: const ValueKey('approval-body'),
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                          if (waitingUser)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                        .withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primaryContainer
-                                              .withValues(alpha: 0.3),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.info_outline,
-                                              size: 20,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                '设备 "${s.receiveSenderAlias ?? '对方'}" 想同步笔记',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  height: 1.4,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
                                       ),
-                                      const SizedBox(height: 12),
-                                      CheckboxListTile(
-                                        value: s.skipSyncConfirmation,
-                                        onChanged: (v) async {
-                                          await s.setSkipSyncConfirmation(
-                                              v ?? false);
-                                          setLocal(() {});
-                                        },
-                                        dense: true,
-                                        contentPadding:
-                                            const EdgeInsets.only(left: 0),
-                                        title: const Text('以后不再提示',
-                                            style: TextStyle(fontSize: 13)),
-                                        subtitle: const Text(
-                                          '将自动接受来自其他设备的同步请求',
-                                          style: TextStyle(fontSize: 11),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          '设备 "${s.receiveSenderAlias ?? '对方'}" 想同步笔记',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            height: 1.4,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  )
-                                : Container(
-                                    key: const ValueKey('progress-body'),
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest
-                                          .withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 220),
-                                      transitionBuilder: (child, animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        );
-                                      },
-                                      child: Text(
-                                        s.syncStatusMessage,
-                                        key: ValueKey(
-                                            'msg-${s.syncStatusMessage.hashCode}'),
-                                        style: const TextStyle(
-                                            fontSize: 14, height: 1.3),
-                                      ),
-                                    ),
                                   ),
-                          ),
+                                ),
+                                const SizedBox(height: 12),
+                                CheckboxListTile(
+                                  value: s.skipSyncConfirmation,
+                                  onChanged: (v) async {
+                                    await s.setSkipSyncConfirmation(v ?? false);
+                                    setLocal(() {});
+                                  },
+                                  dense: true,
+                                  contentPadding:
+                                      const EdgeInsets.only(left: 0),
+                                  title: const Text('以后不再提示',
+                                      style: TextStyle(fontSize: 13)),
+                                  subtitle: const Text(
+                                    '将自动接受来自其他设备的同步请求',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                progressMessage,
+                                style:
+                                    const TextStyle(fontSize: 14, height: 1.3),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                     actions: [
-                      if (awaiting) ...[
+                      if (waitingUser) ...[
                         TextButton(
                           onPressed: () {
                             s.rejectIncoming();
                             Navigator.of(ctx).pop();
+                            _syncDialogVisible = false;
                           },
                           child: const Text('拒绝'),
                         ),
@@ -1055,11 +1006,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               s.cancelReceiving();
                             }
                           },
-                          child: Text(s.syncStatus == SyncStatus.receiving
-                              ? '取消接收'
-                              : '取消发送'),
+                          child: Text(
+                            s.syncStatus == SyncStatus.receiving
+                                ? '取消接收'
+                                : '取消发送',
+                          ),
                         ),
-                      ] else if (!inProgress && !awaiting) ...[
+                      ] else if (!inProgress && !waitingPeer) ...[
                         TextButton(
                           onPressed: () {
                             Navigator.of(ctx).pop();

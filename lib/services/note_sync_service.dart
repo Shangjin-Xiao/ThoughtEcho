@@ -58,9 +58,11 @@ class NoteSyncService extends ChangeNotifier {
   String? _receiveSenderAlias;
   int? _pendingReceiveTotalBytes; // 等待审批大小
   bool _awaitingUserApproval = false; // 是否处于接收审批阶段
+  bool _awaitingPeerApproval = false; // 发送端等待对方审批
 
   bool get awaitingUserApproval => _awaitingUserApproval;
   int? get pendingReceiveTotalBytes => _pendingReceiveTotalBytes;
+  bool get awaitingPeerApproval => _awaitingPeerApproval;
 
   DateTime? _sendStartTime;
   String? _currentSendSessionId; // 当前发送会话ID
@@ -310,11 +312,15 @@ class NoteSyncService extends ChangeNotifier {
       await _preflightCheck(targetDevice);
 
       // 0.1 发送意向握手（让对方先决定是否允许以及是否需要媒体）
+      _setAwaitingPeerApproval(true);
+      _updateSyncStatus(
+          SyncStatus.packaging, '等待对方确认同步请求...', 0.02);
       final approved = await _sendSyncIntent(targetDevice);
       if (!approved) {
         _updateSyncStatus(SyncStatus.failed, '对方拒绝同步请求', 0.0);
         throw Exception('对方拒绝同步请求');
       }
+      _setAwaitingPeerApproval(false);
 
       // 1. 更新状态：开始打包（不显示大小/数量）
       _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
@@ -403,9 +409,16 @@ class NoteSyncService extends ChangeNotifier {
 
       return sessionId;
     } catch (e) {
+      _setAwaitingPeerApproval(false);
       _updateSyncStatus(SyncStatus.failed, '发送失败: $e', 0.0);
       rethrow;
     }
+  }
+
+  void _setAwaitingPeerApproval(bool value) {
+    if (_awaitingPeerApproval == value) return;
+    _awaitingPeerApproval = value;
+    notifyListeners();
   }
 
   /// 发送同步意向，返回是否获得对方批准

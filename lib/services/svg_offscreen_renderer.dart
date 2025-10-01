@@ -73,10 +73,30 @@ class SvgOffscreenRenderer {
     Duration timeout = const Duration(seconds: 10),
     bool devicePixelRatioAware = true,
   }) async {
-    final overlayState = Overlay.maybeOf(context, rootOverlay: true);
+    // 检查context是否有效
+    if (context is Element) {
+      if (!context.mounted) {
+        AppLogger.w('BuildContext已失效（Element未mounted）', source: 'SvgOffscreenRenderer');
+        throw StateError('BuildContext已失效（未mounted），无法执行离屏渲染');
+      }
+    }
+    
+    // 使用rootOverlay=false，尝试获取最近的Overlay
+    var overlayState = Overlay.maybeOf(context, rootOverlay: false) ??
+        Overlay.maybeOf(context, rootOverlay: true);
+    
     if (overlayState == null) {
+      AppLogger.w('未找到Overlay（rootOverlay=false和true都尝试过）', source: 'SvgOffscreenRenderer');
       throw StateError('未找到 Overlay，无法执行离屏渲染');
     }
+    
+    // 检查overlay是否已mounted
+    if (!overlayState.mounted) {
+      AppLogger.w('Overlay未mounted', source: 'SvgOffscreenRenderer');
+      throw StateError('Overlay未mounted，无法执行离屏渲染');
+    }
+    
+    AppLogger.d('Overlay检查通过，准备离屏渲染', source: 'SvgOffscreenRenderer');
 
     // 在任何异步等待之前获取设备像素比，避免异步后再次访问 context 触发 lint
     final preComputedDevicePixelRatio = devicePixelRatioAware

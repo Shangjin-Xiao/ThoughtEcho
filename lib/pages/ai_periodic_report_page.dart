@@ -2204,6 +2204,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 保存卡片
   void _saveCard(GeneratedCard card) async {
+    // 关键修复：在关闭对话框之前，先获取外层scaffold的context
+    final scaffoldContext = context;
+    
     Navigator.of(context).pop(); // 关闭对话框
 
     if (_aiCardService == null) return;
@@ -2211,7 +2214,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     try {
       // 显示加载指示器
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
@@ -2229,18 +2232,20 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         );
       }
 
-      // 保存高质量图片
+      // 保存高质量图片，使用外层scaffold的context
       final filePath = await _aiCardService!.saveCardAsImage(
         card,
         width: 800,
         height: 1200,
         customName: '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
-        context: context,
+        context: scaffoldContext,
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -2256,8 +2261,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
             content: Row(
               children: [
