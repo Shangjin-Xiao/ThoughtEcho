@@ -578,15 +578,15 @@ class NoteListViewState extends State<NoteListView> {
 
       Scrollable.ensureVisible(
         key.currentContext!,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-        alignment: 0.0, // Top alignment
+        duration: QuoteItemWidget.expandCollapseDuration,
+        curve: Curves.easeOutCubic,
+        alignment: 0.02, // 预留少量顶部空间
       ).then((_) {
-        _isAutoScrolling = false;
         logDebug('滚动完成', source: 'NoteListView');
       }).catchError((e) {
-        _isAutoScrolling = false;
         logDebug('滚动失败: $e', source: 'NoteListView');
+      }).whenComplete(() {
+        _isAutoScrolling = false;
       });
     } catch (e, st) {
       logDebug('滚动失败: $e\n$st', source: 'NoteListView');
@@ -735,11 +735,18 @@ class NoteListViewState extends State<NoteListView> {
                     _expandedItems[quote.id!] = expanded;
                   });
 
-                  if (!expanded) {
+                  final bool requiresAlignment =
+                      QuoteItemWidget.needsExpansionFor(quote);
+
+                  if (!expanded && requiresAlignment) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Future.delayed(const Duration(milliseconds: 350), () {
-                        _scrollToItem(quote.id!, index);
-                      });
+                      Future.delayed(
+                        QuoteItemWidget.expandCollapseDuration +
+                            const Duration(milliseconds: 80),
+                        () {
+                          _scrollToItem(quote.id!, index);
+                        },
+                      );
                     });
                   }
                 },

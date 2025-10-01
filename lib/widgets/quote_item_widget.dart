@@ -41,6 +41,10 @@ class QuoteItemWidget extends StatelessWidget {
     this.searchQuery,
   });
 
+  static const Duration expandCollapseDuration = Duration(milliseconds: 260);
+  static const Duration _fadeDuration = Duration(milliseconds: 180);
+  static const Curve _expandCurve = Curves.easeInOutCubic;
+
   // 优化：缓存计算结果，避免重复计算
   static final Map<String, bool> _expansionCache = <String, bool>{};
   static int _cacheHitCount = 0; // 统计缓存命中次数
@@ -51,7 +55,7 @@ class QuoteItemWidget extends StatelessWidget {
   /// 2. 折叠展示：固定展示约3-4行的高度（120像素）
   /// 3. 目的：基于实际显示高度判断，解决图片导致的显示问题
   /// 4. 包含图片的内容会正常显示，避免因图片隐藏造成的矛盾
-  bool _needsExpansion(Quote quote) {
+  static bool needsExpansionFor(Quote quote) {
     final cacheKey =
         '${quote.id}_${quote.content.length}_${quote.deltaContent?.length ?? 0}';
 
@@ -115,6 +119,8 @@ class QuoteItemWidget extends StatelessWidget {
 
     return needsExpansion;
   }
+
+  bool _needsExpansion(Quote quote) => needsExpansionFor(quote);
 
   /// 清理缓存的静态方法（可在适当时机调用）
   static void clearExpansionCache() {
@@ -287,83 +293,108 @@ class QuoteItemWidget extends StatelessWidget {
                         final needsExpansion = _needsExpansion(quote);
                         final showFullContent = isExpanded || !needsExpansion;
 
-                        return Stack(
-                          children: [
-                            ClipRect(
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 220),
+                        return AnimatedSize(
+                          duration: expandCollapseDuration,
+                          curve: _expandCurve,
+                          alignment: Alignment.topCenter,
+                          clipBehavior: Clip.none,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              AnimatedSwitcher(
+                                duration: _fadeDuration,
                                 switchInCurve: Curves.easeOut,
                                 switchOutCurve: Curves.easeIn,
-                                child: QuoteContent(
+                                layoutBuilder:
+                                    (currentChild, previousChildren) => Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    ...previousChildren,
+                                    if (currentChild != null) currentChild,
+                                  ],
+                                ),
+                                child: KeyedSubtree(
                                   key: ValueKey<bool>(showFullContent),
-                                  quote: quote,
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: theme.colorScheme.onSurface,
-                                    height: 1.5,
+                                  child: QuoteContent(
+                                    quote: quote,
+                                    style:
+                                        theme.textTheme.bodyLarge?.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                      height: 1.5,
+                                    ),
+                                    showFullContent: showFullContent,
                                   ),
-                                  showFullContent: showFullContent,
                                 ),
                               ),
-                            ),
-                            if (!isExpanded && needsExpansion)
                               Positioned(
                                 left: 0,
                                 right: 0,
                                 bottom: 0,
                                 height: 30,
                                 child: IgnorePointer(
-                                  child: ClipRect(
-                                    child: BackdropFilter(
-                                      filter: ui.ImageFilter.blur(
-                                        sigmaX: 1.2,
-                                        sigmaY: 1.2,
-                                      ),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              theme.colorScheme.surface
-                                                  .withValues(alpha: 0.0),
-                                              theme.colorScheme.surface
-                                                  .withValues(alpha: 0.08),
-                                              theme.colorScheme.surface
-                                                  .withValues(alpha: 0.18),
-                                            ],
-                                            stops: const [0.0, 0.4, 1.0],
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.surface
-                                                .withValues(alpha: 0.35),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            '双击查看全文',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                              color: theme
-                                                  .colorScheme.onSurface
-                                                  .withValues(alpha: 0.65),
-                                              fontSize: 11,
-                                              fontStyle: FontStyle.italic,
+                                  child: AnimatedSwitcher(
+                                    duration: _fadeDuration,
+                                    switchInCurve: Curves.easeIn,
+                                    switchOutCurve: Curves.easeOut,
+                                    child: (!isExpanded && needsExpansion)
+                                        ? ClipRect(
+                                            child: BackdropFilter(
+                                              filter: ui.ImageFilter.blur(
+                                                sigmaX: 1.2,
+                                                sigmaY: 1.2,
+                                              ),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      theme.colorScheme.surface
+                                                          .withValues(alpha: 0.0),
+                                                      theme.colorScheme.surface
+                                                          .withValues(alpha: 0.08),
+                                                      theme.colorScheme.surface
+                                                          .withValues(alpha: 0.18),
+                                                    ],
+                                                    stops: const [0.0, 0.4, 1.0],
+                                                  ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: theme
+                                                        .colorScheme.surface
+                                                        .withValues(alpha: 0.35),
+                                                    borderRadius:
+                                                        BorderRadius.circular(12),
+                                                  ),
+                                                  child: Text(
+                                                    '双击查看全文',
+                                                    style: theme
+                                                        .textTheme.bodySmall
+                                                        ?.copyWith(
+                                                      color: theme
+                                                          .colorScheme.onSurface
+                                                          .withValues(alpha: 0.65),
+                                                      fontSize: 11,
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                          )
+                                        : const SizedBox.shrink(),
                                   ),
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
                         );
                       },
                     ),
