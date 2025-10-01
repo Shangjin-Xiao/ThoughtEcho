@@ -38,6 +38,7 @@ class NoteListView extends StatefulWidget {
   final List<String> selectedWeathers; // 新增天气筛选参数
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
   final Function(List<String>, List<String>) onFilterChanged; // 新增筛选变化回调
+  final GlobalKey? filterButtonKey; // 功能引导：筛选按钮的 Key
 
   const NoteListView({
     super.key,
@@ -58,6 +59,7 @@ class NoteListView extends StatefulWidget {
     this.selectedWeathers = const [],
     this.selectedDayPeriods = const [],
     required this.onFilterChanged,
+    this.filterButtonKey, // 功能引导 Key
   });
 
   @override
@@ -1089,6 +1091,7 @@ class NoteListViewState extends State<NoteListView> {
                                 )
                               : const Icon(Icons.search),
                           suffixIcon: IconButton(
+                            key: widget.filterButtonKey, // 功能引导 key
                             icon: const Icon(Icons.tune),
                             tooltip: '筛选/排序',
                             onPressed: () {

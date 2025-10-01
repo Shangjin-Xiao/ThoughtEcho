@@ -32,6 +32,7 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
+import '../utils/feature_guide_helper.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -63,6 +64,12 @@ class _HomePageState extends State<HomePage>
       GlobalKey<NoteListViewState>();
   final GlobalKey<DailyQuoteViewState> _dailyQuoteViewKey =
       GlobalKey<DailyQuoteViewState>();
+  
+  // 功能引导：每日一言的 Key
+  final GlobalKey _dailyQuoteGuideKey = GlobalKey();
+  
+  // 功能引导：记录页的 Keys
+  final GlobalKey _noteFilterGuideKey = GlobalKey();
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -320,6 +327,11 @@ class _HomePageState extends State<HomePage>
 
       // 先初始化位置和天气，然后再获取每日提示
       _initLocationAndWeatherThenFetchPrompt();
+      
+      // 显示功能引导（仅在首页时显示）
+      if (_currentIndex == 0) {
+        _showHomePageGuides();
+      }
     });
   }
 
@@ -390,6 +402,8 @@ class _HomePageState extends State<HomePage>
     // 当切换到笔记列表页时，重新加载标签
     if (_currentIndex == 1) {
       _refreshTags();
+      // 显示记录页功能引导
+      _showNotePageGuides();
     }
   }
 
@@ -467,6 +481,29 @@ class _HomePageState extends State<HomePage>
       // 即使初始化失败，也尝试获取默认提示
       await _fetchDailyPrompt(initialLoad: true);
     }
+  }
+
+  /// 显示首页功能引导
+  void _showHomePageGuides() {
+    FeatureGuideHelper.show(
+      context: context,
+      guideId: 'homepage_daily_quote',
+      targetKey: _dailyQuoteGuideKey,
+    );
+  }
+
+  /// 显示记录页功能引导
+  void _showNotePageGuides() {
+    // 延迟显示，确保页面切换完成
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        FeatureGuideHelper.show(
+          context: context,
+          guideId: 'note_page_filter',
+          targetKey: _noteFilterGuideKey,
+        );
+      }
+    });
   }
 
   // 初始化位置和天气服务 - 简化优化版本
@@ -1130,6 +1167,7 @@ class _HomePageState extends State<HomePage>
                         // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
                         Expanded(
                           child: Container(
+                            key: _dailyQuoteGuideKey, // 功能引导 key
                             constraints: BoxConstraints(
                               minHeight: screenHeight *
                                   (isVerySmallScreen ? 0.55 : 0.50), // 极小屏幕调整比例
