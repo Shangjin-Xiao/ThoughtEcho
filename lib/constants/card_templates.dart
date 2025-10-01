@@ -667,53 +667,127 @@ class CardTemplates {
     }
   }
 
-  /// 将文本分割成多行
+  /// 将文本分割成多行（改进：更准确的字符宽度计算）
   static List<String> _splitTextIntoAdaptiveLines(String text, int maxLineChars,
       {int maxLines = 8}) {
     final lines = <String>[];
-    String current = '';
-    int count = 0;
-    for (int i = 0; i < text.length; i++) {
-      // 英文和数字算1，汉字和罕见字符算2
-      count += RegExp(r'[A-Za-z0-9]').hasMatch(text[i]) ? 1 : 2;
-      current += text[i];
-      if (count >= maxLineChars || text[i] == '\n') {
-        lines.add(current.trim());
-        current = '';
-        count = 0;
+    final words = text.split(' ');
+    String currentLine = '';
+    int currentWidth = 0;
+    
+    for (final word in words) {
+      // 计算单词宽度：中文字符算2，英文数字算1
+      int wordWidth = 0;
+      for (int i = 0; i < word.length; i++) {
+        wordWidth += _charWidth(word[i]);
+      }
+      
+      // 如果是换行符，强制换行
+      if (word.contains('\n')) {
+        final parts = word.split('\n');
+        for (int i = 0; i < parts.length; i++) {
+          if (i > 0) {
+            if (currentLine.isNotEmpty) {
+              lines.add(currentLine.trim());
+            }
+            currentLine = '';
+            currentWidth = 0;
+          }
+          if (parts[i].isNotEmpty) {
+            currentLine += parts[i] + ' ';
+            currentWidth += _stringWidth(parts[i]) + 1;
+          }
+        }
+        continue;
+      }
+      
+      // 如果添加这个单词会超出宽度，换行
+      if (currentWidth + wordWidth + 1 > maxLineChars && currentLine.isNotEmpty) {
+        lines.add(currentLine.trim());
+        currentLine = word + ' ';
+        currentWidth = wordWidth + 1;
+      } else {
+        currentLine += word + ' ';
+        currentWidth += wordWidth + 1;
+      }
+      
+      // 如果当前行太长（单个长单词），强制换行
+      if (currentWidth > maxLineChars * 1.2) {
+        lines.add(currentLine.trim());
+        currentLine = '';
+        currentWidth = 0;
       }
     }
-    if (current.isNotEmpty) lines.add(current.trim());
-    // 若行太多，缩小每行字数再重新切，防止溢出
-    // 避免递归爆炸
-    if (lines.length > maxLines && maxLineChars > 5) {
-      int tighter = (maxLineChars * 0.8).floor();
-      return _splitTextIntoAdaptiveLines(text, tighter, maxLines: maxLines);
+    
+    // 添加最后一行
+    if (currentLine.trim().isNotEmpty) {
+      lines.add(currentLine.trim());
     }
+    
+    // 如果行数超过限制，缩短每行字符数重试
+    if (lines.length > maxLines && maxLineChars > 8) {
+      final newMaxChars = (maxLineChars * 0.85).floor();
+      return _splitTextIntoAdaptiveLines(text, newMaxChars, maxLines: maxLines);
+    }
+    
+    // 如果仍然超过，截断
     if (lines.length > maxLines) {
-      // 强行等分切块
-      int chunk = (text.length / maxLines).ceil();
-      List<String> result = [];
-      for (int i = 0; i < text.length; i += chunk) {
-        result.add(text.substring(
-            i, (i + chunk > text.length) ? text.length : i + chunk));
-      }
-      return result.take(maxLines).toList();
+      return lines.sublist(0, maxLines);
     }
-    return lines.take(maxLines).toList();
+    
+    return lines;
+  }
+  
+  /// 计算单个字符的显示宽度
+  static int _charWidth(String char) {
+    // 中文字符、全角符号等算2，英文数字算1
+    final code = char.codeUnitAt(0);
+    if (code > 0x4E00 && code < 0x9FFF) return 2; // CJK统一汉字
+    if (code > 0x3000 && code < 0x303F) return 2; // CJK符号和标点
+    if (code > 0xFF00 && code < 0xFFEF) return 2; // 全角ASCII
+    return 1; // 其他字符（包括ASCII）
+  }
+  
+  /// 计算字符串的总显示宽度
+  static int _stringWidth(String str) {
+    int width = 0;
+    for (int i = 0; i < str.length; i++) {
+      width += _charWidth(str[i]);
+    }
+    return width;
   }
 
-  /// 生成现代化多行文本的SVG元素
+  /// 生成现代化多行文本的SVG元素（改进：防止溢出）
   static String _generateModernTextLines(List<String> lines, double centerX,
       double startY, double fontSize, String color, double lineHeight,
       {bool verticalCenter = true, double areaHeight = 320}) {
     final buffer = StringBuffer();
-    double totalH = lines.length * fontSize * lineHeight;
+    
+    // 计算实际需要的高度
+    double actualLineHeight = fontSize * lineHeight;
+    double totalH = lines.length * actualLineHeight;
+    
+    // 如果内容太高，自动调整字体大小和行高
+    double adjustedFontSize = fontSize;
+    double adjustedLineHeight = lineHeight;
+    if (totalH > areaHeight * 0.9) {
+      // 留10%边距
+      double scaleFactor = (areaHeight * 0.9) / totalH;
+      adjustedFontSize = fontSize * scaleFactor;
+      adjustedLineHeight = lineHeight * scaleFactor;
+      actualLineHeight = adjustedFontSize * adjustedLineHeight;
+      totalH = lines.length * actualLineHeight;
+    }
+    
     double offsetY = verticalCenter ? (areaHeight - totalH) / 2 : 0;
+    
     for (int i = 0; i < lines.length; i++) {
-      final y = startY + offsetY + (i * (fontSize * lineHeight));
+      final y = startY + offsetY + (i * actualLineHeight);
+      // 确保不超出区域
+      if (y > startY + areaHeight) break;
+      
       buffer.writeln(
-          '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, BlinkMacSystemFont, BlinkMacSystemFont, sans-serif" font-size="$fontSize" font-weight="400">${lines[i]}</text>');
+          '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${adjustedFontSize.toStringAsFixed(1)}" font-weight="400">${_escape(lines[i])}</text>');
     }
     return buffer.toString();
   }

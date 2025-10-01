@@ -73,7 +73,7 @@ class SVGCardWidget extends StatelessWidget {
         fit: fit,
         width: width,
         height: height,
-        allowDrawingOutsideViewBox: true, // 与offscreen renderer保持一致
+        allowDrawingOutsideViewBox: false, // 与offscreen renderer保持一致
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
                   color: Colors.grey[200],

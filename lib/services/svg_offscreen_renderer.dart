@@ -106,18 +106,22 @@ class SvgOffscreenRenderer {
     final boundaryKey = GlobalKey();
     // 解析SVG内在尺寸（若有），用于更精确的缩放与裁剪
     final intrinsic = _parseSvgIntrinsicSize(svgContent);
-    final intrinsicWidth = intrinsic.width ?? width.toDouble();
-    final intrinsicHeight = intrinsic.height ?? height.toDouble();
+    final intrinsicWidth = intrinsic.width ?? 400.0;
+    final intrinsicHeight = intrinsic.height ?? 600.0;
+    
+    AppLogger.d(
+      'SVG内在尺寸: ${intrinsicWidth}x$intrinsicHeight, 目标尺寸: ${width}x$height',
+      source: 'SvgOffscreenRenderer',
+    );
 
     final boxFit = _mapFit(mode);
 
     // 创建SVG widget，使用与预览完全一致的配置
+    // 注意：不再在SvgPicture.string上设置width/height，让FittedBox处理缩放
     final svgWidget = SvgPicture.string(
       svgContent,
-      allowDrawingOutsideViewBox: true,
-      fit: boxFit,
-      width: intrinsicWidth,
-      height: intrinsicHeight,
+      allowDrawingOutsideViewBox: false, // 禁用超出绘制，避免意外内容
+      fit: BoxFit.contain, // SVG内部使用contain，外层使用FittedBox控制最终fit
       placeholderBuilder: (context) => Container(
         color: background,
         width: intrinsicWidth,
@@ -125,22 +129,23 @@ class SvgOffscreenRenderer {
       ),
     );
 
-    // 使用与预览类似的结构：背景 -> 对齐 -> 适配 -> SVG
+    // 使用精确的尺寸布局：
+    // 1. 外层Container设置为目标尺寸
+    // 2. FittedBox根据mode进行缩放
+    // 3. SizedBox强制SVG的内在尺寸
     final captureContent = Container(
       color: background,
       width: width.toDouble(),
       height: height.toDouble(),
       alignment: Alignment.center,
-      child: ClipRect(
-        child: FittedBox(
-          fit: boxFit,
-          clipBehavior: Clip.hardEdge,
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: intrinsicWidth,
-            height: intrinsicHeight,
-            child: svgWidget,
-          ),
+      child: FittedBox(
+        fit: boxFit,
+        clipBehavior: Clip.hardEdge,
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: intrinsicWidth,
+          height: intrinsicHeight,
+          child: svgWidget,
         ),
       ),
     );
@@ -225,13 +230,26 @@ class SvgOffscreenRenderer {
     try {
       // 等待多帧，确保SVG完全解析和渲染
       // SVG解析通常需要2-3帧：布局 -> 解析 -> 绘制
-      await _pumpFrames(count: 3);
+      // 增加到5帧，并添加额外延迟确保复杂SVG完全渲染
+      await _pumpFrames(count: 5);
+      
+      // 额外延迟确保渲染管线完成
+      await Future.delayed(const Duration(milliseconds: 200));
       
       final boundary = boundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
       if (boundary == null) {
         throw StateError('未获取到 RenderRepaintBoundary，SVG可能未完成渲染');
       }
+      
+      // 验证boundary已经完成布局
+      if (!boundary.hasSize || boundary.size.isEmpty) {
+        AppLogger.w('RenderRepaintBoundary尺寸异常: ${boundary.hasSize ? boundary.size : "无尺寸"}',
+            source: 'SvgOffscreenRenderer');
+        throw StateError('RenderRepaintBoundary尺寸异常，SVG可能未完成布局');
+      }
+      
+      AppLogger.d('RenderRepaintBoundary已就绪: ${boundary.size}', source: 'SvgOffscreenRenderer');
       
       // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
       double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;

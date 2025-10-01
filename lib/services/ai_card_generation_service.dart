@@ -341,7 +341,8 @@ class AICardGenerationService {
     BuildContext? context,
   }) async {
     try {
-      AppLogger.i('开始保存卡片图片: ${card.id}', source: 'AICardGeneration');
+      AppLogger.i('开始保存卡片图片: ${card.id}, 尺寸: ${width}x$height, 缩放: $scaleFactor', 
+          source: 'AICardGeneration');
 
       // 验证输入参数
       if (width <= 0 || height <= 0) {
@@ -357,15 +358,42 @@ class AICardGenerationService {
         AppLogger.w('未提供BuildContext，渲染可能与预览不一致', source: 'AICardGeneration');
       }
       
+      // 标准化SVG内容，确保渲染一致性
+      final normalizedSvg = _normalizeSVGAttributes(card.svgContent);
+      if (normalizedSvg != card.svgContent) {
+        AppLogger.d('SVG内容已标准化', source: 'AICardGeneration');
+      }
+      
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
           (context != null && context is Element && !context.mounted) ? null : context;
-      final imageBytes = await card.toImageBytes(
+      
+      // 创建临时卡片对象用于渲染（使用标准化的SVG）
+      final tempCard = GeneratedCard(
+        id: card.id,
+        noteId: card.noteId,
+        originalContent: card.originalContent,
+        svgContent: normalizedSvg,
+        type: card.type,
+        createdAt: card.createdAt,
+        author: card.author,
+        source: card.source,
+        location: card.location,
+        weather: card.weather,
+        temperature: card.temperature,
+        date: card.date,
+        dayPeriod: card.dayPeriod,
+      );
+      
+      final imageBytes = await tempCard.toImageBytes(
           width: width,
           height: height,
           scaleFactor: scaleFactor,
           renderMode: renderMode,
           context: safeContext);
+
+      AppLogger.i('卡片图片渲染完成，大小: ${imageBytes.length} bytes', 
+          source: 'AICardGeneration');
 
       // 再检查/申请相册权限并保存（与渲染解耦，避免 context 跨 await）
       if (!await _checkGalleryPermission()) {
@@ -386,8 +414,7 @@ class AICardGenerationService {
         throw Exception('桌面端暂不支持直接保存到相册，建议使用分享功能');
       }
 
-      AppLogger.i('卡片图片保存成功: $fileName, 大小: ${imageBytes.length} bytes', 
-          source: 'AICardGeneration');
+      AppLogger.i('卡片图片保存成功: $fileName', source: 'AICardGeneration');
 
       return fileName;
     } catch (e) {
@@ -480,7 +507,7 @@ class AICardGenerationService {
     return _settingsService.aiCardGenerationEnabled;
   }
 
-  /// 智能选择最适合的提示词
+  /// 智能选择最适合的提示词（改进：增加随机性和变化）
   String _selectBestPrompt(Quote note, String? customStyle) {
     // 分析内容特征
     final content = note.content.toLowerCase();
@@ -526,11 +553,169 @@ class AICardGenerationService {
       }
     }
 
-    // 根据内容特征智能选择提示词
+    // 使用随机化的智能选择，避免单调
+    final random = DateTime.now().millisecondsSinceEpoch % 100;
+    
+    // 1. 检查是否为引用/名言（30%概率使用智能卡片，70%随机海报）
+    if (hasAuthor ||
+        content.contains('说') ||
+        content.contains('曰') ||
+        content.contains('"')) {
+      if (random < 30) {
+        return AICardPrompts.intelligentCardPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      } else {
+        return AICardPrompts.randomStylePosterPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      }
+    }
 
-    // 1. 检查是否为技术/学习内容
+    // 2. 检查是否为技术/学习内容（40%视觉增强，30%智能，30%随机）
     final techKeywords = ['代码', '编程', '算法', '技术', '开发', '学习', '知识', '方法', '原理'];
     if (techKeywords.any((keyword) => content.contains(keyword))) {
+      if (random < 40) {
+        return AICardPrompts.contentAwareVisualPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      } else if (random < 70) {
+        return AICardPrompts.intelligentCardPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      } else {
+        return AICardPrompts.randomStylePosterPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      }
+    }
+
+    // 3. 检查是否为情感/生活内容（50%随机海报，50%视觉增强）
+    final emotionalKeywords = ['感受', '心情', '生活', '感悟', '体验', '回忆', '梦想', '希望'];
+    if (emotionalKeywords.any((keyword) => content.contains(keyword))) {
+      if (random < 50) {
+        return AICardPrompts.randomStylePosterPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      } else {
+        return AICardPrompts.contentAwareVisualPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      }
+    }
+
+    // 4. 根据内容长度和随机性选择
+    if (note.content.length > 100) {
+      // 长内容：40%随机海报，30%智能，30%视觉
+      if (random < 40) {
+        return AICardPrompts.randomStylePosterPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      } else if (random < 70) {
+        return AICardPrompts.intelligentCardPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      } else {
+        return AICardPrompts.contentAwareVisualPrompt(
+          content: note.content,
+          author: note.sourceAuthor,
+          date: _formatDate(note.date),
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      }
+    }
+
+    // 5. 默认使用三种提示词随机选择（各33%）
+    if (random < 33) {
+      return AICardPrompts.randomStylePosterPrompt(
+        content: note.content,
+        author: note.sourceAuthor,
+        date: _formatDate(note.date),
+        location: note.location,
+        weather: note.weather,
+        temperature: note.temperature,
+        dayPeriod: note.dayPeriod,
+        source: note.fullSource,
+      );
+    } else if (random < 66) {
+      return AICardPrompts.intelligentCardPrompt(
+        content: note.content,
+        author: note.sourceAuthor,
+        date: _formatDate(note.date),
+        location: note.location,
+        weather: note.weather,
+        temperature: note.temperature,
+        dayPeriod: note.dayPeriod,
+        source: note.fullSource,
+      );
+    } else {
       return AICardPrompts.contentAwareVisualPrompt(
         content: note.content,
         author: note.sourceAuthor,
@@ -542,46 +727,6 @@ class AICardGenerationService {
         source: note.fullSource,
       );
     }
-
-    // 2. 检查是否为情感/生活内容
-    final emotionalKeywords = ['感受', '心情', '生活', '感悟', '体验', '回忆', '梦想', '希望'];
-    if (emotionalKeywords.any((keyword) => content.contains(keyword))) {
-      return AICardPrompts.contentAwareVisualPrompt(content: note.content);
-    }
-
-    // 3. 检查是否为引用/名言
-    if (hasAuthor ||
-        content.contains('说') ||
-        content.contains('曰') ||
-        content.contains('"')) {
-      return AICardPrompts.intelligentCardPrompt(
-        content: note.content,
-        author: note.sourceAuthor,
-        date: _formatDate(note.date),
-        location: note.location,
-        weather: note.weather,
-        temperature: note.temperature,
-        dayPeriod: note.dayPeriod,
-        source: note.fullSource,
-      );
-    }
-
-    // 4. 检查内容长度，长内容使用创意海报风格
-    if (note.content.length > 100) {
-      return AICardPrompts.randomStylePosterPrompt(content: note.content);
-    }
-
-    // 5. 默认使用智能卡片提示词
-    return AICardPrompts.intelligentCardPrompt(
-      content: note.content,
-      author: note.sourceAuthor,
-      date: _formatDate(note.date),
-      location: note.location,
-      weather: note.weather,
-      temperature: note.temperature,
-      dayPeriod: note.dayPeriod,
-      source: note.fullSource,
-    );
   }
 
   /// 如果AI未输出底部元数据，则添加一个简单信息块
@@ -763,16 +908,33 @@ class AICardGenerationService {
         '<svg xmlns="http://www.w3.org/2000/svg"',
       );
     }
-
-    // 确保有viewBox或width/height属性
-    if (!normalized.contains('viewBox') &&
-        !normalized.contains('width=') &&
-        !normalized.contains('height=')) {
-      normalized = normalized.replaceFirst(
-        '<svg',
-        '<svg width="400" height="600" viewBox="0 0 400 600"',
-      );
+    
+    // 提取现有的viewBox
+    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(normalized);
+    String viewBox;
+    if (viewBoxMatch != null) {
+      viewBox = viewBoxMatch.group(1)!;
+    } else {
+      // 尝试从width/height推断viewBox
+      final widthMatch = RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+      final heightMatch = RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+      final w = widthMatch?.group(1) ?? '400';
+      final h = heightMatch?.group(1) ?? '600';
+      viewBox = '0 0 $w $h';
     }
+
+    // 移除现有的viewBox、width、height、preserveAspectRatio
+    normalized = normalized
+        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
+
+    // 统一设置标准属性
+    normalized = normalized.replaceFirst(
+      '<svg',
+      '<svg viewBox="$viewBox" preserveAspectRatio="xMidYMid meet"',
+    );
 
     return normalized;
   }
