@@ -45,7 +45,7 @@ Quote _buildQuote({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  tearDown(QuoteItemWidget.clearExpansionCache);
+  tearDown(QuoteItemWidget.clearExpansionCacheForTest);
 
   group('QuoteItemWidget', () {
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
