@@ -122,14 +122,22 @@ class FeatureGuideHelper {
     Duration delayBetween = const Duration(milliseconds: 800),
     Duration autoDismissDuration = const Duration(seconds: 4),
   }) async {
-    for (final (guideId, targetKey) in guides) {
+    if (guides.isEmpty) {
+      return;
+    }
+
+    for (var i = 0; i < guides.length; i++) {
+      final (guideId, targetKey) = guides[i];
       await show(
         context: context,
         guideId: guideId,
         targetKey: targetKey,
         autoDismissDuration: autoDismissDuration,
       );
-      await Future.delayed(delayBetween);
+      final isLast = i == guides.length - 1;
+      if (!isLast) {
+        await Future.delayed(delayBetween);
+      }
     }
   }
 

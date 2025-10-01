@@ -39,6 +39,9 @@ class NoteListView extends StatefulWidget {
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
   final Function(List<String>, List<String>) onFilterChanged; // 新增筛选变化回调
   final GlobalKey? filterButtonKey; // 功能引导：筛选按钮的 Key
+  final GlobalKey? favoriteButtonGuideKey; // 功能引导：心形按钮 Key
+  final GlobalKey? foldToggleGuideKey; // 功能引导：折叠/展开区域 Key
+  final VoidCallback? onGuideTargetsReady; // 功能引导：目标就绪回调
 
   const NoteListView({
     super.key,
@@ -60,6 +63,9 @@ class NoteListView extends StatefulWidget {
     this.selectedDayPeriods = const [],
     required this.onFilterChanged,
     this.filterButtonKey, // 功能引导 Key
+    this.favoriteButtonGuideKey,
+    this.foldToggleGuideKey,
+    this.onGuideTargetsReady,
   });
 
   @override
@@ -91,6 +97,28 @@ class NoteListViewState extends State<NoteListView> {
   DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
   bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
 
+  bool get hasQuotes => _quotes.isNotEmpty;
+
+  bool get hasExpandableQuote =>
+    _quotes.any(QuoteItemWidget.needsExpansionFor);
+
+  bool get isFilterGuideReady => widget.filterButtonKey != null &&
+    widget.filterButtonKey!.currentContext != null &&
+    widget.filterButtonKey!.currentContext!.findRenderObject() is RenderBox;
+
+  bool get canShowFavoriteGuide => widget.onFavorite != null &&
+    hasQuotes &&
+    widget.favoriteButtonGuideKey != null &&
+    widget.favoriteButtonGuideKey!.currentContext != null &&
+    widget.favoriteButtonGuideKey!.currentContext!.findRenderObject()
+      is RenderBox;
+
+  bool get canShowExpandGuide => hasExpandableQuote &&
+    widget.foldToggleGuideKey != null &&
+    widget.foldToggleGuideKey!.currentContext != null &&
+    widget.foldToggleGuideKey!.currentContext!.findRenderObject()
+      is RenderBox;
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +136,8 @@ class NoteListViewState extends State<NoteListView> {
     // 优化：延迟初始化数据流订阅，避免build过程中的副作用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDataStream();
+      if (!mounted) return;
+      widget.onGuideTargetsReady?.call();
     });
   }
 
@@ -241,6 +271,13 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+
+          if (widget.onGuideTargetsReady != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              widget.onGuideTargetsReady!.call();
+            });
+          }
 
           // 修复：在首次加载期间恢复滚动位置
           if (savedScrollOffset != null &&
@@ -429,6 +466,13 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+
+          if (widget.onGuideTargetsReady != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              widget.onGuideTargetsReady!.call();
+            });
+          }
 
           // Restore scroll position smoothly
           if (savedScrollOffset != null &&
@@ -790,6 +834,9 @@ class NoteListViewState extends State<NoteListView> {
       );
     }
 
+    var favoriteGuideAssigned = false;
+    var foldGuideAssigned = false;
+
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
         // 修复：优化预加载逻辑，减少频繁触发
@@ -827,6 +874,24 @@ class NoteListViewState extends State<NoteListView> {
             _itemKeys.putIfAbsent(
                 quoteId, () => GlobalKey(debugLabel: itemKey));
 
+      final bool needsExpansion =
+        QuoteItemWidget.needsExpansionFor(quote);
+
+      final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+        widget.favoriteButtonGuideKey != null &&
+        widget.onFavorite != null;
+            final attachFoldGuideKey = !foldGuideAssigned &&
+                widget.foldToggleGuideKey != null &&
+                needsExpansion;
+
+            if (attachFavoriteGuideKey) {
+              favoriteGuideAssigned = true;
+            }
+
+            if (attachFoldGuideKey) {
+              foldGuideAssigned = true;
+            }
+
             final expansionNotifier = _obtainExpansionNotifier(quoteId);
             _expandedItems.putIfAbsent(quoteId, () => expansionNotifier.value);
 
@@ -844,8 +909,7 @@ class NoteListViewState extends State<NoteListView> {
                     }
                     _expandedItems[quoteId] = expanded;
 
-                    final bool requiresAlignment =
-                        QuoteItemWidget.needsExpansionFor(quote);
+                    final bool requiresAlignment = needsExpansion;
 
                     if (!expanded && requiresAlignment) {
                       final waitDuration =
@@ -868,6 +932,12 @@ class NoteListViewState extends State<NoteListView> {
                       : null,
                   onFavorite: widget.onFavorite != null
                       ? () => widget.onFavorite!(quote)
+                      : null,
+                  favoriteButtonGuideKey: attachFavoriteGuideKey
+                      ? widget.favoriteButtonGuideKey
+                      : null,
+                  foldToggleGuideKey: attachFoldGuideKey
+                      ? widget.foldToggleGuideKey
                       : null,
                   tagBuilder: (tag) {
                     return Container(

@@ -95,7 +95,11 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         child: Center(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: _buildPopoverCard(context, PopoverArrowDirection.top),
+            child: _buildPopoverCard(
+              context,
+              PopoverArrowDirection.top,
+              arrowOffset: 110,
+            ),
           ),
         ),
       ),
@@ -106,13 +110,15 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   Widget _buildPositionedPopover(BuildContext context, RenderBox targetBox) {
     final targetSize = targetBox.size;
     final targetPosition = targetBox.localToGlobal(Offset.zero);
-    final screenSize = MediaQuery.of(context).size;
+    final mediaQuery = MediaQuery.of(context);
+    final screenSize = mediaQuery.size;
 
     // 计算最佳显示位置和箭头方向
     final positioning = _calculateBestPosition(
       targetPosition: targetPosition,
       targetSize: targetSize,
       screenSize: screenSize,
+      viewPadding: mediaQuery.padding,
     );
 
     return Material(
@@ -130,18 +136,18 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           ),
 
         // 气泡卡片
-        Positioned(
-          left: positioning['left'],
-          top: positioning['top'],
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: _buildPopoverCard(
-              context,
-              positioning['arrowDirection'] as PopoverArrowDirection,
-              arrowOffset: positioning['arrowOffset'] as double,
+          Positioned(
+            left: positioning['left'] as double,
+            top: positioning['top'] as double,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: _buildPopoverCard(
+                context,
+                positioning['arrowDirection'] as PopoverArrowDirection,
+                arrowOffset: positioning['arrowOffset'] as double,
+              ),
             ),
           ),
-        ),
         ],
       ),
     );
@@ -152,6 +158,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     required Offset targetPosition,
     required Size targetSize,
     required Size screenSize,
+    required EdgeInsets viewPadding,
   }) {
     const popoverWidth = 220.0; // 缩小宽度
     const popoverMaxHeight = 120.0; // 缩小高度
@@ -160,43 +167,59 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
     final targetCenterX = targetPosition.dx + targetSize.width / 2;
     final targetCenterY = targetPosition.dy + targetSize.height / 2;
+    final safeTop = viewPadding.top + margin;
+    final safeBottom = screenSize.height - viewPadding.bottom - margin;
+    final safeLeft = margin;
+    final safeRight = screenSize.width - margin;
 
     // 优先显示在下方
-    if (targetPosition.dy + targetSize.height + arrowSize + popoverMaxHeight + margin < screenSize.height) {
+    if (targetPosition.dy + targetSize.height + arrowSize + popoverMaxHeight + margin <
+        safeBottom) {
+      final left = (targetCenterX - popoverWidth / 2)
+          .clamp(safeLeft, safeRight - popoverWidth);
       return {
-        'left': (targetCenterX - popoverWidth / 2).clamp(margin, screenSize.width - popoverWidth - margin),
+        'left': left,
         'top': targetPosition.dy + targetSize.height + arrowSize,
         'arrowDirection': PopoverArrowDirection.top,
-        'arrowOffset': targetCenterX,
+        'arrowOffset': targetCenterX - left,
       };
     }
 
     // 其次尝试上方
-    if (targetPosition.dy - arrowSize - popoverMaxHeight > margin) {
+    if (targetPosition.dy - arrowSize - popoverMaxHeight > safeTop) {
+      final left = (targetCenterX - popoverWidth / 2)
+          .clamp(safeLeft, safeRight - popoverWidth);
       return {
-        'left': (targetCenterX - popoverWidth / 2).clamp(margin, screenSize.width - popoverWidth - margin),
+        'left': left,
         'top': targetPosition.dy - arrowSize - popoverMaxHeight,
         'arrowDirection': PopoverArrowDirection.bottom,
-        'arrowOffset': targetCenterX,
+        'arrowOffset': targetCenterX - left,
       };
     }
 
     // 尝试右侧
-    if (targetPosition.dx + targetSize.width + arrowSize + popoverWidth + margin < screenSize.width) {
+    if (targetPosition.dx + targetSize.width + arrowSize + popoverWidth + margin <
+        safeRight) {
+      final top = (targetCenterY - popoverMaxHeight / 2)
+          .clamp(safeTop, safeBottom - popoverMaxHeight);
       return {
         'left': targetPosition.dx + targetSize.width + arrowSize,
-        'top': (targetCenterY - popoverMaxHeight / 2).clamp(margin, screenSize.height - popoverMaxHeight - margin),
+        'top': top,
         'arrowDirection': PopoverArrowDirection.left,
-        'arrowOffset': targetCenterY,
+        'arrowOffset': targetCenterY - top,
       };
     }
 
     // 最后尝试左侧
+  final fallbackTop = (targetCenterY - popoverMaxHeight / 2)
+    .clamp(safeTop, safeBottom - popoverMaxHeight);
+  final left = (targetPosition.dx - popoverWidth - arrowSize)
+    .clamp(safeLeft, safeRight - popoverWidth);
     return {
-      'left': targetPosition.dx - popoverWidth - arrowSize,
-      'top': (targetCenterY - popoverMaxHeight / 2).clamp(margin, screenSize.height - popoverMaxHeight - margin),
+      'left': left,
+      'top': fallbackTop,
       'arrowDirection': PopoverArrowDirection.right,
-      'arrowOffset': targetCenterY,
+      'arrowOffset': targetCenterY - fallbackTop,
     };
   }
 
@@ -207,48 +230,48 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     double arrowOffset = 0,
   }) {
     const arrowSize = 8.0;
+    final theme = Theme.of(context);
+    final cardColor = theme.cardColor;
 
-    Widget popoverContent = Container(
+    final popoverContent = Container(
       constraints: const BoxConstraints(
         maxWidth: 220,
         minWidth: 180,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(8),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题行
           Row(
             children: [
               Icon(
                 Icons.tips_and_updates_outlined,
-                color: Theme.of(context).primaryColor,
+                color: theme.colorScheme.primary,
                 size: 16,
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   widget.guide.title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                         fontSize: 13,
-                        color: Theme.of(context).primaryColor,
+                        color: theme.colorScheme.primary,
                       ),
                 ),
               ),
-              // 关闭按钮
               GestureDetector(
                 onTap: _handleDismiss,
                 child: Padding(
@@ -256,85 +279,117 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                   child: Icon(
                     Icons.close,
                     size: 14,
-                    color: Theme.of(context).textTheme.bodySmall?.color,
+                    color: theme.textTheme.bodySmall?.color
+                        ?.withValues(alpha: 0.7),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-
-          // 描述内容
           Text(
             widget.guide.description,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 12,
+                  height: 1.35,
                 ),
           ),
         ],
       ),
     );
 
-    // 根据箭头方向组合卡片和箭头
+    Widget buildHorizontalArrow(bool isTop) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 220.0;
+          final offset = arrowOffset
+              .clamp(arrowSize, width - arrowSize)
+              .toDouble();
+          return Padding(
+            padding: EdgeInsets.only(left: offset - arrowSize),
+            child: CustomPaint(
+              painter: _ArrowPainter(
+                color: cardColor,
+                direction:
+                    isTop ? PopoverArrowDirection.top : PopoverArrowDirection.bottom,
+              ),
+              size: const Size(arrowSize * 2, arrowSize),
+            ),
+          );
+        },
+      );
+    }
+
+    Widget buildVerticalArrow(bool isLeft) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final height = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : 120.0;
+          final offset = arrowOffset
+              .clamp(arrowSize, height - arrowSize)
+              .toDouble();
+          return Padding(
+            padding: EdgeInsets.only(top: offset - arrowSize),
+            child: CustomPaint(
+              painter: _ArrowPainter(
+                color: cardColor,
+                direction:
+                    isLeft ? PopoverArrowDirection.left : PopoverArrowDirection.right,
+              ),
+              size: const Size(arrowSize, arrowSize * 2),
+            ),
+          );
+        },
+      );
+    }
+
     switch (arrowDirection) {
       case PopoverArrowDirection.top:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CustomPaint(
-              painter: _ArrowPainter(
-                color: Theme.of(context).cardColor,
-                direction: arrowDirection,
-              ),
-              size: const Size(arrowSize * 2, arrowSize),
-            ),
-            popoverContent,
-          ],
+        return IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildHorizontalArrow(true),
+              popoverContent,
+            ],
+          ),
         );
-
       case PopoverArrowDirection.bottom:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            popoverContent,
-            CustomPaint(
-              painter: _ArrowPainter(
-                color: Theme.of(context).cardColor,
-                direction: arrowDirection,
-              ),
-              size: const Size(arrowSize * 2, arrowSize),
-            ),
-          ],
+        return IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              popoverContent,
+              buildHorizontalArrow(false),
+            ],
+          ),
         );
-
       case PopoverArrowDirection.left:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CustomPaint(
-              painter: _ArrowPainter(
-                color: Theme.of(context).cardColor,
-                direction: arrowDirection,
-              ),
-              size: const Size(arrowSize, arrowSize * 2),
-            ),
-            popoverContent,
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildVerticalArrow(true),
+              popoverContent,
+            ],
+          ),
         );
-
       case PopoverArrowDirection.right:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            popoverContent,
-            CustomPaint(
-              painter: _ArrowPainter(
-                color: Theme.of(context).cardColor,
-                direction: arrowDirection,
-              ),
-              size: const Size(arrowSize, arrowSize * 2),
-            ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              popoverContent,
+              buildVerticalArrow(false),
+            ],
+          ),
         );
     }
   }
