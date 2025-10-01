@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/services/svg_offscreen_renderer.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
 
 void main() {
@@ -27,6 +29,50 @@ void main() {
         width: 400,
         height: 600,
       );
+
+      testWidgets('离屏渲染保持对齐且无异常', (tester) async {
+        const svgContent = '''
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+      <rect width="400" height="600" fill="#ffffff"/>
+      <rect x="40" y="60" width="320" height="480" fill="#f5f5f5" rx="24"/>
+      <text x="200" y="150" text-anchor="middle" font-size="28" fill="#333">离屏渲染</text>
+      <text x="200" y="210" text-anchor="middle" font-size="16" fill="#666">确保布局和导出一致</text>
+    </svg>
+    ''';
+
+        late BuildContext overlayContext;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  overlayContext = context;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        final bytes = await tester.runAsync(() async {
+          return await SvgOffscreenRenderer.instance.renderSvgString(
+            svgContent,
+            context: overlayContext,
+            width: 400,
+            height: 600,
+            background: Colors.white,
+            mode: ExportRenderMode.contain,
+          );
+        });
+
+        expect(bytes, isNotNull);
+        final nonNullBytes = bytes!;
+        expect(nonNullBytes, isA<Uint8List>());
+        expect(nonNullBytes.length, greaterThan(0));
+      });
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
