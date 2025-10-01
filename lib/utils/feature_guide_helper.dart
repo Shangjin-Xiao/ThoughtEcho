@@ -54,11 +54,20 @@ class FeatureGuideHelper {
         return;
       }
 
-      // 延迟一小段时间，确保页面渲染完成
-      await Future.delayed(const Duration(milliseconds: 300));
+      // 延迟更长时间，确保页面完全渲染完成
+      await Future.delayed(const Duration(milliseconds: 600));
 
       // 检查 context 是否还有效
       if (!context.mounted) return;
+      
+      // 如果有 targetKey，等待其渲染
+      if (targetKey != null) {
+        final renderBox = targetKey.currentContext?.findRenderObject() as RenderBox?;
+        if (renderBox == null) {
+          debugPrint('目标元素尚未渲染: $guideId');
+          return;
+        }
+      }
 
       // 创建引导对象
       final guide = FeatureGuide(

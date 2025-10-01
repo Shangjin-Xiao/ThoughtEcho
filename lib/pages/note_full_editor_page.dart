@@ -103,9 +103,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _showLocation = _location != null;
     _showWeather = _weather != null;
     
-    // 显示功能引导
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showEditorGuide();
+    // 延迟显示功能引导
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        _showEditorGuide();
+      }
     });
   }
 
