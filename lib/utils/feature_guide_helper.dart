@@ -126,12 +126,14 @@ class FeatureGuideHelper {
 
   /// 重置某个引导（用于测试或重新显示）
   static Future<void> reset(BuildContext context, String guideId) async {
+    if (!context.mounted) return;
     final guideService = context.read<FeatureGuideService>();
     await guideService.resetGuide(guideId);
   }
 
   /// 重置所有引导（用于测试）
   static Future<void> resetAll(BuildContext context) async {
+    if (!context.mounted) return;
     final guideService = context.read<FeatureGuideService>();
     await guideService.resetAllGuides();
   }

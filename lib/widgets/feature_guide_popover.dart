@@ -97,7 +97,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   /// 构建居中的气泡（无箭头）
   Widget _buildCenteredPopover(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       child: GestureDetector(
         onTap: _handleDismiss,
         child: Center(
@@ -126,17 +126,19 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       screenSize: screenSize,
     );
 
-    return Stack(
-      children: [
-        // 透明可点击遮罩层（点击关闭）
-        GestureDetector(
-          onTap: _handleDismiss,
-          child: Container(
-            color: Colors.transparent,
-            width: double.infinity,
-            height: double.infinity,
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          // 透明可点击遮罩层（点击关闭）
+          GestureDetector(
+            onTap: _handleDismiss,
+            child: Container(
+              color: Colors.transparent,
+              width: double.infinity,
+              height: double.infinity,
+            ),
           ),
-        ),
 
         // 气泡卡片
         Positioned(
@@ -153,8 +155,9 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
               ),
             ),
           ),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -164,10 +167,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     required Size targetSize,
     required Size screenSize,
   }) {
-    const popoverWidth = 280.0;
-    const popoverMaxHeight = 200.0;
-    const arrowSize = 12.0;
-    const margin = 16.0;
+    const popoverWidth = 220.0; // 缩小宽度
+    const popoverMaxHeight = 120.0; // 缩小高度
+    const arrowSize = 8.0; // 缩小箭头
+    const margin = 12.0;
 
     final targetCenterX = targetPosition.dx + targetSize.width / 2;
     final targetCenterY = targetPosition.dy + targetSize.height / 2;
@@ -217,25 +220,25 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     PopoverArrowDirection arrowDirection, {
     double arrowOffset = 0,
   }) {
-    const arrowSize = 12.0;
+    const arrowSize = 8.0;
 
     Widget popoverContent = Container(
       constraints: const BoxConstraints(
-        maxWidth: 280,
-        minWidth: 200,
+        maxWidth: 220,
+        minWidth: 180,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,39 +249,41 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
               Icon(
                 Icons.tips_and_updates_outlined,
                 color: Theme.of(context).primaryColor,
-                size: 20,
+                size: 16,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   widget.guide.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: 13,
                         color: Theme.of(context).primaryColor,
                       ),
                 ),
               ),
               // 关闭按钮
-              InkWell(
+              GestureDetector(
                 onTap: _handleDismiss,
-                borderRadius: BorderRadius.circular(16),
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(2),
                   child: Icon(
                     Icons.close,
-                    size: 16,
+                    size: 14,
                     color: Theme.of(context).textTheme.bodySmall?.color,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // 描述内容
           Text(
             widget.guide.description,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                ),
           ),
         ],
       ),

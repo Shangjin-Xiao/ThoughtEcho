@@ -29,6 +29,7 @@ import '../widgets/media_player_widget.dart';
 import '../constants/app_constants.dart';
 import '../services/media_file_service.dart';
 import '../services/media_reference_service.dart';
+import '../utils/feature_guide_helper.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -69,6 +70,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 标签搜索控制器和过滤状态
   final TextEditingController _tagSearchController = TextEditingController();
   String _tagSearchQuery = '';
+  
+  // 功能引导：元数据编辑按钮的 Key
+  final GlobalKey _metadataButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -98,6 +102,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 分别检查并设置位置和天气状态
     _showLocation = _location != null;
     _showWeather = _weather != null;
+    
+    // 显示功能引导
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showEditorGuide();
+    });
+  }
+
+  /// 显示编辑器功能引导
+  void _showEditorGuide() {
+    FeatureGuideHelper.show(
+      context: context,
+      guideId: 'editor_metadata',
+      targetKey: _metadataButtonKey,
+    );
   }
 
   /// 异步初始化文档内容
@@ -1104,6 +1122,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         title: const SizedBox.shrink(),
         actions: [
           IconButton(
+            key: _metadataButtonKey, // 功能引导 key
             icon: const Icon(Icons.edit_note),
             tooltip: '编辑元数据',
             onPressed: () => _showMetadataDialog(context),
