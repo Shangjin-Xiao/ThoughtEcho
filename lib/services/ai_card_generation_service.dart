@@ -89,9 +89,10 @@ class AICardGenerationService {
     }
   }
 
-  /// 本地模板回退封装（AI关闭或失败时使用）
+    /// 本地模板回退封装(AI关闭或失败时使用)
   GeneratedCard _buildFallbackCard(Quote note) {
-    final cardType = _analyzeContentTypeByKeywords(note);
+    // 使用随机选择而不是固定分析,确保多样性
+    final cardType = _selectRandomTemplateType(note);
     final fallbackSVG = CardTemplates.getTemplateByType(
       type: cardType,
       content: note.content,
@@ -119,6 +120,37 @@ class AICardGenerationService {
       date: note.date,
       dayPeriod: note.dayPeriod,
     );
+  }
+
+  /// 随机选择模板类型(用于本地回退)
+  CardType _selectRandomTemplateType(Quote note) {
+    // 使用真随机而不是伪随机
+    final random = DateTime.now().microsecondsSinceEpoch % 100;
+    final hasAuthor = note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
+
+    // 如果有作者信息,50%使用quote模板
+    if (hasAuthor && random < 50) {
+      return CardType.quote;
+    }
+
+    // 否则在所有可用模板中随机选择
+    final allTypes = [
+      CardType.knowledge,
+      CardType.quote,
+      CardType.philosophical,
+      CardType.minimalist,
+    ];
+
+    // 基于内容特征调整权重
+    final content = note.content.toLowerCase();
+    if (content.contains('思考') || content.contains('哲学') || content.contains('意义')) {
+      // 哲学内容:40%哲学,其他平分
+      if (random < 40) return CardType.philosophical;
+    }
+
+    // 其他情况:平均分配概率
+    final typeIndex = (random ~/ (100 / allTypes.length)) % allTypes.length;
+    return allTypes[typeIndex];
   }
 
   /// 批量生成（用于周期报告）
@@ -294,40 +326,6 @@ class AICardGenerationService {
     AppLogger.d('SVG清理完成，最终长度: ${cleaned.length}', source: 'AICardGeneration');
 
     return cleaned;
-  }
-
-  /// 基于关键词的简单类型分析（备用方案）
-  CardType _analyzeContentTypeByKeywords(Quote note) {
-    final content = note.content.toLowerCase();
-    final hasAuthor =
-        note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
-
-    // 引用类型关键词
-    final quoteKeywords = ['说', '曰', '云', '言', '道', '"', '"', '引用', '名言', '格言'];
-    if (hasAuthor ||
-        quoteKeywords.any((keyword) => content.contains(keyword))) {
-      return CardType.quote;
-    }
-
-    // 哲学思考关键词
-    final philosophicalKeywords = [
-      '思考',
-      '反思',
-      '感悟',
-      '人生',
-      '哲学',
-      '意义',
-      '价值',
-      '存在',
-      '真理',
-      '智慧',
-    ];
-    if (philosophicalKeywords.any((keyword) => content.contains(keyword))) {
-      return CardType.philosophical;
-    }
-
-    // 默认为知识类型
-    return CardType.knowledge;
   }
 
   /// 保存卡片为图片
@@ -909,11 +907,16 @@ class AICardGenerationService {
       );
     }
     
-    // 提取现有的viewBox
+    // 提取现有的viewBox或生成标准viewBox
     final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(normalized);
     String viewBox;
     if (viewBoxMatch != null) {
       viewBox = viewBoxMatch.group(1)!;
+      // 验证viewBox格式是否正确(应该是4个数字)
+      final parts = viewBox.split(RegExp(r'[\s,]+'));
+      if (parts.length != 4 || !parts.every((p) => double.tryParse(p) != null)) {
+        viewBox = '0 0 400 600'; // 回退到标准尺寸
+      }
     } else {
       // 尝试从width/height推断viewBox
       final widthMatch = RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
@@ -923,14 +926,15 @@ class AICardGenerationService {
       viewBox = '0 0 $w $h';
     }
 
-    // 移除现有的viewBox、width、height、preserveAspectRatio
+    // 移除现有的viewBox、width、height、preserveAspectRatio属性
     normalized = normalized
         .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
 
-    // 统一设置标准属性
+    // 统一设置标准属性:只保留viewBox和preserveAspectRatio,不设置width/height
+    // 这样可以让外部渲染器完全控制实际渲染尺寸
     normalized = normalized.replaceFirst(
       '<svg',
       '<svg viewBox="$viewBox" preserveAspectRatio="xMidYMid meet"',
