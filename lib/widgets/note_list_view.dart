@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -124,20 +125,34 @@ class NoteListViewState extends State<NoteListView> {
       return;
     }
 
+    // 自动滚动过程中产生的事件不视为用户操作
+    if (_isAutoScrolling) {
+      logDebug('自动滚动进行中，忽略滚动事件', source: 'NoteListView');
+      return;
+    }
+
     // 用户正在滑动（通过滚动事件检测）
-    _isUserScrolling = true;
-    _lastUserScrollTime = DateTime.now();
+    if (!_isUserScrolling) {
+      _isUserScrolling = true;
+    }
+
+    final now = DateTime.now();
+    _lastUserScrollTime = now;
 
     // 重置定时器
     _userScrollingTimer?.cancel();
 
-    // 设置定时器，滑动停止后1秒重置状态
-    _userScrollingTimer = Timer(const Duration(seconds: 1), () {
-      if (mounted) {
+    // 设置定时器，滑动停止后快速重置状态
+    _userScrollingTimer = Timer(const Duration(milliseconds: 450), () {
+      if (!mounted) return;
+      if (_isAutoScrolling) return;
+
+      if (_isUserScrolling) {
         setState(() {
           _isUserScrolling = false;
         });
       }
+      _lastUserScrollTime = null;
     });
   }
 
@@ -561,9 +576,8 @@ class NoteListViewState extends State<NoteListView> {
     }
     if (_lastUserScrollTime != null &&
         DateTime.now().difference(_lastUserScrollTime!) <
-            const Duration(milliseconds: 3000)) {
-      // 增加保护期到3秒，给冷启动更多时间
-      logDebug('跳过自动滚动：用户刚刚滚动 (<3000ms)', source: 'NoteListView');
+            const Duration(milliseconds: 900)) {
+      logDebug('跳过自动滚动：用户刚刚滚动 (<900ms)', source: 'NoteListView');
       return;
     }
     if (_isAutoScrolling) {
@@ -578,22 +592,52 @@ class NoteListViewState extends State<NoteListView> {
         return;
       }
 
-      _isAutoScrolling = true;
-      logDebug('滚动到笔记: $quoteId (index: $index)',
-          source: 'NoteListView');
+      final targetContext = key.currentContext;
+      if (targetContext == null) {
+        logDebug('笔记Context为空，无法滚动', source: 'NoteListView');
+        return;
+      }
 
-      Scrollable.ensureVisible(
-        key.currentContext!,
-        duration: QuoteItemWidget.expandCollapseDuration,
-        curve: Curves.easeOutCubic,
-        alignment: 0.02, // 预留少量顶部空间
-      ).then((_) {
-        logDebug('滚动完成', source: 'NoteListView');
-      }).catchError((e) {
-        logDebug('滚动失败: $e', source: 'NoteListView');
-      }).whenComplete(() {
-        _isAutoScrolling = false;
-      });
+      final renderObject = targetContext.findRenderObject();
+      if (renderObject == null) {
+        logDebug('找不到RenderObject，跳过滚动', source: 'NoteListView');
+        return;
+      }
+
+      final viewport = RenderAbstractViewport.of(renderObject);
+
+      final targetOffset = viewport.getOffsetToReveal(renderObject, 0.0).offset;
+      final minExtent = _scrollController.position.minScrollExtent;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      final clampedOffset = targetOffset.clamp(minExtent, maxExtent);
+
+      final currentOffset = _scrollController.offset;
+      if ((currentOffset - clampedOffset).abs() <= 6) {
+        logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
+        return;
+      }
+
+      _isAutoScrolling = true;
+      logDebug(
+        '滚动到笔记: $quoteId (index: $index), target=${clampedOffset.toStringAsFixed(1)}',
+        source: 'NoteListView',
+      );
+
+      _scrollController
+          .animateTo(
+            clampedOffset,
+            duration: QuoteItemWidget.expandCollapseDuration,
+            curve: Curves.easeOutCubic,
+          )
+          .then((_) {
+            logDebug('滚动完成', source: 'NoteListView');
+          })
+          .catchError((e) {
+            logDebug('滚动失败: $e', source: 'NoteListView');
+          })
+          .whenComplete(() {
+            _isAutoScrolling = false;
+          });
     } catch (e, st) {
       logDebug('滚动失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;
@@ -747,8 +791,7 @@ class NoteListViewState extends State<NoteListView> {
                   if (!expanded && requiresAlignment) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       Future.delayed(
-                        QuoteItemWidget.expandCollapseDuration +
-                            const Duration(milliseconds: 80),
+                        QuoteItemWidget.expandCollapseDuration,
                         () {
                           _scrollToItem(quote.id!, index);
                         },

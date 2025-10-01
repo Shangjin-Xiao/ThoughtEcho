@@ -41,9 +41,9 @@ class QuoteItemWidget extends StatelessWidget {
     this.searchQuery,
   });
 
-  static const Duration expandCollapseDuration = Duration(milliseconds: 260);
-  static const Duration _fadeDuration = Duration(milliseconds: 180);
-  static const Curve _expandCurve = Curves.easeInOutCubic;
+  static const Duration expandCollapseDuration = Duration(milliseconds: 190);
+  static const Duration _fadeDuration = Duration(milliseconds: 140);
+  static const Curve _expandCurve = Curves.easeOutCubic;
 
   // 优化：缓存计算结果，避免重复计算
   static final Map<String, bool> _expansionCache = <String, bool>{};
