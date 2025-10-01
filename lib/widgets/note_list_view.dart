@@ -1167,9 +1167,10 @@ class NoteListViewState extends State<NoteListView> {
 
     // 创建清除全部按钮
     final clearAllButton = Container(
+      height: 32,
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: theme.colorScheme.error.withValues(alpha: 0.2),
           width: 1,
@@ -1183,13 +1184,16 @@ class NoteListViewState extends State<NoteListView> {
             widget.onFilterChanged([], []);
             _updateStreamSubscription();
           },
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
-            padding: const EdgeInsets.all(8),
-            child: Icon(
-              Icons.close,
-              size: 20,
-              color: theme.colorScheme.error,
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              child: Icon(
+                Icons.close,
+                size: 18,
+                color: theme.colorScheme.error,
+              ),
             ),
           ),
         ),
@@ -1227,35 +1231,38 @@ class NoteListViewState extends State<NoteListView> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 筛选图标
+              // 筛选图标 - 与芯片同高
               Container(
-                padding: const EdgeInsets.all(6),
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  Icons.filter_alt_outlined,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      ...spacedChips,
-                    ],
+                child: Center(
+                  child: Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: spacedChips,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
               clearAllButton,
             ],
           ),
@@ -1275,74 +1282,74 @@ class NoteListViewState extends State<NoteListView> {
     bool isIconEmoji = false,
   }) {
     return Container(
+      height: 32,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: color.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
-      child: IntrinsicWidth(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                left: 12,
-                top: 8,
-                bottom: 8,
-                right: icon != null ? 4 : 8,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    if (isIconEmoji) ...[
-                      Text(
-                        icon as String,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ] else ...[
-                      Icon(
-                        icon as IconData,
-                        size: 16,
-                        color: color,
-                      ),
-                    ],
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    label,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16, // 稍微调大一点
-                    ),
-                  ),
-                ],
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              left: 10,
+              right: icon != null ? 4 : 8,
             ),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onDeleted,
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  if (isIconEmoji) ...[
+                    Text(
+                      icon as String,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ] else ...[
+                    Icon(
+                      icon as IconData,
+                      size: 15,
+                      color: color,
+                    ),
+                  ],
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
                 ),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
+              ],
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onDeleted,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(10),
+                bottomRight: Radius.circular(10),
+              ),
+              child: Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                child: Center(
                   child: Icon(
                     Icons.close,
-                    size: 16, // 调大关闭图标
+                    size: 15,
                     color: color.withValues(alpha: 0.7),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
