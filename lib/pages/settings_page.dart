@@ -63,9 +63,11 @@ class _SettingsPageState extends State<SettingsPage> {
     // 初始化位置控制器
     _initLocationController();
     
-    // 显示功能引导
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showSettingsGuides();
+    // 延迟显示功能引导
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        _showSettingsGuides();
+      }
     });
   }
 
@@ -79,7 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ('settings_startup', _startupPageGuideKey),
         ('settings_theme', _themeGuideKey),
       ],
-      delayBetween: const Duration(milliseconds: 600),
+      delayBetween: const Duration(milliseconds: 800),
       autoDismissDuration: const Duration(seconds: 4),
     );
   }

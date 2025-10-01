@@ -31,25 +31,17 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 200), // 加快动画速度
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -0.1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
     _controller.forward();
@@ -103,10 +95,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         child: Center(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: _buildPopoverCard(context, PopoverArrowDirection.top),
-            ),
+            child: _buildPopoverCard(context, PopoverArrowDirection.top),
           ),
         ),
       ),
@@ -146,16 +135,13 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           top: positioning['top'],
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: _buildPopoverCard(
-                context,
-                positioning['arrowDirection'] as PopoverArrowDirection,
-                arrowOffset: positioning['arrowOffset'] as double,
-              ),
+            child: _buildPopoverCard(
+              context,
+              positioning['arrowDirection'] as PopoverArrowDirection,
+              arrowOffset: positioning['arrowOffset'] as double,
             ),
           ),
-          ),
+        ),
         ],
       ),
     );

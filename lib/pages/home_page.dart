@@ -327,9 +327,11 @@ class _HomePageState extends State<HomePage>
 
       // 先初始化位置和天气，然后再获取每日提示
       _initLocationAndWeatherThenFetchPrompt();
-      
-      // 显示功能引导（仅在首页时显示）
-      if (_currentIndex == 0) {
+    });
+    
+    // 延迟显示首页引导，确保页面完全加载
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted && _currentIndex == 0) {
         _showHomePageGuides();
       }
     });
@@ -494,9 +496,9 @@ class _HomePageState extends State<HomePage>
 
   /// 显示记录页功能引导
   void _showNotePageGuides() {
-    // 延迟显示，确保页面切换完成
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
+    // 延迟更长时间，确保页面切换和渲染完成
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted && _currentIndex == 1) {
         FeatureGuideHelper.show(
           context: context,
           guideId: 'note_page_filter',
