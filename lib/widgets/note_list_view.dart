@@ -220,7 +220,9 @@ class NoteListViewState extends State<NoteListView> {
           });
 
           // 修复：在首次加载期间恢复滚动位置
-          if (savedScrollOffset != null && savedScrollOffset > 0) {
+          if (savedScrollOffset != null &&
+              savedScrollOffset > 0 &&
+              !_isUserScrolling) {
             final offset = savedScrollOffset; // 捕获非空值
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && 
@@ -256,6 +258,10 @@ class NoteListViewState extends State<NoteListView> {
             searchController.setSearchState(false);
           } catch (e) {
             logDebug('更新搜索控制器状态失败: $e');
+          }
+
+          if (isFirstLoad) {
+            isFirstLoad = false;
           }
         }
       },
