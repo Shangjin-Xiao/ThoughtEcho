@@ -24,6 +24,10 @@
     <b>📝 你的专属灵感摘录本<br>
     让我们一起随心记录，释放 AI 洞察的力量 ✨</b>
   </p>
+
+  <p>
+    <b>⚠️ 友情提示：</b>这是一个 vibe coding 项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
+  </p>
   
   <p>
     <a href="#-english-version"><b>English</b></a> • 
@@ -41,24 +45,19 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本编辑、图片、音频、视频</td>
-      <td align="center" width="33%"><b>🏷️ 智能标签系统</b><br>便捷地分类与检索笔记</td>
-      <td align="center" width="33%"><b>🎨 个性化主题</b><br>Material 3设计，自定义颜色</td>
+      <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本、多媒体附件与双格式存储</td>
+      <td align="center" width="33%"><b>🤖 AI助手</b><br>笔记上下文问答、润色与每日灵感提示</td>
+      <td align="center" width="33%"><b>📊 洞察与报告</b><br>AI 周期洞察、年度报告与写作趋势分析</td>
     </tr>
     <tr>
-      <td align="center"><b>🤖 多AI服务商支持</b><br>OpenAI、Anthropic、DeepSeek等</td>
+      <td align="center"><b>🏷️ 标签与搜索</b><br>多标签筛选、智能过滤与全文搜索</td>
       <td align="center"><b>🎯 AI卡片生成</b><br>将笔记转换为精美分享卡片</td>
-      <td align="center"><b>� 多平台同步</b><br>Windows、Android、iOS、Web</td>
+      <td align="center"><b>📦 媒体与备份中心</b><br>流式处理大文件，备份/恢复更安心</td>
     </tr>
     <tr>
-      <td align="center"><b>💾 智能备份系统</b><br>ZIP格式完整备份，支持大文件流式处理和操作取消</td>
-      <td align="center"><b>🧠 智能内存管理</b><br>大文件流式处理，防止内存溢出</td>
-      <td align="center"><b>📊 AI洞察分析</b><br>智能分析笔记内容与模式</td>
-    </tr>
-    <tr>
-      <td align="center"><b>� 一言集成</b><br>展示精选句子，类型可筛选</td>
-      <td align="center"><b>🌍 位置记录</b><br>自动获取地理位置和天气信息</td>
-      <td align="center"><b>🔍 全文搜索</b><br>快速搜索笔记内容</td>
+      <td align="center"><b>🌍 情境记录</b><br>自动保存位置、天气与时间段信息</td>
+      <td align="center"><b>🧠 智能内存管理</b><br>动态调节批量处理，避免内存溢出</td>
+      <td align="center"><b>⚡ 快速捕获</b><br>剪贴板检测、一言与每日灵感随手收集</td>
     </tr>
   </table>
 </div>
@@ -231,6 +230,9 @@
     <b>📝 Your Personal Inspiration Notebook with AI Power<br>
     Capture ideas effortlessly, unlock insights with AI ✨</b>
   </p>
+  <p>
+    <b>⚠️ Heads-up:</b> this is a vibe coding project—we're polishing it in the open, so thanks for your patience with any rough edges.
+  </p>
 </div>
 
 ## ✨ Current Features
@@ -238,24 +240,19 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Support for rich text, images, audio, video</td>
-      <td align="center" width="33%"><b>🏷️ Smart Tag System</b><br>Organize and retrieve notes easily</td>
-      <td align="center" width="33%"><b>🎨 Personalized Themes</b><br>Material 3 design with custom colors</td>
+      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Rich text, media attachments, dual-format storage</td>
+      <td align="center" width="33%"><b>🤖 AI Assistant</b><br>Context-aware Q&A, polishing, daily inspiration prompts</td>
+      <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual reports, writing trend analysis</td>
     </tr>
     <tr>
-      <td align="center"><b>🤖 Multi-AI Provider Support</b><br>OpenAI, Anthropic, DeepSeek, and more</td>
-      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes to beautiful shareable cards</td>
-      <td align="center"><b>📱 Cross-Platform Sync</b><br>Windows, Android, iOS, Web</td>
+      <td align="center"><b>🏷️ Tags & Search</b><br>Multi-tag filters, smart facets, full-text search</td>
+      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes into beautiful shareable cards</td>
+      <td align="center"><b>� Media & Backup Hub</b><br>Stream large files safely with backup/restore peace of mind</td>
     </tr>
     <tr>
-      <td align="center"><b>💾 Smart Backup System</b><br>ZIP format complete backup with streaming</td>
-      <td align="center"><b>🧠 Intelligent Memory Management</b><br>Large file streaming to prevent OOM</td>
-      <td align="center"><b>📊 AI Insights Analysis</b><br>Smart analysis of note content & patterns</td>
-    </tr>
-    <tr>
-      <td align="center"><b>� Hitokoto Integration</b><br>Display quotes with type filtering</td>
-      <td align="center"><b>🌍 Location Recording</b><br>Auto-capture location and weather info</td>
-      <td align="center"><b>🔍 Full-Text Search</b><br>Quick search through note content</td>
+      <td align="center"><b>🌍 Context Capture</b><br>Auto-save location, weather, and time-of-day context</td>
+      <td align="center"><b>🧠 Intelligent Memory Management</b><br>Adaptive batching to prevent memory spikes</td>
+      <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, Hitokoto quotes, daily prompts on tap</td>
     </tr>
   </table>
 </div>
