@@ -694,7 +694,7 @@ class CardTemplates {
             currentWidth = 0;
           }
           if (parts[i].isNotEmpty) {
-            currentLine += parts[i] + ' ';
+            currentLine += '${parts[i]} ';
             currentWidth += _stringWidth(parts[i]) + 1;
           }
         }
@@ -704,10 +704,10 @@ class CardTemplates {
       // 如果添加这个单词会超出宽度，换行
       if (currentWidth + wordWidth + 1 > maxLineChars && currentLine.isNotEmpty) {
         lines.add(currentLine.trim());
-        currentLine = word + ' ';
+        currentLine = '$word ';
         currentWidth = wordWidth + 1;
       } else {
-        currentLine += word + ' ';
+        currentLine += '$word ';
         currentWidth += wordWidth + 1;
       }
       

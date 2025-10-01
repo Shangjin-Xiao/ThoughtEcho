@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'dart:ui' as ui;
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -85,47 +84,8 @@ class QuoteItemWidget extends StatefulWidget {
       return _expansionCache[cacheKey]!;
     }
 
-    bool needsExpansion = false;
-
-    // 基于内容特征预估高度来判断
-    // 对于包含图片的富文本内容，默认认为需要折叠
-    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
-      try {
-        final decoded = jsonDecode(quote.deltaContent!);
-        if (decoded is List) {
-          bool hasImage = false;
-          int lineCount = 0;
-          int totalLength = 0;
-
-          for (var op in decoded) {
-            if (op is Map) {
-              // 检查是否包含图片
-              if (op['insert'] is Map && op['insert']['image'] != null) {
-                hasImage = true;
-              } else if (op['insert'] != null) {
-                final String insert = op['insert'].toString();
-                final lines = insert.split('\n');
-                lineCount += lines.length - 1;
-                if (!insert.endsWith('\n') && insert.isNotEmpty) lineCount++;
-                totalLength += insert.length;
-              }
-            }
-          }
-
-          // 如果包含图片，默认需要折叠（因为图片会占用较大高度）
-          // 或者文本内容超过一定阈值（预估高度约120像素，约4-5行）
-          needsExpansion = hasImage || lineCount > 4 || totalLength > 150;
-        }
-      } catch (_) {
-        // 富文本解析失败，回退到纯文本判断
-        final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-        needsExpansion = lineCount > 4 || quote.content.length > 150;
-      }
-    } else {
-      // 旧笔记（纯文本）- 基于行数和字符数预估
-      final int lineCount = 1 + '\n'.allMatches(quote.content).length;
-      needsExpansion = lineCount > 4 || quote.content.length > 150;
-    }
+    final bool needsExpansion =
+        QuoteContent.exceedsCollapsedHeight(quote);
 
     // 缓存结果
     _expansionCache[cacheKey] = needsExpansion;
