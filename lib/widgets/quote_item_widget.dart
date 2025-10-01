@@ -281,104 +281,91 @@ class QuoteItemWidget extends StatelessWidget {
                       : null,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                    child: Stack(
-                      children: [
-                        TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 300),
-                          tween: Tween(begin: 0.0, end: isExpanded ? 1.0 : 0.0),
-                          builder: (context, value, child) {
-                            return ClipRect(
-                              child: Transform.translate(
-                                offset: Offset(0, (1 - value) * 120),
-                                child: Opacity(
-                                  opacity: value,
-                                  child: child,
+                    child: Builder(
+                      builder: (context) {
+                        final theme = Theme.of(context);
+                        final needsExpansion = _needsExpansion(quote);
+                        final showFullContent = isExpanded || !needsExpansion;
+
+                        return Stack(
+                          children: [
+                            ClipRect(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 220),
+                                switchInCurve: Curves.easeOut,
+                                switchOutCurve: Curves.easeIn,
+                                child: QuoteContent(
+                                  key: ValueKey<bool>(showFullContent),
+                                  quote: quote,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    height: 1.5,
+                                  ),
+                                  showFullContent: showFullContent,
                                 ),
                               ),
-                            );
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            height: _needsExpansion(quote) ? 120 : null,
-                            child: SingleChildScrollView(
-                              physics: const NeverScrollableScrollPhysics(),
-                              child: QuoteContent(
-                                quote: quote,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.onSurface,
-                                      height: 1.5,
-                                    ),
-                                showFullContent: isExpanded,
-                              ),
                             ),
-                          ),
-                        ),
-                        if (!isExpanded && _needsExpansion(quote))
-                          // 折叠遮罩设计：
-                          // 1) 模糊降低到 1.2，避免“糊一片”压迫感，仅轻微区隔。
-                          // 2) 上浅下深渐变（透明 -> 0.04 -> 0.08）营造“还有内容”暗示，不生硬。
-                          // 3) 使用 IgnorePointer 不阻挡双击展开手势。
-                          // 4) 中央提示文字放入半透明胶囊背景，增强可读性同时不影响下方内容整体感。
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            height: 30, // 增加渐变遮罩高度以适应高度限制
-                            child: IgnorePointer(
-                              // 不阻挡双击
-                              child: ClipRect(
-                                child: BackdropFilter(
-                                  // 降低模糊强度（3 -> 1.2），更轻柔
-                                  filter: ui.ImageFilter.blur(
-                                      sigmaX: 1.2, sigmaY: 1.2),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      // 上浅下深渐变：顶部透明，底部明显以提示还有内容
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          theme.colorScheme.surface
-                                              .withValues(alpha: 0.0),
-                                          theme.colorScheme.surface
-                                              .withValues(alpha: 0.08),
-                                          theme.colorScheme.surface
-                                              .withValues(alpha: 0.18),
-                                        ],
-                                        stops: const [0.0, 0.4, 1.0],
+                            if (!isExpanded && needsExpansion)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                height: 30,
+                                child: IgnorePointer(
+                                  child: ClipRect(
+                                    child: BackdropFilter(
+                                      filter: ui.ImageFilter.blur(
+                                        sigmaX: 1.2,
+                                        sigmaY: 1.2,
                                       ),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surface
-                                            .withValues(alpha: 0.35),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '双击查看全文',
-                                        style:
-                                            theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurface
-                                              .withValues(alpha: 0.65),
-                                          fontSize: 11,
-                                          fontStyle: FontStyle.italic,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              theme.colorScheme.surface
+                                                  .withValues(alpha: 0.0),
+                                              theme.colorScheme.surface
+                                                  .withValues(alpha: 0.08),
+                                              theme.colorScheme.surface
+                                                  .withValues(alpha: 0.18),
+                                            ],
+                                            stops: const [0.0, 0.4, 1.0],
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.surface
+                                                .withValues(alpha: 0.35),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            '双击查看全文',
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                              color: theme
+                                                  .colorScheme.onSurface
+                                                  .withValues(alpha: 0.65),
+                                              fontSize: 11,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
