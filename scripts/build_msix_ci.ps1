@@ -49,44 +49,25 @@ try {
     # Try to build MSIX package
     Write-Host "Starting MSIX package build..."
     
-    # Method 1: Try using environment variables for non-interactive mode
-    Write-Host "Method 1: Using environment variable control..."
-    try {
-        $originalInput = $env:INPUT
-        $env:INPUT = "n"  # Automatically answer 'n' to certificate installation prompt
-        flutter pub run msix:create 2>&1 | ForEach-Object { Write-Host $_ }
-        $env:INPUT = $originalInput
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Method 1 successful"
-        } else {
-            throw "Method 1 failed"
-        }
-    }
-    catch {
-        Write-Host "Method 1 failed: $_"
-        
-        # Method 2: Use PowerShell input redirection
-        Write-Host "Method 2: Using input redirection..."
-        try {
-            $process = Start-Process -FilePath "flutter" -ArgumentList "pub", "run", "msix:create" -NoNewWindow -Wait -PassThru -RedirectStandardInput "NUL"
-            if ($process.ExitCode -ne 0) {
-                throw "Method 2 failed, exit code: $($process.ExitCode)"
-            }
-            Write-Host "Method 2 successful"
-        }
-        catch {
-            Write-Host "Method 2 failed: $_"
-            
-            # Method 3: Last fallback - only build Windows exe, skip MSIX
-            Write-Host "All MSIX build methods failed, will only provide exe file"
-            return $false
-        }
+    # Check if msix_config exists in pubspec.yaml
+    $pubspecContent = Get-Content "pubspec.yaml" -Raw
+    if ($pubspecContent -notmatch "msix_config:") {
+        Write-Warning "msix_config not found in pubspec.yaml. MSIX build may fail."
     }
     
+    # Set environment to prevent certificate installation prompts
+    $env:MSIX_INSTALL_CERTIFICATE = "false"
+    
+    # Use flutter pub run msix:create with verbose output
+    Write-Host "Building MSIX package (will auto-generate test certificate)..."
+    flutter pub run msix:create --verbose 2>&1 | Tee-Object -Variable msixOutput
+    
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "MSIX build failed, but Windows application build successful"
-        Write-Host "Can continue using exe file for release"
+        Write-Warning "MSIX build failed with exit code: $LASTEXITCODE"
+        Write-Host "MSIX build output:"
+        Write-Host $msixOutput
+        Write-Host "Windows exe build was successful. MSIX package creation failed but can be skipped."
+        Write-Host "Note: MSIX will be self-signed with a test certificate. Users need to install the certificate to trust the app."
         return $false
     }
 
