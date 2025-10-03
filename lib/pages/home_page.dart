@@ -515,7 +515,8 @@ class _HomePageState extends State<HomePage>
     }
 
     _homeGuidePending = true;
-    Future.delayed(const Duration(milliseconds: 600), () async {
+    // 立即显示，不等待
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) {
         _homeGuidePending = false;
         return;
@@ -532,7 +533,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _scheduleNoteGuideIfNeeded({
-    Duration delay = const Duration(milliseconds: 700),
+    Duration delay = Duration.zero,
   }) {
     if (_noteGuidePending) return;
 
@@ -548,20 +549,38 @@ class _HomePageState extends State<HomePage>
     }
 
     _noteGuidePending = true;
-    Future.delayed(delay, () async {
-      if (!mounted) {
-        _noteGuidePending = false;
-        return;
-      }
+    if (delay == Duration.zero) {
+      // 立即显示
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) {
+          _noteGuidePending = false;
+          return;
+        }
 
-      if (_currentIndex != 1) {
-        _noteGuidePending = false;
-        return;
-      }
+        if (_currentIndex != 1) {
+          _noteGuidePending = false;
+          return;
+        }
 
-      await _showNotePageGuides();
-      _noteGuidePending = false;
-    });
+        await _showNotePageGuides();
+        _noteGuidePending = false;
+      });
+    } else {
+      Future.delayed(delay, () async {
+        if (!mounted) {
+          _noteGuidePending = false;
+          return;
+        }
+
+        if (_currentIndex != 1) {
+          _noteGuidePending = false;
+          return;
+        }
+
+        await _showNotePageGuides();
+        _noteGuidePending = false;
+      });
+    }
   }
 
   void _handleNoteGuideTargetsReady() {
@@ -570,7 +589,7 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 350));
+    _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
   }
 
   void _scheduleSettingsGuideIfNeeded() {
@@ -584,7 +603,8 @@ class _HomePageState extends State<HomePage>
     }
 
     _settingsGuidePending = true;
-    Future.delayed(const Duration(milliseconds: 700), () {
+    // 立即显示
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         _settingsGuidePending = false;
         return;
@@ -640,8 +660,8 @@ class _HomePageState extends State<HomePage>
     await FeatureGuideHelper.showSequence(
       context: context,
       guides: guides,
-      delayBetween: const Duration(milliseconds: 700),
-      autoDismissDuration: const Duration(seconds: 4),
+      delayBetween: const Duration(milliseconds: 400),
+      autoDismissDuration: const Duration(seconds: 3),
     );
   }
 

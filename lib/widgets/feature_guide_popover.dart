@@ -20,7 +20,7 @@ class FeatureGuidePopover extends StatefulWidget {
     super.key,
     required this.guide,
     required this.onDismiss,
-    this.autoDismissDuration = const Duration(seconds: 5),
+    this.autoDismissDuration = const Duration(seconds: 3),
   });
 
   @override
@@ -36,7 +36,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 200), // 加快动画速度
+      duration: const Duration(milliseconds: 100), // 极简快速动画
       vsync: this,
     );
 
@@ -162,7 +162,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   }) {
     const popoverWidth = 220.0; // 缩小宽度
     const popoverMaxHeight = 120.0; // 缩小高度
-    const arrowSize = 8.0; // 缩小箭头
+    const arrowSize = 10.0; // 更新箭头尺寸
     const margin = 12.0;
 
     final targetCenterX = targetPosition.dx + targetSize.width / 2;
@@ -172,7 +172,20 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     final safeLeft = margin;
     final safeRight = screenSize.width - margin;
 
-    // 优先显示在下方
+    // 优先尝试上方（适合首页每日一言）
+    if (targetPosition.dy - arrowSize - popoverMaxHeight > safeTop) {
+      final left = (targetCenterX - popoverWidth / 2)
+          .clamp(safeLeft, safeRight - popoverWidth);
+      return {
+        'left': left,
+        'top': targetPosition.dy - arrowSize - popoverMaxHeight,
+        'arrowDirection': PopoverArrowDirection.bottom,
+        'arrowOffset': targetCenterX - left,
+      };
+    }
+
+    // 其次显示在下方
+    // 其次显示在下方
     if (targetPosition.dy + targetSize.height + arrowSize + popoverMaxHeight + margin <
         safeBottom) {
       final left = (targetCenterX - popoverWidth / 2)
@@ -181,18 +194,6 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         'left': left,
         'top': targetPosition.dy + targetSize.height + arrowSize,
         'arrowDirection': PopoverArrowDirection.top,
-        'arrowOffset': targetCenterX - left,
-      };
-    }
-
-    // 其次尝试上方
-    if (targetPosition.dy - arrowSize - popoverMaxHeight > safeTop) {
-      final left = (targetCenterX - popoverWidth / 2)
-          .clamp(safeLeft, safeRight - popoverWidth);
-      return {
-        'left': left,
-        'top': targetPosition.dy - arrowSize - popoverMaxHeight,
-        'arrowDirection': PopoverArrowDirection.bottom,
         'arrowOffset': targetCenterX - left,
       };
     }
@@ -229,7 +230,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     PopoverArrowDirection arrowDirection, {
     double arrowOffset = 0,
   }) {
-    const arrowSize = 8.0;
+    const arrowSize = 10.0; // 增大箭头尺寸
     final theme = Theme.of(context);
     final cardColor = theme.cardColor;
 
