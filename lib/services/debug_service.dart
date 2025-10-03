@@ -14,7 +14,6 @@ class WindowsStartupDebugService {
 
   static bool _isInitialized = false;
   static File? _debugLogFile;
-  static File? _desktopLogFile;
   static final List<String> _initSteps = [];
   static final Map<String, dynamic> _debugInfo = {};
 
@@ -23,9 +22,6 @@ class WindowsStartupDebugService {
     if (_isInitialized) return;
 
     try {
-      // 优先尝试创建桌面日志文件，确保用户能看到
-      await _createDesktopLogFile();
-
       // 获取应用文档目录
       final appDir = await getApplicationDocumentsDirectory();
       final debugDir = Directory(path.join(appDir.path, 'debug'));
@@ -49,52 +45,11 @@ class WindowsStartupDebugService {
       _isInitialized = true;
       await _writeDebugLog('调试服务初始化完成');
     } catch (e) {
-      // 即使初始化失败也要记录到桌面文件
-      await _writeToDesktopLog('调试服务初始化失败: $e');
+      // 静默处理初始化失败
     }
   }
 
-  /// 写入桌面日志文件
-  static Future<void> _writeToDesktopLog(String message) async {
-    try {
-      if (_desktopLogFile != null) {
-        final timestamp = DateTime.now().toIso8601String();
-        await _desktopLogFile!
-            .writeAsString('[$timestamp] $message\n', mode: FileMode.append);
-      }
-    } catch (e) {
-      // 静默处理桌面日志写入错误
-    }
-  }
 
-  /// 创建桌面日志文件，确保用户能看到启动问题
-  static Future<void> _createDesktopLogFile() async {
-    try {
-      final home =
-          Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
-      if (home == null) return;
-
-      final desktop = Directory(path.join(home, 'Desktop'));
-      if (!await desktop.exists()) return;
-
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final desktopLogFile =
-          File(path.join(desktop.path, 'ThoughtEcho_启动日志_$timestamp.txt'));
-
-      await desktopLogFile.writeAsString('''
-=== ThoughtEcho Windows 启动日志 ===
-启动时间: ${DateTime.now().toLocal()}
-进程ID: $pid
-工作目录: ${Directory.current.path}
-
-''');
-
-      // 保存桌面日志文件引用
-      _desktopLogFile = desktopLogFile;
-    } catch (e) {
-      // 静默处理桌面日志创建失败
-    }
-  }
 
   /// 记录初始化步骤
   static Future<void> recordInitStep(String step,
@@ -470,19 +425,7 @@ class WindowsStartupDebugService {
         final finalReportFile =
             File(path.join(debugDir.path, 'final_diagnostic_report.txt'));
         await finalReportFile.writeAsString(diagnosticReport);
-
-        // 同时保存到桌面（如果可能）
-        final home =
-            Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
-        if (home != null) {
-          final desktop = Directory(path.join(home, 'Desktop'));
-          if (await desktop.exists()) {
-            final desktopReportFile = File(path.join(desktop.path,
-                'ThoughtEcho_最终诊断报告_${DateTime.now().millisecondsSinceEpoch}.txt'));
-            await desktopReportFile.writeAsString(diagnosticReport);
-            await _writeDebugLog('最终诊断报告已保存到桌面: ${desktopReportFile.path}');
-          }
-        }
+        await _writeDebugLog('最终诊断报告已保存: ${finalReportFile.path}');
       } catch (e) {
         await _writeDebugLog('生成最终诊断报告失败: $e');
       }

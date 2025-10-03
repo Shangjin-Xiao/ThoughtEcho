@@ -99,6 +99,20 @@ flutter_launcher_icons:
   image_path: "icon.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "icon.png"
+
+# MSIX Windows 安装包配置
+msix_config:
+  display_name: ThoughtEcho
+  publisher_display_name: Shangjin
+  identity_name: com.shangjin.thoughtecho
+  msix_version: 1.0.0.0
+  publisher: CN=Shangjin
+  logo_path: windows/runner/resources/app_icon.ico
+  capabilities: internetClient
+  languages: zh-CN, en-US
+  # 签名配置 - msix插件会自动生成测试证书
+  certificate_subject: CN=Shangjin
+  install_certificate: false  # CI环境中不安装证书，避免交互提示
   
 # 字体配置
 flutter:
