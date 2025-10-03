@@ -87,7 +87,7 @@ class SettingsPageState extends State<SettingsPage> {
 
   /// 显示设置页功能引导
   void _showSettingsGuides() {
-    // 依次显示多个引导
+    // 依次显示多个引导，等待前一个消失再显示下一个
     FeatureGuideHelper.showSequence(
       context: context,
       guides: [
@@ -95,8 +95,8 @@ class SettingsPageState extends State<SettingsPage> {
         ('settings_startup', _startupPageGuideKey),
         ('settings_theme', _themeGuideKey),
       ],
-      delayBetween: const Duration(milliseconds: 800),
-      autoDismissDuration: const Duration(seconds: 4),
+      delayBetween: const Duration(milliseconds: 3200), // 等待前一个消失（3秒）+缓冲时间
+      autoDismissDuration: const Duration(seconds: 3),
     );
   }
 
