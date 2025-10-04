@@ -110,6 +110,7 @@ msix_config:
   logo_path: windows/runner/resources/app_icon.ico
   capabilities: internetClient
   languages: zh-CN, en-US
+  output_name: ThoughtEcho-Setup  # 输出文件名（不含.msix扩展名）
   # 签名配置 - msix插件会自动生成测试证书
   certificate_subject: CN=Shangjin
   install_certificate: false  # CI环境中不安装证书，避免交互提示
