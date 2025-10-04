@@ -335,7 +335,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     return AnimatedSize(
                       duration: QuoteItemWidget.expandCollapseDuration,
                       curve: QuoteItemWidget._expandCurve,
-                      alignment: Alignment.topCenter,
+                      alignment: Alignment.topLeft,
                       clipBehavior: Clip.none,
                       child: AnimatedBuilder(
                         animation: _doubleTapController,
