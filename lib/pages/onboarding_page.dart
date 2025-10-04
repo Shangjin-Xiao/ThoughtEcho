@@ -677,34 +677,57 @@ class _OnboardingPageState extends State<OnboardingPage>
     if (!mounted) return;
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('跳过引导'),
-        content: const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                await controller.skipOnboarding();
-                if (mounted) {
-                  _navigateToHome();
-                }
-              } catch (error) {
-                logError('跳过引导失败', error: error, source: 'OnboardingPage');
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('初始化失败，请重试')),
-                  );
-                }
-              }
-            },
-            child: const Text('确定跳过'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (dialogContext) => Consumer<OnboardingController>(
+        builder: (context, ctrl, child) {
+          return AlertDialog(
+            title: const Text('跳过引导'),
+            content: ctrl.state.isCompleting
+                ? const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      EnhancedLottieAnimation(
+                        type: LottieAnimationType.loading,
+                        width: 60,
+                        height: 60,
+                      ),
+                      SizedBox(height: 16),
+                      Text('正在初始化...'),
+                    ],
+                  )
+                : const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
+            actions: ctrl.state.isCompleting
+                ? null
+                : [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('取消'),
+                    ),
+                    FilledButton(
+                      onPressed: () async {
+                        try {
+                          await controller.skipOnboarding();
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          if (mounted) {
+                            _navigateToHome();
+                          }
+                        } catch (error) {
+                          logError('跳过引导失败', error: error, source: 'OnboardingPage');
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('初始化失败，请重试')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('确定跳过'),
+                    ),
+                  ],
+          );
+        },
       ),
     );
   }
