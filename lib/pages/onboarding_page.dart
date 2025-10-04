@@ -679,11 +679,12 @@ class _OnboardingPageState extends State<OnboardingPage>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => Consumer<OnboardingController>(
-        builder: (context, ctrl, child) {
+      builder: (dialogContext) => ListenableBuilder(
+        listenable: controller,
+        builder: (context, child) {
           return AlertDialog(
             title: const Text('跳过引导'),
-            content: ctrl.state.isCompleting
+            content: controller.state.isCompleting
                 ? const Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -697,7 +698,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ],
                   )
                 : const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
-            actions: ctrl.state.isCompleting
+            actions: controller.state.isCompleting
                 ? null
                 : [
                     TextButton(
