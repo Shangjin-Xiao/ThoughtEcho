@@ -8,16 +8,22 @@ import '../services/settings_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
 import '../services/mmkv_service.dart';
+import '../services/ai_analysis_database_service.dart';
 import '../utils/app_logger.dart';
 
 /// 引导页面控制器
 class OnboardingController extends ChangeNotifier {
   final PageController _pageController = PageController();
   OnboardingState _state = const OnboardingState();
+  final ValueNotifier<bool>? servicesInitializedNotifier;
+  
   // Services
   late final MigrationService _migrationService;
   late final SettingsService _settingsService;
   late final ClipboardService _clipboardService;
+  late final AIAnalysisDatabaseService _aiAnalysisDbService;
+
+  OnboardingController({this.servicesInitializedNotifier});
 
   PageController get pageController => _pageController;
   OnboardingState get state => _state;
@@ -28,9 +34,11 @@ class OnboardingController extends ChangeNotifier {
     final settingsService = context.read<SettingsService>();
     final mmkvService = context.read<MMKVService>();
     final clipboardService = context.read<ClipboardService>();
+    final aiAnalysisDbService = context.read<AIAnalysisDatabaseService>();
 
     _settingsService = settingsService;
     _clipboardService = clipboardService;
+    _aiAnalysisDbService = aiAnalysisDbService;
     _migrationService = MigrationService(
       databaseService: databaseService,
       settingsService: settingsService,
@@ -111,7 +119,7 @@ class OnboardingController extends ChangeNotifier {
     try {
       logInfo('开始完成引导流程');
 
-      // 1. 执行数据迁移
+      // 1. 执行数据迁移（包含数据库初始化）
       final migrationResult = await _migrationService.performMigration();
       if (!migrationResult.isSuccess) {
         logError(
@@ -126,11 +134,23 @@ class OnboardingController extends ChangeNotifier {
         }
       }
 
-      // 2. 保存用户偏好设置
+      // 2. 初始化 AI 分析数据库
+      try {
+        await _aiAnalysisDbService.init();
+        logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
+      } catch (aiDbError) {
+        logError('AI分析数据库初始化失败: $aiDbError',
+            error: aiDbError, source: 'OnboardingController');
+      }
+
+      // 3. 保存用户偏好设置
       await _saveUserPreferences();
 
-      // 3. 标记引导完成
+      // 4. 标记引导完成
       await _settingsService.setHasCompletedOnboarding(true);
+
+      // 5. 标记服务初始化完成
+      servicesInitializedNotifier?.value = true;
 
       logInfo('引导流程完成');
     } catch (e, stackTrace) {
@@ -223,8 +243,50 @@ class OnboardingController extends ChangeNotifier {
 
   /// 跳过引导
   Future<void> skipOnboarding() async {
-    // 使用默认设置完成引导
-    await completeOnboarding();
+    if (_state.isCompleting) return;
+
+    _state = _state.copyWith(isCompleting: true);
+    notifyListeners();
+
+    try {
+      logInfo('用户选择跳过引导，使用默认设置');
+
+      // 1. 执行数据迁移（包含数据库初始化）
+      final migrationResult = await _migrationService.performMigration();
+      if (!migrationResult.isSuccess) {
+        logWarning(
+          '跳过引导时数据迁移失败: ${migrationResult.errorMessage}',
+          source: 'OnboardingController',
+        );
+      }
+
+      // 2. 初始化 AI 分析数据库
+      try {
+        await _aiAnalysisDbService.init();
+        logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
+      } catch (aiDbError) {
+        logError('AI分析数据库初始化失败: $aiDbError',
+            error: aiDbError, source: 'OnboardingController');
+      }
+
+      // 3. 标记引导完成（不保存用户偏好，使用默认值）
+      await _settingsService.setHasCompletedOnboarding(true);
+
+      // 4. 标记服务初始化完成
+      servicesInitializedNotifier?.value = true;
+
+      logInfo('跳过引导完成');
+    } catch (e, stackTrace) {
+      logError(
+        '跳过引导失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'OnboardingController',
+      );
+      _state = _state.copyWith(isCompleting: false);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   @override

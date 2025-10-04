@@ -10,6 +10,7 @@ import '../services/migration_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../services/mmkv_service.dart';
+import '../services/ai_analysis_database_service.dart';
 import '../utils/app_logger.dart';
 import 'home_page.dart';
 import '../utils/lottie_animation_manager.dart';
@@ -47,27 +48,34 @@ class _OnboardingPageState extends State<OnboardingPage>
   @override
   void initState() {
     super.initState();
-    _controller = OnboardingController();
-
-    _loadingAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _loadingAnimationController,
-        curve: Curves.easeOut,
-      ),
-    );
-
     _initializeOnboarding();
   }
 
   /// 初始化引导流程
   Future<void> _initializeOnboarding() async {
     try {
+      // 获取 servicesInitializedNotifier
+      final servicesInitializedNotifier = Provider.of<ValueNotifier<bool>>(
+        context,
+        listen: false,
+      );
+
+      _controller = OnboardingController(
+        servicesInitializedNotifier: servicesInitializedNotifier,
+      );
       _controller.initialize(context);
+
+      _loadingAnimationController = AnimationController(
+        duration: const Duration(milliseconds: 800),
+        vsync: this,
+      );
+
+      _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _loadingAnimationController,
+          curve: Curves.easeOut,
+        ),
+      );
 
       // 如果是更新后显示，直接处理迁移
       if (widget.showUpdateReady && !widget.showFullOnboarding) {
@@ -99,6 +107,8 @@ class _OnboardingPageState extends State<OnboardingPage>
     try {
       logInfo('处理更新后迁移');
 
+      if (!mounted) return;
+      
       final migrationService = MigrationService(
         databaseService: context.read<DatabaseService>(),
         settingsService: context.read<SettingsService>(),
@@ -107,11 +117,33 @@ class _OnboardingPageState extends State<OnboardingPage>
 
       final result = await migrationService.performMigration();
 
+      if (!mounted) return;
+
       if (result.isSuccess) {
         logInfo('更新迁移成功完成');
+        
+        // 初始化 AI 分析数据库
+        try {
+          final aiAnalysisDbService = context.read<AIAnalysisDatabaseService>();
+          await aiAnalysisDbService.init();
+          logInfo('AI分析数据库初始化完成', source: 'OnboardingPage');
+        } catch (aiDbError) {
+          logError('AI分析数据库初始化失败: $aiDbError',
+              error: aiDbError, source: 'OnboardingPage');
+        }
+
+        if (!mounted) return;
+
+        // 标记服务初始化完成
+        final servicesInitializedNotifier = Provider.of<ValueNotifier<bool>>(
+          context,
+          listen: false,
+        );
+        servicesInitializedNotifier.value = true;
+
         // 短暂延迟后自动跳转到主页
+        await Future.delayed(const Duration(milliseconds: 1500));
         if (mounted) {
-          await Future.delayed(const Duration(milliseconds: 1500));
           _navigateToHome();
         }
       } else {
@@ -653,9 +685,21 @@ class _OnboardingPageState extends State<OnboardingPage>
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              controller.skipOnboarding().then((_) => _navigateToHome());
+              try {
+                await controller.skipOnboarding();
+                if (mounted) {
+                  _navigateToHome();
+                }
+              } catch (error) {
+                logError('跳过引导失败', error: error, source: 'OnboardingPage');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('初始化失败，请重试')),
+                  );
+                }
+              }
             },
             child: const Text('确定跳过'),
           ),
