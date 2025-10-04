@@ -120,15 +120,27 @@ jobs:
           $exitCode = $LASTEXITCODE
           
           if ($exitCode -eq 0) {
-            # 检查MSIX文件是否实际创建成功
-            $msixPath = "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix"
-            if (Test-Path $msixPath) {
+            # 检查MSIX文件是否实际创建成功（尝试多个可能的文件名）
+            $possibleMsixPaths = @(
+              "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix",
+              "build/windows/x64/runner/Release/thoughtecho.msix"
+            )
+            
+            $msixPath = $null
+            foreach ($path in $possibleMsixPaths) {
+              if (Test-Path $path) {
+                $msixPath = $path
+                break
+              }
+            }
+            
+            if ($msixPath) {
               $msixSize = (Get-Item $msixPath).Length
-              Write-Host "MSIX构建成功！文件大小: $([math]::Round($msixSize/1MB, 2)) MB" -ForegroundColor Green
+              Write-Host "MSIX构建成功！文件: $msixPath, 大小: $([math]::Round($msixSize/1MB, 2)) MB" -ForegroundColor Green
               "msix_success=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
               "msix_path=$msixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
-              Write-Warning "MSIX命令执行成功但文件未找到: $msixPath"
+              Write-Warning "MSIX命令执行成功但文件未找到，尝试过的路径: $($possibleMsixPaths -join ', ')"
               "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
           } else {
@@ -201,8 +213,11 @@ jobs:
             Write-Host "⚠️ 输出路径未找到MSIX，尝试在构建目录搜索..." -ForegroundColor Yellow
             $possiblePaths = @(
                 "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix",
+                "build/windows/x64/runner/Release/thoughtecho.msix",
                 "build/windows/runner/Release/ThoughtEcho-Setup.msix",
-                "build/windows/x64/ThoughtEcho-Setup.msix"
+                "build/windows/runner/Release/thoughtecho.msix",
+                "build/windows/x64/ThoughtEcho-Setup.msix",
+                "build/windows/x64/thoughtecho.msix"
             )
             
             foreach ($path in $possiblePaths) {
