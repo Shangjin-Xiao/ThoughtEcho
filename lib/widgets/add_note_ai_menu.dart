@@ -443,8 +443,15 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final aiService = Provider.of<AIService>(context, listen: false);
-    final bool aiConfigured = aiService.hasValidApiKey();
+    AIService? aiService;
+    try {
+      aiService = Provider.of<AIService>(context, listen: false);
+    } catch (_) {
+      aiService = null;
+    }
+
+    final bool aiConfigured =
+        aiService != null && aiService.hasValidApiKey();
 
     if (!aiConfigured) {
       return const SizedBox.shrink();
