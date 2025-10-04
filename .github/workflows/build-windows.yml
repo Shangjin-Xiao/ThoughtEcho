@@ -185,28 +185,64 @@ jobs:
         
         Compress-Archive -Path "release_temp/*" -DestinationPath $archiveName -Force
         
-        # 检查MSIX文件是否存在
+        # 检查MSIX文件是否存在（改进逻辑）
         $msixSuccess = "${{ steps.msix_build.outputs.msix_success }}" -eq "true"
         $msixPath = "${{ steps.msix_build.outputs.msix_path }}"
+        $msixFound = $false
         
+        # 先检查输出路径中的MSIX文件
         if ($msixSuccess -and $msixPath -and (Test-Path $msixPath)) {
-            $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
-            Copy-Item -Path $msixPath -Destination $msixName
-            "msix_name=$msixName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Output "✅ 创建MSIX安装包: $msixName"
-        } else {
-            if (!$msixSuccess) {
-                Write-Output "⚠️ MSIX构建失败，跳过MSIX打包"
-            } elseif (!$msixPath) {
-                Write-Output "⚠️ MSIX文件路径未设置，跳过MSIX打包"
-            } else {
-                Write-Output "⚠️ MSIX文件未找到: $msixPath，跳过MSIX打包"
+            $msixFound = $true
+            $sourceMsixPath = $msixPath
+            Write-Host "✅ 在输出路径找到MSIX: $msixPath" -ForegroundColor Green
+        } 
+        # 如果输出路径没有找到，尝试在构建目录中查找
+        else {
+            Write-Host "⚠️ 输出路径未找到MSIX，尝试在构建目录搜索..." -ForegroundColor Yellow
+            $possiblePaths = @(
+                "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix",
+                "build/windows/runner/Release/ThoughtEcho-Setup.msix",
+                "build/windows/x64/ThoughtEcho-Setup.msix"
+            )
+            
+            foreach ($path in $possiblePaths) {
+                if (Test-Path $path) {
+                    $msixFound = $true
+                    $sourceMsixPath = $path
+                    Write-Host "✅ 在备选路径找到MSIX: $path" -ForegroundColor Green
+                    break
+                }
             }
-            Write-Output "主要的Windows应用已经构建成功，可以通过ZIP包分发"
         }
         
-        "archive_name=$archiveName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        Write-Output "创建ZIP发布包: $archiveName"
+        # 如果找到MSIX文件，复制并设置输出
+        if ($msixFound) {
+            $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
+            Copy-Item -Path $sourceMsixPath -Destination $msixName -Force
+            
+            # 验证复制成功
+            if (Test-Path $msixName) {
+                $msixSize = (Get-Item $msixName).Length
+                Write-Host "✅ 成功创建MSIX安装包: $msixName (大小: $([math]::Round($msixSize/1MB, 2)) MB)" -ForegroundColor Green
+                "msix_name=$msixName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+                "has_msix=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            } else {
+                Write-Warning "MSIX文件复制失败"
+                "has_msix=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            }
+        } else {
+            Write-Host "⚠️ 未找到MSIX文件，将只提供ZIP包" -ForegroundColor Yellow
+            if (!$msixSuccess) {
+                Write-Host "  原因: MSIX构建步骤报告失败" -ForegroundColor Gray
+            } elseif (!$msixPath) {
+                Write-Host "  原因: MSIX文件路径未设置" -ForegroundColor Gray
+            }
+            Write-Host "✅ Windows应用已成功构建，可通过ZIP包分发" -ForegroundColor Green
+            "has_msix=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        }
+        
+        "archive_name=$archiveName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        Write-Output "✅ 创建ZIP发布包: $archiveName"
       id: archive
       
     - name: Upload ZIP build artifacts
@@ -217,7 +253,7 @@ jobs:
         retention-days: 90
         
     - name: Upload MSIX installer
-      if: steps.archive.outputs.msix_name != ''
+      if: steps.archive.outputs.has_msix == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}-msix
@@ -230,7 +266,7 @@ jobs:
         $buildType = "${{ github.event.inputs.build_type || 'release' }}"
         $archiveName = "${{ steps.archive.outputs.archive_name }}"
         $msixName = "${{ steps.archive.outputs.msix_name }}"
-        $msixSuccess = "${{ steps.msix_build.outputs.msix_success }}" -eq "true"
+        $hasMsix = "${{ steps.archive.outputs.has_msix }}" -eq "true"
         
         Write-Output "## 🎉 Windows构建完成" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
@@ -243,7 +279,7 @@ jobs:
         Write-Output "### 📦 发布文件" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **ZIP压缩包**: ✅ $archiveName" >> $env:GITHUB_STEP_SUMMARY
         
-        if ($msixSuccess -and $msixName) {
+        if ($hasMsix -and $msixName) {
             Write-Output "- **MSIX安装包**: ✅ $msixName" >> $env:GITHUB_STEP_SUMMARY
         } else {
             Write-Output "- **MSIX安装包**: ❌ 构建失败（可使用ZIP包替代）" >> $env:GITHUB_STEP_SUMMARY
@@ -254,7 +290,7 @@ jobs:
         Write-Output "1. 在Actions页面的Artifacts部分下载对应的发布包" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "2. **ZIP包**: 解压后直接运行 thoughtecho.exe" >> $env:GITHUB_STEP_SUMMARY
         
-        if ($msixSuccess) {
+        if ($hasMsix) {
             Write-Output "3. **MSIX包**: 双击安装到系统（推荐）" >> $env:GITHUB_STEP_SUMMARY
         } else {
             Write-Output "3. **MSIX包**: 本次构建失败，请使用ZIP包" >> $env:GITHUB_STEP_SUMMARY
