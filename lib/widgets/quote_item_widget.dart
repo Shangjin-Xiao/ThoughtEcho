@@ -349,7 +349,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                           return Transform.scale(
                             scale: _scaleAnimation.value,
-                            alignment: Alignment.topCenter,
+                            alignment: Alignment.topLeft,
                             child: Stack(
                               clipBehavior: Clip.none,
                               children: [
