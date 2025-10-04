@@ -10,6 +10,7 @@ import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
+import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
@@ -609,6 +610,8 @@ class NoteListViewState extends State<NoteListView> {
       notifier.dispose();
     }
     _expansionNotifiers.clear();
+
+    QuoteContent.resetCaches();
 
     // 清理初始化状态
     _isInitializing = false;
