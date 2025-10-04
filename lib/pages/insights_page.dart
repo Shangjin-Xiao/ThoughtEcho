@@ -336,7 +336,9 @@ class _InsightsPageState extends State<InsightsPage> {
       ));
 
       // 使用share_plus分享
-      Share.share(content);
+      await SharePlus.instance.share(
+        ShareParams(text: content),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
