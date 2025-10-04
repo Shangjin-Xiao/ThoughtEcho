@@ -97,7 +97,7 @@ jobs:
           
           if (!(Test-Path "$buildPath/thoughtecho.exe")) {
             Write-Error "Windows构建文件不存在: $buildPath/thoughtecho.exe"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
+            "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             exit 1
           }
           
@@ -113,20 +113,20 @@ jobs:
             if (Test-Path $msixPath) {
               $msixSize = (Get-Item $msixPath).Length
               Write-Host "✅ MSIX构建成功！文件大小: $([math]::Round($msixSize/1MB, 2)) MB" -ForegroundColor Green
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=true"
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_path=$msixPath"
+              "msix_success=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+              "msix_path=$msixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             } else {
               Write-Warning "⚠️ MSIX命令执行成功但文件未找到: $msixPath"
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
+              "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             }
           } else {
             Write-Warning "⚠️ MSIX构建失败（退出码: $exitCode）"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
+            "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           }
         }
         catch {
           Write-Warning "⚠️ MSIX构建异常: $($_.Exception.Message)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
+          "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         }
       id: msix_build
       env:
@@ -135,9 +135,15 @@ jobs:
     - name: Get app version
       id: version
       run: |
-        $version = (Get-Content pubspec.yaml | Select-String 'version:').ToString().Split(':')[1].Trim()
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
-        Write-Output "App version: $version"
+        $content = Get-Content pubspec.yaml -Raw
+        if ($content -match 'version:\s*([\d\.]+\+?\d*)') {
+          $version = $matches[1]
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Output "App version: $version"
+        } else {
+          Write-Error "无法从 pubspec.yaml 中提取版本号"
+          exit 1
+        }
       
     - name: Create release packages
       run: |
@@ -174,7 +180,7 @@ jobs:
         if ($msixSuccess -and $msixPath -and (Test-Path $msixPath)) {
             $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
             Copy-Item -Path $msixPath -Destination $msixName
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_name=$msixName"
+            "msix_name=$msixName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             Write-Output "✅ 创建MSIX安装包: $msixName"
         } else {
             if (!$msixSuccess) {
@@ -187,7 +193,7 @@ jobs:
             Write-Output "主要的Windows应用已经构建成功，可以通过ZIP包分发"
         }
         
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "archive_name=$archiveName"
+        "archive_name=$archiveName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         Write-Output "创建ZIP发布包: $archiveName"
       id: archive
       
