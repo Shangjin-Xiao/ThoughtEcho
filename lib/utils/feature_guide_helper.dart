@@ -105,6 +105,7 @@ class FeatureGuideHelper {
         description: config.description,
         targetKey: targetKey,
         preferredPlacement: config.placement,
+        offset: config.offset,
       );
 
       final completer = Completer<void>();
