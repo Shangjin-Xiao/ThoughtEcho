@@ -364,7 +364,7 @@ class _CollapsedContentWrapper extends StatelessWidget {
           child: SizedBox(
             height: maxHeight,
             child: OverflowBox(
-              alignment: Alignment.topCenter,
+              alignment: Alignment.topLeft,
               minWidth: 0,
               maxWidth: resolvedMaxWidth,
               minHeight: 0,
