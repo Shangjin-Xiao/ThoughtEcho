@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ThoughtEcho 心迹 - 你的专属AI灵感笔记本，随心记录，释放洞察力量">
+    <title>ThoughtEcho 心迹 - 你的专属灵感摘录本</title>
+    <link rel="icon" type="image/png" href="icon.png"/>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==================== CSS 变量 ==================== */
+        :root {
+            --paper-white: #fefdfb;
+            --paper-cream: #f9f6f0;
+            --paper-yellow: #fff9e6;
+            --paper-pink: #fff0f5;
+            --paper-blue: #f0f8ff;
+            --paper-green: #f0fff4;
+            --line-color: #d4c5b9;
+            --ink-dark: #2c2416;
+            --ink-medium: #5a4a3a;
+            --ink-light: #8b7355;
+            --accent-brown: #a67c52;
+            --accent-orange: #d4895b;
+            --accent-blue: #5d94b8;
+            --accent-green: #7ca982;
+            --accent-red: #c66b6b;
+            --shadow-soft: rgba(0, 0, 0, 0.08);
+            --shadow-medium: rgba(0, 0, 0, 0.12);
+            --shadow-hard: rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="dark"] {
+            --paper-white: #2a2520;
+            --paper-cream: #342e28;
+            --paper-yellow: #3d3630;
+            --paper-pink: #3d3035;
+            --paper-blue: #2d3540;
+            --paper-green: #2d3a30;
+            --line-color: #4a4037;
+            --ink-dark: #e8dfd5;
+            --ink-medium: #d4c5b9;
+            --ink-light: #b8a99a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'ZCOOL XiaoWei', serif;
+            background: var(--paper-cream);
+            color: var(--ink-dark);
+            line-height: 1.8;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 32px, var(--line-color) 32px, var(--line-color) 33px),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.35;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .handwriting {
+            font-family: 'Caveat', 'Ma Shan Zheng', cursive;
+        }
+
+        /* ==================== 导航栏 ==================== */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--paper-white);
+            border-bottom: 3px solid var(--accent-brown);
+            box-shadow: 0 3px 12px var(--shadow-soft);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--ink-dark);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-brand:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-logo {
+            width: 42px;
+            height: 42px;
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 3px 3px 6px var(--shadow-soft);
+            transform: rotate(-3deg);
+        }
+
+        .nav-logo img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .nav-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--ink-medium);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+            padding: 0.25rem 0;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-brown);
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-brown);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--accent-brown);
+            background: var(--paper-yellow);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 4px var(--shadow-soft);
+            transform: rotate(2deg);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(-3deg) scale(1.05);
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+        }
+
+        .btn-notebook {
+            padding: 0.7rem 1.8rem;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 4px 4px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .btn-notebook:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--shadow-hard);
+        }
+
+        .mobile-menu {
+            display: none;
+        }
+
+        /* ==================== Hero 区域 ==================== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 9rem 2rem 5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .doodle-decoration {
+            position: absolute;
+            opacity: 0.08;
+            pointer-events: none;
+        }
+
+        .doodle-1 {
+            top: 15%;
+            right: 8%;
+            width: 120px;
+            height: 120px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50,10 Q30,30 50,50 T50,90' stroke='%23a67c52' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='8' fill='%23a67c52'/%3E%3C/svg%3E");
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-25px) rotate(-3deg); }
+        }
+
+        .hero-container {
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 5rem;
+            align-items: center;
+        }
+
+        .hero-content {
+            padding: 2rem 0;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            background: var(--accent-orange);
+            color: var(--paper-white);
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+            transform: rotate(-2deg);
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 2rem;
+            line-height: 1.2;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            color: var(--ink-medium);
+            margin-bottom: 2.5rem;
+            line-height: 2;
+        }
+
+        .hero-warning {
+            background: var(--paper-yellow);
+            border-left: 4px solid var(--accent-orange);
+            padding: 1rem 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 6px;
+            box-shadow: 2px 2px 6px var(--shadow-soft);
+        }
+
+        .hero-warning strong {
+            color: var(--accent-red);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            padding: 1rem 2.5rem;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            box-shadow: 5px 5px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0 var(--shadow-hard);
+        }
+
+        .btn-secondary {
+            padding: 1rem 2.5rem;
+            background: transparent;
+            color: var(--accent-brown);
+            border: 2px solid var(--accent-brown);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            transform: translateY(-3px);
+        }
+
+        .hero-notebook {
+            perspective: 1500px;
+        }
+
+        .notebook-page {
+            background: var(--paper-white);
+            border: 3px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 3.5rem 3rem;
+            box-shadow: 
+                10px 10px 0 var(--paper-yellow),
+                10px 10px 0 3px var(--accent-brown),
+                15px 15px 25px var(--shadow-medium);
+            position: relative;
+            transform: rotateY(-5deg);
+            transition: transform 0.5s ease;
+        }
+
+        .notebook-page:hover {
+            transform: rotateY(0deg);
+        }
+
+        .binding-holes {
+            position: absolute;
+            left: 2rem;
+            top: 3.5rem;
+            bottom: 3.5rem;
+            width: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .hole {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--accent-brown);
+            border-radius: 50%;
+            background: var(--paper-cream);
+        }
+
+        .notebook-content {
+            margin-left: 2.5rem;
+        }
+
+        .notebook-content h3 {
+            font-family: 'Caveat', cursive;
+            font-size: 2.2rem;
+            color: var(--ink-dark);
+            margin-bottom: 2rem;
+            border-bottom: 2px dashed var(--line-color);
+            padding-bottom: 1rem;
+        }
+
+        .notebook-list {
+            list-style: none;
+        }
+
+        .notebook-list li {
+            font-size: 1.15rem;
+            color: var(--ink-medium);
+            margin-bottom: 1.2rem;
+            padding-left: 2rem;
+            position: relative;
+            font-family: 'Caveat', cursive;
+        }
+
+        .notebook-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent-green);
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        /* ==================== 通用区域样式 ==================== */
+        .section {
+            padding: 5rem 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            background: var(--accent-blue);
+            color: var(--paper-white);
+            padding: 0.6rem 1.8rem;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+            transform: rotate(1deg);
+        }
+
+        .section-title {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1.5rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .section-description {
+            font-size: 1.25rem;
+            color: var(--ink-light);
+            line-height: 2;
+        }
+
+        /* ==================== 功能特性 ==================== */
+        .features-section {
+            background: var(--paper-cream);
+        }
+
+        .features-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .sticky-note {
+            background: var(--paper-yellow);
+            border-radius: 6px;
+            padding: 2.5rem 2.2rem;
+            box-shadow: 0 5px 8px var(--shadow-soft), 0 12px 25px var(--shadow-soft);
+            position: relative;
+            transform: rotate(-1.5deg);
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+
+        .sticky-note:nth-child(2n) {
+            transform: rotate(1.5deg);
+            background: var(--paper-pink);
+        }
+
+        .sticky-note:nth-child(3n) {
+            background: var(--paper-blue);
+        }
+
+        .sticky-note:nth-child(5n) {
+            background: var(--paper-green);
+        }
+
+        .sticky-note:hover {
+            transform: rotate(0deg) scale(1.05) translateY(-8px);
+            box-shadow: 0 10px 15px var(--shadow-medium), 0 20px 40px var(--shadow-medium);
+            z-index: 10;
+        }
+
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px var(--shadow-soft);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .feature-description {
+            font-size: 1.05rem;
+            color: var(--ink-medium);
+            line-height: 1.8;
+            margin-bottom: 1.2rem;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 0.5rem 0;
+            color: var(--ink-medium);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .feature-list li::before {
+            content: '◆';
+            color: var(--accent-brown);
+        }
+
+        /* ==================== 应用截图 ==================== */
+        .screenshots-section {
+            background: var(--paper-white);
+        }
+
+        .screenshots-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 3rem;
+        }
+
+        .screenshot-item {
+            background: var(--paper-white);
+            border: 4px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 6px 6px 0 var(--paper-yellow);
+            transition: all 0.4s ease;
+        }
+
+        .screenshot-item:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 10px 10px 0 var(--paper-yellow);
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px var(--shadow-soft);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .screenshot-item img:hover {
+            transform: scale(1.02);
+        }
+
+        .screenshot-item h4 {
+            font-size: 1.4rem;
+            color: var(--ink-dark);
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .screenshot-item p {
+            color: var(--ink-light);
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        /* ==================== 模态框 ==================== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            max-width: 95%;
+            max-height: 95%;
+            position: relative;
+            animation: modalZoom 0.3s ease;
+        }
+
+        @keyframes modalZoom {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 10px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: var(--accent-brown);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .modal-close:hover {
+            transform: rotate(90deg);
+        }
+
+        /* ==================== 技术栈 ==================== */
+        .tech-section {
+            background: var(--paper-cream);
+        }
+
+        .tech-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .tech-tag {
+            background: var(--paper-white);
+            border: 2px dashed var(--accent-brown);
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: all 0.4s ease;
+        }
+
+        .tech-tag:hover {
+            transform: translateX(10px);
+            border-style: solid;
+            box-shadow: 5px 5px 0 var(--accent-orange);
+        }
+
+        .tech-icon {
+            width: 55px;
+            height: 55px;
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+            transform: rotate(-5deg);
+            transition: transform 0.3s ease;
+        }
+
+        .tech-tag:hover .tech-icon {
+            transform: rotate(0deg) scale(1.1);
+        }
+
+        .tech-info h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--ink-dark);
+            margin-bottom: 0.4rem;
+        }
+
+        .tech-info p {
+            font-size: 0.95rem;
+            color: var(--ink-light);
+        }
+
+        /* ==================== 快速开始 ==================== */
+        .quickstart-section {
+            background: var(--paper-white);
+        }
+
+        .quickstart-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .quickstart-steps {
+            background: var(--paper-cream);
+            border: 3px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 3rem;
+            box-shadow: 8px 8px 0 var(--paper-yellow);
+            margin-top: 3rem;
+        }
+
+        .step {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2.5rem;
+            border-bottom: 2px dashed var(--line-color);
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .step h3 {
+            font-size: 1.5rem;
+            color: var(--ink-dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--accent-brown);
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+
+        .step p {
+            color: var(--ink-medium);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .step pre {
+            background: var(--ink-dark);
+            color: var(--paper-white);
+            padding: 1.25rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* ==================== 路线图 ==================== */
+        .roadmap-section {
+            background: var(--paper-cream);
+        }
+
+        .roadmap-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2.5rem;
+            margin-top: 3rem;
+        }
+
+        .roadmap-card {
+            background: var(--paper-white);
+            border: 3px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 2.5rem 2rem;
+            position: relative;
+            box-shadow: 6px 6px 0 var(--paper-yellow);
+            transition: all 0.4s ease;
+        }
+
+        .roadmap-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 10px 10px 0 var(--paper-yellow);
+        }
+
+        .roadmap-card::before {
+            content: '';
+            position: absolute;
+            top: -14px;
+            right: 25px;
+            width: 45px;
+            height: 28px;
+            border: 3px solid var(--accent-brown);
+            border-bottom: none;
+            border-radius: 25px 25px 0 0;
+        }
+
+        .roadmap-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px dashed var(--line-color);
+        }
+
+        .roadmap-icon {
+            font-size: 2.2rem;
+        }
+
+        .roadmap-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .roadmap-items {
+            list-style: none;
+        }
+
+        .roadmap-items li {
+            padding: 0.8rem 0;
+            color: var(--ink-medium);
+            border-bottom: 1px solid var(--line-color);
+            display: flex;
+            gap: 0.7rem;
+            line-height: 1.6;
+        }
+
+        .roadmap-items li:last-child {
+            border-bottom: none;
+        }
+
+        .roadmap-items li::before {
+            content: '•';
+            color: var(--accent-brown);
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        /* ==================== CTA ==================== */
+        .cta-section {
+            padding: 5rem 2rem;
+            background: var(--accent-brown);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 25px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 25'%3E%3Cpath d='M0,12 Q15,0 30,12 T60,12 T90,12 T120,12 T150,12 T180,12 T210,12 T240,12 T270,12 T300,12 T330,12 T360,12 T390,12 T420,12 T450,12 T480,12 T510,12 T540,12 T570,12 T600,12 T630,12 T660,12 T690,12 T720,12 T750,12 T780,12 T810,12 T840,12 T870,12 T900,12 T930,12 T960,12 T990,12 T1020,12 T1050,12 T1080,12 T1110,12 T1140,12 T1170,12 T1200,12 L1200,25 L0,25 Z' fill='%23f9f6f0'/%3E%3C/svg%3E");
+            background-size: cover;
+        }
+
+        .cta-content {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+            padding-top: 2rem;
+        }
+
+        .cta-content h2 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--paper-white);
+            margin-bottom: 2rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .cta-content p {
+            font-size: 1.35rem;
+            color: var(--paper-cream);
+            margin-bottom: 2.5rem;
+            line-height: 2;
+        }
+
+        .btn-cta {
+            padding: 1.2rem 3.5rem;
+            background: var(--paper-white);
+            color: var(--accent-brown);
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.3rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 6px 6px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+        }
+
+        .btn-cta:hover {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0 var(--shadow-hard);
+        }
+
+        /* ==================== Footer ==================== */
+        footer {
+            background: var(--paper-white);
+            border-top: 4px solid var(--accent-brown);
+            padding: 4rem 2rem 2.5rem;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-brown);
+            margin-bottom: 1.5rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .footer-brand p {
+            color: var(--ink-light);
+            line-height: 2;
+            margin-bottom: 1.5rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-link {
+            width: 45px;
+            height: 45px;
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            transform: rotate(-3deg);
+        }
+
+        .social-link:hover {
+            transform: rotate(3deg) scale(1.15);
+            box-shadow: 4px 4px 8px var(--shadow-medium);
+        }
+
+        .footer-section h4 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1.2rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.7rem;
+        }
+
+        .footer-links a {
+            color: var(--ink-medium);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-brown);
+            transform: translateX(5px);
+        }
+
+        .footer-bottom {
+            padding-top: 2.5rem;
+            border-top: 2px dashed var(--line-color);
+            text-align: center;
+            color: var(--ink-light);
+        }
+
+        /* ==================== 响应式 ==================== */
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+                gap: 4rem;
+            }
+            .hero h1 {
+                font-size: 3rem;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--paper-white);
+                flex-direction: column;
+                padding: 1.5rem;
+                gap: 0;
+                border-bottom: 3px solid var(--accent-brown);
+            }
+            .nav-links.active {
+                display: flex;
+            }
+            .nav-links a {
+                padding: 1rem;
+                border-bottom: 1px solid var(--line-color);
+            }
+            .mobile-menu {
+                display: flex;
+                width: 44px;
+                height: 44px;
+                background: var(--paper-yellow);
+                border: 2px solid var(--accent-brown);
+                border-radius: 8px;
+                cursor: pointer;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+            }
+            .mobile-menu span {
+                width: 22px;
+                height: 2px;
+                background: var(--accent-brown);
+                border-radius: 2px;
+            }
+            .hero {
+                padding: 7rem 1.5rem 4rem;
+            }
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            .section-title {
+                font-size: 2.5rem;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+            .features-grid,
+            .screenshots-grid,
+            .tech-grid,
+            .roadmap-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <div class="nav-logo">
+                    <img src="icon.png" alt="ThoughtEcho">
+                </div>
+                <span class="nav-title">ThoughtEcho 心迹</span>
+            </a>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#features">功能特性</a></li>
+                <li><a href="#screenshots">应用截图</a></li>
+                <li><a href="#tech">技术栈</a></li>
+                <li><a href="#quickstart">快速开始</a></li>
+                <li><a href="#roadmap">路线图</a></li>
+            </ul>
+
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-notebook">立即下载</a>
+                <button class="mobile-menu" id="mobileMenu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="doodle-decoration doodle-1"></div>
+        
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-tag">✨ AI 驱动的智能笔记</div>
+                
+                <h1>你的专属<br>灵感摘录本</h1>
+                
+                <p class="hero-subtitle">
+                    随心记录每一刻灵感，让 AI 洞察助你发现思维脉络。<br>
+                    支持富文本、多媒体附件、智能分析、年度报告等强大功能。
+                </p>
+
+                <div class="hero-warning">
+                    <strong>⚠️ 友情提示：</strong>这是一个 vibe coding 项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
+                </div>
+                
+                <div class="hero-buttons">
+                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-primary">
+                        🚀 开始使用
+                    </a>
+                    <a href="#features" class="btn-secondary">
+                        📖 了解更多
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-notebook">
+                <div class="notebook-page">
+                    <div class="binding-holes">
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                    </div>
+                    <div class="notebook-content">
+                        <h3 class="handwriting">当前功能清单 ✓</h3>
+                        <ul class="notebook-list">
+                            <li>✍️ 富文本笔记 - 支持多媒体</li>
+                            <li>🤖 AI助手 - 问答、润色、灵感</li>
+                            <li>📊 洞察报告 - 趋势分析</li>
+                            <li>🏷️ 智能标签 - 全文搜索</li>
+                            <li>🌍 情境记录 - 位置、天气</li>
+                            <li>📦 备份恢复 - 数据安全</li>
+                            <li>⚡ 快速捕获 - 随时记录</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 功能特性 -->
+    <section class="section features-section" id="features">
+        <div class="section-header fade-in">
+            <span class="section-label">✨ 核心功能</span>
+            <h2 class="section-title">为灵感而生</h2>
+            <p class="section-description">
+                从富文本编辑到 AI 智能分析，ThoughtEcho 提供一切你需要的工具
+            </p>
+        </div>
+
+        <div class="features-grid">
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">✍️</span>
+                <h3 class="feature-title">富文本笔记</h3>
+                <p class="feature-description">
+                    强大的富文本编辑器，支持文字格式化、图片、音频、视频等多种媒体形式
+                </p>
+                <ul class="feature-list">
+                    <li>支持富文本、多媒体附件</li>
+                    <li>大文件流式处理</li>
+                    <li>智能内存管理</li>
+                    <li>双格式存储备份</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🤖</span>
+                <h3 class="feature-title">AI 助手</h3>
+                <p class="feature-description">
+                    基于笔记上下文的智能问答、内容润色、每日灵感提示
+                </p>
+                <ul class="feature-list">
+                    <li>笔记上下文问答</li>
+                    <li>内容智能润色</li>
+                    <li>每日灵感提示</li>
+                    <li>多AI服务商支持</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">📊</span>
+                <h3 class="feature-title">洞察与报告</h3>
+                <p class="feature-description">
+                    AI 周期洞察、年度报告、写作趋势分析
+                </p>
+                <ul class="feature-list">
+                    <li>AI 周期洞察</li>
+                    <li>年度报告生成</li>
+                    <li>写作趋势分析</li>
+                    <li>数据可视化</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🏷️</span>
+                <h3 class="feature-title">标签与搜索</h3>
+                <p class="feature-description">
+                    多标签筛选、智能过滤、全文搜索
+                </p>
+                <ul class="feature-list">
+                    <li>多标签筛选</li>
+                    <li>智能过滤</li>
+                    <li>全文搜索</li>
+                    <li>快速定位</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🎯</span>
+                <h3 class="feature-title">AI 卡片生成</h3>
+                <p class="feature-description">
+                    将笔记转换为精美分享卡片
+                </p>
+                <ul class="feature-list">
+                    <li>智能排版设计</li>
+                    <li>多种模板风格</li>
+                    <li>一键导出分享</li>
+                    <li>自定义样式</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">📦</span>
+                <h3 class="feature-title">媒体与备份中心</h3>
+                <p class="feature-description">
+                    流式处理大文件，完整备份恢复系统
+                </p>
+                <ul class="feature-list">
+                    <li>大文件流式处理</li>
+                    <li>ZIP 格式完整备份</li>
+                    <li>一键恢复数据</li>
+                    <li>媒体文件管理</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🌍</span>
+                <h3 class="feature-title">情境记录</h3>
+                <p class="feature-description">
+                    自动保存位置、天气与时间段信息
+                </p>
+                <ul class="feature-list">
+                    <li>自动保存位置</li>
+                    <li>天气信息记录</li>
+                    <li>时间段标记</li>
+                    <li>情境智能分析</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🧠</span>
+                <h3 class="feature-title">智能内存管理</h3>
+                <p class="feature-description">
+                    动态调节批量处理，避免内存溢出
+                </p>
+                <ul class="feature-list">
+                    <li>动态内存调节</li>
+                    <li>批量处理优化</li>
+                    <li>防止内存溢出</li>
+                    <li>性能自动优化</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">⚡</span>
+                <h3 class="feature-title">快速捕获</h3>
+                <p class="feature-description">
+                    剪贴板检测、一言与每日灵感
+                </p>
+                <ul class="feature-list">
+                    <li>剪贴板检测</li>
+                    <li>一言语录集成</li>
+                    <li>每日灵感推送</li>
+                    <li>快速笔记入口</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 应用截图 -->
+    <section class="section screenshots-section" id="screenshots">
+        <div class="section-header fade-in">
+            <span class="section-label">📸 应用展示</span>
+            <h2 class="section-title">精美界面设计</h2>
+            <p class="section-description">
+                Material 3 现代化设计语言，流畅的用户体验
+            </p>
+        </div>
+
+        <div class="screenshots-grid">
+            <div class="screenshot-item fade-in">
+                <img src="res/homepage.jpg" alt="主页" onclick="openModal(this.src)">
+                <h4>📱 主页</h4>
+                <p>笔记列表展示，支持多种视图模式，快速浏览和管理所有笔记</p>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <img src="res/add.jpg" alt="添加/编辑笔记" onclick="openModal(this.src)">
+                <h4>✏️ 添加/编辑笔记</h4>
+                <p>富文本编辑器，支持文字格式化、图片、音视频等多媒体内容</p>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <img src="res/tags.jpg" alt="标签管理" onclick="openModal(this.src)">
+                <h4>🏷️ 标签管理</h4>
+                <p>灵活的标签系统，支持多标签分类、筛选和智能组织</p>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <img src="res/theme_setting.jpg" alt="主题设置" onclick="openModal(this.src)">
+                <h4>🎨 主题设置</h4>
+                <p>多种主题风格可选，支持浅色/深色模式，个性化定制界面</p>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <img src="res/choose_yiyan.jpg" alt="一言类型选择" onclick="openModal(this.src)">
+                <h4>💬 一言类型选择</h4>
+                <p>集成一言语录功能，多种类型可选，每日灵感随手获取</p>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <img src="res/settingpage.jpg" alt="设置与备份" onclick="openModal(this.src)">
+                <h4>⚙️ 设置与备份</h4>
+                <p>完整的设置选项，支持数据备份恢复、AI配置、个性化设定</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 模态框 -->
+    <div class="modal" id="imageModal" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="modal-close" onclick="closeModal()">×</span>
+            <img id="modalImage" src="" alt="预览">
+        </div>
+    </div>
+
+    <!-- 技术栈 -->
+    <section class="section tech-section" id="tech">
+        <div class="section-header fade-in">
+            <span class="section-label">🛠️ 技术实力</span>
+            <h2 class="section-title">现代化技术栈</h2>
+            <p class="section-description">
+                基于 Flutter 构建的跨平台应用，结合先进的 AI 技术
+            </p>
+        </div>
+
+        <div class="tech-grid">
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">📱</div>
+                <div class="tech-info">
+                    <h4>Flutter (Dart)</h4>
+                    <p>跨平台UI框架</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">⚙️</div>
+                <div class="tech-info">
+                    <h4>provider, get_it</h4>
+                    <p>依赖注入与状态管理</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🗄️</div>
+                <div class="tech-info">
+                    <h4>sqflite</h4>
+                    <p>本地数据库存储</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">📝</div>
+                <div class="tech-info">
+                    <h4>flutter_quill</h4>
+                    <p>富文本编辑器</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🤖</div>
+                <div class="tech-info">
+                    <h4>多AI集成</h4>
+                    <p>OpenAI、Anthropic、DeepSeek</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">💾</div>
+                <div class="tech-info">
+                    <h4>MMKV</h4>
+                    <p>高性能存储</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🔒</div>
+                <div class="tech-info">
+                    <h4>flutter_secure_storage</h4>
+                    <p>安全存储</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🎬</div>
+                <div class="tech-info">
+                    <h4>多媒体处理</h4>
+                    <p>大文件流式处理、智能内存管理</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🌐</div>
+                <div class="tech-info">
+                    <h4>全平台支持</h4>
+                    <p>Windows、Android、iOS、Web</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 快速开始 -->
+    <section class="section quickstart-section" id="quickstart">
+        <div class="section-header fade-in">
+            <span class="section-label">🚀 快速开始</span>
+            <h2 class="section-title">五步上手</h2>
+            <p class="section-description">
+                简单几步，即可开始使用 ThoughtEcho
+            </p>
+        </div>
+
+        <div class="quickstart-container">
+            <div class="quickstart-steps fade-in">
+                <div class="step">
+                    <h3><span class="step-number">1</span> 环境准备</h3>
+                    <p>确保已安装 Flutter 3.x+ 环境。运行以下命令检查配置：</p>
+                    <pre><code>flutter doctor</code></pre>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span> 获取代码</h3>
+                    <p>从 GitHub 克隆项目到本地：</p>
+                    <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
+cd ThoughtEcho</code></pre>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">3</span> 安装依赖</h3>
+                    <p>安装项目所需的所有依赖包：</p>
+                    <pre><code>flutter pub get</code></pre>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">4</span> 运行应用</h3>
+                    <p>在模拟器或真机上运行应用：</p>
+                    <pre><code>flutter run</code></pre>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">5</span> AI 功能配置（可选）</h3>
+                    <p>在应用设置中配置 API Key 以启用 AI 功能。支持 OpenAI、Anthropic、DeepSeek 等多种 AI 服务商。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 路线图 -->
+    <section class="section roadmap-section" id="roadmap">
+        <div class="section-header fade-in">
+            <span class="section-label">🗺️ 发展规划</span>
+            <h2 class="section-title">持续进化中</h2>
+            <p class="section-description">
+                我们正在不断完善和扩展 ThoughtEcho 的功能
+            </p>
+        </div>
+
+        <div class="roadmap-container">
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">✅</span>
+                    <h3 class="roadmap-title">已完成</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>富文本编辑器与多媒体支持</li>
+                    <li>多AI服务商架构</li>
+                    <li>AI卡片生成功能</li>
+                    <li>大文件流式处理</li>
+                    <li>智能内存管理</li>
+                    <li>ZIP格式完整备份</li>
+                    <li>Material 3现代化界面</li>
+                    <li>多平台数据库适配</li>
+                    <li>位置与天气记录</li>
+                    <li>剪贴板智能检测</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">🚧</span>
+                    <h3 class="roadmap-title">进行中 (2024 Q4)</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>AI年度报告生成</li>
+                    <li>笔记内容智能分析</li>
+                    <li>性能优化与稳定性提升</li>
+                    <li>用户体验改进</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">🔥</span>
+                    <h3 class="roadmap-title">计划中 (2025 Q1-Q2)</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>智能语音输入 (长按加号)</li>
+                    <li>AI自然语言
