@@ -101,7 +101,7 @@ jobs:
           
           if (!(Test-Path "$buildPath/thoughtecho.exe")) {
             Write-Error "Windows构建文件不存在: $buildPath/thoughtecho.exe"
-            echo "msix_success=false" >> $env:GITHUB_OUTPUT
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
             exit 1
           }
           
@@ -117,20 +117,20 @@ jobs:
             if (Test-Path $msixPath) {
               $msixSize = (Get-Item $msixPath).Length
               Write-Host "✅ MSIX构建成功！文件大小: $([math]::Round($msixSize/1MB, 2)) MB" -ForegroundColor Green
-              echo "msix_success=true" >> $env:GITHUB_OUTPUT
-              echo "msix_path=$msixPath" >> $env:GITHUB_OUTPUT
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=true"
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_path=$msixPath"
             } else {
               Write-Warning "⚠️ MSIX命令执行成功但文件未找到: $msixPath"
-              echo "msix_success=false" >> $env:GITHUB_OUTPUT
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
             }
           } else {
             Write-Warning "⚠️ MSIX构建失败（退出码: $exitCode）"
-            echo "msix_success=false" >> $env:GITHUB_OUTPUT
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
           }
         }
         catch {
           Write-Warning "⚠️ MSIX构建异常: $($_.Exception.Message)"
-          echo "msix_success=false" >> $env:GITHUB_OUTPUT
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_success=false"
         }
       id: msix_build
       env:
@@ -140,8 +140,8 @@ jobs:
       id: version
       run: |
         $version = (Get-Content pubspec.yaml | Select-String 'version:').ToString().Split(':')[1].Trim()
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-        echo "App version: $version"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+        Write-Output "App version: $version"
       
     - name: Create release packages
       run: |
@@ -178,7 +178,7 @@ jobs:
         if ($msixSuccess -and $msixPath -and (Test-Path $msixPath)) {
             $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
             Copy-Item -Path $msixPath -Destination $msixName
-            echo "msix_name=$msixName" >> $env:GITHUB_OUTPUT
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_name=$msixName"
             Write-Output "✅ 创建MSIX安装包: $msixName"
         } else {
             if (!$msixSuccess) {
@@ -191,7 +191,7 @@ jobs:
             Write-Output "主要的Windows应用已经构建成功，可以通过ZIP包分发"
         }
         
-        echo "archive_name=$archiveName" >> $env:GITHUB_OUTPUT
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "archive_name=$archiveName"
         Write-Output "创建ZIP发布包: $archiveName"
       id: archive
       
