@@ -311,7 +311,9 @@ Future<void> main() async {
               Provider.value(
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService
-              // 提供初始化状态
+              // 提供初始化状态 ValueNotifier 本身
+              Provider<ValueNotifier<bool>>.value(value: servicesInitialized),
+              // 提供初始化状态的值
               ValueListenableProvider<bool>.value(value: servicesInitialized),
               ChangeNotifierProxyProvider<SettingsService, AIService>(
                 create: (context) => AIService(
