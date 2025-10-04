@@ -22,6 +22,7 @@ class OnboardingController extends ChangeNotifier {
   late final SettingsService _settingsService;
   late final ClipboardService _clipboardService;
   late final AIAnalysisDatabaseService _aiAnalysisDbService;
+  late final DatabaseService _databaseService;
 
   OnboardingController({this.servicesInitializedNotifier});
 
@@ -39,6 +40,7 @@ class OnboardingController extends ChangeNotifier {
     _settingsService = settingsService;
     _clipboardService = clipboardService;
     _aiAnalysisDbService = aiAnalysisDbService;
+    _databaseService = databaseService;
     _migrationService = MigrationService(
       databaseService: databaseService,
       settingsService: settingsService,
@@ -134,8 +136,9 @@ class OnboardingController extends ChangeNotifier {
         }
       }
 
-      // 2. 等待一帧，确保数据库的 notifyListeners 已经完成
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 2. 确保数据库完全初始化并可用
+      await _databaseService.safeDatabase;
+      await Future.delayed(const Duration(milliseconds: 50));
 
       // 3. 初始化 AI 分析数据库
       try {
@@ -263,10 +266,14 @@ class OnboardingController extends ChangeNotifier {
         );
       }
 
-      // 2. 等待一帧，确保数据库的 notifyListeners 已经完成
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 2. 确保数据库完全初始化并可用
+      await _databaseService.safeDatabase;
+      await Future.delayed(const Duration(milliseconds: 50));
 
-      // 3. 初始化 AI 分析数据库
+      // 3. 保存默认用户偏好设置
+      await _saveUserPreferences();
+
+      // 4. 初始化 AI 分析数据库
       try {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
@@ -275,10 +282,10 @@ class OnboardingController extends ChangeNotifier {
             error: aiDbError, source: 'OnboardingController');
       }
 
-      // 4. 标记引导完成（不保存用户偏好，使用默认值）
+      // 5. 标记引导完成
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 5. 标记服务初始化完成
+      // 6. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('跳过引导完成');
