@@ -63,6 +63,36 @@ Widget _wrapWithProviders({
   );
 }
 
+Future<void> _pumpQuoteContent(
+  WidgetTester tester, {
+  required SettingsService settings,
+  required Quote quote,
+  required bool showFullContent,
+}) async {
+  await tester.pumpWidget(
+    _wrapWithProviders(
+      settings: settings,
+      quote: quote,
+      showFullContent: showFullContent,
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Map<String, dynamic> _controllerStats() {
+  final stats = QuoteContent.debugCacheStats();
+  return Map<String, dynamic>.from(
+    stats['controller'] as Map<String, dynamic>,
+  );
+}
+
+Map<String, dynamic> _documentStats() {
+  final stats = QuoteContent.debugCacheStats();
+  return Map<String, dynamic>.from(
+    stats['document'] as Map<String, dynamic>,
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -84,43 +114,38 @@ void main() {
       (tester) async {
     final quote = _buildRichQuote(id: 'q1', content: 'Hello world');
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quote,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quote,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    var stats = QuoteContent.debugCacheStats();
-    final controllerStats =
-        stats['controller'] as Map<String, dynamic>;
+    var controllerStats = _controllerStats();
     expect(controllerStats['createCount'], 1);
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quote,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quote,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    stats = QuoteContent.debugCacheStats();
-    final controllerHitCount =
-        (stats['controller'] as Map<String, dynamic>)['hitCount'] as int;
+    controllerStats = _controllerStats();
+    final controllerHitCount = controllerStats['hitCount'] as int;
 
-  final controllerCreateCount =
-    (stats['controller'] as Map<String, dynamic>)['createCount'] as int;
+    final controllerCreateCount =
+        controllerStats['createCount'] as int;
 
-  expect(controllerCreateCount, 1,
-    reason:
-      'controller stats: ${(stats['controller'] as Map<String, dynamic>)}');
+    expect(
+      controllerCreateCount,
+      1,
+      reason: 'controller stats: $controllerStats',
+    );
     expect(
       controllerHitCount,
       greaterThan(0),
-      reason: 'controller stats: ${(stats['controller'] as Map<String, dynamic>)}',
+      reason: 'controller stats: $controllerStats',
     );
   });
 
@@ -129,64 +154,56 @@ void main() {
     final quoteA = _buildRichQuote(id: 'docA', content: 'Shared document');
     final quoteB = _buildRichQuote(id: 'docB', content: 'Shared document');
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quoteA,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quoteA,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quoteB,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quoteB,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    final stats = QuoteContent.debugCacheStats();
-    final documentStats =
-        stats['document'] as Map<String, dynamic>;
-    final controllerStats =
-        stats['controller'] as Map<String, dynamic>;
+  final documentStats = _documentStats();
+  final controllerStats = _controllerStats();
 
     expect(controllerStats['createCount'], 2,
         reason: 'controller stats: $controllerStats');
     expect(documentStats['hitCount'], greaterThan(0),
         reason: 'document stats: $documentStats');
+  expect(documentStats['cacheSize'], 1,
+    reason: 'document stats: $documentStats');
   });
 
   testWidgets('creates distinct controller variants when view changes',
       (tester) async {
     final quote = _buildRichQuote(id: 'q2', content: 'Variant test');
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quote,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quote,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quote,
-        showFullContent: true,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quote,
+      showFullContent: true,
     );
-    await tester.pumpAndSettle();
 
-    final stats = QuoteContent.debugCacheStats();
-    final controllerStats =
-        stats['controller'] as Map<String, dynamic>;
+  final controllerStats = _controllerStats();
+  final documentStats = _documentStats();
 
     expect(controllerStats['createCount'], 2);
     expect(controllerStats['hitCount'], 0);
+  expect(documentStats['cacheSize'], 1,
+    reason: 'document stats: $documentStats');
   });
 
   testWidgets('changing content invalidates cached controller',
@@ -194,29 +211,26 @@ void main() {
     final quoteA = _buildRichQuote(id: 'q3', content: 'First content');
     final quoteB = _buildRichQuote(id: 'q3', content: 'Updated content');
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quoteA,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quoteA,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      _wrapWithProviders(
-        settings: settings,
-        quote: quoteB,
-        showFullContent: false,
-      ),
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quoteB,
+      showFullContent: false,
     );
-    await tester.pumpAndSettle();
 
-    final stats = QuoteContent.debugCacheStats();
-    final controllerStats =
-        stats['controller'] as Map<String, dynamic>;
+  final controllerStats = _controllerStats();
+  final documentStats = _documentStats();
 
     expect(controllerStats['createCount'], 2);
     expect(controllerStats['hitCount'], 0);
+  expect(documentStats['hitCount'], 0,
+    reason: 'document stats: $documentStats');
   });
 }
