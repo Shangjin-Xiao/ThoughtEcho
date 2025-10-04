@@ -211,8 +211,15 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     const arrowSize = 14.0;
     const margin = 12.0;
 
-  final targetCenterX = targetPosition.dx + targetSize.width / 2;
-  final targetCenterY = targetPosition.dy + targetSize.height / 2;
+    // 应用用户自定义的偏移
+    final userOffset = widget.guide.offset ?? Offset.zero;
+    final adjustedTargetPosition = Offset(
+      targetPosition.dx + userOffset.dx,
+      targetPosition.dy + userOffset.dy,
+    );
+
+  final targetCenterX = adjustedTargetPosition.dx + targetSize.width / 2;
+  final targetCenterY = adjustedTargetPosition.dy + targetSize.height / 2;
   final safeTop = viewPadding.top + margin;
   final safeBottom = screenSize.height - viewPadding.bottom - margin;
   const double safeLeft = margin;
@@ -223,7 +230,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     for (final attempt in _buildPlacementAttempts(preferredPlacement)) {
       final result = _computePlacement(
         direction: attempt.direction,
-        targetPosition: targetPosition,
+        targetPosition: adjustedTargetPosition,
         targetSize: targetSize,
         targetCenterX: targetCenterX,
         targetCenterY: targetCenterY,
@@ -244,7 +251,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       if (attempt.allowClamp && fallback == null) {
         fallback = _computePlacement(
           direction: attempt.direction,
-          targetPosition: targetPosition,
+          targetPosition: adjustedTargetPosition,
           targetSize: targetSize,
           targetCenterX: targetCenterX,
           targetCenterY: targetCenterY,
@@ -263,7 +270,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     return fallback ??
         _computePlacement(
           direction: PopoverArrowDirection.top,
-          targetPosition: targetPosition,
+          targetPosition: adjustedTargetPosition,
           targetSize: targetSize,
           targetCenterX: targetCenterX,
           targetCenterY: targetCenterY,

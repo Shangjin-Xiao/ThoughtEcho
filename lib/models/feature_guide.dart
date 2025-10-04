@@ -80,15 +80,20 @@ class FeatureGuide {
     'settings_preferences': FeatureGuideConfig(
       title: '偏好设置',
       description: '这里可以开启"加粗内容优先显示"等个性化设置',
-      placement: FeatureGuidePlacement.above,
+      placement: FeatureGuidePlacement.left,
+      offset: Offset(20, 0), // 向右偏移，避免贴边
     ),
     'settings_startup': FeatureGuideConfig(
       title: '默认启动页面',
       description: '可以设置应用启动时默认打开的页面',
+      placement: FeatureGuidePlacement.right,
+      offset: Offset(-20, 0), // 向左偏移
     ),
     'settings_theme': FeatureGuideConfig(
       title: '主题设置',
       description: '这里可以自定义应用的主题颜色和外观',
+      placement: FeatureGuidePlacement.left,
+      offset: Offset(20, 0),
     ),
   };
 }
@@ -98,10 +103,12 @@ class FeatureGuideConfig {
   final String title;
   final String description;
   final FeatureGuidePlacement placement;
+  final Offset? offset; // 位置微调偏移
 
   const FeatureGuideConfig({
     required this.title,
     required this.description,
     this.placement = FeatureGuidePlacement.auto,
+    this.offset,
   });
 }
