@@ -220,13 +220,6 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('存储管理'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
-            onPressed: _isLoading ? null : _loadStorageStats,
-          ),
-        ],
       ),
       body: _isLoading && _stats == null
           ? const Center(child: CircularProgressIndicator())
@@ -270,6 +263,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   /// 构建总存储空间卡片
   Widget _buildTotalStorageCard(ColorScheme colorScheme) {
     final totalSize = _stats?.totalSize ?? 0;
+    final mainDbSize = _stats?.mainDatabaseSize ?? 0;
+    final logDbSize = _stats?.logDatabaseSize ?? 0;
+    final aiDbSize = _stats?.aiDatabaseSize ?? 0;
+    final mediaSize = _stats?.mediaFilesSize ?? 0;
+    final cacheSize = _stats?.cacheSize ?? 0;
 
     return Card(
       elevation: 2,
@@ -291,12 +289,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          '总占用空间',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                        '总占用空间',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         StorageStats.formatBytes(totalSize),
@@ -311,9 +309,88 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 ),
               ],
             ),
+            if (totalSize > 0) ...[
+              const SizedBox(height: 20),
+              // 彩色分段进度条
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  height: 8,
+                  child: Row(
+                    children: [
+                      if (mainDbSize > 0)
+                        Expanded(
+                          flex: (mainDbSize * 1000 / totalSize).round(),
+                          child: Container(color: Colors.blue),
+                        ),
+                      if (aiDbSize > 0)
+                        Expanded(
+                          flex: (aiDbSize * 1000 / totalSize).round(),
+                          child: Container(color: Colors.purple),
+                        ),
+                      if (logDbSize > 0)
+                        Expanded(
+                          flex: (logDbSize * 1000 / totalSize).round(),
+                          child: Container(color: Colors.orange),
+                        ),
+                      if (mediaSize > 0)
+                        Expanded(
+                          flex: (mediaSize * 1000 / totalSize).round(),
+                          child: Container(color: Colors.green),
+                        ),
+                      if (cacheSize > 0)
+                        Expanded(
+                          flex: (cacheSize * 1000 / totalSize).round(),
+                          child: Container(color: Colors.grey),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 图例
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: [
+                  if (mainDbSize > 0)
+                    _buildLegendItem('笔记数据库', Colors.blue, mainDbSize),
+                  if (aiDbSize > 0)
+                    _buildLegendItem('AI数据库', Colors.purple, aiDbSize),
+                  if (logDbSize > 0)
+                    _buildLegendItem('日志数据库', Colors.orange, logDbSize),
+                  if (mediaSize > 0)
+                    _buildLegendItem('媒体文件', Colors.green, mediaSize),
+                  if (cacheSize > 0)
+                    _buildLegendItem('缓存', Colors.grey, cacheSize),
+                ],
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  /// 构建图例项
+  Widget _buildLegendItem(String label, Color color, int size) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$label (${StorageStats.formatBytes(size)})',
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
     );
   }
 

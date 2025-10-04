@@ -27,8 +27,6 @@ import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
-import '../services/image_cache_service.dart';
-import '../services/media_reference_service.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 
@@ -49,9 +47,6 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 版本检查相关状态 ---
   bool _isCheckingUpdate = false;
   String? _updateCheckMessage;
-
-  // --- 清除缓存相关状态 ---
-  bool _isClearingCache = false;
   
   // 功能引导 keys
   final GlobalKey _preferencesGuideKey = GlobalKey();
@@ -184,75 +179,6 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   // --- 版本检查方法结束 ---
-
-  // --- 清除缓存方法 ---
-  Future<void> _clearAppCache() async {
-    if (_isClearingCache) return;
-    setState(() {
-      _isClearingCache = true;
-    });
-
-    // 在await之前获取所有需要的服务
-    final weatherService = Provider.of<WeatherService>(context, listen: false);
-    final db = Provider.of<DatabaseService>(context, listen: false);
-
-    try {
-      // 清理图片缓存（SVG转图片等）
-      try {
-        // 延迟导入避免循环依赖（文件顶部已静态导入）
-        // ignore: unnecessary_statements
-        ImageCacheService().clearCache();
-      } catch (_) {}
-
-      // 清理天气缓存
-      try {
-        await weatherService.clearCache();
-      } catch (_) {}
-
-      // 清理版本检查缓存
-      try {
-        VersionCheckService.clearCache();
-      } catch (_) {}
-
-      // 刷新数据库内存缓存（不删除数据）
-      try {
-        db.refreshAllData();
-      } catch (_) {}
-
-      // 额外：清理无引用（孤儿）媒体文件
-      int orphanCleared = 0;
-      try {
-        orphanCleared = await MediaReferenceService.cleanupOrphanFiles();
-      } catch (_) {}
-
-      if (!mounted) return;
-      final msg =
-          orphanCleared > 0 ? '缓存已清除，已清理$orphanCleared个无用媒体文件' : '缓存已清除';
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          duration: AppConstants.snackBarDurationImportant,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('清除缓存失败: $e'),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isClearingCache = false;
-        });
-      }
-    }
-  }
-  // --- 清除缓存方法结束 ---
 
   // 显示城市搜索对话框
   void _showCitySearchDialog(BuildContext context) {
@@ -732,44 +658,6 @@ class SettingsPageState extends State<SettingsPage> {
                       ),
                     );
                   },
-                ),
-                // 保留原清除缓存功能（快捷方式）
-                ListTile(
-                  title: const Text('快速清除缓存'),
-                  subtitle: const Text('一键清除图片、天气等缓存'),
-                  leading: const Icon(Icons.cleaning_services_outlined),
-                  trailing: _isClearingCache
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : null,
-                  onTap: _isClearingCache
-                      ? null
-                      : () {
-                          showDialog(
-                            context: context,
-                            builder: (dialogContext) => AlertDialog(
-                              title: const Text('清除缓存'),
-                              content: const Text(
-                                  '将清除图片、天气与版本检查缓存，不会删除任何笔记数据。是否继续？'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dialogContext),
-                                  child: const Text('取消'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    Navigator.pop(dialogContext);
-                                    await _clearAppCache();
-                                  },
-                                  child: const Text('清除'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
                 ),
               ],
             ),
