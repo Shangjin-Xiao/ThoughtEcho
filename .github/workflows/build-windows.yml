@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       app_version:
-        description: '应用版本号 (如: 1.2.0)'
+        description: '应用版本号 - 4位格式 (如: 1.2.0.0)'
         required: true
-        default: '1.0.0'
+        default: '1.0.0.0'
         type: string
       flutter_version:
         description: 'Flutter版本'
@@ -47,27 +47,33 @@ jobs:
       
     - name: Update versions
       run: |
-        $version = "${{ github.event.inputs.app_version || '1.0.0' }}"
+        $version = "${{ github.event.inputs.app_version || '1.0.0.0' }}"
         $buildNumber = "${{ github.run_number }}"
         
-        # MSIX 需要4位版本号格式 (如: 1.0.0.0)，不能包含 + 号
-        # 从版本号中提取前三段数字
-        if ($version -match '(\d+\.\d+\.\d+)') {
-          $msixVersion = "$($matches[1]).0"
+        # 验证版本号格式（应为4位：x.x.x.x）
+        if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+          Write-Error "版本号格式错误！必须是4位格式，如: 1.0.0.0"
+          exit 1
+        }
+        
+        # 提取前三位用于 Flutter 版本（x.x.x）
+        if ($version -match '^(\d+\.\d+\.\d+)\.\d+$') {
+          $flutterVersion = $matches[1]
         } else {
-          $msixVersion = "1.0.0.0"
+          Write-Error "无法从版本号提取Flutter版本"
+          exit 1
         }
         
         # 更新 pubspec.yaml 中的版本
         $pubspecContent = Get-Content pubspec.yaml -Raw
-        $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $version+$buildNumber"
+        $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $flutterVersion+$buildNumber"
         
         # 更新 msix_version，保留前面的缩进
-        $pubspecContent = $pubspecContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $msixVersion"
+        $pubspecContent = $pubspecContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $version"
         $pubspecContent | Set-Content pubspec.yaml -NoNewline
         
-        Write-Output "Updated pubspec.yaml version to: $version+$buildNumber"
-        Write-Output "Updated MSIX version to: $msixVersion"
+        Write-Output "Updated Flutter version to: $flutterVersion+$buildNumber"
+        Write-Output "Updated MSIX version to: $version"
         
     - name: Flutter doctor
       run: flutter doctor -v
