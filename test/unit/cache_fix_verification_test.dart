@@ -18,7 +18,7 @@ void main() {
       // 这个测试验证了问题1的修复
       // 实际清理逻辑在 DatabaseService 中，这里只验证 API 可用
       
-      final testId = 'quote-to-delete';
+      const testId = 'quote-to-delete';
       
       // 模拟调用清理方法
       QuoteContent.removeCacheForQuote(testId);

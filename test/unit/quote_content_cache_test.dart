@@ -9,8 +9,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 
 class _StubSettingsService extends SettingsService {
-  _StubSettingsService(SharedPreferences prefs)
-      : super(prefs);
+  _StubSettingsService(super.prefs);
 
   bool _prioritizeBold = false;
 
