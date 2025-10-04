@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/ai_analysis_model.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
+import '../constants/app_constants.dart';
 
 /// AI分析历史页面（简化版，已移除年度报告功能）
 class AIAnalysisHistoryPage extends StatefulWidget {
@@ -71,8 +72,11 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(
-          // ignore: prefer_const_constructors
-          SnackBar(content: Text('删除失败: $e'), duration: Duration(seconds: 3)));
+        SnackBar(
+          content: Text('删除失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
     }
   }
 

@@ -12,6 +12,7 @@ import '../services/settings_service.dart';
 import '../services/mmkv_service.dart';
 import '../services/ai_analysis_database_service.dart';
 import '../utils/app_logger.dart';
+import '../constants/app_constants.dart';
 import 'home_page.dart';
 import '../utils/lottie_animation_manager.dart';
 
@@ -718,7 +719,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                           Navigator.pop(dialogContext);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('初始化失败，请重试')),
+                              const SnackBar(
+                                content: Text('初始化失败，请重试'),
+                                duration: AppConstants.snackBarDurationError,
+                              ),
                             );
                           }
                         }

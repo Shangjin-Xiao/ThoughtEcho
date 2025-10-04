@@ -4,6 +4,7 @@ import '../services/database_service.dart';
 import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
+import '../constants/app_constants.dart';
 
 class TagSettingsPage extends StatefulWidget {
   const TagSettingsPage({super.key});
@@ -225,7 +226,10 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
                                     if (!mounted) return;
                                     scaffoldMessenger.showSnackBar(
-                                      const SnackBar(content: Text('标签添加成功')),
+                                      const SnackBar(
+                                        content: Text('标签添加成功'),
+                                        duration: AppConstants.snackBarDurationImportant,
+                                      ),
                                     );
                                     _tagController.clear();
                                     setState(() {
@@ -234,7 +238,10 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   } catch (e) {
                                     if (!mounted) return;
                                     scaffoldMessenger.showSnackBar(
-                                      SnackBar(content: Text('添加标签失败：$e')),
+                                      SnackBar(
+                                        content: Text('添加标签失败：$e'),
+                                        duration: AppConstants.snackBarDurationError,
+                                      ),
                                     );
                                   } finally {
                                     if (mounted) {
@@ -585,6 +592,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
+                                                duration: AppConstants.snackBarDurationImportant,
                                               ),
                                             );
                                           } catch (e) {
@@ -611,6 +619,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
+                                                duration: AppConstants.snackBarDurationError,
                                               ),
                                             );
                                           }

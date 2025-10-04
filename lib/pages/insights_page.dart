@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
 import '../services/ai_analysis_database_service.dart';
@@ -334,8 +335,8 @@ class _InsightsPageState extends State<InsightsPage> {
         duration: AppConstants.snackBarDurationNormal,
       ));
 
-      // TODO: 如果需要使用分享插件，可以在这里添加
-      // 用户可以在任何支持粘贴的应用中分享这些内容
+      // 使用share_plus分享
+      Share.share(content);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -959,7 +960,10 @@ class _InsightsPageState extends State<InsightsPage> {
                                     ),
                                   );
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('分析结果已复制')),
+                                    const SnackBar(
+                                      content: Text('分析结果已复制'),
+                                      duration: AppConstants.snackBarDurationImportant,
+                                    ),
                                   );
                                 },
                               ), // 加载指示器在生成过程中显示
