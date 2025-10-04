@@ -66,7 +66,7 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   /// 当设置页真正可见时触发功能引导
-  void showGuidesIfNeeded() {
+  void showGuidesIfNeeded({bool Function()? shouldShow}) {
     if (_guidesTriggered) return;
 
     final allShown = FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
@@ -81,12 +81,12 @@ class SettingsPageState extends State<SettingsPage> {
     _guidesTriggered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _showSettingsGuides();
+      _showSettingsGuides(shouldShow: shouldShow);
     });
   }
 
   /// 显示设置页功能引导
-  void _showSettingsGuides() {
+  void _showSettingsGuides({bool Function()? shouldShow}) {
     // 依次显示多个引导，等待前一个消失再显示下一个
     FeatureGuideHelper.showSequence(
       context: context,
@@ -95,8 +95,15 @@ class SettingsPageState extends State<SettingsPage> {
         ('settings_startup', _startupPageGuideKey),
         ('settings_theme', _themeGuideKey),
       ],
-      delayBetween: const Duration(milliseconds: 3200), // 等待前一个消失（3秒）+缓冲时间
-      autoDismissDuration: const Duration(seconds: 3),
+      shouldShow: () {
+        if (!mounted) {
+          return false;
+        }
+        if (shouldShow != null && !shouldShow()) {
+          return false;
+        }
+        return true;
+      },
     );
   }
 

@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// 引导提示的预设位置偏好
+enum FeatureGuidePlacement {
+  auto,
+  above,
+  below,
+  left,
+  right,
+}
+
 /// 功能引导模型
 /// 用于定义应用中各个功能的引导信息
 class FeatureGuide {
@@ -24,6 +33,9 @@ class FeatureGuide {
   /// 是否在上方显示（默认false为下方显示）
   final bool showOnTop;
 
+  /// 首选的显示位置
+  final FeatureGuidePlacement preferredPlacement;
+
   const FeatureGuide({
     required this.id,
     required this.title,
@@ -32,6 +44,7 @@ class FeatureGuide {
     this.offset,
     this.showOnRight = false,
     this.showOnTop = false,
+    this.preferredPlacement = FeatureGuidePlacement.auto,
   });
 
   /// 预定义的引导配置
@@ -40,6 +53,7 @@ class FeatureGuide {
     'homepage_daily_quote': FeatureGuideConfig(
       title: '每日一言小技巧',
       description: '单击可快速复制内容\n双击可快速添加到笔记',
+      placement: FeatureGuidePlacement.above,
     ),
 
     // 记录页
@@ -66,6 +80,7 @@ class FeatureGuide {
     'settings_preferences': FeatureGuideConfig(
       title: '偏好设置',
       description: '这里可以开启"加粗内容优先显示"等个性化设置',
+      placement: FeatureGuidePlacement.above,
     ),
     'settings_startup': FeatureGuideConfig(
       title: '默认启动页面',
@@ -82,9 +97,11 @@ class FeatureGuide {
 class FeatureGuideConfig {
   final String title;
   final String description;
+  final FeatureGuidePlacement placement;
 
   const FeatureGuideConfig({
     required this.title,
     required this.description,
+    this.placement = FeatureGuidePlacement.auto,
   });
 }
