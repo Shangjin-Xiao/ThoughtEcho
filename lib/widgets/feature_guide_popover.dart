@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/feature_guide.dart';
 
@@ -15,12 +17,14 @@ class FeatureGuidePopover extends StatefulWidget {
   final FeatureGuide guide;
   final VoidCallback onDismiss;
   final Duration autoDismissDuration;
+  final bool Function()? visibilityPredicate;
 
   const FeatureGuidePopover({
     super.key,
     required this.guide,
     required this.onDismiss,
     this.autoDismissDuration = const Duration(seconds: 3),
+    this.visibilityPredicate,
   });
 
   @override
@@ -31,6 +35,8 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  Timer? _visibilityTimer;
+  bool _isDismissing = false;
 
   @override
   void initState() {
@@ -46,6 +52,8 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
     _controller.forward();
 
+    _startVisibilityWatchdog();
+
     // 自动消失
     Future.delayed(widget.autoDismissDuration, () {
       if (mounted) {
@@ -56,11 +64,47 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
   @override
   void dispose() {
+    _visibilityTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _handleDismiss() async {
+  void _startVisibilityWatchdog() {
+    if (widget.visibilityPredicate == null && widget.guide.targetKey == null) {
+      return;
+    }
+
+    _visibilityTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (!mounted) {
+        _visibilityTimer?.cancel();
+        return;
+      }
+
+      if (widget.visibilityPredicate != null &&
+          !widget.visibilityPredicate!()) {
+        _handleDismiss();
+        return;
+      }
+
+      if (widget.guide.targetKey != null) {
+        final targetContext = widget.guide.targetKey.currentContext;
+        final renderBox =
+            targetContext?.findRenderObject() as RenderBox?;
+        final visible =
+            renderBox != null && renderBox.attached && renderBox.hasSize;
+        if (!visible) {
+          _handleDismiss();
+        }
+      }
+    });
+  }
+
+  Future<void> _handleDismiss() async {
+    if (_isDismissing) {
+      return;
+    }
+    _isDismissing = true;
+    _visibilityTimer?.cancel();
     await _controller.reverse();
     if (mounted) {
       widget.onDismiss();
@@ -91,7 +135,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     return Material(
       color: Colors.black.withValues(alpha: 0.3),
       child: GestureDetector(
-        onTap: _handleDismiss,
+        onTap: () => _handleDismiss(),
         child: Center(
           child: FadeTransition(
             opacity: _fadeAnimation,
@@ -119,6 +163,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       targetSize: targetSize,
       screenSize: screenSize,
       viewPadding: mediaQuery.padding,
+      preferredPlacement: widget.guide.preferredPlacement,
     );
 
     return Material(
@@ -127,7 +172,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         children: [
           // 透明可点击遮罩层（点击关闭）
           GestureDetector(
-            onTap: _handleDismiss,
+            onTap: () => _handleDismiss(),
             child: Container(
               color: Colors.transparent,
               width: double.infinity,
@@ -159,68 +204,198 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     required Size targetSize,
     required Size screenSize,
     required EdgeInsets viewPadding,
+    required FeatureGuidePlacement preferredPlacement,
   }) {
-    const popoverWidth = 220.0; // 缩小宽度
-    const popoverMaxHeight = 120.0; // 缩小高度
-    const arrowSize = 10.0; // 更新箭头尺寸
+    const popoverWidth = 220.0;
+    const popoverMaxHeight = 120.0;
+    const arrowSize = 14.0;
     const margin = 12.0;
 
-    final targetCenterX = targetPosition.dx + targetSize.width / 2;
-    final targetCenterY = targetPosition.dy + targetSize.height / 2;
-    final safeTop = viewPadding.top + margin;
-    final safeBottom = screenSize.height - viewPadding.bottom - margin;
-    final safeLeft = margin;
+  final targetCenterX = targetPosition.dx + targetSize.width / 2;
+  final targetCenterY = targetPosition.dy + targetSize.height / 2;
+  final safeTop = viewPadding.top + margin;
+  final safeBottom = screenSize.height - viewPadding.bottom - margin;
+  const double safeLeft = margin;
     final safeRight = screenSize.width - margin;
 
-    // 优先尝试上方（适合首页每日一言）
-    if (targetPosition.dy - arrowSize - popoverMaxHeight > safeTop) {
-      final left = (targetCenterX - popoverWidth / 2)
-          .clamp(safeLeft, safeRight - popoverWidth);
-      return {
-        'left': left,
-        'top': targetPosition.dy - arrowSize - popoverMaxHeight,
-        'arrowDirection': PopoverArrowDirection.bottom,
-        'arrowOffset': targetCenterX - left,
-      };
+    Map<String, dynamic>? fallback;
+
+    for (final attempt in _buildPlacementAttempts(preferredPlacement)) {
+      final result = _computePlacement(
+        direction: attempt.direction,
+        targetPosition: targetPosition,
+        targetSize: targetSize,
+        targetCenterX: targetCenterX,
+        targetCenterY: targetCenterY,
+        safeTop: safeTop,
+        safeBottom: safeBottom,
+  safeLeft: safeLeft,
+  safeRight: safeRight,
+  popoverWidth: popoverWidth,
+  popoverMaxHeight: popoverMaxHeight,
+        arrowSize: arrowSize,
+        requireInBounds: !attempt.allowClamp,
+      );
+
+      if (result != null) {
+        return result;
+      }
+
+      if (attempt.allowClamp && fallback == null) {
+        fallback = _computePlacement(
+          direction: attempt.direction,
+          targetPosition: targetPosition,
+          targetSize: targetSize,
+          targetCenterX: targetCenterX,
+          targetCenterY: targetCenterY,
+          safeTop: safeTop,
+          safeBottom: safeBottom,
+          safeLeft: safeLeft,
+          safeRight: safeRight,
+          popoverWidth: popoverWidth,
+          popoverMaxHeight: popoverMaxHeight,
+          arrowSize: arrowSize,
+          requireInBounds: false,
+        );
+      }
     }
 
-    // 其次显示在下方
-    // 其次显示在下方
-    if (targetPosition.dy + targetSize.height + arrowSize + popoverMaxHeight + margin <
-        safeBottom) {
-      final left = (targetCenterX - popoverWidth / 2)
-          .clamp(safeLeft, safeRight - popoverWidth);
-      return {
-        'left': left,
-        'top': targetPosition.dy + targetSize.height + arrowSize,
-        'arrowDirection': PopoverArrowDirection.top,
-        'arrowOffset': targetCenterX - left,
-      };
+    return fallback ??
+        _computePlacement(
+          direction: PopoverArrowDirection.top,
+          targetPosition: targetPosition,
+          targetSize: targetSize,
+          targetCenterX: targetCenterX,
+          targetCenterY: targetCenterY,
+          safeTop: safeTop,
+          safeBottom: safeBottom,
+          safeLeft: safeLeft,
+          safeRight: safeRight,
+          popoverWidth: popoverWidth,
+          popoverMaxHeight: popoverMaxHeight,
+          arrowSize: arrowSize,
+          requireInBounds: false,
+        )!;
+  }
+
+  List<({PopoverArrowDirection direction, bool allowClamp})>
+      _buildPlacementAttempts(FeatureGuidePlacement placement) {
+    switch (placement) {
+      case FeatureGuidePlacement.above:
+        return const [
+          (direction: PopoverArrowDirection.bottom, allowClamp: true),
+          (direction: PopoverArrowDirection.top, allowClamp: false),
+          (direction: PopoverArrowDirection.left, allowClamp: false),
+          (direction: PopoverArrowDirection.right, allowClamp: false),
+        ];
+      case FeatureGuidePlacement.below:
+        return const [
+          (direction: PopoverArrowDirection.top, allowClamp: true),
+          (direction: PopoverArrowDirection.bottom, allowClamp: false),
+          (direction: PopoverArrowDirection.left, allowClamp: false),
+          (direction: PopoverArrowDirection.right, allowClamp: false),
+        ];
+      case FeatureGuidePlacement.left:
+        return const [
+          (direction: PopoverArrowDirection.right, allowClamp: true),
+          (direction: PopoverArrowDirection.left, allowClamp: false),
+          (direction: PopoverArrowDirection.bottom, allowClamp: false),
+          (direction: PopoverArrowDirection.top, allowClamp: false),
+        ];
+      case FeatureGuidePlacement.right:
+        return const [
+          (direction: PopoverArrowDirection.left, allowClamp: true),
+          (direction: PopoverArrowDirection.right, allowClamp: false),
+          (direction: PopoverArrowDirection.bottom, allowClamp: false),
+          (direction: PopoverArrowDirection.top, allowClamp: false),
+        ];
+      case FeatureGuidePlacement.auto:
+        return const [
+          (direction: PopoverArrowDirection.bottom, allowClamp: false),
+          (direction: PopoverArrowDirection.top, allowClamp: false),
+          (direction: PopoverArrowDirection.left, allowClamp: false),
+          (direction: PopoverArrowDirection.right, allowClamp: false),
+        ];
+    }
+  }
+
+  Map<String, dynamic>? _computePlacement({
+    required PopoverArrowDirection direction,
+    required Offset targetPosition,
+    required Size targetSize,
+    required double targetCenterX,
+    required double targetCenterY,
+    required double safeTop,
+    required double safeBottom,
+    required double safeLeft,
+    required double safeRight,
+    required double popoverWidth,
+    required double popoverMaxHeight,
+    required double arrowSize,
+    required bool requireInBounds,
+  }) {
+    double left;
+    double top;
+    double arrowOffset;
+
+    switch (direction) {
+      case PopoverArrowDirection.bottom:
+        final desiredTop = targetPosition.dy - arrowSize - popoverMaxHeight;
+        if (requireInBounds &&
+            (desiredTop < safeTop ||
+                targetCenterX - popoverWidth / 2 < safeLeft ||
+                targetCenterX + popoverWidth / 2 > safeRight)) {
+          return null;
+        }
+
+        left = (targetCenterX - popoverWidth / 2)
+            .clamp(safeLeft, safeRight - popoverWidth);
+        top = desiredTop.clamp(safeTop, safeBottom - popoverMaxHeight);
+        arrowOffset = targetCenterX - left;
+        break;
+      case PopoverArrowDirection.top:
+        final desiredTop = targetPosition.dy + targetSize.height + arrowSize;
+        if (requireInBounds &&
+            (desiredTop + popoverMaxHeight > safeBottom ||
+                targetCenterX - popoverWidth / 2 < safeLeft ||
+                targetCenterX + popoverWidth / 2 > safeRight)) {
+          return null;
+        }
+
+        left = (targetCenterX - popoverWidth / 2)
+            .clamp(safeLeft, safeRight - popoverWidth);
+        top = desiredTop.clamp(safeTop, safeBottom - popoverMaxHeight);
+        arrowOffset = targetCenterX - left;
+        break;
+      case PopoverArrowDirection.left:
+        final desiredLeft = targetPosition.dx + targetSize.width + arrowSize;
+        if (requireInBounds && desiredLeft + popoverWidth > safeRight) {
+          return null;
+        }
+
+        left = desiredLeft.clamp(safeLeft, safeRight - popoverWidth);
+        top = (targetCenterY - popoverMaxHeight / 2)
+            .clamp(safeTop, safeBottom - popoverMaxHeight);
+        arrowOffset = targetCenterY - top;
+        break;
+      case PopoverArrowDirection.right:
+        final desiredLeft = targetPosition.dx - popoverWidth - arrowSize;
+        if (requireInBounds && desiredLeft < safeLeft) {
+          return null;
+        }
+
+        left = desiredLeft.clamp(safeLeft, safeRight - popoverWidth);
+        top = (targetCenterY - popoverMaxHeight / 2)
+            .clamp(safeTop, safeBottom - popoverMaxHeight);
+        arrowOffset = targetCenterY - top;
+        break;
     }
 
-    // 尝试右侧
-    if (targetPosition.dx + targetSize.width + arrowSize + popoverWidth + margin <
-        safeRight) {
-      final top = (targetCenterY - popoverMaxHeight / 2)
-          .clamp(safeTop, safeBottom - popoverMaxHeight);
-      return {
-        'left': targetPosition.dx + targetSize.width + arrowSize,
-        'top': top,
-        'arrowDirection': PopoverArrowDirection.left,
-        'arrowOffset': targetCenterY - top,
-      };
-    }
-
-    // 最后尝试左侧
-  final fallbackTop = (targetCenterY - popoverMaxHeight / 2)
-    .clamp(safeTop, safeBottom - popoverMaxHeight);
-  final left = (targetPosition.dx - popoverWidth - arrowSize)
-    .clamp(safeLeft, safeRight - popoverWidth);
     return {
       'left': left,
-      'top': fallbackTop,
-      'arrowDirection': PopoverArrowDirection.right,
-      'arrowOffset': targetCenterY - fallbackTop,
+      'top': top,
+      'arrowDirection': direction,
+      'arrowOffset': arrowOffset,
     };
   }
 
@@ -230,7 +405,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     PopoverArrowDirection arrowDirection, {
     double arrowOffset = 0,
   }) {
-    const arrowSize = 10.0; // 增大箭头尺寸
+    const arrowSize = 14.0;
     final theme = Theme.of(context);
     final cardColor = theme.cardColor;
 
@@ -242,11 +417,16 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 14,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -274,7 +454,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                 ),
               ),
               GestureDetector(
-                onTap: _handleDismiss,
+                onTap: () => _handleDismiss(),
                 child: Padding(
                   padding: const EdgeInsets.all(2),
                   child: Icon(
@@ -442,6 +622,7 @@ class _ArrowPainter extends CustomPainter {
     }
 
     path.close();
+  canvas.drawShadow(path, Colors.black.withValues(alpha: 0.18), 4, false);
     canvas.drawPath(path, paint);
   }
 

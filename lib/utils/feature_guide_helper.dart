@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/feature_guide.dart';
@@ -13,7 +15,8 @@ class FeatureGuideHelper {
   /// - context: BuildContext
   /// - guideId: 引导唯一标识符（如 'homepage_daily_quote'）
   /// - targetKey: 目标元素的 GlobalKey（可选，如果不提供则居中显示）
-  /// - autoDismissDuration: 自动消失时间（默认5秒）
+  /// - autoDismissDuration: 自动消失时间（默认约2.2秒）
+  /// - shouldShow: 可选条件判断（返回false则中止显示）
   /// 
   /// 使用示例:
   /// ```dart
@@ -35,50 +38,77 @@ class FeatureGuideHelper {
     required BuildContext context,
     required String guideId,
     GlobalKey? targetKey,
-    Duration autoDismissDuration = const Duration(seconds: 5),
+  Duration autoDismissDuration = const Duration(milliseconds: 2200),
+    bool Function()? shouldShow,
   }) async {
     try {
-      // 获取引导服务
+      final route = ModalRoute.of(context);
       final guideService = context.read<FeatureGuideService>();
 
-      // 检查是否已显示过
       if (guideService.hasShown(guideId)) {
         debugPrint('功能引导 $guideId 已显示过，跳过');
         return;
       }
 
-      // 获取引导配置
       final config = FeatureGuide.configs[guideId];
       if (config == null) {
         debugPrint('未找到引导配置: $guideId');
         return;
       }
 
-      // 延迟更长时间，确保页面完全渲染完成
-      await Future.delayed(const Duration(milliseconds: 600));
+      final overlayState = Overlay.maybeOf(context);
+      if (overlayState == null) {
+        debugPrint('未找到 Overlay，无法显示功能引导: $guideId');
+        return;
+      }
 
-      // 检查 context 是否还有效
-      if (!context.mounted) return;
-      
-      // 如果有 targetKey，等待其渲染
+      await WidgetsBinding.instance.endOfFrame;
+
+      if (!context.mounted) {
+        return;
+      }
+
+      if (shouldShow != null && !shouldShow()) {
+        debugPrint('功能引导 $guideId 已取消，条件不满足');
+        return;
+      }
+
       if (targetKey != null) {
-        final renderBox = targetKey.currentContext?.findRenderObject() as RenderBox?;
+        final renderBox = await _waitForTargetRender(
+          targetKey,
+          cancellation: () => shouldShow != null && !shouldShow(),
+        );
         if (renderBox == null) {
-          debugPrint('目标元素尚未渲染: $guideId');
+          debugPrint('目标元素尚未渲染或已离开视图: $guideId');
           return;
         }
       }
 
-      // 创建引导对象
+      if (shouldShow != null && !shouldShow()) {
+        debugPrint('功能引导 $guideId 在显示前被取消');
+        return;
+      }
+
+      if (route != null && !route.isCurrent) {
+        debugPrint('功能引导 $guideId 所属页面已切换，取消显示');
+        return;
+      }
+
+      if (!overlayState.mounted) {
+        debugPrint('Overlay 已卸载，无法显示功能引导: $guideId');
+        return;
+      }
+
       final guide = FeatureGuide(
         id: guideId,
         title: config.title,
         description: config.description,
         targetKey: targetKey,
+        preferredPlacement: config.placement,
       );
 
-      // 显示 Popover 气泡
-      final overlay = Overlay.of(context);
+      final completer = Completer<void>();
+      var removed = false;
       late OverlayEntry overlayEntry;
 
       overlayEntry = OverlayEntry(
@@ -86,14 +116,22 @@ class FeatureGuideHelper {
           guide: guide,
           autoDismissDuration: autoDismissDuration,
           onDismiss: () {
+            if (removed) {
+              return;
+            }
+            removed = true;
             overlayEntry.remove();
-            // 标记为已显示
             guideService.markAsShown(guideId);
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
           },
+          visibilityPredicate: shouldShow,
         ),
       );
 
-      overlay.insert(overlayEntry);
+      overlayState.insert(overlayEntry);
+      await completer.future;
     } catch (e) {
       debugPrint('显示功能引导失败: $e');
     }
@@ -104,6 +142,7 @@ class FeatureGuideHelper {
   /// 参数:
   /// - context: BuildContext
   /// - guides: 引导列表 [(guideId, targetKey), ...]
+  /// - shouldShow: 可选条件判断（返回false则取消后续气泡）
   /// - delayBetween: 每个引导之间的延迟时间
   /// 
   /// 使用示例:
@@ -119,8 +158,9 @@ class FeatureGuideHelper {
   static Future<void> showSequence({
     required BuildContext context,
     required List<(String, GlobalKey?)> guides,
-    Duration delayBetween = const Duration(milliseconds: 800),
-    Duration autoDismissDuration = const Duration(seconds: 4),
+    bool Function()? shouldShow,
+    Duration delayBetween = const Duration(milliseconds: 180),
+    Duration autoDismissDuration = const Duration(milliseconds: 2200),
   }) async {
     if (guides.isEmpty) {
       return;
@@ -128,14 +168,25 @@ class FeatureGuideHelper {
 
     for (var i = 0; i < guides.length; i++) {
       final (guideId, targetKey) = guides[i];
-      await show(
-        context: context,
+      if (shouldShow != null && !shouldShow()) {
+        break;
+      }
+      // ignore: use_build_context_synchronously
+        await show(
+          context: context, // ignore: use_build_context_synchronously
         guideId: guideId,
         targetKey: targetKey,
         autoDismissDuration: autoDismissDuration,
+        shouldShow: shouldShow,
       );
+      if (context is Element && !context.mounted) {
+        break;
+      }
       final isLast = i == guides.length - 1;
       if (!isLast) {
+        if (shouldShow != null && !shouldShow()) {
+          break;
+        }
         await Future.delayed(delayBetween);
       }
     }
@@ -165,5 +216,30 @@ class FeatureGuideHelper {
   static List<String> getShownGuides(BuildContext context) {
     final guideService = context.read<FeatureGuideService>();
     return guideService.getShownGuides();
+  }
+
+  static Future<RenderBox?> _waitForTargetRender(
+    GlobalKey key, {
+    Duration timeout = const Duration(milliseconds: 500),
+    Duration checkInterval = const Duration(milliseconds: 16),
+    bool Function()? cancellation,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+
+    while (stopwatch.elapsed <= timeout) {
+      if (cancellation?.call() ?? false) {
+        return null;
+      }
+
+      final context = key.currentContext;
+      final renderBox = context?.findRenderObject() as RenderBox?;
+      if (renderBox != null && renderBox.hasSize && renderBox.attached) {
+        return renderBox;
+      }
+
+      await Future.delayed(checkInterval);
+    }
+
+    return null;
   }
 }

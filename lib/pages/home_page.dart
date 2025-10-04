@@ -615,7 +615,9 @@ class _HomePageState extends State<HomePage>
         return;
       }
 
-      _settingsPageKey.currentState?.showGuidesIfNeeded();
+      _settingsPageKey.currentState?.showGuidesIfNeeded(
+        shouldShow: () => mounted && _currentIndex == 3,
+      );
       _settingsGuidePending = false;
     });
   }
@@ -626,6 +628,7 @@ class _HomePageState extends State<HomePage>
       context: context,
       guideId: 'homepage_daily_quote',
       targetKey: _dailyQuoteGuideKey,
+      shouldShow: () => mounted && _currentIndex == 0,
     );
   }
 
@@ -660,8 +663,7 @@ class _HomePageState extends State<HomePage>
     await FeatureGuideHelper.showSequence(
       context: context,
       guides: guides,
-      delayBetween: const Duration(milliseconds: 400),
-      autoDismissDuration: const Duration(seconds: 3),
+      shouldShow: () => mounted && _currentIndex == 1,
     );
   }
 
