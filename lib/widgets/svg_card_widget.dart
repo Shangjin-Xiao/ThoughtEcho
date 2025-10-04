@@ -373,6 +373,17 @@ class GeneratedCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 如果不显示操作按钮，直接返回SVGCardWidget以避免ParentData类型冲突
+    if (!showActions) {
+      return SVGCardWidget(
+        svgContent: card.svgContent,
+        onTap: onTap,
+        width: width,
+        height: height,
+      );
+    }
+    
+    // 显示操作按钮时，使用Column包装
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -382,30 +393,28 @@ class GeneratedCardWidget extends StatelessWidget {
           width: width,
           height: height,
         ),
-        if (showActions) ...[
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              if (onShare != null)
-                Builder(
-                  builder: (ctx) => _ActionButton(
-                    icon: Icons.share,
-                    label: '分享',
-                    onPressed: onShare!,
-                  ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (onShare != null)
+              Builder(
+                builder: (ctx) => _ActionButton(
+                  icon: Icons.share,
+                  label: '分享',
+                  onPressed: onShare!,
                 ),
-              if (onSave != null)
-                Builder(
-                  builder: (ctx) => _ActionButton(
-                    icon: Icons.save_alt,
-                    label: '保存',
-                    onPressed: onSave!,
-                  ),
+              ),
+            if (onSave != null)
+              Builder(
+                builder: (ctx) => _ActionButton(
+                  icon: Icons.save_alt,
+                  label: '保存',
+                  onPressed: onSave!,
                 ),
-            ],
-          ),
-        ],
+              ),
+          ],
+        ),
       ],
     );
   }
