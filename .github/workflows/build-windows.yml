@@ -75,7 +75,7 @@ jobs:
       run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
       
     - name: Build MSIX installer
-      shell: powershell
+      shell: pwsh
       continue-on-error: true  # 允许MSIX构建失败，但继续执行后续步骤
       run: |
         Write-Host "构建MSIX安装包..." -ForegroundColor Yellow
@@ -97,7 +97,7 @@ jobs:
           
           if (!(Test-Path "$buildPath/thoughtecho.exe")) {
             Write-Error "Windows构建文件不存在: $buildPath/thoughtecho.exe"
-            "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             exit 1
           }
           
@@ -112,21 +112,21 @@ jobs:
             $msixPath = "build/windows/x64/runner/Release/ThoughtEcho-Setup.msix"
             if (Test-Path $msixPath) {
               $msixSize = (Get-Item $msixPath).Length
-              Write-Host "✅ MSIX构建成功！文件大小: $([math]::Round($msixSize/1MB, 2)) MB" -ForegroundColor Green
-              "msix_success=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-              "msix_path=$msixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+              Write-Host "MSIX构建成功！文件大小: $([math]::Round($msixSize/1MB, 2)) MB" -ForegroundColor Green
+              "msix_success=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+              "msix_path=$msixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
-              Write-Warning "⚠️ MSIX命令执行成功但文件未找到: $msixPath"
-              "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+              Write-Warning "MSIX命令执行成功但文件未找到: $msixPath"
+              "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
           } else {
-            Write-Warning "⚠️ MSIX构建失败（退出码: $exitCode）"
-            "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Warning "MSIX构建失败(退出码: $exitCode)"
+            "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           }
         }
         catch {
-          Write-Warning "⚠️ MSIX构建异常: $($_.Exception.Message)"
-          "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Warning "MSIX构建异常: $($_.Exception.Message)"
+          "msix_success=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
         }
       id: msix_build
       env:
