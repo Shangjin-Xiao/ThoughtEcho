@@ -42,6 +42,7 @@ import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/backup_restore_page.dart';
+import 'widgets/quote_content_widget.dart'; // 用于缓存管理
 
 // 超时时间常量 (Timeout constants)
 class TimeoutConstants {
@@ -675,7 +676,7 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final bool isEmergencyMode;
   final bool showUpdateReady;
@@ -688,6 +689,44 @@ class MyApp extends StatelessWidget {
     this.showUpdateReady = false,
     this.showFullOnboarding = false,
   });
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // 注册应用生命周期监听器
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // 移除生命周期监听器
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // 修复问题3：应用进入后台时清理缓存，释放内存
+    if (state == AppLifecycleState.paused) {
+      logDebug('应用进入后台，清理富文本缓存', source: 'AppLifecycle');
+      try {
+        // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
+        Future.microtask(() {
+          QuoteContent.resetCaches();
+          logDebug('富文本缓存已清理', source: 'AppLifecycle');
+        });
+      } catch (e) {
+        logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -706,17 +745,17 @@ class MyApp extends StatelessWidget {
         appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
 
         return MaterialApp(
-          navigatorKey: navigatorKey,
+          navigatorKey: widget.navigatorKey,
           title: 'ThoughtEcho',
           theme: appTheme.createLightThemeData(),
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,
           debugShowCheckedModeBanner: false,
-          home: showUpdateReady
+          home: widget.showUpdateReady
               ? const OnboardingPage(showUpdateReady: true)
               : !hasCompletedOnboarding
                   ? const OnboardingPage() // 使用新的引导页面
-                  : isEmergencyMode
+                  : widget.isEmergencyMode
                       ? const EmergencyRecoveryPage()
                       : HomePage(
                           initialPage:

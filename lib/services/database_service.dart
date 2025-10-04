@@ -19,6 +19,7 @@ import 'large_file_manager.dart';
 import 'media_reference_service.dart';
 import '../models/merge_report.dart';
 import '../utils/lww_utils.dart';
+import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 
 class DatabaseService extends ChangeNotifier {
   static Database? _database;
@@ -3308,6 +3309,9 @@ class DatabaseService extends ChangeNotifier {
         // 清理缓存
         _clearAllCache();
 
+        // 修复问题1：清理富文本控制器缓存
+        QuoteContent.removeCacheForQuote(id);
+
         // 直接从内存中移除并通知
         _currentQuotes.removeWhere((quote) => quote.id == id);
         if (_quotesController != null && !_quotesController!.isClosed) {
@@ -3444,6 +3448,10 @@ class DatabaseService extends ChangeNotifier {
         if (index != -1) {
           _currentQuotes[index] = quote;
         }
+        
+        // 修复问题1：更新笔记后清理旧缓存，确保显示最新内容
+        QuoteContent.removeCacheForQuote(quote.id!);
+        
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
