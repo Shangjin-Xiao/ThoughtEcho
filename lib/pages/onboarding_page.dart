@@ -674,19 +674,20 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   /// 显示跳过对话框
   void _showSkipDialog(OnboardingController controller) {
+    if (!mounted) return;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('跳过引导'),
         content: const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               try {
                 await controller.skipOnboarding();
                 if (mounted) {
