@@ -62,8 +62,8 @@ jobs:
         $pubspecContent = Get-Content pubspec.yaml -Raw
         $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $version+$buildNumber"
         
-        # 同时更新 pubspec.yaml 中嵌入的 msix_version
-        $pubspecContent = $pubspecContent -replace 'msix_version:\s*[\d\.]+', "msix_version: $msixVersion"
+        # 更新 msix_version，保留前面的缩进
+        $pubspecContent = $pubspecContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $msixVersion"
         $pubspecContent | Set-Content pubspec.yaml -NoNewline
         
         Write-Output "Updated pubspec.yaml version to: $version+$buildNumber"
