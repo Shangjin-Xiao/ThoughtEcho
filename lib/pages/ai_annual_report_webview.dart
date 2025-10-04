@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import '../constants/app_constants.dart';
 
 class AIAnnualReportWebView extends StatefulWidget {
   final String htmlContent;
@@ -530,6 +531,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
                     ],
                   ),
                   backgroundColor: Theme.of(context).colorScheme.primary,
+                  duration: AppConstants.snackBarDurationNormal,
                 ),
               );
             }
@@ -566,6 +568,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
                   ],
                 ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
+                duration: AppConstants.snackBarDurationNormal,
               ),
             );
           }
@@ -597,6 +600,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           SnackBar(
             content: Text('操作失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: AppConstants.snackBarDurationError,
           ),
         );
       }
@@ -640,6 +644,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
                   ],
                 ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
+                duration: AppConstants.snackBarDurationNormal,
               ),
             );
           }
@@ -698,6 +703,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           SnackBar(
             content: Text('分享失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: AppConstants.snackBarDurationError,
           ),
         );
       }
@@ -752,7 +758,10 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               // 复制文件路径到剪贴板
               Clipboard.setData(ClipboardData(text: filePath));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('文件路径已复制到剪贴板')),
+                const SnackBar(
+                  content: Text('文件路径已复制到剪贴板'),
+                  duration: AppConstants.snackBarDurationImportant,
+                ),
               );
             },
             child: const Text('复制路径'),
@@ -915,6 +924,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           SnackBar(
             content: Text('分享失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: AppConstants.snackBarDurationError,
           ),
         );
       }
@@ -994,6 +1004,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           SnackBar(
             content: Text('保存失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: AppConstants.snackBarDurationError,
           ),
         );
       }

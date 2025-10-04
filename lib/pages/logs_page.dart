@@ -8,6 +8,7 @@ import '../widgets/app_loading_view.dart';
 import '../widgets/app_error_view.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
 import '../utils/time_utils.dart';
+import '../constants/app_constants.dart';
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -106,7 +107,12 @@ class _LogsPageState extends State<LogsPage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('加载更多日志失败: $e')));
+      ).showSnackBar(
+        SnackBar(
+          content: Text('加载更多日志失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
       setState(() {
         _isLoadingMore = false;
       });
@@ -334,7 +340,12 @@ class _LogsPageState extends State<LogsPage> {
     Clipboard.setData(ClipboardData(text: buffer.toString()));
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('日志详情已复制到剪贴板')));
+    ).showSnackBar(
+      const SnackBar(
+        content: Text('日志详情已复制到剪贴板'),
+        duration: AppConstants.snackBarDurationImportant,
+      ),
+    );
   }
 
   // 获取日志级别对应的图标
@@ -976,7 +987,12 @@ class _LogsPageState extends State<LogsPage> {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('内存中的日志已清除')));
+              ).showSnackBar(
+                const SnackBar(
+                  content: Text('内存中的日志已清除'),
+                  duration: AppConstants.snackBarDurationNormal,
+                ),
+              );
             },
             child: const Text('仅清除内存日志'),
           ),
@@ -1005,7 +1021,10 @@ class _LogsPageState extends State<LogsPage> {
                 if (!mounted) return;
                 navigator.pop(); // 关闭加载指示器
                 scaffoldMessenger.showSnackBar(
-                  const SnackBar(content: Text('所有日志记录已清除')),
+                  const SnackBar(
+                    content: Text('所有日志记录已清除'),
+                    duration: AppConstants.snackBarDurationNormal,
+                  ),
                 );
                 setState(() {
                   _historyLogs.clear();
@@ -1016,7 +1035,10 @@ class _LogsPageState extends State<LogsPage> {
                 if (!mounted) return;
                 navigator.pop(); // 关闭加载指示器
                 scaffoldMessenger.showSnackBar(
-                  SnackBar(content: Text('清除日志失败: $e')),
+                  SnackBar(
+                    content: Text('清除日志失败: $e'),
+                    duration: AppConstants.snackBarDurationError,
+                  ),
                 );
               }
             },

@@ -172,6 +172,7 @@ class SettingsPageState extends State<SettingsPage> {
           SnackBar(
             content: Text('检查更新失败: ${e.toString()}'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: AppConstants.snackBarDurationError,
           ),
         );
       }

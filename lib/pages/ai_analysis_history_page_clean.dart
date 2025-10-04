@@ -825,7 +825,12 @@ $positiveQuotesText
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('生成AI年度报告失败: ${e.toString()}')));
+        ).showSnackBar(
+          SnackBar(
+            content: Text('生成AI年度报告失败: ${e.toString()}'),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
