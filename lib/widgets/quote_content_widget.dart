@@ -23,6 +23,19 @@ class QuoteContent extends StatelessWidget {
     this.showFullContent = false,
   });
 
+  // 性能优化：提取为静态常量，避免每次 build 创建
+  static final quill.QuillEditorConfig _staticEditorConfig = quill.QuillEditorConfig(
+    enableInteractiveSelection: false,
+    enableSelectionToolbar: false,
+    showCursor: false,
+    embedBuilders: kIsWeb
+        ? FlutterQuillEmbeds.editorWebBuilders()
+        : QuillEditorExtensions.getEmbedBuilders(),
+    padding: EdgeInsets.zero,
+    expands: false,
+    scrollable: false,
+  );
+
   static const double collapsedContentMaxHeight = 160.0;
   static const double _estimatedLineHeight = 24.0;
   static const double _lineSpacing = 4.0;
@@ -292,17 +305,7 @@ class QuoteContent extends StatelessWidget {
         ),
         scrollController: ScrollController(),
         focusNode: FocusNode(),
-        config: quill.QuillEditorConfig(
-          enableInteractiveSelection: false,
-          enableSelectionToolbar: false,
-          showCursor: false,
-          embedBuilders: kIsWeb
-              ? FlutterQuillEmbeds.editorWebBuilders()
-              : QuillEditorExtensions.getEmbedBuilders(),
-          padding: EdgeInsets.zero,
-          expands: false,
-          scrollable: false,
-        ),
+        config: _staticEditorConfig,
       );
 
       if (style != null) {

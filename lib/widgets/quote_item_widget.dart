@@ -80,8 +80,9 @@ class QuoteItemWidget extends StatefulWidget {
   /// 3. 目的：基于实际显示高度判断，解决图片导致的显示问题
   /// 4. 包含图片的内容会正常显示，避免因图片隐藏造成的矛盾
   static bool needsExpansionFor(Quote quote) {
-    final cacheKey =
-        '${quote.id}_${quote.content.length}_${quote.deltaContent?.length ?? 0}';
+    // 性能优化：使用内容哈希作为缓存 key，提升命中率
+    final contentHash = quote.deltaContent?.hashCode ?? quote.content.hashCode;
+    final cacheKey = '${quote.id}_$contentHash';
 
     if (_expansionCache.containsKey(cacheKey)) {
       _cacheHitCount++;

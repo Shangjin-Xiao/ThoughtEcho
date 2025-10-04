@@ -152,6 +152,13 @@ class NoteListViewState extends State<NoteListView> {
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;
 
+    // 性能优化：增加阈值判断，避免微小滚动触发逻辑
+    final currentOffset = _scrollController.offset;
+    if ((currentOffset - _lastScrollOffset).abs() < _scrollThreshold) {
+      return;
+    }
+    _lastScrollOffset = currentOffset;
+
     // 如果正在初始化，忽略滚动事件以避免冲突
     if (_isInitializing) {
       logDebug('正在初始化，忽略滚动事件', source: 'NoteListView');
@@ -639,6 +646,8 @@ class NoteListViewState extends State<NoteListView> {
   // 添加滚动状态标志，防止在用户滑动时触发自动滚动
   bool _isUserScrolling = false;
   Timer? _userScrollingTimer;
+  double _lastScrollOffset = 0;
+  static const double _scrollThreshold = 5.0; // 性能优化：5像素阈值
 
   /// 滚动到指定笔记的顶部 - 使用 ensureVisible 确保多展开笔记时定位准确
   /// 注意：目前未被使用，因为折叠时的自动滚动被禁用以改善用户体验
@@ -860,6 +869,9 @@ class NoteListViewState extends State<NoteListView> {
       child: ListView.builder(
         controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
+        addAutomaticKeepAlives: true, // 性能优化：保持滚动位置
+        addRepaintBoundaries: true, // 性能优化：减少重绘范围
+        cacheExtent: 500, // 性能优化：预渲染500像素范围
         itemCount: _quotes.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index < _quotes.length) {
@@ -997,19 +1009,18 @@ class NoteListViewState extends State<NoteListView> {
     // 取消之前的防抖定时器
     _searchDebounceTimer?.cancel();
 
-    // 立即更新本地UI状态
-    setState(() {
-      // 如果搜索框被清空，立即重置加载状态
-      if (value.isEmpty && widget.searchQuery.isNotEmpty) {
+    // 性能优化：只在必要时调用 setState，避免不必要的重建
+    final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
+        (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
+    
+    if (shouldSetLoading && !_isLoading) {
+      setState(() {
         _isLoading = true;
+      });
+      if (value.isEmpty) {
         logDebug('搜索内容被清空，重置加载状态');
-        // 优化：只有当搜索内容长度>=2时才显示加载状态
-      } else if (value.isNotEmpty &&
-          value.length >= AppConstants.minSearchLength) {
-        // 优化：只有当搜索内容长度>=2时才显示加载状态
-        _isLoading = true;
       }
-    });
+    }
 
     // 对于清空操作，立即执行
     if (value.isEmpty) {
