@@ -168,25 +168,35 @@ class FeatureGuideHelper {
 
     for (var i = 0; i < guides.length; i++) {
       final (guideId, targetKey) = guides[i];
-      if (shouldShow != null && !shouldShow()) {
-        break;
+      
+      // 每个气泡独立等待条件满足,无超时限制
+      // 只要页面还在(context mounted),就一直等待用户切回来
+      while (shouldShow != null && !shouldShow()) {
+        // Context 已销毁,整个序列终止
+        if (context is Element && !context.mounted) {
+          debugPrint('功能引导序列终止: context 已销毁');
+          return;
+        }
+        // 等待用户切回对应页面
+        await Future.delayed(const Duration(milliseconds: 200));
       }
+      
+      // 条件满足,显示当前引导
       // ignore: use_build_context_synchronously
-        await show(
-          context: context, // ignore: use_build_context_synchronously
+      await show(
+        context: context, // ignore: use_build_context_synchronously
         guideId: guideId,
         targetKey: targetKey,
         autoDismissDuration: autoDismissDuration,
         shouldShow: shouldShow,
       );
+      
       if (context is Element && !context.mounted) {
         break;
       }
+      
       final isLast = i == guides.length - 1;
       if (!isLast) {
-        if (shouldShow != null && !shouldShow()) {
-          break;
-        }
         await Future.delayed(delayBetween);
       }
     }
