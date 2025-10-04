@@ -1,9 +1,11 @@
+import 'dart:collection';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'dart:convert';
 import '../models/quote_model.dart';
 import '../utils/quill_editor_extensions.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
@@ -45,6 +47,20 @@ class QuoteContent extends StatelessWidget {
   static const double _estimatedAudioHeight = 140.0;
   static const Key collapsedWrapperKey =
       ValueKey('quote_content.collapsed_wrapper');
+
+  static void resetCaches() {
+    _QuoteDocumentCache.clear();
+    _QuoteContentControllerCache.clear();
+  }
+
+  @visibleForTesting
+  static void clearCacheForTesting() => resetCaches();
+
+  @visibleForTesting
+  static Map<String, dynamic> debugCacheStats() => {
+        'document': _QuoteDocumentCache.stats,
+        'controller': _QuoteContentControllerCache.stats,
+      };
 
   /// 检查是否为媒体软连接或其他应该过滤的内容
   bool _shouldFilterBoldContent(String content) {
@@ -293,18 +309,36 @@ class QuoteContent extends StatelessWidget {
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       final bool usePrioritizedDoc =
           !showFullContent && prioritizeBoldContent;
-      final quill.Document document = _buildRichTextDocument(
-        quote.deltaContent!,
-        usePrioritizedDoc,
+      final String cacheQuoteId =
+          quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
+      final String contentVariant =
+          _QuoteContentControllerCache.resolveVariant(
+        showFullContent: showFullContent,
+        usePrioritizedDoc: usePrioritizedDoc,
+        needsExpansion: needsExpansion,
+      );
+      final String contentSignature =
+          '${quote.deltaContent!.hashCode}_${quote.deltaContent!.length}_$contentVariant';
+
+      final _CachedControllerSet controllerSet =
+          _QuoteContentControllerCache.getOrCreate(
+        quoteId: cacheQuoteId,
+        contentSignature: contentSignature,
+        variant: contentVariant,
+        documentBuilder: () => _QuoteDocumentCache.getOrCreate(
+          deltaContent: quote.deltaContent!,
+          prioritizeBold: usePrioritizedDoc,
+          builder: () => _buildRichTextDocument(
+            quote.deltaContent!,
+            usePrioritizedDoc,
+          ),
+        ),
       );
 
       Widget richTextEditor = quill.QuillEditor(
-        controller: quill.QuillController(
-          document: document,
-          selection: const TextSelection.collapsed(offset: 0),
-        ),
-        scrollController: ScrollController(),
-        focusNode: FocusNode(),
+        controller: controllerSet.quillController,
+        scrollController: controllerSet.scrollController,
+        focusNode: controllerSet.focusNode,
         config: _staticEditorConfig,
       );
 
@@ -378,5 +412,305 @@ class _CollapsedContentWrapper extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _QuoteDocumentCache {
+  static final LinkedHashMap<_DocumentCacheKey, _DocumentCacheEntry> _cache =
+      LinkedHashMap<_DocumentCacheKey, _DocumentCacheEntry>();
+  static const int _maxCacheSize = 120;
+  static const int _pruneBatchSize = 20;
+
+  static int _hitCount = 0;
+  static int _missCount = 0;
+
+  static quill.Document getOrCreate({
+    required String deltaContent,
+    required bool prioritizeBold,
+    required quill.Document Function() builder,
+  }) {
+    final key = _DocumentCacheKey(
+      deltaContent: deltaContent,
+      prioritizeBold: prioritizeBold,
+    );
+
+    final existing = _cache.remove(key);
+    if (existing != null) {
+      _hitCount++;
+      existing.touch();
+      _cache[key] = existing;
+      return existing.document;
+    }
+
+    _missCount++;
+    if (_cache.length >= _maxCacheSize) {
+      _pruneOldest();
+    }
+
+  quill.Document document;
+    try {
+      document = builder();
+    } catch (_) {
+      document = quill.Document()..insert(0, '');
+    }
+
+    _cache[key] = _DocumentCacheEntry(document: document);
+    return document;
+  }
+
+  static void clear() {
+    _cache.clear();
+    _hitCount = 0;
+    _missCount = 0;
+  }
+
+  static Map<String, dynamic> get stats {
+    final total = _hitCount + _missCount;
+    final double hitRate = total == 0 ? 0 : _hitCount / total;
+    return {
+      'cacheSize': _cache.length,
+      'maxSize': _maxCacheSize,
+      'hitCount': _hitCount,
+      'missCount': _missCount,
+      'hitRate': hitRate,
+    };
+  }
+
+  static void _pruneOldest() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final entries = _cache.entries.toList()
+      ..sort((a, b) =>
+          a.value.lastAccess.compareTo(b.value.lastAccess));
+
+    for (final entry in entries.take(_pruneBatchSize)) {
+      _cache.remove(entry.key);
+    }
+  }
+}
+
+class _DocumentCacheKey {
+  const _DocumentCacheKey({
+    required this.deltaContent,
+    required this.prioritizeBold,
+  });
+
+  final String deltaContent;
+  final bool prioritizeBold;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _DocumentCacheKey &&
+        other.prioritizeBold == prioritizeBold &&
+        other.deltaContent == deltaContent;
+  }
+
+  @override
+  int get hashCode => Object.hash(deltaContent, prioritizeBold);
+}
+
+class _DocumentCacheEntry {
+  _DocumentCacheEntry({required this.document})
+      : lastAccess = DateTime.now();
+
+  final quill.Document document;
+  DateTime lastAccess;
+
+  void touch() {
+    lastAccess = DateTime.now();
+  }
+}
+
+class _QuoteContentControllerCache {
+  static final LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>
+      _cache = LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>();
+
+  static const int _maxCacheSize = 50;
+  static const int _pruneBatchSize = 10;
+
+  static int _hitCount = 0;
+  static int _missCount = 0;
+  static int _createCount = 0;
+  static int _disposeCount = 0;
+
+  static _CachedControllerSet getOrCreate({
+    required String quoteId,
+    required String contentSignature,
+    required String variant,
+    required quill.Document Function() documentBuilder,
+  }) {
+    final key = _ControllerCacheKey(
+      quoteId: quoteId,
+      contentSignature: contentSignature,
+      variant: variant,
+    );
+
+    final existing = _cache.remove(key);
+    if (existing != null) {
+      _hitCount++;
+      existing.touch();
+      _cache[key] = existing;
+      existing.controllers.prepareForReuse();
+      return existing.controllers;
+    }
+
+    _missCount++;
+    if (_cache.length >= _maxCacheSize) {
+      _pruneOldest();
+    }
+
+    final document = documentBuilder();
+    final controllers = _CachedControllerSet(
+      quillController: quill.QuillController(
+        document: document,
+        selection: const TextSelection.collapsed(offset: 0),
+      ),
+      scrollController: ScrollController(),
+      focusNode: FocusNode(),
+      variant: variant,
+    );
+
+    final entry = _ControllerCacheEntry(controllers: controllers);
+    _cache[key] = entry;
+    _createCount++;
+    return controllers;
+  }
+
+  static void clear() {
+    for (final entry in _cache.values) {
+      entry.controllers.dispose();
+      _disposeCount++;
+    }
+    _cache.clear();
+    _hitCount = 0;
+    _missCount = 0;
+    _createCount = 0;
+    _disposeCount = 0;
+  }
+
+  static Map<String, dynamic> get stats {
+    final total = _hitCount + _missCount;
+    final double hitRate = total == 0 ? 0 : _hitCount / total;
+    return {
+      'cacheSize': _cache.length,
+      'maxSize': _maxCacheSize,
+      'hitCount': _hitCount,
+      'missCount': _missCount,
+      'createCount': _createCount,
+      'disposeCount': _disposeCount,
+      'hitRate': hitRate,
+    };
+  }
+
+  static String resolveVariant({
+    required bool showFullContent,
+    required bool usePrioritizedDoc,
+    required bool needsExpansion,
+  }) {
+    final buffer = StringBuffer()
+      ..write(showFullContent ? 'full' : 'collapsed')
+      ..write(usePrioritizedDoc ? '_bold' : '_plain')
+      ..write(needsExpansion ? '_expandable' : '_static');
+    return buffer.toString();
+  }
+
+  static void _pruneOldest() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final entries = _cache.entries.toList()
+      ..sort((a, b) =>
+          a.value.lastAccess.compareTo(b.value.lastAccess));
+
+    for (final entry in entries.take(_pruneBatchSize)) {
+      _cache.remove(entry.key);
+      entry.value.controllers.dispose();
+      _disposeCount++;
+    }
+  }
+}
+
+class _ControllerCacheKey {
+  const _ControllerCacheKey({
+    required this.quoteId,
+    required this.contentSignature,
+    required this.variant,
+  });
+
+  final String quoteId;
+  final String contentSignature;
+  final String variant;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _ControllerCacheKey &&
+        other.quoteId == quoteId &&
+        other.contentSignature == contentSignature &&
+        other.variant == variant;
+  }
+
+  @override
+  int get hashCode => Object.hash(quoteId, contentSignature, variant);
+}
+
+class _ControllerCacheEntry {
+  _ControllerCacheEntry({required this.controllers})
+      : lastAccess = DateTime.now();
+
+  final _CachedControllerSet controllers;
+  DateTime lastAccess;
+
+  void touch() {
+    lastAccess = DateTime.now();
+  }
+}
+
+class _CachedControllerSet {
+  _CachedControllerSet({
+    required this.quillController,
+    required this.scrollController,
+    required this.focusNode,
+    required this.variant,
+  });
+
+  final quill.QuillController quillController;
+  final ScrollController scrollController;
+  final FocusNode focusNode;
+  final String variant;
+
+  void prepareForReuse() {
+    focusNode.unfocus();
+    if (scrollController.hasClients) {
+      try {
+        scrollController.jumpTo(0);
+      } catch (_) {
+        // 忽略跳转失败，可能由于尚未完成布局或控制器已分离
+      }
+    }
+
+    final selection = quillController.selection;
+    if (selection.baseOffset != 0 || selection.extentOffset != 0) {
+      quillController.updateSelection(
+        const TextSelection.collapsed(offset: 0),
+        quill.ChangeSource.local,
+      );
+    }
+  }
+
+  void dispose() {
+    try {
+      quillController.dispose();
+    } catch (_) {}
+    try {
+      scrollController.dispose();
+    } catch (_) {}
+    try {
+      focusNode.dispose();
+    } catch (_) {}
   }
 }
