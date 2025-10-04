@@ -49,6 +49,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
 
+  // 优化：内部维护标签列表，支持动态更新
+  List<NoteCategory> _availableTags = [];
+  DatabaseService? _databaseService;
+
   // 分类选择
   NoteCategory? _selectedCategory;
 
@@ -111,8 +115,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       text: widget.initialQuote?.sourceWork ?? widget.prefilledWork ?? '',
     );
 
-    // 初始化过滤结果
-    _filteredTags = widget.tags;
+    // 优化：初始化内部标签列表
+    _availableTags = List.from(widget.tags);
+    _filteredTags = _availableTags;
     _lastSearchQuery = '';
 
     // 延迟初始化服务缓存，避免在构建过程中查找Provider
@@ -122,6 +127,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             Provider.of<LocationService>(context, listen: false);
         _cachedWeatherService =
             Provider.of<WeatherService>(context, listen: false);
+        
+        // 优化：监听 DatabaseService 变化，自动更新标签列表
+        _databaseService = Provider.of<DatabaseService>(context, listen: false);
+        _databaseService?.addListener(_onDatabaseChanged);
       }
     });
 
@@ -170,6 +179,27 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
+  // 优化：数据库变化监听回调 - 自动更新标签列表
+  void _onDatabaseChanged() async {
+    if (!mounted || _databaseService == null) return;
+    
+    try {
+      // 重新获取最新的标签列表
+      final updatedTags = await _databaseService!.getCategories();
+      
+      if (mounted) {
+        setState(() {
+          _availableTags = updatedTags;
+          // 重新应用当前的搜索过滤
+          _updateFilteredTags(_lastSearchQuery);
+        });
+        logDebug('标签列表已更新，当前共 ${updatedTags.length} 个标签');
+      }
+    } catch (e) {
+      logDebug('更新标签列表失败: $e');
+    }
+  }
+
   // 搜索变化处理 - 使用防抖优化
   void _onSearchChanged() {
     _searchDebounceTimer?.cancel();
@@ -188,13 +218,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     setState(() {
       if (query.isEmpty) {
-        _filteredTags = widget.tags;
+        _filteredTags = _availableTags;
       } else {
         // 优化：使用缓存避免重复计算
         if (_filterCache.containsKey(query)) {
           _filteredTags = _filterCache[query]!;
         } else {
-          _filteredTags = widget.tags.where((tag) {
+          _filteredTags = _availableTags.where((tag) {
             return tag.name.toLowerCase().contains(query);
           }).toList();
 
@@ -214,6 +244,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _authorController.dispose();
     _workController.dispose();
     _tagSearchController.dispose();
+    
+    // 优化：移除数据库监听器，防止内存泄漏
+    _databaseService?.removeListener(_onDatabaseChanged);
+    
     super.dispose();
   }
 
