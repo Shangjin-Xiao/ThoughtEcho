@@ -30,6 +30,7 @@ import 'preferences_detail_page.dart';
 import '../services/image_cache_service.dart';
 import '../services/media_reference_service.dart';
 import '../utils/feature_guide_helper.dart';
+import 'storage_management_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -717,10 +718,25 @@ class SettingsPageState extends State<SettingsPage> {
                     },
                   ),
                 ],
-                // 清除缓存
+                // 存储管理
                 ListTile(
-                  title: const Text('清除缓存'),
-                  subtitle: const Text('释放图片、天气与版本检查等缓存'),
+                  title: const Text('存储管理'),
+                  subtitle: const Text('查看存储占用，清理缓存与无用文件'),
+                  leading: const Icon(Icons.storage_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StorageManagementPage(),
+                      ),
+                    );
+                  },
+                ),
+                // 保留原清除缓存功能（快捷方式）
+                ListTile(
+                  title: const Text('快速清除缓存'),
+                  subtitle: const Text('一键清除图片、天气等缓存'),
                   leading: const Icon(Icons.cleaning_services_outlined),
                   trailing: _isClearingCache
                       ? const SizedBox(
