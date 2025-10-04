@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:async';
+import 'dart:math' as math;
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
@@ -78,9 +79,18 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Timer? _searchDebounceTimer;
   List<NoteCategory> _filteredTags = [];
   String _lastSearchQuery = '';
+  bool _isTagSectionExpanded = false;
 
   // 优化：缓存过滤结果，避免重复计算
   final Map<String, List<NoteCategory>> _filterCache = {};
+
+  T? _readServiceOrNull<T>(BuildContext context) {
+    try {
+      return Provider.of<T>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
 
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
@@ -122,16 +132,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 延迟初始化服务缓存，避免在构建过程中查找Provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _cachedLocationService =
-            Provider.of<LocationService>(context, listen: false);
-        _cachedWeatherService =
-            Provider.of<WeatherService>(context, listen: false);
-        
-        // 优化：监听 DatabaseService 变化，自动更新标签列表
-        _databaseService = Provider.of<DatabaseService>(context, listen: false);
-        _databaseService?.addListener(_onDatabaseChanged);
-      }
+      if (!mounted) return;
+
+      _cachedLocationService =
+          _readServiceOrNull<LocationService>(context);
+      _cachedWeatherService =
+          _readServiceOrNull<WeatherService>(context);
+
+      // 优化：监听 DatabaseService 变化，自动更新标签列表
+      _databaseService = _readServiceOrNull<DatabaseService>(context);
+      _databaseService?.addListener(_onDatabaseChanged);
     });
 
     // 添加搜索防抖监听器
@@ -254,7 +264,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 添加默认的一言相关标签（异步执行，不阻塞UI）
   Future<void> _addDefaultHitokotoTags() async {
     try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
+      final db = _databaseService ??
+          _readServiceOrNull<DatabaseService>(context);
+
+      if (db == null) {
+        logDebug('未找到DatabaseService，跳过默认标签添加');
+        return;
+      }
 
       // 添加"每日一言"标签
       String? dailyQuoteTagId = await _ensureTagExists(
@@ -502,14 +518,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：使用缓存的服务或延迟获取
     final locationService = _cachedLocationService ??
-        Provider.of<LocationService>(context, listen: false);
+        _readServiceOrNull<LocationService>(context);
     final weatherService = _cachedWeatherService ??
-        Provider.of<WeatherService>(context, listen: false);
+        _readServiceOrNull<WeatherService>(context);
 
-    // 位置和天气信息 - 只在需要时获取
-    String? location = locationService.getFormattedLocation();
-    String? weather = weatherService.currentWeather;
-    String? temperature = weatherService.temperature;
+    final locationValue = locationService?.getFormattedLocation();
+    final String? location =
+        (locationValue != null && locationValue.isNotEmpty)
+            ? locationValue
+            : null;
+    final String? currentAddress = locationService?.currentAddress;
+
+    final String? weather = weatherService?.currentWeather;
+    final String? temperature = weatherService?.temperature;
+  final String? formattedWeather = weatherService?.getFormattedWeather();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -748,8 +770,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 const SizedBox(width: 16),
                 // 位置信息按钮
                 Tooltip(
-                  message:
-                      '添加位置: ${locationService.currentAddress ?? location}',
+                  message: locationService != null
+                      ? '添加位置: ${currentAddress ?? location ?? '当前位置'}'
+                      : '位置服务不可用',
                   child: FilterChip(
                     avatar: Icon(
                       Icons.location_on,
@@ -771,14 +794,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 const SizedBox(width: 8),
                 // 天气信息按钮
                 Tooltip(
-                  message: weather != null
-                      ? '添加天气: ${weatherService.getFormattedWeather()}'
-                      : '添加天气信息',
+          message: weather != null && weatherService != null
+            ? '添加天气: ${formattedWeather ?? weather}'
+            : '添加天气信息',
                   child: FilterChip(
                     avatar: Icon(
-                      weather != null
+            weather != null && weatherService != null
                           ? weatherService.getWeatherIconData()
-                          : Icons.cloud,
+              : Icons.cloud,
                       color: _includeWeather
                           ? theme.colorScheme.primary
                           : Colors.grey,
@@ -1277,78 +1300,109 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
       ),
       leading: const Icon(Icons.tag),
-      initiallyExpanded: false, // 默认收起，减少初始渲染负担
+      initiallyExpanded: _isTagSectionExpanded,
+      maintainState: true,
+      onExpansionChanged: (expanded) {
+        if (_isTagSectionExpanded != expanded) {
+          setState(() {
+            _isTagSectionExpanded = expanded;
+          });
+        }
+      },
       childrenPadding: const EdgeInsets.symmetric(
         horizontal: 16.0,
         vertical: 8.0,
       ),
-      children: [
-        // 搜索框
-        TextField(
-          controller: _tagSearchController,
-          decoration: const InputDecoration(
-            hintText: '搜索标签...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(
-              vertical: 8.0,
-              horizontal: 12.0,
-            ),
-          ),
-          // 移除onChanged，现在使用监听器和防抖
-        ),
-        const SizedBox(height: 8),
-        // 标签列表 - 使用缓存的过滤结果
-        Container(
-          constraints: const BoxConstraints(maxHeight: 200),
-          child: _filteredTags.isEmpty
-              ? const Center(
-                  child: Text('没有找到匹配的标签'),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _filteredTags.length,
-                  itemBuilder: (context, index) {
-                    final tag = _filteredTags[index];
-                    final isSelected = _selectedTagIds.contains(tag.id);
-                    return CheckboxListTile(
-                      title: Row(
-                        children: [
-                          if (IconUtils.isEmoji(tag.iconName))
-                            Text(
-                              IconUtils.getDisplayIcon(tag.iconName),
-                              style: const TextStyle(fontSize: 20),
-                            )
-                          else
-                            Icon(IconUtils.getIconData(tag.iconName)),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              tag.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      value: isSelected,
-                      dense: true,
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      onChanged: (selected) {
-                        setState(() {
-                          if (selected == true) {
-                            _selectedTagIds.add(tag.id);
-                          } else {
-                            _selectedTagIds.remove(tag.id);
-                          }
-                        });
-                      },
-                    );
-                  },
+      children: _isTagSectionExpanded
+          ? [
+              TextField(
+                controller: _tagSearchController,
+                decoration: const InputDecoration(
+                  hintText: '搜索标签...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 12.0,
+                  ),
                 ),
-        ),
-      ],
+              ),
+              const SizedBox(height: 8),
+              if (_filteredTags.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Text('没有找到匹配的标签'),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: _computeTagListHeight(),
+                  child: Scrollbar(
+                    thumbVisibility: _filteredTags.length > 6,
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      physics: const ClampingScrollPhysics(),
+                      itemCount: _filteredTags.length,
+                      itemBuilder: (context, index) {
+                        final tag = _filteredTags[index];
+                        final isSelected = _selectedTagIds.contains(tag.id);
+                        final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+                        final Widget leading = isEmoji
+                            ? Text(
+                                IconUtils.getDisplayIcon(tag.iconName),
+                                style: const TextStyle(fontSize: 20),
+                              )
+                            : Icon(IconUtils.getIconData(tag.iconName));
+
+                        return CheckboxListTile(
+                          title: Row(
+                            children: [
+                              leading,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  tag.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          value: isSelected,
+                          dense: true,
+                          controlAffinity: ListTileControlAffinity.trailing,
+                          onChanged: (selected) {
+                            setState(() {
+                              if (selected == true) {
+                                _selectedTagIds.add(tag.id);
+                              } else {
+                                _selectedTagIds.remove(tag.id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ]
+          : const <Widget>[],
     );
   } // 渲染已选标签的Widget，直接使用传入的标签数据
+
+  double _computeTagListHeight() {
+    const double minHeight = 160.0;
+    const double maxHeight = 280.0;
+    const double itemHeight = 52.0;
+
+    if (_filteredTags.isEmpty) {
+      return minHeight;
+    }
+
+    final int visibleCount = math.min(_filteredTags.length, 6);
+    final double estimatedHeight = visibleCount * itemHeight;
+    return estimatedHeight.clamp(minHeight, maxHeight);
+  }
 
   Widget _buildSelectedTags(ThemeData theme) {
     if (_selectedTagIds.isEmpty) {
