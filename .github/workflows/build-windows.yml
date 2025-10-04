@@ -48,7 +48,6 @@ jobs:
     - name: Update versions
       run: |
         $version = "${{ github.event.inputs.app_version || '1.0.0.0' }}"
-        $buildNumber = "${{ github.run_number }}"
         
         # 验证版本号格式（应为4位：x.x.x.x）
         if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
@@ -64,15 +63,15 @@ jobs:
           exit 1
         }
         
-        # 更新 pubspec.yaml 中的版本
+        # 更新 pubspec.yaml 中的版本（不带构建号）
         $pubspecContent = Get-Content pubspec.yaml -Raw
-        $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $flutterVersion+$buildNumber"
+        $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $flutterVersion"
         
         # 更新 msix_version，保留前面的缩进
         $pubspecContent = $pubspecContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $version"
         $pubspecContent | Set-Content pubspec.yaml -NoNewline
         
-        Write-Output "Updated Flutter version to: $flutterVersion+$buildNumber"
+        Write-Output "Updated Flutter version to: $flutterVersion"
         Write-Output "Updated MSIX version to: $version"
         
     - name: Flutter doctor
