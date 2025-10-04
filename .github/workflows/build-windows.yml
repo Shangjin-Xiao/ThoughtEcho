@@ -49,7 +49,14 @@ jobs:
       run: |
         $version = "${{ github.event.inputs.app_version || '1.0.0' }}"
         $buildNumber = "${{ github.run_number }}"
-        $msixVersion = "$version.0"  # MSIX需要4位版本号格式
+        
+        # MSIX 需要4位版本号格式 (如: 1.0.0.0)，不能包含 + 号
+        # 从版本号中提取前三段数字
+        if ($version -match '(\d+\.\d+\.\d+)') {
+          $msixVersion = "$($matches[1]).0"
+        } else {
+          $msixVersion = "1.0.0.0"
+        }
         
         # 更新 pubspec.yaml 中的版本
         $pubspecContent = Get-Content pubspec.yaml -Raw
