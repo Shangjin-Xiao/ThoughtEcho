@@ -53,6 +53,12 @@ class QuoteContent extends StatelessWidget {
     _QuoteContentControllerCache.clear();
   }
 
+  /// 修复问题1：清理特定笔记的缓存（用于笔记删除/更新）
+  static void removeCacheForQuote(String quoteId) {
+    _QuoteContentControllerCache.removeByQuoteId(quoteId);
+    // Document 缓存基于内容哈希，不需要按 ID 清理
+  }
+
   @visibleForTesting
   static void clearCacheForTesting() => resetCaches();
 
@@ -553,6 +559,13 @@ class _QuoteContentControllerCache {
       _hitCount++;
       existing.touch();
       _cache[key] = existing;
+      
+      // 修复问题2：更新 Document 以确保内容最新（防御性编程）
+      final newDocument = documentBuilder();
+      if (existing.controllers.quillController.document != newDocument) {
+        existing.controllers.quillController.document = newDocument;
+      }
+      
       existing.controllers.prepareForReuse();
       return existing.controllers;
     }
@@ -630,6 +643,21 @@ class _QuoteContentControllerCache {
       _cache.remove(entry.key);
       entry.value.controllers.dispose();
       _disposeCount++;
+    }
+  }
+
+  /// 修复问题1：清理特定笔记的所有缓存（用于笔记删除/更新）
+  static void removeByQuoteId(String quoteId) {
+    final keysToRemove = _cache.keys
+        .where((key) => key.quoteId == quoteId)
+        .toList();
+    
+    for (final key in keysToRemove) {
+      final entry = _cache.remove(key);
+      if (entry != null) {
+        entry.controllers.dispose();
+        _disposeCount++;
+      }
     }
   }
 }

@@ -10,7 +10,6 @@ import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
-import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
@@ -611,7 +610,8 @@ class NoteListViewState extends State<NoteListView> {
     }
     _expansionNotifiers.clear();
 
-    QuoteContent.resetCaches();
+    // 修复问题3：移除页面切换时的缓存清空，保留缓存以提升返回体验
+    // QuoteContent.resetCaches(); // 缓存将由 LRU 自动管理
 
     // 清理初始化状态
     _isInitializing = false;
