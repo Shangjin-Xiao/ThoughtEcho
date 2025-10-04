@@ -45,13 +45,22 @@ jobs:
     - name: Enable Windows desktop
       run: flutter config --enable-windows-desktop
       
-    - name: Update app version in pubspec.yaml
+    - name: Update versions
       run: |
         $version = "${{ github.event.inputs.app_version || '1.0.0' }}"
-        $content = Get-Content pubspec.yaml -Raw
-        $content = $content -replace 'version:\s*[\d\.]+\+?\d*', "version: $version+${{ github.run_number }}"
-        $content | Set-Content pubspec.yaml -NoNewline
-        Write-Output "Updated version to: $version+${{ github.run_number }}"
+        $buildNumber = "${{ github.run_number }}"
+        $msixVersion = "$version.0"  # MSIX需要4位版本号格式
+        
+        # 更新 pubspec.yaml 中的版本
+        $pubspecContent = Get-Content pubspec.yaml -Raw
+        $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $version+$buildNumber"
+        
+        # 同时更新 pubspec.yaml 中嵌入的 msix_version
+        $pubspecContent = $pubspecContent -replace 'msix_version:\s*[\d\.]+', "msix_version: $msixVersion"
+        $pubspecContent | Set-Content pubspec.yaml -NoNewline
+        
+        Write-Output "Updated pubspec.yaml version to: $version+$buildNumber"
+        Write-Output "Updated MSIX version to: $msixVersion"
         
     - name: Flutter doctor
       run: flutter doctor -v
@@ -61,19 +70,6 @@ jobs:
       
     - name: Clean previous builds
       run: flutter clean
-      
-    - name: Update MSIX version
-      run: |
-        $version = "${{ github.event.inputs.app_version || '1.0.0' }}"
-        $buildNumber = "${{ github.run_number }}"
-        $msixVersion = "$version.0"  # MSIX需要4位版本号格式
-        
-        if (Test-Path "msix_config.yaml") {
-          $content = Get-Content "msix_config.yaml" -Raw
-          $content = $content -replace 'msix_version:\s*[\d\.]+', "msix_version: $msixVersion"
-          $content | Set-Content "msix_config.yaml" -NoNewline
-          Write-Output "Updated MSIX version to: $msixVersion"
-        }
       
     - name: Build Windows app
       run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
