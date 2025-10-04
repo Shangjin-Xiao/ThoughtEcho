@@ -134,7 +134,10 @@ class OnboardingController extends ChangeNotifier {
         }
       }
 
-      // 2. 初始化 AI 分析数据库
+      // 2. 等待一帧，确保数据库的 notifyListeners 已经完成
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 3. 初始化 AI 分析数据库
       try {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
@@ -143,13 +146,13 @@ class OnboardingController extends ChangeNotifier {
             error: aiDbError, source: 'OnboardingController');
       }
 
-      // 3. 保存用户偏好设置
+      // 4. 保存用户偏好设置
       await _saveUserPreferences();
 
-      // 4. 标记引导完成
+      // 5. 标记引导完成
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 5. 标记服务初始化完成
+      // 6. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('引导流程完成');
@@ -260,7 +263,10 @@ class OnboardingController extends ChangeNotifier {
         );
       }
 
-      // 2. 初始化 AI 分析数据库
+      // 2. 等待一帧，确保数据库的 notifyListeners 已经完成
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 3. 初始化 AI 分析数据库
       try {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
@@ -269,10 +275,10 @@ class OnboardingController extends ChangeNotifier {
             error: aiDbError, source: 'OnboardingController');
       }
 
-      // 3. 标记引导完成（不保存用户偏好，使用默认值）
+      // 4. 标记引导完成（不保存用户偏好，使用默认值）
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 4. 标记服务初始化完成
+      // 5. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('跳过引导完成');
