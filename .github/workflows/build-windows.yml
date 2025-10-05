@@ -70,12 +70,10 @@ jobs:
         # 更新 pubspec.yaml 中的版本（不带构建号）
         $pubspecContent = Get-Content pubspec.yaml -Raw
         $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $flutterVersion"
-        $pubspecContent | Set-Content pubspec.yaml -NoNewline
         
-        # 更新 msix_config.yaml 中的 msix_version
-        $msixConfigContent = Get-Content msix_config.yaml -Raw
-        $msixConfigContent = $msixConfigContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $msixVersion"
-        $msixConfigContent | Set-Content msix_config.yaml -NoNewline
+        # 更新 pubspec.yaml 中的 msix_version（保留缩进）
+        $pubspecContent = $pubspecContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $msixVersion"
+        $pubspecContent | Set-Content pubspec.yaml -NoNewline
         
         Write-Output "Updated Flutter version to: $flutterVersion"
         Write-Output "Updated MSIX version to: $msixVersion (Revision set to 0 for MS Store compliance)"
