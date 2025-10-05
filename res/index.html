@@ -627,32 +627,138 @@
 
         /* ==================== 应用截图 ==================== */
         .screenshots-section {
-            background: var(--paper-white);
+            background: var(--paper-cream);
+            position: relative;
         }
 
         .screenshots-grid {
             max-width: 1400px;
             margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 4rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 0 1rem;
         }
 
+        .screenshot-card {
+            position: relative;
+            background: var(--paper-white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 4px 4px 12px var(--shadow-soft);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .screenshot-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--accent-brown), var(--accent-orange), var(--accent-blue));
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .screenshot-card:hover {
+            transform: translateY(-8px) rotate(0deg);
+            box-shadow: 8px 12px 24px var(--shadow-medium);
+        }
+
+        .screenshot-card:hover::before {
+            opacity: 1;
+        }
+
+        .screenshot-card:nth-child(3n+1) {
+            transform: rotate(-1deg);
+        }
+
+        .screenshot-card:nth-child(3n+2) {
+            transform: rotate(1deg);
+        }
+
+        .screenshot-card:nth-child(3n) {
+            transform: rotate(-0.5deg);
+        }
+
+        .screenshot-image-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 177.78%; /* 9:16 ratio for mobile screenshots */
+            overflow: hidden;
+            background: var(--paper-cream);
+        }
+
+        .screenshot-card img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .screenshot-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .screenshot-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 1.5rem 1rem 1rem;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .screenshot-card:hover .screenshot-overlay {
+            transform: translateY(0);
+        }
+
+        .screenshot-title {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .screenshot-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--accent-orange);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            box-shadow: 2px 2px 8px var(--shadow-medium);
+            z-index: 1;
+        }
         .screenshot-item {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 3rem;
             align-items: center;
+            margin-bottom: 4rem;
+            padding: 2rem;
             background: var(--paper-white);
-            border: 4px solid var(--accent-brown);
             border-radius: 15px;
-            padding: 3rem;
-            box-shadow: 6px 6px 0 var(--paper-yellow);
+            box-shadow: 0 8px 25px var(--shadow-soft);
             transition: all 0.4s ease;
         }
 
-        .screenshot-item:nth-child(even) {
-            grid-template-columns: 1fr 1fr;
+        .screenshot-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px var(--shadow-medium);
         }
 
         .screenshot-item:nth-child(even) .screenshot-image {
@@ -663,41 +769,112 @@
             order: 1;
         }
 
-        .screenshot-item:hover {
-            transform: translate(-3px, -3px);
-            box-shadow: 10px 10px 0 var(--paper-yellow);
-        }
-
         .screenshot-image {
             position: relative;
+            cursor: pointer;
         }
 
-        .screenshot-item img {
+        .screenshot-image img {
             width: 100%;
             border-radius: 10px;
             box-shadow: 0 5px 15px var(--shadow-soft);
-            cursor: pointer;
             transition: transform 0.3s ease;
-            border: 2px solid var(--line-color);
         }
 
-        .screenshot-item img:hover {
+        .screenshot-image:hover img {
             transform: scale(1.03);
+        }
+
+        .screenshot-content {
+            position: relative;
         }
 
         .screenshot-content h4 {
             font-size: 1.8rem;
-            color: var(--accent-brown);
             font-weight: 700;
-            margin-bottom: 1.2rem;
+            color: var(--ink-dark);
+            margin-bottom: 1rem;
             font-family: 'ZCOOL XiaoWei', serif;
         }
 
         .screenshot-content p {
-            color: var(--ink-medium);
-            line-height: 2;
             font-size: 1.1rem;
+            color: var(--ink-medium);
+            line-height: 1.9;
             margin-bottom: 1.5rem;
+        }
+
+        .arrow-doodle {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            opacity: 0.15;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23a67c52' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20,50 Q50,20 80,50'/%3E%3Cpath d='M70,40 L80,50 L70,60'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+        }
+
+        .screenshot-item:nth-child(odd) .screenshot-content .arrow-doodle {
+            top: -20px;
+            left: -30px;
+            transform: rotate(-25deg);
+        }
+
+        .screenshot-item:nth-child(even) .screenshot-content .arrow-doodle {
+            bottom: -20px;
+            right: -30px;
+            transform: rotate(155deg);
+        }
+
+
+        .screenshot-doodle {
+            position: absolute;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .doodle-star {
+            top: 10%;
+            right: 5%;
+            width: 60px;
+            height: 60px;
+            color: var(--accent-orange);
+            animation: rotate 20s linear infinite;
+        }
+
+        .doodle-heart {
+            bottom: 15%;
+            left: 8%;
+            width: 50px;
+            height: 50px;
+            color: var(--accent-red);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .screenshot-category {
+            margin-bottom: 3rem;
+        }
+
+        .category-title {
+            font-size: 1.6rem;
+            color: var(--ink-dark);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            border-left: 4px solid var(--accent-brown);
+            font-family: 'ZCOOL XiaoWei', serif;
         }
 
         .feature-tags {
@@ -1175,6 +1352,9 @@
             .nav-links a {
                 padding: 1rem 2rem;
                 border-bottom: 1px solid var(--line-color);
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .mobile-menu-btn {
@@ -1213,6 +1393,23 @@
             .features-grid {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
+            }
+
+            .screenshots-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .screenshot-category {
+                margin-bottom: 2rem;
+            }
+
+            .category-title {
+                font-size: 1.3rem;
+            }
+
+            .screenshot-card {
+                transform: rotate(0deg) !important;
             }
 
             .screenshot-item {
@@ -1261,6 +1458,9 @@
             }
             .footer-grid {
                 grid-template-columns: 1fr 1fr;
+            }
+            .screenshots-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
@@ -1537,7 +1737,7 @@
                         </h3>
                         <ul class="notebook-list">
                             <li><span class="content-zh">✍️ 富文本笔记 - 支持多媒体</span><span class="content-en">✍️ Rich Text Notes - Media Support</span></li>
-                            <li><span class="content-zh">🤖 AI助手 - 问答、润色、灵感</span><span class="content-en">🤖 AI Assistant - Q&A, Polish, Ideas</span></li>
+                            <li><span class="content-zh">✨ AI助手 - 问答、润色、灵感</span><span class="content-en">✨ AI Assistant - Q&A, Polish, Ideas</span></li>
                             <li><span class="content-zh">📊 洞察报告 - 趋势分析</span><span class="content-en">📊 Insights - Trend Analysis</span></li>
                             <li><span class="content-zh">🏷️ 智能标签 - 多维筛选</span><span class="content-en">🏷️ Smart Tags - Multi-Filter</span></li>
                             <li><span class="content-zh">🎯 卡片生成 - 精美分享</span><span class="content-en">🎯 Card Generation - Beautiful Share</span></li>
@@ -1698,32 +1898,14 @@
                     <span class="content-en">Context Capture</span>
                 </h3>
                 <p class="feature-description">
-                    <span class="content-zh">自动保存位置、天气与时间段信息</span>
-                    <span class="content-en">Auto-save location, weather, and time-of-day context</span>
+                    <span class="content-zh">自动保存位置、天气（由和风天气提供）与时间段信息</span>
+                    <span class="content-en">Auto-save location, weather (powered by QWeather), and time-of-day context</span>
                 </p>
                 <ul class="feature-list">
                     <li><span class="content-zh">自动保存位置</span><span class="content-en">Auto-save location</span></li>
-                    <li><span class="content-zh">天气信息记录</span><span class="content-en">Weather tracking</span></li>
+                    <li><span class="content-zh">天气信息记录 (和风天气)</span><span class="content-en">Weather tracking (QWeather)</span></li>
                     <li><span class="content-zh">时间段标记</span><span class="content-en">Time-of-day tags</span></li>
                     <li><span class="content-zh">情境智能分析</span><span class="content-en">Context analysis</span></li>
-                </ul>
-            </div>
-
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🧠</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">智能内存管理</span>
-                    <span class="content-en">Intelligent Memory</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">动态调节批量处理，避免内存溢出</span>
-                    <span class="content-en">Adaptive batching to prevent memory spikes</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">动态内存调节</span><span class="content-en">Dynamic memory tuning</span></li>
-                    <li><span class="content-zh">批量处理优化</span><span class="content-en">Batch optimization</span></li>
-                    <li><span class="content-zh">防止内存溢出</span><span class="content-en">OOM prevention</span></li>
-                    <li><span class="content-zh">性能自动优化</span><span class="content-en">Auto performance tuning</span></li>
                 </ul>
             </div>
 
@@ -1755,195 +1937,149 @@
                 <span class="content-en">📸 Screenshots</span>
             </span>
             <h2 class="section-title">
-                <span class="content-zh">精美界面设计</span>
-                <span class="content-en">Beautiful Interface Design</span>
+                <span class="content-zh">精美界面，一触即达</span>
+                <span class="content-en">Beautiful UI, Just a Tap Away</span>
             </h2>
             <p class="section-description">
-                <span class="content-zh">Material 3 现代化设计语言，流畅的用户体验</span>
-                <span class="content-en">Material 3 modern design language, smooth user experience</span>
+                <span class="content-zh">点击任意图片查看大图详情</span>
+                <span class="content-en">Click any image to view full size</span>
             </p>
         </div>
 
-        <div class="screenshots-grid">
-            <div class="screenshot-item fade-in">
-                <div class="screenshot-image">
-                    <img src="homepage.jpg" alt="Homepage" onclick="openModal(this.src, this.alt)">
-                </div>
-                <div class="screenshot-content">
-                    <h4>
-                        <span class="content-zh">📱 优雅的主页展示</span>
-                        <span class="content-en">📱 Elegant Homepage</span>
-                    </h4>
-                    <p>
-                        <span class="content-zh">简洁优雅的笔记列表界面，一目了然查看所有灵感记录。支持时间线、网格等多种视图模式，让你的思绪井然有序。</span>
-                        <span class="content-en">Clean and elegant note list interface to view all inspiration records at a glance. Supports multiple view modes including timeline and grid for organized thoughts.</span>
-                    </p>
-                    <div class="feature-tags">
-                        <span class="feature-tag">
-                            <span class="content-zh">多视图模式</span>
-                            <span class="content-en">Multiple Views</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">快速搜索</span>
-                            <span class="content-en">Quick Search</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">智能排序</span>
-                            <span class="content-en">Smart Sorting</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
+        <!-- 装饰元素 -->
+        <div class="screenshot-doodle doodle-star">✨</div>
+        <div class="screenshot-doodle doodle-heart">❤️</div>
 
-            <div class="screenshot-item fade-in">
-                <div class="screenshot-image">
-                    <img src="add.jpg" alt="Add/Edit Note" onclick="openModal(this.src, this.alt)">
-                </div>
-                <div class="screenshot-content">
-                    <h4>
-                        <span class="content-zh">✏️ 强大的富文本编辑</span>
-                        <span class="content-en">✏️ Powerful Rich Text Editor</span>
-                    </h4>
-                    <p>
-                        <span class="content-zh">专业级富文本编辑体验，支持文字格式化、图片、音频、视频等多种媒体。让每一个想法都能以最合适的方式呈现。</span>
-                        <span class="content-en">Professional-grade rich text editing with formatting, images, audio, video & more. Express every idea in the most suitable way.</span>
-                    </p>
-                    <div class="feature-tags">
-                        <span class="feature-tag">
-                            <span class="content-zh">富文本格式</span>
-                            <span class="content-en">Rich Formatting</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">多媒体支持</span>
-                            <span class="content-en">Media Support</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">自动保存</span>
-                            <span class="content-en">Auto Save</span>
-                        </span>
+        <!-- 核心功能 -->
+        <div class="screenshot-category fade-in">
+            <h3 class="category-title">
+                <span class="content-zh">核心功能</span>
+                <span class="content-en">Core Features</span>
+            </h3>
+            <div class="screenshots-grid">
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-image" onclick="openModal('screenshot/home_page.jpg', '主页')">
+                        <img src="screenshot/home_page.jpg" alt="主页">
+                    </div>
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">优雅的主页</span><span class="content-en">Elegant Homepage</span></h4>
+                        <p><span class="content-zh">卡片式设计清晰展示每日灵感、近期笔记和功能入口，助你快速进入创作状态。</span><span class="content-en">Card-based design clearly displays daily inspiration, recent notes, and feature entries to help you get into a creative state quickly.</span></p>
                     </div>
                 </div>
-            </div>
 
-            <div class="screenshot-item fade-in">
-                <div class="screenshot-image">
-                    <img src="tags.jpg" alt="Tag Management" onclick="openModal(this.src, this.alt)">
-                </div>
-                <div class="screenshot-content">
-                    <h4>
-                        <span class="content-zh">🏷️ 灵活的标签系统</span>
-                        <span class="content-en">🏷️ Flexible Tag System</span>
-                    </h4>
-                    <p>
-                        <span class="content-zh">用标签为思绪分类，支持多标签筛选、自定义颜色、智能组织。轻松找到任何时刻的灵感记录。</span>
-                        <span class="content-en">Categorize your thoughts with tags. Multi-tag filtering, custom colors, smart organization. Find any inspiration effortlessly.</span>
-                    </p>
-                    <div class="feature-tags">
-                        <span class="feature-tag">
-                            <span class="content-zh">多标签分类</span>
-                            <span class="content-en">Multi-Tag</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">自定义颜色</span>
-                            <span class="content-en">Custom Colors</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">智能筛选</span>
-                            <span class="content-en">Smart Filter</span>
-                        </span>
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">强大的富文本编辑器</span><span class="content-en">Powerful Rich Text Editor</span></h4>
+                        <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
+                    </div>
+                    <div class="screenshot-image" onclick="openModal('screenshot/note_full_editor_page.dart.jpg', '富文本编辑器')">
+                        <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器">
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="screenshot-item fade-in">
-                <div class="screenshot-image">
-                    <img src="theme_setting.jpg" alt="Theme Settings" onclick="openModal(this.src, this.alt)">
-                </div>
-                <div class="screenshot-content">
-                    <h4>
-                        <span class="content-zh">🎨 个性化主题定制</span>
-                        <span class="content-en">🎨 Personalized Themes</span>
-                    </h4>
-                    <p>
-                        <span class="content-zh">丰富的主题选择，从色彩到字体全方位自定义。Material 3 动态配色，让界面随心而变。</span>
-                        <span class="content-en">Rich theme options with comprehensive customization from colors to fonts. Material 3 dynamic theming for a personalized interface.</span>
-                    </p>
-                    <div class="feature-tags">
-                        <span class="feature-tag">
-                            <span class="content-zh">多主题切换</span>
-                            <span class="content-en">Multi-Theme</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">动态配色</span>
-                            <span class="content-en">Dynamic Colors</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">暗黑模式</span>
-                            <span class="content-en">Dark Mode</span>
-                        </span>
+        <!-- 编辑与AI功能 -->
+        <div class="screenshot-category fade-in">
+            <h3 class="category-title">
+                <span class="content-zh">编辑与AI功能</span>
+                <span class="content-en">Editing & AI Features</span>
+            </h3>
+            <div class="screenshots-grid">
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-image" onclick="openModal('screenshot/note_qa_chat_page.jpg', 'AI问答')">
+                        <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话">
+                    </div>
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">AI 智能问答</span><span class="content-en">AI Q&A Chat</span></h4>
+                        <p><span class="content-zh">基于你的笔记内容，AI能够回答相关问题、提供总结、激发新灵感，成为你的私人知识助理。</span><span class="content-en">Based on your notes, the AI can answer related questions, provide summaries, and spark new ideas, becoming your personal knowledge assistant.</span></p>
                     </div>
                 </div>
-            </div>
 
-            <div class="screenshot-item fade-in">
-                <div class="screenshot-image">
-                    <img src="choose_yiyan.jpg" alt="Hitokoto Types" onclick="openModal(this.src, this.alt)">
-                </div>
-                <div class="screenshot-content">
-                    <h4>
-                        <span class="content-zh">💬 每日灵感一言</span>
-                        <span class="content-en">💬 Daily Inspiration</span>
-                    </h4>
-                    <p>
-                        <span class="content-zh">每天一句精选句子，为你的灵感添加养分。支持多种类型选择，从动漫到诗词，总有一款触动你心。</span>
-                        <span class="content-en">A curated sentence every day to nourish your inspiration. Multiple categories from anime to poetry, something for everyone.</span>
-                    </p>
-                    <div class="feature-tags">
-                        <span class="feature-tag">
-                            <span class="content-zh">每日更新</span>
-                            <span class="content-en">Daily Update</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">多种类型</span>
-                            <span class="content-en">Various Types</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">一键收藏</span>
-                            <span class="content-en">Quick Save</span>
-                        </span>
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">智能筛选与排序</span><span class="content-en">Smart Filter & Sort</span></h4>
+                        <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
+                    </div>
+                    <div class="screenshot-image" onclick="openModal('screenshot/note_filter_sort_sheet.dart.jpg', '筛选排序')">
+                        <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序">
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="screenshot-item fade-in">
-                <div class="screenshot-image">
-                    <img src="settingpage.jpg" alt="Settings & Backup" onclick="openModal(this.src, this.alt)">
+        <!-- 洞察与报告 -->
+        <div class="screenshot-category fade-in">
+            <h3 class="category-title">
+                <span class="content-zh">洞察与报告</span>
+                <span class="content-en">Insights & Reports</span>
+            </h3>
+            <div class="screenshots-grid">
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-image" onclick="openModal('screenshot/insights_page.jpg', '洞察分析')">
+                        <img src="screenshot/insights_page.jpg" alt="洞察分析">
+                    </div>
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">AI 洞察分析</span><span class="content-en">AI Insights Analysis</span></h4>
+                        <p><span class="content-zh">AI 自动分析你的写作习惯、常用词汇和情感倾向，生成可视化图表，助你更好地了解自己。</span><span class="content-en">The AI automatically analyzes your writing habits, common vocabulary, and emotional tendencies, generating visual charts to help you better understand yourself.</span></p>
+                    </div>
                 </div>
-                <div class="screenshot-content">
-                    <h4>
-                        <span class="content-zh">⚙️ 全面的设置与备份</span>
-                        <span class="content-en">⚙️ Comprehensive Settings</span>
-                    </h4>
-                    <p>
-                        <span class="content-zh">完整的设置选项，支持数据备份恢复、AI 配置、个性化设定。你的数据，你做主。</span>
-                        <span class="content-en">Complete settings options with data backup/restore, AI configuration, and personalization. Your data, your control.</span>
-                    </p>
-                    <div class="feature-tags">
-                        <span class="feature-tag">
-                            <span class="content-zh">数据备份</span>
-                            <span class="content-en">Data Backup</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">AI 配置</span>
-                            <span class="content-en">AI Config</span>
-                        </span>
-                        <span class="feature-tag">
-                            <span class="content-zh">隐私保护</span>
-                            <span class="content-en">Privacy</span>
-                        </span>
+
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">跨设备同步</span><span class="content-en">Cross-Device Sync</span></h4>
+                        <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
+                    </div>
+                    <div class="screenshot-image" onclick="openModal('screenshot/note_sync.jpg', '笔记同步')">
+                        <img src="screenshot/note_sync.jpg" alt="笔记同步">
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- 设置与管理 -->
+        <div class="screenshot-category fade-in">
+            <h3 class="category-title">
+                <span class="content-zh">设置与管理</span>
+                <span class="content-en">Settings & Management</span>
+            </h3>
+            <div class="screenshots-grid">
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-image" onclick="openModal('screenshot/theme_settings_page.jpg', '主题设置')">
+                        <img src="screenshot/theme_settings_page.jpg" alt="主题设置">
+                    </div>
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">个性化主题</span><span class="content-en">Personalized Theme</span></h4>
+                        <p><span class="content-zh">内置多种色彩主题，并支持自定义设置，打造专属于你的视觉风格。</span><span class="content-en">Built-in multiple color themes and supports custom settings to create your own unique visual style.</span></p>
+                    </div>
+                </div>
+
+                <div class="screenshot-item fade-in">
+                    <div class="screenshot-content">
+                        <div class="arrow-doodle"></div>
+                        <h4><span class="content-zh">数据备份与恢复</span><span class="content-en">Backup & Restore</span></h4>
+                        <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
+                    </div>
+                    <div class="screenshot-image" onclick="openModal('screenshot/backup_restore_page.jpg', '备份恢复')">
+                        <img src="screenshot/backup_restore_page.jpg" alt="备份恢复">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 存储与备份 -->
+        <div class="screenshot-category fade-in">
+            <h3 class="category-title">
+                <span class="content-zh">存储与备份</span>
+                <span class="content-en">Storage & Backup</span>
+            </h3>
         </div>
     </section>
 
@@ -2118,7 +2254,7 @@ cd ThoughtEcho</code></pre>
             <div class="roadmap-card fade-in">
                 <div class="roadmap-header">
                     <span class="roadmap-icon">🚧</span>
-                    <h3 class="roadmap-title">进行中 (2024 Q4)</h3>
+                    <h3 class="roadmap-title">进行中 (2025 Q4)</h3>
                 </div>
                 <ul class="roadmap-items">
                     <li>AI年度报告生成</li>
@@ -2229,7 +2365,7 @@ cd ThoughtEcho</code></pre>
 
             <div class="footer-bottom">
                 <p>
-                    © 2024 ThoughtEcho. 
+                    © 2025 ThoughtEcho. 
                     <span class="content-zh">基于</span><span class="content-en">Licensed under</span> 
                     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">MIT</a> 
                     <span class="content-zh">许可证</span><span class="content-en">License</span>
