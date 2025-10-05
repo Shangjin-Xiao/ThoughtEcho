@@ -64,11 +64,30 @@
 
 ## 📸 应用截图
 
-| 主页 | 添加/编辑笔记 | 标签管理 |
+### 核心功能
+| 主页 | 笔记列表 | 添加笔记 |
 |:---:|:---:|:---:|
-| ![主页](res/homepage.jpg) | ![添加/编辑笔记](res/add.jpg) | ![标签管理](res/tags.jpg) |
-| **主题设置** | **一言类型选择** | **设置与备份** |
-| ![主题设置](res/theme_setting.jpg) | ![一言类型选择](res/choose_yiyan.jpg) | ![设置与备份](res/settingpage.jpg) |
+| ![主页](res/screenshot/home_page.jpg) | ![笔记列表](res/screenshot/note_list_view.jpg) | ![添加笔记](res/screenshot/add_note.jpg) |
+
+### 编辑与AI功能
+| 富文本编辑器 | AI问答对话 | 筛选与排序 |
+|:---:|:---:|:---:|
+| ![富文本编辑器](res/screenshot/note_full_editor_page.dart.jpg) | ![AI问答对话](res/screenshot/note_qa_chat_page.jpg) | ![筛选与排序](res/screenshot/note_filter_sort_sheet.dart.jpg) |
+
+### 洞察与报告
+| 洞察分析 | 周期报告 | 笔记同步 |
+|:---:|:---:|:---:|
+| ![洞察分析](res/screenshot/insights_page.jpg) | ![周期报告](res/screenshot/period_report.jpg) | ![笔记同步](res/screenshot/note_sync.jpg) |
+
+### 设置与管理
+| 主题设置 | 一言设置 | 偏好设置 |
+|:---:|:---:|:---:|
+| ![主题设置](res/screenshot/theme_settings_page.jpg) | ![一言设置](res/screenshot/hitokoto_settings_page.jpg) | ![偏好设置](res/screenshot/preferences_detail_page.jpg) |
+
+### 存储与备份
+| 备份恢复 | 存储管理 |
+|:---:|:---:|
+| ![备份恢复](res/screenshot/backup_restore_page.jpg) | ![存储管理](res/screenshot/storage_management_page.jpg) |
 
 
 ## 🛠️ 技术栈
@@ -259,11 +278,30 @@
 
 ## 📸 Application Screenshots
 
-| Homepage | Add/Edit Note | Tag Management |
+### Core Features
+| Homepage | Note List | Add Note |
 |:---:|:---:|:---:|
-| ![Homepage](res/homepage.jpg) | ![Add/Edit Note](res/add.jpg) | ![Tag Management](res/tags.jpg) |
-| **Theme Settings** | **Hitokoto Types** | **Settings & Backup** |
-| ![Theme Settings](res/theme_setting.jpg) | ![Hitokoto Types](res/choose_yiyan.jpg) | ![Settings & Backup](res/settingpage.jpg) |
+| ![Homepage](res/screenshot/home_page.jpg) | ![Note List](res/screenshot/note_list_view.jpg) | ![Add Note](res/screenshot/add_note.jpg) |
+
+### Editing & AI Features
+| Rich Text Editor | AI Q&A Chat | Filter & Sort |
+|:---:|:---:|:---:|
+| ![Rich Text Editor](res/screenshot/note_full_editor_page.dart.jpg) | ![AI Q&A Chat](res/screenshot/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.dart.jpg) |
+
+### Insights & Reports
+| Insights Analysis | Period Report | Note Sync |
+|:---:|:---:|:---:|
+| ![Insights Analysis](res/screenshot/insights_page.jpg) | ![Period Report](res/screenshot/period_report.jpg) | ![Note Sync](res/screenshot/note_sync.jpg) |
+
+### Settings & Management
+| Theme Settings | Hitokoto Settings | Preferences |
+|:---:|:---:|:---:|
+| ![Theme Settings](res/screenshot/theme_settings_page.jpg) | ![Hitokoto Settings](res/screenshot/hitokoto_settings_page.jpg) | ![Preferences](res/screenshot/preferences_detail_page.jpg) |
+
+### Storage & Backup
+| Backup & Restore | Storage Management |
+|:---:|:---:|
+| ![Backup & Restore](res/screenshot/backup_restore_page.jpg) | ![Storage Management](res/screenshot/storage_management_page.jpg) |
 
 
 ## 🛠️ Tech Stack
