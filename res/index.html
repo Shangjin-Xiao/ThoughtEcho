@@ -1,50 +1,51 @@
 <!DOCTYPE html>
-<html lang="zh-CN"> <!-- Default lang attribute -->
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="心迹 - 你的专属灵感摘录本。让我们一起随心记录，释放AI洞察的力量。">
     <title>心迹 - 你的专属灵感摘录本</title>
     <link rel="icon" type="image/png" href="icon.png"/>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    
     <style>
-        /* 主题变量定义 */
+        /* ==================== CSS 变量 ==================== */
         :root {
-            /* 浅色主题 - 优化配色方案 */
-            --primary-color: #1976D2;
-            --primary-light: #BBDEFB;
-            --primary-dark: #0D47A1;
-            --accent-color: #FF4081;
-            --secondary-color: #49454F;
-            --background-color: #F8FAFD; /* 稍微调亮背景色 */
-            --surface-color: #FFFFFF;
-            --error-color: #B3261E;
-            --text-primary: #1C1B1F;
-            --text-secondary: #49454F;
-            --text-tertiary: #79747E;
-            --border-color: #E7E0EC;
-            --card-shadow: 0 6px 16px rgba(0, 0, 0, 0.06); /* 柔和阴影 */
-            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* 更平滑的过渡 */
-            scroll-behavior: smooth;
+            --paper-white: #fefdfb;
+            --paper-cream: #f9f6f0;
+            --paper-yellow: #fff9e6;
+            --paper-pink: #fff0f5;
+            --paper-blue: #f0f8ff;
+            --paper-green: #f0fff4;
+            --line-color: #d4c5b9;
+            --ink-dark: #2c2416;
+            --ink-medium: #5a4a3a;
+            --ink-light: #8b7355;
+            --accent-brown: #a67c52;
+            --accent-orange: #d4895b;
+            --accent-blue: #5d94b8;
+            --accent-green: #7ca982;
+            --accent-red: #c66b6b;
+            --shadow-soft: rgba(0, 0, 0, 0.08);
+            --shadow-medium: rgba(0, 0, 0, 0.12);
+            --shadow-hard: rgba(0, 0, 0, 0.2);
         }
 
-        /* 深色主题变量 - 优化深色配色 */
-        body.dark-theme {
-            --primary-color: #90CAF9;
-            --primary-light: #E3F2FD;
-            --primary-dark: #42A5F5;
-            --accent-color: #FF80AB;
-            --secondary-color: #CCC2DC;
-            --background-color: #121212;
-            --surface-color: #1E1E1E;
-            --error-color: #F2B8B5;
-            --text-primary: #E6E1E5;
-            --text-secondary: #CAC4D0;
-            --text-tertiary: #938F99;
-            --border-color: #49454F;
-            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        [data-theme="dark"] {
+            --paper-white: #2a2520;
+            --paper-cream: #342e28;
+            --paper-yellow: #3d3630;
+            --paper-pink: #3d3035;
+            --paper-blue: #2d3540;
+            --paper-green: #2d3a30;
+            --line-color: #4a4037;
+            --ink-dark: #e8dfd5;
+            --ink-medium: #d4c5b9;
+            --ink-light: #b8a99a;
         }
 
         * {
@@ -53,877 +54,670 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            font-family: 'Noto Sans SC', 'Noto Sans', sans-serif;
-            line-height: 1.6;
-            color: var(--text-primary);
-            background-color: var(--background-color);
-            padding-top: 60px; /* 预留导航栏空间 */
-            font-weight: 300;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            font-family: 'Noto Sans SC', 'Noto Sans', 'ZCOOL XiaoWei', serif;
+            background: var(--paper-cream);
+            color: var(--ink-dark);
+            line-height: 1.8;
+            overflow-x: hidden;
+            position: relative;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* Apply Noto Sans first when English is selected */
         body.lang-en {
-            font-family: 'Noto Sans', 'Noto Sans SC', sans-serif;
+            font-family: 'Noto Sans', 'Noto Sans SC', 'ZCOOL XiaoWei', serif;
         }
 
-        nav {
-            background-color: var(--surface-color);
-            color: var(--text-primary);
+        body::before {
+            content: '';
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 32px, var(--line-color) 32px, var(--line-color) 33px),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.35;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .handwriting {
+            font-family: 'Caveat', 'Long Cang', cursive;
+        }
+
+        body.lang-en .handwriting {
+            font-family: 'Caveat', cursive;
+        }
+
+        /* ==================== 导航栏 ==================== */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             z-index: 1000;
-            box-shadow: var(--card-shadow);
+            background: var(--paper-white);
+            border-bottom: 3px solid var(--accent-brown);
+            box-shadow: 0 3px 12px var(--shadow-soft);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.6rem 8%;
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--ink-dark);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-brand:hover {
+            transform: translateY(-2px);
         }
 
         .nav-logo {
+            width: 42px;
+            height: 42px;
             display: flex;
             align-items: center;
+            justify-content: center;
         }
 
         .nav-logo img {
-            width: 32px;
-            height: 32px;
-            margin-right: 0.5rem;
+            width: 42px;
+            height: 42px;
         }
 
-        .nav-logo h2 {
-            margin: 0;
-            font-size: 1.4rem;
-            color: var(--primary-color);
-            font-weight: 500;
-            transition: color 0.3s ease;
+        .nav-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            font-family: 'ZCOOL XiaoWei', serif;
         }
 
         .nav-links {
             display: flex;
-            gap: 1.5rem;
+            gap: 2.5rem;
+            list-style: none;
         }
 
         .nav-links a {
-            color: var(--text-secondary);
+            color: var(--ink-medium);
             text-decoration: none;
-            font-weight: 400;
-            transition: var(--transition);
-            font-size: 0.95rem;
-            padding: 0.3rem 0.5rem;
-            border-radius: 4px;
+            font-weight: 500;
+            position: relative;
+            padding: 0.25rem 0;
+            transition: color 0.3s ease;
         }
 
-        .nav-links a:hover,
-        .nav-links a.active {
-            color: var(--primary-color);
-            background-color: var(--primary-light);
-            opacity: 0.9;
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-brown);
+            transition: width 0.3s ease;
+            border-radius: 2px;
         }
 
-        .nav-controls {
+        .nav-links a:hover {
+            color: var(--accent-brown);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--accent-brown);
+            background: var(--paper-yellow);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.3rem;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 4px var(--shadow-soft);
+            transform: rotate(2deg);
         }
 
-        .theme-switch, .lang-switch {
-            display: flex
+        .theme-toggle:hover {
+            transform: rotate(-3deg) scale(1.05);
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+        }
+
+        .lang-toggle {
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--accent-blue);
+            background: var(--paper-blue);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--primary-light);
-            color: var(--primary-color);
-            border: none;
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 4px var(--shadow-soft);
+            transform: rotate(-2deg);
+            color: var(--accent-blue);
         }
 
-        .theme-switch:hover, .lang-switch:hover {
-            background: var(--primary-color);
-            color: white;
+        .lang-toggle:hover {
+            transform: rotate(2deg) scale(1.05);
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+            background: var(--accent-blue);
+            color: var(--paper-white);
+        }
+
+        .btn-notebook {
+            padding: 0.7rem 1.8rem;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 4px 4px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .btn-notebook:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--shadow-hard);
         }
 
         .mobile-menu-btn {
             display: none;
-            background: none;
-            border: none;
-            color: var(--text-primary);
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--accent-brown);
+            background: var(--paper-yellow);
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: white;
-            text-align: center;
-            padding: 3rem 1rem; /* 减少页头空间，让它更紧凑 */
-            margin-top: 0;
-            transition: background 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            min-height: auto; /* 去掉最小高度限制 */
-        }
-
-        /* 优化页头背景效果 - 更简洁的几何图案 */
-        header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
-            z-index: 0;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 5%;
-        }
-
-        .logo-container {
-            position: relative;
-            z-index: 1;
-            display: flex;
+            align-items: center;
             justify-content: center;
+            box-shadow: 2px 2px 4px var(--shadow-soft);
+            color: var(--accent-brown);
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+        }
+
+        /* ==================== Hero 区域 ==================== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
             align-items: center;
-            margin-bottom: 1rem; /* 减少底部间距 */
-        }
-
-        .logo {
-            width: 80px; /* 减小logo尺寸 */
-            height: 80px;
-            margin-right: 0.75rem; /* 减少右边距 */
-            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25)); /* 减轻阴影 */
-            animation: pulse 3s infinite alternate; /* 添加缓慢脉动效果 */
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.05); }
-        }
-
-        h1 {
-            font-size: 2.2rem; /* 减小标题字号 */
-            margin-bottom: 1rem; /* 减少底部间距 */
-            font-weight: 700;
-            position: relative;
-            z-index: 1;
-            letter-spacing: -0.5px; /* 字母间距微调 */
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
-        }
-
-        h2 {
-            font-size: 1.8rem;
-            margin: 2.5rem 0 1.2rem;
-            color: var(--primary-color);
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        h3 {
-            font-size: 1.4rem;
-            margin: 1.8rem 0 1rem;
-            color: var(--primary-color);
-            font-weight: 400;
-            transition: color 0.3s ease;
-        }
-
-        p {
-            margin-bottom: 1rem;
-            color: var(--text-secondary);
-            line-height: 1.8;
-            transition: color 0.3s ease;
-        }
-
-        .tagline {
-            font-size: 1.2rem; /* 减小副标题字号 */
-            margin-bottom: 1.5rem; /* 减少底部间距 */
-            opacity: 0.95; /* 增加不透明度 */
-            max-width: 600px; /* 减少最大宽度 */
-            margin-left: auto;
-            margin-right: auto;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* 文字阴影 */
-        }
-
-        .cta-button {
-            display: inline-block;
-            background-color: var(--primary-color);
-            color: white;
-            padding: 12px 28px; /* 减小按钮尺寸 */
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 500;
-            margin-top: 1rem; /* 减少顶部间距 */
-            transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 增强按钮阴影 */
-            position: relative;
-            z-index: 1;
-            border: 2px solid transparent; /* 为悬停效果准备 */
-            font-size: 0.95rem; /* 减小字体 */
-        }
-
-        .cta-button:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-4px); /* 增加悬停效果 */
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-        }
-        
-        .cta-button:active {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .section {
-            padding: 2.5rem 0; /* 减少section的上下内边距 */
-            border-bottom: 1px solid var(--border-color);
-            transition: border-color 0.3s ease;
-        }
-        .section:last-of-type {
-             border-bottom: none;
-        }
-
-        .section-title-container {
-            text-align: center;
-            margin-bottom: 2rem; /* 减少标题容器的底部间距 */
-        }
-
-        .section-subtitle {
-            color: var(--text-tertiary);
-            font-size: 1.1rem;
-            max-width: 700px;
-            margin: 0 auto 1rem;
-            transition: color 0.3s ease;
-        }
-
-        /* --- Features Section --- */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem; /* 减少网格间距 */
-            margin: 2rem 0; /* 减少上下外边距 */
-        }
-
-        /* 为功能卡片增加更精致的动画 */
-        .feature {
-            background-color: var(--surface-color);
-            border-radius: 16px; /* 增加圆角 */
-            padding: 1.5rem; /* 减少内边距 */
-            box-shadow: var(--card-shadow);
-            transition: var(--transition);
-            cursor: pointer;
-            border: 1px solid transparent;
+            justify-content: center;
+            padding: 9rem 2rem 5rem;
             position: relative;
             overflow: hidden;
         }
 
-        .feature::after {
+        .doodle-decoration {
+            position: absolute;
+            opacity: 0.08;
+            pointer-events: none;
+        }
+
+        .doodle-1 {
+            top: 15%;
+            right: 8%;
+            width: 120px;
+            height: 120px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50,10 Q30,30 50,50 T50,90' stroke='%23a67c52' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='8' fill='%23a67c52'/%3E%3C/svg%3E");
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-25px) rotate(-3deg); }
+        }
+
+        .hero-container {
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 5rem;
+            align-items: center;
+        }
+
+        .hero-content {
+            padding: 2rem 0;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            background: var(--accent-orange);
+            color: var(--paper-white);
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+            transform: rotate(-2deg);
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 2rem;
+            line-height: 1.2;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            color: var(--ink-medium);
+            margin-bottom: 2.5rem;
+            line-height: 2;
+        }
+
+        .hero-warning {
+            background: var(--paper-yellow);
+            border-left: 4px solid var(--accent-orange);
+            padding: 1rem 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 6px;
+            box-shadow: 2px 2px 6px var(--shadow-soft);
+        }
+
+        .hero-warning strong {
+            color: var(--accent-red);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            padding: 1rem 2.5rem;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            box-shadow: 5px 5px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0 var(--shadow-hard);
+        }
+
+        .btn-secondary {
+            padding: 1rem 2.5rem;
+            background: transparent;
+            color: var(--accent-brown);
+            border: 2px solid var(--accent-brown);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            transform: translateY(-3px);
+        }
+
+        .hero-notebook {
+            perspective: 1500px;
+        }
+
+        .notebook-page {
+            background: var(--paper-white);
+            border: 3px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 3.5rem 3rem;
+            box-shadow: 
+                10px 10px 0 var(--paper-yellow),
+                10px 10px 0 3px var(--accent-brown),
+                15px 15px 25px var(--shadow-medium);
+            position: relative;
+            transform: rotateY(-5deg);
+            transition: transform 0.5s ease;
+        }
+
+        .notebook-page:hover {
+            transform: rotateY(0deg);
+        }
+
+        .binding-holes {
+            position: absolute;
+            left: 2rem;
+            top: 3.5rem;
+            bottom: 3.5rem;
+            width: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .hole {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--accent-brown);
+            border-radius: 50%;
+            background: var(--paper-cream);
+        }
+
+        .notebook-content {
+            margin-left: 2.5rem;
+        }
+
+        .notebook-content h3 {
+            font-family: 'Caveat', cursive;
+            font-size: 2.2rem;
+            color: var(--ink-dark);
+            margin-bottom: 2rem;
+            border-bottom: 2px dashed var(--line-color);
+            padding-bottom: 1rem;
+        }
+
+        .notebook-list {
+            list-style: none;
+        }
+
+        .notebook-list li {
+            font-size: 1.15rem;
+            color: var(--ink-medium);
+            margin-bottom: 1.2rem;
+            padding-left: 2rem;
+            position: relative;
+            font-family: 'Caveat', 'Long Cang', cursive;
+        }
+
+        body.lang-en .notebook-list li {
+            font-family: 'Caveat', cursive;
+        }
+
+        .notebook-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent-green);
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        /* ==================== 通用区域样式 ==================== */
+        .section {
+            padding: 5rem 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            background: var(--accent-blue);
+            color: var(--paper-white);
+            padding: 0.6rem 1.8rem;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+            transform: rotate(1deg);
+        }
+
+        .section-title {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1.5rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .section-description {
+            font-size: 1.25rem;
+            color: var(--ink-light);
+            line-height: 2;
+        }
+
+        /* ==================== 功能特性 ==================== */
+        .features-section {
+            background: var(--paper-cream);
+        }
+
+        .features-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .sticky-note {
+            background: var(--paper-yellow);
+            border-radius: 6px;
+            padding: 2.5rem 2.2rem;
+            box-shadow: 0 5px 8px var(--shadow-soft), 0 12px 25px var(--shadow-soft);
+            position: relative;
+            transform: rotate(-1.5deg);
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+
+        .sticky-note:nth-child(2n) {
+            transform: rotate(1.5deg);
+            background: var(--paper-pink);
+        }
+
+        .sticky-note:nth-child(3n) {
+            background: var(--paper-blue);
+        }
+
+        .sticky-note:nth-child(5n) {
+            background: var(--paper-green);
+        }
+
+        .sticky-note:hover {
+            transform: rotate(0deg) scale(1.05) translateY(-8px);
+            box-shadow: 0 10px 15px var(--shadow-medium), 0 20px 40px var(--shadow-medium);
+            z-index: 10;
+        }
+
+        .sticky-note::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-            opacity: 0;
-            transition: var(--transition);
-        }
-
-        .feature:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary-light);
-        }
-        
-        .feature:hover::after {
-            opacity: 1;
-        }
-
-        .feature-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px var(--shadow-soft);
         }
 
         .feature-icon {
-            font-size: 1.8rem; /* 减小图标字体大小 */
-            color: var(--primary-color);
-            background-color: var(--primary-light);
-            border-radius: 50%;
-            width: 50px; /* 减小图标尺寸 */
-            height: 50px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1.5rem;
-            flex-shrink: 0;
-            transition: var(--transition);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            display: block;
         }
-        
-        .feature:hover .feature-icon {
-            transform: scale(1.1) rotate(5deg);
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .feature-title-container {
-             flex-grow: 1;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-        }
-
 
         .feature-title {
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin: 0;
-            color: var(--text-primary);
-            transition: color 0.3s ease;
-        }
-        .feature:hover .feature-title {
-            color: var(--primary-color);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1rem;
+            font-family: 'ZCOOL XiaoWei', serif;
         }
 
-        .feature-toggle-icon {
-            font-size: 0.9rem;
-            color: var(--text-tertiary);
-            margin-left: 0.5rem;
-            transition: transform 0.3s ease;
+        .feature-description {
+            font-size: 1.05rem;
+            color: var(--ink-medium);
+            line-height: 1.8;
+            margin-bottom: 1.2rem;
         }
 
-        .feature.expanded .feature-toggle-icon {
-            transform: rotate(180deg);
+        .feature-list {
+            list-style: none;
         }
 
-        .short-desc {
-            margin-bottom: 0;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
+        .feature-list li {
+            padding: 0.5rem 0;
+            color: var(--ink-medium);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
 
-        .feature-details {
-            margin-top: 1.5rem;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease-out, opacity 0.4s ease-out, padding-top 0.5s ease-out, margin-top 0.5s ease-out; /* Added padding/margin transition */
-            opacity: 0;
-            border-top: 1px solid var(--border-color);
-            padding-top: 0; /* Start with zero padding */
-            margin-top: 0; /* Start with zero margin */
+        .feature-list li::before {
+            content: '◆';
+            color: var(--accent-brown);
         }
 
-        .feature.expanded .feature-details {
-            max-height: 1000px; /* Increased max-height */
-            opacity: 1;
-            padding-top: 1.5rem; /* Apply padding when expanded */
-            margin-top: 1.5rem; /* Apply margin when expanded */
-            transition: max-height 0.5s ease-in, opacity 0.4s ease-in 0.1s, padding-top 0.5s ease-in, margin-top 0.5s ease-in; /* Added padding/margin transition */
+        /* ==================== 应用截图 ==================== */
+        .screenshots-section {
+            background: var(--paper-white);
         }
 
-        .long-desc {
-            margin-bottom: 1.5rem;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-        .long-desc p {
-             margin-bottom: 1rem;
-        }
-
-        .feature-details img {
-            width: 100%;
-            max-width: 400px;
-            height: auto;
-            border-radius: 8px;
+        .screenshots-grid {
+            max-width: 1400px;
             margin: 0 auto;
-            display: block;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--border-color);
-            cursor: zoom-in; /* Indicate image is clickable */
-        }
-        /* --- End Features Section --- */
-
-
-        /* --- Roadmap Section --- */
-        .roadmap-container {
             display: flex;
             flex-direction: column;
-            margin: 2.5rem 0;
-            position: relative;
+            gap: 4rem;
         }
 
-        .roadmap-timeline {
-            position: relative;
-            margin-left: 1rem;
-            padding-left: 1.5rem;
-        }
-
-        .roadmap-timeline:before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 4px; /* 增加宽度 */
-            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
-            border-radius: 3px;
-            transition: background 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
-        }
-
-        .timeline-item {
-            position: relative;
-            padding-left: 2rem;
-            margin-bottom: 3.5rem;
-        }
-        .timeline-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .timeline-item:before {
-            content: '';
-            position: absolute;
-            left: -0.6rem;
-            top: 0.5rem;
-            width: 1.4rem; /* 增大时间点 */
-            height: 1.4rem;
-            border-radius: 50%;
-            transition: var(--transition);
-            border: 3px solid var(--background-color);
-            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03); /* 添加外发光效果 */
-        }
-        
-        /* 添加时间点悬浮效果 */
-        .timeline-item:hover::before {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 6px rgba(var(--primary-color-rgb), 0.1);
-        }
-
-         /* Style timeline point based on status */
-         .timeline-item[data-status="completed"]::before { background-color: #4CAF50; } /* Green */
-         .timeline-item[data-status="in-progress"]::before { background-color: var(--primary-color); } /* Blue */
-         .timeline-item[data-status="planned"]::before { background-color: #BDBDBD; } /* Grey */
-
-
-        .timeline-date {
-            font-weight: 500;
-            color: var(--primary-color);
-            margin-bottom: 0.8rem;
-            font-size: 1.1rem;
-            display: inline-block;
-            background-color: var(--primary-light);
-            padding: 0.3rem 1rem;
-            border-radius: 20px;
-            transition: color 0.3s ease, background-color 0.3s ease;
-        }
-
-        .timeline-content {
-            background: var(--surface-color);
-            border-radius: 12px;
-            padding: 1.5rem 2rem;
-            box-shadow: var(--card-shadow);
-            transition: var(--transition);
-        }
-
-        .timeline-content:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-        }
-
-        .timeline-content h4 {
-            margin-top: 0;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-            font-weight: 500;
-            font-size: 1.2rem;
-            transition: color 0.3s ease;
-            display: flex;
+        .screenshot-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
             align-items: center;
-        }
-        .timeline-content h4 .status {
-             margin-right: 0.8rem;
-        }
-
-
-        .timeline-content ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+            background: var(--paper-white);
+            border: 4px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 3rem;
+            box-shadow: 6px 6px 0 var(--paper-yellow);
+            transition: all 0.4s ease;
         }
 
-        .timeline-content li {
-            margin-bottom: 0.8rem;
-            padding-left: 1.5rem;
+        .screenshot-item:nth-child(even) {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .screenshot-item:nth-child(even) .screenshot-image {
+            order: 2;
+        }
+
+        .screenshot-item:nth-child(even) .screenshot-content {
+            order: 1;
+        }
+
+        .screenshot-item:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 10px 10px 0 var(--paper-yellow);
+        }
+
+        .screenshot-image {
             position: relative;
-            color: var(--text-secondary);
-            transition: color 0.3s ease;
-        }
-         .timeline-content li:last-child {
-             margin-bottom: 0;
-         }
-
-        .timeline-content li::before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            color: var(--primary-color);
-            font-weight: bold;
-            transition: color 0.3s ease;
         }
 
-        .status {
-            display: inline-block;
-            font-size: 0.8rem;
-            padding: 0.2rem 0.7rem;
-            border-radius: 20px;
-            transition: background-color 0.3s ease, color 0.3s ease;
-            font-weight: 500;
-            white-space: nowrap;
+        .screenshot-item img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px var(--shadow-soft);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            border: 2px solid var(--line-color);
         }
 
-        .status.completed {
-            background-color: #C8E6C9; /* Light Green */
-            color: #2E7D32; /* Dark Green */
+        .screenshot-item img:hover {
+            transform: scale(1.03);
         }
 
-        .status.in-progress {
-            background-color: var(--primary-light); /* Light Blue */
-            color: var(--primary-dark); /* Dark Blue */
+        .screenshot-content h4 {
+            font-size: 1.8rem;
+            color: var(--accent-brown);
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            font-family: 'ZCOOL XiaoWei', serif;
         }
 
-        .status.planned {
-            background-color: #E0E0E0; /* Light Grey */
-            color: #616161; /* Dark Grey */
+        .screenshot-content p {
+            color: var(--ink-medium);
+            line-height: 2;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
         }
 
-
-        .roadmap-footer {
-            margin-top: 3rem;
-            text-align: center;
-            background-color: var(--surface-color);
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        /* --- End Roadmap Section --- */
-
-        /* --- Guide Section --- */
-        .guide-section {
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            padding: 2.5rem;
-            margin: 2rem 0;
-            box-shadow: var(--card-shadow);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .guide-section ol {
-            padding-left: 1.5rem;
-            margin: 1.5rem 0;
-            color: var(--text-secondary);
-            transition: color 0.3s ease;
-        }
-
-        .guide-section ol li {
-            margin-bottom: 1rem;
-            line-height: 1.7;
-        }
-
-        .guide-section pre {
-            background-color: var(--background-color);
-            padding: 1rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 1.5rem 0;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-
-        .guide-buttons {
-            text-align: center;
-            margin-top: 2.5rem;
+        .feature-tags {
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
-            gap: 1.5rem;
-        }
-        /* --- End Guide Section --- */
-
-        /* --- Footer --- */
-        footer {
-            background-color: var(--surface-color);
-            color: var(--text-primary);
-            padding: 4rem 0 2rem;
-            margin-top: 3rem;
-            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
-            border-top: 1px solid var(--border-color);
-            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
         }
 
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 3rem;
-            margin-bottom: 3rem;
-        }
-
-        .footer-section h3 {
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            font-size: 1.2rem;
-            position: relative;
-            display: inline-block;
-            transition: color 0.3s ease;
-            font-weight: 500;
-        }
-
-        .footer-section h3::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 0;
-            width: 40px;
-            height: 3px;
-            background-color: var(--primary-color);
-            border-radius: 3px;
-            transition: background-color 0.3s ease;
-        }
-
-        .footer-section p {
-            color: var (--text-secondary);
-            margin-bottom: 1.2rem;
-            transition: color 0.3s ease;
-            font-size: 0.95rem;
-        }
-
-        .footer-section ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .footer-section ul li {
-            margin-bottom: 0.8rem;
-            transition: var(--transition);
-        }
-
-        .footer-section ul li:hover {
-            transform: translateX(5px);
-        }
-
-        .footer-section a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            font-size: 0.95rem;
-        }
-
-        .footer-section a::before {
-            content: '→';
-            margin-right: 0.6rem;
-            font-size: 0.9em;
-            color: var(--primary-color);
-            transition: var(--transition);
-        }
-
-        .footer-section a:hover {
-            color: var(--primary-color);
-        }
-
-        .footer-section a:hover::before {
-            transform: translateX(3px);
-        }
-        .social-links {
-             margin-top: 1rem;
-        }
-        .social-links a {
-            margin-right: 1rem;
-            font-size: 1.5rem;
-            color: var(--text-secondary);
-        }
-         .social-links a:hover {
-             color: var(--primary-color);
-         }
-         .social-links a::before {
-             content: none;
-         }
-
-
-        .footer-bottom {
-            text-align: center;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border-color);
-            transition: border-color 0.3s ease;
-        }
-
-        .footer-bottom p {
-            color: var(--text-tertiary);
+        .feature-tag {
+            background: var(--paper-yellow);
+            color: var(--accent-brown);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
             font-size: 0.9rem;
-            transition: color 0.3s ease;
+            font-weight: 600;
+            border: 2px solid var(--accent-brown);
         }
-        /* --- End Footer --- */
 
-
-        /* --- Mobile Optimizations --- */
-        @media (max-width: 768px) {
-            body {
-                padding-top: 55px;
-            }
-
-            nav {
-                padding: 0.5rem 5%;
-            }
-
-            .nav-links {
-                display: none;
-                position: absolute;
-                top: 55px;
-                left: 0;
-                width: 100%;
-                background-color: var(--surface-color);
-                flex-direction: column;
-                padding: 1rem 0;
-                box-shadow: var(--card-shadow);
-                text-align: center;
-                border-top: 1px solid var(--border-color);
-                z-index: 999;
-            }
-             .nav-links a {
-                 padding: 0.8rem 1rem;
-                 border-bottom: 1px solid var(--border-color);
-             }
-             .nav-links a:last-child {
-                 border-bottom: none;
-             }
-
-
-            .nav-links.active {
-                display: flex;
-            }
-
-            .mobile-menu-btn {
-                display: block;
-            }
-
-            .nav-controls {
-                 margin-left: auto;
-                 padding-right: 1rem;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            h2 {
-                font-size: 1.5rem;
-            }
-            .section {
-                 padding: 2.5rem 0;
-             }
-
-            .features {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            .feature {
-                 padding: 1rem;
-             }
-             .feature-header {
-                 margin-bottom: 0.8rem;
-             }
-             .feature-icon {
-                 width: 45px;
-                 height: 45px;
-                 font-size: 1.6rem;
-             }
-             .feature-title {
-                 font-size: 1.1rem;
-             }
-             .feature-details {
-                 margin-top: 1rem;
-                 padding-top: 1rem;
-             }
-
-
-            .feature-list {
-                grid-template-columns: 1fr;
-            }
-
-            .roadmap-timeline {
-                margin-left: 0.5rem;
-                padding-left: 1rem;
-            }
-            .timeline-item {
-                padding-left: 1.5rem;
-                margin-bottom: 2.5rem;
-            }
-             .timeline-item::before {
-                 left: -0.5rem;
-                 width: 1rem;
-                 height: 1rem;
-             }
-
-            .timeline-content {
-                padding: 1.2rem 1.5rem;
-            }
-
-            .guide-section {
-                padding: 1.5rem;
-            }
-
-            .guide-buttons {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .guide-buttons .cta-button {
-                width: 100%;
-                padding: 12px 24px;
-            }
-
-            footer {
-                padding: 2.5rem 0 1.5rem;
-            }
-
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-                text-align: center;
-            }
-             .footer-section h3::after {
-                 left: 50%;
-                 transform: translateX(-50%);
-             }
-             .footer-section ul {
-                 text-align: center;
-             }
-              .social-links {
-                  justify-content: center;
-                  display: flex;
-              }
-
-        }
-        /* --- End Mobile Optimizations --- */
-
-        /* --- Utility & Animation --- */
-        /* Image Modal - Optimized Animation */
+        /* ==================== 模态框 ==================== */
         .modal {
             display: none;
             position: fixed;
@@ -931,194 +725,534 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 2000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
-            opacity: 0;
-            transition: opacity 0.3s ease; /* Fade in background */
+            padding: 2rem;
         }
 
-        .modal.show {
+        .modal.active {
             display: flex;
-            opacity: 1;
         }
 
         .modal-content {
-            max-width: 90%;
+            max-width: 95%;
+            max-height: 95%;
+            position: relative;
+            animation: modalZoom 0.3s ease;
+        }
+
+        @keyframes modalZoom {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal img {
+            max-width: 100%;
             max-height: 90vh;
             border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            background-color: var(--surface-color);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease; /* Smoother scale/fade */
-            transform: scale(0.8); /* Start smaller */
-            opacity: 0;
-            display: flex; /* Use flex for content alignment */
-            flex-direction: column;
-        }
-
-        .modal.show .modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        .modal-image-container { /* Added container for potential spinner */
-             flex-grow: 1; /* Allow image container to grow */
-             display: flex;
-             justify-content: center;
-             align-items: center;
-             position: relative; /* For spinner positioning */
-             min-height: 100px; /* Ensure some height for spinner */
-             background-color: rgba(0, 0, 0, 0.03); /* 添加微妙背景色 */
-             border-radius: 8px 8px 0 0;
-        }
-        /* Basic Spinner Style (Hidden by default) */
-         .modal-spinner {
-             width: 40px;
-             height: 40px;
-             border: 4px solid var(--primary-light);
-             border-top: 4px solid var(--primary-color);
-             border-radius: 50%;
-             animation: spin 1s linear infinite;
-             position: absolute;
-             display: none; /* Hidden initially */
-         }
-         .modal-content.loading .modal-spinner {
-             display: block; /* Show spinner when loading */
-         }
-         .modal-content.loading .modal-image {
-             opacity: 0; /* Hide image while loading */
-         }
-
-
-        .modal-image {
-            width: 100%;
-            height: auto;
-            max-height: calc(90vh - 60px); /* Adjust max height considering caption */
-            object-fit: contain;
-            display: block;
-            opacity: 1; /* Visible by default */
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-caption {
-            padding: 15px 20px;
-            color: var(--text-primary);
-            background-color: var(--surface-color);
-            text-align: center;
-            font-weight: 500;
-            border-top: 1px solid var(--border-color);
-            flex-shrink: 0; /* Prevent caption from shrinking */
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
         }
 
         .modal-close {
             position: absolute;
-            top: 10px; /* Adjusted position */
-            right: 10px; /* Adjusted position */
-            width: 35px;
-            height: 35px;
-            background-color: rgba(30, 30, 30, 0.6); /* Darker background */
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: var(--accent-brown);
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-            font-size: 20px;
-            color: white; /* White cross */
-            border: none;
-            transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-            z-index: 10;
+            transition: transform 0.3s ease;
         }
 
         .modal-close:hover {
-            background-color: rgba(0, 0, 0, 0.8);
-            transform: scale(1.1);
+            transform: rotate(90deg);
         }
-        /* End Image Modal Optimization */
 
+        /* ==================== 技术栈 ==================== */
+        .tech-section {
+            background: var(--paper-cream);
+        }
 
-        .floating-controls {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
+        .tech-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .tech-tag {
+            background: var(--paper-white);
+            border: 2px dashed var(--accent-brown);
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 900;
+            align-items: center;
+            gap: 1.25rem;
+            transition: all 0.4s ease;
         }
 
-        .control-button {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
+        .tech-tag:hover {
+            transform: translateX(10px);
+            border-style: solid;
+            box-shadow: 5px 5px 0 var(--accent-orange);
+        }
+
+        .tech-icon {
+            width: 55px;
+            height: 55px;
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            font-size: 20px;
-            transition: var(--transition), opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(20px);
+            font-size: 1.6rem;
+            flex-shrink: 0;
+            transform: rotate(-5deg);
+            transition: transform 0.3s ease;
         }
-         .control-button.visible {
-             opacity: 1;
-             visibility: visible;
-             transform: translateY(0);
-         }
 
-        .control-button:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        .tech-tag:hover .tech-icon {
+            transform: rotate(0deg) scale(1.1);
         }
-         #backToTopBtn::before {
-             content: "↑";
-             font-weight: bold;
-         }
 
+        .tech-info h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--ink-dark);
+            margin-bottom: 0.4rem;
+        }
 
-        .loading-overlay {
-            position: fixed;
+        .tech-info p {
+            font-size: 0.95rem;
+            color: var(--ink-light);
+        }
+
+        /* ==================== 快速开始 ==================== */
+        .quickstart-section {
+            background: var(--paper-white);
+        }
+
+        .quickstart-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .quickstart-steps {
+            background: var(--paper-cream);
+            border: 3px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 3rem;
+            box-shadow: 8px 8px 0 var(--paper-yellow);
+            margin-top: 3rem;
+        }
+
+        .step {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2.5rem;
+            border-bottom: 2px dashed var(--line-color);
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .step h3 {
+            font-size: 1.5rem;
+            color: var(--ink-dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--accent-brown);
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+
+        .step p {
+            color: var(--ink-medium);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .step pre {
+            background: var(--ink-dark);
+            color: var(--paper-white);
+            padding: 1.25rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* ==================== 路线图 ==================== */
+        .roadmap-section {
+            background: var(--paper-cream);
+        }
+
+        .roadmap-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2.5rem;
+            margin-top: 3rem;
+        }
+
+        .roadmap-card {
+            background: var(--paper-white);
+            border: 3px solid var(--accent-brown);
+            border-radius: 15px;
+            padding: 2.5rem 2rem;
+            position: relative;
+            box-shadow: 6px 6px 0 var(--paper-yellow);
+            transition: all 0.4s ease;
+        }
+
+        .roadmap-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 10px 10px 0 var(--paper-yellow);
+        }
+
+        .roadmap-card::before {
+            content: '';
+            position: absolute;
+            top: -14px;
+            right: 25px;
+            width: 45px;
+            height: 28px;
+            border: 3px solid var(--accent-brown);
+            border-bottom: none;
+            border-radius: 25px 25px 0 0;
+        }
+
+        .roadmap-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px dashed var(--line-color);
+        }
+
+        .roadmap-icon {
+            font-size: 2.2rem;
+        }
+
+        .roadmap-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .roadmap-items {
+            list-style: none;
+        }
+
+        .roadmap-items li {
+            padding: 0.8rem 0;
+            color: var(--ink-medium);
+            border-bottom: 1px solid var(--line-color);
+            display: flex;
+            gap: 0.7rem;
+            line-height: 1.6;
+        }
+
+        .roadmap-items li:last-child {
+            border-bottom: none;
+        }
+
+        .roadmap-items li::before {
+            content: '•';
+            color: var(--accent-brown);
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        /* ==================== CTA ==================== */
+        .cta-section {
+            padding: 5rem 2rem;
+            background: var(--accent-brown);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--background-color);
+            right: 0;
+            height: 25px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 25'%3E%3Cpath d='M0,12 Q15,0 30,12 T60,12 T90,12 T120,12 T150,12 T180,12 T210,12 T240,12 T270,12 T300,12 T330,12 T360,12 T390,12 T420,12 T450,12 T480,12 T510,12 T540,12 T570,12 T600,12 T630,12 T660,12 T690,12 T720,12 T750,12 T780,12 T810,12 T840,12 T870,12 T900,12 T930,12 T960,12 T990,12 T1020,12 T1050,12 T1080,12 T1110,12 T1140,12 T1170,12 T1200,12 L1200,25 L0,25 Z' fill='%23f9f6f0'/%3E%3C/svg%3E");
+            background-size: cover;
+        }
+
+        .cta-content {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+            padding-top: 2rem;
+        }
+
+        .cta-content h2 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--paper-white);
+            margin-bottom: 2rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .cta-content p {
+            font-size: 1.35rem;
+            color: var(--paper-cream);
+            margin-bottom: 2.5rem;
+            line-height: 2;
+        }
+
+        .btn-cta {
+            padding: 1.2rem 3.5rem;
+            background: var(--paper-white);
+            color: var(--accent-brown);
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.3rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 6px 6px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+        }
+
+        .btn-cta:hover {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0 var(--shadow-hard);
+        }
+
+        /* ==================== Footer ==================== */
+        footer {
+            background: var(--paper-white);
+            border-top: 4px solid var(--accent-brown);
+            padding: 4rem 2rem 2.5rem;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-brown);
+            margin-bottom: 1.5rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .footer-brand p {
+            color: var(--ink-light);
+            line-height: 2;
+            margin-bottom: 1.5rem;
+        }
+
+        .social-links {
             display: flex;
-            justify-content: center;
+            gap: 1rem;
+        }
+
+        .social-link {
+            width: 45px;
+            height: 45px;
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            border-radius: 10px;
+            display: flex;
             align-items: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            justify-content: center;
+            text-decoration: none;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            transform: rotate(-3deg);
         }
 
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--primary-light);
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .social-link:hover {
+            transform: rotate(3deg) scale(1.15);
+            box-shadow: 4px 4px 8px var(--shadow-medium);
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .footer-section h4 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1.2rem;
+            font-family: 'ZCOOL XiaoWei', serif;
         }
 
-        .fade-out {
-            opacity: 0;
-            visibility: hidden;
+        .footer-links {
+            list-style: none;
         }
 
-        /* --- Language Switching CSS --- */
+        .footer-links li {
+            margin-bottom: 0.7rem;
+        }
+
+        .footer-links a {
+            color: var(--ink-medium);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-brown);
+            transform: translateX(5px);
+        }
+
+        .footer-bottom {
+            padding-top: 2.5rem;
+            border-top: 2px dashed var(--line-color);
+            text-align: center;
+            color: var(--ink-light);
+        }
+
+        /* ==================== 响应式 ==================== */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+            }
+
+            .nav-links {
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background: var(--paper-white);
+                flex-direction: column;
+                gap: 0;
+                padding: 1rem 0;
+                box-shadow: 0 4px 12px var(--shadow-medium);
+                border-bottom: 3px solid var(--accent-brown);
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+            }
+
+            .nav-links.active {
+                max-height: 400px;
+            }
+
+            .nav-links a {
+                padding: 1rem 2rem;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .hero-container {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+                text-align: center;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .hero-notebook {
+                order: -1;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .screenshot-item {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 2rem;
+            }
+
+            .screenshot-item:nth-child(even) .screenshot-image {
+                order: 1;
+            }
+
+            .screenshot-item:nth-child(even) .screenshot-content {
+                order: 2;
+            }
+
+            .tech-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .quickstart-steps {
+                padding-left: 1rem;
+            }
+
+            .roadmap-container {
+                grid-template-columns: 1fr;
+            }
+
+            .section-title {
+                font-size: 2.2rem;
+            }
+
+            .section-description {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+                gap: 4rem;
+            }
+            .hero h1 {
+                font-size: 3rem;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* 语言切换 */
         body.lang-zh .content-en {
             display: none;
         }
@@ -1126,781 +1260,1096 @@
         body.lang-en .content-zh {
             display: none;
         }
-        /* --- End Language Switching CSS --- */
 
-
-        /* 改进动画效果 */
-        .animated {
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
             opacity: 0;
-            transform: translateY(30px); /* 增加初始偏移 */
-            transition: opacity 0.7s ease-out, transform 0.7s cubic-bezier(0.19, 1, 0.22, 1); /* 使用更平滑的缓动函数 */
+            transition: opacity 0.3s ease;
         }
-        
-        .animated.visible {
+
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: var(--paper-white);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 40px;
+            height: 40px;
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .modal-close:hover {
+            transform: rotate(90deg);
+            background: var(--accent-orange);
+        }
+
+        .modal img {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 10px;
+            display: block;
+        }
+
+        #modalCaption {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--ink-medium);
+            font-size: 1.1rem;
+        }
+
+        /* 导航栏滚动隐藏效果 */
+        nav {
+            transition: transform 0.3s ease;
+        }
+
+        /* 移动端响应式 */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--paper-white);
+                flex-direction: column;
+                padding: 1.5rem;
+                gap: 0;
+                border-bottom: 3px solid var(--accent-brown);
+            }
+            .nav-links.active {
+                display: flex;
+            }
+            .nav-links a {
+                padding: 1rem;
+                border-bottom: 1px solid var(--line-color);
+            }
+            .mobile-menu {
+                display: flex;
+                width: 44px;
+                height: 44px;
+                background: var(--paper-yellow);
+                border: 2px solid var(--accent-brown);
+                border-radius: 8px;
+                cursor: pointer;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+            }
+            .mobile-menu span {
+                width: 22px;
+                height: 2px;
+                background: var(--accent-brown);
+                border-radius: 2px;
+            }
+            .hero {
+                padding: 7rem 1.5rem 4rem;
+            }
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            .section-title {
+                font-size: 2.5rem;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+            .features-grid,
+            .screenshots-grid,
+            .tech-grid,
+            .roadmap-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .fade-in.visible {
             opacity: 1;
             transform: translateY(0);
         }
-        /* --- End Utility & Animation --- */
-
     </style>
 </head>
-<body class="lang-zh"> <!-- Default class on body -->
-    <!-- 加载动画 -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-    </div>
-
+<body class="lang-zh">
+    <!-- 导航栏 -->
     <nav>
-        <div class="nav-logo">
-            <img src="icon.png" alt="心迹图标">
-            <h2 class="content-zh">心迹</h2>
-            <h2 class="content-en">ThoughtEcho</h2>
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <div class="nav-logo">
+                    <img src="icon.png" alt="ThoughtEcho">
+                </div>
+                <span class="nav-title content-zh">心迹</span>
+                <span class="nav-title content-en">ThoughtEcho</span>
+            </a>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#features"><span class="content-zh">功能特性</span><span class="content-en">Features</span></a></li>
+                <li><a href="#screenshots"><span class="content-zh">应用截图</span><span class="content-en">Screenshots</span></a></li>
+                <li><a href="#tech"><span class="content-zh">技术栈</span><span class="content-en">Tech Stack</span></a></li>
+                <li><a href="#quickstart"><span class="content-zh">快速开始</span><span class="content-en">Quick Start</span></a></li>
+                <li><a href="privacy.html"><span class="content-zh">隐私政策</span><span class="content-en">Privacy</span></a></li>
+            </ul>
+
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <button class="lang-toggle" id="langToggle" aria-label="Switch language">
+                    <span id="langText">EN</span>
+                </button>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-notebook">
+                    <span class="content-zh">立即下载</span>
+                    <span class="content-en">Download</span>
+                </a>
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
+            </div>
         </div>
-        <div class="nav-links" id="navLinks">
-            <a href="#overview" class="content-zh">概述</a>
-            <a href="#overview" class="content-en">Overview</a>
-            <a href="#features" class="content-zh">功能</a>
-            <a href="#features" class="content-en">Features</a>
-            <a href="#roadmap" class="content-zh">路线图</a>
-            <a href="#roadmap" class="content-en">Roadmap</a>
-            <a href="#guide" class="content-zh">使用指南</a>
-            <a href="#guide" class="content-en">Guide</a>
-            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub</a>
-        </div>
-        <div class="nav-controls">
-            <button class="theme-switch" id="themeSwitch" aria-label="切换主题">🌙</button>
-            <button class="lang-switch" id="langSwitch" aria-label="切换语言">En</button>
-        </div>
-        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">☰</button>
     </nav>
 
-    <header id="overview">
-        <div class="container">
-            <div class="logo-container animated">
-                <img src="icon.png" alt="心迹 Logo" class="logo">
+    <!-- Hero -->
+    <section class="hero">
+        <div class="doodle-decoration doodle-1"></div>
+        
+        <div class="hero-container">
+            <div class="hero-content fade-in">
+                <div class="hero-tag">
+                    <span class="content-zh">✨ AI 驱动的智能笔记</span>
+                    <span class="content-en">✨ AI-Powered Smart Notes</span>
+                </div>
+                
+                <h1>
+                    <span class="content-zh">你的专属<br>灵感摘录本</span>
+                    <span class="content-en">Your Personal<br>Inspiration Notebook</span>
+                </h1>
+                
+                <p class="hero-subtitle">
+                    <span class="content-zh">
+                        随心记录每一刻灵感,让 AI 洞察助你发现思维脉络。<br>
+                        支持富文本、多媒体附件、智能分析、年度报告等强大功能。
+                    </span>
+                    <span class="content-en">
+                        Capture ideas effortlessly, unlock insights with AI.<br>
+                        Rich text, media attachments, smart analysis, annual reports & more.
+                    </span>
+                </p>
+
+                <div class="hero-warning">
+                    <strong>⚠️ <span class="content-zh">友情提示：</span><span class="content-en">Heads-up:</span></strong>
+                    <span class="content-zh">这是一个 vibe coding 项目,我会持续打磨体验,如遇潜在的小 bug 敬请包涵,也欢迎随时反馈。</span>
+                    <span class="content-en">This is a vibe coding project—we're polishing it in the open, so thanks for your patience with any rough edges.</span>
+                </div>
+                
+                <div class="hero-buttons">
+                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-primary">
+                        <span class="content-zh">🚀 开始使用</span>
+                        <span class="content-en">🚀 Get Started</span>
+                    </a>
+                    <a href="#features" class="btn-secondary">
+                        <span class="content-zh">📖 了解更多</span>
+                        <span class="content-en">📖 Learn More</span>
+                    </a>
+                </div>
             </div>
-            <h1 class="animated" style="transition-delay: 0.1s;">
-                <span class="content-zh">心迹</span>
-                <span class="content-en">ThoughtEcho</span>
-            </h1>
-            <p class="tagline animated" style="transition-delay: 0.2s;">
-                <span class="content-zh">你的专属灵感摘录本</span>
-                <span class="content-en">Your Personal Inspiration Notebook with AI Power</span>
-            </p>
-            <div class="cta-buttons animated" style="transition-delay: 0.3s;">
-                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" class="cta-button">
-                    <span class="content-zh">获取最新版本</span>
-                    <span class="content-en">Get Latest Release</span>
-                </a>
-                <a href="#features" class="cta-button" style="background: transparent; border-color: white; margin-left: 16px;">
-                    <span class="content-zh">探索功能</span>
-                    <span class="content-en">Explore Features</span>
-                </a>
+
+            <div class="hero-notebook fade-in">
+                <div class="notebook-page">
+                    <div class="binding-holes">
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                    </div>
+                    <div class="notebook-content">
+                        <h3 class="handwriting">
+                            <span class="content-zh">当前功能清单 ✓</span>
+                            <span class="content-en">Current Features ✓</span>
+                        </h3>
+                        <ul class="notebook-list">
+                            <li><span class="content-zh">✍️ 富文本笔记 - 支持多媒体</span><span class="content-en">✍️ Rich Text Notes - Media Support</span></li>
+                            <li><span class="content-zh">🤖 AI助手 - 问答、润色、灵感</span><span class="content-en">🤖 AI Assistant - Q&A, Polish, Ideas</span></li>
+                            <li><span class="content-zh">📊 洞察报告 - 趋势分析</span><span class="content-en">📊 Insights - Trend Analysis</span></li>
+                            <li><span class="content-zh">🏷️ 智能标签 - 多维筛选</span><span class="content-en">🏷️ Smart Tags - Multi-Filter</span></li>
+                            <li><span class="content-zh">🎯 卡片生成 - 精美分享</span><span class="content-en">🎯 Card Generation - Beautiful Share</span></li>
+                            <li><span class="content-zh">📦 备份中心 - 安全可靠</span><span class="content-en">📦 Backup Hub - Safe & Secure</span></li>
+                            <li><span class="content-zh">🌍 情境记录 - 位置天气</span><span class="content-en">🌍 Context Capture - Location & Weather</span></li>
+                            <li><span class="content-zh">⚡ 快速捕获 - 剪贴板检测</span><span class="content-en">⚡ Quick Capture - Clipboard Watch</span></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
-    </header>
+    </section>
 
-    <main>
-        <section id="features" class="section">
-            <div class="container">
-                <div class="section-title-container animated">
-                    <h2 class="content-zh">核心功能</h2>
-                    <h2 class="content-en">Core Features</h2>
-                    <p class="section-subtitle content-zh">探索心迹如何帮助你捕捉、整理和深化你的想法。点击下方卡片查看详情。</p>
-                    <p class="section-subtitle content-en">Discover how ThoughtEcho helps you capture, organize, and deepen your ideas. Click cards below for details.</p>
-                </div>
-                <div class="features">
-                    <!-- 功能1: 富文本笔记 -->
-                    <div class="feature animated" style="transition-delay: 0.1s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">✍️</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">富文本笔记</h3>
-                                <h3 class="feature-title content-en">Rich Text Notes</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">支持富文本、多媒体附件，并同步保存纯文本与富文本格式...</p>
-                        <p class="short-desc content-en">Rich text with media attachments plus dual plain/rich text storage...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">心迹提供强大的富文本编辑器，基于Flutter Quill构建，支持格式化文本、插入图片、音频、视频等多媒体内容。采用大文件流式处理技术，确保即使处理大型媒体文件也不会造成内存溢出。双存储架构同时保存纯文本和富文本格式，兼顾搜索性能和内容丰富度。</p>
-                                <p class="content-en">ThoughtEcho provides a powerful rich text editor built on Flutter Quill, supporting formatted text, images, audio, video and multimedia content. Using large file streaming technology ensures that even processing large media files won't cause memory overflow. The dual storage architecture saves both plain text and rich text formats, balancing search performance and content richness.</p>
-                             </div>
-                            <img src="add.jpg" alt="添加笔记界面截图 / Add Note Interface Screenshot" loading="lazy">
-                        </div>
-                    </div>
-                    <!-- 功能2: 标签与搜索 -->
-                    <div class="feature animated" style="transition-delay: 0.2s;">
-                         <div class="feature-header">
-                             <span class="feature-icon">🏷️</span>
-                             <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">标签与搜索</h3>
-                                <h3 class="feature-title content-en">Tags &amp; Search</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">多标签筛选、组合条件与全文搜索，快速定位灵感...</p>
-                        <p class="short-desc content-en">Multi-tag filters, facets, and full-text search to surface notes instantly...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">灵活的标签系统支持颜色与图标定制，可为笔记添加多重语义标签。配合全文搜索、天气与时间段过滤以及标签组合筛选，你能在几秒内找到目标记录，并让知识体系层次清晰。</p>
-                                <p class="content-en">A flexible tagging system with color/icon customization lets you add multiple semantic labels to each note. Combined with full-text search, weather and time-of-day filters, plus tag combination queries, you can surface the exact record in seconds and keep your knowledge base tidy.</p>
-                            </div>
-                            <img src="tags.jpg" alt="标签管理界面截图 / Tag Management Interface Screenshot" loading="lazy">
-                        </div>
-                    </div>
-                    <!-- 功能3: AI助手 -->
-                    <div class="feature animated" style="transition-delay: 0.3s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">🤖</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">AI助手</h3>
-                                <h3 class="feature-title content-en">AI Assistant</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">随时召唤 AI 助手，围绕当前笔记上下文问答、润色与延伸...</p>
-                        <p class="short-desc content-en">Summon the AI assistant for context-aware Q&amp;A, polishing, and idea expansion...</p>
-                        <div class="feature-details">
-                             <div class="long-desc">
-                                <p class="content-zh">内置的「AI助手」悬浮入口支持针对当前笔记的上下文聊天、润色总结、灵感续写与笔记问答，还能生成每日提示与周期洞察。多服务商架构兼容 OpenAI、Anthropic、DeepSeek、硅基流动等主流模型，提供自动故障转移与流式反馈体验，API 密钥全程安全加密存储。</p>
-                                <p class="content-en">The built-in floating AI Assistant lets you chat with notes in context, polish summaries, extend ideas, and generate note-specific Q&amp;A, plus daily prompts and periodic insights. A multi-provider architecture supports OpenAI, Anthropic, DeepSeek, SiliconFlow, and more with automatic failover, streaming responses, and securely encrypted API key storage.</p>
-                             </div>
-                        </div>
-                    </div>
-                     <!-- 功能4: AI卡片生成 -->
-                     <div class="feature animated" style="transition-delay: 0.4s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">🎯</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">AI卡片生成</h3>
-                                <h3 class="feature-title content-en">AI Card Generation</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">将笔记转换为精美分享卡片，支持SVG矢量图形...</p>
-                        <p class="short-desc content-en">Convert notes to beautiful shareable cards with SVG vector graphics...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">革命性的AI卡片生成功能，基于先进的AI算法将普通笔记转换为杂志级的视觉卡片。支持多种卡片风格，AI会根据笔记内容智能选择最适合的设计风格。生成的SVG矢量卡片支持无损缩放，可直接保存到相册或分享到社交平台，让你的思考以更美的方式传播。</p>
-                                <p class="content-en">Revolutionary AI card generation feature that transforms ordinary notes into magazine-quality visual cards using advanced AI algorithms. Supports multiple card styles, with AI intelligently selecting the most suitable design based on note content. Generated SVG vector cards support lossless scaling and can be saved to photo albums or shared on social platforms, spreading your thoughts in a more beautiful way.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 功能5: 洞察与报告 -->
-                    <div class="feature animated" style="transition-delay: 0.5s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">📊</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">洞察与报告</h3>
-                                <h3 class="feature-title content-en">Insights &amp; Reports</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">AI 周期洞察、年度报告与写作趋势一站呈现...</p>
-                        <p class="short-desc content-en">AI-driven periodic insights, annual reports, and writing trends in one place...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">洞察中心聚合 AI 周期分析、情绪曲线、写作习惯与重点事件，帮助你回顾思维轨迹。配套的年度/周期报告生成器利用模板化 HTML 呈现数据可视化、精选笔记与建议，报告可离线保存或分享，全方位了解自己的成长脉络。</p>
-                                <p class="content-en">The Insights hub combines AI periodic analysis, emotional trends, writing habits, and highlight moments to help you reflect on your thinking journey. Annual and periodic report builders generate templated HTML reports with charts, featured notes, and actionable suggestions that you can save or share offline for a holistic view of your growth.</p>
-                            </div>
-                             <img src="homepage.jpg" alt="洞察与报告界面截图 / Insights Overview Screenshot" loading="lazy">
-                        </div>
-                    </div>
-                     <!-- 功能6: 情境记录 -->
-                     <div class="feature animated" style="transition-delay: 0.5s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">🌍</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">情境记录</h3>
-                                <h3 class="feature-title content-en">Context Capture</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">自动保存位置、天气与时间段，让灵感附带背景信息...</p>
-                        <p class="short-desc content-en">Automatically capture location, weather, and time-of-day context alongside every note...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">定位与天气服务会在你写下思考的同时记录当下的城市、天气、温度与时间段，方便日后回顾当时的环境。无论是旅行日记还是工作灵感，都能快速还原当时的场景，让笔记拥有更多维度的信息。</p>
-                                <p class="content-en">Location and weather services record the city, conditions, temperature, and time-of-day while you write, making it easy to reconstruct the moment later. Whether it's a travel diary or a work insight, you can revisit the surrounding context and give every note richer dimensions.</p>
-                            </div>
-                             <img src="settingpage.jpg" alt="情境记录界面截图 / Context Capture Interface Screenshot" loading="lazy">
-                        </div>
-                    </div>
-                     <!-- 功能7: 媒体与备份中心 -->
-                     <div class="feature animated" style="transition-delay: 0.6s;">
-                         <div class="feature-header">
-                             <span class="feature-icon">�</span>
-                             <div class="feature-title-container">
-                                 <h3 class="feature-title content-zh">媒体与备份中心</h3>
-                                 <h3 class="feature-title content-en">Media &amp; Backup Hub</h3>
-                                 <span class="feature-toggle-icon">▼</span>
-                             </div>
-                         </div>
-                         <p class="short-desc content-zh">流式备份、媒体清理与一键恢复，数据安全有保障...</p>
-                         <p class="short-desc content-en">Streamlined backups, media cleanup, and one-tap restore for safe data management...</p>
-                         <div class="feature-details">
-                             <div class="long-desc">
-                                 <p class="content-zh">备份中心支持 ZIP 完整备份、增量导出与操作取消，所有大文件借助流式处理和智能批量策略，避免内存占用爆表。媒体管理器可扫描孤立附件、批量清理无用资源，并配合恢复向导在设备迁移时还原全部内容。</p>
-                                 <p class="content-en">The hub offers ZIP full backups, incremental exports, and cancellable operations. Large files are handled with streaming and adaptive batching to prevent memory spikes. The media manager scans for orphaned attachments, cleans unused assets, and works with the restore wizard to bring everything back when migrating devices.</p>
-                             </div>
-                             <img src="settingpage.jpg" alt="媒体与备份中心界面截图 / Media &amp; Backup Hub Screenshot" loading="lazy">
-                         </div>
-                     </div>
-                     <!-- 功能8: 智能内存管理 -->
-                     <div class="feature animated" style="transition-delay: 0.7s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">🧠</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">智能内存管理</h3>
-                                <h3 class="feature-title content-en">Intelligent Memory Management</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">动态调节批处理策略，处理超大笔记也不担心卡顿...</p>
-                        <p class="short-desc content-en">Adaptive batching keeps giant notes flowing without memory spikes...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">底层内存管理器会根据设备状态动态调整批量大小与缓存策略，结合流式读写与 OOM 自动降级方案，大型媒体、HTML 报告和备份压缩都能安全完成。即便在低配置设备上也可后台执行长任务，执行进度与异常均会完整记录。</p>
-                                <p class="content-en">The memory manager adapts batch sizes and caching strategies based on device health, pairing streaming I/O with automatic OOM fallbacks. Large media, HTML reports, and compressed backups finish safely even on low-spec devices, with background execution, progress tracking, and exhaustive logging for any edge cases.</p>
-                            </div>
-                        </div>
-                    </div>
-                     <!-- 功能9: 快速捕获 -->
-                     <div class="feature animated" style="transition-delay: 0.8s;">
-                        <div class="feature-header">
-                            <span class="feature-icon">⚡</span>
-                            <div class="feature-title-container">
-                                <h3 class="feature-title content-zh">快速捕获</h3>
-                                <h3 class="feature-title content-en">Quick Capture</h3>
-                                <span class="feature-toggle-icon">▼</span>
-                            </div>
-                        </div>
-                        <p class="short-desc content-zh">剪贴板检测、每日灵感与一言卡片，灵感随到随记...</p>
-                        <p class="short-desc content-en">Clipboard watcher, daily inspiration, and Hitokoto cards keep ideas flowing...</p>
-                        <div class="feature-details">
-                            <div class="long-desc">
-                                <p class="content-zh">心迹会在后台监听剪贴板内容，识别出新摘抄时提供一键存入的浮窗；每日灵感提示与一言卡片让你在主页就能收集灵感火花。无论是文本、链接还是临时想法，都能在几秒内写入笔记。</p>
-                                <p class="content-en">ThoughtEcho watches the clipboard in the background and surfaces a quick-save prompt when new snippets appear. Daily inspiration prompts and Hitokoto quote cards greet you on the home screen so you can capture sparks immediately—text, links, and fleeting thoughts land in your notebook within seconds.</p>
-                            </div>
-                        </div>
-                    </div>
-                     <!-- 功能10: 个性化主题 -->
-                     <div class="feature animated" style="transition-delay: 0.8s;">
-                         <div class="feature-header">
-                             <span class="feature-icon">🎨</span>
-                             <div class="feature-title-container">
-                                 <h3 class="feature-title content-zh">个性化主题</h3>
-                                 <h3 class="feature-title content-en">Personalized Themes</h3>
-                                 <span class="feature-toggle-icon">▼</span>
-                             </div>
-                         </div>
-                         <p class="short-desc content-zh">Material 3 设计语言，支持动态配色与自定义主题...</p>
-                         <p class="short-desc content-en">Material 3 design with dynamic color and fully customizable themes...</p>
-                         <div class="feature-details">
-                             <div class="long-desc">
-                                 <p class="content-zh">界面遵循最新 Material 3 规范，提供浅色/深色模式、动态颜色和自定义调色板。你可以保存喜爱的主题方案，让笔记空间在不同场景、时间都有合适的氛围。</p>
-                                 <p class="content-en">The interface follows the latest Material 3 guidelines with light/dark modes, dynamic color, and a custom palette. Save your favorite theme presets and give your notebook the perfect mood for every moment.</p>
-                             </div>
-                             <img src="theme_setting.jpg" alt="个性化主题界面截图 / Theme Setting Screenshot" loading="lazy">
-                         </div>
-                     </div>
-                     <!-- 功能11: 多平台体验 -->
-                     <div class="feature animated" style="transition-delay: 0.9s;">
-                         <div class="feature-header">
-                             <span class="feature-icon">🌐</span>
-                             <div class="feature-title-container">
-                                 <h3 class="feature-title content-zh">多平台体验</h3>
-                                 <h3 class="feature-title content-en">Cross-Platform Experience</h3>
-                                 <span class="feature-toggle-icon">▼</span>
-                             </div>
-                         </div>
-                         <p class="short-desc content-zh">Windows、Android、iOS、Web 一致体验，数据随时随地可用...</p>
-                         <p class="short-desc content-en">Consistent Windows, Android, iOS, and Web experiences with data available anywhere...</p>
-                         <div class="feature-details">
-                             <div class="long-desc">
-                                 <p class="content-zh">针对 Windows 桌面启用了 sqflite FFI，移动端使用原生 sqflite，Web 端自动切换到内存模式，确保各个平台都能稳定运行。跨端共享主题、标签和备份方案，让你在任何设备上都能无缝继续创作。</p>
-                                 <p class="content-en">Windows desktop uses sqflite FFI, mobile relies on native sqflite, and the web switches to an in-memory strategy—every platform stays stable. Themes, tags, and backup workflows stay in sync so you can pick up your ideas on any device without missing a beat.</p>
-                             </div>
-                         </div>
-                     </div>
-                </div>
+    <!-- 功能特性 -->
+    <section class="section features-section" id="features">
+        <div class="section-header fade-in">
+            <span class="section-label">
+                <span class="content-zh">✨ 核心功能</span>
+                <span class="content-en">✨ Core Features</span>
+            </span>
+            <h2 class="section-title">
+                <span class="content-zh">为灵感而生</span>
+                <span class="content-en">Built for Inspiration</span>
+            </h2>
+            <p class="section-description">
+                <span class="content-zh">从富文本编辑到 AI 智能分析，ThoughtEcho 提供一切你需要的工具</span>
+                <span class="content-en">From rich text editing to AI analysis, ThoughtEcho provides everything you need</span>
+            </p>
+        </div>
+
+        <div class="features-grid">
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">✍️</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">富文本笔记</span>
+                    <span class="content-en">Rich Text Notes</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">强大的富文本编辑器，支持文字格式化、图片、音频、视频等多种媒体形式</span>
+                    <span class="content-en">Powerful rich text editor with formatting, images, audio, video & more</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">支持富文本、多媒体附件</span><span class="content-en">Rich text & media attachments</span></li>
+                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
+                    <li><span class="content-zh">智能内存管理</span><span class="content-en">Smart memory management</span></li>
+                    <li><span class="content-zh">双格式存储备份</span><span class="content-en">Dual-format storage</span></li>
+                </ul>
             </div>
-        </section>
 
-        <section id="roadmap" class="section">
-            <div class="container">
-                <div class="section-title-container animated">
-                    <h2 class="content-zh">发展路线图</h2>
-                    <h2 class="content-en">Development Roadmap</h2>
-                    <p class="section-subtitle content-zh">了解我们的开发计划和未来方向。</p>
-                    <p class="section-subtitle content-en">Learn about our development plans and future direction.</p>
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🤖</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">AI 助手</span>
+                    <span class="content-en">AI Assistant</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">基于笔记上下文的智能问答、内容润色、每日灵感提示</span>
+                    <span class="content-en">Context-aware Q&A, content polishing, daily inspiration prompts</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">笔记上下文问答</span><span class="content-en">Context-aware Q&A</span></li>
+                    <li><span class="content-zh">内容智能润色</span><span class="content-en">Smart content polishing</span></li>
+                    <li><span class="content-zh">每日灵感提示</span><span class="content-en">Daily inspiration</span></li>
+                    <li><span class="content-zh">多AI服务商支持</span><span class="content-en">Multi-AI provider support</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">📊</span>
+                <h3 class="feature-title">洞察与报告</h3>
+                <p class="feature-description">
+                    AI 周期洞察、年度报告、写作趋势分析
+                </p>
+                <ul class="feature-list">
+                    <li>AI 周期洞察</li>
+                    <li>年度报告生成</li>
+                    <li>写作趋势分析</li>
+                    <li>数据可视化</li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">📊</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">洞察与报告</span>
+                    <span class="content-en">Insights & Reports</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">AI 周期洞察、年度报告与写作趋势分析</span>
+                    <span class="content-en">AI periodic insights, annual reports & writing trend analysis</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">AI 周期洞察</span><span class="content-en">AI periodic insights</span></li>
+                    <li><span class="content-zh">年度报告生成</span><span class="content-en">Annual report generation</span></li>
+                    <li><span class="content-zh">写作趋势分析</span><span class="content-en">Writing trend analysis</span></li>
+                    <li><span class="content-zh">数据可视化</span><span class="content-en">Data visualization</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🏷️</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">标签与搜索</span>
+                    <span class="content-en">Tags & Search</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">多标签筛选、智能过滤、全文搜索</span>
+                    <span class="content-en">Multi-tag filters, smart facets, full-text search</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">多标签筛选</span><span class="content-en">Multi-tag filters</span></li>
+                    <li><span class="content-zh">智能过滤</span><span class="content-en">Smart filtering</span></li>
+                    <li><span class="content-zh">全文搜索</span><span class="content-en">Full-text search</span></li>
+                    <li><span class="content-zh">快速定位</span><span class="content-en">Quick navigation</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🎯</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">AI 卡片生成</span>
+                    <span class="content-en">AI Card Generation</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">将笔记转换为精美分享卡片</span>
+                    <span class="content-en">Convert notes into beautiful shareable cards</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">智能排版设计</span><span class="content-en">Smart layout design</span></li>
+                    <li><span class="content-zh">多种模板风格</span><span class="content-en">Multiple templates</span></li>
+                    <li><span class="content-zh">一键导出分享</span><span class="content-en">One-click export</span></li>
+                    <li><span class="content-zh">自定义样式</span><span class="content-en">Custom styles</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">📦</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">媒体与备份中心</span>
+                    <span class="content-en">Media & Backup Hub</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">流式处理大文件，完整备份恢复系统</span>
+                    <span class="content-en">Stream large files safely with backup/restore peace of mind</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
+                    <li><span class="content-zh">ZIP 格式完整备份</span><span class="content-en">ZIP format backup</span></li>
+                    <li><span class="content-zh">一键恢复数据</span><span class="content-en">One-click restore</span></li>
+                    <li><span class="content-zh">媒体文件管理</span><span class="content-en">Media file management</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🌍</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">情境记录</span>
+                    <span class="content-en">Context Capture</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">自动保存位置、天气与时间段信息</span>
+                    <span class="content-en">Auto-save location, weather, and time-of-day context</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">自动保存位置</span><span class="content-en">Auto-save location</span></li>
+                    <li><span class="content-zh">天气信息记录</span><span class="content-en">Weather tracking</span></li>
+                    <li><span class="content-zh">时间段标记</span><span class="content-en">Time-of-day tags</span></li>
+                    <li><span class="content-zh">情境智能分析</span><span class="content-en">Context analysis</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">🧠</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">智能内存管理</span>
+                    <span class="content-en">Intelligent Memory</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">动态调节批量处理，避免内存溢出</span>
+                    <span class="content-en">Adaptive batching to prevent memory spikes</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">动态内存调节</span><span class="content-en">Dynamic memory tuning</span></li>
+                    <li><span class="content-zh">批量处理优化</span><span class="content-en">Batch optimization</span></li>
+                    <li><span class="content-zh">防止内存溢出</span><span class="content-en">OOM prevention</span></li>
+                    <li><span class="content-zh">性能自动优化</span><span class="content-en">Auto performance tuning</span></li>
+                </ul>
+            </div>
+
+            <div class="sticky-note fade-in">
+                <span class="feature-icon">⚡</span>
+                <h3 class="feature-title">
+                    <span class="content-zh">快速捕获</span>
+                    <span class="content-en">Quick Capture</span>
+                </h3>
+                <p class="feature-description">
+                    <span class="content-zh">剪贴板检测、一言与每日灵感</span>
+                    <span class="content-en">Clipboard watcher, Hitokoto quotes, daily prompts on tap</span>
+                </p>
+                <ul class="feature-list">
+                    <li><span class="content-zh">剪贴板检测</span><span class="content-en">Clipboard watch</span></li>
+                    <li><span class="content-zh">一言语录集成</span><span class="content-en">Hitokoto integration</span></li>
+                    <li><span class="content-zh">每日灵感推送</span><span class="content-en">Daily inspiration</span></li>
+                    <li><span class="content-zh">快速笔记入口</span><span class="content-en">Quick note entry</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 应用截图 -->
+    <section class="section screenshots-section" id="screenshots">
+        <div class="section-header fade-in">
+            <span class="section-label">
+                <span class="content-zh">📸 应用展示</span>
+                <span class="content-en">📸 Screenshots</span>
+            </span>
+            <h2 class="section-title">
+                <span class="content-zh">精美界面设计</span>
+                <span class="content-en">Beautiful Interface Design</span>
+            </h2>
+            <p class="section-description">
+                <span class="content-zh">Material 3 现代化设计语言，流畅的用户体验</span>
+                <span class="content-en">Material 3 modern design language, smooth user experience</span>
+            </p>
+        </div>
+
+        <div class="screenshots-grid">
+            <div class="screenshot-item fade-in">
+                <div class="screenshot-image">
+                    <img src="homepage.jpg" alt="Homepage" onclick="openModal(this.src, this.alt)">
                 </div>
-                <div class="roadmap-container">
-                    <div class="roadmap-timeline">
-                        <!-- 已完成 -->
-                        <div class="timeline-item animated" data-status="completed">
-                            <span class="timeline-date">已完成 ✅</span>
-                            <div class="timeline-content">
-                                <h4><span class="status completed content-zh">已完成</span><span class="status completed content-en">Completed</span> <span class="content-zh">核心功能</span><span class="content-en">Core Features</span></h4>
-                                <ul>
-                                    <li class="content-zh">富文本编辑器与多媒体支持</li>
-                                    <li class="content-en">Rich text editor with multimedia support</li>
-                                    <li class="content-zh">多AI服务商架构</li>
-                                    <li class="content-en">Multi-AI provider architecture</li>
-                                    <li class="content-zh">AI卡片生成功能</li>
-                                    <li class="content-en">AI card generation feature</li>
-                                    <li class="content-zh">大文件流式处理</li>
-                                    <li class="content-en">Large file streaming processing</li>
-                                    <li class="content-zh">智能内存管理</li>
-                                    <li class="content-en">Intelligent memory management</li>
-                                    <li class="content-zh">ZIP格式完整备份</li>
-                                    <li class="content-en">ZIP format complete backup</li>
-                                    <li class="content-zh">Material 3现代化界面</li>
-                                    <li class="content-en">Material 3 modern interface</li>
-                                    <li class="content-zh">多平台数据库适配</li>
-                                    <li class="content-en">Multi-platform database adapter</li>
-                                    <li class="content-zh">位置与天气记录</li>
-                                    <li class="content-en">Location & weather recording</li>
-                                    <li class="content-zh">剪贴板智能检测</li>
-                                    <li class="content-en">Smart clipboard detection</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <!-- 进行中（2024 Q4） -->
-                        <div class="timeline-item animated" data-status="in-progress">
-                            <span class="timeline-date">2024 Q4 🚧</span>
-                            <div class="timeline-content">
-                                <h4><span class="status in-progress content-zh">进行中</span><span class="status in-progress content-en">In Progress</span> <span class="content-zh">优化提升</span><span class="content-en">Optimization</span></h4>
-                                <ul>
-                                    <li class="content-zh">AI年度报告生成</li>
-                                    <li class="content-en">AI annual report generation</li>
-                                    <li class="content-zh">笔记内容智能分析</li>
-                                    <li class="content-en">Smart note content analysis</li>
-                                    <li class="content-zh">性能优化与稳定性提升</li>
-                                    <li class="content-en">Performance optimization & stability</li>
-                                    <li class="content-zh">用户体验改进</li>
-                                    <li class="content-en">User experience improvements</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <!-- 计划中（2025 Q1） -->
-                        <div class="timeline-item animated" data-status="planned">
-                            <span class="timeline-date">2025 Q1 📅</span>
-                            <div class="timeline-content">
-                                <h4><span class="status planned content-zh">计划中</span><span class="status planned content-en">Planned</span> <span class="content-zh">功能增强</span><span class="content-en">Feature Enhancement</span></h4>
-                                <ul>
-                                    <li class="content-zh">自然语言搜索增强</li>
-                                    <li class="content-en">Enhanced natural language search</li>
-                                    <li class="content-zh">AI聊天对话功能</li>
-                                    <li class="content-en">AI chat conversation feature</li>
-                                    <li class="content-zh">地图选点添加位置</li>
-                                    <li class="content-en">Map location selection</li>
-                                    <li class="content-zh">笔记分类管理优化</li>
-                                    <li class="content-en">Note categorization optimization</li>
-                                    <li class="content-zh">高级搜索功能</li>
-                                    <li class="content-en">Advanced search features</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <!-- 长期规划 -->
-                        <div class="timeline-item animated" data-status="planned">
-                            <span class="timeline-date">长期规划 💡</span>
-                            <div class="timeline-content">
-                                <h4><span class="status planned content-zh">长期</span><span class="status planned content-en">Long Term</span> <span class="content-zh">未来扩展</span><span class="content-en">Future Expansion</span></h4>
-                                <ul>
-                                    <li class="content-zh">离线AI分析能力</li>
-                                    <li class="content-en">Offline AI analysis capability</li>
-                                    <li class="content-zh">多设备实时同步</li>
-                                    <li class="content-en">Multi-device real-time sync</li>
-                                    <li class="content-zh">高级数据可视化</li>
-                                    <li class="content-en">Advanced data visualization</li>
-                                    <li class="content-zh">桌面端独立应用</li>
-                                    <li class="content-en">Standalone desktop app</li>
-                                    <li class="content-zh">更多AI集成服务</li>
-                                    <li class="content-en">More AI service integrations</li>
-                                    <li class="content-zh">数据导出与迁移工具</li>
-                                    <li class="content-en">Data export & migration tools</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="roadmap-footer animated">
-                        <p class="content-zh">路线图会根据用户反馈和开发进度动态调整。</p>
-                        <p class="content-en">The roadmap is subject to change based on user feedback and development progress.</p>
+                <div class="screenshot-content">
+                    <h4>
+                        <span class="content-zh">📱 优雅的主页展示</span>
+                        <span class="content-en">📱 Elegant Homepage</span>
+                    </h4>
+                    <p>
+                        <span class="content-zh">简洁优雅的笔记列表界面，一目了然查看所有灵感记录。支持时间线、网格等多种视图模式，让你的思绪井然有序。</span>
+                        <span class="content-en">Clean and elegant note list interface to view all inspiration records at a glance. Supports multiple view modes including timeline and grid for organized thoughts.</span>
+                    </p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">
+                            <span class="content-zh">多视图模式</span>
+                            <span class="content-en">Multiple Views</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">快速搜索</span>
+                            <span class="content-en">Quick Search</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">智能排序</span>
+                            <span class="content-en">Smart Sorting</span>
+                        </span>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <section id="guide" class="section">
-            <div class="container">
-                <div class="section-title-container animated"></div>
-                    <h2 class="content-zh">快速上手</h2>
-                    <h2 class="content-en">Quick Start Guide</h2>
-                    <p class="section-subtitle content-zh">简单几步，开始使用心迹记录你的想法。</p>
-                    <p class="section-subtitle content-en">Start using ThoughtEcho to record your ideas in just a few simple steps.</p>
+            <div class="screenshot-item fade-in">
+                <div class="screenshot-image">
+                    <img src="add.jpg" alt="Add/Edit Note" onclick="openModal(this.src, this.alt)">
+                </div>
+                <div class="screenshot-content">
+                    <h4>
+                        <span class="content-zh">✏️ 强大的富文本编辑</span>
+                        <span class="content-en">✏️ Powerful Rich Text Editor</span>
+                    </h4>
+                    <p>
+                        <span class="content-zh">专业级富文本编辑体验，支持文字格式化、图片、音频、视频等多种媒体。让每一个想法都能以最合适的方式呈现。</span>
+                        <span class="content-en">Professional-grade rich text editing with formatting, images, audio, video & more. Express every idea in the most suitable way.</span>
+                    </p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">
+                            <span class="content-zh">富文本格式</span>
+                            <span class="content-en">Rich Formatting</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">多媒体支持</span>
+                            <span class="content-en">Media Support</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">自动保存</span>
+                            <span class="content-en">Auto Save</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <div class="screenshot-image">
+                    <img src="tags.jpg" alt="Tag Management" onclick="openModal(this.src, this.alt)">
+                </div>
+                <div class="screenshot-content">
+                    <h4>
+                        <span class="content-zh">🏷️ 灵活的标签系统</span>
+                        <span class="content-en">🏷️ Flexible Tag System</span>
+                    </h4>
+                    <p>
+                        <span class="content-zh">用标签为思绪分类，支持多标签筛选、自定义颜色、智能组织。轻松找到任何时刻的灵感记录。</span>
+                        <span class="content-en">Categorize your thoughts with tags. Multi-tag filtering, custom colors, smart organization. Find any inspiration effortlessly.</span>
+                    </p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">
+                            <span class="content-zh">多标签分类</span>
+                            <span class="content-en">Multi-Tag</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">自定义颜色</span>
+                            <span class="content-en">Custom Colors</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">智能筛选</span>
+                            <span class="content-en">Smart Filter</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <div class="screenshot-image">
+                    <img src="theme_setting.jpg" alt="Theme Settings" onclick="openModal(this.src, this.alt)">
+                </div>
+                <div class="screenshot-content">
+                    <h4>
+                        <span class="content-zh">🎨 个性化主题定制</span>
+                        <span class="content-en">🎨 Personalized Themes</span>
+                    </h4>
+                    <p>
+                        <span class="content-zh">丰富的主题选择，从色彩到字体全方位自定义。Material 3 动态配色，让界面随心而变。</span>
+                        <span class="content-en">Rich theme options with comprehensive customization from colors to fonts. Material 3 dynamic theming for a personalized interface.</span>
+                    </p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">
+                            <span class="content-zh">多主题切换</span>
+                            <span class="content-en">Multi-Theme</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">动态配色</span>
+                            <span class="content-en">Dynamic Colors</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">暗黑模式</span>
+                            <span class="content-en">Dark Mode</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <div class="screenshot-image">
+                    <img src="choose_yiyan.jpg" alt="Hitokoto Types" onclick="openModal(this.src, this.alt)">
+                </div>
+                <div class="screenshot-content">
+                    <h4>
+                        <span class="content-zh">💬 每日灵感一言</span>
+                        <span class="content-en">💬 Daily Inspiration</span>
+                    </h4>
+                    <p>
+                        <span class="content-zh">每天一句精选句子，为你的灵感添加养分。支持多种类型选择，从动漫到诗词，总有一款触动你心。</span>
+                        <span class="content-en">A curated sentence every day to nourish your inspiration. Multiple categories from anime to poetry, something for everyone.</span>
+                    </p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">
+                            <span class="content-zh">每日更新</span>
+                            <span class="content-en">Daily Update</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">多种类型</span>
+                            <span class="content-en">Various Types</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">一键收藏</span>
+                            <span class="content-en">Quick Save</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screenshot-item fade-in">
+                <div class="screenshot-image">
+                    <img src="settingpage.jpg" alt="Settings & Backup" onclick="openModal(this.src, this.alt)">
+                </div>
+                <div class="screenshot-content">
+                    <h4>
+                        <span class="content-zh">⚙️ 全面的设置与备份</span>
+                        <span class="content-en">⚙️ Comprehensive Settings</span>
+                    </h4>
+                    <p>
+                        <span class="content-zh">完整的设置选项，支持数据备份恢复、AI 配置、个性化设定。你的数据，你做主。</span>
+                        <span class="content-en">Complete settings options with data backup/restore, AI configuration, and personalization. Your data, your control.</span>
+                    </p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">
+                            <span class="content-zh">数据备份</span>
+                            <span class="content-en">Data Backup</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">AI 配置</span>
+                            <span class="content-en">AI Config</span>
+                        </span>
+                        <span class="feature-tag">
+                            <span class="content-zh">隐私保护</span>
+                            <span class="content-en">Privacy</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 模态框 -->
+    <div class="modal" id="imageModal" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="modal-close" onclick="closeModal()">×</span>
+            <img id="modalImage" src="" alt="预览">
+        </div>
+    </div>
+
+    <!-- 技术栈 -->
+    <section class="section tech-section" id="tech">
+        <div class="section-header fade-in">
+            <span class="section-label">🛠️ 技术实力</span>
+            <h2 class="section-title">现代化技术栈</h2>
+            <p class="section-description">
+                基于 Flutter 构建的跨平台应用，结合先进的 AI 技术
+            </p>
+        </div>
+
+        <div class="tech-grid">
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">📱</div>
+                <div class="tech-info">
+                    <h4>Flutter (Dart)</h4>
+                    <p>跨平台UI框架</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">⚙️</div>
+                <div class="tech-info">
+                    <h4>provider, get_it</h4>
+                    <p>依赖注入与状态管理</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🗄️</div>
+                <div class="tech-info">
+                    <h4>sqflite</h4>
+                    <p>本地数据库存储</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">📝</div>
+                <div class="tech-info">
+                    <h4>flutter_quill</h4>
+                    <p>富文本编辑器</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🤖</div>
+                <div class="tech-info">
+                    <h4>多AI集成</h4>
+                    <p>OpenAI、Anthropic、DeepSeek</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">💾</div>
+                <div class="tech-info">
+                    <h4>MMKV</h4>
+                    <p>高性能存储</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🔒</div>
+                <div class="tech-info">
+                    <h4>flutter_secure_storage</h4>
+                    <p>安全存储</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🎬</div>
+                <div class="tech-info">
+                    <h4>多媒体处理</h4>
+                    <p>大文件流式处理、智能内存管理</p>
+                </div>
+            </div>
+
+            <div class="tech-tag fade-in">
+                <div class="tech-icon">🌐</div>
+                <div class="tech-info">
+                    <h4>全平台支持</h4>
+                    <p>Windows、Android、iOS、Web</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 快速开始 -->
+    <section class="section quickstart-section" id="quickstart">
+        <div class="section-header fade-in">
+            <span class="section-label">🚀 快速开始</span>
+            <h2 class="section-title">五步上手</h2>
+            <p class="section-description">
+                简单几步，即可开始使用 ThoughtEcho
+            </p>
+        </div>
+
+        <div class="quickstart-container">
+            <div class="quickstart-steps fade-in">
+                <div class="step">
+                    <h3><span class="step-number">1</span> 环境准备</h3>
+                    <p>确保已安装 Flutter 3.x+ 环境。运行以下命令检查配置：</p>
+                    <pre><code>flutter doctor</code></pre>
                 </div>
 
-                <div class="guide-section animated">
-                    <h3 class="content-zh">安装与运行</h3>
-                    <h3 class="content-en">Installation & Running</h3>
-                    <ol>
-                        <li class="content-zh">前往 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank">GitHub Releases</a> 页面下载适合你平台的最新版本。</li>
-                        <li class="content-en">Go to the <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank">GitHub Releases</a> page to download the latest version for your platform.</li>
-                        <li class="content-zh">根据你的操作系统进行安装或直接运行。</li>
-                        <li class="content-en">Install or run the application according to your operating system.</li>
-                        <li class="content-zh">(可选) 如果你想自行构建，请确保已安装 Flutter 环境，然后运行以下命令：</li>
-                        <li class="content-en">(Optional) If you want to build it yourself, ensure you have the Flutter environment set up, then run the following commands:</li>
-                    </ol>
+                <div class="step">
+                    <h3><span class="step-number">2</span> 获取代码</h3>
+                    <p>从 GitHub 克隆项目到本地：</p>
                     <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
-cd ThoughtEcho
-flutter pub get
-flutter run</code></pre>
+cd ThoughtEcho</code></pre>
                 </div>
 
-                <div class="guide-section animated" style="transition-delay: 0.1s;">
-                    <h3 class="content-zh">基本操作</h3>
-                    <h3 class="content-en">Basic Operations</h3>
-                    <ul>
-                        <li class="content-zh"><strong>创建笔记</strong>：点击主页右下角的 '+' 按钮。</li>
-                        <li class="content-en"><strong>Create Note</strong>: Click the '+' button on the bottom right of the homepage.</li>
-                        <li class="content-zh"><strong>编辑笔记</strong>：在笔记列表或笔记详情页点击笔记内容。</li>
-                        <li class="content-en"><strong>Edit Note</strong>: Click on the note content in the list or detail view.</li>
-                        <li class="content-zh"><strong>添加标签</strong>：在笔记编辑页面，点击标签图标进行添加或管理。</li>
-                        <li class="content-en"><strong>Add Tags</strong>: In the note editing page, click the tag icon to add or manage tags.</li>
-                        <li class="content-zh"><strong>切换主题</strong>：在设置页面选择浅色、深色模式或自定义颜色。</li>
-                        <li class="content-en"><strong>Switch Theme</strong>: Choose light, dark mode, or custom colors in the settings page.</li>
-                        <li class="content-zh"><strong>备份恢复</strong>：在设置页面找到备份与恢复选项。</li>
-                        <li class="content-en"><strong>Backup/Restore</strong>: Find backup and restore options in the settings page.</li>
-                        <li class="content-zh"><strong>查看功能详情</strong>：在"核心功能"区域点击卡片即可展开。</li>
-                        <li class="content-en"><strong>View Feature Details</strong>: Click on a card in the "Core Features" section to expand it.</li>
-                    </ul>
+                <div class="step">
+                    <h3><span class="step-number">3</span> 安装依赖</h3>
+                    <p>安装项目所需的所有依赖包：</p>
+                    <pre><code>flutter pub get</code></pre>
                 </div>
 
-                <div class="guide-buttons animated" style="transition-delay: 0.2s;">
-                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank" class="cta-button">
-                        <span class="content-zh">报告问题</span>
-                        <span class="content-en">Report an Issue</span>
-                    </a>
-                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" class="cta-button">
-                         <span class="content-zh">查看源码</span>
-                         <span class="content-en">View Source Code</span>
-                    </a>
+                <div class="step">
+                    <h3><span class="step-number">4</span> 运行应用</h3>
+                    <p>在模拟器或真机上运行应用：</p>
+                    <pre><code>flutter run</code></pre>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">5</span> AI 功能配置（可选）</h3>
+                    <p>在应用设置中配置 API Key 以启用 AI 功能。支持 OpenAI、Anthropic、DeepSeek 等多种 AI 服务商。</p>
                 </div>
             </div>
-        </section>
-    </main>
+        </div>
+    </section>
 
+    <!-- 路线图 -->
+    <section class="section roadmap-section" id="roadmap">
+        <div class="section-header fade-in">
+            <span class="section-label">🗺️ 发展规划</span>
+            <h2 class="section-title">持续进化中</h2>
+            <p class="section-description">
+                我们正在不断完善和扩展 ThoughtEcho 的功能
+            </p>
+        </div>
+
+        <div class="roadmap-container">
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">✅</span>
+                    <h3 class="roadmap-title">已完成</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>富文本编辑器与多媒体支持</li>
+                    <li>多AI服务商架构</li>
+                    <li>AI卡片生成功能</li>
+                    <li>大文件流式处理</li>
+                    <li>智能内存管理</li>
+                    <li>ZIP格式完整备份</li>
+                    <li>Material 3现代化界面</li>
+                    <li>多平台数据库适配</li>
+                    <li>位置与天气记录</li>
+                    <li>剪贴板智能检测</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">🚧</span>
+                    <h3 class="roadmap-title">进行中 (2024 Q4)</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>AI年度报告生成</li>
+                    <li>笔记内容智能分析</li>
+                    <li>性能优化与稳定性提升</li>
+                    <li>用户体验改进</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">🔥</span>
+                    <h3 class="roadmap-title">计划中 (2025 Q1-Q2)</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>智能语音输入 (长按加号)</li>
+                    <li>AI自然语言
+搜索</li>
+                    <li>OCR智能摘录</li>
+                    <li>AI智能提取作者出处</li>
+                    <li>多语言支持</li>
+                    <li>3D仿真笔记本界面</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-card fade-in">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">💡</span>
+                    <h3 class="roadmap-title">长期规划 (2025 H2)</h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li>端侧AI能力</li>
+                    <li>多设备实时同步</li>
+                    <li>团队协作功能</li>
+                    <li>高级数据可视化</li>
+                    <li>桌面端独立应用</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="cta-content fade-in">
+            <h2>
+                <span class="content-zh">让我们一起随心记录</span>
+                <span class="content-en">Let's Record Our Thoughts Freely</span>
+            </h2>
+            <p>
+                <span class="content-zh">开启你的灵感摘录之旅，让 AI 助你发现思维脉络</span>
+                <span class="content-en">Start your inspiration journey, let AI help you discover your thought patterns</span>
+            </p>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-cta">
+                <span class="content-zh">🚀 立即下载</span>
+                <span class="content-en">🚀 Download Now</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
     <footer>
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-section animated">
-                    <h3 class="content-zh">关于心迹</h3>
-                    <h3 class="content-en">About ThoughtEcho</h3>
-                    <p class="content-zh">一款简洁高效的 Flutter 应用，旨在帮助用户捕捉、整理和深化思考。</p>
-                    <p class="content-en">A clean and efficient Flutter app designed to help users capture, organize, and deepen their thoughts.</p>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <h3>
+                        <span class="content-zh">心迹 ThoughtEcho</span>
+                        <span class="content-en">ThoughtEcho</span>
+                    </h3>
+                    <p>
+                        <span class="content-zh">你的专属灵感摘录本</span>
+                        <span class="content-en">Your Personal Inspiration Notebook</span>
+                    </p>
+                    <div class="social-links">
+                        <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" class="social-link" aria-label="GitHub">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                            </svg>
+                        </a>
+                    </div>
                 </div>
-                <div class="footer-section animated" style="transition-delay: 0.1s;">
-                    <h3 class="content-zh">相关链接</h3>
-                    <h3 class="content-en">Related Links</h3>
-                    <ul>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub Repo</a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank"><span class="content-zh">下载发布版</span><span class="content-en">Downloads</span></a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank"><span class="content-zh">问题反馈</span><span class="content-en">Issue Tracker</span></a></li>
-                        <li><a href="https://flutter.dev" target="_blank">Flutter</a></li>
+
+                <div class="footer-section">
+                    <h4>
+                        <span class="content-zh">快速链接</span>
+                        <span class="content-en">Quick Links</span>
+                    </h4>
+                    <ul class="footer-links">
+                        <li><a href="#features"><span class="content-zh">功能特性</span><span class="content-en">Features</span></a></li>
+                        <li><a href="#screenshots"><span class="content-zh">应用截图</span><span class="content-en">Screenshots</span></a></li>
+                        <li><a href="#tech"><span class="content-zh">技术栈</span><span class="content-en">Tech Stack</span></a></li>
+                        <li><a href="privacy.html"><span class="content-zh">隐私政策</span><span class="content-en">Privacy Policy</span></a></li>
                     </ul>
                 </div>
-                <div class="footer-section animated" style="transition-delay: 0.2s;">
-                    <h3 class="content-zh">联系我</h3>
-                    <h3 class="content-en">Contact Me</h3>
-                    <ul>
-                         <li><a href="https://github.com/Shangjin-Xiao" target="_blank">GitHub Profile</a></li>
+
+                <div class="footer-section">
+                    <h4>
+                        <span class="content-zh">资源</span>
+                        <span class="content-en">Resources</span>
+                    </h4>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho"><span class="content-zh">GitHub 仓库</span><span class="content-en">GitHub Repo</span></a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><span class="content-zh">下载</span><span class="content-en">Releases</span></a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues"><span class="content-zh">反馈问题</span><span class="content-en">Issues</span></a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE"><span class="content-zh">许可证</span><span class="content-en">License</span></a></li>
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom animated" style="transition-delay: 0.3s;"></div>
-                <p>&copy; <span id="currentYear"></span> Shangjin-Xiao. All Rights Reserved.</p>
+
+            <div class="footer-bottom">
+                <p>
+                    © 2024 ThoughtEcho. 
+                    <span class="content-zh">基于</span><span class="content-en">Licensed under</span> 
+                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">MIT</a> 
+                    <span class="content-zh">许可证</span><span class="content-en">License</span>
+                </p>
             </div>
         </div>
     </footer>
 
-     <!-- 图片模态框 -->
-     <div class="modal" id="imageModal">
-         <button class="modal-close" id="modalCloseBtn" aria-label="关闭">&times;</button>
-         <div class="modal-content">
-             <div class="modal-image-container">
-                 <div class="modal-spinner"></div> <!-- Spinner added -->
-                 <img src="" alt="放大后的图片" class="modal-image" id="modalImage">
-             </div>
-             <div class="modal-caption" id="modalCaption"></div>
-         </div>
-     </div>
-
-     <!-- 返回顶部按钮 -->
-     <div class="floating-controls">
-        <button class="control-button" id="backToTopBtn" aria-label="返回顶部"></button>
-     </div>
-
-
     <script>
-        // --- 页面加载与入场动画 ---
-        window.addEventListener('load', () => {
-            addScrollIndicator();
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            if(loadingOverlay) loadingOverlay.classList.add('fade-out');
-            const animatedElements = document.querySelectorAll('.animated');
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.1 });
-
-            animatedElements.forEach(el => {
-                observer.observe(el);
-            });
-        });
-
-        // --- 移动端菜单 ---
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const navLinks = document.getElementById('navLinks');
-        if(mobileMenuBtn && navLinks){
-            mobileMenuBtn.addEventListener('click', () => {
-                navLinks.classList.toggle('active');
-            });
-            navLinks.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', () => {
-                    navLinks.classList.remove('active');
-                });
-            });
-        }
-
-
-        // --- 主题切换 ---
-        const themeSwitch = document.getElementById('themeSwitch');
+        // 主题切换
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
         const body = document.body;
-        const currentTheme = localStorage.getItem('theme');
-
-        function setTheme(theme) {
-            if (theme === 'dark') {
-                body.classList.add('dark-theme');
-                if(themeSwitch) themeSwitch.textContent = '☀️';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                body.classList.remove('dark-theme');
-                 if(themeSwitch) themeSwitch.textContent = '🌙';
-                localStorage.setItem('theme', 'light');
-            }
-        }
-
-        if (currentTheme) {
-            setTheme(currentTheme);
-        } else {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            setTheme(prefersDark ? 'dark' : 'light');
-        }
-
-        if(themeSwitch) {
-            themeSwitch.addEventListener('click', () => {
-                const newTheme = body.classList.contains('dark-theme') ? 'light' : 'dark';
-                setTheme(newTheme);
-            });
-        }
-
-
-        // --- 语言切换 ---
-        const langSwitch = document.getElementById('langSwitch');
         const html = document.documentElement;
 
-        function setLanguage(lang) {
-            html.lang = lang === 'zh-CN' ? 'zh-CN' : 'en';
-            body.classList.toggle('lang-en', lang === 'en');
-            body.classList.toggle('lang-zh', lang === 'zh-CN');
-            if(langSwitch) langSwitch.textContent = lang === 'en' ? '中' : 'En';
-            localStorage.setItem('language', lang);
+        // 从本地存储加载主题
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            html.setAttribute('data-theme', 'dark');
+            themeIcon.textContent = '☀️';
         }
 
-        const currentLang = localStorage.getItem('language') || 'zh-CN';
-        setLanguage(currentLang);
-
-        if(langSwitch) {
-            langSwitch.addEventListener('click', () => {
-                const newLang = body.classList.contains('lang-en') ? 'zh-CN' : 'en';
-                setLanguage(newLang);
-            });
-        }
-
-
-        // --- 页脚年份 ---
-        const currentYearEl = document.getElementById('currentYear');
-        if(currentYearEl) {
-            currentYearEl.textContent = new Date().getFullYear();
-        }
-
-
-        // --- 功能特性展开/收起 ---
-        const featuresContainer = document.querySelector('.features');
-        if (featuresContainer) {
-            featuresContainer.addEventListener('click', (event) => {
-                const featureElement = event.target.closest('.feature');
-                 if (event.target.tagName === 'IMG' && event.target.closest('.feature-details')) {
-                     return; // Don't toggle card if clicking image inside details
-                 }
-
-                if (featureElement) {
-                    // Close other expanded features (optional)
-                    // featuresContainer.querySelectorAll('.feature.expanded').forEach(openFeature => {
-                    //     if (openFeature !== featureElement) {
-                    //         openFeature.classList.remove('expanded');
-                    //     }
-                    // });
-                    featureElement.classList.toggle('expanded');
-                }
-            });
-        }
-
-
-        // --- 图片模态框 - Optimized with Loading State ---
-        const imageModal = document.getElementById('imageModal');
-        const modalContent = imageModal ? imageModal.querySelector('.modal-content') : null; // Get content element
-        const modalImage = document.getElementById('modalImage');
-        const modalCaption = document.getElementById('modalCaption');
-        const modalCloseBtn = document.getElementById('modalCloseBtn');
-
-        document.querySelectorAll('.feature-details img').forEach(img => {
-            img.style.cursor = 'zoom-in';
-            img.addEventListener('click', (e) => {
-                 e.stopPropagation();
-                 if (!imageModal || !modalContent || !modalImage || !modalCaption) return; // Safety check
-
-                 modalCaption.textContent = img.alt; // Set caption immediately
-                 modalContent.classList.add('loading'); // Show spinner
-                 modalImage.style.opacity = '0'; // Hide image initially
-
-                 // Preload image
-                 const tempImage = new Image();
-                 tempImage.onload = () => {
-                     modalImage.src = tempImage.src;
-                     modalContent.classList.remove('loading'); // Hide spinner
-                     modalImage.style.opacity = '1'; // Show image
-                 };
-                 tempImage.onerror = () => {
-                     // Handle image loading error (optional)
-                     modalCaption.textContent = "Error loading image.";
-                     modalContent.classList.remove('loading');
-                 };
-                 tempImage.src = img.src; // Start loading
-
-                 imageModal.classList.add('show'); // Show modal background
-             });
+        themeToggle.addEventListener('click', () => {
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                html.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '��';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
         });
 
+        // 语言切换
+        const langToggle = document.getElementById('langToggle');
+        const langText = document.getElementById('langText');
+        
+        // 从本地存储加载语言
+        const currentLang = localStorage.getItem('lang') || 'zh';
+        body.classList.add(`lang-${currentLang}`);
+        langText.textContent = currentLang === 'zh' ? 'EN' : '中文';
+
+        langToggle.addEventListener('click', () => {
+            const isZh = body.classList.contains('lang-zh');
+            if (isZh) {
+                body.classList.remove('lang-zh');
+                body.classList.add('lang-en');
+                langText.textContent = '中文';
+                localStorage.setItem('lang', 'en');
+            } else {
+                body.classList.remove('lang-en');
+                body.classList.add('lang-zh');
+                langText.textContent = 'EN';
+                localStorage.setItem('lang', 'zh');
+            }
+        });
+
+        // 移动端菜单
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // 点击导航链接后关闭菜单
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+            });
+        });
+
+        // 图片模态框
+        function openModal(src, alt) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            
+            modal.classList.add('active');
+            modalImage.src = src;
+            if (modalCaption && alt) {
+                modalCaption.textContent = alt;
+            }
+        }
 
         function closeModal() {
-            if(imageModal) imageModal.classList.remove('show');
-            // Reset image src to prevent showing old image briefly on next open (optional)
-            // if(modalImage) modalImage.src = "";
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
         }
 
-        if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
-        if(imageModal) {
-            imageModal.addEventListener('click', (e) => {
-                if (e.target === imageModal) { // Click on background
-                    closeModal();
-                }
-            });
-        }
-
-
-        // --- 返回顶部按钮 ---
-        const backToTopBtn = document.getElementById('backToTopBtn');
-
-        window.addEventListener('scroll', () => {
-             if(!backToTopBtn) return;
-            if ((window.pageYOffset || document.documentElement.scrollTop) > 300) { // More robust scroll check
-                backToTopBtn.classList.add('visible');
-            } else {
-                backToTopBtn.classList.remove('visible');
+        // ESC 键关闭模态框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
             }
         });
 
-        if(backToTopBtn) {
-             backToTopBtn.addEventListener('click', () => {
-                 window.scrollTo({ top: 0, behavior: 'smooth' });
-             });
-        }
-
-        // --- 导航链接高亮 ---
-        const sections = document.querySelectorAll('main section[id]');
-        const navLi = document.querySelectorAll('.nav-links a');
-
-        function updateActiveNav() {
-            let current = '';
-            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-            const offset = 100; // Offset for activation point
-
-            // Find current section based on scroll position
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                const sectionHeight = section.offsetHeight;
-                if (scrollPosition >= sectionTop - offset && scrollPosition < sectionTop + sectionHeight - offset) {
-                    current = section.getAttribute('id');
-                }
-            });
-
-            // Handle header/overview section separately
-            const header = document.getElementById('overview');
-            if (header && scrollPosition < header.offsetTop + header.offsetHeight - offset) {
-                current = 'overview';
-            }
-
-            // Update active class on nav links
-            let activeLinkFound = false;
-            navLi.forEach(a => {
-                const href = a.getAttribute('href');
-                if (href && href === `#${current}`) {
-                    a.classList.add('active');
-                    activeLinkFound = true;
-                } else {
-                    a.classList.remove('active');
-                }
-            });
-
-            // Fallback: If near top or no section matched, activate overview
-            if (!activeLinkFound && scrollPosition < sections[0]?.offsetTop - offset) {
-                 const overviewLink = document.queryselector('.nav-links a[href="#overview"]');
-                 if (overviewLink) overviewLink.classList.add('active');
-            }
-        }
-
-        window.addEventListener('scroll', updateActiveNav);
-        window.addEventListener('load', updateActiveNav);
-
-        // 添加滚动进度指示器
-        const addScrollIndicator = () => {
-            const indicator = document.createElement('div');
-            indicator.style.position = 'fixed';
-            indicator.style.top = '0';
-            indicator.style.left = '0';
-            indicator.style.height = '4px';
-            indicator.style.backgroundColor = 'var(--primary-color)';
-            indicator.style.zIndex = '2000';
-            indicator.style.width = '0%';
-            indicator.style.transition = 'width 0.1s ease';
-            document.body.appendChild(indicator);
-            
-            window.addEventListener('scroll', () => {
-                const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-                const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-                const scrolled = (scrollTop / scrollHeight) * 100;
-                indicator.style.width = scrolled + '%';
-            });
+        // 滚动动画
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
         };
 
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // 观察所有需要动画的元素
+        document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // 导航栏滚动效果
+        let lastScroll = 0;
+        const nav = document.querySelector('nav');
+
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > lastScroll && currentScroll > 100) {
+                nav.style.transform = 'translateY(-100%)';
+            } else {
+                nav.style.transform = 'translateY(0)';
+            }
+            
+            lastScroll = currentScroll;
+        });
     </script>
 </body>
 </html>
