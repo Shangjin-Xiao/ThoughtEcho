@@ -108,7 +108,9 @@ msix_config:
   msix_version: 1.0.0.0
   publisher: CN=Shangjinyun
   logo_path: windows/runner/resources/app_icon.ico
-  capabilities: internetClient, runFullTrust
+  capabilities: internetClient
+  # runFullTrust 是受限权限，MSIX 工具会自动添加到 AppxManifest.xml
+  # 不要在 capabilities 中重复定义
   languages: zh-CN, en-US
   output_name: ThoughtEcho-Setup  # 输出文件名（不含.msix扩展名）
   # 签名配置 - msix插件会自动生成测试证书
