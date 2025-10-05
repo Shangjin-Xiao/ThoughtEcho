@@ -111,7 +111,7 @@ class AppLogger {
 /// 全局日志函数，用于替换 logDebug
 void appLog(
   String message, {
-  UnifiedLogLevel level = UnifiedLogLevel.debug,
+  UnifiedLogLevel level = UnifiedLogLevel.info,
   String? source,
   Object? error,
   StackTrace? stackTrace,

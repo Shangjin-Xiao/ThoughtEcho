@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -23,7 +24,7 @@ class _LogsPageState extends State<LogsPage> {
   String? _filterSource;
   String? _searchQuery;
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
+  final FocusNode _searchFocusNode = FocusNode();
 
   // 正在加载更多日志
   bool _isLoadingMore = false;
@@ -31,11 +32,19 @@ class _LogsPageState extends State<LogsPage> {
   // 分页相关
   int _currentPage = 0;
   static const int _pageSize = 50;
+  static const int _maxHistoryLogs = 500; // 限制历史日志内存占用
   final List<LogEntry> _historyLogs = [];
   bool _hasMoreLogs = true;
 
   // 滚动控制器
   final ScrollController _scrollController = ScrollController();
+
+  // 性能优化：缓存过滤结果
+  List<LogEntry>? _cachedFilteredLogs;
+
+  // 防抖定时器
+  Timer? _searchDebounceTimer;
+  Timer? _scrollThrottleTimer;
 
   @override
   void initState() {
@@ -46,21 +55,26 @@ class _LogsPageState extends State<LogsPage> {
 
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
+    _scrollThrottleTimer?.cancel();
     _searchController.dispose();
-    _searchFocusNode.dispose(); // 清理焦点节点
+    _searchFocusNode.dispose();
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
   }
 
-  // 滚动监听器，用于加载更多日志
+  // 滚动监听器，用于加载更多日志（添加节流）
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
+    if (_scrollThrottleTimer?.isActive ?? false) return;
 
     // 当滚动到底部时加载更多历史日志
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      _loadMoreLogs();
+      _scrollThrottleTimer = Timer(const Duration(milliseconds: 200), () {
+        if (mounted) _loadMoreLogs();
+      });
     }
   }
 
@@ -95,11 +109,16 @@ class _LogsPageState extends State<LogsPage> {
           _isLoadingMore = false;
         });
       } else {
-        // 添加新加载的日志并更新页码
+        // 添加新加载的日志并更新页码，限制总数防止内存溢出
         setState(() {
           _historyLogs.addAll(moreLogs);
+          // 限制历史日志总数
+          if (_historyLogs.length > _maxHistoryLogs) {
+            _historyLogs.removeRange(0, _historyLogs.length - _maxHistoryLogs);
+          }
           _currentPage++;
           _isLoadingMore = false;
+          _invalidateCache(); // 使缓存失效
         });
       }
     } catch (e) {
@@ -129,33 +148,54 @@ class _LogsPageState extends State<LogsPage> {
       _currentPage = 0;
       _historyLogs.clear();
       _hasMoreLogs = true;
+      _invalidateCache();
     });
 
     await _loadMoreLogs();
   }
 
-  // 过滤日志
-  bool _filterLog(LogEntry log) {
-    // 级别过滤
-    if (_filterLevel != null && log.level != _filterLevel) {
-      return false;
+  // 使缓存失效
+  void _invalidateCache() {
+    _cachedFilteredLogs = null;
+  }
+
+  // 获取过滤后的日志（使用缓存优化）
+  List<LogEntry> _getFilteredLogs(List<LogEntry> memoryLogs) {
+    if (_cachedFilteredLogs != null) {
+      return _cachedFilteredLogs!;
     }
 
-    // 源过滤
-    if (_filterSource != null && _filterSource!.isNotEmpty) {
-      final source = log.source ?? '';
-      if (!source.toLowerCase().contains(_filterSource!.toLowerCase())) {
+    final allLogs = [...memoryLogs, ..._historyLogs];
+
+    // 预处理搜索文本（小写）
+    final searchLower = _searchQuery?.toLowerCase();
+    final sourceLower = _filterSource?.toLowerCase();
+
+    final filtered = allLogs.where((log) {
+      // 级别过滤
+      if (_filterLevel != null && log.level != _filterLevel) {
         return false;
       }
-    }
 
-    // 文本搜索
-    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      return log.message.toLowerCase().contains(_searchQuery!.toLowerCase()) ||
-          (log.error ?? '').toLowerCase().contains(_searchQuery!.toLowerCase());
-    }
+      // 源过滤
+      if (sourceLower != null && sourceLower.isNotEmpty) {
+        final source = log.source ?? '';
+        if (!source.toLowerCase().contains(sourceLower)) {
+          return false;
+        }
+      }
 
-    return true;
+      // 文本搜索
+      if (searchLower != null && searchLower.isNotEmpty) {
+        return log.message.toLowerCase().contains(searchLower) ||
+            (log.error ?? '').toLowerCase().contains(searchLower);
+      }
+
+      return true;
+    }).toList();
+
+    _cachedFilteredLogs = filtered;
+    return filtered;
   }
 
   // 显示日志详情对话框
@@ -408,6 +448,7 @@ class _LogsPageState extends State<LogsPage> {
           onDeleted: () {
             setState(() {
               _filterLevel = null;
+              _invalidateCache();
             });
             _refreshLogs();
           },
@@ -425,6 +466,7 @@ class _LogsPageState extends State<LogsPage> {
           onDeleted: () {
             setState(() {
               _filterSource = null;
+              _invalidateCache();
             });
             _refreshLogs();
           },
@@ -443,6 +485,7 @@ class _LogsPageState extends State<LogsPage> {
             setState(() {
               _searchQuery = null;
               _searchController.clear();
+              _invalidateCache();
             });
             _refreshLogs();
           },
@@ -477,6 +520,7 @@ class _LogsPageState extends State<LogsPage> {
                 _filterSource = null;
                 _searchQuery = null;
                 _searchController.clear();
+                _invalidateCache();
               });
               _refreshLogs();
             },
@@ -531,9 +575,11 @@ class _LogsPageState extends State<LogsPage> {
                       ? IconButton(
                           icon: const Icon(Icons.clear),
                           onPressed: () {
+                            _searchDebounceTimer?.cancel();
                             _searchController.clear();
                             setState(() {
                               _searchQuery = null;
+                              _invalidateCache();
                             });
                             _refreshLogs();
                           },
@@ -541,20 +587,26 @@ class _LogsPageState extends State<LogsPage> {
                       : null,
                 ),
                 onChanged: (value) {
+                  // 取消之前的防抖定时器
+                  _searchDebounceTimer?.cancel();
+
                   setState(() {
                     _searchQuery = value.isEmpty ? null : value;
+                    _invalidateCache();
                   });
-                  // 延迟搜索，减少频繁查询
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (_searchQuery == value) {
-                      _refreshLogs();
-                    }
+
+                  // 设置新的防抖定时器
+                  _searchDebounceTimer =
+                      Timer(const Duration(milliseconds: 300), () {
+                    if (mounted) _refreshLogs();
                   });
                 },
                 textInputAction: TextInputAction.search,
                 onSubmitted: (value) {
+                  _searchDebounceTimer?.cancel();
                   setState(() {
                     _searchQuery = value.isEmpty ? null : value;
+                    _invalidateCache();
                   });
                   _refreshLogs();
                 },
@@ -568,16 +620,12 @@ class _LogsPageState extends State<LogsPage> {
             Expanded(
               child: Consumer<UnifiedLogService>(
                 builder: (context, logService, child) {
-                  // 获取内存中的日志（实时）与历史日志
-                  final memoryLogs = logService.logs.where(_filterLog).toList();
-                  final allLogs = [
-                    ...memoryLogs,
-                    ..._historyLogs.where(_filterLog),
-                  ];
+                  // 使用缓存的过滤方法，只计算一次
+                  final filteredLogs = _getFilteredLogs(logService.logs);
 
                   return RefreshIndicator(
                     onRefresh: _refreshLogs,
-                    child: allLogs.isEmpty
+                    child: filteredLogs.isEmpty
                         ? const AppEmptyView(
                             svgAsset: 'assets/empty/empty_logs.svg',
                             text: '暂无日志',
@@ -585,12 +633,12 @@ class _LogsPageState extends State<LogsPage> {
                         : ListView.separated(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(8.0),
-                            itemCount: allLogs.length +
+                            itemCount: filteredLogs.length +
                                 (_isLoadingMore ? 1 : 0) +
                                 (_hasMoreLogs ? 1 : 0),
                             separatorBuilder: (context, index) {
                               // 确保分隔符仅用于列表项之间，不包括加载指示器
-                              if (index >= allLogs.length - 1) {
+                              if (index >= filteredLogs.length - 1) {
                                 return const SizedBox.shrink();
                               }
                               return Divider(
@@ -602,7 +650,8 @@ class _LogsPageState extends State<LogsPage> {
                             },
                             itemBuilder: (context, index) {
                               // 加载更多指示器
-                              if (_isLoadingMore && index == allLogs.length) {
+                              if (_isLoadingMore &&
+                                  index == filteredLogs.length) {
                                 return const Padding(
                                   padding: EdgeInsets.all(8.0),
                                   child: AppLoadingView(),
@@ -612,7 +661,7 @@ class _LogsPageState extends State<LogsPage> {
                               // 加载更多按钮
                               if (_hasMoreLogs &&
                                   !_isLoadingMore &&
-                                  index == allLogs.length) {
+                                  index == filteredLogs.length) {
                                 return TextButton(
                                   onPressed: _loadMoreLogs,
                                   child: const Text('加载更多日志'),
@@ -620,122 +669,15 @@ class _LogsPageState extends State<LogsPage> {
                               }
 
                               // 确保index在有效范围内
-                              if (index >= allLogs.length) {
+                              if (index >= filteredLogs.length) {
                                 return const SizedBox.shrink();
                               }
 
                               // 正常日志项
-                              final log = allLogs[index];
-                              final logColor = _getLogLevelColor(
-                                log.level,
-                                theme,
-                              );
-
-                              return InkWell(
+                              final log = filteredLogs[index];
+                              return _LogEntryItem(
+                                log: log,
                                 onTap: () => _showLogDetails(log),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8.0,
-                                    horizontal: 4.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(
-                                      AppTheme.cardRadius,
-                                    ),
-                                    border: Border.all(
-                                      color: theme.colorScheme.outline,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // 日志头部（时间和级别）
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            _getLogLevelIcon(log.level),
-                                            size: 16,
-                                            color: logColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            log.level.name.toUpperCase(),
-                                            style: theme.textTheme.labelSmall
-                                                ?.copyWith(
-                                              color: logColor,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          if (log.source != null &&
-                                              log.source!.isNotEmpty)
-                                            Expanded(
-                                              child: Text(
-                                                '[${log.source}]',
-                                                style: theme
-                                                    .textTheme.labelSmall
-                                                    ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme.onSurface
-                                                      .applyOpacity(
-                                                    0.7,
-                                                  ), // Use applyOpacity
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          Text(
-                                            TimeUtils.formatLogTimestamp(
-                                              log.timestamp,
-                                            ),
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .applyOpacity(
-                                                0.5,
-                                              ), // Use applyOpacity
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      // 日志消息
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 4.0,
-                                          left: 20.0,
-                                        ),
-                                        child: Text(
-                                          log.message,
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(height: 1.2),
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-
-                                      // 错误指示器（如果有）
-                                      if (log.error != null &&
-                                          log.error!.isNotEmpty)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 4.0,
-                                            left: 20.0,
-                                          ),
-                                          child: Text(
-                                            '包含错误信息',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                              color: theme.colorScheme.error,
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
                               );
                             },
                           ),
@@ -744,27 +686,23 @@ class _LogsPageState extends State<LogsPage> {
               ),
             ),
 
-            // 底部状态栏
-            Consumer<UnifiedLogService>(
-              builder: (context, logService, child) {
-                final memoryLogs = logService.logs.where(_filterLog).toList();
-                final allLogs = [
-                  ...memoryLogs,
-                  ..._historyLogs.where(_filterLog),
-                ];
-                return Container(
-                  color: theme.colorScheme.surface,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: Text(
-                    '已显示 ${allLogs.length} 条日志 • 长按日志可复制 • 点击查看详情',
+            // 底部状态栏 - 直接使用缓存的过滤结果
+            Container(
+              color: theme.colorScheme.surface,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Consumer<UnifiedLogService>(
+                builder: (context, logService, child) {
+                  final filteredLogs = _getFilteredLogs(logService.logs);
+                  return Text(
+                    '已显示 ${filteredLogs.length} 条日志 • 长按日志可复制 • 点击查看详情',
                     style: theme.textTheme.bodySmall,
                     textAlign: TextAlign.center,
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -947,6 +885,7 @@ class _LogsPageState extends State<LogsPage> {
                         this.setState(() {
                           _filterLevel = tempFilterLevel;
                           _filterSource = tempFilterSource;
+                          _invalidateCache();
                         });
 
                         Navigator.of(context).pop();
@@ -1030,6 +969,7 @@ class _LogsPageState extends State<LogsPage> {
                   _historyLogs.clear();
                   _currentPage = 0;
                   _hasMoreLogs = true;
+                  _invalidateCache();
                 });
               } catch (e) {
                 if (!mounted) return;
@@ -1047,5 +987,137 @@ class _LogsPageState extends State<LogsPage> {
         ],
       ),
     );
+  }
+}
+
+// 独立的日志条目 Widget，优化性能
+class _LogEntryItem extends StatelessWidget {
+  final LogEntry log;
+  final VoidCallback onTap;
+
+  const _LogEntryItem({
+    required this.log,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final logColor = _getLogLevelColor(log.level, theme);
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: 8.0,
+          horizontal: 4.0,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: theme.colorScheme.outline),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 日志头部（时间和级别）
+            Row(
+              children: [
+                Icon(
+                  _getLogLevelIcon(log.level),
+                  size: 16,
+                  color: logColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  log.level.name.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: logColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (log.source != null && log.source!.isNotEmpty)
+                  Expanded(
+                    child: Text(
+                      '[${log.source}]',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurface.applyOpacity(0.7),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                Text(
+                  TimeUtils.formatLogTimestamp(log.timestamp),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.applyOpacity(0.5),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+
+            // 日志消息
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, left: 20.0),
+              child: Text(
+                log.message,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.2),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+            // 错误指示器（如果有）
+            if (log.error != null && log.error!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0, left: 20.0),
+                child: Text(
+                  '包含错误信息',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 获取日志级别对应的图标
+  static IconData _getLogLevelIcon(UnifiedLogLevel level) {
+    switch (level) {
+      case UnifiedLogLevel.verbose:
+        return Icons.text_snippet_outlined;
+      case UnifiedLogLevel.debug:
+        return Icons.code;
+      case UnifiedLogLevel.info:
+        return Icons.info_outline;
+      case UnifiedLogLevel.warning:
+        return Icons.warning_amber;
+      case UnifiedLogLevel.error:
+        return Icons.error_outline;
+      case UnifiedLogLevel.none:
+        return Icons.block;
+    }
+  }
+
+  // 获取日志级别对应的颜色
+  static Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
+    switch (level) {
+      case UnifiedLogLevel.verbose:
+        return Colors.grey;
+      case UnifiedLogLevel.debug:
+        return Colors.teal;
+      case UnifiedLogLevel.info:
+        return Colors.blue;
+      case UnifiedLogLevel.warning:
+        return Colors.orange;
+      case UnifiedLogLevel.error:
+        return Colors.red;
+      case UnifiedLogLevel.none:
+        return theme.colorScheme.onSurface;
+    }
   }
 }
