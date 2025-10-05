@@ -65,6 +65,11 @@ class SafeMMKV {
         _storage = SharedPrefsAdapter();
         await _storage!.initialize();
         logDebug('SafeMMKV: Web 平台，使用 SharedPreferences');
+      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        // 桌面平台使用 SharedPreferences，避免 MMKV FFI 兼容性问题
+        logDebug('SafeMMKV: 桌面平台，使用 SharedPreferences');
+        _storage = SharedPrefsAdapter();
+        await _storage!.initialize();
       } else {
         // 32位ARM设备优先使用SharedPreferences，避免MMKV可能存在的兼容性问题
         if (_isArm32Device) {
