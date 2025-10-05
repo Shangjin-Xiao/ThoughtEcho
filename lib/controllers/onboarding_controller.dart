@@ -152,10 +152,13 @@ class OnboardingController extends ChangeNotifier {
       // 4. 保存用户偏好设置
       await _saveUserPreferences();
 
-      // 5. 标记引导完成
+      // 5. 标记数据库迁移完成
+      await _settingsService.setDatabaseMigrationComplete(true);
+
+      // 6. 标记引导完成
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 6. 标记服务初始化完成
+      // 7. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('引导流程完成');
@@ -282,10 +285,13 @@ class OnboardingController extends ChangeNotifier {
             error: aiDbError, source: 'OnboardingController');
       }
 
-      // 5. 标记引导完成
+      // 5. 标记数据库迁移完成
+      await _settingsService.setDatabaseMigrationComplete(true);
+
+      // 6. 标记引导完成
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 6. 标记服务初始化完成
+      // 7. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('跳过引导完成');
