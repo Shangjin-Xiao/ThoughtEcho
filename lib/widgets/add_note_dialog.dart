@@ -80,6 +80,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   List<NoteCategory> _filteredTags = [];
   String _lastSearchQuery = '';
   bool _isTagSectionExpanded = false;
+  
+  // 数据库监听防抖
+  Timer? _dbChangeDebounceTimer;
+  
+  // 一言标签加载状态
+  bool _isLoadingHitokotoTags = false;
 
   // 优化：缓存过滤结果，避免重复计算
   final Map<String, List<NoteCategory>> _filterCache = {};
@@ -130,18 +136,23 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _filteredTags = _availableTags;
     _lastSearchQuery = '';
 
-    // 延迟初始化服务缓存，避免在构建过程中查找Provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
+    // 使用 microtask 确保在首次 build 完成后再执行
+    Future.microtask(() {
       if (!mounted) return;
 
       _cachedLocationService =
           _readServiceOrNull<LocationService>(context);
       _cachedWeatherService =
           _readServiceOrNull<WeatherService>(context);
-
-      // 优化：监听 DatabaseService 变化，自动更新标签列表
       _databaseService = _readServiceOrNull<DatabaseService>(context);
-      _databaseService?.addListener(_onDatabaseChanged);
+      
+      // 延迟注册监听器，避免初始化时触发不必要的查询
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && _databaseService != null) {
+          _databaseService!.addListener(_onDatabaseChanged);
+        }
+      });
     });
 
     // 添加搜索防抖监听器
@@ -181,33 +192,52 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       }
     }
 
-    // 延迟执行重量级操作，避免阻塞UI构建
+    // 优化：完全异步执行重量级操作，不阻塞 UI
     if (widget.hitokotoData != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _addDefaultHitokotoTags();
+      // 使用 microtask 在下一个事件循环执行，比 Future.delayed 更快
+      Future.microtask(() {
+        if (mounted) {
+          _addDefaultHitokotoTagsAsync();
+        }
       });
     }
   }
 
-  // 优化：数据库变化监听回调 - 自动更新标签列表
-  void _onDatabaseChanged() async {
+  // 优化：数据库变化监听回调 - 自动更新标签列表（带防抖）
+  void _onDatabaseChanged() {
     if (!mounted || _databaseService == null) return;
     
-    try {
-      // 重新获取最新的标签列表
-      final updatedTags = await _databaseService!.getCategories();
+    // 防抖：300ms 内的多次变化只触发一次更新
+    _dbChangeDebounceTimer?.cancel();
+    _dbChangeDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted || _databaseService == null) return;
       
-      if (mounted) {
-        setState(() {
-          _availableTags = updatedTags;
-          // 重新应用当前的搜索过滤
-          _updateFilteredTags(_lastSearchQuery);
-        });
-        logDebug('标签列表已更新，当前共 ${updatedTags.length} 个标签');
+      try {
+        // 重新获取最新的标签列表
+        final updatedTags = await _databaseService!.getCategories();
+        
+        if (!mounted) return;
+        
+        // 脏检查：只有标签数量或内容变化时才更新
+        bool needsUpdate = _availableTags.length != updatedTags.length;
+        if (!needsUpdate && _availableTags.isNotEmpty) {
+          // 简单检查第一个和最后一个标签是否相同
+          needsUpdate = _availableTags.first.id != updatedTags.first.id ||
+                       _availableTags.last.id != updatedTags.last.id;
+        }
+        
+        if (needsUpdate) {
+          setState(() {
+            _availableTags = updatedTags;
+            // 重新应用当前的搜索过滤
+            _updateFilteredTags(_lastSearchQuery);
+          });
+          logDebug('标签列表已更新，当前共 ${updatedTags.length} 个标签');
+        }
+      } catch (e) {
+        logDebug('更新标签列表失败: $e');
       }
-    } catch (e) {
-      logDebug('更新标签列表失败: $e');
-    }
+    });
   }
 
   // 搜索变化处理 - 使用防抖优化
@@ -250,6 +280,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   @override
   void dispose() {
     _searchDebounceTimer?.cancel();
+    _dbChangeDebounceTimer?.cancel();
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
@@ -258,11 +289,23 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     // 优化：移除数据库监听器，防止内存泄漏
     _databaseService?.removeListener(_onDatabaseChanged);
     
+    // 优化：清理所有缓存，释放内存
+    _filterCache.clear();
+    _allCategoriesCache = null;
+    _availableTags.clear();
+    _filteredTags.clear();
+    
     super.dispose();
   }
 
-  // 添加默认的一言相关标签（异步执行，不阻塞UI）
-  Future<void> _addDefaultHitokotoTags() async {
+  // 添加默认的一言相关标签（完全异步执行，不阻塞UI）
+  Future<void> _addDefaultHitokotoTagsAsync() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoadingHitokotoTags = true;
+    });
+    
     try {
       final db = _databaseService ??
           _readServiceOrNull<DatabaseService>(context);
@@ -272,54 +315,81 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         return;
       }
 
+      // 批量准备标签信息，减少异步等待次数
+      final List<Map<String, String>> tagsToEnsure = [];
+      
       // 添加"每日一言"标签
-      String? dailyQuoteTagId = await _ensureTagExists(
-        db,
-        '每日一言',
-        '💭',
-      );
-      if (dailyQuoteTagId != null &&
-          !_selectedTagIds.contains(dailyQuoteTagId)) {
-        if (mounted) {
-          setState(() {
-            _selectedTagIds.add(dailyQuoteTagId);
+      tagsToEnsure.add({
+        'name': '每日一言',
+        'icon': '💭',
+        'fixedId': DatabaseService.defaultCategoryIdHitokoto,
+      });
+
+      // 添加一言类型对应的标签
+      String? hitokotoType;
+      if (widget.hitokotoData != null) {
+        hitokotoType = _getHitokotoTypeFromApiResponse();
+        if (hitokotoType != null && hitokotoType.isNotEmpty) {
+          String tagName = _convertHitokotoTypeToTagName(hitokotoType);
+          String iconName = _getIconForHitokotoType(hitokotoType);
+          String? fixedId;
+          
+          if (_hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
+            fixedId = _hitokotoTypeToCategoryIdMap[hitokotoType];
+          }
+          
+          tagsToEnsure.add({
+            'name': tagName,
+            'icon': iconName,
+            if (fixedId != null) 'fixedId': fixedId,
           });
         }
       }
 
-      // 添加一言类型对应的标签
-      if (widget.hitokotoData != null) {
-        // 获取一言类型
-        String? hitokotoType = _getHitokotoTypeFromApiResponse();
-        if (hitokotoType != null && hitokotoType.isNotEmpty) {
-          // 将类型代码转换为可读标签名称
-          String tagName = _convertHitokotoTypeToTagName(hitokotoType);
-          String iconName = _getIconForHitokotoType(hitokotoType);
+      // 批量确保标签存在
+      final List<String> tagIds = [];
+      for (final tagInfo in tagsToEnsure) {
+        final tagId = await _ensureTagExists(
+          db,
+          tagInfo['name']!,
+          tagInfo['icon']!,
+          fixedId: tagInfo['fixedId'],
+        );
+        if (tagId != null) {
+          tagIds.add(tagId);
+        }
+      }
 
-          // 确保类型标签存在并添加到选中标签中
-          String? typeTagId = await _ensureTagExists(db, tagName, iconName);
-          if (typeTagId != null && !_selectedTagIds.contains(typeTagId)) {
-            if (mounted) {
-              setState(() {
-                _selectedTagIds.add(typeTagId);
-              });
-            }
-          }
+      if (!mounted) return;
 
-          // 设置分类
-          if (_hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
-            final categoryId = _hitokotoTypeToCategoryIdMap[hitokotoType];
-            final category = await db.getCategoryById(categoryId!);
-            if (mounted) {
-              setState(() {
-                _selectedCategory = category;
-              });
-            }
+      // 一次性更新所有选中的标签
+      setState(() {
+        for (final tagId in tagIds) {
+          if (!_selectedTagIds.contains(tagId)) {
+            _selectedTagIds.add(tagId);
           }
+        }
+      });
+
+      // 设置分类（如果需要）
+      if (hitokotoType != null &&
+          _hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
+        final categoryId = _hitokotoTypeToCategoryIdMap[hitokotoType];
+        final category = await db.getCategoryById(categoryId!);
+        if (mounted) {
+          setState(() {
+            _selectedCategory = category;
+          });
         }
       }
     } catch (e) {
       logDebug('添加默认标签失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingHitokotoTags = false;
+        });
+      }
     }
   }
 
@@ -375,39 +445,45 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     return iconMap[typeCode] ?? 'format_quote';
   }
 
-  // 确保标签存在，如果不存在则创建
+  // 缓存所有标签，避免重复查询
+  List<NoteCategory>? _allCategoriesCache;
+  
+  // 确保标签存在，如果不存在则创建（优化版：减少数据库查询）
   Future<String?> _ensureTagExists(
     DatabaseService db,
     String name,
-    String iconName,
-  ) async {
+    String iconName, {
+    String? fixedId,
+  }) async {
     try {
-      // 首先，检查是否有固定ID映射
-      String? fixedId;
-      for (var entry in _hitokotoTypeToCategoryIdMap.entries) {
-        if (_convertHitokotoTypeToTagName(entry.key) == name) {
-          fixedId = entry.value;
-          break;
+      // 使用传入的 fixedId 或检查是否有固定ID映射
+      if (fixedId == null) {
+        for (var entry in _hitokotoTypeToCategoryIdMap.entries) {
+          if (_convertHitokotoTypeToTagName(entry.key) == name) {
+            fixedId = entry.value;
+            break;
+          }
+        }
+
+        // 如果是"每日一言"标签的特殊情况
+        if (name == '每日一言') {
+          fixedId = DatabaseService.defaultCategoryIdHitokoto;
         }
       }
 
-      // 如果是"每日一言"标签的特殊情况
-      if (name == '每日一言') {
-        fixedId = DatabaseService.defaultCategoryIdHitokoto;
-      }
-
       // 无论标签是否被重命名，优先通过固定ID查找
-      // 这样可以确保即使标签被重命名，仍然能正确关联
       if (fixedId != null) {
         final category = await db.getCategoryById(fixedId);
         if (category != null) {
           logDebug('通过固定ID找到标签: ${category.name}(ID=${category.id})');
-          return category.id; // 返回已存在的固定ID标签，即使它已被重命名
+          return category.id;
         }
       }
 
-      // 如果固定ID没有找到对应标签，再通过名称查找
-      final categories = await db.getCategories();
+      // 优化：使用缓存的标签列表，避免每次都查询数据库
+      _allCategoriesCache ??= await db.getCategories();
+      final categories = _allCategoriesCache!;
+      
       final existingTag = categories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteCategory(id: '', name: ''),
@@ -418,23 +494,23 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         return existingTag.id;
       }
 
-      // 如果有固定ID但未创建，使用固定ID创建
+      // 创建新标签
       if (fixedId != null) {
         try {
-          // 使用固定ID创建标签
           await db.addCategoryWithId(fixedId, name, iconName: iconName);
+          // 清除缓存，下次会重新加载
+          _allCategoriesCache = null;
           return fixedId;
         } catch (e) {
           logDebug('使用固定ID创建标签失败: $e');
-          // 如果固定ID创建失败，尝试常规创建
           await db.addCategory(name, iconName: iconName);
         }
       } else {
-        // 创建新标签
         await db.addCategory(name, iconName: iconName);
       }
 
-      // 获取新创建的标签
+      // 清除缓存并重新获取
+      _allCategoriesCache = null;
       final updatedCategories = await db.getCategories();
       final newTag = updatedCategories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
@@ -444,23 +520,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       return newTag.id.isNotEmpty ? newTag.id : null;
     } catch (e) {
       logDebug('确保标签"$name"存在时出错: $e');
-      // 尝试获取现有标签作为回退方案
-      try {
-        final allCategories = await db.getCategories();
-        // 尝试通过名称匹配
-        final matchingTag = allCategories.firstWhere(
-          (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-          orElse: () => NoteCategory(id: '', name: ''),
-        );
-        if (matchingTag.id.isNotEmpty) {
-          logDebug('虽然发生错误，但找到了匹配的标签: ${matchingTag.id}');
-          return matchingTag.id;
-        }
-        // 如果没有匹配标签，返回任何可用标签的ID或null
-        return allCategories.isNotEmpty ? allCategories.first.id : null;
-      } catch (_) {
-        return null;
-      }
+      return null;
     }
   }
 
@@ -1288,16 +1348,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
-  // 优化的标签选择区域
+  // 优化的标签选择区域 - 延迟构建子元素，使用 Builder 和缓存优化
   Widget _buildTagSelectionSection(List<NoteCategory> tags) {
     if (tags.isEmpty) {
       return const Center(child: Text('暂无可用标签，请先添加标签'));
     }
 
     return ExpansionTile(
-      title: Text(
-        '选择标签 (${_selectedTagIds.length})',
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+      title: Row(
+        children: [
+          Text(
+            '选择标签 (${_selectedTagIds.length})',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          if (_isLoadingHitokotoTags) ...[
+            const SizedBox(width: 8),
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ],
+        ],
       ),
       leading: const Icon(Icons.tag),
       initiallyExpanded: _isTagSectionExpanded,
@@ -1313,83 +1385,97 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         horizontal: 16.0,
         vertical: 8.0,
       ),
-      children: _isTagSectionExpanded
-          ? [
-              TextField(
-                controller: _tagSearchController,
-                decoration: const InputDecoration(
-                  hintText: '搜索标签...',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 8.0,
-                    horizontal: 12.0,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (_filteredTags.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: Text('没有找到匹配的标签'),
-                  ),
-                )
-              else
-                SizedBox(
-                  height: _computeTagListHeight(),
-                  child: Scrollbar(
-                    thumbVisibility: _filteredTags.length > 6,
-                    child: ListView.builder(
-                      padding: EdgeInsets.zero,
-                      physics: const ClampingScrollPhysics(),
-                      itemCount: _filteredTags.length,
-                      itemBuilder: (context, index) {
-                        final tag = _filteredTags[index];
-                        final isSelected = _selectedTagIds.contains(tag.id);
-                        final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-                        final Widget leading = isEmoji
-                            ? Text(
-                                IconUtils.getDisplayIcon(tag.iconName),
-                                style: const TextStyle(fontSize: 20),
-                              )
-                            : Icon(IconUtils.getIconData(tag.iconName));
-
-                        return CheckboxListTile(
-                          title: Row(
-                            children: [
-                              leading,
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  tag.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          value: isSelected,
-                          dense: true,
-                          controlAffinity: ListTileControlAffinity.trailing,
-                          onChanged: (selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _selectedTagIds.add(tag.id);
-                              } else {
-                                _selectedTagIds.remove(tag.id);
-                              }
-                            });
-                          },
-                        );
-                      },
+      // 优化：只有展开时才构建子元素，避免折叠状态下的无用渲染
+      children: [
+        // 使用 Builder 延迟构建，提升性能
+        Builder(
+          builder: (context) {
+            if (!_isTagSectionExpanded) {
+              return const SizedBox.shrink();
+            }
+            
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _tagSearchController,
+                  decoration: const InputDecoration(
+                    hintText: '搜索标签...',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 8.0,
+                      horizontal: 12.0,
                     ),
                   ),
                 ),
-            ]
-          : const <Widget>[],
-    );
-  } // 渲染已选标签的Widget，直接使用传入的标签数据
+                const SizedBox(height: 8),
+                if (_filteredTags.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Text('没有找到匹配的标签'),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: _computeTagListHeight(),
+                    child: Scrollbar(
+                      thumbVisibility: _filteredTags.length > 6,
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        physics: const ClampingScrollPhysics(),
+                        itemCount: _filteredTags.length,
+                        itemBuilder: (context, index) {
+                          final tag = _filteredTags[index];
+                          final isSelected = _selectedTagIds.contains(tag.id);
+                          final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+                          final Widget leading = isEmoji
+                              ? Text(
+                                  IconUtils.getDisplayIcon(tag.iconName),
+                                  style: const TextStyle(fontSize: 20),
+                                )
+                              : Icon(IconUtils.getIconData(tag.iconName));
 
+                          return CheckboxListTile(
+                            title: Row(
+                              children: [
+                                leading,
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    tag.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            value: isSelected,
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.trailing,
+                            onChanged: (selected) {
+                              setState(() {
+                                if (selected == true) {
+                                  _selectedTagIds.add(tag.id);
+                                } else {
+                                  _selectedTagIds.remove(tag.id);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // 渲染已选标签的Widget，直接使用传入的标签数据
   double _computeTagListHeight() {
     const double minHeight = 160.0;
     const double maxHeight = 280.0;
