@@ -5,14 +5,14 @@ msix_config:
   # 应用基本信息
   display_name: "ThoughtEcho"
   publisher_display_name: "Shangjinyun"
-  identity_name: "com.thoughtecho.app"
+  identity_name: "Shangjinyun.330094822087A"
   
   # 版本信息 - 将在CI中自动更新
   msix_version: 1.0.0.0
   
-  # 发布者信息（CI环境使用自动生成的测试证书）
-  # 注意：发布到 MS Store 时，此字段会被 Store 自动替换为你的开发者证书
-  publisher: "CN=Shangjinyun"
+  # 发布者信息（Microsoft Store要求的发布者证书）
+  # 注意：此为Microsoft Store分配的发布者标识
+  publisher: "CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7"
   
   # 应用描述
   description: "一款帮助你记录和分析思想的应用"
@@ -49,7 +49,7 @@ msix_config:
   app_execution_alias: "thoughtecho"
   
   # CI/CD设置 - 在非交互式环境中自动处理证书
-  certificate_subject: "CN=ThoughtEcho Team"
+  certificate_subject: "CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7"
   store_type: "defaultInstallLocation"
   
   # 可视化资产
