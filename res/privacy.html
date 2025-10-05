@@ -310,8 +310,12 @@
 
         /* 响应式 */
         @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+            }
+
             .container {
-                padding: 6rem 1.5rem 3rem;
+                padding: 7rem 1.5rem 3rem;
             }
 
             .header h1 {
@@ -332,7 +336,7 @@
     <!-- 导航栏 -->
     <nav>
         <div class="nav-container">
-            <a href="index2.html" class="nav-brand">
+            <a href="index.html" class="nav-brand">
                 <div class="nav-logo">
                     <img src="icon.png" alt="ThoughtEcho">
                 </div>
@@ -347,7 +351,7 @@
                 <button class="lang-toggle" id="langToggle" aria-label="Switch language">
                     <span id="langText">EN</span>
                 </button>
-                <a href="index2.html" class="btn-back">
+                <a href="index.html" class="btn-back">
                     <span class="content-zh">返回首页</span>
                     <span class="content-en">Back to Home</span>
                 </a>
@@ -363,8 +367,8 @@
                 <span class="content-en">Privacy Policy</span>
             </h1>
             <p class="date">
-                <span class="content-zh">最后更新：2025 年 1 月</span>
-                <span class="content-en">Last Updated: January 2025</span>
+                <span class="content-zh">最后更新：2024 年 10 月</span>
+                <span class="content-en">Last Updated: October 2024</span>
             </p>
         </div>
 
@@ -473,6 +477,25 @@
                 <li class="content-en">You can disable this feature in settings</li>
             </ul>
 
+            <h3 class="content-zh">天气 API</h3>
+            <h3 class="content-en">Weather API</h3>
+            <p class="content-zh">
+                应用的天气功能使用第三方天气服务 API 获取天气信息。此功能：
+            </p>
+            <p class="content-en">
+                The weather feature uses third-party weather service APIs. This feature:
+            </p>
+            <ul>
+                <li class="content-zh">仅在您主动启用天气功能时激活</li>
+                <li class="content-en">Only activates when you enable the weather feature</li>
+                <li class="content-zh">可能会发送您的位置信息（城市名称或坐标）到天气服务提供商</li>
+                <li class="content-en">May send your location (city name or coordinates) to weather service providers</li>
+                <li class="content-zh">您可以随时在设置中禁用天气功能</li>
+                <li class="content-en">You can disable the weather feature anytime in settings</li>
+                <li class="content-zh">天气数据的使用受第三方天气服务商的隐私政策约束</li>
+                <li class="content-en">Weather data usage is subject to third-party weather providers' privacy policies</li>
+            </ul>
+
             <h2><span class="icon">🔐</span> <span class="content-zh">数据安全</span><span class="content-en">Data Security</span></h2>
             <p class="content-zh">为了保护您的数据安全，我们采取以下措施：</p>
             <p class="content-en">To protect your data security, we implement the following measures:</p>
@@ -487,15 +510,7 @@
                 <li class="content-en"><strong>Minimal Permissions</strong>: App requests only necessary permissions (storage, camera, microphone for media)</li>
             </ul>
 
-            <h2><span class="icon">👥</span> <span class="content-zh">儿童隐私</span><span class="content-en">Children's Privacy</span></h2>
-            <p class="content-zh">
-                心迹不针对 13 岁以下儿童设计。我们不会有意收集儿童的个人信息。如果您是家长并发现您的孩子使用了本应用，请联系我们。
-            </p>
-            <p class="content-en">
-                ThoughtEcho is not designed for children under 13. We do not knowingly collect personal information from children. If you are a parent and discover your child has used this app, please contact us.
-            </p>
-
-            <h2><span class="icon">🔄</span> <span class="content-zh">隐私政策更新</span><span class="content-en">Privacy Policy Updates</span></h2>
+            <h2><span class="icon"></span> <span class="content-zh">隐私政策更新</span><span class="content-en">Privacy Policy Updates</span></h2>
             <p class="content-zh">
                 我们可能会不时更新此隐私政策。任何变更将在此页面发布，并更新"最后更新"日期。重大变更会在应用内通知用户。
             </p>
@@ -511,6 +526,8 @@
                 If you have any questions or concerns about this privacy policy, please contact us:
             </p>
             <ul>
+                <li class="content-zh"><strong>邮箱</strong>: <a href="mailto:support@shangjinyun.cn">support@shangjinyun.cn</a></li>
+                <li class="content-en"><strong>Email</strong>: <a href="mailto:support@shangjinyun.cn">support@shangjinyun.cn</a></li>
                 <li class="content-zh"><strong>GitHub Issues</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank">提交问题</a></li>
                 <li class="content-en"><strong>GitHub Issues</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank">Submit an issue</a></li>
                 <li class="content-zh"><strong>项目主页</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub 仓库</a></li>
@@ -547,18 +564,20 @@
         const currentTheme = localStorage.getItem('theme') || 'light';
         if (currentTheme === 'dark') {
             html.setAttribute('data-theme', 'dark');
-            themeIcon.textContent = '☀️';
+            themeIcon.innerHTML = '&#9728;&#65039;';
+        } else {
+            themeIcon.innerHTML = '&#127769;';
         }
 
         themeToggle.addEventListener('click', () => {
             const isDark = html.getAttribute('data-theme') === 'dark';
             if (isDark) {
                 html.setAttribute('data-theme', 'light');
-                themeIcon.textContent = '🌙';
+                themeIcon.innerHTML = '&#127769;';
                 localStorage.setItem('theme', 'light');
             } else {
                 html.setAttribute('data-theme', 'dark');
-                themeIcon.textContent = '☀️';
+                themeIcon.innerHTML = '&#9728;&#65039;';
                 localStorage.setItem('theme', 'dark');
             }
         });
