@@ -109,8 +109,8 @@ msix_config:
   publisher: CN=Shangjinyun
   logo_path: windows/runner/resources/app_icon.ico
   capabilities: internetClient
-  # runFullTrust 是受限权限，MSIX 工具会自动添加到 AppxManifest.xml
-  # 不要在 capabilities 中重复定义
+  # 注意：runFullTrust 会在构建时自动添加（Flutter Windows 应用默认需要）
+  # 不要手动在 capabilities 中添加 runFullTrust，否则会导致重复定义错误
   languages: zh-CN, en-US
   output_name: ThoughtEcho-Setup  # 输出文件名（不含.msix扩展名）
   # 签名配置 - msix插件会自动生成测试证书
