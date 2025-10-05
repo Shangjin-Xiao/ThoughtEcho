@@ -140,9 +140,30 @@ class DataDirectoryService {
 
       // 3. 计算需要复制的文件
       final filesToCopy = <FileSystemEntity>[];
-      await for (final entity in currentDir.list(recursive: true)) {
-        if (entity is File) {
-          filesToCopy.add(entity);
+      try {
+        await for (final entity in currentDir.list(
+          recursive: true,
+          followLinks: false, // 不跟随符号链接，避免访问系统文件夹
+        )) {
+          try {
+            if (entity is File) {
+              // 排除 Windows 特殊文件夹（My Music, My Videos 等）
+              final relativePath = path.relative(entity.path, from: currentPath);
+              if (!_isSystemFolder(relativePath)) {
+                filesToCopy.add(entity);
+              }
+            }
+          } catch (e) {
+            // 跳过无法访问的单个文件
+            logDebug('跳过无法访问的文件: ${entity.path}, 错误: $e');
+          }
+        }
+      } catch (e) {
+        // 如果整个目录遍历失败，记录错误但继续
+        logError('遍历目录时遇到错误: $e', error: e);
+        // 如果没有收集到任何文件，抛出错误
+        if (filesToCopy.isEmpty) {
+          throw Exception('无法读取当前数据目录中的文件: $e');
         }
       }
 
@@ -326,5 +347,22 @@ class DataDirectoryService {
       logError('计算目录大小失败: $e', error: e);
       return 0;
     }
+  }
+
+  /// 检查是否是 Windows 系统文件夹（如 My Music, My Videos 等）
+  static bool _isSystemFolder(String relativePath) {
+    if (!Platform.isWindows) return false;
+
+    final lowerPath = relativePath.toLowerCase();
+    final systemFolders = [
+      'my music',
+      'my videos',
+      'my pictures',
+      'my documents',
+      'desktop.ini',
+      'thumbs.db',
+    ];
+
+    return systemFolders.any((folder) => lowerPath.contains(folder));
   }
 }

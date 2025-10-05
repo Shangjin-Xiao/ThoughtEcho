@@ -1,5 +1,7 @@
 import 'package:mmkv/mmkv.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'mmkv_ffi_fix.dart'; // 引入 StorageAdapter 和 SharedPrefsAdapter
 
 /// MMKV 存储适配器 - 仅在移动端使用
@@ -11,6 +13,11 @@ class MMKVAdapter implements StorageAdapter {
   @override
   Future<void> initialize() async {
     if (_initialized) return; // 防止重复初始化
+
+    // Windows/Linux/macOS 桌面平台不支持 MMKV FFI
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      throw UnsupportedError('MMKVAdapter 不支持桌面平台，请使用 SafeMMKV 或 SharedPrefsAdapter');
+    }
 
     // 确保 MMKV 全局只初始化一次
     if (!_mmkvGlobalInitialized) {

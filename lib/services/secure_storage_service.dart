@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../utils/mmkv_adapter.dart';
+import '../utils/mmkv_ffi_fix.dart'; // 使用 SafeMMKV 替代 MMKVAdapter
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 安全存储服务，专门用于存储多供应商API密钥
@@ -7,7 +7,7 @@ class SecureStorageService {
   static final SecureStorageService _instance =
       SecureStorageService._internal();
   static const String _providerApiKeysKey = 'provider_api_keys';
-  late MMKVAdapter _storage;
+  late SafeMMKV _storage;
   bool _initialized = false;
 
   factory SecureStorageService() => _instance;
@@ -18,7 +18,7 @@ class SecureStorageService {
 
   Future<void> _initStorage() async {
     if (!_initialized) {
-      _storage = MMKVAdapter();
+      _storage = SafeMMKV();
       await _storage.initialize();
       _initialized = true;
       logDebug('安全存储服务初始化完成');
