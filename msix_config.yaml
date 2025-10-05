@@ -4,14 +4,15 @@
 msix_config:
   # 应用基本信息
   display_name: "ThoughtEcho"
-  publisher_display_name: "ThoughtEcho Team"
+  publisher_display_name: "Shangjinyun"
   identity_name: "com.thoughtecho.app"
   
   # 版本信息 - 将在CI中自动更新
   msix_version: 1.0.0.0
   
   # 发布者信息（CI环境使用自动生成的测试证书）
-  publisher: "CN=ThoughtEcho Team"
+  # 注意：发布到 MS Store 时，此字段会被 Store 自动替换为你的开发者证书
+  publisher: "CN=Shangjinyun"
   
   # 应用描述
   description: "一款帮助你记录和分析思想的应用"
@@ -24,7 +25,9 @@ msix_config:
   tile_icon: "windows/runner/resources/app_icon.ico"
   
   # 所需权限
-  capabilities: "internetClient"
+  # runFullTrust: 允许应用完全访问系统资源（需要在 MS Store 提交时申请批准）
+  # internetClient: 允许应用访问互联网
+  capabilities: "internetClient,runFullTrust"
   
   # 安装设置
   install_location: "custom"

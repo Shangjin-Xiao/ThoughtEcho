@@ -63,16 +63,22 @@ jobs:
           exit 1
         }
         
+        # ⚠️ Microsoft Store 要求：MSIX 版本号的第四位（Revision）必须为 0
+        # 强制将第四位设为 0
+        $msixVersion = "$flutterVersion.0"
+        
         # 更新 pubspec.yaml 中的版本（不带构建号）
         $pubspecContent = Get-Content pubspec.yaml -Raw
         $pubspecContent = $pubspecContent -replace 'version:\s*[\d\.]+\+?\d*', "version: $flutterVersion"
-        
-        # 更新 msix_version，保留前面的缩进
-        $pubspecContent = $pubspecContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $version"
         $pubspecContent | Set-Content pubspec.yaml -NoNewline
         
+        # 更新 msix_config.yaml 中的 msix_version
+        $msixConfigContent = Get-Content msix_config.yaml -Raw
+        $msixConfigContent = $msixConfigContent -replace '(\s*)msix_version:\s*[\d\.]+', "`$1msix_version: $msixVersion"
+        $msixConfigContent | Set-Content msix_config.yaml -NoNewline
+        
         Write-Output "Updated Flutter version to: $flutterVersion"
-        Write-Output "Updated MSIX version to: $version"
+        Write-Output "Updated MSIX version to: $msixVersion (Revision set to 0 for MS Store compliance)"
         
     - name: Flutter doctor
       run: flutter doctor -v
