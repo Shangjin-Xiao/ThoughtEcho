@@ -243,8 +243,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
               .join(', ');
           debugPrint('接口地址: $addresses');
 
-          final socket = await RawDatagramSocket.bind(
-              InternetAddress.anyIPv4, defaultMulticastPort);
+          // Windows 平台不使用 reusePort（可能不支持或导致问题）
+          final socket = Platform.isWindows
+              ? await RawDatagramSocket.bind(
+                  InternetAddress.anyIPv4, defaultMulticastPort,
+                  reuseAddress: true)
+              : await RawDatagramSocket.bind(
+                  InternetAddress.anyIPv4, defaultMulticastPort,
+                  reuseAddress: true, reusePort: true);
 
           debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
 
