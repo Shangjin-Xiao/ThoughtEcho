@@ -1153,7 +1153,7 @@
 
             .nav-links {
                 position: fixed;
-                top: 60px;
+                top: 70px;
                 left: 0;
                 right: 0;
                 background: var(--paper-white);
@@ -1165,6 +1165,7 @@
                 max-height: 0;
                 overflow: hidden;
                 transition: max-height 0.3s ease;
+                z-index: 999;
             }
 
             .nav-links.active {
@@ -1173,17 +1174,24 @@
 
             .nav-links a {
                 padding: 1rem 2rem;
-                border-bottom: 1px solid var(--border-color);
+                border-bottom: 1px solid var(--line-color);
             }
 
             .mobile-menu-btn {
                 display: flex;
             }
 
+            .hero {
+                padding-top: 7rem;
+            }
+
             .hero-container {
                 grid-template-columns: 1fr;
                 gap: 3rem;
-                text-align: center;
+            }
+
+            .hero-content {
+                text-align: left;
             }
 
             .hero h1 {
@@ -1195,7 +1203,11 @@
             }
 
             .hero-notebook {
-                order: -1;
+                order: 2;
+            }
+
+            .hero-content {
+                order: 1;
             }
 
             .features-grid {
@@ -1343,10 +1355,14 @@
 
         /* 移动端响应式 */
         @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+            }
+
             .nav-links {
                 display: none;
-                position: absolute;
-                top: 100%;
+                position: fixed;
+                top: 70px;
                 left: 0;
                 right: 0;
                 background: var(--paper-white);
@@ -1354,6 +1370,8 @@
                 padding: 1.5rem;
                 gap: 0;
                 border-bottom: 3px solid var(--accent-brown);
+                box-shadow: 0 4px 12px var(--shadow-medium);
+                z-index: 999;
             }
             .nav-links.active {
                 display: flex;
@@ -1362,30 +1380,28 @@
                 padding: 1rem;
                 border-bottom: 1px solid var(--line-color);
             }
-            .mobile-menu {
+            .mobile-menu-btn {
                 display: flex;
-                width: 44px;
-                height: 44px;
-                background: var(--paper-yellow);
-                border: 2px solid var(--accent-brown);
-                border-radius: 8px;
-                cursor: pointer;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                gap: 5px;
-            }
-            .mobile-menu span {
-                width: 22px;
-                height: 2px;
-                background: var(--accent-brown);
-                border-radius: 2px;
             }
             .hero {
                 padding: 7rem 1.5rem 4rem;
             }
+            .hero-container {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+            .hero-content {
+                order: 1;
+                text-align: left;
+            }
+            .hero-notebook {
+                order: 2;
+            }
             .hero h1 {
                 font-size: 2.5rem;
+            }
+            .hero-subtitle {
+                font-size: 1.1rem;
             }
             .section-title {
                 font-size: 2.5rem;
@@ -1398,6 +1414,17 @@
             .tech-grid,
             .roadmap-container {
                 grid-template-columns: 1fr;
+            }
+            .screenshot-item {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 2rem;
+            }
+            .screenshot-item:nth-child(even) .screenshot-image {
+                order: 1;
+            }
+            .screenshot-item:nth-child(even) .screenshot-content {
+                order: 2;
             }
         }
 
@@ -2222,21 +2249,24 @@ cd ThoughtEcho</code></pre>
         const currentTheme = localStorage.getItem('theme') || 'light';
         if (currentTheme === 'dark') {
             html.setAttribute('data-theme', 'dark');
-            themeIcon.textContent = '☀️';
+            themeIcon.innerHTML = '&#9728;&#65039;';
+        } else {
+            themeIcon.innerHTML = '&#127769;';
         }
 
         themeToggle.addEventListener('click', () => {
             const isDark = html.getAttribute('data-theme') === 'dark';
             if (isDark) {
                 html.setAttribute('data-theme', 'light');
-                themeIcon.textContent = '��';
+                themeIcon.innerHTML = '&#127769;';
                 localStorage.setItem('theme', 'light');
             } else {
                 html.setAttribute('data-theme', 'dark');
-                themeIcon.textContent = '☀️';
+                themeIcon.innerHTML = '&#9728;&#65039;';
                 localStorage.setItem('theme', 'dark');
             }
         });
+
 
         // 语言切换
         const langToggle = document.getElementById('langToggle');
