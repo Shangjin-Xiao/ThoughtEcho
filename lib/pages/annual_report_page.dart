@@ -9,6 +9,9 @@ import '../utils/color_utils.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
 
+/// ⚠️ 暂时弃用 - 防止 AI 工具识别错误
+/// 此页面已暂停使用，如需年度报告功能请使用 AI 周期报告页面
+@deprecated
 class AnnualReportPage extends StatefulWidget {
   final int year;
   final List<Quote> quotes;
@@ -561,7 +564,39 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
             // 主要统计卡片
             Expanded(
-              child: ListView(
+              child: _stats!.totalNotes == 0
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.edit_note,
+                            size: 80,
+                            color: ColorUtils.withOpacitySafe(
+                                Theme.of(context).colorScheme.onSurface, 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '这个时段还没有笔记',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: ColorUtils.withOpacitySafe(
+                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '开始记录你的想法吧',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ColorUtils.withOpacitySafe(
+                                  Theme.of(context).colorScheme.onSurface, 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
                 children: [
                   _buildStatCard(
                     icon: Icons.edit_note,
@@ -600,7 +635,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   ),
                 ],
               ),
-            ),
+                  ),
           ],
         ),
       ),
@@ -624,7 +659,30 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
             // 习惯卡片列表
             Expanded(
-              child: ListView(
+              child: _stats!.totalNotes == 0
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 80,
+                            color: ColorUtils.withOpacitySafe(
+                                Theme.of(context).colorScheme.onSurface, 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '暂无写作习惯数据',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: ColorUtils.withOpacitySafe(
+                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
                 children: [
                   // 最活跃时间段
                   _buildHabitCard(
@@ -685,7 +743,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   ),
                 ],
               ),
-            ),
+                  ),
           ],
         ),
       ),
@@ -711,97 +769,103 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 20),
-              Expanded(
-                child: ListView.builder(
-                  itemCount:
-                      _stats!.topTags.length > 5 ? 5 : _stats!.topTags.length,
-                  itemBuilder: (context, index) {
-                    final tag = _stats!.topTags[index];
-                    final percentage = (tag.count / _stats!.totalNotes * 100);
+            ],
+            Expanded(
+              child: _stats!.topTags.isNotEmpty
+                  ? ListView.builder(
+                      itemCount: _stats!.topTags.length > 5
+                          ? 5
+                          : _stats!.topTags.length,
+                      itemBuilder: (context, index) {
+                        final tag = _stats!.topTags[index];
+                        final percentage = _stats!.totalNotes > 0
+                            ? (tag.count / _stats!.totalNotes * 100)
+                            : 0.0;
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.cardRadius,
-                        ),
-                        boxShadow: AppTheme.lightShadow,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: _getTagColor(index),
-                              shape: BoxShape.circle,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.cardRadius,
                             ),
-                            child: Center(
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                            boxShadow: AppTheme.lightShadow,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: _getTagColor(index),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tag.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '使用了 ${tag.count} 次 (${percentage.toStringAsFixed(1)}%)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: ColorUtils.withOpacitySafe(
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                            0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tag.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '使用了 ${tag.count} 次 (${percentage.toStringAsFixed(1)}%)',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: ColorUtils.withOpacitySafe(
-                                        Theme.of(context).colorScheme.onSurface,
-                                        0.7),
-                                  ),
-                                ),
-                              ],
+                        );
+                      },
+                    )
+                  : Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.label_outline,
+                            size: 80,
+                            color: ColorUtils.withOpacitySafe(
+                                Theme.of(context).colorScheme.onSurface, 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '还没有使用过标签',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: ColorUtils.withOpacitySafe(
+                                  Theme.of(context).colorScheme.onSurface, 0.7),
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
-              ),
-            ] else ...[
-              Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.label_outline,
-                      size: 80,
-                      color: ColorUtils.withOpacitySafe(
-                          Theme.of(context).colorScheme.onSurface, 0.3),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '还没有使用过标签',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: ColorUtils.withOpacitySafe(
-                            Theme.of(context).colorScheme.onSurface, 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ],
         ),
       ),
@@ -822,15 +886,38 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             ),
             const SizedBox(height: 40),
             Expanded(
-              child: ListView.builder(
-                itemCount: _stats!.monthlyStats.length,
-                itemBuilder: (context, index) {
-                  final month = _stats!.monthlyStats[index];
-                  final maxCount = _stats!.monthlyStats
-                      .map((m) => m.count)
-                      .reduce((a, b) => a > b ? a : b);
-                  final percentage =
-                      maxCount > 0 ? month.count / maxCount : 0.0;
+              child: _stats!.monthlyStats.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 80,
+                            color: ColorUtils.withOpacitySafe(
+                                Theme.of(context).colorScheme.onSurface, 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '这个时段还没有记录',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: ColorUtils.withOpacitySafe(
+                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _stats!.monthlyStats.length,
+                      itemBuilder: (context, index) {
+                        final month = _stats!.monthlyStats[index];
+                        final maxCount = _stats!.monthlyStats
+                            .map((m) => m.count)
+                            .reduce((a, b) => a > b ? a : b);
+                        final percentage =
+                            maxCount > 0 ? month.count / maxCount : 0.0;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -1256,6 +1343,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   String _getGrowthText() {
     final months = _stats!.monthlyStats;
+    if (months.isEmpty) {
+      return '还没有开始记录,现在就是最好的时机。';
+    }
     if (months.length >= 2) {
       final lastMonth = months.last.count;
       final firstMonth = months.first.count;
