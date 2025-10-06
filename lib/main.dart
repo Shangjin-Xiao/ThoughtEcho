@@ -14,6 +14,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:logging/logging.dart' as logging;
 
 // 项目内部
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
@@ -106,6 +107,11 @@ final List<Map<String, dynamic>> _deferredErrors = [];
 GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
+  // 立即设置日志级别为INFO，避免早期verbose日志输出
+  // 这必须在任何其他初始化之前执行，因为logging包默认级别是ALL
+  logging.hierarchicalLoggingEnabled = true;
+  logging.Logger.root.level = logging.Level.INFO;
+
   // Windows平台优化：避免错误处理导致的启动卡死
   BindingBase.debugZoneErrorsAreFatal =
       (!kIsWeb && Platform.isWindows) ? false : true;
