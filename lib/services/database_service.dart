@@ -539,22 +539,22 @@ class DatabaseService extends ChangeNotifier {
   Future<void> _configureDatabasePragmas(Database db) async {
     try {
       // 启用外键约束（防止数据孤立）
-      await db.execute('PRAGMA foreign_keys = ON');
+      await db.rawQuery('PRAGMA foreign_keys = ON');
       
-      // 使用WAL模式提升并发性能
-      await db.execute('PRAGMA journal_mode = WAL');
+      // 使用WAL模式提升并发性能（必须用rawQuery，因为会返回结果）
+      await db.rawQuery('PRAGMA journal_mode = WAL');
       
       // 设置繁忙超时（5秒），防止并发冲突
-      await db.execute('PRAGMA busy_timeout = 5000');
+      await db.rawQuery('PRAGMA busy_timeout = 5000');
       
       // 设置缓存大小为8MB（负数表示KB）
-      await db.execute('PRAGMA cache_size = -8000');
+      await db.rawQuery('PRAGMA cache_size = -8000');
       
       // 临时表使用内存存储
-      await db.execute('PRAGMA temp_store = MEMORY');
+      await db.rawQuery('PRAGMA temp_store = MEMORY');
       
       // 正常同步模式（平衡性能和安全）
-      await db.execute('PRAGMA synchronous = NORMAL');
+      await db.rawQuery('PRAGMA synchronous = NORMAL');
       
       // 验证关键配置
       final foreignKeys = await db.rawQuery('PRAGMA foreign_keys');
