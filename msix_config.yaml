@@ -25,9 +25,10 @@ msix_config:
   tile_icon: "windows/runner/resources/app_icon.ico"
   
   # 所需权限
-  # runFullTrust: 允许应用完全访问系统资源（需要在 MS Store 提交时申请批准）
   # internetClient: 允许应用访问互联网
-  capabilities: "internetClient,runFullTrust"
+  # 注意：不要手动添加 runFullTrust，Flutter Windows 应用会自动添加
+  #       手动添加会导致包标识不匹配问题
+  capabilities: "internetClient"
   
   # 安装设置
   install_location: "custom"

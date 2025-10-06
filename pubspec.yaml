@@ -101,21 +101,48 @@ flutter_launcher_icons:
   adaptive_icon_foreground: "icon.png"
 
 # MSIX Windows 安装包配置
+# Microsoft Store 提交要求的精确配置
 msix_config:
+  # 应用显示名称
   display_name: ThoughtEcho
+  
+  # 发布者显示名称（必须与 Store 中的 PublisherDisplayName 完全一致）
   publisher_display_name: Shangjinyun
+  
+  # 应用包标识名称（必须与 Store 中的 Package/Identity/Name 完全一致）
   identity_name: Shangjinyun.330094822087A
+  
+  # MSIX 版本号（4位格式，最后一位必须为0以符合 Store 要求）
   msix_version: 1.0.0.0
+  
+  # 发布者证书 DN（必须与 Store 中的 Package/Identity/Publisher 完全一致）
+  # 这是 Microsoft Store 分配给你的发布者标识符
   publisher: CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7
+  
+  # 应用图标路径
   logo_path: windows/runner/resources/app_icon.ico
+  
+  # 应用权限（internetClient 用于网络访问）
+  # 注意：不要手动添加 runFullTrust，Flutter Windows 应用会自动添加
   capabilities: internetClient
-  # 注意：runFullTrust 会在构建时自动添加（Flutter Windows 应用默认需要）
-  # 不要手动在 capabilities 中添加 runFullTrust，否则会导致重复定义错误
+  
+  # 支持的语言
   languages: zh-CN, en-US
-  output_name: ThoughtEcho-Setup  # 输出文件名（不含.msix扩展名）
-  # 签名配置 - msix插件会自动生成测试证书
+  
+  # 输出文件名（不含 .msix 扩展名）
+  output_name: ThoughtEcho-Setup
+  
+  # 签名设置（用于本地测试和 Store 提交）
+  # Store 提交时必须使用与 publisher 匹配的证书主题
   certificate_subject: CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7
-  install_certificate: false  # CI环境中不安装证书，避免交互提示
+  
+  # CI 环境设置：不安装测试证书，避免交互式提示
+  install_certificate: false
+  
+  # Store 提交标识：确保使用正确的 Store ID
+  # Store ID: 9NC7GDG6KFMC
+  # Package Family Name: Shangjinyun.330094822087A_q4mj6h6cp1xbc
+  # 注意：PFN 后缀 (q4mj6h6cp1xbc) 由 Publisher DN 自动生成，无需手动配置
   
 # 字体配置
 flutter:
