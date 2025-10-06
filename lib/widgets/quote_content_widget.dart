@@ -28,7 +28,8 @@ class QuoteContent extends StatelessWidget {
     enableInteractiveSelection: false,
     enableSelectionToolbar: false,
     showCursor: false,
-    embedBuilders: QuillEditorExtensions.getEmbedBuilders(),
+  embedBuilders:
+    QuillEditorExtensions.getEmbedBuilders(optimizedImages: true),
     padding: EdgeInsets.zero,
     expands: false,
     scrollable: false,
