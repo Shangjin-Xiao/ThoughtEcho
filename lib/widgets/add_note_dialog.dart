@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
-import '../utils/icon_utils.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import '../theme/app_theme.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -18,6 +16,7 @@ import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../constants/app_constants.dart';
+import 'add_note_dialog_parts.dart'; // 导入拆分的组件
 import '../utils/feature_guide_helper.dart';
 
 class AddNoteDialog extends StatefulWidget {
@@ -81,7 +80,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Timer? _searchDebounceTimer;
   List<NoteCategory> _filteredTags = [];
   String _lastSearchQuery = '';
-  bool _isTagSectionExpanded = false;
   
   // 数据库监听防抖
   Timer? _dbChangeDebounceTimer;
@@ -592,6 +590,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // 性能监控：记录build开始时间
+    final buildStart = DateTime.now();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final buildTime = DateTime.now().difference(buildStart).inMilliseconds;
+      if (buildTime > 16) {
+        logWarning('AddNoteDialog build耗时: ${buildTime}ms (超过一帧)', source: 'Performance');
+      }
+    });
+    
     final theme = Theme.of(context);
 
     // 优化：使用缓存的服务或延迟获取
@@ -943,10 +950,30 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               ],
             ), // 标签选择区域
             const SizedBox(height: 16),
-            _buildTagSelectionSection(widget.tags),
+            // ✅ 使用独立组件，避免AddNoteDialog重建时重复构建标签列表
+            TagSelectionSection(
+              tags: _availableTags,
+              selectedTagIds: _selectedTagIds,
+              onSelectionChanged: (newSelection) {
+                setState(() {
+                  _selectedTagIds
+                    ..clear()
+                    ..addAll(newSelection);
+                });
+              },
+              isLoading: _isLoadingHitokotoTags,
+            ),
 
             // 显示已选标签
-            _buildSelectedTags(theme),
+            SelectedTagsDisplay(
+              selectedTagIds: _selectedTagIds,
+              allTags: _availableTags,
+              onRemoveTag: (tagId) {
+                setState(() {
+                  _selectedTagIds.remove(tagId);
+                });
+              },
+            ),
 
             // AI分析结果
             if (_aiSummary != null)
@@ -1365,216 +1392,5 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             : '#${result.toARGB32().toRadixString(16).substring(2)}'; // MODIFIED
       });
     }
-  }
-
-  // 优化的标签选择区域 - 延迟构建子元素，使用 Builder 和缓存优化
-  Widget _buildTagSelectionSection(List<NoteCategory> tags) {
-    if (tags.isEmpty) {
-      return const Center(child: Text('暂无可用标签，请先添加标签'));
-    }
-
-    return ExpansionTile(
-      title: Row(
-        children: [
-          Text(
-            '选择标签 (${_selectedTagIds.length})',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          if (_isLoadingHitokotoTags) ...[
-            const SizedBox(width: 8),
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ],
-        ],
-      ),
-      leading: const Icon(Icons.tag),
-      initiallyExpanded: _isTagSectionExpanded,
-      maintainState: true,
-      onExpansionChanged: (expanded) {
-        if (_isTagSectionExpanded != expanded) {
-          setState(() {
-            _isTagSectionExpanded = expanded;
-          });
-        }
-      },
-      childrenPadding: const EdgeInsets.symmetric(
-        horizontal: 16.0,
-        vertical: 8.0,
-      ),
-      // 优化：只有展开时才构建子元素，避免折叠状态下的无用渲染
-      children: [
-        // 使用 Builder 延迟构建，提升性能
-        Builder(
-          builder: (context) {
-            if (!_isTagSectionExpanded) {
-              return const SizedBox.shrink();
-            }
-            
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _tagSearchController,
-                  decoration: const InputDecoration(
-                    hintText: '搜索标签...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: 8.0,
-                      horizontal: 12.0,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_filteredTags.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: Text('没有找到匹配的标签'),
-                    ),
-                  )
-                else
-                  SizedBox(
-                    height: _computeTagListHeight(),
-                    child: Scrollbar(
-                      thumbVisibility: _filteredTags.length > 6,
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        physics: const ClampingScrollPhysics(),
-                        itemCount: _filteredTags.length,
-                        itemBuilder: (context, index) {
-                          final tag = _filteredTags[index];
-                          final isSelected = _selectedTagIds.contains(tag.id);
-                          final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-                          final Widget leading = isEmoji
-                              ? Text(
-                                  IconUtils.getDisplayIcon(tag.iconName),
-                                  style: const TextStyle(fontSize: 20),
-                                )
-                              : Icon(IconUtils.getIconData(tag.iconName));
-
-                          return CheckboxListTile(
-                            title: Row(
-                              children: [
-                                leading,
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    tag.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            value: isSelected,
-                            dense: true,
-                            controlAffinity: ListTileControlAffinity.trailing,
-                            onChanged: (selected) {
-                              setState(() {
-                                if (selected == true) {
-                                  _selectedTagIds.add(tag.id);
-                                } else {
-                                  _selectedTagIds.remove(tag.id);
-                                }
-                              });
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  // 渲染已选标签的Widget，直接使用传入的标签数据
-  double _computeTagListHeight() {
-    const double minHeight = 160.0;
-    const double maxHeight = 280.0;
-    const double itemHeight = 52.0;
-
-    if (_filteredTags.isEmpty) {
-      return minHeight;
-    }
-
-    final int visibleCount = math.min(_filteredTags.length, 6);
-    final double estimatedHeight = visibleCount * itemHeight;
-    return estimatedHeight.clamp(minHeight, maxHeight);
-  }
-
-  Widget _buildSelectedTags(ThemeData theme) {
-    if (_selectedTagIds.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    // 直接使用widget.tags，避免异步查询
-    final tags = widget.tags;
-
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '已选标签',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 4.0,
-            runSpacing: 4.0,
-            children: _selectedTagIds.map((tagId) {
-              // 从最新的标签列表中查找
-              final tag = tags.firstWhere(
-                (t) => t.id == tagId,
-                orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-              );
-              return Chip(
-                label: IconUtils.isEmoji(tag.iconName)
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            IconUtils.getDisplayIcon(tag.iconName),
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            tag.name,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      )
-                    : Text(tag.name),
-                avatar: !IconUtils.isEmoji(tag.iconName)
-                    ? Icon(
-                        IconUtils.getIconData(tag.iconName),
-                        size: 14,
-                      )
-                    : null,
-                deleteIcon: const Icon(Icons.close, size: 14),
-                onDeleted: () {
-                  setState(() {
-                    _selectedTagIds.remove(tagId);
-                  });
-                },
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
@@ -777,10 +780,19 @@ class _HomePageState extends State<HomePage>
     // 使用延迟显示，确保动画流畅
     Future.microtask(() {
       if (mounted) {
+        // 性能优化：移动端使用固定高度，避免isScrollControlled的GPU开销
+        final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+        
         showModalBottomSheet(
           context: context,
-          isScrollControlled: true,
+          isScrollControlled: !isMobile, // 移动端禁用，桌面端保持
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+          // 移动端使用固定高度
+          constraints: isMobile 
+              ? BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                )
+              : null,
           builder: (context) => AddNoteDialog(
             prefilledContent: prefilledContent,
             prefilledAuthor: prefilledAuthor,
@@ -837,12 +849,19 @@ class _HomePageState extends State<HomePage>
       }
     } else {
       // 否则，打开常规编辑对话框
+      final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+      
       showModalBottomSheet(
         context: context,
-        isScrollControlled: true,
+        isScrollControlled: !isMobile,
         backgroundColor: Theme.of(context).brightness == Brightness.light
             ? Colors.white
             : Theme.of(context).colorScheme.surface,
+        constraints: isMobile 
+            ? BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              )
+            : null,
         builder: (context) => AddNoteDialog(
           initialQuote: quote,
           tags: _tags,
