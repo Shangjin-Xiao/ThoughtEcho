@@ -819,6 +819,7 @@ class NoteListViewState extends State<NoteListView> {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(
+          key: listKey,
           builder: (context, constraints) {
             final size = (constraints.maxHeight * 0.7).clamp(120.0, 400.0);
             return Center(
@@ -832,16 +833,18 @@ class NoteListViewState extends State<NoteListView> {
           },
         );
       }
-      return const AppLoadingView();
+      return AppLoadingView(key: listKey);
     }
     if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
-      return const AppEmptyView(
+      return AppEmptyView(
+        key: listKey,
         svgAsset: 'assets/empty/empty_state.svg',
         text: '还没有笔记，开始记录吧！',
       );
     }
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
       return Center(
+        key: listKey,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -874,6 +877,7 @@ class NoteListViewState extends State<NoteListView> {
     var foldGuideAssigned = false;
 
     return NotificationListener<ScrollNotification>(
+      key: listKey,
       onNotification: (ScrollNotification notification) {
         // 修复：优化预加载逻辑，减少频繁触发
         if (notification is ScrollUpdateNotification) {
@@ -894,7 +898,6 @@ class NoteListViewState extends State<NoteListView> {
         return true;
       },
       child: ListView.builder(
-        key: listKey, // 为 AnimatedSwitcher 提供 key
         controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
         addAutomaticKeepAlives: true, // 性能优化：保持滚动位置
