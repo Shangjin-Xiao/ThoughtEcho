@@ -379,6 +379,9 @@ class DatabaseService extends ChangeNotifier {
       _filterCache.clear();
       _watchHasMore = true;
 
+      // 新增：执行数据库健康检查
+      await _performStartupHealthCheck();
+
       // 延迟通知监听者，让UI知道数据库已准备好
       WidgetsBinding.instance.addPostFrameCallback((_) {
         notifyListeners();
@@ -467,15 +470,17 @@ class DatabaseService extends ChangeNotifier {
         await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
         );
-        // 修复：安全地创建day_period索引
-        await _createIndexSafely(
-            db, 'quotes', 'day_period', 'idx_quotes_day_period');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+        );
         // 新增：last_modified 索引用于同步增量查询
-        await _createIndexSafely(
-            db, 'quotes', 'last_modified', 'idx_quotes_last_modified');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)',
+        );
         // 新增：favorite_count 索引用于按喜爱度排序
-        await _createIndexSafely(
-            db, 'quotes', 'favorite_count', 'idx_quotes_favorite_count');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)',
+        );
 
         // 创建新的 quote_tags 关联表
         await db.execute('''
@@ -529,10 +534,33 @@ class DatabaseService extends ChangeNotifier {
         }
       },
       onOpen: (db) async {
+        // 关键：确保外键约束已启用（必须在事务外执行）
+        await db.rawQuery('PRAGMA foreign_keys = ON');
+        
         // 每次打开数据库时配置PRAGMA参数
         await _configureDatabasePragmas(db);
+        
+        // 验证外键约束状态
+        await _verifyForeignKeysEnabled(db);
       },
     );
+  }
+
+  /// 验证外键约束是否已启用
+  Future<void> _verifyForeignKeysEnabled(Database db) async {
+    try {
+      final result = await db.rawQuery('PRAGMA foreign_keys');
+      final isEnabled = result.isNotEmpty && result.first['foreign_keys'] == 1;
+      
+      if (isEnabled) {
+        logDebug('✅ 外键约束已启用，数据完整性受保护');
+      } else {
+        logError('⚠️ 警告：外键约束未启用，可能影响数据完整性', 
+                 source: 'DatabaseService');
+      }
+    } catch (e) {
+      logError('验证外键约束状态失败: $e', error: e, source: 'DatabaseService');
+    }
   }
 
   /// 配置数据库安全和性能PRAGMA参数
@@ -891,7 +919,11 @@ class DatabaseService extends ChangeNotifier {
           'psychology': '🤔', // 哲学
         };
 
-        // 更新默认标签的图标
+        // 注意：这里会更新所有默认标签的图标，包括用户可能自定义过的
+        // 但由于是从旧版本升级（oldVersion < 18），通常是首次迁移
+        // 如果用户在v18之前已经自定义了图标，这里会被覆盖
+        // 考虑到这是首次引入emoji图标，这个行为是可接受的
+        // 未来版本如需更新图标，应检查 last_modified 字段避免覆盖用户修改
         for (final entry in iconMigration.entries) {
           final oldIcon = entry.key;
           final newIcon = entry.value;
@@ -3050,6 +3082,61 @@ class DatabaseService extends ChangeNotifier {
     } catch (e) {
       logDebug('检查列是否存在失败: $e');
       return false;
+    }
+  }
+
+  /// 启动时执行数据库健康检查
+  Future<void> _performStartupHealthCheck() async {
+    if (kIsWeb) {
+      logDebug('Web平台跳过数据库健康检查');
+      return;
+    }
+
+    try {
+      logDebug('开始数据库健康检查...');
+      
+      final db = await safeDatabase;
+      
+      // 1. 验证外键约束状态
+      final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');
+      final foreignKeysEnabled = foreignKeysResult.isNotEmpty && 
+                                  foreignKeysResult.first['foreign_keys'] == 1;
+      
+      // 2. 获取数据库版本
+      final dbVersion = await db.getVersion();
+      
+      // 3. 获取基本统计
+      final quoteCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+      final quoteCount = quoteCountResult.first['count'] as int;
+      
+      final categoryCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM categories');
+      final categoryCount = categoryCountResult.first['count'] as int;
+      
+      final tagRelationCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
+      final tagRelationCount = tagRelationCountResult.first['count'] as int;
+      
+      // 4. 记录健康状态
+      logDebug('''
+========================================
+数据库健康检查报告
+========================================
+版本: v$dbVersion
+外键约束: ${foreignKeysEnabled ? '✅ 已启用' : '⚠️ 未启用'}
+笔记数量: $quoteCount
+分类数量: $categoryCount
+标签关联: $tagRelationCount
+========================================
+      ''');
+      
+      // 5. 如果发现问题，记录警告
+      if (!foreignKeysEnabled) {
+        logError('⚠️ 警告：外键约束未启用，可能影响数据完整性', 
+                 source: 'DatabaseHealthCheck');
+      }
+      
+    } catch (e) {
+      logError('数据库健康检查失败: $e', error: e, source: 'DatabaseHealthCheck');
+      // 健康检查失败不应阻止应用启动
     }
   }
 
