@@ -293,6 +293,11 @@ class DatabaseService extends ChangeNotifier {
       // 触发更新
       _categoriesController.add(_categoryStore);
       _isInitialized = true; // 标记为已初始化
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
+      _initCompleter = null;
       notifyListeners();
       return;
     }
@@ -301,6 +306,11 @@ class DatabaseService extends ChangeNotifier {
     if (_database != null && _database!.isOpen) {
       logDebug('数据库已存在且打开，跳过重复初始化');
       _isInitialized = true;
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
+      _initCompleter = null;
       return;
     }
 
@@ -358,6 +368,7 @@ class DatabaseService extends ChangeNotifier {
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
         _initCompleter!.complete();
       }
+      _initCompleter = null;
 
       // 修复：恢复简化的预加载逻辑，确保首次加载能正常工作
       logDebug('数据库初始化完成，准备预加载数据...');
@@ -3394,6 +3405,7 @@ class DatabaseService extends ChangeNotifier {
               if (await file.exists()) {
                 await file.delete();
                 logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
+                _initCompleter = null;
               } else {
                 logDebug('孤儿媒体文件不存在或已被删除: $absolutePath');
               }
