@@ -75,6 +75,11 @@ class FeatureGuide {
       title: '编辑笔记元数据',
       description: '点击这里可以编辑笔记的标签、分类等信息',
     ),
+    'add_note_fullscreen_button': FeatureGuideConfig(
+      title: '全屏编辑器',
+      description: '点击这里打开全屏编辑器\n支持富文本、插入图片/音频/视频',
+      placement: FeatureGuidePlacement.left,
+    ),
 
     // 设置页
     'settings_preferences': FeatureGuideConfig(

@@ -18,6 +18,7 @@ import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../constants/app_constants.dart';
+import '../utils/feature_guide_helper.dart';
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -47,6 +48,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _workController;
+  final GlobalKey _fullscreenButtonKey = GlobalKey();
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
 
@@ -158,6 +160,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     // 添加搜索防抖监听器
     _tagSearchController.addListener(_onSearchChanged);
 
+    // 显示全屏编辑按钮的功能引导
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showFullscreenButtonGuide();
+      }
+    });
+
     // 如果是编辑已有笔记
     if (widget.initialQuote != null) {
       _aiSummary = widget.initialQuote!.aiAnalysis;
@@ -238,6 +247,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         logDebug('更新标签列表失败: $e');
       }
     });
+  }
+
+  /// 显示全屏编辑按钮的功能引导
+  void _showFullscreenButtonGuide() {
+    FeatureGuideHelper.show(
+      context: context,
+      guideId: 'add_note_fullscreen_button',
+      targetKey: _fullscreenButtonKey,
+    );
   }
 
   // 搜索变化处理 - 使用防抖优化
@@ -648,6 +666,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               ),
                             ),
                           IconButton(
+                            key: _fullscreenButtonKey,
                             tooltip: isLongContent ? '建议全屏编辑长文本' : '全屏编辑',
                             icon: Icon(
                               Icons.fullscreen,
