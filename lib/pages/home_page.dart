@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -32,7 +32,6 @@ import '../services/ai_card_generation_service.dart';
 import '../widgets/svg_card_widget.dart';
 import '../models/generated_card.dart';
 import 'package:share_plus/share_plus.dart';
-import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';

@@ -212,6 +212,162 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     }
   }
 
+  /// 执行数据库维护（VACUUM + ANALYZE + REINDEX）
+  Future<void> _performDatabaseMaintenance() async {
+    // 确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('数据库维护优化'),
+        content: const Text(
+          '此操作将对数据库进行优化维护，包括：\n\n'
+          '• 整理碎片空间\n'
+          '• 更新统计信息\n'
+          '• 重建索引\n\n'
+          '维护过程可能需要几秒到几分钟，具体取决于数据量大小。\n\n'
+          '确定继续吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('开始维护'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _isClearing = true;
+    });
+
+    String currentProgress = '准备中...';
+
+    // 显示进度对话框
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 16),
+                Text('数据库维护中...'),
+              ],
+            ),
+            content: Text(currentProgress),
+          );
+        },
+      ),
+    );
+
+    try {
+      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      
+      final result = await dbService.performDatabaseMaintenance(
+        onProgress: (progress) {
+          currentProgress = progress;
+          // 注意：这里无法直接更新对话框状态，但至少记录了进度
+        },
+      );
+
+      // 关闭进度对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (!mounted) return;
+
+      // 刷新统计信息
+      await _loadStorageStats();
+
+      if (!mounted) return;
+
+      // 显示结果
+      if (result['success'] == true) {
+        final durationMs = result['duration_ms'] as int;
+        final spaceSaved = result['space_saved_mb'] as double;
+        final dbSizeBefore = result['db_size_before_mb'] as double;
+        final dbSizeAfter = result['db_size_after_mb'] as double;
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 12),
+                Text('维护完成'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('耗时: ${(durationMs / 1000).toStringAsFixed(1)} 秒'),
+                const SizedBox(height: 8),
+                Text('数据库大小: ${dbSizeBefore.toStringAsFixed(2)} MB → ${dbSizeAfter.toStringAsFixed(2)} MB'),
+                const SizedBox(height: 8),
+                Text(
+                  spaceSaved > 0
+                      ? '释放空间: ${spaceSaved.toStringAsFixed(2)} MB'
+                      : '未释放空间（数据库已很紧凑）',
+                  style: TextStyle(
+                    color: spaceSaved > 0 ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('维护失败: ${result['message']}'),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+      }
+    } catch (e) {
+      // 关闭进度对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('维护失败: $e'),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isClearing = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -514,6 +670,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           onPressed: _isClearing ? null : _cleanupOrphanFiles,
           icon: const Icon(Icons.delete_sweep),
           label: const Text('清理无用媒体文件'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _isClearing ? null : _performDatabaseMaintenance,
+          icon: const Icon(Icons.build_circle_outlined),
+          label: const Text('数据库维护优化'),
         ),
       ],
     );
