@@ -561,7 +561,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
             // 主要统计卡片
             Expanded(
-              child: Column(
+              child: ListView(
                 children: [
                   _buildStatCard(
                     icon: Icons.edit_note,
@@ -622,68 +622,69 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
             const SizedBox(height: 40),
 
-            // 最活跃时间段
-            _buildHabitCard(
-              title: '最活跃时间',
-              content: _stats!.mostActiveHour != null
-                  ? '${_stats!.mostActiveHour}:00 - ${_stats!.mostActiveHour! + 1}:00'
-                  : '暂无数据',
-              icon: Icons.schedule,
-              color: const Color(0xFF8B5CF6),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 最喜欢的日子
-            _buildHabitCard(
-              title: '最喜欢的日子',
-              content: _stats!.mostActiveWeekday ?? '暂无数据',
-              icon: Icons.today,
-              color: const Color(0xFF06B6D4),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 平均字数
-            _buildHabitCard(
-              title: '平均每篇字数',
-              content: '${_stats!.averageWordsPerNote.toInt()} 字',
-              icon: Icons.text_fields,
-              color: const Color(0xFFEC4899),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 最长笔记
-            _buildHabitCard(
-              title: '最长的一篇',
-              content: '${_stats!.longestNoteWords} 字',
-              icon: Icons.article,
-              color: const Color(0xFF84CC16),
-            ),
-            const SizedBox(height: 20),
-            // 新增：最常见时间段
-            _buildHabitCard(
-              title: '最常见时间段',
-              content: _mostDayPeriod ?? '暂无数据',
-              icon: Icons.timelapse,
-              color: const Color(0xFF8B5CF6),
-            ),
-            const SizedBox(height: 20),
-            // 新增：最常见天气
-            _buildHabitCard(
-              title: '最常见天气',
-              content: _mostWeather ?? '暂无数据',
-              icon: Icons.cloud_queue,
-              color: const Color(0xFF06B6D4),
-            ),
-            const SizedBox(height: 20),
-            // 新增：最常用标签
-            _buildHabitCard(
-              title: '最常用标签',
-              content: _mostTopTag ?? '暂无数据',
-              icon: Icons.local_offer_outlined,
-              color: const Color(0xFFEF4444),
+            // 习惯卡片列表
+            Expanded(
+              child: ListView(
+                children: [
+                  // 最活跃时间段
+                  _buildHabitCard(
+                    title: '最活跃时间',
+                    content: _stats!.mostActiveHour != null
+                        ? '${_stats!.mostActiveHour}:00 - ${_stats!.mostActiveHour! + 1}:00'
+                        : '暂无数据',
+                    icon: Icons.schedule,
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                  const SizedBox(height: 20),
+                  // 最喜欢的日子
+                  _buildHabitCard(
+                    title: '最喜欢的日子',
+                    content: _stats!.mostActiveWeekday ?? '暂无数据',
+                    icon: Icons.today,
+                    color: const Color(0xFF06B6D4),
+                  ),
+                  const SizedBox(height: 20),
+                  // 平均字数
+                  _buildHabitCard(
+                    title: '平均每篇字数',
+                    content: '${_stats!.averageWordsPerNote.toInt()} 字',
+                    icon: Icons.text_fields,
+                    color: const Color(0xFFEC4899),
+                  ),
+                  const SizedBox(height: 20),
+                  // 最长笔记
+                  _buildHabitCard(
+                    title: '最长的一篇',
+                    content: '${_stats!.longestNoteWords} 字',
+                    icon: Icons.article,
+                    color: const Color(0xFF84CC16),
+                  ),
+                  const SizedBox(height: 20),
+                  // 新增：最常见时间段
+                  _buildHabitCard(
+                    title: '最常见时间段',
+                    content: _mostDayPeriod ?? '暂无数据',
+                    icon: Icons.timelapse,
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                  const SizedBox(height: 20),
+                  // 新增：最常见天气
+                  _buildHabitCard(
+                    title: '最常见天气',
+                    content: _mostWeather ?? '暂无数据',
+                    icon: Icons.cloud_queue,
+                    color: const Color(0xFF06B6D4),
+                  ),
+                  const SizedBox(height: 20),
+                  // 新增：最常用标签
+                  _buildHabitCard(
+                    title: '最常用标签',
+                    content: _mostTopTag ?? '暂无数据',
+                    icon: Icons.local_offer_outlined,
+                    color: const Color(0xFFEF4444),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -927,7 +928,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             _buildInsightBulbBar(),
             const SizedBox(height: 20),
             Expanded(
-              child: Column(
+              child: ListView(
                 children: [
                   _buildInsightCard(
                     icon: Icons.psychology,
