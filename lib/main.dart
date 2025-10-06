@@ -746,7 +746,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         return MaterialApp(
           navigatorKey: widget.navigatorKey,
-          title: 'ThoughtEcho',
+          title: '心迹',
           theme: appTheme.createLightThemeData(),
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,

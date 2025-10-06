@@ -3,7 +3,7 @@
 
 msix_config:
   # 应用基本信息
-  display_name: "ThoughtEcho"
+  display_name: "心迹"
   publisher_display_name: "Shangjinyun"
   identity_name: "Shangjinyun.330094822087A"
   
@@ -15,7 +15,7 @@ msix_config:
   publisher: "CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7"
   
   # 应用描述
-  description: "一款帮助你记录和分析思想的应用"
+  description: "心迹 - 你的专属灵感摘录本"
   
   # 应用图标（Windows ICO格式）
   logo_path: "windows/runner/resources/app_icon.ico"
@@ -60,8 +60,8 @@ msix_config:
   
   # 可视化资产
   visual_elements:
-    display_name: "ThoughtEcho"
-    description: "一款帮助你记录和分析思想的应用"
+    display_name: "心迹"
+    description: "心迹 - 你的专属灵感摘录本"
     background_color: "#2E7D32"
     show_name_on_square150x150_logo: true
     square150x150_logo: "windows/runner/resources/app_icon.ico"
