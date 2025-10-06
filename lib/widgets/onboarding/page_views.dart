@@ -103,8 +103,10 @@ class _WelcomePageViewState extends State<WelcomePageView>
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        theme.colorScheme.primary.withValues(alpha: 0.18),
-                                        theme.colorScheme.secondary.withValues(alpha: 0.13),
+                                        theme.colorScheme.primary
+                                            .withValues(alpha: 0.18),
+                                        theme.colorScheme.secondary
+                                            .withValues(alpha: 0.13),
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -112,7 +114,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
                                     borderRadius: BorderRadius.circular(14),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: theme.colorScheme.primary.withValues(alpha: 0.13),
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.13),
                                         blurRadius: 12,
                                         spreadRadius: 1,
                                         offset: const Offset(0, 2),
@@ -132,7 +135,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
                                 letterSpacing: 1.1,
                                 shadows: [
                                   Shadow(
-                                    color: theme.colorScheme.primary.withValues(alpha: 0.18),
+                                    color: theme.colorScheme.primary
+                                        .withValues(alpha: 0.18),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -149,13 +153,16 @@ class _WelcomePageViewState extends State<WelcomePageView>
                     if (widget.pageData.description != null) ...[
                       const SizedBox(height: 18),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withValues(alpha: 0.82),
+                          color:
+                              theme.colorScheme.surface.withValues(alpha: 0.82),
                           borderRadius: BorderRadius.circular(22),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.10),
                               blurRadius: 22,
                               spreadRadius: 1,
                               offset: const Offset(0, 6),
@@ -172,7 +179,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
                             fontFamily: 'Rounded',
                             shadows: [
                               Shadow(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.13),
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.13),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),

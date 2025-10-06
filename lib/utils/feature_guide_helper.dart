@@ -10,18 +10,18 @@ import '../widgets/feature_guide_popover.dart';
 /// 提供简单的 API 来显示功能引导提示
 class FeatureGuideHelper {
   /// 显示功能引导气泡
-  /// 
+  ///
   /// 参数:
   /// - context: BuildContext
   /// - guideId: 引导唯一标识符（如 'homepage_daily_quote'）
   /// - targetKey: 目标元素的 GlobalKey（可选，如果不提供则居中显示）
   /// - autoDismissDuration: 自动消失时间（默认约2.2秒）
   /// - shouldShow: 可选条件判断（返回false则中止显示）
-  /// 
+  ///
   /// 使用示例:
   /// ```dart
   /// final _quoteKey = GlobalKey();
-  /// 
+  ///
   /// @override
   /// void initState() {
   ///   super.initState();
@@ -38,7 +38,7 @@ class FeatureGuideHelper {
     required BuildContext context,
     required String guideId,
     GlobalKey? targetKey,
-  Duration autoDismissDuration = const Duration(milliseconds: 2200),
+    Duration autoDismissDuration = const Duration(milliseconds: 2200),
     bool Function()? shouldShow,
   }) async {
     try {
@@ -139,13 +139,13 @@ class FeatureGuideHelper {
   }
 
   /// 批量显示多个引导（按顺序）
-  /// 
+  ///
   /// 参数:
   /// - context: BuildContext
   /// - guides: 引导列表 [(guideId, targetKey), ...]
   /// - shouldShow: 可选条件判断（返回false则取消后续气泡）
   /// - delayBetween: 每个引导之间的延迟时间
-  /// 
+  ///
   /// 使用示例:
   /// ```dart
   /// FeatureGuideHelper.showSequence(
@@ -169,7 +169,7 @@ class FeatureGuideHelper {
 
     for (var i = 0; i < guides.length; i++) {
       final (guideId, targetKey) = guides[i];
-      
+
       // 每个气泡独立等待条件满足,无超时限制
       // 只要页面还在(context mounted),就一直等待用户切回来
       while (shouldShow != null && !shouldShow()) {
@@ -181,7 +181,7 @@ class FeatureGuideHelper {
         // 等待用户切回对应页面
         await Future.delayed(const Duration(milliseconds: 200));
       }
-      
+
       // 条件满足,显示当前引导
       // ignore: use_build_context_synchronously
       await show(
@@ -191,11 +191,11 @@ class FeatureGuideHelper {
         autoDismissDuration: autoDismissDuration,
         shouldShow: shouldShow,
       );
-      
+
       if (context is Element && !context.mounted) {
         break;
       }
-      
+
       final isLast = i == guides.length - 1;
       if (!isLast) {
         await Future.delayed(delayBetween);

@@ -15,8 +15,10 @@ class MMKVAdapter implements StorageAdapter {
     if (_initialized) return; // 防止重复初始化
 
     // Windows/Linux/macOS 桌面平台不支持 MMKV FFI
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      throw UnsupportedError('MMKVAdapter 不支持桌面平台，请使用 SafeMMKV 或 SharedPrefsAdapter');
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      throw UnsupportedError(
+          'MMKVAdapter 不支持桌面平台，请使用 SafeMMKV 或 SharedPrefsAdapter');
     }
 
     // 确保 MMKV 全局只初始化一次

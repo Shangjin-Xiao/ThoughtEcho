@@ -1831,10 +1831,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     opacity: value,
                     child: Text(
                       '本${_getPeriodName()}暂无笔记记录',
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -2204,7 +2203,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   void _saveCard(GeneratedCard card) async {
     // 关键修复：在关闭对话框之前，先获取外层scaffold的context
     final scaffoldContext = context;
-    
+
     Navigator.of(context).pop(); // 关闭对话框
 
     if (_aiCardService == null) return;

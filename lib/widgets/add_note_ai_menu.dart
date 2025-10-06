@@ -450,8 +450,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       aiService = null;
     }
 
-    final bool aiConfigured =
-        aiService != null && aiService.hasValidApiKey();
+    final bool aiConfigured = aiService != null && aiService.hasValidApiKey();
 
     if (!aiConfigured) {
       return const SizedBox.shrink();

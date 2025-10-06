@@ -780,8 +780,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   void _maybeShowOrHideSyncDialog(NoteSyncService service) {
     // 统一：审批 + 进度 合并为一个弹窗
-  final active = service.awaitingUserApproval ||
-    service.awaitingPeerApproval ||
+    final active = service.awaitingUserApproval ||
+        service.awaitingPeerApproval ||
         service.syncStatus == SyncStatus.packaging ||
         service.syncStatus == SyncStatus.sending ||
         service.syncStatus == SyncStatus.receiving ||
@@ -894,8 +894,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],

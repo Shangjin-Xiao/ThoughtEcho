@@ -58,7 +58,8 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
         _filteredTags = widget.tags;
       } else {
         _filteredTags = widget.tags
-            .where((tag) => tag.name.toLowerCase().contains(query.toLowerCase()))
+            .where(
+                (tag) => tag.name.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -179,7 +180,8 @@ class _TagSelectionContent extends StatelessWidget {
             ),
           )
         else
-          RepaintBoundary( // ✅ 隔离标签列表的重绘
+          RepaintBoundary(
+            // ✅ 隔离标签列表的重绘
             child: SizedBox(
               height: _computeTagListHeight(),
               child: Scrollbar(
@@ -194,7 +196,8 @@ class _TagSelectionContent extends StatelessWidget {
                     return _TagListItem(
                       tag: tag,
                       isSelected: selectedTagIds.contains(tag.id),
-                      onChanged: (selected) => onToggleTag(tag.id, selected ?? false),
+                      onChanged: (selected) =>
+                          onToggleTag(tag.id, selected ?? false),
                     );
                   },
                 ),

@@ -76,26 +76,28 @@ class SvgOffscreenRenderer {
     // 检查context是否有效
     if (context is Element) {
       if (!context.mounted) {
-        AppLogger.w('BuildContext已失效（Element未mounted）', source: 'SvgOffscreenRenderer');
+        AppLogger.w('BuildContext已失效（Element未mounted）',
+            source: 'SvgOffscreenRenderer');
         throw StateError('BuildContext已失效（未mounted），无法执行离屏渲染');
       }
     }
-    
+
     // 使用rootOverlay=false，尝试获取最近的Overlay
     var overlayState = Overlay.maybeOf(context, rootOverlay: false) ??
         Overlay.maybeOf(context, rootOverlay: true);
-    
+
     if (overlayState == null) {
-      AppLogger.w('未找到Overlay（rootOverlay=false和true都尝试过）', source: 'SvgOffscreenRenderer');
+      AppLogger.w('未找到Overlay（rootOverlay=false和true都尝试过）',
+          source: 'SvgOffscreenRenderer');
       throw StateError('未找到 Overlay，无法执行离屏渲染');
     }
-    
+
     // 检查overlay是否已mounted
     if (!overlayState.mounted) {
       AppLogger.w('Overlay未mounted', source: 'SvgOffscreenRenderer');
       throw StateError('Overlay未mounted，无法执行离屏渲染');
     }
-    
+
     AppLogger.d('Overlay检查通过，准备离屏渲染', source: 'SvgOffscreenRenderer');
 
     // 在任何异步等待之前获取设备像素比，避免异步后再次访问 context 触发 lint
@@ -108,7 +110,7 @@ class SvgOffscreenRenderer {
     final intrinsic = _parseSvgIntrinsicSize(svgContent);
     final intrinsicWidth = intrinsic.width ?? 400.0;
     final intrinsicHeight = intrinsic.height ?? 600.0;
-    
+
     AppLogger.d(
       'SVG内在尺寸: ${intrinsicWidth}x$intrinsicHeight, 目标尺寸: ${width}x$height',
       source: 'SvgOffscreenRenderer',
@@ -232,25 +234,27 @@ class SvgOffscreenRenderer {
       // SVG解析通常需要2-3帧：布局 -> 解析 -> 绘制
       // 增加到5帧，并添加额外延迟确保复杂SVG完全渲染
       await _pumpFrames(count: 5);
-      
+
       // 额外延迟确保渲染管线完成
       await Future.delayed(const Duration(milliseconds: 200));
-      
+
       final boundary = boundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
       if (boundary == null) {
         throw StateError('未获取到 RenderRepaintBoundary，SVG可能未完成渲染');
       }
-      
+
       // 验证boundary已经完成布局
       if (!boundary.hasSize || boundary.size.isEmpty) {
-        AppLogger.w('RenderRepaintBoundary尺寸异常: ${boundary.hasSize ? boundary.size : "无尺寸"}',
+        AppLogger.w(
+            'RenderRepaintBoundary尺寸异常: ${boundary.hasSize ? boundary.size : "无尺寸"}',
             source: 'SvgOffscreenRenderer');
         throw StateError('RenderRepaintBoundary尺寸异常，SVG可能未完成布局');
       }
-      
-      AppLogger.d('RenderRepaintBoundary已就绪: ${boundary.size}', source: 'SvgOffscreenRenderer');
-      
+
+      AppLogger.d('RenderRepaintBoundary已就绪: ${boundary.size}',
+          source: 'SvgOffscreenRenderer');
+
       // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
       double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;
       // 限制最大像素比（4.0 已足够大部分需求，避免OOM）
@@ -259,24 +263,24 @@ class SvgOffscreenRenderer {
             source: 'SvgOffscreenRenderer');
         effectivePixelRatio = 4.0;
       }
-      
+
       final image = await boundary.toImage(pixelRatio: effectivePixelRatio);
       final byteData = await image.toByteData(format: format);
       if (byteData == null) {
         throw StateError('无法获取图片字节数据');
       }
-      
+
       final bytes = byteData.buffer.asUint8List();
-      
+
       // 清理资源
       image.dispose();
       cleanup();
-      
+
       AppLogger.d(
         'SVG离屏渲染成功: ${width}x$height, 像素比: ${effectivePixelRatio.toStringAsFixed(1)}, 大小: ${bytes.length} bytes',
         source: 'SvgOffscreenRenderer',
       );
-      
+
       return bytes;
     } catch (e, st) {
       cleanup();

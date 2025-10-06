@@ -8,8 +8,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
-class _TestSettingsService extends ChangeNotifier
-    implements SettingsService {
+class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBold;
 
   _TestSettingsService({bool prioritizeBold = false})

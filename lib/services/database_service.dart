@@ -536,10 +536,10 @@ class DatabaseService extends ChangeNotifier {
       onOpen: (db) async {
         // 关键：确保外键约束已启用（必须在事务外执行）
         await db.rawQuery('PRAGMA foreign_keys = ON');
-        
+
         // 每次打开数据库时配置PRAGMA参数
         await _configureDatabasePragmas(db);
-        
+
         // 验证外键约束状态
         await _verifyForeignKeysEnabled(db);
       },
@@ -551,12 +551,11 @@ class DatabaseService extends ChangeNotifier {
     try {
       final result = await db.rawQuery('PRAGMA foreign_keys');
       final isEnabled = result.isNotEmpty && result.first['foreign_keys'] == 1;
-      
+
       if (isEnabled) {
         logDebug('✅ 外键约束已启用，数据完整性受保护');
       } else {
-        logError('⚠️ 警告：外键约束未启用，可能影响数据完整性', 
-                 source: 'DatabaseService');
+        logError('⚠️ 警告：外键约束未启用，可能影响数据完整性', source: 'DatabaseService');
       }
     } catch (e) {
       logError('验证外键约束状态失败: $e', error: e, source: 'DatabaseService');
@@ -565,34 +564,36 @@ class DatabaseService extends ChangeNotifier {
 
   /// 配置数据库安全和性能PRAGMA参数
   /// [inTransaction] 是否在事务内执行（onCreate/onUpgrade为true，onOpen为false）
-  Future<void> _configureDatabasePragmas(Database db, {bool inTransaction = false}) async {
+  Future<void> _configureDatabasePragmas(Database db,
+      {bool inTransaction = false}) async {
     try {
       // 启用外键约束（防止数据孤立）
       await db.rawQuery('PRAGMA foreign_keys = ON');
-      
+
       // 设置繁忙超时（5秒），防止并发冲突
       await db.rawQuery('PRAGMA busy_timeout = 5000');
-      
+
       // 设置缓存大小为8MB（负数表示KB）
       await db.rawQuery('PRAGMA cache_size = -8000');
-      
+
       // 临时表使用内存存储
       await db.rawQuery('PRAGMA temp_store = MEMORY');
-      
+
       // 只在事务外执行的配置（onCreate/onUpgrade在事务内，onOpen在事务外）
       if (!inTransaction) {
         // 使用WAL模式提升并发性能（必须在事务外）
         await db.rawQuery('PRAGMA journal_mode = WAL');
-        
+
         // 正常同步模式（必须在事务外，否则报错 SQLITE_ERROR）
         await db.rawQuery('PRAGMA synchronous = NORMAL');
       }
-      
+
       // 验证关键配置
       final foreignKeys = await db.rawQuery('PRAGMA foreign_keys');
       final journalMode = await db.rawQuery('PRAGMA journal_mode');
-      
-      logDebug('数据库PRAGMA配置完成 (inTransaction=$inTransaction): foreign_keys=${foreignKeys.first['foreign_keys']}, journal_mode=${journalMode.first['journal_mode']}');
+
+      logDebug(
+          '数据库PRAGMA配置完成 (inTransaction=$inTransaction): foreign_keys=${foreignKeys.first['foreign_keys']}, journal_mode=${journalMode.first['journal_mode']}');
     } catch (e) {
       logError('配置数据库PRAGMA失败: $e', error: e, source: 'DatabaseService');
       // 配置失败不应阻止数据库使用，只记录错误
@@ -1508,7 +1509,7 @@ class DatabaseService extends ChangeNotifier {
         // 创建Quote对象（移除临时字段）
         final quoteData = Map<String, dynamic>.from(map);
         quoteData.remove('tag_ids_joined');
-        
+
         final quote = Quote.fromJson({...quoteData, 'tag_ids': tagIds});
         quotes.add(quote);
       } catch (e) {
@@ -1898,7 +1899,7 @@ class DatabaseService extends ChangeNotifier {
         // 恢复分类数据（优化：使用batch批量插入）
         final categories = data['categories'] as List;
         final categoryBatch = txn.batch();
-        
+
         for (final c in categories) {
           final categoryData = Map<String, dynamic>.from(
             c as Map<String, dynamic>,
@@ -1929,7 +1930,7 @@ class DatabaseService extends ChangeNotifier {
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
-        
+
         // 批量提交分类（性能提升5-10倍）
         try {
           await categoryBatch.commit(noResult: true);
@@ -1938,8 +1939,12 @@ class DatabaseService extends ChangeNotifier {
           logError('批量插入分类失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           // 降级：逐条插入
           for (final c in categories) {
-            final categoryData = Map<String, dynamic>.from(c as Map<String, dynamic>);
-            final categoryFieldMappings = {'isDefault': 'is_default', 'iconName': 'icon_name'};
+            final categoryData =
+                Map<String, dynamic>.from(c as Map<String, dynamic>);
+            final categoryFieldMappings = {
+              'isDefault': 'is_default',
+              'iconName': 'icon_name'
+            };
             for (final mapping in categoryFieldMappings.entries) {
               if (categoryData.containsKey(mapping.key)) {
                 categoryData[mapping.value] = categoryData[mapping.key];
@@ -1949,9 +1954,10 @@ class DatabaseService extends ChangeNotifier {
             categoryData['id'] ??= _uuid.v4();
             categoryData['name'] ??= '未命名分类';
             categoryData['is_default'] ??= 0;
-            
+
             try {
-              await txn.insert('categories', categoryData, conflictAlgorithm: ConflictAlgorithm.replace);
+              await txn.insert('categories', categoryData,
+                  conflictAlgorithm: ConflictAlgorithm.replace);
             } catch (e2) {
               logDebug('插入单个分类失败: ${categoryData['id']}');
             }
@@ -1962,7 +1968,7 @@ class DatabaseService extends ChangeNotifier {
         final quotes = data['quotes'] as List;
         final quoteBatch = txn.batch();
         final tagRelations = <Map<String, String>>[];
-        
+
         for (final q in quotes) {
           final quoteData = Map<String, dynamic>.from(
             q as Map<String, dynamic>,
@@ -2011,7 +2017,8 @@ class DatabaseService extends ChangeNotifier {
           // 收集标签信息（稍后批量插入）
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
-            final tagIds = tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+            final tagIds =
+                tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
             for (final tagId in tagIds) {
               tagRelations.add({'quote_id': quoteId, 'tag_id': tagId.trim()});
             }
@@ -2024,7 +2031,7 @@ class DatabaseService extends ChangeNotifier {
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
-        
+
         // 批量提交笔记数据（性能提升5-10倍）
         try {
           await quoteBatch.commit(noResult: true);
@@ -2033,8 +2040,9 @@ class DatabaseService extends ChangeNotifier {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           // 降级：逐条插入
           for (final q in quotes) {
-            final quoteData = Map<String, dynamic>.from(q as Map<String, dynamic>);
-            
+            final quoteData =
+                Map<String, dynamic>.from(q as Map<String, dynamic>);
+
             String? tagIdsString;
             if (quoteData.containsKey('tag_ids')) {
               tagIdsString = quoteData['tag_ids'] as String?;
@@ -2068,12 +2076,14 @@ class DatabaseService extends ChangeNotifier {
             quoteData['date'] ??= DateTime.now().toIso8601String();
 
             try {
-              await txn.insert('quotes', quoteData, conflictAlgorithm: ConflictAlgorithm.replace);
-              
+              await txn.insert('quotes', quoteData,
+                  conflictAlgorithm: ConflictAlgorithm.replace);
+
               // 插入成功后，处理标签关联
               if (tagIdsString != null && tagIdsString.isNotEmpty) {
                 final quoteId = quoteData['id'] as String;
-                final tagIds = tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+                final tagIds =
+                    tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
                 for (final tagId in tagIds) {
                   try {
                     await txn.insert(
@@ -2091,14 +2101,15 @@ class DatabaseService extends ChangeNotifier {
             }
           }
         }
-        
+
         // 批量插入标签关联（性能提升显著）
         if (tagRelations.isNotEmpty) {
           final tagBatch = txn.batch();
           for (final relation in tagRelations) {
-            tagBatch.insert('quote_tags', relation, conflictAlgorithm: ConflictAlgorithm.ignore);
+            tagBatch.insert('quote_tags', relation,
+                conflictAlgorithm: ConflictAlgorithm.ignore);
           }
-          
+
           try {
             await tagBatch.commit(noResult: true);
             logDebug('批量插入${tagRelations.length}条标签关联成功');
@@ -2107,7 +2118,8 @@ class DatabaseService extends ChangeNotifier {
             // 降级：逐条插入
             for (final relation in tagRelations) {
               try {
-                await txn.insert('quote_tags', relation, conflictAlgorithm: ConflictAlgorithm.ignore);
+                await txn.insert('quote_tags', relation,
+                    conflictAlgorithm: ConflictAlgorithm.ignore);
               } catch (e2) {
                 logDebug('插入单条标签关联失败: ${relation['quote_id']}');
               }
@@ -2973,15 +2985,19 @@ class DatabaseService extends ChangeNotifier {
     stopwatch.stop();
 
     final queryTime = stopwatch.elapsedMilliseconds;
-    
+
     // 记录查询统计（用于性能分析）
     _recordQueryStats('getQuotesCount', queryTime);
 
     // 慢查询检测和警告（阈值降低到100ms，更敏感）
     if (queryTime > 100) {
-      final level = queryTime > 1000 ? '🔴 严重慢查询' : queryTime > 500 ? '⚠️ 慢查询警告' : 'ℹ️ 性能提示';
+      final level = queryTime > 1000
+          ? '🔴 严重慢查询'
+          : queryTime > 500
+              ? '⚠️ 慢查询警告'
+              : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
-      
+
       if (queryTime > 500) {
         logDebug('慢查询SQL: $query');
         logDebug('查询参数: $args');
@@ -3094,27 +3110,30 @@ class DatabaseService extends ChangeNotifier {
 
     try {
       logDebug('开始数据库健康检查...');
-      
+
       final db = await safeDatabase;
-      
+
       // 1. 验证外键约束状态
       final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');
-      final foreignKeysEnabled = foreignKeysResult.isNotEmpty && 
-                                  foreignKeysResult.first['foreign_keys'] == 1;
-      
+      final foreignKeysEnabled = foreignKeysResult.isNotEmpty &&
+          foreignKeysResult.first['foreign_keys'] == 1;
+
       // 2. 获取数据库版本
       final dbVersion = await db.getVersion();
-      
+
       // 3. 获取基本统计
-      final quoteCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+      final quoteCountResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
       final quoteCount = quoteCountResult.first['count'] as int;
-      
-      final categoryCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM categories');
+
+      final categoryCountResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM categories');
       final categoryCount = categoryCountResult.first['count'] as int;
-      
-      final tagRelationCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
+
+      final tagRelationCountResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
       final tagRelationCount = tagRelationCountResult.first['count'] as int;
-      
+
       // 4. 记录健康状态
       logDebug('''
 ========================================
@@ -3127,13 +3146,11 @@ class DatabaseService extends ChangeNotifier {
 标签关联: $tagRelationCount
 ========================================
       ''');
-      
+
       // 5. 如果发现问题，记录警告
       if (!foreignKeysEnabled) {
-        logError('⚠️ 警告：外键约束未启用，可能影响数据完整性', 
-                 source: 'DatabaseHealthCheck');
+        logError('⚠️ 警告：外键约束未启用，可能影响数据完整性', source: 'DatabaseHealthCheck');
       }
-      
     } catch (e) {
       logError('数据库健康检查失败: $e', error: e, source: 'DatabaseHealthCheck');
       // 健康检查失败不应阻止应用启动
@@ -3650,10 +3667,10 @@ class DatabaseService extends ChangeNotifier {
         if (index != -1) {
           _currentQuotes[index] = quote;
         }
-        
+
         // 修复问题1：更新笔记后清理旧缓存，确保显示最新内容
         QuoteContent.removeCacheForQuote(quote.id!);
-        
+
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
@@ -5122,7 +5139,8 @@ class DatabaseService extends ChangeNotifier {
       };
     }
 
-    return _executeWithLock<Map<String, dynamic>>('databaseMaintenance', () async {
+    return _executeWithLock<Map<String, dynamic>>('databaseMaintenance',
+        () async {
       final stopwatch = Stopwatch()..start();
       final result = <String, dynamic>{
         'success': false,
@@ -5135,12 +5153,12 @@ class DatabaseService extends ChangeNotifier {
 
       try {
         final db = await safeDatabase;
-        
+
         // 获取数据库文件路径
         final dbPath = await getDatabasesPath();
         final path = join(dbPath, 'thoughtecho.db');
         final dbFile = File(path);
-        
+
         // 记录维护前的文件大小
         if (await dbFile.exists()) {
           final sizeBefore = await dbFile.length();
@@ -5149,23 +5167,23 @@ class DatabaseService extends ChangeNotifier {
 
         onProgress?.call('正在更新数据库统计信息...');
         logDebug('开始数据库维护：ANALYZE');
-        
+
         // 1. 更新统计信息（快速，优先执行）
         await db.execute('ANALYZE');
-        
+
         onProgress?.call('正在整理数据库碎片...');
         logDebug('开始数据库维护：VACUUM');
-        
+
         // 2. 清理碎片（可能较慢）
         // VACUUM会自动使用事务保护，中途中断会回滚
         await db.execute('VACUUM');
-        
+
         onProgress?.call('正在优化索引...');
         logDebug('开始数据库维护：REINDEX');
-        
+
         // 3. 重建索引
         await db.execute('REINDEX');
-        
+
         // 记录维护后的文件大小
         if (await dbFile.exists()) {
           final sizeAfter = await dbFile.length();
@@ -5206,26 +5224,29 @@ class DatabaseService extends ChangeNotifier {
 
     try {
       final db = await safeDatabase;
-      
+
       // 获取数据库文件大小
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'thoughtecho.db');
       final dbFile = File(path);
       double dbSizeMb = 0.0;
-      
+
       if (await dbFile.exists()) {
         final size = await dbFile.length();
         dbSizeMb = size / (1024 * 1024);
       }
 
       // 获取记录数量
-      final quoteCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+      final quoteCountResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
       final quoteCount = quoteCountResult.first['count'] as int;
-      
-      final categoryCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM categories');
+
+      final categoryCountResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM categories');
       final categoryCount = categoryCountResult.first['count'] as int;
-      
-      final tagRelationCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
+
+      final tagRelationCountResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
       final tagRelationCount = tagRelationCountResult.first['count'] as int;
 
       // 检查外键约束状态

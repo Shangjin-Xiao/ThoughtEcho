@@ -964,7 +964,8 @@ class _InsightsPageState extends State<InsightsPage> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('分析结果已复制'),
-                                      duration: AppConstants.snackBarDurationImportant,
+                                      duration: AppConstants
+                                          .snackBarDurationImportant,
                                     ),
                                   );
                                 },

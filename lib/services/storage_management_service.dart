@@ -320,7 +320,8 @@ class StorageManagementService {
         final tempDir = await getTemporaryDirectory();
         final tempStats = await _getDirectorySize(tempDir.path);
         totalSize += tempStats['size'] as int;
-        logDebug('临时目录大小: ${StorageStats.formatBytes(tempStats['size'] as int)}');
+        logDebug(
+            '临时目录大小: ${StorageStats.formatBytes(tempStats['size'] as int)}');
       } catch (e) {
         logDebug('获取临时目录大小失败: $e');
       }
@@ -386,7 +387,8 @@ class StorageManagementService {
       if (!kIsWeb) {
         try {
           final tempDir = await getTemporaryDirectory();
-          final beforeSize = (await _getDirectorySize(tempDir.path))['size'] as int;
+          final beforeSize =
+              (await _getDirectorySize(tempDir.path))['size'] as int;
 
           // 清理临时目录中的所有文件
           await for (final entity in tempDir.list()) {
@@ -401,9 +403,11 @@ class StorageManagementService {
             }
           }
 
-          final afterSize = (await _getDirectorySize(tempDir.path))['size'] as int;
+          final afterSize =
+              (await _getDirectorySize(tempDir.path))['size'] as int;
           clearedBytes += (beforeSize - afterSize);
-          logDebug('临时文件已清理: ${StorageStats.formatBytes(beforeSize - afterSize)}');
+          logDebug(
+              '临时文件已清理: ${StorageStats.formatBytes(beforeSize - afterSize)}');
         } catch (e) {
           logDebug('清理临时文件失败: $e');
         }

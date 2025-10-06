@@ -96,7 +96,8 @@ class SVGCardWidget extends StatelessWidget {
           AppLogger.e('SVG渲染错误: $error',
               error: error, stackTrace: stackTrace, source: 'SvgCardWidget');
           if (kDebugMode) {
-            AppLogger.d('SVG内容预览: ${svgContent.substring(0, svgContent.length > 200 ? 200 : svgContent.length)}...', 
+            AppLogger.d(
+                'SVG内容预览: ${svgContent.substring(0, svgContent.length > 200 ? 200 : svgContent.length)}...',
                 source: 'SvgCardWidget');
           }
           // 使用回退SVG模板而不是错误提示
@@ -382,7 +383,7 @@ class GeneratedCardWidget extends StatelessWidget {
         height: height,
       );
     }
-    
+
     // 显示操作按钮时，使用Column包装
     return Column(
       mainAxisSize: MainAxisSize.min,

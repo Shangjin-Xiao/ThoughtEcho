@@ -70,7 +70,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 标签搜索控制器和过滤状态
   final TextEditingController _tagSearchController = TextEditingController();
   String _tagSearchQuery = '';
-  
+
   // 功能引导：元数据编辑按钮的 Key
   final GlobalKey _metadataButtonKey = GlobalKey();
 
@@ -102,7 +102,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 分别检查并设置位置和天气状态
     _showLocation = _location != null;
     _showWeather = _weather != null;
-    
+
     // 显示功能引导（首帧后立即触发）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -1251,11 +1251,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       scrollController: ScrollController(),
                       focusNode: FocusNode(),
                       config: quill.QuillEditorConfig(
-            embedBuilders: kIsWeb
-              ? FlutterQuillEmbeds.editorWebBuilders()
-              : QuillEditorExtensions.getEmbedBuilders(
-                optimizedImages: false,
-                ),
+                        embedBuilders: kIsWeb
+                            ? FlutterQuillEmbeds.editorWebBuilders()
+                            : QuillEditorExtensions.getEmbedBuilders(
+                                optimizedImages: false,
+                              ),
                         placeholder: '开始编写你的想法...',
                         padding: const EdgeInsets.all(16),
                         autoFocus: false,

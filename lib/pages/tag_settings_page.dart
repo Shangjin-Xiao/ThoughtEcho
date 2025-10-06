@@ -228,7 +228,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                     scaffoldMessenger.showSnackBar(
                                       const SnackBar(
                                         content: Text('标签添加成功'),
-                                        duration: AppConstants.snackBarDurationImportant,
+                                        duration: AppConstants
+                                            .snackBarDurationImportant,
                                       ),
                                     );
                                     _tagController.clear();
@@ -240,7 +241,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
                                         content: Text('添加标签失败：$e'),
-                                        duration: AppConstants.snackBarDurationError,
+                                        duration:
+                                            AppConstants.snackBarDurationError,
                                       ),
                                     );
                                   } finally {
@@ -592,7 +594,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
-                                                duration: AppConstants.snackBarDurationImportant,
+                                                duration: AppConstants
+                                                    .snackBarDurationImportant,
                                               ),
                                             );
                                           } catch (e) {
@@ -619,7 +622,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
-                                                duration: AppConstants.snackBarDurationError,
+                                                duration: AppConstants
+                                                    .snackBarDurationError,
                                               ),
                                             );
                                           }

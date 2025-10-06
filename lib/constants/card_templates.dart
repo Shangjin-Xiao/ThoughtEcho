@@ -673,18 +673,18 @@ class CardTemplates {
     final lines = <String>[];
     // 先按换行符预分割
     final paragraphs = text.split('\n');
-    
+
     for (final para in paragraphs) {
       if (para.trim().isEmpty) continue;
-      
+
       final words = para.split(' ');
       String currentLine = '';
       int currentWidth = 0;
-      
+
       for (final word in words) {
         // 计算单词宽度：中文字符算2,英文数字算1
         int wordWidth = _stringWidth(word);
-        
+
         // 如果单词本身就超长,强制拆分
         if (wordWidth > maxLineChars) {
           if (currentLine.isNotEmpty) {
@@ -696,7 +696,8 @@ class CardTemplates {
           for (int i = 0; i < word.length;) {
             String chunk = '';
             int chunkWidth = 0;
-            while (i < word.length && chunkWidth + _charWidth(word[i]) <= maxLineChars) {
+            while (i < word.length &&
+                chunkWidth + _charWidth(word[i]) <= maxLineChars) {
               chunk += word[i];
               chunkWidth += _charWidth(word[i]);
               i++;
@@ -705,9 +706,10 @@ class CardTemplates {
           }
           continue;
         }
-        
+
         // 如果添加这个单词会超出宽度,换行
-        if (currentWidth + wordWidth + (currentLine.isEmpty ? 0 : 1) > maxLineChars) {
+        if (currentWidth + wordWidth + (currentLine.isEmpty ? 0 : 1) >
+            maxLineChars) {
           if (currentLine.isNotEmpty) {
             lines.add(currentLine.trim());
           }
@@ -723,13 +725,13 @@ class CardTemplates {
           }
         }
       }
-      
+
       // 添加段落最后一行
       if (currentLine.trim().isNotEmpty) {
         lines.add(currentLine.trim());
       }
     }
-    
+
     // 如果行数超过限制,直接截断并添加省略号
     if (lines.length > maxLines) {
       final truncated = lines.sublist(0, maxLines);
@@ -738,10 +740,10 @@ class CardTemplates {
       }
       return truncated;
     }
-    
+
     return lines;
   }
-  
+
   /// 计算单个字符的显示宽度
   static int _charWidth(String char) {
     // 中文字符、全角符号等算2，英文数字算1
@@ -751,7 +753,7 @@ class CardTemplates {
     if (code > 0xFF00 && code < 0xFFEF) return 2; // 全角ASCII
     return 1; // 其他字符（包括ASCII）
   }
-  
+
   /// 计算字符串的总显示宽度
   static int _stringWidth(String str) {
     int width = 0;
@@ -766,11 +768,11 @@ class CardTemplates {
       double startY, double fontSize, String color, double lineHeight,
       {bool verticalCenter = true, double areaHeight = 320}) {
     final buffer = StringBuffer();
-    
+
     // 计算实际需要的高度
     double actualLineHeight = fontSize * lineHeight;
     double totalH = lines.length * actualLineHeight;
-    
+
     // 如果内容太高,自动调整字体大小和行高（留15%安全边距）
     double adjustedFontSize = fontSize;
     double adjustedLineHeight = lineHeight;
@@ -783,16 +785,16 @@ class CardTemplates {
       actualLineHeight = adjustedFontSize * adjustedLineHeight;
       totalH = lines.length * actualLineHeight;
     }
-    
+
     double offsetY = verticalCenter ? (areaHeight - totalH) / 2 : 0;
     // 限制offsetY最小为上边距10px
     if (offsetY < 10) offsetY = 10;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final y = startY + offsetY + (i * actualLineHeight);
       // 确保不超出区域底部（留10px下边距）
       if (y > startY + areaHeight - 10) break;
-      
+
       buffer.writeln(
           '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${adjustedFontSize.toStringAsFixed(1)}" font-weight="400">${_escape(lines[i])}</text>');
     }

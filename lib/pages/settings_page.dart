@@ -47,7 +47,7 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 版本检查相关状态 ---
   bool _isCheckingUpdate = false;
   String? _updateCheckMessage;
-  
+
   // 功能引导 keys
   final GlobalKey _preferencesGuideKey = GlobalKey();
   final GlobalKey _startupPageGuideKey = GlobalKey();
@@ -65,9 +65,10 @@ class SettingsPageState extends State<SettingsPage> {
   void showGuidesIfNeeded({bool Function()? shouldShow}) {
     if (_guidesTriggered) return;
 
-    final allShown = FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-        FeatureGuideHelper.hasShown(context, 'settings_theme');
+    final allShown =
+        FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
+            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+            FeatureGuideHelper.hasShown(context, 'settings_theme');
 
     if (allShown) {
       _guidesTriggered = true;
