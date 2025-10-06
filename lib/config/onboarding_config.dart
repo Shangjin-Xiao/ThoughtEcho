@@ -55,9 +55,9 @@ class OnboardingConfig {
     ),
   ];
 
-  // 偏好设置列表
+  // 偏好设置列表（顺序：每日一言类型、位置服务、默认启动页面）
   static final List<OnboardingPreference<dynamic>> preferences = [
-    // 一言类型选择 - 移至完成页面
+    // 1. 每日一言类型选择
     OnboardingPreference<String>(
       key: 'hitokotoTypes',
       title: '每日一言类型',
@@ -74,7 +74,16 @@ class OnboardingConfig {
           .toList(),
     ),
 
-    // 默认启动页面
+    // 2. 位置服务
+    const OnboardingPreference<bool>(
+      key: 'locationService',
+      title: '位置服务',
+      description: '启用位置服务以自动记录笔记地点和获取天气信息',
+      defaultValue: false,
+      type: OnboardingPreferenceType.toggle,
+    ),
+
+    // 3. 默认启动页面
     const OnboardingPreference<int>(
       key: 'defaultStartPage',
       title: '默认启动页面',
@@ -93,13 +102,6 @@ class OnboardingConfig {
           description: '直接进入笔记管理界面',
         ),
       ],
-    ),
-    const OnboardingPreference<bool>(
-      key: 'locationService',
-      title: '位置服务',
-      description: '启用位置服务以自动记录笔记地点和获取天气信息',
-      defaultValue: false,
-      type: OnboardingPreferenceType.toggle,
     ),
   ];
 

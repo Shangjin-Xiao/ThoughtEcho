@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/onboarding_models.dart';
 import '../config/onboarding_config.dart';
@@ -168,8 +169,13 @@ class OnboardingController extends ChangeNotifier {
 
       // 7. 标记引导完成（数据库迁移已在performMigration中标记）
       await _settingsService.setHasCompletedOnboarding(true);
+      
+      // 8. 保存当前应用版本号，避免下次启动误判为升级
+      final packageInfo = await PackageInfo.fromPlatform();
+      await _settingsService.setAppVersion(packageInfo.version);
+      logInfo('已保存应用版本号: ${packageInfo.version}', source: 'OnboardingController');
 
-      // 8. 标记服务初始化完成
+      // 9. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('引导流程完成');
@@ -310,8 +316,13 @@ class OnboardingController extends ChangeNotifier {
 
       // 7. 标记引导完成（数据库迁移已在performMigration中标记）
       await _settingsService.setHasCompletedOnboarding(true);
+      
+      // 8. 保存当前应用版本号，避免下次启动误判为升级
+      final packageInfo = await PackageInfo.fromPlatform();
+      await _settingsService.setAppVersion(packageInfo.version);
+      logInfo('已保存应用版本号: ${packageInfo.version}', source: 'OnboardingController');
 
-      // 8. 标记服务初始化完成
+      // 9. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('跳过引导完成');
