@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -168,6 +170,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
+  bool _isPendingLoad = false;
+  Timer? _loadDebounceTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -182,13 +186,21 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   }
 
   @override
+  void dispose() {
+    _loadDebounceTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(covariant _LazyQuillImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source) {
+      _loadDebounceTimer?.cancel();
       _hasError = false;
       final bool previouslyLoaded = _loadedSources.contains(widget.source);
       _shouldLoad = previouslyLoaded;
       _isLoaded = previouslyLoaded;
+      _isPendingLoad = false;
     }
   }
 
@@ -198,13 +210,27 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     }
 
     if (info.visibleFraction > 0.05) {
-      if (mounted) {
+      // 标记为待加载，但不立即触发
+      _isPendingLoad = true;
+      
+      // 取消之前的定时器
+      _loadDebounceTimer?.cancel();
+      
+      // 延迟150ms后再加载（等待滑动停止）
+      _loadDebounceTimer = Timer(const Duration(milliseconds: 150), () {
+        if (!mounted || !_isPendingLoad) {
+          return;
+        }
+        
         setState(() {
           _shouldLoad = true;
+          _isPendingLoad = false;
         });
-      } else {
-        _shouldLoad = true;
-      }
+      });
+    } else {
+      // 离开可视区域，取消待加载状态
+      _isPendingLoad = false;
+      _loadDebounceTimer?.cancel();
     }
   }
 
@@ -237,14 +263,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         }
 
         final double displayWidth = _resolveWidth(fallbackWidth);
-        final double displayHeight = _resolveHeight(displayWidth);
 
         final double devicePixelRatio =
             mediaQuery.devicePixelRatio.clamp(1.0, 3.0);
         final int? targetCacheWidth =
             _computeCacheSize(displayWidth, devicePixelRatio);
-        final int? targetCacheHeight =
-            _computeCacheSize(displayHeight, devicePixelRatio);
 
         return RepaintBoundary(
           child: VisibilityDetector(
@@ -258,19 +281,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minWidth: displayWidth,
                   maxWidth: displayWidth,
-                  minHeight: displayHeight,
-                  maxHeight: displayHeight,
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: _buildImageContent(
                     context,
                     displayWidth,
-                    displayHeight,
                     targetCacheWidth,
-                    targetCacheHeight,
                   ),
                 ),
               ),
@@ -289,53 +307,28 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     return fallbackWidth;
   }
 
-  double _resolveHeight(double displayWidth) {
-    final double? specifiedWidth = widget.specifiedWidth;
-    final double? specifiedHeight = widget.specifiedHeight;
-
-    if (specifiedWidth != null &&
-        specifiedWidth > 0 &&
-        specifiedHeight != null &&
-        specifiedHeight > 0) {
-      final aspectRatio = specifiedWidth / specifiedHeight;
-      if (aspectRatio > 0) {
-        final height = displayWidth / aspectRatio;
-        return height.clamp(80.0, displayWidth * 1.8);
-      }
-    }
-
-    if (specifiedHeight != null && specifiedHeight > 0) {
-      return specifiedHeight.clamp(80.0, displayWidth * 1.8);
-    }
-
-    return displayWidth * 0.6;
-  }
-
   Widget _buildImageContent(
     BuildContext context,
     double width,
-    double height,
     int? cacheWidth,
-    int? cacheHeight,
   ) {
     if (_hasError) {
-      return _buildErrorPlaceholder(context, width, height);
+      return _buildErrorPlaceholder(context, width);
     }
 
     if (!_shouldLoad) {
-      return _buildPlaceholder(context, width, height);
+      return _buildPlaceholder(context, width);
     }
 
     final provider = createOptimizedImageProvider(
       widget.source,
       cacheWidth: cacheWidth,
-      cacheHeight: cacheHeight,
     );
 
     if (provider == null) {
       logDebug('图片Provider创建失败: ${widget.source}',
           source: 'OptimizedImageEmbed');
-      return _buildErrorPlaceholder(context, width, height);
+      return _buildErrorPlaceholder(context, width);
     }
 
     return Semantics(
@@ -347,8 +340,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         child: Image(
           image: provider,
           width: width,
-          height: height,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           filterQuality: FilterQuality.medium,
           isAntiAlias: true,
           gaplessPlayback: true,
@@ -388,9 +380,9 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             }
 
             return Stack(
-              fit: StackFit.expand,
+              alignment: Alignment.center,
               children: [
-                _buildPlaceholder(context, width, height),
+                _buildPlaceholder(context, width),
                 const Center(
                   child: SizedBox(
                     width: 24,
@@ -419,7 +411,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
               });
             }
 
-            return _buildErrorPlaceholder(context, width, height);
+            return _buildErrorPlaceholder(context, width);
           },
         ),
       ),
@@ -537,11 +529,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     return bounded.round();
   }
 
-  Widget _buildPlaceholder(BuildContext context, double width, double height) {
+  Widget _buildPlaceholder(BuildContext context, double width) {
     final theme = Theme.of(context);
     return Container(
       width: width,
-      height: height,
+      height: width * 0.6,
       color: theme.colorScheme.surfaceContainerHigh,
       alignment: Alignment.center,
       child: Icon(
@@ -555,12 +547,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   Widget _buildErrorPlaceholder(
     BuildContext context,
     double width,
-    double height,
   ) {
     final theme = Theme.of(context);
     return Container(
       width: width,
-      height: height,
+      height: width * 0.6,
       color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
       alignment: Alignment.center,
       child: Column(
