@@ -12,17 +12,13 @@ import '../widgets/media_player_widget.dart';
 /// 图片使用flutter_quill_extensions官方实现，视频和音频使用自定义MediaPlayerWidget
 class QuillEditorExtensions {
   /// 获取编辑器的嵌入构建器
-  static List<quill.EmbedBuilder> getEmbedBuilders() {
+  static List<quill.EmbedBuilder> getEmbedBuilders({
+    bool optimizedImages = true,
+  }) {
     // 获取官方的builders作为基础
     final builders = kIsWeb
         ? FlutterQuillEmbeds.editorWebBuilders()
         : FlutterQuillEmbeds.editorBuilders();
-
-    // 移除官方的图片构建器，替换为优化版
-    builders.removeWhere((builder) => builder.key == 'image');
-
-    // 添加优化的图片构建器
-    builders.add(_OptimizedImageEmbedBuilder());
 
     if (!kIsWeb) {
       // 非Web平台使用自定义的视频和音频构建器
@@ -31,6 +27,11 @@ class QuillEditorExtensions {
       );
       builders.add(_CustomVideoEmbedBuilder());
       builders.add(_CustomAudioEmbedBuilder());
+    }
+
+    if (optimizedImages) {
+      builders.removeWhere((builder) => builder.key == 'image');
+      builders.add(_OptimizedImageEmbedBuilder());
     }
 
     return builders;
@@ -161,6 +162,8 @@ class _LazyQuillImage extends StatefulWidget {
 
 class _LazyQuillImageState extends State<_LazyQuillImage>
     with AutomaticKeepAliveClientMixin {
+  static final Set<String> _loadedSources = <String>{};
+
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
@@ -168,15 +171,39 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   @override
   bool get wantKeepAlive => true;
 
+  @override
+  void initState() {
+    super.initState();
+    if (_loadedSources.contains(widget.source)) {
+      _shouldLoad = true;
+      _isLoaded = true;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _LazyQuillImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.source != widget.source) {
+      _hasError = false;
+      final bool previouslyLoaded = _loadedSources.contains(widget.source);
+      _shouldLoad = previouslyLoaded;
+      _isLoaded = previouslyLoaded;
+    }
+  }
+
   void _handleVisibility(VisibilityInfo info) {
     if (_shouldLoad) {
       return;
     }
 
     if (info.visibleFraction > 0.05) {
-      setState(() {
+      if (mounted) {
+        setState(() {
+          _shouldLoad = true;
+        });
+      } else {
         _shouldLoad = true;
-      });
+      }
     }
   }
 
@@ -309,70 +336,180 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return _buildErrorPlaceholder(context, width, height);
     }
 
-    return Image(
-      image: provider,
-      width: width,
-      height: height,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.medium,
-      isAntiAlias: true,
-      gaplessPlayback: true,
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (frame != null && !_isLoaded) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _isLoaded = true;
+    return Semantics(
+      button: true,
+      label: '查看图片',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _openImagePreview(context),
+        child: Image(
+          image: provider,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          isAntiAlias: true,
+          gaplessPlayback: true,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded) {
+              _loadedSources.add(widget.source);
+              _isLoaded = true;
+              return child;
+            }
+
+            if (frame != null && !_isLoaded) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || _isLoaded) {
+                  return;
+                }
+                setState(() {
+                  _isLoaded = true;
+                  _loadedSources.add(widget.source);
+                });
               });
             }
-          });
-        }
 
-        return AnimatedOpacity(
-          opacity: frame == null ? 0.0 : 1.0,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          child: child,
-        );
-      },
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) {
-          return child;
-        }
+            if (_isLoaded) {
+              return child;
+            }
 
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildPlaceholder(context, width, height),
-            const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+            return AnimatedOpacity(
+              opacity: frame == null ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              child: child,
+            );
+          },
+          loadingBuilder: (context, child, progress) {
+            if (progress == null || _isLoaded) {
+              return child;
+            }
+
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                _buildPlaceholder(context, width, height),
+                const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ],
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            logError(
+              '图片加载失败: ${widget.source}',
+              error: error,
+              stackTrace: stackTrace,
+              source: 'OptimizedImageEmbed',
+            );
+
+            if (!_hasError && mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasError = true;
+                  });
+                }
+              });
+            }
+
+            return _buildErrorPlaceholder(context, width, height);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openImagePreview(BuildContext context) async {
+    final ImageProvider? previewProvider =
+        createOptimizedImageProvider(widget.source, cacheWidth: null, cacheHeight: null) ??
+            createOptimizedImageProvider(widget.source);
+
+    if (previewProvider == null) {
+      logWarning('无法打开图片预览: Provider 创建失败 (${widget.source})', source: 'OptimizedImageEmbed');
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.85),
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: const Duration(milliseconds: 160),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        final theme = Theme.of(dialogContext);
+        return Material(
+          color: Colors.black.withValues(alpha: 0.92),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    minScale: 0.6,
+                    maxScale: 4.0,
+                    child: Image(
+                      image: previewProvider,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) {
+                          return child;
+                        }
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              constraints: const BoxConstraints(maxWidth: 420, maxHeight: 420),
+                              alignment: Alignment.center,
+                              child: const SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: CircularProgressIndicator(strokeWidth: 3),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return SizedBox(
+                          width: 260,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.broken_image_outlined, color: Colors.white70, size: 48),
+                              const SizedBox(height: 12),
+                              Text(
+                                '图片加载失败',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.titleMedium?.copyWith(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    tooltip: '关闭图片预览',
+                    onPressed: () => Navigator.of(dialogContext).maybePop(),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        logError(
-          '图片加载失败: ${widget.source}',
-          error: error,
-          stackTrace: stackTrace,
-          source: 'OptimizedImageEmbed',
-        );
-
-        if (!_hasError && mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _hasError = true;
-              });
-            }
-          });
-        }
-
-        return _buildErrorPlaceholder(context, width, height);
       },
     );
   }
