@@ -811,6 +811,10 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
+    // 为 AnimatedSwitcher 提供唯一 key，确保筛选变化时能触发动画
+    final listKey = ValueKey(
+        '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}');
+
     if (_isLoading && _quotes.isEmpty) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
@@ -890,6 +894,7 @@ class NoteListViewState extends State<NoteListView> {
         return true;
       },
       child: ListView.builder(
+        key: listKey, // 为 AnimatedSwitcher 提供 key
         controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
         addAutomaticKeepAlives: true, // 性能优化：保持滚动位置
@@ -1279,13 +1284,24 @@ class NoteListViewState extends State<NoteListView> {
                     // 筛选条件展示区域
                     _buildFilterDisplay(theme, horizontalPadding),
 
-                    // 笔记列表
+                    // 笔记列表 - 添加平滑过渡动画
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: horizontalPadding,
                         ),
-                        child: _buildNoteList(db, theme),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 150),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeOut,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                          child: _buildNoteList(db, theme),
+                        ),
                       ),
                     ),
                   ],
