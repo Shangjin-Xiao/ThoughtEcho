@@ -709,11 +709,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                       onPressed: () async {
                         try {
                           await controller.skipOnboarding();
+                          // 不要手动导航！让 SettingsService.hasCompletedOnboarding() 的变化
+                          // 触发 MyApp 重新构建，从而自动跳转到 HomePage
+                          // 这样才能确保数据库完全初始化后才构建 HomePage
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
-                          if (mounted) {
-                            _navigateToHome();
-                          }
+                          // 移除了 _navigateToHome() 调用
                         } catch (error) {
                           logError('跳过引导失败', error: error, source: 'OnboardingPage');
                           if (!dialogContext.mounted) return;
