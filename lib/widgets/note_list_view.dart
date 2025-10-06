@@ -945,6 +945,7 @@ class NoteListViewState extends State<NoteListView> {
                 builder: (context, isExpanded, child) => QuoteItemWidget(
                   quote: quote,
                   tags: widget.tags,
+                  selectedTagIds: widget.selectedTagIds,
                   isExpanded: isExpanded,
                   onToggleExpanded: (expanded) {
                     if (expansionNotifier.value != expanded) {

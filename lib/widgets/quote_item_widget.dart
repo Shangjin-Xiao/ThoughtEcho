@@ -26,6 +26,9 @@ class QuoteItemWidget extends StatefulWidget {
   final Widget Function(NoteCategory)? tagBuilder;
   final GlobalKey? favoriteButtonGuideKey;
   final GlobalKey? foldToggleGuideKey;
+  
+  /// 当前筛选的标签ID列表，用于优先显示匹配的标签
+  final List<String> selectedTagIds;
 
   const QuoteItemWidget({
     super.key,
@@ -42,6 +45,7 @@ class QuoteItemWidget extends StatefulWidget {
     this.searchQuery,
     this.favoriteButtonGuideKey,
     this.foldToggleGuideKey,
+    this.selectedTagIds = const [],
   });
 
   @override
@@ -155,6 +159,29 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   }
 
   bool _needsExpansion(Quote quote) => QuoteItemWidget.needsExpansionFor(quote);
+
+  /// 对标签ID列表进行排序，优先显示匹配筛选条件的标签
+  List<String> _getSortedTagIds(List<String> tagIds, List<String> selectedTagIds) {
+    if (selectedTagIds.isEmpty) {
+      // 没有筛选条件时，按原顺序返回
+      return tagIds;
+    }
+
+    // 将标签分为两组：匹配筛选条件的和其他的
+    final matchedTags = <String>[];
+    final otherTags = <String>[];
+
+    for (final tagId in tagIds) {
+      if (selectedTagIds.contains(tagId)) {
+        matchedTags.add(tagId);
+      } else {
+        otherTags.add(tagId);
+      }
+    }
+
+    // 先显示匹配的标签，再显示其他标签
+    return [...matchedTags, ...otherTags];
+  }
 
   String _formatSource(String author, String work) {
     if (author.isEmpty && work.isEmpty) {
@@ -535,74 +562,86 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     Expanded(
                       child: SizedBox(
                         height: 32,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: quote.tagIds.length,
-                          itemBuilder: (context, index) {
-                            final tagId = quote.tagIds[index];
-                            final tag = widget.tags.firstWhere(
-                              (t) => t.id == tagId,
-                              orElse: () =>
-                                  NoteCategory(id: tagId, name: '未知标签'),
-                            );
+                        child: Builder(
+                          builder: (context) {
+                            // 对标签进行排序：优先显示匹配筛选条件的标签
+                            final sortedTagIds = _getSortedTagIds(quote.tagIds, widget.selectedTagIds);
+                            
+                            return ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: sortedTagIds.length,
+                              itemBuilder: (context, index) {
+                                final tagId = sortedTagIds[index];
+                                final tag = widget.tags.firstWhere(
+                                  (t) => t.id == tagId,
+                                  orElse: () =>
+                                      NoteCategory(id: tagId, name: '未知标签'),
+                                );
+                                
+                                // 判断是否是筛选条件中的标签
+                                final isFilteredTag = widget.selectedTagIds.contains(tagId);
 
-                            return Container(
-                              margin: EdgeInsets.only(
-                                right: index < quote.tagIds.length - 1 ? 8 : 0,
-                              ),
-                              child: widget.tagBuilder != null
-                                  ? widget.tagBuilder!(tag)
-                                  : Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary
-                                            .applyOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: theme.colorScheme.primary
-                                              .withValues(alpha: 0.3),
-                                          width: 0.5,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (tag.iconName?.isNotEmpty ==
-                                              true) ...[
-                                            if (IconUtils.isEmoji(
-                                                tag.iconName!)) ...[
-                                              Text(
-                                                IconUtils.getDisplayIcon(
-                                                    tag.iconName!),
-                                                style: const TextStyle(
-                                                    fontSize: 12),
-                                              ),
-                                              const SizedBox(width: 3),
-                                            ] else ...[
-                                              Icon(
-                                                IconUtils.getIconData(
-                                                    tag.iconName!),
-                                                size: 12,
-                                                color:
-                                                    theme.colorScheme.primary,
-                                              ),
-                                              const SizedBox(width: 3),
-                                            ],
-                                          ],
-                                          Text(
-                                            tag.name,
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                              color: theme.colorScheme.primary,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500,
+                                return Container(
+                                  margin: EdgeInsets.only(
+                                    right: index < sortedTagIds.length - 1 ? 8 : 0,
+                                  ),
+                                  child: widget.tagBuilder != null
+                                      ? widget.tagBuilder!(tag)
+                                      : Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isFilteredTag
+                                                ? theme.colorScheme.primary.applyOpacity(0.18)
+                                                : theme.colorScheme.primary.applyOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: isFilteredTag
+                                                  ? theme.colorScheme.primary.withValues(alpha: 0.6)
+                                                  : theme.colorScheme.primary.withValues(alpha: 0.3),
+                                              width: isFilteredTag ? 1.0 : 0.5,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (tag.iconName?.isNotEmpty ==
+                                                  true) ...[
+                                                if (IconUtils.isEmoji(
+                                                    tag.iconName!)) ...[
+                                                  Text(
+                                                    IconUtils.getDisplayIcon(
+                                                        tag.iconName!),
+                                                    style: const TextStyle(
+                                                        fontSize: 12),
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                ] else ...[
+                                                  Icon(
+                                                    IconUtils.getIconData(
+                                                        tag.iconName!),
+                                                    size: 12,
+                                                    color:
+                                                        theme.colorScheme.primary,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                ],
+                                              ],
+                                              Text(
+                                                tag.name,
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: theme.colorScheme.primary,
+                                                  fontSize: 11,
+                                                  fontWeight: isFilteredTag ? FontWeight.w600 : FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                );
+                              },
                             );
                           },
                         ),
