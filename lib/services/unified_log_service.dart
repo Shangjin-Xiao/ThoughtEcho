@@ -295,7 +295,19 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           levelIndex >= 0 &&
           levelIndex < UnifiedLogLevel.values.length) {
         _currentLevel = UnifiedLogLevel.values[levelIndex];
+        
+        // 安全检查：如果加载的级别是verbose或debug，重置为info
+        // 这是为了防止意外设置导致性能问题和日志泛滥
+        if (_currentLevel == UnifiedLogLevel.verbose || 
+            _currentLevel == UnifiedLogLevel.debug) {
+          if (kDebugMode) {
+            print('UnifiedLogService: 检测到日志级别为${_currentLevel.name}，为避免性能问题，重置为info');
+          }
+          _currentLevel = UnifiedLogLevel.info;
+          await mmkv.setInt(_logLevelKey, _currentLevel.index);
+        }
       } else {
+        // 首次启动或无效值时，使用默认的info级别
         _currentLevel = UnifiedLogLevel.info;
         await mmkv.setInt(_logLevelKey, _currentLevel.index);
       }
