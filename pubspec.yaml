@@ -104,9 +104,9 @@ flutter_launcher_icons:
 msix_config:
   display_name: ThoughtEcho
   publisher_display_name: Shangjinyun
-  identity_name: com.thoughtecho.app
+  identity_name: Shangjinyun.330094822087A
   msix_version: 1.0.0.0
-  publisher: CN=Shangjinyun
+  publisher: CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7
   logo_path: windows/runner/resources/app_icon.ico
   capabilities: internetClient
   # 注意：runFullTrust 会在构建时自动添加（Flutter Windows 应用默认需要）
@@ -114,7 +114,7 @@ msix_config:
   languages: zh-CN, en-US
   output_name: ThoughtEcho-Setup  # 输出文件名（不含.msix扩展名）
   # 签名配置 - msix插件会自动生成测试证书
-  certificate_subject: CN=Shangjinyun
+  certificate_subject: CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7
   install_certificate: false  # CI环境中不安装证书，避免交互提示
   
 # 字体配置
