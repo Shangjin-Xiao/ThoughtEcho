@@ -1798,52 +1798,50 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
 
     if (_periodQuotes.isEmpty) {
-      return Expanded(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 800),
-                tween: Tween(begin: 0.0, end: 1.0),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Opacity(
-                      opacity: value,
-                      child: Icon(
-                        Icons.note_alt_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 800),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(
+                    opacity: value,
+                    child: Icon(
+                      Icons.note_alt_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 600),
-                tween: Tween(begin: 0.0, end: 1.0),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 20 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: Text(
-                        '本${_getPeriodName()}暂无笔记记录',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                        textAlign: TextAlign.center,
-                      ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 600),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: Text(
+                      '本${_getPeriodName()}暂无笔记记录',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                      textAlign: TextAlign.center,
                     ),
-                  );
-                },
-              ),
-            ],
-          ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       );
     }
