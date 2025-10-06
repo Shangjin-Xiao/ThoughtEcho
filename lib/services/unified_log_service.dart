@@ -363,8 +363,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     // 关键修复：启用分层日志记录
     logging.hierarchicalLoggingEnabled = true;
 
-    // 设置全局日志级别
-    logging.Logger.root.level = logging.Level.ALL;
+    // 修复：设置全局日志级别为 INFO，而不是 ALL
+    // 这样默认情况下不会输出过于详细的 verbose/debug 日志
+    logging.Logger.root.level = logging.Level.INFO;
 
     // 创建应用专用的 logger
     _logger = logging.Logger('ThoughtEcho');
