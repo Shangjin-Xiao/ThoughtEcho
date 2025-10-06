@@ -132,11 +132,11 @@ msix_config:
   # 输出文件名（不含 .msix 扩展名）
   output_name: ThoughtEcho-Setup
   
-  # 签名设置（用于本地测试和 Store 提交）
-  # Store 提交时必须使用与 publisher 匹配的证书主题
-  certificate_subject: CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7
+  # ⚠️ 关键配置：禁用本地签名，让 Microsoft Store 自动签名
+  # 这样可以避免使用测试证书，确保 Publisher 正确匹配
+  sign_msix: false
   
-  # CI 环境设置：不安装测试证书，避免交互式提示
+  # CI 环境设置：不安装测试证书
   install_certificate: false
   
   # Store 提交标识：确保使用正确的 Store ID

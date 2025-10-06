@@ -42,16 +42,21 @@ msix_config:
   # 输出文件名
   output_name: "ThoughtEcho-Setup.msix"
   
-  # 签名设置（CI环境自动处理）
+  # ⚠️ 关键配置：禁用本地签名，让 Microsoft Store 自动签名
+  # 本地签名会生成测试证书，导致 Publisher 不匹配
+  # Store 提交时会自动使用正确的证书重新签名
+  sign_msix: false
+  
+  # 签名设置（完全禁用本地证书）
   certificate_path: null
   certificate_password: null
   
   # 应用设置
   app_execution_alias: "thoughtecho"
   
-  # CI/CD设置 - 在非交互式环境中自动处理证书
-  certificate_subject: "CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7"
+  # CI/CD设置
   store_type: "defaultInstallLocation"
+  install_certificate: false
   
   # 可视化资产
   visual_elements:

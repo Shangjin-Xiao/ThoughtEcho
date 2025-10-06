@@ -90,6 +90,67 @@ jobs:
     - name: Build Windows app
       run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
       
+    - name: Verify MSIX configuration
+      shell: pwsh
+      run: |
+        Write-Host "=== 验证 MSIX 配置 ===" -ForegroundColor Cyan
+        Write-Host ""
+        
+        # Microsoft Store 要求的正确值
+        $EXPECTED_PUBLISHER = "CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7"
+        $EXPECTED_IDENTITY_NAME = "Shangjinyun.330094822087A"
+        
+        # 读取 pubspec.yaml 配置
+        $pubspecContent = Get-Content pubspec.yaml -Raw
+        
+        # 检查 publisher 配置
+        if ($pubspecContent -match 'publisher:\s*([^\r\n]+)') {
+          $publisher = $matches[1].Trim()
+          Write-Host "Publisher 配置: $publisher" -ForegroundColor Yellow
+          
+          if ($publisher -eq $EXPECTED_PUBLISHER) {
+            Write-Host "✅ Publisher 配置正确" -ForegroundColor Green
+          } else {
+            Write-Host "⚠️ Publisher 配置不匹配!" -ForegroundColor Red
+            Write-Host "  预期值: $EXPECTED_PUBLISHER" -ForegroundColor Yellow
+            Write-Host "  当前值: $publisher" -ForegroundColor Yellow
+          }
+        } else {
+          Write-Host "❌ 未找到 publisher 配置" -ForegroundColor Red
+        }
+        
+        # 检查 identity_name 配置
+        if ($pubspecContent -match 'identity_name:\s*([^\r\n]+)') {
+          $identityName = $matches[1].Trim()
+          Write-Host "Identity Name 配置: $identityName" -ForegroundColor Yellow
+          
+          if ($identityName -eq $EXPECTED_IDENTITY_NAME) {
+            Write-Host "✅ Identity Name 配置正确" -ForegroundColor Green
+          } else {
+            Write-Host "⚠️ Identity Name 配置不匹配!" -ForegroundColor Red
+            Write-Host "  预期值: $EXPECTED_IDENTITY_NAME" -ForegroundColor Yellow
+            Write-Host "  当前值: $identityName" -ForegroundColor Yellow
+          }
+        } else {
+          Write-Host "❌ 未找到 identity_name 配置" -ForegroundColor Red
+        }
+        
+        # 检查 capabilities 配置（不应包含 runFullTrust）
+        if ($pubspecContent -match 'capabilities:\s*([^\r\n]+)') {
+          $capabilities = $matches[1].Trim()
+          Write-Host "Capabilities 配置: $capabilities" -ForegroundColor Yellow
+          
+          if ($capabilities -match 'runFullTrust') {
+            Write-Host "⚠️ 警告: capabilities 包含 runFullTrust（应该由 Flutter 自动添加）" -ForegroundColor Yellow
+          } else {
+            Write-Host "✅ Capabilities 配置正确（不包含 runFullTrust）" -ForegroundColor Green
+          }
+        }
+        
+        Write-Host ""
+        Write-Host "ℹ️ 注意: 本地构建可能使用测试证书，Store 会在提交后自动重新签名" -ForegroundColor Cyan
+        Write-Host ""
+      
     - name: Build MSIX installer
       shell: pwsh
       continue-on-error: true  # 允许MSIX构建失败，但继续执行后续步骤
