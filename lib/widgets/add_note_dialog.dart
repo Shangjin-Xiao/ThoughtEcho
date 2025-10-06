@@ -590,15 +590,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // 性能监控：记录build开始时间
-    final buildStart = DateTime.now();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final buildTime = DateTime.now().difference(buildStart).inMilliseconds;
-      if (buildTime > 16) {
-        logWarning('AddNoteDialog build耗时: ${buildTime}ms (超过一帧)', source: 'Performance');
-      }
-    });
-    
     final theme = Theme.of(context);
 
     // 优化：使用缓存的服务或延迟获取
