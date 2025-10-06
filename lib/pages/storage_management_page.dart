@@ -110,8 +110,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     });
 
     try {
-      final weatherService = Provider.of<WeatherService>(context, listen: false);
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final weatherService =
+          Provider.of<WeatherService>(context, listen: false);
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
 
       final clearedBytes = await StorageManagementService.clearCache(
         weatherService: weatherService,
@@ -185,9 +187,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       if (!mounted) return;
 
-      final message = orphanCount > 0
-          ? '清理完成，删除了 $orphanCount 个无用文件'
-          : '没有发现无用文件';
+      final message =
+          orphanCount > 0 ? '清理完成，删除了 $orphanCount 个无用文件' : '没有发现无用文件';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -275,7 +276,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
     try {
       final dbService = Provider.of<DatabaseService>(context, listen: false);
-      
+
       final result = await dbService.performDatabaseMaintenance(
         onProgress: (progress) {
           currentProgress = progress;
@@ -318,7 +319,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
               children: [
                 Text('耗时: ${(durationMs / 1000).toStringAsFixed(1)} 秒'),
                 const SizedBox(height: 8),
-                Text('数据库大小: ${dbSizeBefore.toStringAsFixed(2)} MB → ${dbSizeAfter.toStringAsFixed(2)} MB'),
+                Text(
+                    '数据库大小: ${dbSizeBefore.toStringAsFixed(2)} MB → ${dbSizeAfter.toStringAsFixed(2)} MB'),
                 const SizedBox(height: 8),
                 Text(
                   spaceSaved > 0
@@ -380,39 +382,42 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       body: _isLoading && _stats == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // 总占用空间卡片
-                  _buildTotalStorageCard(colorScheme),
-                  const SizedBox(height: 16),
+              padding: const EdgeInsets.all(16),
+              children: [
+                // 总占用空间卡片
+                _buildTotalStorageCard(colorScheme),
+                const SizedBox(height: 16),
 
-                  // 数据库占用详情
-                  _buildSectionTitle('数据库占用'),
-                  const SizedBox(height: 8),
-                  _buildDatabaseStorageCard(colorScheme),
-                  const SizedBox(height: 16),
+                // 数据库占用详情
+                _buildSectionTitle('数据库占用'),
+                const SizedBox(height: 8),
+                _buildDatabaseStorageCard(colorScheme),
+                const SizedBox(height: 16),
 
-                  // 媒体文件占用详情
-                  _buildSectionTitle('媒体文件占用'),
-                  const SizedBox(height: 8),
-                  _buildMediaStorageCard(colorScheme),
-                  const SizedBox(height: 16),
+                // 媒体文件占用详情
+                _buildSectionTitle('媒体文件占用'),
+                const SizedBox(height: 8),
+                _buildMediaStorageCard(colorScheme),
+                const SizedBox(height: 16),
 
-                  // 缓存占用
-                  _buildSectionTitle('缓存占用'),
-                  const SizedBox(height: 8),
-                  _buildCacheStorageCard(colorScheme),
-                  const SizedBox(height: 24),
+                // 缓存占用
+                _buildSectionTitle('缓存占用'),
+                const SizedBox(height: 8),
+                _buildCacheStorageCard(colorScheme),
+                const SizedBox(height: 24),
 
-                  // 操作按钮
-                  _buildActionButtons(colorScheme),
-                  const SizedBox(height: 24),
+                // 操作按钮
+                _buildActionButtons(colorScheme),
+                const SizedBox(height: 24),
 
-                  // 数据目录信息（仅桌面端）
-                  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS))
-                    _buildDataDirectorySection(colorScheme),
-                ],
-              ),
+                // 数据目录信息（仅桌面端）
+                if (!kIsWeb &&
+                    (Platform.isWindows ||
+                        Platform.isLinux ||
+                        Platform.isMacOS))
+                  _buildDataDirectorySection(colorScheme),
+              ],
+            ),
     );
   }
 
@@ -921,7 +926,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                                 '当前数据目录',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                               if (_isUsingCustomPath) ...[

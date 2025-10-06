@@ -133,8 +133,7 @@ void main() {
     controllerStats = _controllerStats();
     final controllerHitCount = controllerStats['hitCount'] as int;
 
-    final controllerCreateCount =
-        controllerStats['createCount'] as int;
+    final controllerCreateCount = controllerStats['createCount'] as int;
 
     expect(
       controllerCreateCount,
@@ -167,15 +166,15 @@ void main() {
       showFullContent: false,
     );
 
-  final documentStats = _documentStats();
-  final controllerStats = _controllerStats();
+    final documentStats = _documentStats();
+    final controllerStats = _controllerStats();
 
     expect(controllerStats['createCount'], 2,
         reason: 'controller stats: $controllerStats');
     expect(documentStats['hitCount'], greaterThan(0),
         reason: 'document stats: $documentStats');
-  expect(documentStats['cacheSize'], 1,
-    reason: 'document stats: $documentStats');
+    expect(documentStats['cacheSize'], 1,
+        reason: 'document stats: $documentStats');
   });
 
   testWidgets('creates distinct controller variants when view changes',
@@ -196,17 +195,16 @@ void main() {
       showFullContent: true,
     );
 
-  final controllerStats = _controllerStats();
-  final documentStats = _documentStats();
+    final controllerStats = _controllerStats();
+    final documentStats = _documentStats();
 
     expect(controllerStats['createCount'], 2);
     expect(controllerStats['hitCount'], 0);
-  expect(documentStats['cacheSize'], 1,
-    reason: 'document stats: $documentStats');
+    expect(documentStats['cacheSize'], 1,
+        reason: 'document stats: $documentStats');
   });
 
-  testWidgets('changing content invalidates cached controller',
-      (tester) async {
+  testWidgets('changing content invalidates cached controller', (tester) async {
     final quoteA = _buildRichQuote(id: 'q3', content: 'First content');
     final quoteB = _buildRichQuote(id: 'q3', content: 'Updated content');
 
@@ -224,12 +222,12 @@ void main() {
       showFullContent: false,
     );
 
-  final controllerStats = _controllerStats();
-  final documentStats = _documentStats();
+    final controllerStats = _controllerStats();
+    final documentStats = _documentStats();
 
     expect(controllerStats['createCount'], 2);
     expect(controllerStats['hitCount'], 0);
-  expect(documentStats['hitCount'], 0,
-    reason: 'document stats: $documentStats');
+    expect(documentStats['hitCount'], 0,
+        reason: 'document stats: $documentStats');
   });
 }

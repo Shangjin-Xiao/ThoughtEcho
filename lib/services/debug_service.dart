@@ -49,8 +49,6 @@ class WindowsStartupDebugService {
     }
   }
 
-
-
   /// 记录初始化步骤
   static Future<void> recordInitStep(String step,
       {String? details, bool success = true}) async {

@@ -718,7 +718,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // 修复问题3：应用进入后台时清理缓存，释放内存
     if (state == AppLifecycleState.paused) {
       logDebug('应用进入后台，清理富文本缓存', source: 'AppLifecycle');

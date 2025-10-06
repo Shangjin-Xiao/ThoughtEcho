@@ -100,7 +100,8 @@ class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
     }
 
     final styleAttributes = embedContext.node.style.attributes;
-    final double? specifiedWidth = _readDimension(styleAttributes[quill.Attribute.width.key]?.value);
+    final double? specifiedWidth =
+        _readDimension(styleAttributes[quill.Attribute.width.key]?.value);
     final double? specifiedHeight =
         _readDimension(styleAttributes[quill.Attribute.height.key]?.value);
 
@@ -332,7 +333,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     );
 
     if (provider == null) {
-      logDebug('图片Provider创建失败: ${widget.source}', source: 'OptimizedImageEmbed');
+      logDebug('图片Provider创建失败: ${widget.source}',
+          source: 'OptimizedImageEmbed');
       return _buildErrorPlaceholder(context, width, height);
     }
 
@@ -425,12 +427,15 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   }
 
   Future<void> _openImagePreview(BuildContext context) async {
-    final ImageProvider? previewProvider =
-        createOptimizedImageProvider(widget.source, cacheWidth: null, cacheHeight: null) ??
-            createOptimizedImageProvider(widget.source);
+    final ImageProvider? previewProvider = createOptimizedImageProvider(
+            widget.source,
+            cacheWidth: null,
+            cacheHeight: null) ??
+        createOptimizedImageProvider(widget.source);
 
     if (previewProvider == null) {
-      logWarning('无法打开图片预览: Provider 创建失败 (${widget.source})', source: 'OptimizedImageEmbed');
+      logWarning('无法打开图片预览: Provider 创建失败 (${widget.source})',
+          source: 'OptimizedImageEmbed');
       return;
     }
 
@@ -466,12 +471,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                           alignment: Alignment.center,
                           children: [
                             Container(
-                              constraints: const BoxConstraints(maxWidth: 420, maxHeight: 420),
+                              constraints: const BoxConstraints(
+                                  maxWidth: 420, maxHeight: 420),
                               alignment: Alignment.center,
                               child: const SizedBox(
                                 width: 36,
                                 height: 36,
-                                child: CircularProgressIndicator(strokeWidth: 3),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 3),
                               ),
                             ),
                           ],
@@ -483,12 +490,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.broken_image_outlined, color: Colors.white70, size: 48),
+                              const Icon(Icons.broken_image_outlined,
+                                  color: Colors.white70, size: 48),
                               const SizedBox(height: 12),
                               Text(
                                 '图片加载失败',
                                 textAlign: TextAlign.center,
-                                style: theme.textTheme.titleMedium?.copyWith(color: Colors.white70),
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(color: Colors.white70),
                               ),
                             ],
                           ),

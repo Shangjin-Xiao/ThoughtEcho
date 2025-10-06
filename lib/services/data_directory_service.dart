@@ -148,7 +148,8 @@ class DataDirectoryService {
           try {
             if (entity is File) {
               // 排除 Windows 特殊文件夹（My Music, My Videos 等）
-              final relativePath = path.relative(entity.path, from: currentPath);
+              final relativePath =
+                  path.relative(entity.path, from: currentPath);
               if (!_isSystemFolder(relativePath)) {
                 filesToCopy.add(entity);
               }

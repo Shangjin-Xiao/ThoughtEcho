@@ -64,7 +64,8 @@ class SvgToImageService {
       }
 
       // 标准化SVG内容，确保正确的viewBox和尺寸属性
-      final normalizedSvg = _normalizeSvgForRendering(svgContent, width, height);
+      final normalizedSvg =
+          _normalizeSvgForRendering(svgContent, width, height);
 
       // 优先使用真实Flutter渲染（与预览完全一致）
       final imageBytes = await _renderSvgToBytes(
@@ -158,7 +159,8 @@ class SvgToImageService {
   }
 
   /// 标准化SVG内容以确保正确渲染
-  static String _normalizeSvgForRendering(String svgContent, int width, int height) {
+  static String _normalizeSvgForRendering(
+      String svgContent, int width, int height) {
     String normalized = svgContent.trim();
 
     // 确保SVG有xmlns命名空间
@@ -176,14 +178,16 @@ class SvgToImageService {
       existingViewBox = viewBoxMatch.group(1);
       AppLogger.d('使用现有viewBox: $existingViewBox', source: 'SvgToImageService');
     }
-    
+
     // 提取SVG内在尺寸
-    final widthMatch = RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
-    final heightMatch = RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
-    
+    final widthMatch =
+        RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+    final heightMatch =
+        RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+
     String svgWidth;
     String svgHeight;
-    
+
     if (existingViewBox != null) {
       // 有viewBox，从viewBox提取
       final parts = existingViewBox.split(RegExp(r'[\s,]+'));
@@ -199,15 +203,15 @@ class SvgToImageService {
       svgWidth = widthMatch?.group(1) ?? '400';
       svgHeight = heightMatch?.group(1) ?? '600';
     }
-    
+
     AppLogger.d('SVG内在尺寸: ${svgWidth}x$svgHeight', source: 'SvgToImageService');
-    
+
     // 移除现有的width、height、viewBox属性
     normalized = normalized
         .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '');
-    
+
     // 重新设置标准化的属性：保持SVG内在尺寸作为viewBox，物理尺寸由外层容器控制
     normalized = normalized.replaceFirst(
       '<svg',
@@ -232,7 +236,8 @@ class SvgToImageService {
     // 策略：优先使用真实Flutter渲染，确保与预览一致
     if (buildContext != null) {
       try {
-        AppLogger.d('使用Flutter真实渲染（与预览一致）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode', 
+        AppLogger.d(
+            '使用Flutter真实渲染（与预览一致）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
             source: 'SvgToImageService');
         final result = await SvgOffscreenRenderer.instance.renderSvgString(
           svgContent,
@@ -244,15 +249,15 @@ class SvgToImageService {
           mode: renderMode,
           format: format,
         );
-        AppLogger.i('Flutter真实渲染成功，图片大小: ${result.length} bytes', 
+        AppLogger.i('Flutter真实渲染成功，图片大小: ${result.length} bytes',
             source: 'SvgToImageService');
         return result;
       } catch (e) {
-        AppLogger.w('Flutter真实渲染失败，尝试备用方案: $e', 
+        AppLogger.w('Flutter真实渲染失败，尝试备用方案: $e',
             error: e, source: 'SvgToImageService');
       }
     } else {
-      AppLogger.w('缺少BuildContext，无法使用真实渲染，将使用备用方案', 
+      AppLogger.w('缺少BuildContext，无法使用真实渲染，将使用备用方案',
           source: 'SvgToImageService');
     }
 
@@ -269,7 +274,7 @@ class SvgToImageService {
         renderMode,
       );
     } catch (e) {
-      AppLogger.w('flutter_svg渲染失败，使用最终回退: $e', 
+      AppLogger.w('flutter_svg渲染失败，使用最终回退: $e',
           error: e, source: 'SvgToImageService');
       // 最终回退方案
       return await _renderFallbackImage(
@@ -295,7 +300,7 @@ class SvgToImageService {
     // 注意：flutter_svg 2.x 不支持直接渲染到canvas
     // 这个备用方案使用简化的方式，主要用于无BuildContext的场景
     AppLogger.w('使用简化SVG渲染（无BuildContext备用方案）', source: 'SvgToImageService');
-    
+
     final pictureRecorder = ui.PictureRecorder();
     final canvas = Canvas(pictureRecorder);
 
@@ -315,14 +320,14 @@ class SvgToImageService {
       (height * scaleFactor).round(),
     );
     final byteData = await image.toByteData(format: format);
-    
+
     picture.dispose();
     image.dispose();
-    
+
     if (byteData == null) {
       throw Exception('无法生成图片字节数据');
     }
-    
+
     return byteData.buffer.asUint8List();
   }
 

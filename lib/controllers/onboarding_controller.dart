@@ -19,7 +19,7 @@ class OnboardingController extends ChangeNotifier {
   final PageController _pageController = PageController();
   OnboardingState _state = const OnboardingState();
   final ValueNotifier<bool>? servicesInitializedNotifier;
-  
+
   // Services
   late final MigrationService _migrationService;
   late final SettingsService _settingsService;
@@ -141,17 +141,17 @@ class OnboardingController extends ChangeNotifier {
 
       // 2. 确保数据库完全初始化并可用
       await _databaseService.safeDatabase;
-      
+
       // 3. 显式通知数据库监听者，确保UI组件能正确订阅数据流
       _databaseService.notifyListeners();
-      
+
       // 4. 等待下一帧，确保数据库的 addPostFrameCallback 已执行
       final completer = Completer<void>();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         completer.complete();
       });
       await completer.future;
-      
+
       // 再等待一小段时间确保所有监听器响应完成
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -169,11 +169,12 @@ class OnboardingController extends ChangeNotifier {
 
       // 7. 标记引导完成（数据库迁移已在performMigration中标记）
       await _settingsService.setHasCompletedOnboarding(true);
-      
+
       // 8. 保存当前应用版本号，避免下次启动误判为升级
       final packageInfo = await PackageInfo.fromPlatform();
       await _settingsService.setAppVersion(packageInfo.version);
-      logInfo('已保存应用版本号: ${packageInfo.version}', source: 'OnboardingController');
+      logInfo('已保存应用版本号: ${packageInfo.version}',
+          source: 'OnboardingController');
 
       // 9. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
@@ -288,17 +289,17 @@ class OnboardingController extends ChangeNotifier {
 
       // 2. 确保数据库完全初始化并可用
       await _databaseService.safeDatabase;
-      
+
       // 3. 显式通知数据库监听者，确保UI组件能正确订阅数据流
       _databaseService.notifyListeners();
-      
+
       // 4. 等待下一帧，确保数据库的 addPostFrameCallback 已执行
       final completer = Completer<void>();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         completer.complete();
       });
       await completer.future;
-      
+
       // 再等待一小段时间确保所有监听器响应完成
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -316,11 +317,12 @@ class OnboardingController extends ChangeNotifier {
 
       // 7. 标记引导完成（数据库迁移已在performMigration中标记）
       await _settingsService.setHasCompletedOnboarding(true);
-      
+
       // 8. 保存当前应用版本号，避免下次启动误判为升级
       final packageInfo = await PackageInfo.fromPlatform();
       await _settingsService.setAppVersion(packageInfo.version);
-      logInfo('已保存应用版本号: ${packageInfo.version}', source: 'OnboardingController');
+      logInfo('已保存应用版本号: ${packageInfo.version}',
+          source: 'OnboardingController');
 
       // 9. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;

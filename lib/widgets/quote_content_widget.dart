@@ -24,12 +24,13 @@ class QuoteContent extends StatelessWidget {
   });
 
   // 性能优化：提取为静态常量，避免每次 build 创建
-  static final quill.QuillEditorConfig _staticEditorConfig = quill.QuillEditorConfig(
+  static final quill.QuillEditorConfig _staticEditorConfig =
+      quill.QuillEditorConfig(
     enableInteractiveSelection: false,
     enableSelectionToolbar: false,
     showCursor: false,
-  embedBuilders:
-    QuillEditorExtensions.getEmbedBuilders(optimizedImages: true),
+    embedBuilders:
+        QuillEditorExtensions.getEmbedBuilders(optimizedImages: true),
     padding: EdgeInsets.zero,
     expands: false,
     scrollable: false,
@@ -301,7 +302,6 @@ class QuoteContent extends StatelessWidget {
     return quill.Document()..insert(0, quote.content);
   }
 
-
   @override
   Widget build(BuildContext context) {
     final settingsService = Provider.of<SettingsService>(context);
@@ -310,12 +310,10 @@ class QuoteContent extends StatelessWidget {
     final bool needsExpansion = exceedsCollapsedHeight(quote);
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
-      final bool usePrioritizedDoc =
-          !showFullContent && prioritizeBoldContent;
+      final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
       final String cacheQuoteId =
           quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
-      final String contentVariant =
-          _QuoteContentControllerCache.resolveVariant(
+      final String contentVariant = _QuoteContentControllerCache.resolveVariant(
         showFullContent: showFullContent,
         usePrioritizedDoc: usePrioritizedDoc,
         needsExpansion: needsExpansion,
@@ -450,7 +448,7 @@ class _QuoteDocumentCache {
       _pruneOldest();
     }
 
-  quill.Document document;
+    quill.Document document;
     try {
       document = builder();
     } catch (_) {
@@ -485,8 +483,7 @@ class _QuoteDocumentCache {
     }
 
     final entries = _cache.entries.toList()
-      ..sort((a, b) =>
-          a.value.lastAccess.compareTo(b.value.lastAccess));
+      ..sort((a, b) => a.value.lastAccess.compareTo(b.value.lastAccess));
 
     for (final entry in entries.take(_pruneBatchSize)) {
       _cache.remove(entry.key);
@@ -516,8 +513,7 @@ class _DocumentCacheKey {
 }
 
 class _DocumentCacheEntry {
-  _DocumentCacheEntry({required this.document})
-      : lastAccess = DateTime.now();
+  _DocumentCacheEntry({required this.document}) : lastAccess = DateTime.now();
 
   final quill.Document document;
   DateTime lastAccess;
@@ -556,13 +552,13 @@ class _QuoteContentControllerCache {
       _hitCount++;
       existing.touch();
       _cache[key] = existing;
-      
+
       // 修复问题2：更新 Document 以确保内容最新（防御性编程）
       final newDocument = documentBuilder();
       if (existing.controllers.quillController.document != newDocument) {
         existing.controllers.quillController.document = newDocument;
       }
-      
+
       existing.controllers.prepareForReuse();
       return existing.controllers;
     }
@@ -633,8 +629,7 @@ class _QuoteContentControllerCache {
     }
 
     final entries = _cache.entries.toList()
-      ..sort((a, b) =>
-          a.value.lastAccess.compareTo(b.value.lastAccess));
+      ..sort((a, b) => a.value.lastAccess.compareTo(b.value.lastAccess));
 
     for (final entry in entries.take(_pruneBatchSize)) {
       _cache.remove(entry.key);
@@ -645,10 +640,9 @@ class _QuoteContentControllerCache {
 
   /// 修复问题1：清理特定笔记的所有缓存（用于笔记删除/更新）
   static void removeByQuoteId(String quoteId) {
-    final keysToRemove = _cache.keys
-        .where((key) => key.quoteId == quoteId)
-        .toList();
-    
+    final keysToRemove =
+        _cache.keys.where((key) => key.quoteId == quoteId).toList();
+
     for (final key in keysToRemove) {
       final entry = _cache.remove(key);
       if (entry != null) {

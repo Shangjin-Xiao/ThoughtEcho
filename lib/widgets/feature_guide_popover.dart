@@ -5,10 +5,10 @@ import '../models/feature_guide.dart';
 
 /// 气泡箭头方向
 enum PopoverArrowDirection {
-  top,    // 箭头在顶部，气泡在下方
+  top, // 箭头在顶部，气泡在下方
   bottom, // 箭头在底部，气泡在上方
-  left,   // 箭头在左侧，气泡在右方
-  right,  // 箭头在右侧，气泡在左方
+  left, // 箭头在左侧，气泡在右方
+  right, // 箭头在右侧，气泡在左方
 }
 
 /// 功能引导 Popover 气泡组件
@@ -88,8 +88,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
       if (widget.guide.targetKey != null) {
         final targetContext = widget.guide.targetKey.currentContext;
-        final renderBox =
-            targetContext?.findRenderObject() as RenderBox?;
+        final renderBox = targetContext?.findRenderObject() as RenderBox?;
         final visible =
             renderBox != null && renderBox.attached && renderBox.hasSize;
         if (!visible) {
@@ -180,7 +179,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
             ),
           ),
 
-        // 气泡卡片
+          // 气泡卡片
           Positioned(
             left: positioning['left'] as double,
             top: positioning['top'] as double,
@@ -218,11 +217,11 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       targetPosition.dy + userOffset.dy,
     );
 
-  final targetCenterX = adjustedTargetPosition.dx + targetSize.width / 2;
-  final targetCenterY = adjustedTargetPosition.dy + targetSize.height / 2;
-  final safeTop = viewPadding.top + margin;
-  final safeBottom = screenSize.height - viewPadding.bottom - margin;
-  const double safeLeft = margin;
+    final targetCenterX = adjustedTargetPosition.dx + targetSize.width / 2;
+    final targetCenterY = adjustedTargetPosition.dy + targetSize.height / 2;
+    final safeTop = viewPadding.top + margin;
+    final safeBottom = screenSize.height - viewPadding.bottom - margin;
+    const double safeLeft = margin;
     final safeRight = screenSize.width - margin;
 
     Map<String, dynamic>? fallback;
@@ -236,10 +235,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         targetCenterY: targetCenterY,
         safeTop: safeTop,
         safeBottom: safeBottom,
-  safeLeft: safeLeft,
-  safeRight: safeRight,
-  popoverWidth: popoverWidth,
-  popoverMaxHeight: popoverMaxHeight,
+        safeLeft: safeLeft,
+        safeRight: safeRight,
+        popoverWidth: popoverWidth,
+        popoverMaxHeight: popoverMaxHeight,
         arrowSize: arrowSize,
         requireInBounds: !attempt.allowClamp,
       );
@@ -454,10 +453,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                 child: Text(
                   widget.guide.title,
                   style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: theme.colorScheme.primary,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
               GestureDetector(
@@ -478,9 +477,9 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           Text(
             widget.guide.description,
             style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  height: 1.35,
-                ),
+              fontSize: 12,
+              height: 1.35,
+            ),
           ),
         ],
       ),
@@ -489,19 +488,18 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     Widget buildHorizontalArrow(bool isTop) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final width = constraints.maxWidth.isFinite
-              ? constraints.maxWidth
-              : 220.0;
-          final offset = arrowOffset
-              .clamp(arrowSize, width - arrowSize)
-              .toDouble();
+          final width =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 220.0;
+          final offset =
+              arrowOffset.clamp(arrowSize, width - arrowSize).toDouble();
           return Padding(
             padding: EdgeInsets.only(left: offset - arrowSize),
             child: CustomPaint(
               painter: _ArrowPainter(
                 color: cardColor,
-                direction:
-                    isTop ? PopoverArrowDirection.top : PopoverArrowDirection.bottom,
+                direction: isTop
+                    ? PopoverArrowDirection.top
+                    : PopoverArrowDirection.bottom,
               ),
               size: const Size(arrowSize * 2, arrowSize),
             ),
@@ -513,19 +511,18 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     Widget buildVerticalArrow(bool isLeft) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final height = constraints.maxHeight.isFinite
-              ? constraints.maxHeight
-              : 120.0;
-          final offset = arrowOffset
-              .clamp(arrowSize, height - arrowSize)
-              .toDouble();
+          final height =
+              constraints.maxHeight.isFinite ? constraints.maxHeight : 120.0;
+          final offset =
+              arrowOffset.clamp(arrowSize, height - arrowSize).toDouble();
           return Padding(
             padding: EdgeInsets.only(top: offset - arrowSize),
             child: CustomPaint(
               painter: _ArrowPainter(
                 color: cardColor,
-                direction:
-                    isLeft ? PopoverArrowDirection.left : PopoverArrowDirection.right,
+                direction: isLeft
+                    ? PopoverArrowDirection.left
+                    : PopoverArrowDirection.right,
               ),
               size: const Size(arrowSize, arrowSize * 2),
             ),
@@ -629,7 +626,7 @@ class _ArrowPainter extends CustomPainter {
     }
 
     path.close();
-  canvas.drawShadow(path, Colors.black.withValues(alpha: 0.18), 4, false);
+    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.18), 4, false);
     canvas.drawPath(path, paint);
   }
 

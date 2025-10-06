@@ -141,13 +141,15 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    Icon(Icons.tune, color: theme.colorScheme.primary, size: 22),
+                    Icon(Icons.tune,
+                        color: theme.colorScheme.primary, size: 22),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         '更多个性化选项和AI功能可在「设置 > 偏好设置」中随时调整。',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ),
@@ -438,8 +440,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   selectedColor: theme.colorScheme.primaryContainer,
                   checkmarkColor: theme.colorScheme.primary,
                   backgroundColor: isSelected
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.8),
                   labelStyle: TextStyle(
                     color: isSelected
                         ? theme.colorScheme.onPrimaryContainer
@@ -449,8 +452,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   ),
                   side: BorderSide(
                     color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.outline.withValues(alpha: 0.5),
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outline.withValues(alpha: 0.5),
                     width: isSelected ? 1.5 : 1.0,
                   ),
                   elevation: isSelected ? 2 : 1,

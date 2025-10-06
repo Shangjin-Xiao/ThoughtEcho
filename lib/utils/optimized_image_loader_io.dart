@@ -42,7 +42,8 @@ ImageProvider? createOptimizedImageProvider(
   return _wrapResize(FileImage(file), cacheWidth, cacheHeight);
 }
 
-ImageProvider _wrapResize(ImageProvider provider, int? cacheWidth, int? cacheHeight) {
+ImageProvider _wrapResize(
+    ImageProvider provider, int? cacheWidth, int? cacheHeight) {
   if (cacheWidth == null && cacheHeight == null) {
     return provider;
   }

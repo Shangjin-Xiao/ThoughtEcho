@@ -65,16 +65,16 @@ class _HomePageState extends State<HomePage>
       GlobalKey<NoteListViewState>();
   final GlobalKey<DailyQuoteViewState> _dailyQuoteViewKey =
       GlobalKey<DailyQuoteViewState>();
-  
+
   // 功能引导：每日一言的 Key
   final GlobalKey _dailyQuoteGuideKey = GlobalKey();
-  
+
   // 功能引导：记录页的 Keys
   final GlobalKey _noteFilterGuideKey = GlobalKey();
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
   final GlobalKey _noteFoldGuideKey = GlobalKey();
   final GlobalKey<SettingsPageState> _settingsPageKey =
-    GlobalKey<SettingsPageState>();
+      GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   bool _settingsGuidePending = false;
@@ -596,9 +596,10 @@ class _HomePageState extends State<HomePage>
   void _scheduleSettingsGuideIfNeeded() {
     if (_settingsGuidePending) return;
 
-    final allShown = FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-        FeatureGuideHelper.hasShown(context, 'settings_theme');
+    final allShown =
+        FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
+            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+            FeatureGuideHelper.hasShown(context, 'settings_theme');
     if (allShown) {
       return;
     }

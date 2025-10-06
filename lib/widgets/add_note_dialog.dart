@@ -80,10 +80,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Timer? _searchDebounceTimer;
   List<NoteCategory> _filteredTags = [];
   String _lastSearchQuery = '';
-  
+
   // 数据库监听防抖
   Timer? _dbChangeDebounceTimer;
-  
+
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
 
@@ -141,12 +141,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     Future.microtask(() {
       if (!mounted) return;
 
-      _cachedLocationService =
-          _readServiceOrNull<LocationService>(context);
-      _cachedWeatherService =
-          _readServiceOrNull<WeatherService>(context);
+      _cachedLocationService = _readServiceOrNull<LocationService>(context);
+      _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
       _databaseService = _readServiceOrNull<DatabaseService>(context);
-      
+
       // 延迟注册监听器，避免初始化时触发不必要的查询
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && _databaseService != null) {
@@ -213,26 +211,26 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 优化：数据库变化监听回调 - 自动更新标签列表（带防抖）
   void _onDatabaseChanged() {
     if (!mounted || _databaseService == null) return;
-    
+
     // 防抖：300ms 内的多次变化只触发一次更新
     _dbChangeDebounceTimer?.cancel();
     _dbChangeDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
       if (!mounted || _databaseService == null) return;
-      
+
       try {
         // 重新获取最新的标签列表
         final updatedTags = await _databaseService!.getCategories();
-        
+
         if (!mounted) return;
-        
+
         // 脏检查：只有标签数量或内容变化时才更新
         bool needsUpdate = _availableTags.length != updatedTags.length;
         if (!needsUpdate && _availableTags.isNotEmpty) {
           // 简单检查第一个和最后一个标签是否相同
           needsUpdate = _availableTags.first.id != updatedTags.first.id ||
-                       _availableTags.last.id != updatedTags.last.id;
+              _availableTags.last.id != updatedTags.last.id;
         }
-        
+
         if (needsUpdate) {
           setState(() {
             _availableTags = updatedTags;
@@ -301,30 +299,30 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _authorController.dispose();
     _workController.dispose();
     _tagSearchController.dispose();
-    
+
     // 优化：移除数据库监听器，防止内存泄漏
     _databaseService?.removeListener(_onDatabaseChanged);
-    
+
     // 优化：清理所有缓存，释放内存
     _filterCache.clear();
     _allCategoriesCache = null;
     _availableTags.clear();
     _filteredTags.clear();
-    
+
     super.dispose();
   }
 
   // 添加默认的一言相关标签（完全异步执行，不阻塞UI）
   Future<void> _addDefaultHitokotoTagsAsync() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoadingHitokotoTags = true;
     });
-    
+
     try {
-      final db = _databaseService ??
-          _readServiceOrNull<DatabaseService>(context);
+      final db =
+          _databaseService ?? _readServiceOrNull<DatabaseService>(context);
 
       if (db == null) {
         logDebug('未找到DatabaseService，跳过默认标签添加');
@@ -333,7 +331,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       // 批量准备标签信息，减少异步等待次数
       final List<Map<String, String>> tagsToEnsure = [];
-      
+
       // 添加"每日一言"标签
       tagsToEnsure.add({
         'name': '每日一言',
@@ -349,11 +347,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           String tagName = _convertHitokotoTypeToTagName(hitokotoType);
           String iconName = _getIconForHitokotoType(hitokotoType);
           String? fixedId;
-          
+
           if (_hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
             fixedId = _hitokotoTypeToCategoryIdMap[hitokotoType];
           }
-          
+
           tagsToEnsure.add({
             'name': tagName,
             'icon': iconName,
@@ -463,7 +461,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 缓存所有标签，避免重复查询
   List<NoteCategory>? _allCategoriesCache;
-  
+
   // 确保标签存在，如果不存在则创建（优化版：减少数据库查询）
   Future<String?> _ensureTagExists(
     DatabaseService db,
@@ -499,7 +497,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       // 优化：使用缓存的标签列表，避免每次都查询数据库
       _allCategoriesCache ??= await db.getCategories();
       final categories = _allCategoriesCache!;
-      
+
       final existingTag = categories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteCategory(id: '', name: ''),
@@ -593,21 +591,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     final theme = Theme.of(context);
 
     // 优化：使用缓存的服务或延迟获取
-    final locationService = _cachedLocationService ??
-        _readServiceOrNull<LocationService>(context);
-    final weatherService = _cachedWeatherService ??
-        _readServiceOrNull<WeatherService>(context);
+    final locationService =
+        _cachedLocationService ?? _readServiceOrNull<LocationService>(context);
+    final weatherService =
+        _cachedWeatherService ?? _readServiceOrNull<WeatherService>(context);
 
     final locationValue = locationService?.getFormattedLocation();
-    final String? location =
-        (locationValue != null && locationValue.isNotEmpty)
-            ? locationValue
-            : null;
+    final String? location = (locationValue != null && locationValue.isNotEmpty)
+        ? locationValue
+        : null;
     final String? currentAddress = locationService?.currentAddress;
 
     final String? weather = weatherService?.currentWeather;
     final String? temperature = weatherService?.temperature;
-  final String? formattedWeather = weatherService?.getFormattedWeather();
+    final String? formattedWeather = weatherService?.getFormattedWeather();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -871,14 +868,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 const SizedBox(width: 8),
                 // 天气信息按钮
                 Tooltip(
-          message: weather != null && weatherService != null
-            ? '添加天气: ${formattedWeather ?? weather}'
-            : '添加天气信息',
+                  message: weather != null && weatherService != null
+                      ? '添加天气: ${formattedWeather ?? weather}'
+                      : '添加天气信息',
                   child: FilterChip(
                     avatar: Icon(
-            weather != null && weatherService != null
+                      weather != null && weatherService != null
                           ? weatherService.getWeatherIconData()
-              : Icons.cloud,
+                          : Icons.cloud,
                       color: _includeWeather
                           ? theme.colorScheme.primary
                           : Colors.grey,

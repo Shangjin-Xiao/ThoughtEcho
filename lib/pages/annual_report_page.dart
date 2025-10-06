@@ -597,45 +597,45 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       ),
                     )
                   : ListView(
-                children: [
-                  _buildStatCard(
-                    icon: Icons.edit_note,
-                    title: '总共记录',
-                    value: '${_stats!.totalNotes}',
-                    subtitle: '篇笔记',
-                    color: const Color(0xFF6366F1),
-                    delay: 0.0,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildStatCard(
-                    icon: Icons.sentiment_satisfied_alt,
-                    title: '写作天数',
-                    value: '${_stats!.activeDays}',
-                    subtitle: '天',
-                    color: const Color(0xFF10B981),
-                    delay: 0.1,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildStatCard(
-                    icon: Icons.trending_up,
-                    title: '最长连续',
-                    value: '${_stats!.longestStreak}',
-                    subtitle: '天',
-                    color: const Color(0xFFF59E0B),
-                    delay: 0.2,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildStatCard(
-                    icon: Icons.local_offer,
-                    title: '使用标签',
-                    value: '${_stats!.totalTags}',
-                    subtitle: '个',
-                    color: const Color(0xFFEF4444),
-                    delay: 0.3,
-                  ),
-                ],
-              ),
-                  ),
+                      children: [
+                        _buildStatCard(
+                          icon: Icons.edit_note,
+                          title: '总共记录',
+                          value: '${_stats!.totalNotes}',
+                          subtitle: '篇笔记',
+                          color: const Color(0xFF6366F1),
+                          delay: 0.0,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildStatCard(
+                          icon: Icons.sentiment_satisfied_alt,
+                          title: '写作天数',
+                          value: '${_stats!.activeDays}',
+                          subtitle: '天',
+                          color: const Color(0xFF10B981),
+                          delay: 0.1,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildStatCard(
+                          icon: Icons.trending_up,
+                          title: '最长连续',
+                          value: '${_stats!.longestStreak}',
+                          subtitle: '天',
+                          color: const Color(0xFFF59E0B),
+                          delay: 0.2,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildStatCard(
+                          icon: Icons.local_offer,
+                          title: '使用标签',
+                          value: '${_stats!.totalTags}',
+                          subtitle: '个',
+                          color: const Color(0xFFEF4444),
+                          delay: 0.3,
+                        ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
@@ -683,67 +683,67 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       ),
                     )
                   : ListView(
-                children: [
-                  // 最活跃时间段
-                  _buildHabitCard(
-                    title: '最活跃时间',
-                    content: _stats!.mostActiveHour != null
-                        ? '${_stats!.mostActiveHour}:00 - ${_stats!.mostActiveHour! + 1}:00'
-                        : '暂无数据',
-                    icon: Icons.schedule,
-                    color: const Color(0xFF8B5CF6),
-                  ),
-                  const SizedBox(height: 20),
-                  // 最喜欢的日子
-                  _buildHabitCard(
-                    title: '最喜欢的日子',
-                    content: _stats!.mostActiveWeekday ?? '暂无数据',
-                    icon: Icons.today,
-                    color: const Color(0xFF06B6D4),
-                  ),
-                  const SizedBox(height: 20),
-                  // 平均字数
-                  _buildHabitCard(
-                    title: '平均每篇字数',
-                    content: '${_stats!.averageWordsPerNote.toInt()} 字',
-                    icon: Icons.text_fields,
-                    color: const Color(0xFFEC4899),
-                  ),
-                  const SizedBox(height: 20),
-                  // 最长笔记
-                  _buildHabitCard(
-                    title: '最长的一篇',
-                    content: '${_stats!.longestNoteWords} 字',
-                    icon: Icons.article,
-                    color: const Color(0xFF84CC16),
-                  ),
-                  const SizedBox(height: 20),
-                  // 新增：最常见时间段
-                  _buildHabitCard(
-                    title: '最常见时间段',
-                    content: _mostDayPeriod ?? '暂无数据',
-                    icon: Icons.timelapse,
-                    color: const Color(0xFF8B5CF6),
-                  ),
-                  const SizedBox(height: 20),
-                  // 新增：最常见天气
-                  _buildHabitCard(
-                    title: '最常见天气',
-                    content: _mostWeather ?? '暂无数据',
-                    icon: Icons.cloud_queue,
-                    color: const Color(0xFF06B6D4),
-                  ),
-                  const SizedBox(height: 20),
-                  // 新增：最常用标签
-                  _buildHabitCard(
-                    title: '最常用标签',
-                    content: _mostTopTag ?? '暂无数据',
-                    icon: Icons.local_offer_outlined,
-                    color: const Color(0xFFEF4444),
-                  ),
-                ],
-              ),
-                  ),
+                      children: [
+                        // 最活跃时间段
+                        _buildHabitCard(
+                          title: '最活跃时间',
+                          content: _stats!.mostActiveHour != null
+                              ? '${_stats!.mostActiveHour}:00 - ${_stats!.mostActiveHour! + 1}:00'
+                              : '暂无数据',
+                          icon: Icons.schedule,
+                          color: const Color(0xFF8B5CF6),
+                        ),
+                        const SizedBox(height: 20),
+                        // 最喜欢的日子
+                        _buildHabitCard(
+                          title: '最喜欢的日子',
+                          content: _stats!.mostActiveWeekday ?? '暂无数据',
+                          icon: Icons.today,
+                          color: const Color(0xFF06B6D4),
+                        ),
+                        const SizedBox(height: 20),
+                        // 平均字数
+                        _buildHabitCard(
+                          title: '平均每篇字数',
+                          content: '${_stats!.averageWordsPerNote.toInt()} 字',
+                          icon: Icons.text_fields,
+                          color: const Color(0xFFEC4899),
+                        ),
+                        const SizedBox(height: 20),
+                        // 最长笔记
+                        _buildHabitCard(
+                          title: '最长的一篇',
+                          content: '${_stats!.longestNoteWords} 字',
+                          icon: Icons.article,
+                          color: const Color(0xFF84CC16),
+                        ),
+                        const SizedBox(height: 20),
+                        // 新增：最常见时间段
+                        _buildHabitCard(
+                          title: '最常见时间段',
+                          content: _mostDayPeriod ?? '暂无数据',
+                          icon: Icons.timelapse,
+                          color: const Color(0xFF8B5CF6),
+                        ),
+                        const SizedBox(height: 20),
+                        // 新增：最常见天气
+                        _buildHabitCard(
+                          title: '最常见天气',
+                          content: _mostWeather ?? '暂无数据',
+                          icon: Icons.cloud_queue,
+                          color: const Color(0xFF06B6D4),
+                        ),
+                        const SizedBox(height: 20),
+                        // 新增：最常用标签
+                        _buildHabitCard(
+                          title: '最常用标签',
+                          content: _mostTopTag ?? '暂无数据',
+                          icon: Icons.local_offer_outlined,
+                          color: const Color(0xFFEF4444),
+                        ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
@@ -919,79 +919,82 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                         final percentage =
                             maxCount > 0 ? month.count / maxCount : 0.0;
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                      boxShadow: AppTheme.lightShadow,
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          child: Text(
-                            '${month.month}月',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.cardRadius),
+                            boxShadow: AppTheme.lightShadow,
                           ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        color: ColorUtils.withOpacitySafe(
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: FractionallySizedBox(
-                                        alignment: Alignment.centerLeft,
-                                        widthFactor: percentage,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
+                              SizedBox(
+                                width: 60,
+                                child: Text(
+                                  '${month.month}月',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: ColorUtils.withOpacitySafe(
+                                                  Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                  0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: FractionallySizedBox(
+                                              alignment: Alignment.centerLeft,
+                                              widthFactor: percentage,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    4,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          '${month.count}篇',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    '${month.count}篇',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

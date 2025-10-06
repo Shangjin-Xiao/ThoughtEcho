@@ -99,25 +99,27 @@ class NoteListViewState extends State<NoteListView> {
 
   bool get hasQuotes => _quotes.isNotEmpty;
 
-  bool get hasExpandableQuote =>
-    _quotes.any(QuoteItemWidget.needsExpansionFor);
+  bool get hasExpandableQuote => _quotes.any(QuoteItemWidget.needsExpansionFor);
 
-  bool get isFilterGuideReady => widget.filterButtonKey != null &&
-    widget.filterButtonKey!.currentContext != null &&
-    widget.filterButtonKey!.currentContext!.findRenderObject() is RenderBox;
+  bool get isFilterGuideReady =>
+      widget.filterButtonKey != null &&
+      widget.filterButtonKey!.currentContext != null &&
+      widget.filterButtonKey!.currentContext!.findRenderObject() is RenderBox;
 
-  bool get canShowFavoriteGuide => widget.onFavorite != null &&
-    hasQuotes &&
-    widget.favoriteButtonGuideKey != null &&
-    widget.favoriteButtonGuideKey!.currentContext != null &&
-    widget.favoriteButtonGuideKey!.currentContext!.findRenderObject()
-      is RenderBox;
+  bool get canShowFavoriteGuide =>
+      widget.onFavorite != null &&
+      hasQuotes &&
+      widget.favoriteButtonGuideKey != null &&
+      widget.favoriteButtonGuideKey!.currentContext != null &&
+      widget.favoriteButtonGuideKey!.currentContext!.findRenderObject()
+          is RenderBox;
 
-  bool get canShowExpandGuide => hasExpandableQuote &&
-    widget.foldToggleGuideKey != null &&
-    widget.foldToggleGuideKey!.currentContext != null &&
-    widget.foldToggleGuideKey!.currentContext!.findRenderObject()
-      is RenderBox;
+  bool get canShowExpandGuide =>
+      hasExpandableQuote &&
+      widget.foldToggleGuideKey != null &&
+      widget.foldToggleGuideKey!.currentContext != null &&
+      widget.foldToggleGuideKey!.currentContext!.findRenderObject()
+          is RenderBox;
 
   @override
   void initState() {
@@ -393,12 +395,14 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange = 
-          oldWidget.searchQuery == widget.searchQuery &&
+      final bool isOnlySortChange = oldWidget.searchQuery ==
+              widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
-          _areListsEqual(oldWidget.selectedDayPeriods, widget.selectedDayPeriods) &&
-          (oldWidget.sortType != widget.sortType || oldWidget.sortAscending != widget.sortAscending);
+          _areListsEqual(
+              oldWidget.selectedDayPeriods, widget.selectedDayPeriods) &&
+          (oldWidget.sortType != widget.sortType ||
+              oldWidget.sortAscending != widget.sortAscending);
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(preserveScrollPosition: isOnlySortChange);
@@ -434,11 +438,14 @@ class NoteListViewState extends State<NoteListView> {
   void _updateStreamSubscription({bool preserveScrollPosition = false}) {
     if (!mounted) return; // 确保组件仍然挂载
 
-    logDebug('更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)', source: 'NoteListView');
+    logDebug('更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)',
+        source: 'NoteListView');
 
     double? savedScrollOffset;
     // 只有在需要保持滚动位置时才保存（仅排序变化时）
-    if (preserveScrollPosition && _scrollController.hasClients && _quotes.isNotEmpty) {
+    if (preserveScrollPosition &&
+        _scrollController.hasClients &&
+        _quotes.isNotEmpty) {
       savedScrollOffset = _scrollController.offset;
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     } else if (!preserveScrollPosition) {
@@ -902,12 +909,12 @@ class NoteListViewState extends State<NoteListView> {
             _itemKeys.putIfAbsent(
                 quoteId, () => GlobalKey(debugLabel: itemKey));
 
-      final bool needsExpansion =
-        QuoteItemWidget.needsExpansionFor(quote);
+            final bool needsExpansion =
+                QuoteItemWidget.needsExpansionFor(quote);
 
-      final attachFavoriteGuideKey = !favoriteGuideAssigned &&
-        widget.favoriteButtonGuideKey != null &&
-        widget.onFavorite != null;
+            final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+                widget.favoriteButtonGuideKey != null &&
+                widget.onFavorite != null;
             final attachFoldGuideKey = !foldGuideAssigned &&
                 widget.foldToggleGuideKey != null &&
                 needsExpansion;
@@ -964,9 +971,8 @@ class NoteListViewState extends State<NoteListView> {
                   favoriteButtonGuideKey: attachFavoriteGuideKey
                       ? widget.favoriteButtonGuideKey
                       : null,
-                  foldToggleGuideKey: attachFoldGuideKey
-                      ? widget.foldToggleGuideKey
-                      : null,
+                  foldToggleGuideKey:
+                      attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                   tagBuilder: (tag) {
                     return Container(
                       padding: const EdgeInsets.symmetric(
@@ -1028,7 +1034,7 @@ class NoteListViewState extends State<NoteListView> {
     // 性能优化：只在必要时调用 setState，避免不必要的重建
     final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
         (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
-    
+
     if (shouldSetLoading && !_isLoading) {
       setState(() {
         _isLoading = true;

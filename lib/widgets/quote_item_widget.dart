@@ -318,8 +318,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
             // 笔记内容 - 支持双击展开/折叠
             GestureDetector(
-        key: widget.foldToggleGuideKey ??
-          const ValueKey('quote_item.double_tap_region'),
+              key: widget.foldToggleGuideKey ??
+                  const ValueKey('quote_item.double_tap_region'),
               behavior: HitTestBehavior.translucent,
               onDoubleTap: _needsExpansion(quote)
                   ? () => _handleDoubleTap(isExpanded, quote)

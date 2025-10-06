@@ -109,7 +109,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       logInfo('处理更新后迁移');
 
       if (!mounted) return;
-      
+
       final migrationService = MigrationService(
         databaseService: context.read<DatabaseService>(),
         settingsService: context.read<SettingsService>(),
@@ -122,7 +122,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
       if (result.isSuccess) {
         logInfo('更新迁移成功完成');
-        
+
         // 初始化 AI 分析数据库
         try {
           final aiAnalysisDbService = context.read<AIAnalysisDatabaseService>();
@@ -381,9 +381,11 @@ class _OnboardingPageState extends State<OnboardingPage>
       builder: (context, controller, child) {
         final hitokotoPreference = OnboardingConfig.preferences
             .firstWhere((p) => p.key == 'hitokotoTypes');
-        final currentValue = controller.state.getPreference<String>('hitokotoTypes') ??
-            hitokotoPreference.defaultValue as String;
-        final selectedValues = currentValue.split(',').where((v) => v.isNotEmpty).toSet();
+        final currentValue =
+            controller.state.getPreference<String>('hitokotoTypes') ??
+                hitokotoPreference.defaultValue as String;
+        final selectedValues =
+            currentValue.split(',').where((v) => v.isNotEmpty).toSet();
         final options = hitokotoPreference.options ?? [];
 
         return SingleChildScrollView(
@@ -421,7 +423,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 Text(
                                   '已选择 ${selectedValues.length} 种类型',
                                   style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -433,7 +436,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                       Text(
                         hitokotoPreference.description,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6),
                           height: 1.5,
                         ),
                       ),
@@ -445,13 +449,17 @@ class _OnboardingPageState extends State<OnboardingPage>
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                final allValues = options.map((o) => o.value as String).join(',');
-                                _controller.updatePreference('hitokotoTypes', allValues);
+                                final allValues = options
+                                    .map((o) => o.value as String)
+                                    .join(',');
+                                _controller.updatePreference(
+                                    'hitokotoTypes', allValues);
                               },
                               icon: const Icon(Icons.select_all, size: 16),
                               label: const Text('全选'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                               ),
                             ),
                           ),
@@ -463,12 +471,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 final firstValue = options.isNotEmpty
                                     ? options.first.value as String
                                     : 'a';
-                                _controller.updatePreference('hitokotoTypes', firstValue);
+                                _controller.updatePreference(
+                                    'hitokotoTypes', firstValue);
                               },
                               icon: const Icon(Icons.clear_all, size: 16),
                               label: const Text('清空'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                               ),
                             ),
                           ),
@@ -480,37 +490,45 @@ class _OnboardingPageState extends State<OnboardingPage>
                         spacing: 8,
                         runSpacing: 8,
                         children: options.map((option) {
-                          final isSelected = selectedValues.contains(option.value as String);
+                          final isSelected =
+                              selectedValues.contains(option.value as String);
                           return FilterChip(
                             label: Text(option.label),
                             selected: isSelected,
                             onSelected: (selected) {
-                              final newSelectedValues = Set<String>.from(selectedValues);
+                              final newSelectedValues =
+                                  Set<String>.from(selectedValues);
                               if (selected) {
                                 newSelectedValues.add(option.value as String);
                               } else {
-                                newSelectedValues.remove(option.value as String);
+                                newSelectedValues
+                                    .remove(option.value as String);
                                 // 确保至少有一个选项被选中
                                 if (newSelectedValues.isEmpty) {
-                                  newSelectedValues.add(options.first.value as String);
+                                  newSelectedValues
+                                      .add(options.first.value as String);
                                 }
                               }
                               final newValue = newSelectedValues.join(',');
-                              _controller.updatePreference('hitokotoTypes', newValue);
+                              _controller.updatePreference(
+                                  'hitokotoTypes', newValue);
                             },
                             backgroundColor: theme.colorScheme.surface,
                             selectedColor: Colors.transparent,
                             checkmarkColor: theme.colorScheme.primary,
                             labelStyle: TextStyle(
                               color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurface,
-                              fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface,
+                              fontWeight: isSelected
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
                             ),
                             side: BorderSide(
                               color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.outline.withValues(alpha: 0.3),
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.outline
+                                      .withValues(alpha: 0.3),
                               width: isSelected ? 2.0 : 1.0,
                             ),
                           );
@@ -547,7 +565,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                     const SizedBox(height: 24),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -716,7 +735,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                           Navigator.pop(dialogContext);
                           // 移除了 _navigateToHome() 调用
                         } catch (error) {
-                          logError('跳过引导失败', error: error, source: 'OnboardingPage');
+                          logError('跳过引导失败',
+                              error: error, source: 'OnboardingPage');
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
                           if (mounted) {

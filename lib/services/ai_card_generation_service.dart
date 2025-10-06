@@ -89,7 +89,7 @@ class AICardGenerationService {
     }
   }
 
-    /// 本地模板回退封装(AI关闭或失败时使用)
+  /// 本地模板回退封装(AI关闭或失败时使用)
   GeneratedCard _buildFallbackCard(Quote note) {
     // 使用随机选择而不是固定分析,确保多样性
     final cardType = _selectRandomTemplateType(note);
@@ -126,7 +126,8 @@ class AICardGenerationService {
   CardType _selectRandomTemplateType(Quote note) {
     // 使用真随机而不是伪随机
     final random = DateTime.now().microsecondsSinceEpoch % 100;
-    final hasAuthor = note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
+    final hasAuthor =
+        note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
 
     // 如果有作者信息,50%使用quote模板
     if (hasAuthor && random < 50) {
@@ -143,7 +144,9 @@ class AICardGenerationService {
 
     // 基于内容特征调整权重
     final content = note.content.toLowerCase();
-    if (content.contains('思考') || content.contains('哲学') || content.contains('意义')) {
+    if (content.contains('思考') ||
+        content.contains('哲学') ||
+        content.contains('意义')) {
       // 哲学内容:40%哲学,其他平分
       if (random < 40) return CardType.philosophical;
     }
@@ -339,7 +342,8 @@ class AICardGenerationService {
     BuildContext? context,
   }) async {
     try {
-      AppLogger.i('开始保存卡片图片: ${card.id}, 尺寸: ${width}x$height, 缩放: $scaleFactor', 
+      AppLogger.i(
+          '开始保存卡片图片: ${card.id}, 尺寸: ${width}x$height, 缩放: $scaleFactor',
           source: 'AICardGeneration');
 
       // 验证输入参数
@@ -350,22 +354,24 @@ class AICardGenerationService {
       if (width > 4000 || height > 4000) {
         throw ArgumentError('图片尺寸过大，最大支持4000x4000');
       }
-      
+
       // 强烈建议传入BuildContext以使用精准渲染
       if (context == null) {
         AppLogger.w('未提供BuildContext，渲染可能与预览不一致', source: 'AICardGeneration');
       }
-      
+
       // 标准化SVG内容，确保渲染一致性
       final normalizedSvg = _normalizeSVGAttributes(card.svgContent);
       if (normalizedSvg != card.svgContent) {
         AppLogger.d('SVG内容已标准化', source: 'AICardGeneration');
       }
-      
+
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
-          (context != null && context is Element && !context.mounted) ? null : context;
-      
+          (context != null && context is Element && !context.mounted)
+              ? null
+              : context;
+
       // 创建临时卡片对象用于渲染（使用标准化的SVG）
       final tempCard = GeneratedCard(
         id: card.id,
@@ -382,7 +388,7 @@ class AICardGenerationService {
         date: card.date,
         dayPeriod: card.dayPeriod,
       );
-      
+
       final imageBytes = await tempCard.toImageBytes(
           width: width,
           height: height,
@@ -390,7 +396,7 @@ class AICardGenerationService {
           renderMode: renderMode,
           context: safeContext);
 
-      AppLogger.i('卡片图片渲染完成，大小: ${imageBytes.length} bytes', 
+      AppLogger.i('卡片图片渲染完成，大小: ${imageBytes.length} bytes',
           source: 'AICardGeneration');
 
       // 再检查/申请相册权限并保存（与渲染解耦，避免 context 跨 await）
@@ -402,8 +408,8 @@ class AICardGenerationService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = customName != null
           ? '${customName}_$timestamp'
-          : '心迹_Card_$timestamp'; 
-          
+          : '心迹_Card_$timestamp';
+
       // 保存到相册（仅移动端）
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
         await gal.Gal.putImageBytes(imageBytes, name: fileName);
@@ -553,7 +559,7 @@ class AICardGenerationService {
 
     // 使用随机化的智能选择，避免单调
     final random = DateTime.now().millisecondsSinceEpoch % 100;
-    
+
     // 1. 检查是否为引用/名言（30%概率使用智能卡片，70%随机海报）
     if (hasAuthor ||
         content.contains('说') ||
@@ -906,7 +912,7 @@ class AICardGenerationService {
         '<svg xmlns="http://www.w3.org/2000/svg"',
       );
     }
-    
+
     // 提取现有的viewBox或生成标准viewBox
     final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(normalized);
     String viewBox;
@@ -914,13 +920,16 @@ class AICardGenerationService {
       viewBox = viewBoxMatch.group(1)!;
       // 验证viewBox格式是否正确(应该是4个数字)
       final parts = viewBox.split(RegExp(r'[\s,]+'));
-      if (parts.length != 4 || !parts.every((p) => double.tryParse(p) != null)) {
+      if (parts.length != 4 ||
+          !parts.every((p) => double.tryParse(p) != null)) {
         viewBox = '0 0 400 600'; // 回退到标准尺寸
       }
     } else {
       // 尝试从width/height推断viewBox
-      final widthMatch = RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
-      final heightMatch = RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+      final widthMatch =
+          RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+      final heightMatch =
+          RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
       final w = widthMatch?.group(1) ?? '400';
       final h = heightMatch?.group(1) ?? '600';
       viewBox = '0 0 $w $h';

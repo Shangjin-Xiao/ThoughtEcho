@@ -313,8 +313,7 @@ class NoteSyncService extends ChangeNotifier {
 
       // 0.1 发送意向握手（让对方先决定是否允许以及是否需要媒体）
       _setAwaitingPeerApproval(true);
-      _updateSyncStatus(
-          SyncStatus.packaging, '等待对方确认同步请求...', 0.02);
+      _updateSyncStatus(SyncStatus.packaging, '等待对方确认同步请求...', 0.02);
       final approved = await _sendSyncIntent(targetDevice);
       if (!approved) {
         _updateSyncStatus(SyncStatus.failed, '对方拒绝同步请求', 0.0);
