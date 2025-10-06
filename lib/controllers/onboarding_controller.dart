@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -138,9 +140,21 @@ class OnboardingController extends ChangeNotifier {
 
       // 2. 确保数据库完全初始化并可用
       await _databaseService.safeDatabase;
+      
+      // 3. 显式通知数据库监听者，确保UI组件能正确订阅数据流
+      _databaseService.notifyListeners();
+      
+      // 4. 等待下一帧，确保数据库的 addPostFrameCallback 已执行
+      final completer = Completer<void>();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        completer.complete();
+      });
+      await completer.future;
+      
+      // 再等待一小段时间确保所有监听器响应完成
       await Future.delayed(const Duration(milliseconds: 50));
 
-      // 3. 初始化 AI 分析数据库
+      // 5. 初始化 AI 分析数据库
       try {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
@@ -149,16 +163,13 @@ class OnboardingController extends ChangeNotifier {
             error: aiDbError, source: 'OnboardingController');
       }
 
-      // 4. 保存用户偏好设置
+      // 6. 保存用户偏好设置
       await _saveUserPreferences();
 
-      // 5. 标记数据库迁移完成
-      await _settingsService.setDatabaseMigrationComplete(true);
-
-      // 6. 标记引导完成
+      // 7. 标记引导完成（数据库迁移已在performMigration中标记）
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 7. 标记服务初始化完成
+      // 8. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('引导流程完成');
@@ -271,12 +282,24 @@ class OnboardingController extends ChangeNotifier {
 
       // 2. 确保数据库完全初始化并可用
       await _databaseService.safeDatabase;
+      
+      // 3. 显式通知数据库监听者，确保UI组件能正确订阅数据流
+      _databaseService.notifyListeners();
+      
+      // 4. 等待下一帧，确保数据库的 addPostFrameCallback 已执行
+      final completer = Completer<void>();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        completer.complete();
+      });
+      await completer.future;
+      
+      // 再等待一小段时间确保所有监听器响应完成
       await Future.delayed(const Duration(milliseconds: 50));
 
-      // 3. 保存默认用户偏好设置
+      // 5. 保存默认用户偏好设置
       await _saveUserPreferences();
 
-      // 4. 初始化 AI 分析数据库
+      // 6. 初始化 AI 分析数据库
       try {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
@@ -285,13 +308,10 @@ class OnboardingController extends ChangeNotifier {
             error: aiDbError, source: 'OnboardingController');
       }
 
-      // 5. 标记数据库迁移完成
-      await _settingsService.setDatabaseMigrationComplete(true);
-
-      // 6. 标记引导完成
+      // 7. 标记引导完成（数据库迁移已在performMigration中标记）
       await _settingsService.setHasCompletedOnboarding(true);
 
-      // 7. 标记服务初始化完成
+      // 8. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
 
       logInfo('跳过引导完成');
