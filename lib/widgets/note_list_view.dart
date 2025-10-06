@@ -392,8 +392,16 @@ class NoteListViewState extends State<NoteListView> {
         return;
       }
 
-      // 更新流订阅
-      _updateStreamSubscription();
+      // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
+      final bool isOnlySortChange = 
+          oldWidget.searchQuery == widget.searchQuery &&
+          _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
+          _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
+          _areListsEqual(oldWidget.selectedDayPeriods, widget.selectedDayPeriods) &&
+          (oldWidget.sortType != widget.sortType || oldWidget.sortAscending != widget.sortAscending);
+
+      // 更新流订阅，传入是否仅为排序变化
+      _updateStreamSubscription(preserveScrollPosition: isOnlySortChange);
     } else if (shouldUpdate) {
       logDebug('跳过更新：初始化中或数据未加载', source: 'NoteListView');
     }
@@ -423,15 +431,18 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   // 修复：新增方法：更新数据库监听流（改进版本）
-  void _updateStreamSubscription() {
+  void _updateStreamSubscription({bool preserveScrollPosition = false}) {
     if (!mounted) return; // 确保组件仍然挂载
 
-    logDebug('更新数据流订阅', source: 'NoteListView');
+    logDebug('更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)', source: 'NoteListView');
 
     double? savedScrollOffset;
-    if (_scrollController.hasClients && _quotes.isNotEmpty) {
+    // 只有在需要保持滚动位置时才保存（仅排序变化时）
+    if (preserveScrollPosition && _scrollController.hasClients && _quotes.isNotEmpty) {
       savedScrollOffset = _scrollController.offset;
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
+    } else if (!preserveScrollPosition) {
+      logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
     }
 
     // Set loading only if not first load
@@ -481,7 +492,7 @@ class NoteListViewState extends State<NoteListView> {
             });
           }
 
-          // Restore scroll position smoothly
+          // Restore scroll position smoothly (only if preserveScrollPosition is true)
           if (savedScrollOffset != null &&
               _scrollController.hasClients &&
               _initialDataLoaded) {
@@ -497,6 +508,8 @@ class NoteListViewState extends State<NoteListView> {
                 );
                 logDebug('平滑恢复滚动位置: $savedScrollOffset',
                     source: 'NoteListView');
+              } else {
+                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
               }
             });
           }
