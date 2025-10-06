@@ -149,6 +149,10 @@
             font-family: 'ZCOOL XiaoWei', serif;
         }
 
+        body.lang-en .nav-title {
+            font-size: 1.4rem;
+        }
+
         .nav-links {
             display: flex;
             gap: 2.5rem;
@@ -748,17 +752,19 @@
             grid-template-columns: 1fr 1fr;
             gap: 3rem;
             align-items: center;
-            margin-bottom: 4rem;
-            padding: 2rem;
+            margin-bottom: 3rem;
+            padding: 2.5rem;
             background: var(--paper-white);
             border-radius: 15px;
-            box-shadow: 0 8px 25px var(--shadow-soft);
+            border: 2px solid var(--line-color);
+            box-shadow: 0 4px 15px var(--shadow-soft);
             transition: all 0.4s ease;
         }
 
         .screenshot-item:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px var(--shadow-medium);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px var(--shadow-medium);
+            border-color: var(--accent-brown);
         }
 
         .screenshot-item:nth-child(even) .screenshot-image {
@@ -787,6 +793,7 @@
 
         .screenshot-content {
             position: relative;
+            padding: 1rem 0;
         }
 
         .screenshot-content h4 {
@@ -806,25 +813,25 @@
 
         .arrow-doodle {
             position: absolute;
-            width: 80px;
-            height: 80px;
-            opacity: 0.15;
+            width: 60px;
+            height: 60px;
+            opacity: 0.2;
             pointer-events: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23a67c52' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20,50 Q50,20 80,50'/%3E%3Cpath d='M70,40 L80,50 L70,60'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23a67c52' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20,50 Q50,20 80,50'/%3E%3Cpath d='M70,40 L80,50 L70,60'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-size: contain;
         }
 
         .screenshot-item:nth-child(odd) .screenshot-content .arrow-doodle {
-            top: -20px;
-            left: -30px;
-            transform: rotate(-25deg);
+            top: 10px;
+            left: -50px;
+            transform: rotate(-15deg);
         }
 
         .screenshot-item:nth-child(even) .screenshot-content .arrow-doodle {
-            bottom: -20px;
-            right: -30px;
-            transform: rotate(155deg);
+            top: 10px;
+            right: -50px;
+            transform: rotate(15deg) scaleX(-1);
         }
 
 
@@ -1012,6 +1019,83 @@
         .tech-info p {
             font-size: 0.95rem;
             color: var(--ink-light);
+        }
+
+        /* ==================== 下载区域 ==================== */
+        .download-section {
+            background: linear-gradient(135deg, var(--paper-blue) 0%, var(--paper-green) 100%);
+        }
+
+        .download-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .download-card {
+            background: var(--paper-white);
+            padding: 3rem 2rem;
+            border-radius: 16px;
+            border: 3px solid var(--accent-brown);
+            box-shadow: 6px 6px 0 var(--shadow-hard);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-brown), var(--accent-orange));
+        }
+
+        .download-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 10px 10px 0 var(--shadow-hard);
+        }
+
+        .download-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .download-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1rem;
+        }
+
+        .download-description {
+            color: var(--ink-medium);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .btn-download {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            box-shadow: 4px 4px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+        }
+
+        .btn-download:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--shadow-hard);
         }
 
         /* ==================== 快速开始 ==================== */
@@ -1323,131 +1407,6 @@
         }
 
         /* ==================== 响应式 ==================== */
-        @media (max-width: 768px) {
-            .nav-container {
-                padding: 1rem 1.5rem;
-            }
-
-            .nav-links {
-                position: fixed;
-                top: 70px;
-                left: 0;
-                right: 0;
-                background: var(--paper-white);
-                flex-direction: column;
-                gap: 0;
-                padding: 1rem 0;
-                box-shadow: 0 4px 12px var(--shadow-medium);
-                border-bottom: 3px solid var(--accent-brown);
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.3s ease;
-                z-index: 999;
-            }
-
-            .nav-links.active {
-                max-height: 400px;
-            }
-
-            .nav-links a {
-                padding: 1rem 2rem;
-                border-bottom: 1px solid var(--line-color);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .mobile-menu-btn {
-                display: flex;
-            }
-
-            .hero {
-                padding-top: 7rem;
-            }
-
-            .hero-container {
-                grid-template-columns: 1fr;
-                gap: 3rem;
-            }
-
-            .hero-content {
-                text-align: left;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .hero-subtitle {
-                font-size: 1.1rem;
-            }
-
-            .hero-notebook {
-                order: 2;
-            }
-
-            .hero-content {
-                order: 1;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-
-            .screenshots-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-
-            .screenshot-category {
-                margin-bottom: 2rem;
-            }
-
-            .category-title {
-                font-size: 1.3rem;
-            }
-
-            .screenshot-card {
-                transform: rotate(0deg) !important;
-            }
-
-            .screenshot-item {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-                padding: 2rem;
-            }
-
-            .screenshot-item:nth-child(even) .screenshot-image {
-                order: 1;
-            }
-
-            .screenshot-item:nth-child(even) .screenshot-content {
-                order: 2;
-            }
-
-            .tech-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-
-            .quickstart-steps {
-                padding-left: 1rem;
-            }
-
-            .roadmap-container {
-                grid-template-columns: 1fr;
-            }
-
-            .section-title {
-                font-size: 2.2rem;
-            }
-
-            .section-description {
-                font-size: 1.1rem;
-            }
-        }
-
         @media (max-width: 1024px) {
             .hero-container {
                 grid-template-columns: 1fr;
@@ -1556,13 +1515,48 @@
         /* 移动端响应式 */
         @media (max-width: 768px) {
             .nav-container {
-                padding: 1rem 1.5rem;
+                padding: 0.8rem 1rem;
+            }
+
+            .nav-title {
+                font-size: 1.2rem;
+            }
+
+            body.lang-en .nav-title {
+                font-size: 1rem;
+            }
+
+            .nav-logo img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .nav-actions {
+                gap: 0.4rem;
+            }
+
+            .theme-toggle,
+            .lang-toggle {
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
+            }
+
+            .btn-notebook {
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .mobile-menu-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1.2rem;
             }
 
             .nav-links {
                 display: none;
                 position: fixed;
-                top: 70px;
+                top: 62px;
                 left: 0;
                 right: 0;
                 background: var(--paper-white);
@@ -1612,19 +1606,41 @@
             .features-grid,
             .screenshots-grid,
             .tech-grid,
-            .roadmap-container {
+            .roadmap-container,
+            .download-container {
                 grid-template-columns: 1fr;
+            }
+            .download-card {
+                padding: 2.5rem 2rem;
+            }
+            .download-container {
+                gap: 1.5rem;
+            }
+            .download-icon {
+                font-size: 3rem;
+            }
+            .download-title {
+                font-size: 1.5rem;
             }
             .screenshot-item {
                 grid-template-columns: 1fr;
-                gap: 2rem;
-                padding: 2rem;
+                gap: 1.5rem;
+                padding: 2rem 1.5rem;
             }
             .screenshot-item:nth-child(even) .screenshot-image {
                 order: 1;
             }
             .screenshot-item:nth-child(even) .screenshot-content {
                 order: 2;
+            }
+            .arrow-doodle {
+                display: none;
+            }
+            .cta-content h2 {
+                font-size: 2rem;
+            }
+            .cta-content p {
+                font-size: 1.1rem;
             }
         }
 
@@ -1667,7 +1683,7 @@
                 <button class="lang-toggle" id="langToggle" aria-label="Switch language">
                     <span id="langText">EN</span>
                 </button>
-                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-notebook">
+                <a href="#download" class="btn-notebook">
                     <span class="content-zh">立即下载</span>
                     <span class="content-en">Download</span>
                 </a>
@@ -1710,9 +1726,9 @@
                 </div>
                 
                 <div class="hero-buttons">
-                    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-primary">
-                        <span class="content-zh">🚀 开始使用</span>
-                        <span class="content-en">🚀 Get Started</span>
+                    <a href="#download" class="btn-primary">
+                        <span class="content-zh">🚀 立即下载</span>
+                        <span class="content-en">🚀 Download Now</span>
                     </a>
                     <a href="#features" class="btn-secondary">
                         <span class="content-zh">📖 了解更多</span>
@@ -2154,13 +2170,69 @@
         </div>
     </section>
 
+    <!-- 下载区域 -->
+    <section class="section download-section" id="download">
+        <div class="section-header fade-in">
+            <span class="section-label">
+                <span class="content-zh">📥 立即下载</span>
+                <span class="content-en">📥 Download Now</span>
+            </span>
+            <h2 class="section-title">
+                <span class="content-zh">开始使用 ThoughtEcho</span>
+                <span class="content-en">Get Started with ThoughtEcho</span>
+            </h2>
+            <p class="section-description">
+                <span class="content-zh">选择适合您的平台，立即开始记录灵感</span>
+                <span class="content-en">Choose your platform and start capturing ideas</span>
+            </p>
+        </div>
+
+        <div class="download-container fade-in">
+            <div class="download-card">
+                <div class="download-icon">🐙</div>
+                <h3 class="download-title">GitHub Releases</h3>
+                <p class="download-description">
+                    <span class="content-zh">下载适用于 Windows、Android 等平台的安装包</span>
+                    <span class="content-en">Download for Windows, Android & more</span>
+                </p>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-download" target="_blank" rel="noopener noreferrer">
+                    <span class="content-zh">前往下载</span>
+                    <span class="content-en">Download</span>
+                </a>
+            </div>
+
+            <div class="download-card">
+                <div class="download-icon">🏪</div>
+                <h3 class="download-title">
+                    <span class="content-zh">微软商店</span>
+                    <span class="content-en">Microsoft Store</span>
+                </h3>
+                <p class="download-description">
+                    <span class="content-zh">Windows 用户推荐，自动更新更便捷</span>
+                    <span class="content-en">Recommended for Windows, auto-updates included</span>
+                </p>
+                <a href="https://apps.microsoft.com/store/apps" class="btn-download" target="_blank" rel="noopener noreferrer">
+                    <span class="content-zh">前往商店</span>
+                    <span class="content-en">Visit Store</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
     <!-- 快速开始 -->
     <section class="section quickstart-section" id="quickstart">
         <div class="section-header fade-in">
-            <span class="section-label">🚀 快速开始</span>
-            <h2 class="section-title">五步上手</h2>
+            <span class="section-label">
+                <span class="content-zh">🚀 快速开始</span>
+                <span class="content-en">🚀 Quick Start</span>
+            </span>
+            <h2 class="section-title">
+                <span class="content-zh">五步上手</span>
+                <span class="content-en">Get Started in 5 Steps</span>
+            </h2>
             <p class="section-description">
-                简单几步，即可开始使用 ThoughtEcho
+                <span class="content-zh">简单几步，即可开始使用 ThoughtEcho</span>
+                <span class="content-en">Simple steps to start using ThoughtEcho</span>
             </p>
         </div>
 
@@ -2275,7 +2347,7 @@ cd ThoughtEcho</code></pre>
                 <span class="content-zh">开启你的灵感摘录之旅，让 AI 助你发现思维脉络</span>
                 <span class="content-en">Start your inspiration journey, let AI help you discover your thought patterns</span>
             </p>
-            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="btn-cta">
+            <a href="#download" class="btn-cta">
                 <span class="content-zh">🚀 立即下载</span>
                 <span class="content-en">🚀 Download Now</span>
             </a>
@@ -2324,7 +2396,8 @@ cd ThoughtEcho</code></pre>
                     </h4>
                     <ul class="footer-links">
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho"><span class="content-zh">GitHub 仓库</span><span class="content-en">GitHub Repo</span></a></li>
-                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><span class="content-zh">下载</span><span class="content-en">Releases</span></a></li>
+                        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><span class="content-zh">GitHub 下载</span><span class="content-en">GitHub Releases</span></a></li>
+                        <li><a href="https://apps.microsoft.com/store/apps" target="_blank" rel="noopener noreferrer"><span class="content-zh">微软商店</span><span class="content-en">Microsoft Store</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues"><span class="content-zh">反馈问题</span><span class="content-en">Issues</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE"><span class="content-zh">许可证</span><span class="content-en">License</span></a></li>
                     </ul>
