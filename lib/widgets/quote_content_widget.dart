@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/quote_model.dart';
 import '../utils/quill_editor_extensions.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
-import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
 
@@ -30,9 +28,7 @@ class QuoteContent extends StatelessWidget {
     enableInteractiveSelection: false,
     enableSelectionToolbar: false,
     showCursor: false,
-    embedBuilders: kIsWeb
-        ? FlutterQuillEmbeds.editorWebBuilders()
-        : QuillEditorExtensions.getEmbedBuilders(),
+    embedBuilders: QuillEditorExtensions.getEmbedBuilders(),
     padding: EdgeInsets.zero,
     expands: false,
     scrollable: false,
