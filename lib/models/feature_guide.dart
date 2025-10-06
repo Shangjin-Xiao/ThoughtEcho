@@ -84,7 +84,7 @@ class FeatureGuide {
     // 设置页
     'settings_preferences': FeatureGuideConfig(
       title: '偏好设置',
-      description: '这里可以开启"加粗内容优先显示"等个性化设置',
+      description: '这里可开启加粗优先显示、剪贴板监控等个性化设置。',
       placement: FeatureGuidePlacement.right,
       offset: Offset(-30, -10), // 右侧偏上一点，避免挡住文字
     ),
