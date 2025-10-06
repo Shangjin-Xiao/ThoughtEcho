@@ -503,8 +503,8 @@ class DatabaseService extends ChangeNotifier {
         // 创建媒体文件引用表
         await MediaReferenceService.initializeTable(db);
 
-        // 配置数据库安全和性能参数
-        await _configureDatabasePragmas(db);
+        // 配置数据库安全和性能参数（在事务内）
+        await _configureDatabasePragmas(db, inTransaction: true);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         logDebug('开始数据库升级: $oldVersion -> $newVersion');
@@ -536,13 +536,11 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 配置数据库安全和性能PRAGMA参数
-  Future<void> _configureDatabasePragmas(Database db) async {
+  /// [inTransaction] 是否在事务内执行（onCreate/onUpgrade为true，onOpen为false）
+  Future<void> _configureDatabasePragmas(Database db, {bool inTransaction = false}) async {
     try {
       // 启用外键约束（防止数据孤立）
       await db.rawQuery('PRAGMA foreign_keys = ON');
-      
-      // 使用WAL模式提升并发性能（必须用rawQuery，因为会返回结果）
-      await db.rawQuery('PRAGMA journal_mode = WAL');
       
       // 设置繁忙超时（5秒），防止并发冲突
       await db.rawQuery('PRAGMA busy_timeout = 5000');
@@ -553,19 +551,27 @@ class DatabaseService extends ChangeNotifier {
       // 临时表使用内存存储
       await db.rawQuery('PRAGMA temp_store = MEMORY');
       
-      // 正常同步模式（平衡性能和安全）
-      await db.rawQuery('PRAGMA synchronous = NORMAL');
+      // 只在事务外执行的配置（onCreate/onUpgrade在事务内，onOpen在事务外）
+      if (!inTransaction) {
+        // 使用WAL模式提升并发性能（必须在事务外）
+        await db.rawQuery('PRAGMA journal_mode = WAL');
+        
+        // 正常同步模式（必须在事务外，否则报错 SQLITE_ERROR）
+        await db.rawQuery('PRAGMA synchronous = NORMAL');
+      }
       
       // 验证关键配置
       final foreignKeys = await db.rawQuery('PRAGMA foreign_keys');
       final journalMode = await db.rawQuery('PRAGMA journal_mode');
       
-      logDebug('数据库PRAGMA配置完成: foreign_keys=${foreignKeys.first['foreign_keys']}, journal_mode=${journalMode.first['journal_mode']}');
+      logDebug('数据库PRAGMA配置完成 (inTransaction=$inTransaction): foreign_keys=${foreignKeys.first['foreign_keys']}, journal_mode=${journalMode.first['journal_mode']}');
     } catch (e) {
       logError('配置数据库PRAGMA失败: $e', error: e, source: 'DatabaseService');
       // 配置失败不应阻止数据库使用，只记录错误
     }
   }
+
+  /// 修复：创建升级备份
 
   /// 修复：创建升级备份
   Future<void> _createUpgradeBackup(Transaction txn, int oldVersion) async {
