@@ -813,25 +813,25 @@
 
         .arrow-doodle {
             position: absolute;
-            width: 60px;
-            height: 60px;
-            opacity: 0.2;
+            width: 80px;
+            height: 80px;
+            opacity: 0.25;
             pointer-events: none;
+            top: 50%;
+            transform: translateY(-50%);
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23a67c52' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20,50 Q50,20 80,50'/%3E%3Cpath d='M70,40 L80,50 L70,60'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-size: contain;
         }
 
         .screenshot-item:nth-child(odd) .screenshot-content .arrow-doodle {
-            top: 10px;
-            left: -50px;
-            transform: rotate(-15deg);
+            left: -70px;
+            transform: translateY(-50%) scaleX(-1) rotate(-8deg);
         }
 
         .screenshot-item:nth-child(even) .screenshot-content .arrow-doodle {
-            top: 10px;
-            right: -50px;
-            transform: rotate(15deg) scaleX(-1);
+            right: -70px;
+            transform: translateY(-50%) rotate(8deg);
         }
 
 
@@ -1124,6 +1124,8 @@
             box-shadow: 0 2px 8px var(--shadow-soft);
             background: var(--paper-white);
             padding: 0; /* remove extra white space */
+            text-decoration: none;
+            color: inherit;
         }
 
         .official-badge:hover {
@@ -1136,6 +1138,41 @@
             max-height: 100%;
             width: auto;
             object-fit: contain;
+        }
+
+        .official-badge--github {
+            background: #181717;
+            color: #ffffff;
+            gap: 0.75rem;
+            padding: 0 1.5rem;
+        }
+
+        .official-badge--github:hover {
+            color: #ffffff;
+        }
+
+        .official-badge--github .badge-icon {
+            display: flex;
+            align-items: center;
+        }
+
+        .official-badge--github svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        .official-badge--github .badge-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .official-badge--github .badge-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         /* ==================== 快速开始 ==================== */
@@ -2361,9 +2398,15 @@ cd ThoughtEcho</code></pre>
                     <span class="content-zh">下载适用于 Windows、Android 等平台的安装包</span>
                     <span class="content-en">Download for Windows, Android & more</span>
                 </p>
-                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="official-badge" target="_blank" rel="noopener noreferrer">
-                    <span class="content-zh"><img src="https://img.shields.io/badge/GitHub-下载最新版本-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub 下载"></span>
-                    <span class="content-en"><img src="https://img.shields.io/badge/GitHub-Download%20Latest-181717?style=for-the-badge&logo=github&logoColor=white" alt="Download from GitHub"></span>
+                <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="official-badge official-badge--github" target="_blank" rel="noopener noreferrer" aria-label="Download the latest release from GitHub">
+                    <span class="badge-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img">
+                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                        </svg>
+                    </span>
+                    <span class="badge-label">GitHub</span>
+                    <span class="badge-text content-zh">下载最新版本</span>
+                    <span class="badge-text content-en">Download Latest</span>
                 </a>
             </div>
 
@@ -2376,7 +2419,7 @@ cd ThoughtEcho</code></pre>
                     <span class="content-zh">Windows 用户推荐，自动更新更便捷</span>
                     <span class="content-en">Recommended for Windows, auto-updates included</span>
                 </p>
-                <a href="https://apps.microsoft.com/store/apps" class="official-badge" target="_blank" rel="noopener noreferrer">
+                <a href="https://apps.microsoft.com/detail/9NC7GDG6KFMC" class="official-badge" target="_blank" rel="noopener noreferrer">
                     <span class="content-zh"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取"></span>
                     <span class="content-en"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft"></span>
                 </a>
@@ -2405,7 +2448,7 @@ cd ThoughtEcho</code></pre>
                                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
                             </svg>
                         </a>
-                        <a href="https://apps.microsoft.com/store/apps" class="social-link" aria-label="Microsoft Store">
+                        <a href="https://apps.microsoft.com/detail/9NC7GDG6KFMC" class="social-link" aria-label="Microsoft Store">
                             <svg width="24" height="24" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="currentColor">
                                 <rect x="2.5" y="3" width="8.5" height="8.5" rx="1" />
                                 <rect x="13" y="3" width="8.5" height="8.5" rx="1" />
@@ -2437,7 +2480,7 @@ cd ThoughtEcho</code></pre>
                     <ul class="footer-links">
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho"><span class="content-zh">GitHub 仓库</span><span class="content-en">GitHub Repo</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><span class="content-zh">GitHub 下载</span><span class="content-en">GitHub Releases</span></a></li>
-                        <li><a href="https://apps.microsoft.com/store/apps" target="_blank" rel="noopener noreferrer"><span class="content-zh">微软商店</span><span class="content-en">Microsoft Store</span></a></li>
+                        <li><a href="https://apps.microsoft.com/detail/9NC7GDG6KFMC" target="_blank" rel="noopener noreferrer"><span class="content-zh">微软商店</span><span class="content-en">Microsoft Store</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues"><span class="content-zh">反馈问题</span><span class="content-en">Issues</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE"><span class="content-zh">许可证</span><span class="content-en">License</span></a></li>
                     </ul>
