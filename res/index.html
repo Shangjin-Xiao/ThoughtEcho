@@ -1043,7 +1043,7 @@
             text-align: center;
             transition: all 0.3s ease;
             position: relative;
-            overflow: hidden;
+            overflow: visible; /* allow icon svgs to render without being clipped */
         }
 
         .download-card::before {
@@ -1069,13 +1069,13 @@
             width: 64px;
             height: 64px;
             color: var(--accent-brown);
-            overflow: visible; /* avoid svg clipping */
+            overflow: visible; /* avoid clipping inside parent */
         }
 
         .download-icon svg {
+            display: block;
             width: 100%;
             height: 100%;
-            display: block;
         }
 
         .download-title {
