@@ -1114,12 +1114,16 @@
 
         /* 官方徽章样式 */
         .official-badge {
-            display: inline-block;
-            height: 60px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 44px; /* tighter to avoid bottom gap */
             transition: all 0.3s ease;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 8px var(--shadow-soft);
+            background: var(--paper-white);
+            padding: 0; /* remove extra white space */
         }
 
         .official-badge:hover {
@@ -1129,8 +1133,9 @@
 
         .official-badge img {
             display: block;
-            height: 100%;
+            max-height: 100%;
             width: auto;
+            object-fit: contain;
         }
 
         /* ==================== 快速开始 ==================== */
@@ -2351,26 +2356,18 @@ cd ThoughtEcho</code></pre>
 
         <div class="download-container fade-in">
             <div class="download-card">
-                <div class="download-icon" aria-hidden="true" role="img">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-label="GitHub">
-                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-                    </svg>
-                </div>
                 <h3 class="download-title">GitHub Releases</h3>
                 <p class="download-description">
                     <span class="content-zh">下载适用于 Windows、Android 等平台的安装包</span>
                     <span class="content-en">Download for Windows, Android & more</span>
                 </p>
                 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" class="official-badge" target="_blank" rel="noopener noreferrer">
-                    <span class="content-zh"><img src="https://img.shields.io/badge/GitHub-下载最新版本-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub 下载" style="height: 50px;"></span>
-                    <span class="content-en"><img src="https://img.shields.io/badge/GitHub-Download%20Latest-181717?style=for-the-badge&logo=github&logoColor=white" alt="Download from GitHub" style="height: 50px;"></span>
+                    <span class="content-zh"><img src="https://img.shields.io/badge/GitHub-下载最新版本-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub 下载"></span>
+                    <span class="content-en"><img src="https://img.shields.io/badge/GitHub-Download%20Latest-181717?style=for-the-badge&logo=github&logoColor=white" alt="Download from GitHub"></span>
                 </a>
             </div>
 
             <div class="download-card">
-                <a href="https://apps.microsoft.com/store/apps" class="official-badge" target="_blank" rel="noopener noreferrer" style="margin-bottom: 1.5rem;">
-                    <img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取" />
-                </a>
                 <h3 class="download-title">
                     <span class="content-zh">微软商店</span>
                     <span class="content-en">Microsoft Store</span>
@@ -2380,8 +2377,8 @@ cd ThoughtEcho</code></pre>
                     <span class="content-en">Recommended for Windows, auto-updates included</span>
                 </p>
                 <a href="https://apps.microsoft.com/store/apps" class="official-badge" target="_blank" rel="noopener noreferrer">
-                    <span class="content-zh"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取" style="height: 50px;"></span>
-                    <span class="content-en"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" style="height: 50px;"></span>
+                    <span class="content-zh"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取"></span>
+                    <span class="content-en"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft"></span>
                 </a>
             </div>
         </div>
