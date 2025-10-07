@@ -590,18 +590,8 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
       }
     }
 
-    final double scaledWidth = imageWidth * scale;
-    final double scaledHeight = imageHeight * scale;
-    final double dx = (availableWidth - scaledWidth) / 2;
-    final double dy = (availableHeight - scaledHeight) / 2;
-
-    final matrix = Matrix4.identity();
-    matrix.setEntry(0, 0, scale);
-    matrix.setEntry(1, 1, scale);
-    matrix.setEntry(0, 3, dx);
-    matrix.setEntry(1, 3, dy);
-
-    _controller.value = matrix;
+    // 不设置初始变换，让InteractiveViewer自己处理
+    // 这样缩放中心点会正确
     _baseScale = scale;
     _initialized = true;
 
@@ -660,43 +650,38 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
             Positioned.fill(
               child: InteractiveViewer(
                 transformationController: _controller,
-                constrained: false,
-                clipBehavior: Clip.none,
                 minScale: minScale,
                 maxScale: maxScale,
                 panEnabled: true,
                 scaleEnabled: true,
-                boundaryMargin: const EdgeInsets.all(240),
+                boundaryMargin: const EdgeInsets.all(80),
                 child: Center(
-                  child: SizedBox(
-                    width: childWidth,
-                    height: childHeight,
-                    child: Image(
-                      image: widget.provider,
-                      filterQuality: FilterQuality.high,
-                      isAntiAlias: true,
-                      frameBuilder:
-                          (context, child, frame, wasSynchronouslyLoaded) {
-                        if ((wasSynchronouslyLoaded || frame != null) &&
-                            !_imageLoaded) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              _markImageLoaded();
-                            }
-                          });
-                        }
-                        return child;
-                      },
-                      loadingBuilder: (context, child, progress) => child,
-                      errorBuilder: (context, error, stackTrace) {
+                  child: Image(
+                    image: widget.provider,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    isAntiAlias: true,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                      if ((wasSynchronouslyLoaded || frame != null) &&
+                          !_imageLoaded) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (mounted) {
-                            _markImageFailed();
+                            _markImageLoaded();
                           }
                         });
-                        return _PreviewErrorContent(theme: theme);
-                      },
-                    ),
+                      }
+                      return child;
+                    },
+                    loadingBuilder: (context, child, progress) => child,
+                    errorBuilder: (context, error, stackTrace) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          _markImageFailed();
+                        }
+                      });
+                      return _PreviewErrorContent(theme: theme);
+                    },
                   ),
                 ),
               ),
