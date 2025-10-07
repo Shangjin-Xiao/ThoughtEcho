@@ -13,7 +13,6 @@ import '../widgets/quote_item_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
-import '../utils/color_utils.dart'; // Import color_utils
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
@@ -982,45 +981,8 @@ class NoteListViewState extends State<NoteListView> {
                       : null,
                   foldToggleGuideKey:
                       attachFoldGuideKey ? widget.foldToggleGuideKey : null,
-                  tagBuilder: (tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.applyOpacity(
-                          0.1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (IconUtils.isEmoji(tag.iconName)) ...[
-                            Text(
-                              IconUtils.getDisplayIcon(tag.iconName),
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(width: 4),
-                          ] else ...[
-                            Icon(
-                              IconUtils.getIconData(tag.iconName),
-                              size: 14,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(
-                            tag.name,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                  // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
+                  // 这样可以支持筛选标签的优先显示和高亮效果
                 ),
               ),
             );
