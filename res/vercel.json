@@ -1,0 +1,6 @@
+{
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "status": 301, "headers": { "Location": "/" } }
+  ]
+}
