@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -170,8 +168,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
-  bool _isPendingLoad = false;
-  Timer? _loadDebounceTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -186,21 +182,13 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   }
 
   @override
-  void dispose() {
-    _loadDebounceTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
   void didUpdateWidget(covariant _LazyQuillImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source) {
-      _loadDebounceTimer?.cancel();
       _hasError = false;
       final bool previouslyLoaded = _loadedSources.contains(widget.source);
       _shouldLoad = previouslyLoaded;
       _isLoaded = previouslyLoaded;
-      _isPendingLoad = false;
     }
   }
 
@@ -210,27 +198,9 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     }
 
     if (info.visibleFraction > 0.05) {
-      // 标记为待加载，但不立即触发
-      _isPendingLoad = true;
-      
-      // 取消之前的定时器
-      _loadDebounceTimer?.cancel();
-      
-      // 延迟150ms后再加载（等待滑动停止）
-      _loadDebounceTimer = Timer(const Duration(milliseconds: 150), () {
-        if (!mounted || !_isPendingLoad) {
-          return;
-        }
-        
-        setState(() {
-          _shouldLoad = true;
-          _isPendingLoad = false;
-        });
+      setState(() {
+        _shouldLoad = true;
       });
-    } else {
-      // 离开可视区域，取消待加载状态
-      _isPendingLoad = false;
-      _loadDebounceTimer?.cancel();
     }
   }
 
