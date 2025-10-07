@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -389,6 +392,43 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     );
   }
 
+  Future<_ImageDimensions?> _resolveImageDimensions(
+    ImageProvider provider,
+  ) async {
+    final completer = Completer<_ImageDimensions?>();
+    final ImageStream stream = provider.resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (ImageInfo info, bool synchronousCall) {
+        final double logicalWidth = info.image.width / info.scale;
+        final double logicalHeight = info.image.height / info.scale;
+        if (!completer.isCompleted) {
+          completer.complete(_ImageDimensions(logicalWidth, logicalHeight));
+        }
+      },
+      onError: (Object error, StackTrace? stackTrace) {
+        if (!completer.isCompleted) {
+          completer.completeError(error, stackTrace ?? StackTrace.empty);
+        }
+      },
+    );
+
+    stream.addListener(listener);
+    try {
+      return await completer.future;
+    } catch (error, stackTrace) {
+      logError(
+        '图片预览尺寸解析失败: ${widget.source}',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'OptimizedImageEmbed',
+      );
+      return null;
+    } finally {
+      stream.removeListener(listener);
+    }
+  }
+
   Future<void> _openImagePreview(BuildContext context) async {
     final ImageProvider? previewProvider = createOptimizedImageProvider(
             widget.source,
@@ -402,85 +442,32 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return;
     }
 
-    if (!mounted) {
+  final BuildContext modalContext = context;
+  final String barrierLabel =
+    MaterialLocalizations.of(context).modalBarrierDismissLabel;
+
+  final _ImageDimensions? dimensions =
+    await _resolveImageDimensions(previewProvider);
+
+    if (!context.mounted) {
       return;
     }
 
     await showGeneralDialog<void>(
-      context: context,
+  context: modalContext,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.85),
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+  barrierLabel: barrierLabel,
       transitionDuration: const Duration(milliseconds: 160),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        final theme = Theme.of(dialogContext);
         return Material(
           color: Colors.black.withValues(alpha: 0.92),
           child: SafeArea(
-            child: Stack(
-              children: [
-                Center(
-                  child: InteractiveViewer(
-                    minScale: 0.1,
-                    maxScale: 5.0,
-                    panEnabled: true,
-                    scaleEnabled: true,
-                    boundaryMargin: const EdgeInsets.all(double.infinity),
-                    child: Image(
-                      image: previewProvider,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) {
-                          return child;
-                        }
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              constraints: const BoxConstraints(
-                                  maxWidth: 420, maxHeight: 420),
-                              alignment: Alignment.center,
-                              child: const SizedBox(
-                                width: 36,
-                                height: 36,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 3),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return SizedBox(
-                          width: 260,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.broken_image_outlined,
-                                  color: Colors.white70, size: 48),
-                              const SizedBox(height: 12),
-                              Text(
-                                '图片加载失败',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.titleMedium
-                                    ?.copyWith(color: Colors.white70),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    tooltip: '关闭图片预览',
-                    onPressed: () => Navigator.of(dialogContext).maybePop(),
-                  ),
-                ),
-              ],
+            child: _ImagePreviewOverlay(
+              provider: previewProvider,
+              imageWidth: dimensions?.width,
+              imageHeight: dimensions?.height,
+              onClose: () => Navigator.of(dialogContext).maybePop(),
             ),
           ),
         );
@@ -525,6 +512,254 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             '图片加载失败',
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.error,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImageDimensions {
+  const _ImageDimensions(this.width, this.height);
+
+  final double width;
+  final double height;
+}
+
+class _ImagePreviewOverlay extends StatefulWidget {
+  const _ImagePreviewOverlay({
+    required this.provider,
+    required this.onClose,
+    this.imageWidth,
+    this.imageHeight,
+  });
+
+  final ImageProvider provider;
+  final VoidCallback onClose;
+  final double? imageWidth;
+  final double? imageHeight;
+
+  @override
+  State<_ImagePreviewOverlay> createState() => _ImagePreviewOverlayState();
+}
+
+class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
+  late final TransformationController _controller = TransformationController();
+  bool _initialized = false;
+  double? _baseScale;
+  bool _imageLoaded = false;
+  bool _loadFailed = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  double _setupInitialTransform(BoxConstraints constraints) {
+    if (_initialized && _baseScale != null) {
+      return _baseScale!;
+    }
+
+    final double availableWidth = constraints.maxWidth;
+    final double availableHeight = constraints.maxHeight;
+
+    double imageWidth = widget.imageWidth ?? availableWidth;
+    double imageHeight = widget.imageHeight ?? availableHeight;
+
+    if (!imageWidth.isFinite || imageWidth <= 0) {
+      imageWidth = availableWidth.isFinite && availableWidth > 0
+          ? availableWidth
+          : 360;
+    }
+
+    if (!imageHeight.isFinite || imageHeight <= 0) {
+      imageHeight = availableHeight.isFinite && availableHeight > 0
+          ? availableHeight
+          : 640;
+    }
+
+    double scale = 1.0;
+    if (imageWidth > 0 && imageHeight > 0) {
+      final double widthScale = availableWidth / imageWidth;
+      final double heightScale = availableHeight / imageHeight;
+      final double computed = math.min(widthScale, heightScale);
+      if (computed.isFinite && computed > 0) {
+        scale = computed;
+      }
+    }
+
+    final double scaledWidth = imageWidth * scale;
+    final double scaledHeight = imageHeight * scale;
+    final double dx = (availableWidth - scaledWidth) / 2;
+    final double dy = (availableHeight - scaledHeight) / 2;
+
+    final matrix = Matrix4.identity();
+    matrix.setEntry(0, 0, scale);
+    matrix.setEntry(1, 1, scale);
+    matrix.setEntry(0, 3, dx);
+    matrix.setEntry(1, 3, dy);
+
+    _controller.value = matrix;
+    _baseScale = scale;
+    _initialized = true;
+
+    return scale;
+  }
+
+  void _markImageLoaded() {
+    if (_imageLoaded || !mounted) {
+      return;
+    }
+    setState(() {
+      _imageLoaded = true;
+    });
+  }
+
+  void _markImageFailed() {
+    if (_loadFailed || !mounted) {
+      return;
+    }
+    setState(() {
+      _loadFailed = true;
+      _imageLoaded = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double baseScale = _setupInitialTransform(constraints);
+        final double safeScale =
+            baseScale.isFinite && baseScale > 0 ? baseScale : 1.0;
+        final double minScale = safeScale * 0.5;
+        final double maxScale = safeScale * 6.0;
+
+        double childWidth = widget.imageWidth ?? constraints.maxWidth;
+        double childHeight = widget.imageHeight ?? constraints.maxHeight;
+
+        if (!childWidth.isFinite || childWidth <= 0) {
+          childWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+              ? constraints.maxWidth
+              : 360;
+        }
+
+        if (!childHeight.isFinite || childHeight <= 0) {
+          childHeight =
+              constraints.maxHeight.isFinite && constraints.maxHeight > 0
+                  ? constraints.maxHeight
+                  : 640;
+        }
+
+        final theme = Theme.of(context);
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                transformationController: _controller,
+                constrained: false,
+                clipBehavior: Clip.none,
+                minScale: minScale,
+                maxScale: maxScale,
+                panEnabled: true,
+                scaleEnabled: true,
+                boundaryMargin: const EdgeInsets.all(240),
+                child: Center(
+                  child: SizedBox(
+                    width: childWidth,
+                    height: childHeight,
+                    child: Image(
+                      image: widget.provider,
+                      filterQuality: FilterQuality.high,
+                      isAntiAlias: true,
+                      frameBuilder:
+                          (context, child, frame, wasSynchronouslyLoaded) {
+                        if ((wasSynchronouslyLoaded || frame != null) &&
+                            !_imageLoaded) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              _markImageLoaded();
+                            }
+                          });
+                        }
+                        return child;
+                      },
+                      loadingBuilder: (context, child, progress) => child,
+                      errorBuilder: (context, error, stackTrace) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            _markImageFailed();
+                          }
+                        });
+                        return _PreviewErrorContent(theme: theme);
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (!_imageLoaded && !_loadFailed)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.28),
+                    alignment: Alignment.center,
+                    child: const SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white70),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                tooltip: '关闭图片预览',
+                onPressed: widget.onClose,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PreviewErrorContent extends StatelessWidget {
+  const _PreviewErrorContent({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.broken_image_outlined,
+            color: Colors.white70,
+            size: 48,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '图片加载失败',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: Colors.white70,
             ),
           ),
         ],
