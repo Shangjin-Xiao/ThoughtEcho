@@ -577,8 +577,8 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double minScale = 0.1;
-        final double maxScale = 20.0;
+  const double minScale = 0.1;
+  const double maxScale = 20.0;
         final double availableWidth = constraints.maxWidth;
         final double availableHeight = constraints.maxHeight;
         double imageWidth = widget.imageWidth ?? availableWidth;
