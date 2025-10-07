@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -545,8 +544,7 @@ class _ImagePreviewOverlay extends StatefulWidget {
 }
 
 class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
-  late final TransformationController _controller = TransformationController();
-  bool _initialized = false;
+  final TransformationController _controller = TransformationController();
   bool _imageLoaded = false;
   bool _loadFailed = false;
 
@@ -554,57 +552,6 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  void _setupInitialTransform(BoxConstraints constraints) {
-    if (_initialized) {
-      return;
-    }
-
-    final double availableWidth = constraints.maxWidth;
-    final double availableHeight = constraints.maxHeight;
-
-    double imageWidth = widget.imageWidth ?? availableWidth;
-    double imageHeight = widget.imageHeight ?? availableHeight;
-
-    if (!imageWidth.isFinite || imageWidth <= 0) {
-      imageWidth = availableWidth.isFinite && availableWidth > 0
-          ? availableWidth
-          : 360;
-    }
-
-    if (!imageHeight.isFinite || imageHeight <= 0) {
-      imageHeight = availableHeight.isFinite && availableHeight > 0
-          ? availableHeight
-          : 640;
-    }
-
-    // 计算让图片适配屏幕的缩放比例（可能缩小或放大）
-    double scale = 1.0;
-    if (imageWidth > 0 && imageHeight > 0) {
-      final double widthScale = availableWidth / imageWidth;
-      final double heightScale = availableHeight / imageHeight;
-      // 选择较小的缩放比例，确保整张图片都能显示
-      scale = math.min(widthScale, heightScale);
-      // 确保缩放值有效
-      if (!scale.isFinite || scale <= 0) {
-        scale = 1.0;
-      }
-    }
-
-    // 计算缩放后的图片尺寸
-    final double scaledWidth = imageWidth * scale;
-    final double scaledHeight = imageHeight * scale;
-    // 计算居中偏移量
-    final double offsetX = (availableWidth - scaledWidth) / 2;
-    final double offsetY = (availableHeight - scaledHeight) / 2;
-
-    // 应用初始变换：先平移到中心位置，再缩放
-    _controller.value = Matrix4.identity()
-      ..translate(offsetX, offsetY)
-      ..scale(scale);
-
-    _initialized = true;
   }
 
   void _markImageLoaded() {
@@ -630,34 +577,19 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 确保初始化已完成（用于计算初始适配）
-        _setupInitialTransform(constraints);
-        
-        // 实现真正的自由缩放：
-        // minScale: 0.1 - 允许缩小到10%，方便查看全局
-        // maxScale: 20.0 - 允许放大到20倍，可以看清每个像素细节
-        // 这样用户可以在极小到极大之间任意缩放
         final double minScale = 0.1;
         final double maxScale = 20.0;
-
-        double childWidth = widget.imageWidth ?? constraints.maxWidth;
-        double childHeight = widget.imageHeight ?? constraints.maxHeight;
-
-        if (!childWidth.isFinite || childWidth <= 0) {
-          childWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
-              ? constraints.maxWidth
-              : 360;
+        final double availableWidth = constraints.maxWidth;
+        final double availableHeight = constraints.maxHeight;
+        double imageWidth = widget.imageWidth ?? availableWidth;
+        double imageHeight = widget.imageHeight ?? availableHeight;
+        if (!imageWidth.isFinite || imageWidth <= 0) {
+          imageWidth = availableWidth.isFinite && availableWidth > 0 ? availableWidth : 360;
         }
-
-        if (!childHeight.isFinite || childHeight <= 0) {
-          childHeight =
-              constraints.maxHeight.isFinite && constraints.maxHeight > 0
-                  ? constraints.maxHeight
-                  : 640;
+        if (!imageHeight.isFinite || imageHeight <= 0) {
+          imageHeight = availableHeight.isFinite && availableHeight > 0 ? availableHeight : 640;
         }
-
         final theme = Theme.of(context);
-
         return Stack(
           children: [
             Positioned.fill(
@@ -667,24 +599,18 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
                 maxScale: maxScale,
                 panEnabled: true,
                 scaleEnabled: true,
-                // 更大的边界边距，允许图片在放大时完全填充屏幕
                 boundaryMargin: const EdgeInsets.all(200),
-                // 限制过度滚动，保持操控感
                 constrained: false,
-                child: SizedBox(
-                  width: childWidth,
-                  height: childHeight,
+                child: Center(
                   child: Image(
                     image: widget.provider,
-                    width: childWidth,
-                    height: childHeight,
+                    width: imageWidth,
+                    height: imageHeight,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                     isAntiAlias: true,
-                    frameBuilder:
-                        (context, child, frame, wasSynchronouslyLoaded) {
-                      if ((wasSynchronouslyLoaded || frame != null) &&
-                          !_imageLoaded) {
+                    frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                      if ((wasSynchronouslyLoaded || frame != null) && !_imageLoaded) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (mounted) {
                             _markImageLoaded();
@@ -717,8 +643,7 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
                       height: 42,
                       child: CircularProgressIndicator(
                         strokeWidth: 3,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white70),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
                       ),
                     ),
                   ),
