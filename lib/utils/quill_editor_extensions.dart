@@ -421,11 +421,13 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
               children: [
                 Center(
                   child: InteractiveViewer(
-                    minScale: 0.6,
-                    maxScale: 4.0,
+                    minScale: 0.1,
+                    maxScale: 5.0,
+                    panEnabled: true,
+                    scaleEnabled: true,
+                    boundaryMargin: const EdgeInsets.all(double.infinity),
                     child: Image(
                       image: previewProvider,
-                      fit: BoxFit.contain,
                       loadingBuilder: (context, child, progress) {
                         if (progress == null) {
                           return child;
