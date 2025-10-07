@@ -2919,37 +2919,38 @@ class DatabaseService extends ChangeNotifier {
     }
 
     /// 修复：优化标签筛选查询，减少复杂度
+    /// 关键修复：始终使用独立的 LEFT JOIN 获取所有标签，不受筛选条件影响
     if (tagIds != null && tagIds.isNotEmpty) {
       if (tagIds.length == 1) {
-        // 单标签查询：使用简单的INNER JOIN，性能最佳
-        joinClause = 'INNER JOIN quote_tags qt ON q.id = qt.quote_id';
-        conditions.add('qt.tag_id = ?');
+        // 单标签查询：使用简单的INNER JOIN筛选，但用另一个JOIN获取所有标签
+        conditions.add('''
+          EXISTS (
+            SELECT 1 FROM quote_tags qt_filter
+            WHERE qt_filter.quote_id = q.id
+            AND qt_filter.tag_id = ?
+          )
+        ''');
         args.add(tagIds.first);
-        groupByClause = 'GROUP BY q.id';
       } else {
         // 多标签查询：使用EXISTS确保所有标签都匹配
         final tagPlaceholders = tagIds.map((_) => '?').join(',');
         conditions.add('''
           EXISTS (
-            SELECT 1 FROM quote_tags qt
-            WHERE qt.quote_id = q.id
-            AND qt.tag_id IN ($tagPlaceholders)
-            GROUP BY qt.quote_id
-            HAVING COUNT(DISTINCT qt.tag_id) = ?
+            SELECT 1 FROM quote_tags qt_filter
+            WHERE qt_filter.quote_id = q.id
+            AND qt_filter.tag_id IN ($tagPlaceholders)
+            GROUP BY qt_filter.quote_id
+            HAVING COUNT(DISTINCT qt_filter.tag_id) = ?
           )
         ''');
         args.addAll(tagIds);
         args.add(tagIds.length);
-
-        // 获取标签信息的LEFT JOIN
-        joinClause = 'LEFT JOIN quote_tags qt2 ON q.id = qt2.quote_id';
-        groupByClause = 'GROUP BY q.id';
       }
-    } else {
-      // 没有标签筛选时也需要获取标签信息
-      joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
-      groupByClause = 'GROUP BY q.id';
     }
+
+    // 始终使用独立的 LEFT JOIN 来获取所有标签（不受筛选条件影响）
+    joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
+    groupByClause = 'GROUP BY q.id';
 
     final where =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
@@ -2958,14 +2959,9 @@ class DatabaseService extends ChangeNotifier {
     final correctedOrderBy =
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
-    /// 修复：优化查询，根据JOIN类型选择正确的标签字段
-    String tagField = 'qt.tag_id';
-    if (tagIds != null && tagIds.isNotEmpty && tagIds.length > 1) {
-      tagField = 'qt2.tag_id'; // 多标签查询使用qt2别名
-    }
-
+    /// 修复：始终使用 qt.tag_id 获取所有标签
     final query = '''
-      SELECT q.*, GROUP_CONCAT($tagField) as tag_ids
+      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
       $fromClause
       $joinClause
       $where
