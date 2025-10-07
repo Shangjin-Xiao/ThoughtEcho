@@ -245,21 +245,16 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
               'quill_image_${widget.uniqueId}_${widget.source.hashCode}',
             ),
             onVisibilityChanged: _handleVisibility,
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: displayWidth,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _buildImageContent(
-                    context,
-                    displayWidth,
-                    targetCacheWidth,
-                  ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: displayWidth,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _buildImageContent(
+                  context,
+                  displayWidth,
+                  targetCacheWidth,
                 ),
               ),
             ),
@@ -286,13 +281,9 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return _buildErrorPlaceholder(context, width);
     }
 
-    if (!_shouldLoad) {
-      return _buildPlaceholder(context, width);
-    }
-
     final provider = createOptimizedImageProvider(
       widget.source,
-      cacheWidth: cacheWidth,
+      cacheWidth: _shouldLoad ? cacheWidth : null,
     );
 
     if (provider == null) {
@@ -345,19 +336,29 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             );
           },
           loadingBuilder: (context, child, progress) {
-            if (progress == null || _isLoaded) {
+            // 如果不应该加载或已加载完成，直接显示图片
+            if (!_shouldLoad || progress == null || _isLoaded) {
               return child;
             }
 
+            // 加载中：在图片上叠加半透明背景和进度指示器
             return Stack(
               alignment: Alignment.center,
               children: [
-                _buildPlaceholder(context, width),
-                const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                child, // 图片本身占据空间
+                Container(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHigh
+                      .withValues(alpha: 0.7),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: progress.expectedTotalBytes != null
+                          ? progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!
+                          : null,
+                      strokeWidth: 2,
+                    ),
                   ),
                 ),
               ],
@@ -499,21 +500,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     return bounded.round();
   }
 
-  Widget _buildPlaceholder(BuildContext context, double width) {
-    final theme = Theme.of(context);
-    return Container(
-      width: width,
-      height: width * 0.6,
-      color: theme.colorScheme.surfaceContainerHigh,
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.image_outlined,
-        color: theme.colorScheme.outline,
-        size: 28,
-      ),
-    );
-  }
-
   Widget _buildErrorPlaceholder(
     BuildContext context,
     double width,
@@ -521,7 +507,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     final theme = Theme.of(context);
     return Container(
       width: width,
-      height: width * 0.6,
+      constraints: const BoxConstraints(minHeight: 120),
       color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
       alignment: Alignment.center,
       child: Column(
