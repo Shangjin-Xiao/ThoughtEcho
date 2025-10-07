@@ -577,10 +577,10 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-  const double minScale = 0.1;
-  const double maxScale = 20.0;
         final double availableWidth = constraints.maxWidth;
         final double availableHeight = constraints.maxHeight;
+        
+        // 获取图片原始尺寸
         double imageWidth = widget.imageWidth ?? availableWidth;
         double imageHeight = widget.imageHeight ?? availableHeight;
         if (!imageWidth.isFinite || imageWidth <= 0) {
@@ -589,6 +589,32 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
         if (!imageHeight.isFinite || imageHeight <= 0) {
           imageHeight = availableHeight.isFinite && availableHeight > 0 ? availableHeight : 640;
         }
+        
+        if (!imageHeight.isFinite || imageHeight <= 0) {
+          imageHeight = availableHeight.isFinite && availableHeight > 0 ? availableHeight : 640;
+        }
+        
+        // 计算适配屏幕的缩放比例
+        double fitScale = 1.0;
+        if (imageWidth > 0 && imageHeight > 0 && availableWidth > 0 && availableHeight > 0) {
+          final double widthScale = availableWidth / imageWidth;
+          final double heightScale = availableHeight / imageHeight;
+          fitScale = widthScale < heightScale ? widthScale : heightScale;
+          if (!fitScale.isFinite || fitScale <= 0) {
+            fitScale = 1.0;
+          }
+        }
+        
+        // child 使用适配后的尺寸，这样初始 scale=1.0 时图片正好适配屏幕
+        final double fittedWidth = imageWidth * fitScale;
+        final double fittedHeight = imageHeight * fitScale;
+        
+        // 动态计算缩放范围：
+        // minScale: 0.3 允许缩小到适配尺寸的30%
+        // maxScale: 基于 fitScale 计算，确保可以放大到原始尺寸甚至更大
+        const double minScale = 0.3;
+        final double maxScale = (3.0 / fitScale).clamp(2.0, 20.0);
+        
         final theme = Theme.of(context);
         return Stack(
           children: [
@@ -601,11 +627,11 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
                 scaleEnabled: true,
                 boundaryMargin: const EdgeInsets.all(200),
                 constrained: false,
-                child: Center(
+                child: SizedBox(
+                  width: fittedWidth,
+                  height: fittedHeight,
                   child: Image(
                     image: widget.provider,
-                    width: imageWidth,
-                    height: imageHeight,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                     isAntiAlias: true,
