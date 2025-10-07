@@ -119,8 +119,17 @@ msix_config:
   # 这是 Microsoft Store 分配给你的发布者标识符
   publisher: CN=14B607B9-7CF3-42D9-9054-090F3ECEC1D7
   
-  # 应用图标路径
+  # 应用图标路径（ICO 格式，用于任务栏和窗口图标）
   logo_path: windows/runner/resources/app_icon.ico
+  
+  # 开始菜单磁贴图标（PNG 格式，符合 MS Store 要求）
+  # 这些图标用于开始菜单、应用列表等位置
+  start_menu_icon_path: windows/runner/resources/tiles/Square44x44Logo.png
+  tile_icon_path: windows/runner/resources/tiles/Square150x150Logo.png
+  
+  # Visual Assets 图标路径（可选，但推荐提供以通过 Store 审核）
+  # 这些是高质量的 PNG 图标，用于各种 Windows UI 场景
+  icons_background_color: '#FFFFFF'
   
   # 应用权限（internetClient 用于网络访问）
   # 注意：不要手动添加 runFullTrust，Flutter Windows 应用会自动添加
