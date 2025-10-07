@@ -547,7 +547,6 @@ class _ImagePreviewOverlay extends StatefulWidget {
 class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
   late final TransformationController _controller = TransformationController();
   bool _initialized = false;
-  double? _baseScale;
   bool _imageLoaded = false;
   bool _loadFailed = false;
 
@@ -557,9 +556,9 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
     super.dispose();
   }
 
-  double _setupInitialTransform(BoxConstraints constraints) {
-    if (_initialized && _baseScale != null) {
-      return _baseScale!;
+  void _setupInitialTransform(BoxConstraints constraints) {
+    if (_initialized) {
+      return;
     }
 
     final double availableWidth = constraints.maxWidth;
@@ -580,22 +579,32 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
           : 640;
     }
 
+    // 计算让图片适配屏幕的缩放比例（可能缩小或放大）
     double scale = 1.0;
     if (imageWidth > 0 && imageHeight > 0) {
       final double widthScale = availableWidth / imageWidth;
       final double heightScale = availableHeight / imageHeight;
-      final double computed = math.min(widthScale, heightScale);
-      if (computed.isFinite && computed > 0) {
-        scale = computed;
+      // 选择较小的缩放比例，确保整张图片都能显示
+      scale = math.min(widthScale, heightScale);
+      // 确保缩放值有效
+      if (!scale.isFinite || scale <= 0) {
+        scale = 1.0;
       }
     }
 
-    // 不设置初始变换，让InteractiveViewer自己处理
-    // 这样缩放中心点会正确
-    _baseScale = scale;
-    _initialized = true;
+    // 计算缩放后的图片尺寸
+    final double scaledWidth = imageWidth * scale;
+    final double scaledHeight = imageHeight * scale;
+    // 计算居中偏移量
+    final double offsetX = (availableWidth - scaledWidth) / 2;
+    final double offsetY = (availableHeight - scaledHeight) / 2;
 
-    return scale;
+    // 应用初始变换：先平移到中心位置，再缩放
+    _controller.value = Matrix4.identity()
+      ..translate(offsetX, offsetY)
+      ..scale(scale);
+
+    _initialized = true;
   }
 
   void _markImageLoaded() {
@@ -662,9 +671,13 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
                 boundaryMargin: const EdgeInsets.all(200),
                 // 限制过度滚动，保持操控感
                 constrained: false,
-                child: Center(
+                child: SizedBox(
+                  width: childWidth,
+                  height: childHeight,
                   child: Image(
                     image: widget.provider,
+                    width: childWidth,
+                    height: childHeight,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                     isAntiAlias: true,
