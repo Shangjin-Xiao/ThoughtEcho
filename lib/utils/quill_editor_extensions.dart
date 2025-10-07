@@ -621,11 +621,15 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double baseScale = _setupInitialTransform(constraints);
-        final double safeScale =
-            baseScale.isFinite && baseScale > 0 ? baseScale : 1.0;
-        final double minScale = safeScale * 0.5;
-        final double maxScale = safeScale * 6.0;
+        // 确保初始化已完成（用于计算初始适配）
+        _setupInitialTransform(constraints);
+        
+        // 实现真正的自由缩放：
+        // minScale: 0.1 - 允许缩小到10%，方便查看全局
+        // maxScale: 20.0 - 允许放大到20倍，可以看清每个像素细节
+        // 这样用户可以在极小到极大之间任意缩放
+        final double minScale = 0.1;
+        final double maxScale = 20.0;
 
         double childWidth = widget.imageWidth ?? constraints.maxWidth;
         double childHeight = widget.imageHeight ?? constraints.maxHeight;
@@ -654,7 +658,10 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
                 maxScale: maxScale,
                 panEnabled: true,
                 scaleEnabled: true,
-                boundaryMargin: const EdgeInsets.all(80),
+                // 更大的边界边距，允许图片在放大时完全填充屏幕
+                boundaryMargin: const EdgeInsets.all(200),
+                // 限制过度滚动，保持操控感
+                constrained: false,
                 child: Center(
                   child: Image(
                     image: widget.provider,
