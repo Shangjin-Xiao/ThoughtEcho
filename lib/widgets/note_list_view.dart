@@ -1284,32 +1284,57 @@ class NoteListViewState extends State<NoteListView> {
         widget.selectedWeathers.isNotEmpty ||
         widget.selectedDayPeriods.isNotEmpty;
 
-    if (!hasFilters) return const SizedBox.shrink();
+    // 使用 AnimatedSize 实现整个筛选区域的展开/收起动画
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      child: !hasFilters
+          ? const SizedBox.shrink()
+          : _buildFilterContent(theme, horizontalPadding),
+    );
+  }
 
+  /// 构建筛选条件的实际内容
+  Widget _buildFilterContent(ThemeData theme, double horizontalPadding) {
     // 收集所有筛选chip
     final List<Widget> allChips = [];
 
-    // 添加标签chip (带图标支持)
+    // 添加标签chip (带图标支持) - 添加进出场动画
     if (widget.selectedTagIds.isNotEmpty) {
       allChips.addAll(widget.selectedTagIds.map((tagId) {
         final tag = widget.tags.firstWhere(
           (tag) => tag.id == tagId,
           orElse: () => NoteCategory(id: tagId, name: '未知标签'),
         );
-        return _buildModernFilterChip(
-          theme: theme,
-          label: tag.name,
-          icon: IconUtils.isEmoji(tag.iconName)
-              ? IconUtils.getDisplayIcon(tag.iconName)
-              : IconUtils.getIconData(tag.iconName),
-          isIconEmoji: IconUtils.isEmoji(tag.iconName),
-          color: theme.colorScheme.primary,
-          onDeleted: () {
-            final newSelectedTags = List<String>.from(
-              widget.selectedTagIds,
-            )..remove(tagId);
-            widget.onTagSelectionChanged(newSelectedTags);
+        return TweenAnimationBuilder<double>(
+          key: ValueKey('tag_$tagId'),
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          tween: Tween(begin: 0.0, end: 1.0),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.8 + (0.2 * value),
+                child: child,
+              ),
+            );
           },
+          child: _buildModernFilterChip(
+            theme: theme,
+            label: tag.name,
+            icon: IconUtils.isEmoji(tag.iconName)
+                ? IconUtils.getDisplayIcon(tag.iconName)
+                : IconUtils.getIconData(tag.iconName),
+            isIconEmoji: IconUtils.isEmoji(tag.iconName),
+            color: theme.colorScheme.primary,
+            onDeleted: () {
+              final newSelectedTags = List<String>.from(
+                widget.selectedTagIds,
+              )..remove(tagId);
+              widget.onTagSelectionChanged(newSelectedTags);
+            },
+          ),
         );
       }));
     }
@@ -1325,22 +1350,37 @@ class NoteListViewState extends State<NoteListView> {
       allChips.addAll(categorySet.map((cat) {
         final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
         final icon = WeatherService.getFilterCategoryIcon(cat);
-        return _buildModernFilterChip(
-          theme: theme,
-          label: label,
-          icon: icon,
-          color: theme.colorScheme.secondary,
-          onDeleted: () {
-            final keysToRemove =
-                WeatherService.getWeatherKeysByFilterCategory(cat);
-            final newWeathers = List<String>.from(widget.selectedWeathers)
-              ..removeWhere((w) => keysToRemove.contains(w));
-            widget.onFilterChanged(
-              newWeathers,
-              widget.selectedDayPeriods,
+        return TweenAnimationBuilder<double>(
+          key: ValueKey('weather_cat_$cat'),
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          tween: Tween(begin: 0.0, end: 1.0),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.8 + (0.2 * value),
+                child: child,
+              ),
             );
-            _updateStreamSubscription();
           },
+          child: _buildModernFilterChip(
+            theme: theme,
+            label: label,
+            icon: icon,
+            color: theme.colorScheme.secondary,
+            onDeleted: () {
+              final keysToRemove =
+                  WeatherService.getWeatherKeysByFilterCategory(cat);
+              final newWeathers = List<String>.from(widget.selectedWeathers)
+                ..removeWhere((w) => keysToRemove.contains(w));
+              widget.onFilterChanged(
+                newWeathers,
+                widget.selectedDayPeriods,
+              );
+              _updateStreamSubscription();
+            },
+          ),
         );
       }));
 
@@ -1353,40 +1393,70 @@ class NoteListViewState extends State<NoteListView> {
       for (final k in others) {
         final label = WeatherService.weatherKeyToLabel[k] ?? k;
         allChips.add(
-          _buildModernFilterChip(
-            theme: theme,
-            label: label,
-            color: theme.colorScheme.secondary,
-            onDeleted: () {
-              final newWeathers = List<String>.from(widget.selectedWeathers)
-                ..remove(k);
-              widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
-              _updateStreamSubscription();
+          TweenAnimationBuilder<double>(
+            key: ValueKey('weather_$k'),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.scale(
+                  scale: 0.8 + (0.2 * value),
+                  child: child,
+                ),
+              );
             },
+            child: _buildModernFilterChip(
+              theme: theme,
+              label: label,
+              color: theme.colorScheme.secondary,
+              onDeleted: () {
+                final newWeathers = List<String>.from(widget.selectedWeathers)
+                  ..remove(k);
+                widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
+                _updateStreamSubscription();
+              },
+            ),
           ),
         );
       }
     }
 
-    // 添加时间段chip
+    // 添加时间段chip - 添加进出场动画
     if (widget.selectedDayPeriods.isNotEmpty) {
       allChips.addAll(widget.selectedDayPeriods.map((periodKey) {
         final periodLabel = TimeUtils.getDayPeriodLabel(periodKey);
         final periodIcon = TimeUtils.getDayPeriodIconByKey(periodKey);
-        return _buildModernFilterChip(
-          theme: theme,
-          label: periodLabel,
-          icon: periodIcon,
-          color: theme.colorScheme.tertiary,
-          onDeleted: () {
-            final newDayPeriods = List<String>.from(widget.selectedDayPeriods)
-              ..remove(periodKey);
-            widget.onFilterChanged(
-              widget.selectedWeathers,
-              newDayPeriods,
+        return TweenAnimationBuilder<double>(
+          key: ValueKey('period_$periodKey'),
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          tween: Tween(begin: 0.0, end: 1.0),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.8 + (0.2 * value),
+                child: child,
+              ),
             );
-            _updateStreamSubscription();
           },
+          child: _buildModernFilterChip(
+            theme: theme,
+            label: periodLabel,
+            icon: periodIcon,
+            color: theme.colorScheme.tertiary,
+            onDeleted: () {
+              final newDayPeriods = List<String>.from(widget.selectedDayPeriods)
+                ..remove(periodKey);
+              widget.onFilterChanged(
+                widget.selectedWeathers,
+                newDayPeriods,
+              );
+              _updateStreamSubscription();
+            },
+          ),
         );
       }));
     }
