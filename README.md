@@ -161,8 +161,7 @@
   <table>
     <tr>
       <th>已完成 ✅</th>
-      <th>计划中 (2026 Q1-Q2) 📅</th>
-      <th>长期规划 (2026 H2) 💡</th>
+      <th>长期规划 💡</th>
     </tr>
     <tr>
       <td>
@@ -179,46 +178,31 @@
         • AI年度报告生成<br>
         • 笔记内容智能分析<br>
         • 性能优化与稳定性提升<br>
-        • 用户体验改进
+        • 用户体验改进<br>
+        • 多设备同步功能<br>
+        • 桌面端应用支持
       </td>
       <td>
         <b>🔥 智能输入升级</b><br>
         • AI自然语言搜索<br>
-        • 语音转文字输入 (长按加号)<br>
+        • 语音转文字输入<br>
         • OCR拍照识别摘录<br>
         • AI自动提取作者出处<br><br>
         <b>🌍 用户体验提升</b><br>
         • 国际化多语言支持<br>
         • 仿真3D笔记本界面<br>
         • 智能内容分类<br>
-        • 地图选点添加位置
-      </td>
-      <td>
+        • 地图选点添加位置<br><br>
         <b>🤖 端侧AI能力</b><br>
         • 离线语音识别<br>
         • 本地OCR处理<br>
-        • 端侧智能分析<br><br>
-        <b>📡 云端协作</b><br>
-        • 多设备实时同步<br>
-        • 团队协作功能<br>
+        • 端侧智能分析<br>
         • 高级数据可视化<br>
-        • 桌面端独立应用<br>
         • 更多AI集成服务
       </td>
     </tr>
   </table>
 </div>
-
-### 🎯 近期重点功能预览
-
-| 功能 | 描述 | 预期上线时间 | 优先级 |
-|------|------|-------------|---------|
-| 🎤 **智能语音输入** | 长按加号进行语音转文字，直接添加到编辑器 | 2026年1月 | 🔥 高 |
-| 🔍 **AI自然语言搜索** | 使用自然语言描述查找笔记，如"上个月关于工作的想法" | 2026年2月 | 🔥 高 |
-| 📷 **OCR智能摘录** | 拍照识别文字，圈选感兴趣内容自动添加到笔记 | 2026年2月 | 🔥 高 |
-| 🤖 **AI智能提取** | 自动识别剪贴板内容中的作者、出处等信息 | 2026年3月 | ⚡ 中 |
-| 🌍 **多语言支持** | 支持英文、日文、韩文等多种界面语言 | 2026年1月 | ⚡ 中 |
-| 📖 **3D仿真笔记本** | 笔记页面呈现为可翻页的立体笔记本效果 | 2026年4月 | 💡 低 |
 
 > 📝 详细技术分析请查看 [技术分析报告](docs/TECHNOLOGY_ANALYSIS.md)
 
@@ -234,6 +218,13 @@
 ## 📄 许可证
 
 本项目基于 [MIT 许可证](LICENSE) 发布。
+
+## 🙏 鸣谢
+
+感谢以下服务提供商的支持：
+- [一言（Hitokoto）](https://hitokoto.cn/) - 提供每日一言服务
+- [Open-Meteo](https://open-meteo.com/) - 提供天气数据服务
+
 </div>
 
 ---
@@ -372,7 +363,6 @@
   <table>
     <tr>
       <th>Completed ✅</th>
-      <th>Planned (2026 Q1) 📅</th>
       <th>Long Term 💡</th>
     </tr>
     <tr>
@@ -390,20 +380,21 @@
         • AI annual report generation<br>
         • Smart note content analysis<br>
         • Performance optimization<br>
-        • User experience improvements
+        • User experience improvements<br>
+        • Multi-device sync support<br>
+        • Desktop application support
       </td>
       <td>
         • Enhanced natural language search<br>
-        • AI chat conversation feature<br>
+        • Voice-to-text input<br>
+        • OCR text recognition<br>
+        • AI author extraction<br>
         • Map location selection<br>
-        • Note categorization optimization<br>
-        • Advanced search features
-      </td>
-      <td>
-        • Offline AI analysis capability<br>
-        • Multi-device real-time sync<br>
+        • Internationalization support<br>
+        • 3D notebook interface<br>
+        • Smart categorization<br>
+        • Offline AI capabilities<br>
         • Advanced data visualization<br>
-        • Standalone desktop app<br>
         • More AI service integrations<br>
         • Data export & migration tools
       </td>
@@ -420,8 +411,10 @@
    - Commit changes `git commit -m 'feat: Add feature'`
    - Create Pull Request to main repository
 
-## 📄 License
+## � Acknowledgments
 
-This project is licensed under the [MIT License](LICENSE).
+Thanks to the following service providers:
+- [Hitokoto](https://hitokoto.cn/) - Daily quote service
+- [Open-Meteo](https://open-meteo.com/) - Weather data service
 
 </details>
