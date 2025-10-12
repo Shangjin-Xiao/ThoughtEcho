@@ -1,9 +1,11 @@
-import 'dart:async';
+// ignore_for_file: implementation_imports
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
+import 'package:flutter_quill_extensions/src/editor/image/widgets/image.dart'
+  show ImageTapWrapper;
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../utils/app_logger.dart';
@@ -88,6 +90,18 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
 }
 
 class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
+  static const QuillEditorImageEmbedConfig _imageConfig =
+    QuillEditorImageEmbedConfig(
+    imageProviderBuilder: _optimizedImageProviderBuilder,
+  );
+
+  static ImageProvider? _optimizedImageProviderBuilder(
+    BuildContext context,
+    String imageUrl,
+  ) {
+    return createOptimizedImageProvider(imageUrl);
+  }
+
   @override
   String get key => 'image';
 
@@ -114,6 +128,7 @@ class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
         specifiedWidth: specifiedWidth,
         specifiedHeight: specifiedHeight,
         uniqueId: embedContext.node.hashCode,
+        config: _imageConfig,
       ),
     );
   }
@@ -152,12 +167,14 @@ class _LazyQuillImage extends StatefulWidget {
     required this.uniqueId,
     this.specifiedWidth,
     this.specifiedHeight,
+    required this.config,
   });
 
   final String source;
   final int uniqueId;
   final double? specifiedWidth;
   final double? specifiedHeight;
+  final QuillEditorImageEmbedConfig config;
 
   @override
   State<_LazyQuillImage> createState() => _LazyQuillImageState();
@@ -391,86 +408,18 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     );
   }
 
-  Future<_ImageDimensions?> _resolveImageDimensions(
-    ImageProvider provider,
-  ) async {
-    final completer = Completer<_ImageDimensions?>();
-    final ImageStream stream = provider.resolve(const ImageConfiguration());
-    late final ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (ImageInfo info, bool synchronousCall) {
-        final double logicalWidth = info.image.width / info.scale;
-        final double logicalHeight = info.image.height / info.scale;
-        if (!completer.isCompleted) {
-          completer.complete(_ImageDimensions(logicalWidth, logicalHeight));
-        }
-      },
-      onError: (Object error, StackTrace? stackTrace) {
-        if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace ?? StackTrace.empty);
-        }
-      },
-    );
-
-    stream.addListener(listener);
-    try {
-      return await completer.future;
-    } catch (error, stackTrace) {
-      logError(
-        '图片预览尺寸解析失败: ${widget.source}',
-        error: error,
-        stackTrace: stackTrace,
-        source: 'OptimizedImageEmbed',
-      );
-      return null;
-    } finally {
-      stream.removeListener(listener);
-    }
-  }
-
   Future<void> _openImagePreview(BuildContext context) async {
-    final ImageProvider? previewProvider = createOptimizedImageProvider(
-            widget.source,
-            cacheWidth: null,
-            cacheHeight: null) ??
-        createOptimizedImageProvider(widget.source);
-
-    if (previewProvider == null) {
-      logWarning('无法打开图片预览: Provider 创建失败 (${widget.source})',
-          source: 'OptimizedImageEmbed');
+    if (!mounted) {
       return;
     }
 
-  final BuildContext modalContext = context;
-  final String barrierLabel =
-    MaterialLocalizations.of(context).modalBarrierDismissLabel;
-
-  final _ImageDimensions? dimensions =
-    await _resolveImageDimensions(previewProvider);
-
-    if (!context.mounted) {
-      return;
-    }
-
-    await showGeneralDialog<void>(
-  context: modalContext,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.85),
-  barrierLabel: barrierLabel,
-      transitionDuration: const Duration(milliseconds: 160),
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        return Material(
-          color: Colors.black.withValues(alpha: 0.92),
-          child: SafeArea(
-            child: _ImagePreviewOverlay(
-              provider: previewProvider,
-              imageWidth: dimensions?.width,
-              imageHeight: dimensions?.height,
-              onClose: () => Navigator.of(dialogContext).maybePop(),
-            ),
-          ),
-        );
-      },
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ImageTapWrapper(
+          imageUrl: widget.source,
+          config: widget.config,
+        ),
+      ),
     );
   }
 
@@ -511,174 +460,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             '图片加载失败',
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.error,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ImageDimensions {
-  const _ImageDimensions(this.width, this.height);
-
-  final double width;
-  final double height;
-}
-
-class _ImagePreviewOverlay extends StatefulWidget {
-  const _ImagePreviewOverlay({
-    required this.provider,
-    required this.onClose,
-    this.imageWidth,
-    this.imageHeight,
-  });
-
-  final ImageProvider provider;
-  final VoidCallback onClose;
-  final double? imageWidth;
-  final double? imageHeight;
-
-  @override
-  State<_ImagePreviewOverlay> createState() => _ImagePreviewOverlayState();
-}
-
-class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
-  bool _imageLoaded = false;
-  bool _loadFailed = false;
-
-  void _markImageLoaded() {
-    if (_imageLoaded || !mounted) {
-      return;
-    }
-    setState(() {
-      _imageLoaded = true;
-    });
-  }
-
-  void _markImageFailed() {
-    if (_loadFailed || !mounted) {
-      return;
-    }
-    setState(() {
-      _loadFailed = true;
-      _imageLoaded = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    // ✅ 极简可靠方案：完全默认的 InteractiveViewer 行为
-    // 不预设任何初始变换，不计算尺寸，让系统自动处理一切
-    return Stack(
-      children: [
-        // 主图片预览区域
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: widget.onClose, // 点击背景关闭
-            child: Container(
-              color: Colors.transparent,
-              child: Center(
-                child: GestureDetector(
-                  onTap: () {}, // 阻止事件冒泡到背景
-                  child: InteractiveViewer(
-                    // 使用保守的缩放范围，确保可靠性
-                    minScale: 0.5,
-                    maxScale: 4.0,
-                    child: Image(
-                      image: widget.provider,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                      isAntiAlias: true,
-                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                        if ((wasSynchronouslyLoaded || frame != null) && !_imageLoaded) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              _markImageLoaded();
-                            }
-                          });
-                        }
-                        return child;
-                      },
-                      loadingBuilder: (context, child, progress) => child,
-                      errorBuilder: (context, error, stackTrace) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) {
-                            _markImageFailed();
-                          }
-                        });
-                        return _PreviewErrorContent(theme: theme);
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // 加载指示器
-        if (!_imageLoaded && !_loadFailed)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.28),
-                alignment: Alignment.center,
-                child: const SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        // 关闭按钮
-        Positioned(
-          top: 12,
-          right: 12,
-          child: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            tooltip: '关闭图片预览',
-            onPressed: widget.onClose,
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.black.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PreviewErrorContent extends StatelessWidget {
-  const _PreviewErrorContent({required this.theme});
-
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 280,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.broken_image_outlined,
-            color: Colors.white70,
-            size: 48,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '图片加载失败',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: Colors.white70,
             ),
           ),
         ],
