@@ -1,5 +1,7 @@
 // ignore_for_file: implementation_imports
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -182,7 +184,8 @@ class _LazyQuillImage extends StatefulWidget {
 
 class _LazyQuillImageState extends State<_LazyQuillImage>
     with AutomaticKeepAliveClientMixin {
-  static final Set<String> _loadedSources = <String>{};
+  static final LinkedHashSet<String> _loadedSources = LinkedHashSet<String>();
+  static const int _maxCachedSources = 200;
 
   bool _shouldLoad = false;
   bool _hasError = false;
@@ -326,7 +329,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           gaplessPlayback: true,
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
             if (wasSynchronouslyLoaded) {
-              _loadedSources.add(widget.source);
+              _rememberSource(widget.source);
               _isLoaded = true;
               return child;
             }
@@ -338,7 +341,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 }
                 setState(() {
                   _isLoaded = true;
-                  _loadedSources.add(widget.source);
+                  _rememberSource(widget.source);
                 });
               });
             }
@@ -406,6 +409,17 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         ),
       ),
     );
+  }
+
+  void _rememberSource(String source) {
+    if (_loadedSources.contains(source)) {
+      _loadedSources.remove(source);
+    }
+    _loadedSources.add(source);
+    if (_loadedSources.length > _maxCachedSources) {
+      final oldest = _loadedSources.first;
+      _loadedSources.remove(oldest);
+    }
   }
 
   Future<void> _openImagePreview(BuildContext context) async {
