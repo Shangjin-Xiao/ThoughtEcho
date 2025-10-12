@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/version_check_service.dart';
 import '../utils/app_logger.dart';
 
@@ -29,8 +30,18 @@ class UpdateDialog extends StatelessWidget {
   Widget _buildUpdateAvailableDialog(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+
+    // 根据屏幕尺寸调整约束
+    final maxReleaseNotesHeight = screenHeight > 700 ? 350.0 : 250.0;
+    final contentPadding = mediaQuery.size.width < 400 ? 12.0 : 16.0;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       title: Row(
         children: [
           Icon(
@@ -50,7 +61,7 @@ class UpdateDialog extends StatelessWidget {
             // 版本信息卡片
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(contentPadding),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(12),
@@ -113,7 +124,7 @@ class UpdateDialog extends StatelessWidget {
 
             // 更新内容
             if (versionInfo.releaseNotes.isNotEmpty) ...[
-              const SizedBox(height: 20),
+              SizedBox(height: contentPadding),
               Text(
                 '更新内容',
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -123,8 +134,11 @@ class UpdateDialog extends StatelessWidget {
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                constraints: const BoxConstraints(maxHeight: 200),
-                padding: const EdgeInsets.all(16),
+                constraints: BoxConstraints(
+                  minHeight: 100,
+                  maxHeight: maxReleaseNotesHeight,
+                ),
+                padding: EdgeInsets.all(contentPadding),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(12),
@@ -133,18 +147,23 @@ class UpdateDialog extends StatelessWidget {
                   ),
                 ),
                 child: SingleChildScrollView(
-                  child: Text(
-                    versionInfo.releaseNotes,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      height: 1.5,
-                    ),
+                  child: MarkdownBody(
+                    data: versionInfo.releaseNotes,
+                    selectable: true,
+                    styleSheet: _createUpdateMarkdownStyle(theme),
+                    onTapLink: (text, href, title) {
+                      if (href != null) {
+                        launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    shrinkWrap: false,
                   ),
                 ),
               ),
             ],
 
             // 发布时间
-            const SizedBox(height: 16),
+            SizedBox(height: contentPadding),
             Row(
               children: [
                 Icon(
@@ -185,8 +204,14 @@ class UpdateDialog extends StatelessWidget {
   Widget _buildNoUpdateDialog(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final mediaQuery = MediaQuery.of(context);
+    final contentPadding = mediaQuery.size.width < 400 ? 12.0 : 16.0;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       title: const Row(
         children: [
           Icon(
@@ -203,7 +228,7 @@ class UpdateDialog extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(contentPadding),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(12),
@@ -218,7 +243,7 @@ class UpdateDialog extends StatelessWidget {
                   size: 48,
                   color: Colors.green,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: contentPadding),
                 Text(
                   '当前版本 ${versionInfo.currentVersion}',
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -261,6 +286,105 @@ class UpdateDialog extends StatelessWidget {
   /// 格式化日期
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// 创建适合更新弹窗的Markdown样式表
+  MarkdownStyleSheet _createUpdateMarkdownStyle(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+    final baseColor = colorScheme.onSurface;
+
+    return MarkdownStyleSheet(
+      // 段落样式
+      p: theme.textTheme.bodyMedium?.copyWith(
+        color: baseColor,
+        height: 1.5,
+        fontSize: 14,
+      ),
+
+      // 标题样式
+      h1: theme.textTheme.headlineSmall?.copyWith(
+        color: baseColor,
+        fontWeight: FontWeight.bold,
+        fontSize: 18,
+        height: 1.2,
+      ),
+      h2: theme.textTheme.titleLarge?.copyWith(
+        color: baseColor,
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+        height: 1.3,
+      ),
+      h3: theme.textTheme.titleMedium?.copyWith(
+        color: baseColor,
+        fontWeight: FontWeight.w600,
+        fontSize: 15,
+        height: 1.3,
+      ),
+
+      // 文本装饰
+      em: TextStyle(color: baseColor, fontStyle: FontStyle.italic),
+      strong: TextStyle(color: baseColor, fontWeight: FontWeight.bold),
+      del: TextStyle(
+        color: baseColor.withValues(alpha: 0.7),
+        decoration: TextDecoration.lineThrough,
+      ),
+
+      // 链接样式
+      a: TextStyle(
+        color: colorScheme.primary,
+        decoration: TextDecoration.underline,
+        decorationColor: colorScheme.primary.withValues(alpha: 0.6),
+      ),
+
+      // 引用块样式
+      blockquote: theme.textTheme.bodySmall?.copyWith(
+        color: baseColor.withValues(alpha: 0.8),
+        fontStyle: FontStyle.italic,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(6),
+        border: Border(
+          left: BorderSide(
+            color: colorScheme.primary.withValues(alpha: 0.4),
+            width: 3,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+
+      // 行内代码样式
+      code: TextStyle(
+        color: colorScheme.primary,
+        backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        fontFamily: 'JetBrains Mono, Consolas, Monaco, Courier New, monospace',
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.2,
+      ),
+
+      // 代码块样式
+      codeblockDecoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      codeblockPadding: const EdgeInsets.all(12),
+
+      // 列表样式
+      listBullet: TextStyle(
+        color: colorScheme.primary,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+      listIndent: 20,
+
+      // 其他样式
+      textScaler: const TextScaler.linear(1.0),
+    );
   }
 
   /// 显示更新对话框的静态方法
