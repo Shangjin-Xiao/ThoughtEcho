@@ -23,7 +23,7 @@ class QuoteContent extends StatelessWidget {
     this.showFullContent = false,
   });
 
-  // 性能优化：提取为静态常量，避免每次 build 创建
+  // 性能优化:提取为静态常量,避免每次 build 创建
   static final quill.QuillEditorConfig _staticEditorConfig =
       quill.QuillEditorConfig(
     enableInteractiveSelection: false,
