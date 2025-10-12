@@ -544,15 +544,8 @@ class _ImagePreviewOverlay extends StatefulWidget {
 }
 
 class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
-  final TransformationController _controller = TransformationController();
   bool _imageLoaded = false;
   bool _loadFailed = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   void _markImageLoaded() {
     if (_imageLoaded || !mounted) {
@@ -575,118 +568,88 @@ class _ImagePreviewOverlayState extends State<_ImagePreviewOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double availableWidth = constraints.maxWidth;
-        final double availableHeight = constraints.maxHeight;
-        
-        // 获取图片原始尺寸
-        double imageWidth = widget.imageWidth ?? availableWidth;
-        double imageHeight = widget.imageHeight ?? availableHeight;
-        if (!imageWidth.isFinite || imageWidth <= 0) {
-          imageWidth = availableWidth.isFinite && availableWidth > 0 ? availableWidth : 360;
-        }
-        if (!imageHeight.isFinite || imageHeight <= 0) {
-          imageHeight = availableHeight.isFinite && availableHeight > 0 ? availableHeight : 640;
-        }
-        
-        if (!imageHeight.isFinite || imageHeight <= 0) {
-          imageHeight = availableHeight.isFinite && availableHeight > 0 ? availableHeight : 640;
-        }
-        
-        // 计算适配屏幕的缩放比例
-        double fitScale = 1.0;
-        if (imageWidth > 0 && imageHeight > 0 && availableWidth > 0 && availableHeight > 0) {
-          final double widthScale = availableWidth / imageWidth;
-          final double heightScale = availableHeight / imageHeight;
-          fitScale = widthScale < heightScale ? widthScale : heightScale;
-          if (!fitScale.isFinite || fitScale <= 0) {
-            fitScale = 1.0;
-          }
-        }
-        
-        // child 使用适配后的尺寸，这样初始 scale=1.0 时图片正好适配屏幕
-        final double fittedWidth = imageWidth * fitScale;
-        final double fittedHeight = imageHeight * fitScale;
-        
-        // 动态计算缩放范围：
-        // minScale: 0.3 允许缩小到适配尺寸的30%
-        // maxScale: 基于 fitScale 计算，确保可以放大到原始尺寸甚至更大
-        const double minScale = 0.3;
-        final double maxScale = (3.0 / fitScale).clamp(2.0, 20.0);
-        
-        final theme = Theme.of(context);
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: InteractiveViewer(
-                transformationController: _controller,
-                minScale: minScale,
-                maxScale: maxScale,
-                panEnabled: true,
-                scaleEnabled: true,
-                boundaryMargin: const EdgeInsets.all(200),
-                constrained: false,
-                child: SizedBox(
-                  width: fittedWidth,
-                  height: fittedHeight,
-                  child: Image(
-                    image: widget.provider,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    isAntiAlias: true,
-                    frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                      if ((wasSynchronouslyLoaded || frame != null) && !_imageLoaded) {
+    final theme = Theme.of(context);
+    
+    // ✅ 极简可靠方案：完全默认的 InteractiveViewer 行为
+    // 不预设任何初始变换，不计算尺寸，让系统自动处理一切
+    return Stack(
+      children: [
+        // 主图片预览区域
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: widget.onClose, // 点击背景关闭
+            child: Container(
+              color: Colors.transparent,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {}, // 阻止事件冒泡到背景
+                  child: InteractiveViewer(
+                    // 使用保守的缩放范围，确保可靠性
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Image(
+                      image: widget.provider,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      isAntiAlias: true,
+                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                        if ((wasSynchronouslyLoaded || frame != null) && !_imageLoaded) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              _markImageLoaded();
+                            }
+                          });
+                        }
+                        return child;
+                      },
+                      loadingBuilder: (context, child, progress) => child,
+                      errorBuilder: (context, error, stackTrace) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (mounted) {
-                            _markImageLoaded();
+                            _markImageFailed();
                           }
                         });
-                      }
-                      return child;
-                    },
-                    loadingBuilder: (context, child, progress) => child,
-                    errorBuilder: (context, error, stackTrace) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          _markImageFailed();
-                        }
-                      });
-                      return _PreviewErrorContent(theme: theme);
-                    },
-                  ),
-                ),
-              ),
-            ),
-            if (!_imageLoaded && !_loadFailed)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.28),
-                    alignment: Alignment.center,
-                    child: const SizedBox(
-                      width: 42,
-                      height: 42,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                      ),
+                        return _PreviewErrorContent(theme: theme);
+                      },
                     ),
                   ),
                 ),
               ),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                tooltip: '关闭图片预览',
-                onPressed: widget.onClose,
+            ),
+          ),
+        ),
+        // 加载指示器
+        if (!_imageLoaded && !_loadFailed)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.28),
+                alignment: Alignment.center,
+                child: const SizedBox(
+                  width: 42,
+                  height: 42,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                  ),
+                ),
               ),
             ),
-          ],
-        );
-      },
+          ),
+        // 关闭按钮
+        Positioned(
+          top: 12,
+          right: 12,
+          child: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            tooltip: '关闭图片预览',
+            onPressed: widget.onClose,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
