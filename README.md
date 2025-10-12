@@ -8,7 +8,7 @@
       <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
     </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
-      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?include_prereleases&style=flat-square&color=green&label=最新版本" alt="Latest Release / 最新版本">
+  <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&label=latest" alt="Latest Release">
     </a>
     <!-- TODO: If CI is set up later, uncomment and potentially update the workflow filename -->
     <!-- <img src="https://img.shields.io/github/workflow/status/Shangjin-Xiao/ThoughtEcho/CI?style=flat-square" alt="Build Status / 构建状态"> -->
