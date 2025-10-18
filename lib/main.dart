@@ -35,6 +35,7 @@ import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/utils/update_dialog_helper.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -606,9 +607,15 @@ Future<void> main() async {
             // 启动后台版本检查（静默执行，不影响用户体验）
             VersionCheckService.backgroundCheckForUpdates(
               onUpdateAvailable: (versionInfo) {
-                // 这里可以添加更新提示的逻辑，比如显示通知
                 logInfo('检测到新版本: ${versionInfo.latestVersion}',
                     source: 'VersionCheck');
+                // 延迟显示更新对话框，确保UI已完全初始化
+                Future.delayed(const Duration(seconds: 2), () {
+                  final context = navigatorKey.currentContext;
+                  if (context != null && context.mounted) {
+                    UpdateDialogHelper.showUpdateDialog(context, versionInfo);
+                  }
+                });
               },
               delay: const Duration(seconds: 5), // 延迟5秒执行
             );

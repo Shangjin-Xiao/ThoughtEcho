@@ -76,6 +76,8 @@ dependencies:
   http_server: ^1.0.0 # for MimeMultipartTransformer and HttpMultipartFormData
   collection: ^1.18.0
   refena_flutter: ^2.0.0
+  open_file: ^3.5.10 # 用于打开文件，包括APK安装
+  flutter_local_notifications: ^18.0.1 # 下载进度通知
 
 dev_dependencies:
   flutter_test:

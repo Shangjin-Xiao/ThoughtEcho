@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
 
 /// 版本信息模型
@@ -8,6 +9,7 @@ class VersionInfo {
   final String currentVersion;
   final String latestVersion;
   final String downloadUrl;
+  final String? apkDownloadUrl; // 新增：APK直接下载链接
   final String releaseNotes;
   final DateTime publishedAt;
   final bool hasUpdate;
@@ -16,6 +18,7 @@ class VersionInfo {
     required this.currentVersion,
     required this.latestVersion,
     required this.downloadUrl,
+    this.apkDownloadUrl,
     required this.releaseNotes,
     required this.publishedAt,
     required this.hasUpdate,
@@ -27,10 +30,27 @@ class VersionInfo {
     final hasUpdate =
         VersionInfo._compareVersions(currentVersion, latestVersion) < 0;
 
+    // 解析assets以找到APK文件
+    String? apkDownloadUrl;
+    final assets = json['assets'] as List<dynamic>?;
+    if (assets != null) {
+      for (final asset in assets) {
+        final name = asset['name'] as String?;
+        final downloadUrl = asset['browser_download_url'] as String?;
+        if (name != null &&
+            downloadUrl != null &&
+            name.toLowerCase().endsWith('.apk')) {
+          apkDownloadUrl = downloadUrl;
+          break; // 找到第一个APK文件就使用
+        }
+      }
+    }
+
     return VersionInfo(
       currentVersion: currentVersion,
       latestVersion: latestVersion,
       downloadUrl: json['html_url'] as String? ?? '',
+      apkDownloadUrl: apkDownloadUrl,
       releaseNotes: json['body'] as String? ?? '',
       publishedAt: DateTime.tryParse(json['published_at'] as String? ?? '') ??
           DateTime.now(),
@@ -204,6 +224,40 @@ class VersionCheckService {
     } catch (e) {
       // 后台检查失败时静默处理，不影响用户体验
       logDebug('后台版本检查失败: $e');
+    }
+  }
+
+  /// 检查是否应该忽略某个版本
+  static Future<bool> shouldIgnoreVersion(String version) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ignoredVersion = prefs.getString('ignored_update_version');
+      return ignoredVersion == version;
+    } catch (e) {
+      logDebug('检查忽略版本失败: $e');
+      return false;
+    }
+  }
+
+  /// 永久忽略某个版本
+  static Future<void> ignoreVersion(String version) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('ignored_update_version', version);
+      logDebug('已永久忽略版本: $version');
+    } catch (e) {
+      logDebug('保存忽略版本失败: $e');
+    }
+  }
+
+  /// 清除忽略的版本记录
+  static Future<void> clearIgnoredVersion() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('ignored_update_version');
+      logDebug('已清除忽略版本记录');
+    } catch (e) {
+      logDebug('清除忽略版本记录失败: $e');
     }
   }
 
