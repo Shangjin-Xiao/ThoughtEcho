@@ -156,7 +156,7 @@ class SettingsPageState extends State<SettingsPage> {
       });
 
       if (mounted) {
-        await UpdateDialog.show(
+        await UpdateBottomSheet.show(
           context,
           versionInfo,
           showNoUpdateMessage: showNoUpdateMessage,

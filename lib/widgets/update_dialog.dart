@@ -1,18 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'dart:io' show Platform;
 import '../services/version_check_service.dart';
-import '../utils/app_logger.dart';
+import '../services/apk_download_service.dart';
 
-/// 版本更新提示对话框
-class UpdateDialog extends StatelessWidget {
+/// 更新按钮类型枚举
+enum UpdateButtonType {
+  /// 稍后更新（本次忽略）
+  later,
+  /// 永久忽略
+  ignore,
+  /// 立即更新/下载
+  update,
+  /// 查看更新详情/日志
+  viewDetails,
+}
+
+/// 更新按钮配置
+class UpdateButtonConfig {
+  final UpdateButtonType type;
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+
+  const UpdateButtonConfig({
+    required this.type,
+    required this.label,
+    this.icon,
+    this.onPressed,
+  });
+}
+
+/// 统一的更新底部抽屉组件
+class UpdateBottomSheet extends StatelessWidget {
   final VersionInfo versionInfo;
   final bool showNoUpdateMessage;
+  final List<UpdateButtonConfig> buttons;
 
-  const UpdateDialog({
+  const UpdateBottomSheet({
     super.key,
     required this.versionInfo,
     this.showNoUpdateMessage = false,
+    required this.buttons,
   });
 
   @override
@@ -37,29 +67,48 @@ class UpdateDialog extends StatelessWidget {
     final maxReleaseNotesHeight = screenHeight > 700 ? 350.0 : 250.0;
     final contentPadding = mediaQuery.size.width < 400 ? 12.0 : 16.0;
 
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-      contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      title: Row(
-        children: [
-          Icon(
-            Icons.system_update,
-            color: colorScheme.primary,
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          const Text('发现新版本'),
-        ],
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 版本信息卡片
-            Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 顶部拖拽指示器
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: colorScheme.onSurfaceVariant.withAlpha(128),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // 标题区域
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.system_update,
+                  color: colorScheme.primary,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                const Text('发现新版本'),
+              ],
+            ),
+          ),
+
+          // 版本信息卡片
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
               width: double.infinity,
               padding: EdgeInsets.all(contentPadding),
               decoration: BoxDecoration(
@@ -121,18 +170,22 @@ class UpdateDialog extends StatelessWidget {
                 ],
               ),
             ),
+          ),
 
-            // 更新内容
-            if (versionInfo.releaseNotes.isNotEmpty) ...[
-              SizedBox(height: contentPadding),
-              Text(
+          // 更新内容
+          if (versionInfo.releaseNotes.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Text(
                 '更新内容',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 12),
-              Container(
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
                 width: double.infinity,
                 constraints: BoxConstraints(
                   minHeight: 100,
@@ -160,11 +213,13 @@ class UpdateDialog extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+            ),
+          ],
 
-            // 发布时间
-            SizedBox(height: contentPadding),
-            Row(
+          // 发布时间
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+            child: Row(
               children: [
                 Icon(
                   Icons.schedule,
@@ -180,23 +235,17 @@ class UpdateDialog extends StatelessWidget {
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+
+          // 按钮区域
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: _buildButtons(context),
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('稍后更新'),
-        ),
-        FilledButton.icon(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _launchDownloadUrl(versionInfo.downloadUrl);
-          },
-          icon: const Icon(Icons.download),
-          label: const Text('立即下载'),
-        ),
-      ],
     );
   }
 
@@ -207,80 +256,157 @@ class UpdateDialog extends StatelessWidget {
     final mediaQuery = MediaQuery.of(context);
     final contentPadding = mediaQuery.size.width < 400 ? 12.0 : 16.0;
 
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-      contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      title: const Row(
-        children: [
-          Icon(
-            Icons.check_circle,
-            color: Colors.green,
-            size: 28,
-          ),
-          SizedBox(width: 12),
-          Text('已是最新版本'),
-        ],
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
       ),
-      content: Column(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 顶部拖拽指示器
           Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(contentPadding),
+            margin: const EdgeInsets.only(top: 8),
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: colorScheme.outline.withAlpha(50),
-              ),
+              color: colorScheme.onSurfaceVariant.withAlpha(128),
+              borderRadius: BorderRadius.circular(2),
             ),
-            child: Column(
+          ),
+
+          // 标题区域
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
+            child: Row(
               children: [
-                const Icon(
-                  Icons.verified,
-                  size: 48,
+                Icon(
+                  Icons.check_circle,
                   color: Colors.green,
+                  size: 28,
                 ),
-                SizedBox(height: contentPadding),
-                Text(
-                  '当前版本 ${versionInfo.currentVersion}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '您使用的已是最新版本',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                SizedBox(width: 12),
+                Text('已是最新版本'),
               ],
             ),
           ),
+
+          // 内容区域
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(contentPadding),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colorScheme.outline.withAlpha(50),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.verified,
+                    size: 48,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '当前版本 ${versionInfo.currentVersion}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '您使用的已是最新版本',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 按钮区域
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              ),
+              child: const Text('确定'),
+            ),
+          ),
         ],
       ),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('确定'),
-        ),
-      ],
     );
   }
 
-  /// 启动下载链接
-  Future<void> _launchDownloadUrl(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        logError('无法打开下载链接: $url');
+  /// 构建按钮列表
+  List<Widget> _buildButtons(BuildContext context) {
+    final buttonWidgets = <Widget>[];
+
+    for (int i = 0; i < buttons.length; i++) {
+      final config = buttons[i];
+
+      Widget button;
+      switch (config.type) {
+        case UpdateButtonType.ignore:
+          button = OutlinedButton(
+            onPressed: config.onPressed,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(config.label),
+          );
+          break;
+        case UpdateButtonType.later:
+          button = TextButton(
+            onPressed: config.onPressed,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(config.label),
+          );
+          break;
+        case UpdateButtonType.update:
+          button = FilledButton.icon(
+            onPressed: config.onPressed,
+            icon: config.icon != null ? Icon(config.icon, size: 18) : null,
+            label: Text(config.label),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          );
+          break;
+        case UpdateButtonType.viewDetails:
+          button = OutlinedButton.icon(
+            onPressed: config.onPressed,
+            icon: config.icon != null ? Icon(config.icon, size: 18) : null,
+            label: Text(config.label),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          );
+          break;
       }
-    } catch (e) {
-      logError('启动下载链接失败: $e', error: e);
+
+      buttonWidgets.add(Expanded(child: button));
+
+      // 在按钮之间添加间距（除了最后一个）
+      if (i < buttons.length - 1) {
+        buttonWidgets.add(const SizedBox(width: 12));
+      }
     }
+
+    return buttonWidgets;
   }
 
   /// 格式化日期
@@ -393,13 +519,169 @@ class UpdateDialog extends StatelessWidget {
     VersionInfo versionInfo, {
     bool showNoUpdateMessage = false,
   }) async {
-    return showDialog<void>(
+    // 如果没有更新且不需要显示无更新消息，直接返回
+    if (!versionInfo.hasUpdate && !showNoUpdateMessage) {
+      return;
+    }
+
+    // 如果没有更新，显示无更新消息
+    if (!versionInfo.hasUpdate && showNoUpdateMessage) {
+      return showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => UpdateBottomSheet(
+          versionInfo: versionInfo,
+          showNoUpdateMessage: true,
+          buttons: const [], // 无更新时不需要按钮
+        ),
+      );
+    }
+
+    // 有更新时，统一使用带忽略选项的对话框
+    return showWithIgnoreOption(context, versionInfo);
+  }
+
+  /// 显示带有忽略选项的更新对话框
+  static Future<void> showWithIgnoreOption(
+    BuildContext context,
+    VersionInfo versionInfo,
+  ) async {
+    // 根据平台确定更新按钮的文本和图标
+    final updateButtonLabel = Platform.isWindows ? '前往商店' : '立即更新';
+    final updateButtonIcon = Platform.isWindows ? Icons.store : Icons.download;
+
+    // 按钮配置：永久忽略、本次忽略、查看详情、立即更新/前往商店
+    final buttons = [
+      UpdateButtonConfig(
+        type: UpdateButtonType.ignore,
+        label: '永久忽略',
+        onPressed: () async {
+          await VersionCheckService.ignoreVersion(versionInfo.latestVersion);
+          if (context.mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('已忽略此版本更新'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        },
+      ),
+      UpdateButtonConfig(
+        type: UpdateButtonType.later,
+        label: '本次忽略',
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      UpdateButtonConfig(
+        type: UpdateButtonType.viewDetails,
+        label: '查看详情',
+        icon: Icons.open_in_browser,
+        onPressed: () async {
+          // 不关闭对话框，直接打开GitHub页面
+          await _openDownloadUrl(context, versionInfo.downloadUrl);
+        },
+      ),
+      UpdateButtonConfig(
+        type: UpdateButtonType.update,
+        label: updateButtonLabel,
+        icon: updateButtonIcon,
+        onPressed: () async {
+          Navigator.of(context).pop();
+          await _downloadAndInstallApk(context, versionInfo);
+        },
+      ),
+    ];
+
+    return showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: true,
-      builder: (context) => UpdateDialog(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => UpdateBottomSheet(
         versionInfo: versionInfo,
-        showNoUpdateMessage: showNoUpdateMessage,
+        buttons: buttons,
       ),
     );
+  }
+
+  /// 下载并安装APK或跳转到对应平台的商店
+  static Future<void> _downloadAndInstallApk(
+    BuildContext context,
+    VersionInfo versionInfo,
+  ) async {
+    // 根据平台选择不同的更新方式
+    if (Platform.isWindows) {
+      // Windows平台：跳转到Microsoft Store
+      await _openMicrosoftStore(context);
+    } else if (Platform.isAndroid) {
+      // Android平台：下载APK
+      if (versionInfo.apkDownloadUrl != null) {
+        await ApkDownloadService.downloadAndInstallApk(
+          context,
+          versionInfo.apkDownloadUrl!,
+          versionInfo.latestVersion,
+        );
+      } else {
+        // 回退到浏览器下载
+        await _openDownloadUrl(context, versionInfo.downloadUrl);
+      }
+    } else {
+      // 其他平台：打开浏览器下载
+      await _openDownloadUrl(context, versionInfo.downloadUrl);
+    }
+  }
+
+  /// 打开Microsoft Store
+  static Future<void> _openMicrosoftStore(BuildContext context) async {
+    // Microsoft Store URL格式：ms-windows-store://pdp/?productId=<AppId>
+    // 这里需要替换为实际的应用ProductId
+    const String microsoftStoreUrl = 'ms-windows-store://pdp/?productId=9NC7GDG6KFMC';
+
+    try {
+      final uri = Uri.parse(microsoftStoreUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // 如果Store协议不可用，回退到网页版
+        const String webStoreUrl = 'https://www.microsoft.com/store/apps/9NC7GDG6KFMC';
+        final webUri = Uri.parse(webStoreUrl);
+        if (await canLaunchUrl(webUri)) {
+          await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('无法打开Microsoft Store');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('打开Microsoft Store失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// 打开下载链接（实例方法）
+  static Future<void> _openDownloadUrl(BuildContext context, String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('无法打开下载链接');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('打开下载链接失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
