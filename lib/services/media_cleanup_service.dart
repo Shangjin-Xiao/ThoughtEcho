@@ -15,7 +15,6 @@ import 'database_service.dart';
 /// - 迁移现有笔记的媒体引用
 /// - 定期维护任务
 class MediaCleanupService {
-  static Timer? _periodicCleanupTimer;
   static bool _isInitialized = false;
 
   /// 初始化清理服务
@@ -24,9 +23,7 @@ class MediaCleanupService {
 
     try {
       logDebug('初始化媒体清理服务...');
-
-      // 启动定期清理任务（每24小时执行一次）
-      _startPeriodicCleanup();
+      logDebug('自动媒体清理已禁用，仅保留手动触发入口');
 
       _isInitialized = true;
       logDebug('媒体清理服务初始化完成');
@@ -37,31 +34,14 @@ class MediaCleanupService {
 
   /// 停止清理服务
   static void dispose() {
-    _periodicCleanupTimer?.cancel();
-    _periodicCleanupTimer = null;
     _isInitialized = false;
     logDebug('媒体清理服务已停止');
-  }
-
-  /// 启动定期清理任务
-  static void _startPeriodicCleanup() {
-    _periodicCleanupTimer?.cancel();
-
-    // 每24小时执行一次清理
-    _periodicCleanupTimer = Timer.periodic(
-      const Duration(hours: 24),
-      (timer) async {
-        await performPeriodicCleanup();
-      },
-    );
-
-    logDebug('定期清理任务已启动');
   }
 
   /// 执行定期清理
   static Future<Map<String, int>> performPeriodicCleanup() async {
     try {
-      logDebug('开始执行定期清理...');
+      logDebug('开始执行媒体清理任务（手动触发）...');
 
       final results = <String, int>{};
 
@@ -74,10 +54,10 @@ class MediaCleanupService {
       final orphanFiles = await MediaReferenceService.cleanupOrphanFiles();
       results['orphanFiles'] = orphanFiles;
 
-      logDebug('定期清理完成: $results');
+      logDebug('媒体清理任务完成: $results');
       return results;
     } catch (e) {
-      logDebug('定期清理失败: $e');
+      logDebug('媒体清理任务失败: $e');
       return {'error': 1};
     }
   }

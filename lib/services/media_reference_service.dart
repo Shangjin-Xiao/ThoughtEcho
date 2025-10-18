@@ -166,21 +166,11 @@ class MediaReferenceService {
   /// 检测孤儿文件（没有被任何笔记引用的文件）
   static Future<List<String>> detectOrphanFiles() async {
     try {
-      final orphanFiles = <String>[];
-
-      // 获取所有媒体文件
-      final allMediaFiles = await _getAllMediaFiles();
-
-      // 检查每个文件的引用计数
-      for (final filePath in allMediaFiles) {
-        final count = await getReferenceCount(filePath);
-        if (count == 0) {
-          orphanFiles.add(filePath);
-        }
-      }
-
-      logDebug('检测到 ${orphanFiles.length} 个孤儿文件');
-      return orphanFiles;
+      final plan = await _planOrphanCleanup();
+      logDebug(
+        '检测到 ${plan.candidates.length} 个孤儿文件，待修复引用 ${plan.missingReferencePairs} 条',
+      );
+      return plan.candidates.map((c) => c.absolutePath).toList();
     } catch (e) {
       logDebug('检测孤儿文件失败: $e');
       return [];
@@ -190,24 +180,45 @@ class MediaReferenceService {
   /// 清理孤儿文件
   static Future<int> cleanupOrphanFiles({bool dryRun = false}) async {
     try {
-      final orphanFiles = await detectOrphanFiles();
+      final plan = await _planOrphanCleanup();
+
+      if (plan.missingReferencePairs > 0) {
+        if (dryRun) {
+          logDebug(
+            '检测到 ${plan.missingReferencePairs} 条缺失的引用记录，实际执行时将自动修复',
+          );
+        } else {
+          final healed = await _healMissingReferences(plan.missingReferenceIndex);
+          if (healed > 0) {
+            logDebug('已自动修复 $healed 条缺失的媒体引用记录');
+          }
+        }
+      }
+
+      if (plan.candidates.isEmpty) {
+        logDebug('${dryRun ? '模拟' : '实际'}清理完成：未发现孤儿文件');
+        return 0;
+      }
+
       int cleanedCount = 0;
 
-      for (final filePath in orphanFiles) {
-        try {
-          if (dryRun) {
-            logDebug('(模拟) 将删除孤儿文件: $filePath');
-            cleanedCount++;
-          } else {
-            final file = File(filePath);
+      if (dryRun) {
+        for (final candidate in plan.candidates) {
+          logDebug('(模拟) 将删除孤儿文件: ${candidate.absolutePath}');
+        }
+        cleanedCount = plan.candidates.length;
+      } else {
+        for (final candidate in plan.candidates) {
+          try {
+            final file = File(candidate.absolutePath);
             if (await file.exists()) {
               await file.delete();
-              logDebug('已删除孤儿文件: $filePath');
               cleanedCount++;
+              logDebug('已删除孤儿文件: ${candidate.absolutePath}');
             }
+          } catch (e) {
+            logDebug('删除孤儿文件失败: ${candidate.absolutePath}, 错误: $e');
           }
-        } catch (e) {
-          logDebug('删除孤儿文件失败: $filePath, 错误: $e');
         }
       }
 
@@ -216,6 +227,242 @@ class MediaReferenceService {
     } catch (e) {
       logDebug('清理孤儿文件失败: $e');
       return 0;
+    }
+  }
+
+  static Future<_CleanupPlan> _planOrphanCleanup() async {
+    final snapshot = await _buildReferenceSnapshot();
+    final allMediaFiles = await _getAllMediaFiles();
+
+    final candidates = <_OrphanCandidate>[];
+    final missingReferences = <String, Map<String, Set<String>>>{};
+
+    for (final filePath in allMediaFiles) {
+      final normalizedPath = await _normalizeFilePath(filePath);
+      final canonicalKey = _canonicalComparisonKey(normalizedPath);
+
+      final storedVariants = snapshot.storedIndex[canonicalKey];
+      final quoteVariants = snapshot.quoteIndex[canonicalKey];
+
+      final hasStoredRefs = storedVariants != null &&
+          storedVariants.values.any((refs) => refs.isNotEmpty);
+      final hasQuoteRefs = quoteVariants != null &&
+          quoteVariants.values.any((refs) => refs.isNotEmpty);
+
+      if (hasQuoteRefs) {
+        final variants = quoteVariants;
+        if (!hasStoredRefs) {
+          missingReferences[canonicalKey] = variants.map(
+            (variantPath, ids) => MapEntry(
+              variantPath,
+              Set<String>.from(ids),
+            ),
+          );
+        }
+        continue;
+      }
+
+      if (hasStoredRefs) {
+        continue;
+      }
+
+      candidates.add(
+        _OrphanCandidate(
+          absolutePath: filePath,
+          normalizedPath: normalizedPath,
+          canonicalKey: canonicalKey,
+        ),
+      );
+    }
+
+    return _CleanupPlan(
+      candidates: candidates,
+      missingReferenceIndex: missingReferences,
+    );
+  }
+
+  static Future<_ReferenceSnapshot> _buildReferenceSnapshot() async {
+    final storedIndex = await _fetchStoredReferenceIndex();
+    final quoteIndex = await _collectQuoteReferenceIndex();
+    return _ReferenceSnapshot(
+      storedIndex: storedIndex,
+      quoteIndex: quoteIndex,
+    );
+  }
+
+  static Future<Map<String, Map<String, Set<String>>>>
+      _fetchStoredReferenceIndex() async {
+    final db = await database;
+    final rows = await db.query(
+      _tableName,
+      columns: ['file_path', 'quote_id'],
+    );
+
+    final index = <String, Map<String, Set<String>>>{};
+
+    for (final row in rows) {
+      final filePath = row['file_path'] as String?;
+      final quoteId = row['quote_id'] as String?;
+      if (filePath == null || quoteId == null || quoteId.isEmpty) {
+        continue;
+      }
+
+      final variantPath = path.normalize(filePath);
+      final key = _canonicalComparisonKey(variantPath);
+
+      final variants =
+          index.putIfAbsent(key, () => <String, Set<String>>{});
+      final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
+      quoteSet.add(quoteId);
+    }
+
+    return index;
+  }
+
+  static Future<Map<String, Map<String, Set<String>>>>
+      _collectQuoteReferenceIndex() async {
+    final databaseService = DatabaseService();
+    final quotes = await databaseService.getAllQuotes();
+
+    final index = <String, Map<String, Set<String>>>{};
+
+    for (final quote in quotes) {
+      final quoteId = quote.id;
+      if (quoteId == null || quoteId.isEmpty) {
+        continue;
+      }
+
+      final mediaPaths = await extractMediaPathsFromQuote(quote);
+
+      for (final mediaPath in mediaPaths) {
+        final variantPath = path.normalize(mediaPath);
+        final key = _canonicalComparisonKey(variantPath);
+
+        final variants =
+            index.putIfAbsent(key, () => <String, Set<String>>{});
+        final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
+        quoteSet.add(quoteId);
+      }
+    }
+
+    return index;
+  }
+
+  static Future<int> _healMissingReferences(
+    Map<String, Map<String, Set<String>>> missingIndex,
+  ) async {
+    int healed = 0;
+
+    for (final variants in missingIndex.values) {
+      for (final entry in variants.entries) {
+        final filePath = entry.key;
+        for (final quoteId in entry.value) {
+          final success = await addReference(filePath, quoteId);
+          if (success) {
+            healed++;
+          }
+        }
+      }
+    }
+
+    return healed;
+  }
+
+  static String _canonicalComparisonKey(String value) {
+    if (value.isEmpty) {
+      return value;
+    }
+
+    var key = value.trim();
+    key = key.replaceAll('\\', '/');
+
+    while (key.contains('//')) {
+      key = key.replaceAll('//', '/');
+    }
+
+    if (key.startsWith('./')) {
+      key = key.substring(2);
+    }
+
+    return key;
+  }
+
+  /// 轻量级检查单个文件是否仍被引用（仅查引用表，性能优化版）
+  /// 返回 true 表示文件已被安全删除，false 表示文件仍被引用或删除失败
+  static Future<bool> quickCheckAndDeleteIfOrphan(String filePath) async {
+    try {
+      final normalizedPath = await _normalizeFilePath(filePath);
+      final refCount = await getReferenceCount(normalizedPath);
+      
+      if (refCount > 0) {
+        return false; // 仍被引用，不删除
+      }
+
+      // 引用计数为0，执行删除
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+        logDebug('已删除无引用文件: $filePath');
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      logDebug('检查并删除文件失败: $filePath, 错误: $e');
+      return false;
+    }
+  }
+
+  /// 安全检查并清理单个媒体文件（使用快照机制，避免误删）
+  /// 返回 true 表示文件已被安全删除，false 表示文件仍被引用或删除失败
+  static Future<bool> safeCheckAndDeleteOrphan(String filePath) async {
+    try {
+      final snapshot = await _buildReferenceSnapshot();
+      final normalizedPath = await _normalizeFilePath(filePath);
+      final canonicalKey = _canonicalComparisonKey(normalizedPath);
+
+      final storedVariants = snapshot.storedIndex[canonicalKey];
+      final quoteVariants = snapshot.quoteIndex[canonicalKey];
+
+      final hasStoredRefs = storedVariants != null &&
+          storedVariants.values.any((refs) => refs.isNotEmpty);
+      final hasQuoteRefs = quoteVariants != null &&
+          quoteVariants.values.any((refs) => refs.isNotEmpty);
+
+      // 如果在笔记内容中找到引用，先尝试修复缺失的引用记录
+      if (hasQuoteRefs) {
+        final variants = quoteVariants;
+        if (!hasStoredRefs) {
+          logDebug('检测到文件 $filePath 在笔记中有引用但缺失引用记录，尝试修复...');
+          for (final entry in variants.entries) {
+            final variantPath = entry.key;
+            for (final quoteId in entry.value) {
+              await addReference(variantPath, quoteId);
+            }
+          }
+          logDebug('已修复文件 $filePath 的引用记录');
+        }
+        // 文件仍被引用，不删除
+        return false;
+      }
+
+      // 如果在引用表中有记录，不删除
+      if (hasStoredRefs) {
+        return false;
+      }
+
+      // 确认是孤儿文件，执行删除
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+        logDebug('安全删除孤儿文件: $filePath');
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      logDebug('安全检查并删除文件失败: $filePath, 错误: $e');
+      return false;
     }
   }
 
@@ -329,15 +576,30 @@ class MediaReferenceService {
   /// 标准化文件路径（转换为相对路径）
   static Future<String> _normalizeFilePath(String filePath) async {
     try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final appPath = appDir.path;
-
-      if (filePath.startsWith(appPath)) {
-        return path.relative(filePath, from: appPath);
+      if (filePath.isEmpty) {
+        return filePath;
       }
 
-      return filePath;
-    } catch (e) {
+      var sanitized = filePath.trim();
+
+      if (sanitized.startsWith('file://')) {
+        final uri = Uri.tryParse(sanitized);
+        if (uri != null && uri.scheme == 'file') {
+          sanitized = uri.toFilePath();
+        }
+      }
+
+      sanitized = path.normalize(sanitized);
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = path.normalize(appDir.path);
+
+      if (sanitized.startsWith(appPath)) {
+        return path.normalize(path.relative(sanitized, from: appPath));
+      }
+
+      return sanitized;
+    } catch (_) {
       return filePath;
     }
   }
@@ -405,4 +667,46 @@ class MediaReferenceService {
       return 0;
     }
   }
+}
+
+class _ReferenceSnapshot {
+  final Map<String, Map<String, Set<String>>> storedIndex;
+  final Map<String, Map<String, Set<String>>> quoteIndex;
+
+  const _ReferenceSnapshot({
+    required this.storedIndex,
+    required this.quoteIndex,
+  });
+}
+
+class _CleanupPlan {
+  final List<_OrphanCandidate> candidates;
+  final Map<String, Map<String, Set<String>>> missingReferenceIndex;
+
+  const _CleanupPlan({
+    required this.candidates,
+    required this.missingReferenceIndex,
+  });
+
+  int get missingReferencePairs {
+    var total = 0;
+    for (final variants in missingReferenceIndex.values) {
+      for (final ids in variants.values) {
+        total += ids.length;
+      }
+    }
+    return total;
+  }
+}
+
+class _OrphanCandidate {
+  final String absolutePath;
+  final String normalizedPath;
+  final String canonicalKey;
+
+  const _OrphanCandidate({
+    required this.absolutePath,
+    required this.normalizedPath,
+    required this.canonicalKey,
+  });
 }

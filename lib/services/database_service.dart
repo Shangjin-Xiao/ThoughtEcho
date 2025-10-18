@@ -2563,10 +2563,12 @@ class DatabaseService extends ChangeNotifier {
     return _executeWithLock('addQuote_${quote.id ?? 'new'}', () async {
       try {
         final db = await safeDatabase;
+        final newQuoteId = quote.id ?? _uuid.v4();
+        final quoteWithId = quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
+
         await db.transaction((txn) async {
-          final id = quote.id ?? _uuid.v4();
-          final quoteMap = quote.toJson();
-          quoteMap['id'] = id;
+          final quoteMap = quoteWithId.toJson();
+          quoteMap['id'] = newQuoteId;
 
           // 自动设置 last_modified 时间戳
           final now = DateTime.now().toUtc().toIso8601String();
@@ -2610,17 +2612,17 @@ class DatabaseService extends ChangeNotifier {
             for (final tagId in quote.tagIds) {
               await txn.insert(
                 'quote_tags',
-                {'quote_id': id, 'tag_id': tagId},
+                {'quote_id': newQuoteId, 'tag_id': tagId},
                 conflictAlgorithm: ConflictAlgorithm.ignore,
               );
             }
           }
         });
 
-        logDebug('笔记已成功保存到数据库，ID: ${quote.id}');
+        logDebug('笔记已成功保存到数据库，ID: ${quoteWithId.id}');
 
         // 同步媒体文件引用
-        await MediaReferenceService.syncQuoteMediaReferences(quote);
+        await MediaReferenceService.syncQuoteMediaReferences(quoteWithId);
 
         // 优化：数据变更后清空缓存
         _clearAllCache();
@@ -3491,33 +3493,27 @@ class DatabaseService extends ChangeNotifier {
         // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
         await MediaReferenceService.removeAllReferencesForQuote(id);
 
-        // 检查并清理孤儿媒体文件（合并来源：引用表 + 内容提取）
+        // 使用轻量级检查机制清理孤儿媒体文件（合并来源：引用表 + 内容提取）
+        // 注：removeAllReferencesForQuote 已经清理了引用表，这里只需查引用计数
         for (final storedPath in mediaPathsToCheck) {
-          final refCount =
-              await MediaReferenceService.getReferenceCount(storedPath);
-          if (refCount == 0) {
+          try {
+            // storedPath 可能是相对路径（相对于应用文档目录）
+            String absolutePath = storedPath;
             try {
-              // storedPath 可能是相对路径（相对于应用文档目录）
-              String absolutePath = storedPath;
-              try {
-                if (!absolutePath.startsWith('/')) {
-                  // 简单判断相对路径
-                  final appDir = await getApplicationDocumentsDirectory();
-                  absolutePath = join(appDir.path, storedPath);
-                }
-              } catch (_) {}
-
-              final file = File(absolutePath);
-              if (await file.exists()) {
-                await file.delete();
-                logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
-                _initCompleter = null;
-              } else {
-                logDebug('孤儿媒体文件不存在或已被删除: $absolutePath');
+              if (!absolutePath.startsWith('/')) {
+                // 简单判断相对路径
+                final appDir = await getApplicationDocumentsDirectory();
+                absolutePath = join(appDir.path, storedPath);
               }
-            } catch (e) {
-              logDebug('清理孤儿媒体文件失败: $storedPath, 错误: $e');
+            } catch (_) {}
+
+            // 使用轻量级检查（仅查引用表计数）
+            final deleted = await MediaReferenceService.quickCheckAndDeleteIfOrphan(absolutePath);
+            if (deleted) {
+              logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
             }
+          } catch (e) {
+            logDebug('清理孤儿媒体文件失败: $storedPath, 错误: $e');
           }
         }
 
@@ -3633,28 +3629,25 @@ class DatabaseService extends ChangeNotifier {
         // 同步媒体文件引用
         await MediaReferenceService.syncQuoteMediaReferences(quote);
 
-        // 清理因内容变更而不再被引用的媒体文件
+        // 使用轻量级检查机制清理因内容变更而不再被引用的媒体文件
+        // 注：syncQuoteMediaReferences 已经更新了引用表，这里只需查引用计数
         for (final storedPath in oldReferencedFiles) {
-          final refCount =
-              await MediaReferenceService.getReferenceCount(storedPath);
-          if (refCount == 0) {
+          try {
+            String absolutePath = storedPath;
             try {
-              String absolutePath = storedPath;
-              try {
-                if (!absolutePath.startsWith('/')) {
-                  final appDir = await getApplicationDocumentsDirectory();
-                  absolutePath = join(appDir.path, storedPath);
-                }
-              } catch (_) {}
-
-              final file = File(absolutePath);
-              if (await file.exists()) {
-                await file.delete();
-                logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
+              if (!absolutePath.startsWith('/')) {
+                final appDir = await getApplicationDocumentsDirectory();
+                absolutePath = join(appDir.path, storedPath);
               }
-            } catch (e) {
-              logDebug('清理无引用媒体文件失败: $storedPath, 错误: $e');
+            } catch (_) {}
+
+            // 使用轻量级检查（仅查引用表计数）
+            final deleted = await MediaReferenceService.quickCheckAndDeleteIfOrphan(absolutePath);
+            if (deleted) {
+              logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
             }
+          } catch (e) {
+            logDebug('清理无引用媒体文件失败: $storedPath, 错误: $e');
           }
         }
 

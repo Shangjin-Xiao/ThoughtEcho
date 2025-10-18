@@ -29,7 +29,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   @override
   void initState() {
     super.initState();
-    _loadStorageStats();
+    // 延迟加载统计信息，避免阻塞初始化
+    Future.microtask(() {
+      if (mounted) {
+        _loadStorageStats();
+      }
+    });
     _loadAppDataPath();
   }
 
