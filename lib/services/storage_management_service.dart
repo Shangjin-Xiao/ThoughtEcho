@@ -279,7 +279,7 @@ class StorageManagementService {
     }
   }
 
-  /// 获取目录大小和文件数量
+  /// 获取目录大小和文件数量（优化版：分批处理，避免阻塞）
   static Future<Map<String, int>> _getDirectorySize(String dirPath) async {
     try {
       final dir = Directory(dirPath);
@@ -289,12 +289,21 @@ class StorageManagementService {
 
       int totalSize = 0;
       int fileCount = 0;
+      int batchCount = 0;
+      const batchSize = 50; // 每处理50个文件就让出控制权
 
       await for (final entity in dir.list(recursive: true)) {
         if (entity is File) {
           try {
             totalSize += await entity.length();
             fileCount++;
+            batchCount++;
+
+            // 每批次处理后让出控制权，避免阻塞UI
+            if (batchCount >= batchSize) {
+              await Future.delayed(const Duration(milliseconds: 1));
+              batchCount = 0;
+            }
           } catch (e) {
             logDebug('获取文件大小失败: ${entity.path}, 错误: $e');
           }
