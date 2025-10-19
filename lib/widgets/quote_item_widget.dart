@@ -760,10 +760,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         value: 'ask',
                         child: Row(
                           children: [
-                            Icon(Icons.question_answer,
+                            Icon(Icons.photo,
                                 color: theme.colorScheme.primary),
                             const SizedBox(width: 8),
-                            const Text('向AI提问'),
+                            const Text('AI助手'),
                           ],
                         ),
                       ),
