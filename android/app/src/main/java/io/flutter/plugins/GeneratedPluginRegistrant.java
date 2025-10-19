@@ -81,11 +81,6 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin image_picker_android, io.flutter.plugins.imagepicker.ImagePickerPlugin", e);
     }
     try {
-      flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());
-    } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin integration_test, dev.flutter.plugins.integration_test.IntegrationTestPlugin", e);
-    }
-    try {
       flutterEngine.getPlugins().add(new com.tencent.mmkv.MMKVPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin mmkv_android, com.tencent.mmkv.MMKVPlugin", e);
