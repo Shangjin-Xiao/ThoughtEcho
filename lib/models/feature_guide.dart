@@ -75,6 +75,13 @@ class FeatureGuide {
       title: '编辑笔记元数据',
       description: '点击这里可以编辑笔记的标签、分类等信息',
     ),
+    // 新增：全屏编辑器工具栏操作气泡
+    'editor_toolbar_usage': FeatureGuideConfig(
+      title: '工具栏操作提示',
+      description: '工具栏可左右滑动，支持添加图片、音频、视频等媒体。\n试试左右滑动或点击加号按钮！',
+      placement: FeatureGuidePlacement.below,
+      offset: Offset(0, 8),
+    ),
     'add_note_fullscreen_button': FeatureGuideConfig(
       title: '全屏编辑器',
       description: '点击这里打开全屏编辑器\n支持富文本、插入图片/音频/视频',
