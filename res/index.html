@@ -12,6 +12,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
     
+    <script type="module" src="https://get.microsoft.com/badge/ms-store-badge.bundled.js"></script>
+
     <style>
         /* ==================== CSS 变量 ==================== */
         :root {
@@ -1591,6 +1593,23 @@
             font-size: 1.1rem;
         }
 
+        /* 微软商店徽章高分辨率样式 */
+        ms-store-badge {
+          image-rendering: crisp-edges;
+          image-rendering: pixelated;
+          -webkit-font-smoothing: antialiased;
+          -webkit-transform: scale(1);
+          transform: scale(1);
+          filter: none;
+          width: 320px !important;
+          height: 96px !important;
+          max-width: 100%;
+          box-shadow: none;
+          background: transparent;
+          display: block;
+          margin: 0 auto;
+        }
+
         /* 导航栏滚动隐藏效果 */
         nav {
             transition: transform 0.3s ease;
@@ -2427,10 +2446,18 @@ cd ThoughtEcho</code></pre>
                     <span class="content-zh">Windows 用户推荐，自动更新更便捷</span>
                     <span class="content-en">Recommended for Windows, auto-updates included</span>
                 </p>
-                <a href="https://apps.microsoft.com/detail/9NC7GDG6KFMC" class="official-badge" target="_blank" rel="noopener noreferrer">
-                    <span class="content-zh"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取"></span>
-                    <span class="content-en"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft"></span>
-                </a>
+                <!-- 官方微软商店徽章组件 -->
+                <div style="display:flex;justify-content:center;align-items:center;">
+                  <ms-store-badge
+                    productid="9nc7gdg6kfmc"
+                    productname="心迹"
+                    window-mode="direct"
+                    theme="auto"
+                    size="large"
+                    language="zh-cn"
+                    animation="on">
+                  </ms-store-badge>
+                </div>
             </div>
         </div>
 
