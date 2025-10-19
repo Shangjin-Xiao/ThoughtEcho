@@ -89,7 +89,7 @@ class _LicensePageState extends State<LicensePage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_licenseError != null) {
-      return Text(_licenseError!, style: TextStyle(color: Theme.of(context).colorScheme.error));
+      return Text(_licenseError!, style: const TextStyle(color: Colors.red));
     }
     if (_licenseText == null || _licenseText!.trim().isEmpty) {
       return const Text('未找到本程序 LICENSE 文件。');
@@ -176,12 +176,12 @@ class _LicensePageState extends State<LicensePage> {
           url: 'https://lottiefiles.com/animations/not-found',
         ),
         const SizedBox(height: 12),
-        Text(
+        const Text(
           '感谢 LottieFiles 提供优质的动画资源。',
           style: TextStyle(
             fontSize: 12,
             fontStyle: FontStyle.italic,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: Colors.grey,
           ),
         ),
       ],
@@ -274,11 +274,11 @@ class _LicensePageState extends State<LicensePage> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           '感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。',
           style: TextStyle(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: Color(0xB3000000),
           ),
         ),
       ],
@@ -373,7 +373,7 @@ class _LicensePageState extends State<LicensePage> {
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          Icon(Icons.animation_outlined, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const Icon(Icons.animation_outlined, size: 16, color: Colors.grey),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -585,7 +585,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                 Expanded(
                   child: Text(
                     '本页自动汇总了 Flutter 及所有依赖包的许可证信息，内容由各依赖包声明自动生成，仅供参考。',
-                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    style: TextStyle(fontSize: 13, color: Colors.blueGrey),
                   ),
                 ),
               ],
@@ -627,26 +627,26 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 32),
             const SizedBox(height: 12),
-            Text('加载系统许可证失败：$_error', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text('加载系统许可证失败：$_error', style: const TextStyle(color: Colors.red)),
           ],
         ),
       );
     }
     if (_mergedEntries.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 32),
-            const SizedBox(height: 12),
-            Text('未找到系统许可证条目', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Icon(Icons.info_outline, color: Colors.grey, size: 32),
+            SizedBox(height: 12),
+            Text('未找到系统许可证条目', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
     }
     if (visible.isEmpty) {
-      return Center(
-        child: Text('未找到匹配的许可证条目', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      return const Center(
+        child: Text('未找到匹配的许可证条目', style: TextStyle(color: Colors.grey)),
       );
     }
     return ListView.builder(

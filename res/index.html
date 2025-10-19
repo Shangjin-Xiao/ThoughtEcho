@@ -1593,21 +1593,15 @@
             font-size: 1.1rem;
         }
 
-        /* 微软商店徽章高分辨率样式 */
+        /* 微软商店徽章高分辨率样式（小号） */
         ms-store-badge {
-          image-rendering: crisp-edges;
-          image-rendering: pixelated;
-          -webkit-font-smoothing: antialiased;
-          -webkit-transform: scale(1);
-          transform: scale(1);
-          filter: none;
-          width: 320px !important;
-          height: 96px !important;
+          height: 44px !important;
+          width: auto !important;
           max-width: 100%;
-          box-shadow: none;
-          background: transparent;
           display: block;
           margin: 0 auto;
+          background: transparent;
+          box-shadow: none;
         }
 
         /* 导航栏滚动隐藏效果 */
@@ -2446,14 +2440,14 @@ cd ThoughtEcho</code></pre>
                     <span class="content-zh">Windows 用户推荐，自动更新更便捷</span>
                     <span class="content-en">Recommended for Windows, auto-updates included</span>
                 </p>
-                <!-- 官方微软商店徽章组件 -->
+                <!-- 官方微软商店徽章组件（小号） -->
                 <div style="display:flex;justify-content:center;align-items:center;">
                   <ms-store-badge
                     productid="9nc7gdg6kfmc"
                     productname="心迹"
                     window-mode="direct"
                     theme="auto"
-                    size="large"
+                    size="small"
                     language="zh-cn"
                     animation="on">
                   </ms-store-badge>
