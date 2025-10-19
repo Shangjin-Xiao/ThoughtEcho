@@ -85,25 +85,74 @@ class _LicensePageState extends State<LicensePage> {
   }
 
   Widget _buildLicenseFileSection(BuildContext context) {
-    if (_licenseLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_licenseError != null) {
-      return Text(_licenseError!, style: const TextStyle(color: Colors.red));
-    }
-    if (_licenseText == null || _licenseText!.trim().isEmpty) {
-      return const Text('未找到本程序 LICENSE 文件。');
-    }
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: SelectableText(
-        _licenseText!,
-        style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-      ),
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.verified_user_outlined),
+      label: const Text('查看本程序 LICENSE'),
+      style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+      onPressed: () => _showLicenseDialog(context),
+    );
+  }
+
+  Future<void> _showLicenseDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        if (_licenseLoading) {
+          return const AlertDialog(
+            title: Text('本程序 LICENSE'),
+            content: SizedBox(
+              height: 80,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+        if (_licenseError != null) {
+          return AlertDialog(
+            title: const Text('本程序 LICENSE'),
+            content: Text(_licenseError!, style: const TextStyle(color: Colors.red)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('关闭'),
+              ),
+            ],
+          );
+        }
+        if (_licenseText == null || _licenseText!.trim().isEmpty) {
+          return AlertDialog(
+            title: const Text('本程序 LICENSE'),
+            content: const Text('未找到本程序 LICENSE 文件。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('关闭'),
+              ),
+            ],
+          );
+        }
+        return AlertDialog(
+          title: const Text('本程序 LICENSE'),
+          content: SizedBox(
+            width: 400,
+            height: 320,
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  _licenseText!,
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('关闭'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -123,7 +172,7 @@ class _LicensePageState extends State<LicensePage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.link_outlined),
+                Icon(icon),
                 const SizedBox(width: 8),
                 Text(
                   title,
