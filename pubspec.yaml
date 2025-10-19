@@ -78,6 +78,7 @@ dependencies:
   refena_flutter: ^3.2.0
   open_file: ^3.5.10 # 用于打开文件，包括APK安装
   flutter_local_notifications: ^19.5.0 # 下载进度通知
+  flutter_chat_core: ^2.8.0
 
 dev_dependencies:
   flutter_test:
