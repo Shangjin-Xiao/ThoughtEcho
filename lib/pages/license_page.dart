@@ -288,7 +288,7 @@ class _LicensePageState extends State<LicensePage> {
           name: 'LocalSend（部分代码集成）',
           url: 'https://github.com/localsend/localsend',
           description:
-              '同步功能参考并集成了 LocalSend 项目中的部分实现/代码片段。原项目许可证：MIT，已遵循并保留原始项目的许可证和作者信息，详情见上方链接。',
+              '同步功能参考并集成了 LocalSend 项目中的部分实现/代码片段。原项目许可证：Apache 2.0，已遵循并保留原始项目的许可证和作者信息，详情见上方链接。',
         ),
         const SizedBox(height: 12),
         const Text(

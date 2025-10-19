@@ -78,7 +78,7 @@ class FeatureGuide {
     // 新增：全屏编辑器工具栏操作气泡
     'editor_toolbar_usage': FeatureGuideConfig(
       title: '工具栏操作提示',
-      description: '工具栏可左右滑动，支持添加图片、音频、视频等媒体。\n试试左右滑动或点击加号按钮！',
+      description: '工具栏支持左右滑动\n试试添加图片、视频等媒体文件！',
       placement: FeatureGuidePlacement.below,
       offset: Offset(0, 8),
     ),
