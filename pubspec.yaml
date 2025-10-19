@@ -162,3 +162,4 @@ flutter:
   assets:
     - assets/lottie/
     - assets/icon.png
+    - LICENSE
