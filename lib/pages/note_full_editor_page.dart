@@ -73,6 +73,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 功能引导：元数据编辑按钮的 Key
   final GlobalKey _metadataButtonKey = GlobalKey();
+  // 新增：工具栏气泡引导 Key
+  final GlobalKey _toolbarGuideKey = GlobalKey();
 
   @override
   void initState() {
@@ -107,6 +109,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _showEditorGuide();
+        _showToolbarGuide();
       }
     });
   }
@@ -117,6 +120,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       context: context,
       guideId: 'editor_metadata',
       targetKey: _metadataButtonKey,
+    );
+  }
+
+  /// 新增：显示工具栏操作气泡引导
+  void _showToolbarGuide() {
+    FeatureGuideHelper.show(
+      context: context,
+      guideId: 'editor_toolbar_usage',
+      targetKey: _toolbarGuideKey,
+      autoDismissDuration: const Duration(milliseconds: 3200),
     );
   }
 
@@ -1153,6 +1166,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             Column(
               children: [
                 UnifiedQuillToolbar(
+                  key: _toolbarGuideKey, // 新增：用于气泡定位
                   controller: _controller,
                   onMediaImported: (String filePath) {
                     _sessionImportedMedia.add(filePath);
