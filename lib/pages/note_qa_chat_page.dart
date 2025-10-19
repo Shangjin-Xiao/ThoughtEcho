@@ -2,16 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
-import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
+import 'package:flutter_chat_core/flutter_chat_core.dart';
+import 'package:flutter_chat_types/flutter_chat_types.dart' show PartialText;
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../utils/app_logger.dart';
-import '../utils/chat_theme_helper.dart';
-import '../widgets/markdown_message_bubble.dart';
-import '../widgets/chat_input_suggestions.dart';
 
 /// 现代化的问笔记聊天界面页面
 class NoteQAChatPage extends StatefulWidget {
@@ -25,9 +23,9 @@ class NoteQAChatPage extends StatefulWidget {
 }
 
 class _NoteQAChatPageState extends State<NoteQAChatPage> {
-  final List<types.Message> _messages = [];
-  late final types.User _user;
-  late final types.User _assistant;
+  late final InMemoryChatController _chatController;
+  late final User _user;
+  late final User _assistant;
   late AIService _aiService;
   StreamSubscription<String>? _streamSubscription;
   bool _isResponding = false;
@@ -36,20 +34,23 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   void initState() {
     super.initState();
     _aiService = Provider.of<AIService>(context, listen: false);
-
-    // 创建用户
-    _user = const types.User(id: 'user', firstName: '我');
-
-    // 创建AI助手
-    _assistant = const types.User(id: 'assistant', firstName: 'AI助手');
-
+    _user = const User(id: 'user', name: '我');
+    _assistant = const User(id: 'assistant', name: 'AI助手');
+    _chatController = InMemoryChatController();
     // 添加欢迎消息
-    _addWelcomeMessage();
-
+    _chatController.insertMessage(
+      TextMessage(
+        authorId: _assistant.id,
+        createdAt: DateTime.now(),
+        id: const Uuid().v4(),
+        text:
+            '你好！我是你的笔记助手。你可以问我关于这篇笔记的任何问题，我会基于笔记内容为你提供深度解答。\n\n📝 笔记内容概览：\n${_getQuotePreview()}\n\n💡 你可以试试这些问题：\n• 这篇笔记的核心思想是什么？\n• 从这篇笔记中能得到什么启发？\n• 如何将这篇笔记的想法应用到实际生活中？\n• 这篇笔记反映了什么样的思维模式？',
+      ),
+    );
     // 如果有初始问题，自动发送
     if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleSendPressed(types.PartialText(text: widget.initialQuestion!));
+        _handleSendPressed(PartialText(text: widget.initialQuestion!));
       });
     }
   }
@@ -57,22 +58,10 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _chatController.dispose();
     super.dispose();
   }
 
-  void _addWelcomeMessage() {
-    final welcomeMessage = types.TextMessage(
-      author: _assistant,
-      createdAt: DateTime.now().millisecondsSinceEpoch,
-      id: const Uuid().v4(),
-      text:
-          '你好！我是你的笔记助手。你可以问我关于这篇笔记的任何问题，我会基于笔记内容为你提供深度解答。\n\n📝 笔记内容概览：\n${_getQuotePreview()}\n\n💡 你可以试试这些问题：\n• 这篇笔记的核心思想是什么？\n• 从这篇笔记中能得到什么启发？\n• 如何将这篇笔记的想法应用到实际生活中？\n• 这篇笔记反映了什么样的思维模式？',
-    );
-
-    setState(() {
-      _messages.insert(0, welcomeMessage);
-    });
-  }
 
   String _getQuotePreview() {
     final content = widget.quote.content;
@@ -82,25 +71,19 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     return '${content.substring(0, 100)}...';
   }
 
-  void _handleSendPressed(types.PartialText message) {
+  void _handleSendPressed(PartialText message) {
     if (_isResponding) return;
-
-    final textMessage = types.TextMessage(
-      author: _user,
-      createdAt: DateTime.now().millisecondsSinceEpoch,
+    final textMessage = TextMessage(
+      authorId: _user.id,
+      createdAt: DateTime.now(),
       id: const Uuid().v4(),
       text: message.text,
     );
-
-    _addMessage(textMessage);
+    _chatController.insertMessage(textMessage);
     _askAI(message.text);
   }
 
-  void _addMessage(types.Message message) {
-    setState(() {
-      _messages.insert(0, message);
-    });
-  }
+  // 已弃用，直接用 _chatController.insertMessage
 
   Future<void> _askAI(String question) async {
     if (question.trim().isEmpty) return;
@@ -108,16 +91,14 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     setState(() {
       _isResponding = true;
     });
-
     // 创建一个临时的加载消息
-    final loadingMessage = types.TextMessage(
-      author: _assistant,
-      createdAt: DateTime.now().millisecondsSinceEpoch,
+    final loadingMessage = TextMessage(
+      authorId: _assistant.id,
+      createdAt: DateTime.now(),
       id: 'loading',
       text: '正在思考中...',
     );
-
-    _addMessage(loadingMessage);
+    _chatController.insertMessage(loadingMessage);
 
     try {
       String fullResponse = '';
@@ -129,30 +110,37 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
 
           // 更新正在回复的消息内容
           setState(() {
-            final index = _messages.indexWhere((msg) => msg.id == 'loading');
+            // 替换 loading 消息内容
+            final messages = _chatController.messages;
+            final index = messages.indexWhere((msg) => msg.id == 'loading');
             if (index != -1) {
-              _messages[index] = types.TextMessage(
-                author: _assistant,
-                createdAt: DateTime.now().millisecondsSinceEpoch,
+              final loadingMsg = messages[index];
+              final updatedMsg = TextMessage(
+                authorId: _assistant.id,
+                createdAt: DateTime.now(),
                 id: 'loading',
                 text: fullResponse,
               );
+              _chatController.updateMessage(loadingMsg, updatedMsg);
             }
           });
         },
         onDone: () {
           // 完成回复，生成最终消息
           setState(() {
-            final index = _messages.indexWhere((msg) => msg.id == 'loading');
+            final messages = _chatController.messages;
+            final index = messages.indexWhere((msg) => msg.id == 'loading');
             if (index != -1) {
-              _messages[index] = types.TextMessage(
-                author: _assistant,
-                createdAt: DateTime.now().millisecondsSinceEpoch,
-                id: const Uuid().v4(),
+              final loadingMsg = messages[index];
+              final finalMsg = TextMessage(
+                authorId: _assistant.id,
+                createdAt: DateTime.now(),
+                id: 'loading',
                 text: fullResponse.isNotEmpty
                     ? fullResponse
                     : '抱歉，我没能理解这个问题。请尝试换个方式问我。',
               );
+              _chatController.updateMessage(loadingMsg, finalMsg);
             }
             _isResponding = false;
           });
@@ -160,14 +148,17 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         onError: (error) {
           AppLogger.e('AI回答失败', error: error);
           setState(() {
-            final index = _messages.indexWhere((msg) => msg.id == 'loading');
+            final messages = _chatController.messages;
+            final index = messages.indexWhere((msg) => msg.id == 'loading');
             if (index != -1) {
-              _messages[index] = types.TextMessage(
-                author: _assistant,
-                createdAt: DateTime.now().millisecondsSinceEpoch,
-                id: const Uuid().v4(),
+              final loadingMsg = messages[index];
+              final errorMsg = TextMessage(
+                authorId: _assistant.id,
+                createdAt: DateTime.now(),
+                id: 'loading',
                 text: '抱歉，回答时出现了错误：${error.toString()}',
               );
+              _chatController.updateMessage(loadingMsg, errorMsg);
             }
             _isResponding = false;
           });
@@ -176,14 +167,17 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     } catch (e) {
       AppLogger.e('发送问题失败', error: e);
       setState(() {
-        final index = _messages.indexWhere((msg) => msg.id == 'loading');
+        final messages = _chatController.messages;
+        final index = messages.indexWhere((msg) => msg.id == 'loading');
         if (index != -1) {
-          _messages[index] = types.TextMessage(
-            author: _assistant,
-            createdAt: DateTime.now().millisecondsSinceEpoch,
-            id: const Uuid().v4(),
+          final loadingMsg = messages[index];
+          final errorMsg = TextMessage(
+            authorId: _assistant.id,
+            createdAt: DateTime.now(),
+            id: 'loading',
             text: '抱歉，发生了错误：${e.toString()}',
           );
+          _chatController.updateMessage(loadingMsg, errorMsg);
         }
         _isResponding = false;
       });
@@ -209,99 +203,20 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         ],
       ),
       body: Chat(
-        messages: _messages,
-        onSendPressed: _handleSendPressed,
-        user: _user,
-        theme: ChatThemeHelper.createChatTheme(theme),
-        showUserAvatars: true,
-        showUserNames: true,
-        textMessageBuilder: _customTextMessageBuilder,
-        inputOptions: InputOptions(
-          enabled: !_isResponding,
-          sendButtonVisibilityMode: SendButtonVisibilityMode.always,
-        ),
-        messageWidthRatio: 0.8,
-        typingIndicatorOptions: const TypingIndicatorOptions(typingUsers: []),
-        emptyState: _messages.isEmpty
-            ? Container(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.chat_outlined,
-                      size: 64,
-                      color: theme.colorScheme.outline,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '开始对话',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '问我关于这篇笔记的任何问题',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildQuickQuestionButtons(theme),
-                  ],
-                ),
-              )
-            : null,
+        chatController: _chatController,
+        currentUserId: _user.id,
+        onMessageSend: (text) {
+          _handleSendPressed(PartialText(text: text));
+        },
+        resolveUser: (id) async {
+          if (id == _user.id) return _user;
+          if (id == _assistant.id) return _assistant;
+          return User(id: id, name: '未知');
+        },
       ),
     );
   }
 
-  /// 自定义文本消息构建器，支持Markdown渲染
-  Widget _customTextMessageBuilder(
-    types.TextMessage message, {
-    required int messageWidth,
-    required bool showName,
-  }) {
-    final isCurrentUser = message.author.id == _user.id;
-    return MarkdownMessageBubble(
-      message: message,
-      isCurrentUser: isCurrentUser,
-      theme: Theme.of(context),
-    );
-  }
-
-  Widget _buildQuickQuestionButtons(ThemeData theme) {
-    // 使用智能建议生成问题
-    final smartSuggestions = ChatInputSuggestions.generateSuggestions(
-      widget.quote.content,
-    );
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: smartSuggestions.map((question) {
-        return ActionChip(
-          label: Text(
-            question,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          backgroundColor: theme.colorScheme.surface,
-          side: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.3),
-          ),
-          onPressed: () {
-            _handleSendPressed(types.PartialText(text: question));
-          },
-        );
-      }).toList(),
-    );
-  }
 
   void _showNoteInfo() {
     showDialog(

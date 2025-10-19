@@ -258,7 +258,6 @@ class NoteSyncService extends ChangeNotifier {
     try {
       // 停止设备发现服务
       if (_discoveryService != null) {
-        AppLogger.d('停止设备发现服务...', source: 'NoteSyncService');
         await _discoveryService!.stopDiscovery();
         AppLogger.i('设备发现服务已停止', source: 'NoteSyncService');
       }
