@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../pages/note_qa_chat_page.dart';
 import '../constants/app_constants.dart';
+import 'dart:math';
 
 /// AI助手功能选项枚举
 enum AIOption {
@@ -177,7 +178,22 @@ class AIAssistantDrawer extends StatelessWidget {
       Navigator.of(context).pop();
 
       try {
-        final Map<String, dynamic> sourceData = json.decode(result);
+        // 尝试多种方式解析JSON响应
+        Map<String, dynamic> sourceData;
+
+        // 首先尝试直接解析
+        if (result.trim().startsWith('{') && result.trim().endsWith('}')) {
+          sourceData = json.decode(result);
+        } else {
+          // 尝试从响应中提取JSON部分
+          final jsonMatch = RegExp(r'\{.*\}', dotAll: true).firstMatch(result);
+          if (jsonMatch != null) {
+            sourceData = json.decode(jsonMatch.group(0)!);
+          } else {
+            throw Exception('无法找到JSON格式的响应');
+          }
+        }
+
         String? author = sourceData['author'] as String?;
         String? work = sourceData['work'] as String?;
         String confidence = sourceData['confidence'] as String? ?? '低';
@@ -238,7 +254,7 @@ class AIAssistantDrawer extends StatelessWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('解析结果失败: $e'),
+            content: Text('解析分析结果失败: $e\n\n原始响应: ${result.substring(0, min(200, result.length))}'),
             duration: AppConstants.snackBarDurationError,
           ));
         }

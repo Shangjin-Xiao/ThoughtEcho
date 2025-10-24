@@ -760,7 +760,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         value: 'ask',
                         child: Row(
                           children: [
-                            Icon(Icons.photo,
+                            Icon(Icons.auto_awesome,
                                 color: theme.colorScheme.primary),
                             const SizedBox(width: 8),
                             const Text('AI助手'),
@@ -772,7 +772,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           value: 'generate_card',
                           child: Row(
                             children: [
-                              Icon(Icons.auto_awesome,
+                              Icon(Icons.photo,
                                   color: theme.colorScheme.primary),
                               const SizedBox(width: 8),
                               const Text('生成卡片分享'),

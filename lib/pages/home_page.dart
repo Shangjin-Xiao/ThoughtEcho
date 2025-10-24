@@ -20,6 +20,7 @@ import 'ai_features_page.dart';
 import 'settings_page.dart';
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
+import '../pages/note_qa_chat_page.dart'; // 添加问笔记页面导入
 import '../services/settings_service.dart'; // Import SettingsService
 import '../services/insight_history_service.dart'; // Import InsightHistoryService
 import '../utils/lottie_animation_manager.dart';
@@ -33,7 +34,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
-import '../widgets/ai_assistant_drawer.dart'; // 添加AI助手抽屉导入
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -939,13 +939,16 @@ class _HomePageState extends State<HomePage>
 
   // 显示AI助手菜单
   void _showAIQuestionDialog(Quote quote) {
-    AIAssistantDrawer.show(
-      context,
-      quote,
-      onContentUpdated: (updatedQuote) {
-        // 当内容更新时，导航到编辑页面
-        _showEditQuoteDialog(updatedQuote);
-      },
+    if (quote.content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('请先输入内容'),
+        duration: AppConstants.snackBarDurationNormal,
+      ));
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: quote)),
     );
   }
 
