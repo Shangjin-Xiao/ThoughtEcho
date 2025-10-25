@@ -22,6 +22,17 @@ jobs:
           cache: true
       - name: Install dependencies
         run: flutter pub get
+      - name: Lint all plist files
+        run: |
+          echo "Checking all .plist files under ios for validity"
+          find ios -name '*.plist' -print | while read f; do
+            echo "Linting $f"
+            plutil -lint "$f"
+          done
+          echo "Checking for non-printable/control chars in plist files"
+          find ios -name '*.plist' -print | while read f; do
+            perl -0777 -ne 'if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/) { print "Non-printable chars found in: $ENV{f}\n" }'  || true
+          done
       - name: Set app version
         run: |
           # 安全地修改 Info.plist 中的版本号，使用 PlistBuddy 而不是文本替换
