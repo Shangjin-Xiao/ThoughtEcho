@@ -2,6 +2,11 @@ name: Build iOS IPA (No Codesign)
 
 on:
   workflow_dispatch:
+    inputs:
+      version_name:
+        description: '版本名称 (例如: 1.0.0)'
+        required: true
+        default: '1.0.0'
 
 jobs:
   build-ios:
@@ -12,11 +17,22 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
+          flutter-version: '3.35.3'
+          channel: 'stable'
+          cache: true
       - name: Install dependencies
         run: flutter pub get
+      - name: Set app version
+        run: |
+          # 修改 Info.plist 文件中的版本号
+          sed -i '' "s/<key>CFBundleShortVersionString<\/key>.*/<key>CFBundleShortVersionString<\/key><string>${{ github.event.inputs.version_name }}<\/string>/g" ios/Runner/Info.plist
+          sed -i '' "s/<key>CFBundleVersion<\/key>.*/<key>CFBundleVersion<\/key><string>${{ github.run_number }}<\/string>/g" ios/Runner/Info.plist
+          
+          # 显示更新后的版本信息
+          grep -A1 "CFBundleShortVersionString\|CFBundleVersion" ios/Runner/Info.plist
+
       - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
       - name: Archive app
         run: |
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -archivePath build/Runner.xcarchive archive
