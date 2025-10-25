@@ -56,10 +56,22 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" ios/Runner/Info.plist || true
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/Runner/Info.plist || true
 
+      - name: Clean iOS build cache
+        run: |
+          cd ios
+          rm -rf Pods/
+          rm -rf .symlinks/
+          rm -f Podfile.lock
+          cd ..
       - name: Install CocoaPods dependencies
         run: |
           cd ios
           pod install --repo-update
+          cd ..
+      - name: Verify CocoaPods installation
+        run: |
+          cd ios
+          pod install --verbose
           cd ..
       - name: Build iOS (no codesign)
         run: |

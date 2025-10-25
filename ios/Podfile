@@ -31,7 +31,7 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     
-    # 对特定target进行配置
+    # 对所有target设置通用配置
     target.build_configurations.each do |config|
       # 设置iOS部署目标
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
@@ -39,17 +39,36 @@ post_install do |installer|
       # 禁用Bitcode
       config.build_settings['ENABLE_BITCODE'] = 'NO'
       
-      # 设置Swift版本
-      config.build_settings['SWIFT_VERSION'] = '5.0'
+      # 设置Swift版本（升级到最新Swift 6.0）
+      config.build_settings['SWIFT_VERSION'] = '6.0'
       
       # 设置Swift编译器标志
       config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone' if config.name == 'Debug'
+      
+      # Swift 6.0 特有的配置
+      config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'complete' if config.name == 'Release'
+      config.build_settings['SWIFT_ENABLE_BATCH_MODE'] = 'YES' if config.name == 'Release'
       
       # 设置C++标准库
       config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
       
       # 设置C++标准
       config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++0x'
+      
+      # 设置Pod配置
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_LOCATION=1',
+        'PERMISSION_NOTIFICATIONS=1'
+      ]
     end
+  end
+  
+  # 解决抽象target问题
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
   end
 end
