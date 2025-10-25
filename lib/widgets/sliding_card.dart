@@ -193,10 +193,12 @@ class _SlidingCardState extends State<SlidingCard>
                         ),
                         boxShadow: currentShadow,
                         color: theme.brightness == Brightness.light
-                            ? Color.alphaBlend(
-                                Colors.white.withValues(alpha: 0.1), // 使用轻微的白色叠加
-                                theme.colorScheme.surface,
-                              )
+                            ? (Color.lerp(
+                                    theme.colorScheme.surface,
+                                    Colors.white,
+                                    0.08,
+                                  ) ??
+                                theme.colorScheme.surface)
                             : theme.colorScheme.surface,
                         // 微妙的边框效果（Material Design）
                         border: Border.all(
