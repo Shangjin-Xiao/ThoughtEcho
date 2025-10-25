@@ -56,16 +56,29 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" ios/Runner/Info.plist || true
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/Runner/Info.plist || true
 
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+          cd ..
       - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+        run: |
+          flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
       - name: Archive app
         run: |
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -archivePath build/Runner.xcarchive archive
       - name: Export IPA (no signing)
         run: |
-          xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath build/ipa || echo "Export may fail without valid plist, this is expected without developer account."
+          mkdir -p build/ipa
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportPath build/ipa \
+            -allowProvisioningUpdates
+        continue-on-error: true
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ipa
           path: build/ipa/*.ipa
+          retention-days: 7

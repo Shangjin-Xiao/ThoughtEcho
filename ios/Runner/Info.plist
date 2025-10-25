@@ -43,5 +43,18 @@
   <true/>
   <key>UIApplicationSupportsIndirectInputEvents</key>
   <true/>
+  
+  <!-- 权限声明 - iOS 发布必需 -->
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>应用需要访问您的位置来记录笔记的地理位置信息</string>
+  
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>应用需要访问照片库来导入图片到您的笔记中</string>
+  
+  <key>NSCameraUsageDescription</key>
+  <string>应用需要访问相机来拍摄照片并添加到笔记中</string>
+  
+  <key>NSUserNotificationsUsageDescription</key>
+  <string>应用需要发送通知来提醒您重要的笔记和更新</string>
 </dict>
 </plist>
