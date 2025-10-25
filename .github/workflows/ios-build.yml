@@ -24,12 +24,26 @@ jobs:
         run: flutter pub get
       - name: Set app version
         run: |
-          # 修改 Info.plist 文件中的版本号
-          sed -i '' "s/<key>CFBundleShortVersionString<\/key>.*/<key>CFBundleShortVersionString<\/key><string>${{ github.event.inputs.version_name }}<\/string>/g" ios/Runner/Info.plist
-          sed -i '' "s/<key>CFBundleVersion<\/key>.*/<key>CFBundleVersion<\/key><string>${{ github.run_number }}<\/string>/g" ios/Runner/Info.plist
-          
+          # 安全地修改 Info.plist 中的版本号，使用 PlistBuddy 而不是文本替换
+          VERSION_NAME="${{ github.event.inputs.version_name }}"
+          BUILD_NUMBER="${{ github.run_number }}"
+
+          echo "Setting CFBundleShortVersionString to $VERSION_NAME and CFBundleVersion to $BUILD_NUMBER"
+
+          # Set or add CFBundleShortVersionString
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NAME" ios/Runner/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION_NAME" ios/Runner/Info.plist
+
+          # Set or add CFBundleVersion
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Runner/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/Runner/Info.plist
+
+          # 校验 plist 是否仍然有效
+          plutil -lint ios/Runner/Info.plist
+
           # 显示更新后的版本信息
-          grep -A1 "CFBundleShortVersionString\|CFBundleVersion" ios/Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" ios/Runner/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/Runner/Info.plist || true
 
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
