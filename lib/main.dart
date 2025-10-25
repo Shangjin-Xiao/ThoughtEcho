@@ -755,30 +755,35 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         // 直接更新主题中的动态颜色方案，确保MaterialApp构建时能获取到
         appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
 
-        return MaterialApp(
-          navigatorKey: widget.navigatorKey,
-          title: '心迹',
-          theme: appTheme.createLightThemeData(),
-          darkTheme: appTheme.createDarkThemeData(),
-          themeMode: appTheme.themeMode,
-          debugShowCheckedModeBanner: false,
-          home: widget.showUpdateReady
-              ? const OnboardingPage(showUpdateReady: true)
-              : !hasCompletedOnboarding
-                  ? const OnboardingPage() // 使用新的引导页面
-                  : widget.isEmergencyMode
-                      ? const EmergencyRecoveryPage()
-                      : HomePage(
-                          initialPage:
-                              settingsService.appSettings.defaultStartPage,
-                        ),
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-            FlutterQuillLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
+        return AnimatedTheme(
+          data: Theme.of(context), // 使用当前主题数据
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: MaterialApp(
+            navigatorKey: widget.navigatorKey,
+            title: '心迹',
+            theme: appTheme.createLightThemeData(),
+            darkTheme: appTheme.createDarkThemeData(),
+            themeMode: appTheme.themeMode,
+            debugShowCheckedModeBanner: false,
+            home: widget.showUpdateReady
+                ? const OnboardingPage(showUpdateReady: true)
+                : !hasCompletedOnboarding
+                    ? const OnboardingPage() // 使用新的引导页面
+                    : widget.isEmergencyMode
+                        ? const EmergencyRecoveryPage()
+                        : HomePage(
+                            initialPage:
+                                settingsService.appSettings.defaultStartPage,
+                          ),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              FlutterQuillLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
+          ),
         );
       },
     );

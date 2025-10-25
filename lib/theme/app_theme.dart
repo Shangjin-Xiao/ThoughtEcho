@@ -117,10 +117,47 @@ class AppTheme with ChangeNotifier {
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
       logDebug('使用自定义颜色(深色模式): ${_customColor!.toARGB32().toRadixString(16)}');
-      // 使用与浅色模式一致的方法，确保自定义颜色正确应用
-      return ColorScheme.fromSeed(
-        seedColor: _customColor!,
-        brightness: Brightness.dark,
+      // 使用Material Design规范的深色模式颜色生成
+      final userColor = _customColor!;
+      
+      // 为深色模式优化用户颜色
+      final primaryDark = _optimizeColorForDarkMode(userColor);
+      final secondaryDark = _generateSecondaryColor(userColor, Brightness.dark);
+      final tertiaryDark = _generateTertiaryColor(userColor, Brightness.dark);
+      
+      return ColorScheme.dark(
+        primary: primaryDark,
+        onPrimary: _getOnColor(primaryDark, Brightness.dark),
+        primaryContainer: _generateContainerColor(primaryDark, Brightness.dark, 0.3),
+        onPrimaryContainer: _getOnContainerColor(primaryDark, Brightness.dark),
+        
+        secondary: secondaryDark,
+        onSecondary: _getOnColor(secondaryDark, Brightness.dark),
+        secondaryContainer: _generateContainerColor(secondaryDark, Brightness.dark, 0.2),
+        onSecondaryContainer: _getOnContainerColor(secondaryDark, Brightness.dark),
+        
+        tertiary: tertiaryDark,
+        onTertiary: _getOnColor(tertiaryDark, Brightness.dark),
+        tertiaryContainer: _generateContainerColor(tertiaryDark, Brightness.dark, 0.25),
+        onTertiaryContainer: _getOnContainerColor(tertiaryDark, Brightness.dark),
+        
+        error: const Color(0xFFEF5350),
+        onError: Colors.white,
+        errorContainer: const Color(0xFF451A1A),
+        onErrorContainer: const Color(0xFFFFCDD2),
+        
+        surface: const Color(0xFF000000), // 保持OLED友好的纯黑背景
+        onSurface: const Color(0xFFF5F5F5), // 提高文本对比度和可读性
+        surfaceContainerHighest: const Color(0xFF2A2A2A),
+        surfaceContainerHigh: const Color(0xFF1F1F1F),
+        surfaceContainerLowest: const Color(0xFF000000),
+        onSurfaceVariant: const Color(0xFFE0E0E0), // 提高变体文本的可读性
+        outline: const Color(0xFF4A4A4A), // 改进边框颜色对比度
+        outlineVariant: const Color(0xFF3A3A3A), // 变体边框颜色
+        shadow: const Color(0xFF000000),
+        scrim: const Color(0xFF000000),
+        surfaceBright: const Color(0xFF3A3A3A),
+        surfaceDim: const Color(0xFF121212),
       );
     }
 
@@ -133,37 +170,170 @@ class AppTheme with ChangeNotifier {
     return _buildModernDarkScheme();
   }
 
-  // 现代深色方案 - OLED优化设计
+  // 为深色模式优化颜色
+  Color _optimizeColorForDarkMode(Color color) {
+    // 调整颜色以在深色背景上更好看，提高对比度和可读性
+    HSLColor hsl = HSLColor.fromColor(color);
+    
+    // 在深色模式下，需要调整饱和度和亮度以确保更好的对比度
+    final double adjustedSaturation = (hsl.saturation * 1.1 + 0.1).clamp(0.0, 1.0);
+    final double adjustedLightness = (hsl.lightness * 0.7 + 0.15).clamp(0.0, 1.0);
+    
+    return hsl
+        .withSaturation(adjustedSaturation)
+        .withLightness(adjustedLightness)
+        .toColor();
+  }
+
+  // 生成次色
+  Color _generateSecondaryColor(Color primary, Brightness brightness) {
+    HSLColor primaryHSL = HSLColor.fromColor(primary);
+    if (brightness == Brightness.dark) {
+      // 深色模式下，次色是主色的变体，保持协调性
+      return primaryHSL.withHue(
+        (primaryHSL.hue + 60) % 360  // 色相偏移60度
+      ).withSaturation(
+        (primaryHSL.saturation * 0.7).clamp(0.0, 1.0)
+      ).withLightness(
+        (primaryHSL.lightness * 0.6 + 0.2).clamp(0.0, 1.0)
+      ).toColor();
+    } else {
+      return primaryHSL.withLightness(
+        (primaryHSL.lightness * 0.7 + 0.15).clamp(0.0, 1.0)
+      ).toColor();
+    }
+  }
+
+  // 生成第三色
+  Color _generateTertiaryColor(Color primary, Brightness brightness) {
+    HSLColor primaryHSL = HSLColor.fromColor(primary);
+    if (brightness == Brightness.dark) {
+      // 深色模式下，第三色也基于主色但有不同的色相
+      return primaryHSL.withHue(
+        (primaryHSL.hue + 120) % 360  // 色相偏移120度
+      ).withSaturation(
+        (primaryHSL.saturation * 0.6).clamp(0.0, 1.0)
+      ).withLightness(
+        (primaryHSL.lightness * 0.6 + 0.25).clamp(0.0, 1.0)
+      ).toColor();
+    } else {
+      return primaryHSL.withHue(
+        (primaryHSL.hue + 120) % 360
+      ).toColor();
+    }
+  }
+
+  // 生成容器颜色
+  Color _generateContainerColor(Color baseColor, Brightness brightness, double alpha) {
+    if (brightness == Brightness.dark) {
+      // 深色模式下创建合适的容器颜色
+      return baseColor.withValues(alpha: alpha);
+    } else {
+      return baseColor.withValues(alpha: alpha);
+    }
+  }
+
+  // 获取在指定颜色上的文本颜色
+  Color _getOnColor(Color backgroundColor, Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      // 深色模式下的文本颜色策略：更精确的对比度计算
+      final double luminance = backgroundColor.computeLuminance();
+      if (luminance > 0.6) {
+        return Colors.black; // 非常亮的背景使用纯黑文本
+      } else if (luminance > 0.3) {
+        return Colors.black87; // 亮背景使用深灰文本
+      } else if (luminance > 0.15) {
+        return Colors.grey.shade800; // 中等亮度背景使用中性色
+      } else if (luminance > 0.05) {
+        return Colors.grey.shade200; // 较暗背景使用浅色文本
+      } else {
+        return Colors.white; // 非常暗背景使用纯白文本
+      }
+    } else {
+      // 浅色模式下的文本颜色策略
+      final double luminance = backgroundColor.computeLuminance();
+      if (luminance > 0.7) {
+        return Colors.black; // 非常亮的背景使用黑色文本
+      } else if (luminance > 0.4) {
+        return Colors.black87; // 亮背景使用深灰文本
+      } else if (luminance > 0.15) {
+        return Colors.grey.shade800; // 中等亮度背景使用中性色
+      } else {
+        return Colors.white; // 暗背景使用白色文本
+      }
+    }
+  }
+
+  // 获取容器上的文本颜色
+  Color _getOnContainerColor(Color containerColor, Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      // 深色模式下，容器颜色通常比较亮，使用更精细的颜色选择逻辑
+      final double luminance = containerColor.computeLuminance();
+      if (luminance > 0.7) {
+        return Colors.black; // 非常亮的容器使用纯黑文本
+      } else if (luminance > 0.4) {
+        return Colors.black87; // 亮容器使用深灰文本
+      } else if (luminance > 0.2) {
+        return Colors.grey.shade800; // 中等亮度容器使用中性色
+      } else if (luminance > 0.1) {
+        return Colors.grey.shade300; // 较暗容器使用浅灰文本
+      } else {
+        return Colors.white; // 非常暗容器使用纯白文本
+      }
+    } else {
+      // 浅色模式下的容器文本颜色策略
+      final double luminance = containerColor.computeLuminance();
+      if (luminance > 0.8) {
+        return Colors.black; // 非常亮的容器使用黑色文本
+      } else if (luminance > 0.5) {
+        return Colors.black87; // 亮容器使用深灰文本
+      } else if (luminance > 0.2) {
+        return Colors.grey.shade800; // 中等亮度容器使用中性色
+      } else {
+        return Colors.white; // 暗容器使用白色文本
+      }
+    }
+  }
+
+  // 现代深色方案 - OLED优化设计，提高对比度和可读性
   ColorScheme _buildModernDarkScheme() {
-    // 使用OLED友好的纯黑背景，节省电量
+    // 使用OLED友好的纯黑背景，节省电量，同时确保良好的对比度
     return ColorScheme.dark(
-      primary: const Color(0xFF64B5F6), // 更柔和的蓝色
-      onPrimary: const Color(0xFF000000), // 纯黑文本
-      primaryContainer: const Color(0xFF1565C0), // 深蓝色容器
-      onPrimaryContainer: const Color(0xFFB3E5FC), // 浅色文本
-      secondary: const Color(0xFF81C784), // 柔和的绿色
+      primary: const Color(0xFF64B5F6), // 更柔和的蓝色，保持足够对比度
+      onPrimary: const Color(0xFF000000), // 纯黑文本，在亮背景上清晰可见
+      primaryContainer: const Color(0xFF1E3A5F), // 更深的蓝色容器，确保文字可读性
+      onPrimaryContainer: const Color(0xFFB3E5FC), // 浅色文本，在深蓝背景上清晰
+      
+      secondary: const Color(0xFF81C784), // 柔和的绿色，在深色背景下可见
       onSecondary: const Color(0xFF000000), // 纯黑文本
-      secondaryContainer: const Color(0xFF2E7D32), // 深绿色容器
-      onSecondaryContainer: const Color(0xFFCCFFCC), // 浅色文本
-      tertiary: const Color(0xFFCE93D8), // 柔和的紫色
+      secondaryContainer: const Color(0xFF1B3E23), // 深绿色容器
+      onSecondaryContainer: const Color(0xFFCCFFCC), // 浅色文本，在深绿背景上清晰
+      
+      tertiary: const Color(0xFFCE93D8), // 柔和的紫色，保持良好的视觉效果
       onTertiary: const Color(0xFF000000), // 纯黑文本
-      tertiaryContainer: const Color(0xFF6A1B9A), // 深紫色容器
-      onTertiaryContainer: const Color(0xFFE1BEE7), // 浅色文本
-      error: const Color(0xFFEF5350), // 柔和的红色
-      errorContainer: const Color(0xFFC62828), // 深红色容器
+      tertiaryContainer: const Color(0xFF3D1944), // 深紫色容器，确保对比度
+      onTertiaryContainer: const Color(0xFFE1BEE7), // 浅色文本，在深紫背景上清晰
+      
+      error: const Color(0xFFEF5350), // 柔和的红色，在深色背景下可见
+      errorContainer: const Color(0xFF451A1A), // 深红色容器，提高对比度
       onError: const Color(0xFF000000), // 纯黑文本
-      onErrorContainer: const Color(0xFFFFCDD2), // 浅色文本
+      onErrorContainer: const Color(0xFFFFCDD2), // 浅色文本，在深红背景上清晰
+      
       surface: const Color(0xFF000000), // 纯黑背景 - OLED优化
-      onSurface: const Color(0xFFE1E1E1), // 浅色文本
-      surfaceContainerHighest: const Color(0xFF1A1A1A), // 几乎纯黑的表面
-      surfaceContainerHigh: const Color(0xFF121212), // 非常深的深灰
+      onSurface: const Color(0xFFF5F5F5), // 改进的浅色文本，提高对比度和可读性
+      surfaceContainerHighest: const Color(0xFF2A2A2A), // 改进的几乎纯黑的表面，更好的层次感
+      surfaceContainerHigh: const Color(0xFF1F1F1F), // 改进的非常深的深灰，提高对比度
       surfaceContainerLowest: const Color(0xFF000000), // 纯黑表面
-      onSurfaceVariant: const Color(0xFFB3B3B3), // 变体文本
-      outline: const Color(0xFF303030), // 更深的边框颜色
+      onSurfaceVariant: const Color(0xFFE0E0E0), // 改进的变体文本，提高可读性
+      
+      outline: const Color(0xFF4A4A4A), // 改进的边框颜色，提供更好的视觉分离
+      outlineVariant: const Color(0xFF3A3A3A), // 变体边框颜色
+      
       shadow: const Color(0xFF000000), // 纯黑阴影
       scrim: const Color(0xFF000000), // 纯黑幕布
-      surfaceBright: const Color(0xFF1A1A1A), // 亮表面也接近黑色
-      surfaceDim: const Color(0xFF000000), // 纯黑暗表面
+      
+      surfaceBright: const Color(0xFF3A3A3A), // 改进的亮表面，提供更好的层次感
+      surfaceDim: const Color(0xFF121212), // 改进的暗表面，确保足够对比度
     );
   }
 
@@ -176,6 +346,28 @@ class AppTheme with ChangeNotifier {
     logDebug(
         '强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode');
     notifyListeners();
+  }
+
+  /// 检查当前主题是否为深色模式（考虑系统偏好）
+  bool isCurrentlyDarkMode(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    if (_themeMode == ThemeMode.dark) return true;
+    if (_themeMode == ThemeMode.light) return false;
+    return brightness == Brightness.dark;
+  }
+
+  /// 获取适合深色模式的增强颜色
+  /// 提供深色模式下更好的对比度和可读性
+  Color getEnhancedDarkModeColor(BuildContext context, Color baseColor) {
+    final isDark = isCurrentlyDarkMode(context);
+    if (!isDark) return baseColor;
+
+    // 深色模式下对颜色进行优化
+    HSLColor hsl = HSLColor.fromColor(baseColor);
+    return hsl
+        .withSaturation((hsl.saturation * 1.1).clamp(0.0, 1.0))
+        .withLightness((hsl.lightness * 0.8 + 0.2).clamp(0.0, 1.0))
+        .toColor();
   }
 
   // 判断当前是否为深色模式
@@ -448,39 +640,18 @@ class AppTheme with ChangeNotifier {
   }
 
   // 创建深色主题数据 - 重新设计
-  ThemeData createDarkThemeData() {
-    final baseTheme = FlexThemeData.dark(
-      colorScheme: darkColorScheme,
+  ThemeData createDarkThemeData() {    // 获取实际使用的颜色方案（包含自定义颜色）
+    final actualColorScheme = darkColorScheme;
+    
+    // 直接使用 ThemeData 避免 FlexThemeData 的颜色干扰
+    final baseTheme = ThemeData(
       useMaterial3: true,
-      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 0,
-      subThemesData: const FlexSubThemesData(
-        blendOnLevel: 0,
-        blendOnColors: false,
-        useMaterial3Typography: true,
-        useM2StyleDividerInM3: false,
-        alignedDropdown: true,
-        useInputDecoratorThemeInDialogs: true,
-        elevatedButtonSchemeColor: SchemeColor.primary,
-        elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
-        cardRadius: cardRadius,
-        inputDecoratorRadius: inputRadius,
-        dialogRadius: dialogRadius,
-        timePickerDialogRadius: dialogRadius,
-        outlinedButtonRadius: buttonRadius,
-        filledButtonRadius: buttonRadius,
-        textButtonRadius: buttonRadius,
-        fabRadius: buttonRadius,
-      ),
-      keyColors: const FlexKeyColors(
-        useSecondary: true,
-        useTertiary: true,
-      ),
-      tones: FlexTones.material(Brightness.dark),
-      visualDensity: FlexColorScheme.comfortablePlatformDensity,
+      colorScheme: actualColorScheme,
+      brightness: Brightness.dark,
     );
-
-    final colorScheme = baseTheme.colorScheme;
+    
+    // 确保使用完整的自定义颜色方案
+    final colorScheme = actualColorScheme;
 
     return baseTheme.copyWith(
       // 使用OLED友好的纯黑背景

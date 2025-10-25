@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -65,6 +66,44 @@ class QuoteContent extends StatelessWidget {
         'document': _QuoteDocumentCache.stats,
         'controller': _QuoteContentControllerCache.stats,
       };
+
+  /// 计算两个颜色之间的对比度比率 (WCAG 标准)
+  double _calculateContrastRatio(Color foreground, Color background) {
+    // 获取相对亮度
+    final double foregroundLuminance = _getRelativeLuminance(foreground);
+    final double backgroundLuminance = _getRelativeLuminance(background);
+    
+    // 计算对比度比率
+    final double lighter = math.max(foregroundLuminance, backgroundLuminance);
+    final double darker = math.min(foregroundLuminance, backgroundLuminance);
+    
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  /// 获取颜色的相对亮度 (WCAG 2.0 标准)
+  double _getRelativeLuminance(Color color) {
+    // 将颜色转换为RGB分量 (0-1范围) - 使用推荐的组件访问器
+    final double rNorm = color.r / 255.0;
+    final double gNorm = color.g / 255.0;
+    final double bNorm = color.b / 255.0;
+    
+    // 应用sRGB gamma校正
+    final double rs = _linearizeColorComponent(rNorm);
+    final double gs = _linearizeColorComponent(gNorm);
+    final double bs = _linearizeColorComponent(bNorm);
+    
+    // 计算相对亮度
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  }
+
+  /// 线性化sRGB颜色分量
+  double _linearizeColorComponent(double component) {
+    if (component <= 0.03928) {
+      return component / 12.92;
+    } else {
+      return math.pow((component + 0.055) / 1.055, 2.4) as double;
+    }
+  }
 
   /// 检查是否为媒体软连接或其他应该过滤的内容
   bool _shouldFilterBoldContent(String content) {
@@ -348,27 +387,75 @@ class QuoteContent extends StatelessWidget {
           style: style!,
           child: richTextEditor,
         );
-      } else {
-        // 如果没有提供样式，根据主题和quote颜色确定合适的文字颜色
-        final theme = Theme.of(context);
-        Color textColor;
-        if (quote.colorHex != null && quote.colorHex!.isNotEmpty) {
-          final cardColor = Color(
-            int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
-          );
-          final double luminance = cardColor.computeLuminance();
-          textColor = luminance > 0.5 ? Colors.black87 : Colors.white;
         } else {
-          textColor = theme.colorScheme.onSurface;
-        }
-        
-        richTextEditor = DefaultTextStyle.merge(
-          style: TextStyle(color: textColor),
-          child: richTextEditor,
-        );
-      }
-
-      if (!showFullContent && needsExpansion) {
+          // 如果没有提供样式，根据主题和quote颜色确定合适的文字颜色
+          final theme = Theme.of(context);
+          Color textColor;
+          if (quote.colorHex != null && quote.colorHex!.isNotEmpty) {
+            final cardColor = Color(
+              int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
+            );
+            
+            // 计算背景色的亮度并进行更精确的颜色选择
+            final double luminance = cardColor.computeLuminance();
+            final bool isDarkTheme = theme.brightness == Brightness.dark;
+            
+            if (isDarkTheme) {
+              // 深色模式下的文字颜色策略：深色背景用浅色文字
+              if (luminance > 0.3) {
+                // 较亮背景：使用深色文字确保对比度
+                textColor = Colors.black;
+              } else if (luminance > 0.15) {
+                // 中等亮度背景：使用深灰文字
+                textColor = Colors.grey.shade900;
+              } else if (luminance > 0.05) {
+                // 较暗背景：使用浅灰文字
+                textColor = Colors.grey.shade100;
+              } else {
+                // 很暗背景：使用纯白色文字确保最佳可读性
+                textColor = Colors.white;
+              }
+            } else {
+              // 浅色模式：优化阈值，确保更好的对比度
+              if (luminance > 0.65) {
+                textColor = Colors.black;
+              } else if (luminance > 0.35) {
+                textColor = Colors.black87;
+              } else if (luminance > 0.15) {
+                textColor = Colors.grey.shade800;
+              } else {
+                textColor = Colors.white;
+              }
+            }
+            
+            // 额外的对比度检查，确保文字与背景有足够的对比度
+            final double contrast = _calculateContrastRatio(textColor, cardColor);
+            if (contrast < 4.5) {
+              // 如果对比度不够，根据背景亮度调整文字颜色
+              if (isDarkTheme) {
+                if (luminance > 0.3) {
+                  textColor = Colors.black87; // 较亮背景用深色文字
+                } else {
+                  textColor = Colors.white; // 较暗背景用浅色文字
+                }
+              } else {
+                if (luminance > 0.5) {
+                  textColor = Colors.black87;
+                } else {
+                  textColor = Colors.white;
+                }
+              }
+            }
+          } else {
+            // 使用主题默认颜色
+            textColor = theme.colorScheme.onSurface;
+          }
+          
+          richTextEditor = DefaultTextStyle.merge(
+            style: TextStyle(color: textColor),
+            child: richTextEditor,
+          );
+        }      if (!showFullContent && needsExpansion) {
         richTextEditor = _CollapsedContentWrapper(
           key: collapsedWrapperKey,
           maxHeight: collapsedContentMaxHeight,
@@ -379,12 +466,85 @@ class QuoteContent extends StatelessWidget {
       return richTextEditor;
     }
 
-    Widget plainText = Text(
-      quote.content,
-      style: style,
-      softWrap: true,
-      overflow: TextOverflow.visible,
-    );
+    Widget plainText;
+    if (style != null) {
+      plainText = Text(
+        quote.content,
+        style: style,
+        softWrap: true,
+        overflow: TextOverflow.visible,
+      );
+    } else {
+      // 为纯文本也应用相同的颜色逻辑
+      final theme = Theme.of(context);
+      Color textColor;
+      if (quote.colorHex != null && quote.colorHex!.isNotEmpty) {
+        final cardColor = Color(
+          int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
+        );
+        
+        // 计算背景色的亮度并进行更精确的颜色选择
+        final double luminance = cardColor.computeLuminance();
+        final bool isDarkTheme = theme.brightness == Brightness.dark;
+        
+        if (isDarkTheme) {
+          // 深色模式下的文字颜色策略：深色背景用浅色文字
+          if (luminance > 0.3) {
+            // 较亮背景：使用深色文字确保对比度
+            textColor = Colors.black;
+          } else if (luminance > 0.15) {
+            // 中等亮度背景：使用深灰文字
+            textColor = Colors.grey.shade900;
+          } else if (luminance > 0.05) {
+            // 较暗背景：使用浅灰文字
+            textColor = Colors.grey.shade100;
+          } else {
+            // 很暗背景：使用纯白色文字确保最佳可读性
+            textColor = Colors.white;
+          }
+        } else {
+          // 浅色模式：优化阈值，确保更好的对比度
+          if (luminance > 0.65) {
+            textColor = Colors.black;
+          } else if (luminance > 0.35) {
+            textColor = Colors.black87;
+          } else if (luminance > 0.15) {
+            textColor = Colors.grey.shade800;
+          } else {
+            textColor = Colors.white;
+          }
+        }
+        
+        // 额外的对比度检查，确保文字与背景有足够的对比度
+        final double contrast = _calculateContrastRatio(textColor, cardColor);
+        if (contrast < 4.5) {
+          // 如果对比度不够，根据背景亮度调整文字颜色
+          if (isDarkTheme) {
+            if (luminance > 0.3) {
+              textColor = Colors.black87; // 较亮背景用深色文字
+            } else {
+              textColor = Colors.white; // 较暗背景用浅色文字
+            }
+          } else {
+            if (luminance > 0.5) {
+              textColor = Colors.black87;
+            } else {
+              textColor = Colors.white;
+            }
+          }
+        }
+      } else {
+        // 使用主题默认颜色
+        textColor = theme.colorScheme.onSurface;
+      }
+      
+      plainText = Text(
+        quote.content,
+        style: TextStyle(color: textColor),
+        softWrap: true,
+        overflow: TextOverflow.visible,
+      );
+    }
 
     if (!showFullContent && needsExpansion) {
       plainText = _CollapsedContentWrapper(

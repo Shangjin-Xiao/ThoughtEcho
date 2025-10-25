@@ -16,7 +16,7 @@ class BackupMediaProcessor {
   /// [onProgress] - 进度回调 (current, total)
   /// [onStatusUpdate] - 状态更新回调
   /// [cancelToken] - 取消令牌
-  /// 返回 Map<relativePath, absolutePath>
+  /// 返回 `Map<String, String>` - 相对路径与绝对路径的映射
   static Future<Map<String, String>> collectMediaFilesForBackup({
     required bool includeMediaFiles,
     Function(int current, int total)? onProgress,

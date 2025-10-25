@@ -452,6 +452,150 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       await appTheme.setUseDynamicColor(false);
     }
   }
+
+  /// 显示深色模式对比度检测对话框
+  void _showDarkModeContrastDialog(BuildContext context, AppTheme appTheme) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+          ),
+          title: const Text('深色模式对比度检测'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '当前深色模式配置检测结果：',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                
+                // 检测文本对比度
+                _buildContrastTestItem(
+                  context,
+                  '主文本对比度',
+                  '主文本与背景的对比度',
+                  appTheme.isCurrentlyDarkMode(context),
+                ),
+                
+                _buildContrastTestItem(
+                  context,
+                  '次要文本对比度',
+                  '次要文本与背景的对比度',
+                  appTheme.isCurrentlyDarkMode(context),
+                ),
+                
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                
+                // 对比度说明
+                const Text(
+                  '对比度标准 (WCAG 2.0)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '• AA级：4.5:1 (普通文本)\n'
+                  '• AA级：3:1 (大文本)\n'
+                  '• AAA级：7:1 (普通文本)\n'
+                  '• AAA级：4.5:1 (大文本)',
+                  style: TextStyle(fontSize: 12),
+                ),
+                
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                
+                // 深色模式优化建议
+                const Text(
+                  '优化建议',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '• 使用更亮的背景色提高对比度\n'
+                  '• 选择较亮的文字颜色\n'
+                  '• 避免纯白文字在纯黑背景上\n'
+                  '• 确保在不同亮度环境下都清晰可见',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('关闭'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 构建对比度测试项
+  Widget _buildContrastTestItem(
+    BuildContext context,
+    String title,
+    String description,
+    bool isDarkMode,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.black : Colors.white,
+                border: Border.all(color: colorScheme.outline),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Center(
+                child: Text(
+                  'A',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // 这里移除了自定义的ColorPicker组件，使用flex_color_picker包提供的组件

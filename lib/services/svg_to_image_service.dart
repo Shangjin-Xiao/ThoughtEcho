@@ -579,7 +579,7 @@ class SvgToImageService {
     }
   }
 
-  /// 提取文本元素，支持嵌套标签如<tspan>
+  /// 提取文本元素，支持嵌套标签如 `<tspan>`
   static List<Map<String, String>> _extractTextElements(String svgContent) {
     final textElements = <Map<String, String>>[];
 

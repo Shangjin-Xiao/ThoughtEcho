@@ -391,11 +391,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                     key: ValueKey<bool>(showFullContent),
                                     child: QuoteContent(
                                       quote: quote,
-                                      style: innerTheme.textTheme.bodyLarge
-                                          ?.copyWith(
-                                        color: innerTheme.colorScheme.onSurface,
-                                        height: 1.5,
-                                      ),
+                                      // 如果笔记使用了自定义背景色，不在这里强制设置文字颜色，
+                                      // 让 QuoteContent 根据背景色计算最合适的文字颜色以保证对比度。
+                                      style: quote.colorHex != null &&
+                                              quote.colorHex!.isNotEmpty
+                                          ? innerTheme.textTheme.bodyLarge
+                                              ?.copyWith(height: 1.5)
+                                          : innerTheme.textTheme.bodyLarge
+                                              ?.copyWith(
+                                                color: innerTheme
+                                                    .colorScheme.onSurface,
+                                                height: 1.5,
+                                              ),
                                       showFullContent: showFullContent,
                                     ),
                                   ),
