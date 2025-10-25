@@ -1122,9 +1122,11 @@ class NoteListViewState extends State<NoteListView> {
     // 布局构建
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 主体内容 - 添加白色背景容器
+        // 主体内容 - 记录页使用极浅主题色
         return Container(
-            color: Colors.white, // 固定白色背景，不受主题影响
+            color: theme.brightness == Brightness.light
+                ? theme.colorScheme.surface.withValues(alpha: 0.3) // 记录页使用更浅的颜色
+                : theme.colorScheme.surface, // 深色模式保持不变
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),

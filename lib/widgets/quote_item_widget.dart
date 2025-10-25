@@ -234,8 +234,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           ) // Ensure alpha for hex string
         : theme.colorScheme.surfaceContainerLowest;
 
-    // Determine the text color based on the card color
-
     // 格式化日期和时间段
     final DateTime quoteDate = DateTime.parse(quote.date);
     final String formattedDate = TimeUtils.formatQuoteDate(
@@ -287,9 +285,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   Text(
                     formattedDate,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.applyOpacity(
-                        0.7,
-                      ), // MODIFIED
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                   if (quote.location != null || quote.weather != null)
@@ -300,10 +296,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           Icon(
                             Icons.location_on,
                             size: 14,
-                            color: theme.colorScheme.secondary.applyOpacity(
-                              // MODIFIED
-                              0.7,
-                            ),
+                            color: theme.colorScheme.secondary.withValues(alpha: 0.7),
                           ),
                           const SizedBox(width: 2),
                           Text(
@@ -526,9 +519,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     quote.sourceWork ?? '',
                   ),
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.75,
-                    ), // MODIFIED
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -539,9 +530,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 child: Text(
                   quote.source!,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.75,
-                    ), // MODIFIED
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -557,7 +546,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     Icon(
                       Icons.label_outline,
                       size: 16,
-                      color: theme.colorScheme.onSurface.applyOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -730,7 +719,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_vert,
-                      color: theme.colorScheme.onSurface.applyOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),

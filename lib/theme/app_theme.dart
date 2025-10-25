@@ -133,11 +133,37 @@ class AppTheme with ChangeNotifier {
     return _buildModernDarkScheme();
   }
 
-  // 默认的现代深色方案
+  // 现代深色方案 - OLED优化设计
   ColorScheme _buildModernDarkScheme() {
-    return ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.dark,
+    // 使用OLED友好的纯黑背景，节省电量
+    return ColorScheme.dark(
+      primary: const Color(0xFF64B5F6), // 更柔和的蓝色
+      onPrimary: const Color(0xFF000000), // 纯黑文本
+      primaryContainer: const Color(0xFF1565C0), // 深蓝色容器
+      onPrimaryContainer: const Color(0xFFB3E5FC), // 浅色文本
+      secondary: const Color(0xFF81C784), // 柔和的绿色
+      onSecondary: const Color(0xFF000000), // 纯黑文本
+      secondaryContainer: const Color(0xFF2E7D32), // 深绿色容器
+      onSecondaryContainer: const Color(0xFFCCFFCC), // 浅色文本
+      tertiary: const Color(0xFFCE93D8), // 柔和的紫色
+      onTertiary: const Color(0xFF000000), // 纯黑文本
+      tertiaryContainer: const Color(0xFF6A1B9A), // 深紫色容器
+      onTertiaryContainer: const Color(0xFFE1BEE7), // 浅色文本
+      error: const Color(0xFFEF5350), // 柔和的红色
+      errorContainer: const Color(0xFFC62828), // 深红色容器
+      onError: const Color(0xFF000000), // 纯黑文本
+      onErrorContainer: const Color(0xFFFFCDD2), // 浅色文本
+      surface: const Color(0xFF000000), // 纯黑背景 - OLED优化
+      onSurface: const Color(0xFFE1E1E1), // 浅色文本
+      surfaceContainerHighest: const Color(0xFF1A1A1A), // 几乎纯黑的表面
+      surfaceContainerHigh: const Color(0xFF121212), // 非常深的深灰
+      surfaceContainerLowest: const Color(0xFF000000), // 纯黑表面
+      onSurfaceVariant: const Color(0xFFB3B3B3), // 变体文本
+      outline: const Color(0xFF303030), // 更深的边框颜色
+      shadow: const Color(0xFF000000), // 纯黑阴影
+      scrim: const Color(0xFF000000), // 纯黑幕布
+      surfaceBright: const Color(0xFF1A1A1A), // 亮表面也接近黑色
+      surfaceDim: const Color(0xFF000000), // 纯黑暗表面
     );
   }
 
@@ -421,16 +447,16 @@ class AppTheme with ChangeNotifier {
     );
   }
 
-  // 创建暗色主题数据
+  // 创建深色主题数据 - 重新设计
   ThemeData createDarkThemeData() {
     final baseTheme = FlexThemeData.dark(
       colorScheme: darkColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 0, // 设置为0，避免混合修改自定义颜色
+      blendLevel: 0,
       subThemesData: const FlexSubThemesData(
-        blendOnLevel: 0, // 设置为0，避免修改自定义颜色
-        blendOnColors: false, // 禁用颜色混合
+        blendOnLevel: 0,
+        blendOnColors: false,
         useMaterial3Typography: true,
         useM2StyleDividerInM3: false,
         alignedDropdown: true,
@@ -454,9 +480,128 @@ class AppTheme with ChangeNotifier {
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 
-    // 返回主题，确保使用原始的colorScheme
+    final colorScheme = baseTheme.colorScheme;
+
     return baseTheme.copyWith(
-      colorScheme: darkColorScheme, // 重新应用原始colorScheme，确保自定义颜色不被修改
+      // 使用OLED友好的纯黑背景
+      scaffoldBackgroundColor: colorScheme.surface,
+
+      // 对话框使用接近黑色的深色
+      dialogTheme: baseTheme.dialogTheme.copyWith(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+      ),
+
+      // 卡片使用接近黑色的深色
+      cardTheme: baseTheme.cardTheme.copyWith(
+        color: colorScheme.surfaceContainerLowest,
+        elevation: 1, // 降低阴影以配合深色背景
+      ),
+
+      // 底部表单使用接近黑色的深色
+      bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+      ),
+
+      // 抽屉使用纯黑背景
+      drawerTheme: baseTheme.drawerTheme.copyWith(
+        backgroundColor: colorScheme.surface,
+      ),
+
+      // AppBar使用接近黑色的深色
+      appBarTheme: baseTheme.appBarTheme.copyWith(
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+        ),
+      ),
+
+      // 导航栏使用纯黑背景
+      navigationBarTheme: baseTheme.navigationBarTheme.copyWith(
+        backgroundColor: colorScheme.surface,
+      ),
+
+      // 浮动操作按钮使用主色
+      floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 6,
+      ),
+
+      // 列表项目使用透明背景
+      listTileTheme: baseTheme.listTileTheme.copyWith(
+        tileColor: Colors.transparent,
+      ),
+
+      // 按钮主题优化
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primaryContainer,
+          foregroundColor: colorScheme.onPrimaryContainer,
+          elevation: 2,
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.outline, width: 1.5),
+        ),
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+        ),
+      ),
+
+      // 输入框主题优化
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide(color: colorScheme.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide(color: colorScheme.error),
+        ),
+      ),
+
+      // Switch主题优化
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.onSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primaryContainer;
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+      ),
+
+      // 进度条主题优化
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colorScheme.primary,
+        linearTrackColor: colorScheme.surfaceContainerHighest,
+        circularTrackColor: Colors.transparent,
+      ),
     );
   }
 }

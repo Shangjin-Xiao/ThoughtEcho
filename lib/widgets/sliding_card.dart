@@ -166,7 +166,7 @@ class _SlidingCardState extends State<SlidingCard>
                         ),
                         boxShadow: currentShadow,
                         color: theme.brightness == Brightness.light
-                            ? Colors.white
+                            ? Colors.white.withValues(alpha: 0.95) // 简洁的浅色背景
                             : theme.colorScheme.surface,
                         // 微妙的边框效果（Material Design）
                         border: Border.all(

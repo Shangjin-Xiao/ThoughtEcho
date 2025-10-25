@@ -348,6 +348,24 @@ class QuoteContent extends StatelessWidget {
           style: style!,
           child: richTextEditor,
         );
+      } else {
+        // 如果没有提供样式，根据主题和quote颜色确定合适的文字颜色
+        final theme = Theme.of(context);
+        Color textColor;
+        if (quote.colorHex != null && quote.colorHex!.isNotEmpty) {
+          final cardColor = Color(
+            int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
+          );
+          final double luminance = cardColor.computeLuminance();
+          textColor = luminance > 0.5 ? Colors.black87 : Colors.white;
+        } else {
+          textColor = theme.colorScheme.onSurface;
+        }
+        
+        richTextEditor = DefaultTextStyle.merge(
+          style: TextStyle(color: textColor),
+          child: richTextEditor,
+        );
       }
 
       if (!showFullContent && needsExpansion) {

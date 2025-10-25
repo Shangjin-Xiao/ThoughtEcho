@@ -843,7 +843,7 @@ class _HomePageState extends State<HomePage>
         context: context,
         isScrollControlled: true,
         backgroundColor: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
+            ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.3)
             : Theme.of(context).colorScheme.surface,
         builder: (context) => AddNoteDialog(
           initialQuote: quote,
@@ -1194,7 +1194,7 @@ class _HomePageState extends State<HomePage>
     // 使用Provider包装搜索控制器，使其子组件可以访问
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? Colors.white
+          ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.7)
           : Theme.of(context).colorScheme.surface,
       appBar: _currentIndex == 1
           ? null // 记录页不需要标题栏
