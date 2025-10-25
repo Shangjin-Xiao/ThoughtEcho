@@ -20,24 +20,37 @@ class PulseAnimation extends StatefulWidget {
 
 class _PulseAnimationState extends State<PulseAnimation>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  AnimationController? _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: widget.duration, vsync: this);
-    _animation = Tween<double>(
-      begin: widget.minOpacity,
-      end: widget.maxOpacity,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _initializeAnimation();
+  }
 
-    _controller.repeat(reverse: true);
+  void _initializeAnimation() {
+    try {
+      _controller = AnimationController(duration: widget.duration, vsync: this);
+      _animation = Tween<double>(
+        begin: widget.minOpacity,
+        end: widget.maxOpacity,
+      ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeInOut));
+
+      _controller!.repeat(reverse: true);
+    } catch (e) {
+      // 如果动画初始化失败，提供默认值
+      print('PulseAnimation动画初始化失败: $e');
+      _animation = Tween<double>(
+        begin: widget.minOpacity,
+        end: widget.maxOpacity,
+      ).animate(const AlwaysStoppedAnimation<double>(1.0));
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 

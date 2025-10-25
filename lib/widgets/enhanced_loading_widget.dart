@@ -190,28 +190,38 @@ class StatusAnimationWidget extends StatefulWidget {
 
 class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
+  AnimationController? _controller;
   late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _scaleAnim = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
-    _controller.forward();
-    if (widget.displayDuration != null) {
-      Future.delayed(widget.displayDuration!, () {
-        if (mounted) widget.onCompleted?.call();
-      });
+    _initializeAnimation();
+  }
+
+  void _initializeAnimation() {
+    try {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 600),
+      );
+      _scaleAnim = CurvedAnimation(parent: _controller!, curve: Curves.elasticOut);
+      _controller!.forward();
+      if (widget.displayDuration != null) {
+        Future.delayed(widget.displayDuration!, () {
+          if (mounted) widget.onCompleted?.call();
+        });
+      }
+    } catch (e) {
+      // 如果动画初始化失败，提供默认值
+      print('StatusAnimationWidget动画初始化失败: $e');
+      _scaleAnim = const AlwaysStoppedAnimation<double>(1.0);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 

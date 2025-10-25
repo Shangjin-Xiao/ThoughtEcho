@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
@@ -13,82 +14,108 @@ class SlidingCard extends StatefulWidget {
 
 class _SlidingCardState extends State<SlidingCard>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late AnimationController _hoverController;
+  AnimationController? _controller;
+  AnimationController? _hoverController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<double> _hoverScaleAnimation;
   bool _isPressed = false;
   bool _isHovered = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _hoverController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.98,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _opacityAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.85,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _initializeAnimations();
+  }
 
-    // 悬停动画（Material Design 微交互）
-    _hoverScaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
-      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
-    );
+  void _initializeAnimations() {
+    try {
+      _controller = AnimationController(
+        duration: const Duration(milliseconds: 150),
+        vsync: this,
+      );
+      _hoverController = AnimationController(
+        duration: const Duration(milliseconds: 200),
+        vsync: this,
+      );
+      
+      _scaleAnimation = Tween<double>(
+        begin: 1.0,
+        end: 0.98,
+      ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeInOut));
+      _opacityAnimation = Tween<double>(
+        begin: 1.0,
+        end: 0.85,
+      ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeInOut));
+
+      // 悬停动画（Material Design 微交互）
+      _hoverScaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+        CurvedAnimation(parent: _hoverController!, curve: Curves.easeOutCubic),
+      );
+      
+      _isInitialized = true;
+    } catch (e) {
+      // 如果动画初始化失败，提供默认值
+      logError('SlidingCard动画初始化失败: $e');
+      _scaleAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
+        const AlwaysStoppedAnimation<double>(1.0),
+      );
+      _opacityAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
+        const AlwaysStoppedAnimation<double>(1.0),
+      );
+      _hoverScaleAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
+        const AlwaysStoppedAnimation<double>(1.0),
+      );
+      _isInitialized = false;
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _hoverController.dispose();
+    _controller?.dispose();
+    _hoverController?.dispose();
     super.dispose();
   }
 
   void _onTapDown(TapDownDetails details) {
+    if (!_isInitialized) return;
     setState(() {
       _isPressed = true;
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   void _onTapUp(TapUpDetails details) {
+    if (!_isInitialized) return;
     setState(() {
       _isPressed = false;
     });
-    _controller.reverse();
+    _controller?.reverse();
   }
 
   void _onTapCancel() {
+    if (!_isInitialized) return;
     setState(() {
       _isPressed = false;
     });
-    _controller.reverse();
+    _controller?.reverse();
   }
 
   void _onHoverEnter() {
-    if (!_isPressed) {
-      setState(() {
-        _isHovered = true;
-      });
-      _hoverController.forward();
-    }
+    if (!_isInitialized || _isPressed) return;
+    setState(() {
+      _isHovered = true;
+    });
+    _hoverController?.forward();
   }
 
   void _onHoverExit() {
+    if (!_isInitialized) return;
     setState(() {
       _isHovered = false;
     });
-    _hoverController.reverse();
+    _hoverController?.reverse();
   }
 
   @override

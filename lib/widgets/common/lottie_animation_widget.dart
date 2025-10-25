@@ -73,7 +73,7 @@ class LottieAnimationWidget extends StatefulWidget {
 
 class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
+  AnimationController? _controller;
   late AnimationPreset _preset;
   late String _animationPath;
   late bool _shouldRepeat;
@@ -97,32 +97,37 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   }
 
   void _setupController() {
-    _controller = widget.controller ??
-        AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    try {
+      _controller = widget.controller ??
+          AnimationController(vsync: this, duration: const Duration(seconds: 2));
 
-    // 设置播放速度
-    if (widget.speed != null && widget.speed != 1.0) {
-      _controller.duration = Duration(
-        milliseconds:
-            (_controller.duration!.inMilliseconds / widget.speed!).round(),
-      );
-    }
-
-    if (widget.autoPlay) {
-      if (_shouldRepeat) {
-        _controller.repeat();
-      } else {
-        _controller.forward().then((_) {
-          widget.onCompleted?.call();
-        });
+      // 设置播放速度
+      if (widget.speed != null && widget.speed != 1.0 && _controller != null) {
+        _controller!.duration = Duration(
+          milliseconds:
+              (_controller!.duration!.inMilliseconds / widget.speed!).round(),
+        );
       }
+
+      if (widget.autoPlay && _controller != null) {
+        if (_shouldRepeat) {
+          _controller!.repeat();
+        } else {
+          _controller!.forward().then((_) {
+            widget.onCompleted?.call();
+          });
+        }
+      }
+    } catch (e) {
+      // 如果动画初始化失败，记录错误但不影响UI显示
+      print('LottieAnimationWidget动画初始化失败: $e');
     }
   }
 
   @override
   void dispose() {
     if (widget.controller == null) {
-      _controller.dispose();
+      _controller?.dispose();
     }
     super.dispose();
   }
@@ -138,7 +143,7 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
         controller: _controller,
         repeat: _shouldRepeat,
         onLoaded: (composition) {
-          _controller.duration = composition.duration;
+          _controller?.duration = composition.duration;
           widget.onLoaded?.call();
         },
         options:
