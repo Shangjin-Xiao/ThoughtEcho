@@ -138,10 +138,16 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         child: Center(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: _buildPopoverCard(
-              context,
-              PopoverArrowDirection.top,
-              arrowOffset: 110,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 300,
+                maxHeight: 200,
+              ),
+              child: _buildPopoverCard(
+                context,
+                PopoverArrowDirection.top,
+                arrowOffset: 110,
+              ),
             ),
           ),
         ),
@@ -185,10 +191,16 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
             top: positioning['top'] as double,
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: _buildPopoverCard(
-                context,
-                positioning['arrowDirection'] as PopoverArrowDirection,
-                arrowOffset: positioning['arrowOffset'] as double,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 300,
+                  maxHeight: 200,
+                ),
+                child: _buildPopoverCard(
+                  context,
+                  positioning['arrowDirection'] as PopoverArrowDirection,
+                  arrowOffset: positioning['arrowOffset'] as double,
+                ),
               ),
             ),
           ),
@@ -533,7 +545,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
     switch (arrowDirection) {
       case PopoverArrowDirection.top:
-        return IntrinsicWidth(
+        return SizedBox(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,7 +556,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           ),
         );
       case PopoverArrowDirection.bottom:
-        return IntrinsicWidth(
+        return SizedBox(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,7 +567,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           ),
         );
       case PopoverArrowDirection.left:
-        return IntrinsicHeight(
+        return SizedBox(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,7 +578,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           ),
         );
       case PopoverArrowDirection.right:
-        return IntrinsicHeight(
+        return SizedBox(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
