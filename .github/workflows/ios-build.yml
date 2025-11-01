@@ -2,29 +2,110 @@ name: Build iOS IPA (No Codesign)
 
 on:
   workflow_dispatch:
+    inputs:
+      version_name:
+        description: '版本名称 (例如: 1.0.0)'
+        required: true
+        default: '1.0.0'
+  push:
+    branches:
+      - main
+    paths:
+      - 'ios/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/ios-build.yml'
 
 jobs:
   build-ios:
     runs-on: macos-latest
+    
     steps:
-      - name: Checkout code
+      - name: 检出代码
         uses: actions/checkout@v4
-      - name: Set up Flutter
+        
+      - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
-      - name: Install dependencies
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+          
+      - name: Flutter 诊断
+        run: flutter doctor -v
+        
+      - name: 安装依赖
         run: flutter pub get
-      - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
-      - name: Archive app
+        
+      - name: 代码分析
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+        
+      - name: 清理构建缓存
+        run: flutter clean
+        
+      - name: 构建 iOS 应用包 (无签名)
         run: |
-          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -archivePath build/Runner.xcarchive archive
-      - name: Export IPA (no signing)
+          # 如果是手动触发，使用输入的版本号；否则使用默认版本
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            flutter build ios --release --no-codesign --no-tree-shake-icons \
+              --build-number=${{ github.run_number }} \
+              --build-name=${{ github.event.inputs.version_name }}
+          else
+            flutter build ios --release --no-codesign --no-tree-shake-icons \
+              --build-number=${{ github.run_number }}
+          fi
+        
+      - name: 创建未签名的 IPA
         run: |
-          xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath build/ipa || echo "Export may fail without valid plist, this is expected without developer account."
-      - name: Upload IPA artifact
+          mkdir -p build/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ipa/Payload/
+          cd build/ipa
+          zip -r ThoughtEcho-unsigned.ipa Payload
+          cd ../..
+          
+      - name: 上传未签名的 IPA 文件
         uses: actions/upload-artifact@v4
         with:
-          name: ipa
-          path: build/ipa/*.ipa
+          name: ThoughtEcho-iOS-unsigned-${{ github.run_number }}
+          path: build/ipa/ThoughtEcho-unsigned.ipa
+          retention-days: 30
+          
+      - name: 创建构建信息
+        run: |
+          VERSION="${{ github.event.inputs.version_name || '1.0.0' }}"
+          cat > build/ipa/build-info.txt << EOF
+          心迹 ThoughtEcho iOS 构建信息
+          ================================
+          构建日期: $(date '+%Y-%m-%d %H:%M:%S')
+          Flutter 版本: $(flutter --version | head -n 1)
+          应用版本: ${VERSION}+${{ github.run_number }}
+          Bundle ID: com.shangjin.thoughtecho
+          构建编号: ${{ github.run_number }}
+          
+          注意事项:
+          ========
+          这是一个未签名的 IPA 文件。要在真机上安装，您需要：
+          
+          1. 使用您自己的开发者证书进行签名
+          2. 使用第三方工具（如 AltStore, Sideloadly）进行侧载
+          3. 通过 Xcode 直接安装到已配置的测试设备
+          4. 签名后上传到 TestFlight 进行测试
+          
+          如何签名和发布:
+          ==============
+          1. 在 Mac 上安装 Xcode
+          2. 在 Xcode 中打开 ios/Runner.xcworkspace
+          3. 配置您的 Apple Developer 账号和签名证书
+          4. 选择 Product > Archive 创建归档
+          5. 通过 Organizer 上传到 App Store Connect
+          
+          详细文档请参阅: https://flutter.dev/docs/deployment/ios
+          EOF
+          
+      - name: 上传构建信息
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info-${{ github.run_number }}
+          path: build/ipa/build-info.txt
+          retention-days: 30
