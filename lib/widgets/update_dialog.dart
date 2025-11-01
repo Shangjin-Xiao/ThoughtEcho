@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'dart:io' show Platform;
 import '../services/version_check_service.dart';
-import '../services/apk_download_service.dart';
+
+// 条件导入：只在非 Web 平台导入
+import '../services/apk_download_service.dart'
+    if (dart.library.html) '../services/apk_download_service_stub.dart';
 
 /// 更新按钮类型枚举
 enum UpdateButtonType {
@@ -548,8 +551,9 @@ class UpdateBottomSheet extends StatelessWidget {
     VersionInfo versionInfo,
   ) async {
     // 根据平台确定更新按钮的文本和图标
-    final updateButtonLabel = Platform.isWindows ? '前往商店' : '立即更新';
-    final updateButtonIcon = Platform.isWindows ? Icons.store : Icons.download;
+    final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    final updateButtonLabel = isWindows ? '前往商店' : '立即更新';
+    final updateButtonIcon = isWindows ? Icons.store : Icons.download;
 
     // 按钮配置：永久忽略、本次忽略、查看详情、立即更新/前往商店
     final buttons = [
@@ -611,10 +615,13 @@ class UpdateBottomSheet extends StatelessWidget {
     VersionInfo versionInfo,
   ) async {
     // 根据平台选择不同的更新方式
-    if (Platform.isWindows) {
+    final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    
+    if (isWindows) {
       // Windows平台：跳转到Microsoft Store
       await _openMicrosoftStore(context);
-    } else if (Platform.isAndroid) {
+    } else if (isAndroid) {
       // Android平台：下载APK
       if (versionInfo.apkDownloadUrl != null) {
         await ApkDownloadService.downloadAndInstallApk(
