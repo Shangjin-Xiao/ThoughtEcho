@@ -68,6 +68,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   // 新增：流式显示动画控制器
   AnimationController? _animatedTextController;
 
+  // 新增：控制动画是否应该执行的标志
+  bool _shouldAnimateOverview = true;
+  bool _shouldAnimateCards = true;
+  String _dataKey = ''; // 用于跟踪数据版本
+
   // 服务
   AICardGenerationService? _aiCardService;
 
@@ -87,9 +92,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      // 切换tab时清除选中状态
+      // 切换tab时清除选中状态，并禁用动画（因为只是视图切换，数据没变）
       setState(() {
         _selectedCardIndex = null;
+        // Tab切换时不播放动画，保持即时响应
+        _shouldAnimateOverview = false;
+        _shouldAnimateCards = false;
       });
     }
   }
@@ -128,9 +136,17 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       // 根据选择的时间范围筛选笔记
       final filteredQuotes = _filterQuotesByPeriod(quotes);
 
+      // 更新数据版本key，触发动画
+      final newDataKey = '${_selectedPeriod}_${_selectedDate.millisecondsSinceEpoch}';
+      final dataChanged = newDataKey != _dataKey;
+
       setState(() {
         _periodQuotes = filteredQuotes;
         _isLoadingData = false;
+        _dataKey = newDataKey;
+        // 只在数据真正变化时才播放动画
+        _shouldAnimateOverview = dataChanged;
+        _shouldAnimateCards = dataChanged;
       });
 
       // 计算“最多”指标并触发洞察
@@ -938,10 +954,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 20),
 
-          // 统计卡片网格 - 添加淡入动画
+          // 统计卡片网格 - 根据标志决定是否播放动画
           TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 600),
-            tween: Tween(begin: 0.0, end: 1.0),
+            key: ValueKey('stats1_$_dataKey'), // 添加key确保动画只在数据变化时触发
+            duration: _shouldAnimateOverview 
+                ? const Duration(milliseconds: 600)
+                : Duration.zero, // 不动画时立即显示
+            tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
             builder: (context, value, child) {
               return Transform.translate(
                 offset: Offset(0, 20 * (1 - value)),
@@ -964,8 +983,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 12),
           TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 800),
-            tween: Tween(begin: 0.0, end: 1.0),
+            key: ValueKey('stats2_$_dataKey'),
+            duration: _shouldAnimateOverview
+                ? const Duration(milliseconds: 800)
+                : Duration.zero,
+            tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
             builder: (context, value, child) {
               return Transform.translate(
                 offset: Offset(0, 20 * (1 - value)),
@@ -989,10 +1011,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 24),
 
-          // 新增：三个"最多"指标 - 添加淡入动画
+          // 新增：三个"最多"指标 - 根据标志决定是否播放动画
           TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 1000),
-            tween: Tween(begin: 0.0, end: 1.0),
+            key: ValueKey('stats3_$_dataKey'),
+            duration: _shouldAnimateOverview
+                ? const Duration(milliseconds: 1000)
+                : Duration.zero,
+            tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
             builder: (context, value, child) {
               return Transform.translate(
                 offset: Offset(0, 20 * (1 - value)),
@@ -1032,11 +1057,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           _buildInsightBulbBar(),
           const SizedBox(height: 24),
 
-          // 本周期收藏最多（放在洞察下面，最近笔记上面）- 添加动画
+          // 本周期收藏最多（放在洞察下面，最近笔记上面）- 根据标志决定是否播放动画
           if (_periodQuotes.isNotEmpty) ...[
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 800),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('favorites_$_dataKey'),
+              duration: _shouldAnimateOverview
+                  ? const Duration(milliseconds: 800)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
@@ -1050,11 +1078,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             const SizedBox(height: 16),
           ],
 
-          // 最近笔记部分 - 添加动画
+          // 最近笔记部分 - 根据标志决定是否播放动画
           if (_periodQuotes.isNotEmpty) ...[
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 1000),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('recent_$_dataKey'),
+              duration: _shouldAnimateOverview
+                  ? const Duration(milliseconds: 1000)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
@@ -1126,8 +1157,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
       return TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 600),
-        tween: Tween(begin: 0.0, end: 1.0),
+        key: ValueKey('favorites_empty_$_dataKey'),
+        duration: _shouldAnimateOverview
+            ? const Duration(milliseconds: 600)
+            : Duration.zero,
+        tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
         builder: (context, value, child) {
           return Transform.translate(
             offset: Offset(0, 10 * (1 - value)),
@@ -1159,8 +1193,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 500),
-          tween: Tween(begin: 0.0, end: 1.0),
+          key: ValueKey('favorites_title_$_dataKey'),
+          duration: _shouldAnimateOverview
+              ? const Duration(milliseconds: 500)
+              : Duration.zero,
+          tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
           builder: (context, value, child) {
             return Transform.translate(
               offset: Offset(0, 10 * (1 - value)),
@@ -1189,9 +1226,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         const SizedBox(height: 12),
         ...favorited.take(3).map(
               (q) => TweenAnimationBuilder<double>(
-                duration:
-                    Duration(milliseconds: 600 + (favorited.indexOf(q) * 150)),
-                tween: Tween(begin: 0.0, end: 1.0),
+                key: ValueKey('favorite_${q.id}_$_dataKey'),
+                duration: _shouldAnimateOverview
+                    ? Duration(milliseconds: 600 + (favorited.indexOf(q) * 150))
+                    : Duration.zero,
+                tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
                 builder: (context, value, child) {
                   return Transform.translate(
                     offset: Offset(0, 15 * (1 - value)),
@@ -1625,8 +1664,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 800),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('empty1_$_dataKey'),
+              duration: _shouldAnimateOverview
+                  ? const Duration(milliseconds: 800)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.scale(
                   scale: value,
@@ -1646,8 +1688,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             ),
             const SizedBox(height: 16),
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 600),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('empty2_$_dataKey'),
+              duration: _shouldAnimateOverview
+                  ? const Duration(milliseconds: 600)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
@@ -1667,8 +1712,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             ),
             const SizedBox(height: 8),
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 400),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('empty3_$_dataKey'),
+              duration: _shouldAnimateOverview
+                  ? const Duration(milliseconds: 400)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
@@ -1804,8 +1852,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 800),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('cards_empty1_$_dataKey'),
+              duration: _shouldAnimateCards
+                  ? const Duration(milliseconds: 800)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateCards ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.scale(
                   scale: value,
@@ -1822,8 +1873,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             ),
             const SizedBox(height: 16),
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 600),
-              tween: Tween(begin: 0.0, end: 1.0),
+              key: ValueKey('cards_empty2_$_dataKey'),
+              duration: _shouldAnimateCards
+                  ? const Duration(milliseconds: 600)
+                  : Duration.zero,
+              tween: Tween(begin: _shouldAnimateCards ? 0.0 : 1.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
