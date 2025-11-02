@@ -75,7 +75,7 @@ class ColorUtils {
   /// 获取页面背景色
   ///
   /// 根据主题亮度返回合适的背景色：
-  /// - 浅色模式：70%不透明度的surface叠加到白色上
+  /// - 浅色模式：78%不透明度的surface叠加到白色上（较原方案更深一点）
   /// - 深色模式：使用原始surface颜色
   ///
   /// [surfaceColor] 主题的surface颜色
@@ -87,9 +87,9 @@ class ColorUtils {
     if (brightness == Brightness.dark) {
       return surfaceColor;
     }
-    // 浅色模式：70%不透明的surface叠加到白色上，产生带主题色调的浅背景
+    // 浅色模式：78%不透明的surface叠加到白色上，让背景更接近主题色
     return Color.alphaBlend(
-      withOpacitySafe(surfaceColor, 0.7),
+      withOpacitySafe(surfaceColor, 0.78),
       Colors.white,
     );
   }
@@ -97,7 +97,7 @@ class ColorUtils {
   /// 获取卡片背景色
   ///
   /// 根据主题亮度返回合适的卡片背景色：
-  /// - 浅色模式：surface向白色方向混合8%，比页面背景更浅
+  /// - 浅色模式：surface向白色方向混合6%，同步加深每日一言卡片
   /// - 深色模式：使用原始surface颜色
   ///
   /// [surfaceColor] 主题的surface颜色
@@ -109,8 +109,8 @@ class ColorUtils {
     if (brightness == Brightness.dark) {
       return surfaceColor;
     }
-    // 浅色模式：surface向白色偏移8%，产生微妙提亮效果
-    return Color.lerp(surfaceColor, Colors.white, 0.08) ?? surfaceColor;
+    // 浅色模式：surface向白色偏移6%，保持层次同时略微加深
+    return Color.lerp(surfaceColor, Colors.white, 0.06) ?? surfaceColor;
   }
 
   /// 获取记录列表背景色

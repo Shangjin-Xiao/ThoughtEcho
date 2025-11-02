@@ -1153,9 +1153,10 @@ class NoteListViewState extends State<NoteListView> {
                           hintText: '搜索笔记...',
                           isDense: true,
                           filled: true,
-                          fillColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerLowest,
+                          fillColor: ColorUtils.getCardBackgroundColor(
+                            theme.colorScheme.surface,
+                            theme.brightness,
+                          ),
                           prefixIcon: searchController.isSearching
                               ? const SizedBox(
                                   width: 20,
