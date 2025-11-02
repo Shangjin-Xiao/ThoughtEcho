@@ -7,14 +7,6 @@ on:
         description: '版本名称 (例如: 1.0.0)'
         required: true
         default: '1.0.0'
-  push:
-    branches:
-      - main
-    paths:
-      - 'ios/**'
-      - 'lib/**'
-      - 'pubspec.yaml'
-      - '.github/workflows/ios-build.yml'
 
 jobs:
   build-ios:
