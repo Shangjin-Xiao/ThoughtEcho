@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../utils/color_utils.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
@@ -165,9 +166,10 @@ class _SlidingCardState extends State<SlidingCard>
                           AppTheme.cardRadius,
                         ),
                         boxShadow: currentShadow,
-                        color: theme.brightness == Brightness.light
-                            ? Colors.white
-                            : theme.colorScheme.surface,
+                        color: ColorUtils.getCardBackgroundColor(
+                          theme.colorScheme.surface,
+                          theme.brightness,
+                        ),
                         // 微妙的边框效果（Material Design）
                         border: Border.all(
                           color: _isHovered

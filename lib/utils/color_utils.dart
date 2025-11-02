@@ -71,4 +71,67 @@ class ColorUtils {
     // 创建带有新alpha值的颜色
     return color.withAlpha(alpha);
   }
+
+  /// 获取页面背景色
+  ///
+  /// 根据主题亮度返回合适的背景色：
+  /// - 浅色模式：70%不透明度的surface叠加到白色上
+  /// - 深色模式：使用原始surface颜色
+  ///
+  /// [surfaceColor] 主题的surface颜色
+  /// [brightness] 当前主题亮度
+  static Color getPageBackgroundColor(
+    Color surfaceColor,
+    Brightness brightness,
+  ) {
+    if (brightness == Brightness.dark) {
+      return surfaceColor;
+    }
+    // 浅色模式：70%不透明的surface叠加到白色上，产生带主题色调的浅背景
+    return Color.alphaBlend(
+      withOpacitySafe(surfaceColor, 0.7),
+      Colors.white,
+    );
+  }
+
+  /// 获取卡片背景色
+  ///
+  /// 根据主题亮度返回合适的卡片背景色：
+  /// - 浅色模式：surface向白色方向混合8%，比页面背景更浅
+  /// - 深色模式：使用原始surface颜色
+  ///
+  /// [surfaceColor] 主题的surface颜色
+  /// [brightness] 当前主题亮度
+  static Color getCardBackgroundColor(
+    Color surfaceColor,
+    Brightness brightness,
+  ) {
+    if (brightness == Brightness.dark) {
+      return surfaceColor;
+    }
+    // 浅色模式：surface向白色偏移8%，产生微妙提亮效果
+    return Color.lerp(surfaceColor, Colors.white, 0.08) ?? surfaceColor;
+  }
+
+  /// 获取记录列表背景色
+  ///
+  /// 根据主题亮度返回合适的记录列表背景色：
+  /// - 浅色模式：30%不透明度的surface叠加到白色上
+  /// - 深色模式：使用原始surface颜色
+  ///
+  /// [surfaceColor] 主题的surface颜色
+  /// [brightness] 当前主题亮度
+  static Color getNoteListBackgroundColor(
+    Color surfaceColor,
+    Brightness brightness,
+  ) {
+    if (brightness == Brightness.dark) {
+      return surfaceColor;
+    }
+    // 浅色模式：30%不透明的surface叠加到白色上，产生极浅的主题色背景
+    return Color.alphaBlend(
+      withOpacitySafe(surfaceColor, 0.3),
+      Colors.white,
+    );
+  }
 }
