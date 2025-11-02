@@ -26,6 +26,7 @@ import '../services/insight_history_service.dart'; // Import InsightHistoryServi
 import '../utils/lottie_animation_manager.dart';
 import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
+import '../utils/color_utils.dart';
 import '../utils/daily_prompt_generator.dart';
 import '../services/ai_card_generation_service.dart';
 import '../widgets/svg_card_widget.dart';
@@ -1184,10 +1185,13 @@ class _HomePageState extends State<HomePage>
         settingsService.aiSettings.model.isNotEmpty;
 
     // 使用Provider包装搜索控制器，使其子组件可以访问
+    final scaffoldBackgroundColor = ColorUtils.getPageBackgroundColor(
+      theme.colorScheme.surface,
+      theme.brightness,
+    );
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? Colors.white
-          : Theme.of(context).colorScheme.surface,
+      backgroundColor: scaffoldBackgroundColor,
       appBar: _currentIndex == 1
           ? null // 记录页不需要标题栏
           : _currentIndex == 0

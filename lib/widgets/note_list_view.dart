@@ -14,6 +14,7 @@ import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../utils/color_utils.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
@@ -1122,9 +1123,14 @@ class NoteListViewState extends State<NoteListView> {
     // 布局构建
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 主体内容 - 添加白色背景容器
+        // 主体内容 - 使用极浅主题色背景，适配深色模式
+        final backgroundColor = ColorUtils.getNoteListBackgroundColor(
+          theme.colorScheme.surface,
+          theme.brightness,
+        );
+        
         return Container(
-            color: Colors.white, // 固定白色背景，不受主题影响
+            color: backgroundColor,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),
