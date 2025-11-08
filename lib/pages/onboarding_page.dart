@@ -39,9 +39,9 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
-  late OnboardingController _controller;
-  late AnimationController _loadingAnimationController;
-  late Animation<double> _fadeInAnimation;
+  OnboardingController? _controller;
+  AnimationController? _loadingAnimationController;
+  Animation<double>? _fadeInAnimation;
 
   bool _isLoaded = false;
   String? _errorMessage;
@@ -61,19 +61,21 @@ class _OnboardingPageState extends State<OnboardingPage>
         listen: false,
       );
 
-      _controller = OnboardingController(
+      final controller = OnboardingController(
         servicesInitializedNotifier: servicesInitializedNotifier,
       );
-      _controller.initialize(context);
+      _controller = controller;
+      controller.initialize(context);
 
-      _loadingAnimationController = AnimationController(
+      final loadingController = AnimationController(
         duration: const Duration(milliseconds: 800),
         vsync: this,
       );
+      _loadingAnimationController = loadingController;
 
       _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
-          parent: _loadingAnimationController,
+          parent: loadingController,
           curve: Curves.easeOut,
         ),
       );
@@ -90,7 +92,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         setState(() {
           _isLoaded = true;
         });
-        _loadingAnimationController.forward();
+        _loadingAnimationController?.forward();
       }
     } catch (e) {
       logError('初始化引导失败', error: e, source: 'OnboardingPage');
@@ -136,10 +138,8 @@ class _OnboardingPageState extends State<OnboardingPage>
         if (!mounted) return;
 
         // 标记服务初始化完成
-        final servicesInitializedNotifier = Provider.of<ValueNotifier<bool>>(
-          context,
-          listen: false,
-        );
+        final servicesInitializedNotifier =
+            context.read<ValueNotifier<bool>>();
         servicesInitializedNotifier.value = true;
 
         // 短暂延迟后自动跳转到主页
@@ -167,8 +167,8 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   @override
   void dispose() {
-    _controller.dispose();
-    _loadingAnimationController.dispose();
+    _controller?.dispose();
+    _loadingAnimationController?.dispose();
     super.dispose();
   }
 
@@ -254,13 +254,14 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// 更新完成视图
   Widget _buildUpdateCompleteView() {
     final theme = Theme.of(context);
+    final animation = _fadeInAnimation ?? const AlwaysStoppedAnimation(1.0);
 
     return Scaffold(
       body: AnimatedBuilder(
-        animation: _fadeInAnimation,
+        animation: animation,
         builder: (context, child) {
           return Opacity(
-            opacity: _fadeInAnimation.value,
+            opacity: animation.value,
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(40.0),
@@ -310,13 +311,19 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   /// 引导视图
   Widget _buildOnboardingView() {
+    final controller = _controller;
+    if (controller == null) {
+      return _buildErrorView();
+    }
+    final animation = _fadeInAnimation ?? const AlwaysStoppedAnimation(1.0);
+
     return ChangeNotifierProvider.value(
-      value: _controller,
+      value: controller,
       child: AnimatedBuilder(
-        animation: _fadeInAnimation,
+        animation: animation,
         builder: (context, child) {
           return Opacity(
-            opacity: _fadeInAnimation.value,
+            opacity: animation.value,
             child: Consumer<OnboardingController>(
               builder: (context, controller, child) {
                 return Scaffold(
@@ -329,7 +336,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           onPageChanged: controller.onPageChanged,
                           itemCount: OnboardingConfig.totalPages,
                           itemBuilder: (context, index) {
-                            return _buildPageContent(index, controller.state);
+                            return _buildPageContent(index, controller);
                           },
                         ),
 
@@ -354,7 +361,8 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   /// 构建页面内容
-  Widget _buildPageContent(int pageIndex, OnboardingState state) {
+  Widget _buildPageContent(int pageIndex, OnboardingController controller) {
+    final state = controller.state;
     final pageData = OnboardingConfig.getPageData(pageIndex);
 
     switch (pageData.type) {
@@ -366,7 +374,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         return PreferencesPageView(
           pageData: pageData,
           state: state,
-          onPreferenceChanged: _controller.updatePreference,
+          onPreferenceChanged: controller.updatePreference,
         );
       case OnboardingPageType.complete:
         return _buildCompletePage();
@@ -452,8 +460,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 final allValues = options
                                     .map((o) => o.value as String)
                                     .join(',');
-                                _controller.updatePreference(
-                                    'hitokotoTypes', allValues);
+                                controller.updatePreference(
+                                  'hitokotoTypes', allValues);
                               },
                               icon: const Icon(Icons.select_all, size: 16),
                               label: const Text('全选'),
@@ -471,8 +479,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 final firstValue = options.isNotEmpty
                                     ? options.first.value as String
                                     : 'a';
-                                _controller.updatePreference(
-                                    'hitokotoTypes', firstValue);
+                                controller.updatePreference(
+                                  'hitokotoTypes', firstValue);
                               },
                               icon: const Icon(Icons.clear_all, size: 16),
                               label: const Text('清空'),
@@ -510,7 +518,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 }
                               }
                               final newValue = newSelectedValues.join(',');
-                              _controller.updatePreference(
+                                controller.updatePreference(
                                   'hitokotoTypes', newValue);
                             },
                             backgroundColor: theme.colorScheme.surface,
