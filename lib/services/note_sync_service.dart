@@ -15,6 +15,7 @@ import 'package:thoughtecho/models/merge_report.dart';
 import 'package:http/http.dart' as http;
 import 'device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -50,11 +51,16 @@ class NoteSyncService extends ChangeNotifier {
   double _syncProgress = 0.0;
   // UI节流：避免高频notify导致数字跳动与重建闪烁
   DateTime _lastUiNotify = DateTime.fromMillisecondsSinceEpoch(0);
-  // 调整：进一步缩短 UI 通知节流时间以实现更实时的进度更新（用户期望更“实时”）
+  // 调整：进一步缩短 UI 通知节流时间以实现更实时的进度更新（用户期望更"实时"）
   static const int _minUiNotifyIntervalMs = 50; // ~20fps
+  
+  // 速度计算相关（滑动窗口）
+  final List<_SpeedSample> _speedSamples = [];
+  static const int _maxSpeedSamples = 10; // 保留最近10个样本
+  DateTime? _lastProgressTime;
+  int? _lastProgressBytes;
   MergeReport? _lastMergeReport; // 新增：最近一次合并报告
   String? _currentReceiveSessionId; // 当前接收会话ID
-  DateTime? _receiveStartTime;
   String? _receiveSenderAlias;
   int? _pendingReceiveTotalBytes; // 等待审批大小
   bool _awaitingUserApproval = false; // 是否处于接收审批阶段
@@ -63,8 +69,6 @@ class NoteSyncService extends ChangeNotifier {
   bool get awaitingUserApproval => _awaitingUserApproval;
   int? get pendingReceiveTotalBytes => _pendingReceiveTotalBytes;
   bool get awaitingPeerApproval => _awaitingPeerApproval;
-
-  DateTime? _sendStartTime;
   String? _currentSendSessionId; // 当前发送会话ID
 
   // 状态访问器
@@ -148,21 +152,18 @@ class NoteSyncService extends ChangeNotifier {
             // 仅当未进入合并阶段才更新为接收状态，避免覆盖后续合并状态
             if (_syncStatus == SyncStatus.idle ||
                 _syncStatus == SyncStatus.receiving) {
+              final now = DateTime.now();
+              _addSpeedSample(received, now);
+              final speed = _calculateAverageSpeed(); // bytes/s
+              
               String extra = '';
-              if (_receiveStartTime != null) {
-                final elapsed = DateTime.now()
-                        .difference(_receiveStartTime!)
-                        .inMilliseconds /
-                    1000.0;
-                if (elapsed > 0.2) {
-                  final speed = received / 1024 / 1024 / elapsed; // MB/s
-                  final remaining = total - received;
-                  final etaSec =
-                      speed > 0 ? remaining / 1024 / 1024 / speed : 0;
-                  extra =
-                      ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
-                }
+              if (speed > 1024 * 100) { // 速度 > 100KB/s 时才显示
+                final speedMBps = speed / 1024 / 1024;
+                final remaining = total - received;
+                final etaSec = remaining / speed;
+                extra = ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
               }
+              
               _updateSyncStatus(
                 SyncStatus.receiving,
                 '正在接收${_receiveSenderAlias != null ? '（来自$_receiveSenderAlias）' : ''} ${(received / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
@@ -174,13 +175,17 @@ class NoteSyncService extends ChangeNotifier {
         onReceiveSessionCreated: (sid, totalBytes, alias) {
           _currentReceiveSessionId = sid;
           _receiveSenderAlias = alias;
-          _receiveStartTime = DateTime.now();
+          _resetSpeedTracking(); // 重置速度跟踪
           if (_syncStatus == SyncStatus.idle) {
             // 审批前不展示总大小，简化文案
             _updateSyncStatus(SyncStatus.receiving, '等待 $alias 发送数据...', 0.02);
           }
         },
         onApprovalNeeded: (sid, totalBytes, alias) async {
+          // 如果设置了跳过确认,直接批准
+          if (skipSyncConfirmation) {
+            return true;
+          }
           // 进入审批阶段，暂停进度显示（保持接收状态初始progress）
           _awaitingUserApproval = true;
           _pendingReceiveTotalBytes = totalBytes;
@@ -359,6 +364,7 @@ class NoteSyncService extends ChangeNotifier {
       }
 
       // 3. 更新状态：开始发送
+      _resetSpeedTracking(); // 重置速度跟踪
       _updateSyncStatus(SyncStatus.sending, '正在发送到目标设备...', 0.5);
 
       // 4. 发送文件 (使用LocalSend的优质代码)
@@ -370,20 +376,18 @@ class NoteSyncService extends ChangeNotifier {
         onProgress: (sent, total) {
           // 打包阶段占 0-0.5 ，发送阶段占 0.5-0.9，余下 0.9-1.0 为完成收尾
           final ratio = total == 0 ? 0.0 : sent / total;
-          _sendStartTime ??= DateTime.now();
+          final now = DateTime.now();
+          _addSpeedSample(sent, now);
+          final speed = _calculateAverageSpeed(); // bytes/s
+          
           String extra = '';
-          if (_sendStartTime != null) {
-            final now = DateTime.now();
-            final elapsed =
-                now.difference(_sendStartTime!).inMilliseconds / 1000.0;
-            if (elapsed > 0.2) {
-              final speed = sent / 1024 / 1024 / elapsed; // MB/s 总平均
-              final remaining = (total - sent).clamp(0, total);
-              final etaSec = speed > 0 ? remaining / 1024 / 1024 / speed : 0;
-              extra =
-                  ' | ${speed.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
-            }
+          if (speed > 1024 * 100) { // 速度 > 100KB/s 时才显示
+            final speedMBps = speed / 1024 / 1024;
+            final remaining = (total - sent).clamp(0, total);
+            final etaSec = remaining / speed;
+            extra = ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
           }
+          
           final progress = 0.5 + ratio * 0.4; // 线性映射
           _updateSyncStatus(
               SyncStatus.sending,
@@ -421,38 +425,43 @@ class NoteSyncService extends ChangeNotifier {
 
   /// 发送同步意向，返回是否获得对方批准
   Future<bool> _sendSyncIntent(Device target) async {
-    if (skipSyncConfirmation) return true; // 全局跳过确认
+    // 注意：即使本地设置了 skipSyncConfirmation，我们仍然需要发送 intent
+    // 以便接收方知道即将到来的同步，并且接收方可以根据自己的设置决定是否需要审批
     try {
       final uri = Uri.parse(
           'http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent');
       final fp = await DeviceIdentityManager.I.getFingerprint();
-      // 动态 alias：优先使用发现服务中的真实设备型号
+      // 直接使用 discoveryService 的设备型号，它已经正确地从设备信息中获取
       String alias = 'ThoughtEcho';
       try {
-        // 通过 discovery service 找到本机注册的 deviceModel（若可）
         if (_discoveryService != null) {
-          // discovery 服务内部维护 deviceModel，但未暴露；临时通过 toString 不安全，改为在广播中由对方解析
-          // 方案：走一次 announce 所带的 model；这里简化：如果有任意本机广播设备项则取其 deviceModel
-          final self = _discoveryService!.devices.firstWhere(
-            (d) => d.fingerprint == fp,
-            orElse: () => Device(
-              signalingId: null,
-              ip: null,
-              version: '',
-              port: _localSendServer?.port ?? defaultPort,
-              https: false,
-              fingerprint: fp,
-              alias: alias,
-              deviceModel: null,
-              deviceType: DeviceType.desktop,
-              download: false,
-              discoveryMethods: const {},
-            ),
-          );
-          if ((self.deviceModel ?? '').trim().isNotEmpty) {
-            alias = self.deviceModel!.trim();
-          } else if ((self.alias).trim().isNotEmpty) {
-            alias = self.alias.trim();
+          // 先尝试从 _deviceModel 字段（这是真实的设备型号）
+          final reflectModel = await _getDiscoveryDeviceModel();
+          if (reflectModel.isNotEmpty) {
+            alias = reflectModel;
+          } else {
+            // Fallback: 查找本机设备项
+            final self = _discoveryService!.devices.firstWhere(
+              (d) => d.fingerprint == fp,
+              orElse: () => Device(
+                signalingId: null,
+                ip: null,
+                version: '',
+                port: _localSendServer?.port ?? defaultPort,
+                https: false,
+                fingerprint: fp,
+                alias: 'ThoughtEcho',
+                deviceModel: null,
+                deviceType: DeviceType.desktop,
+                download: false,
+                discoveryMethods: const {},
+              ),
+            );
+            if ((self.deviceModel ?? '').trim().isNotEmpty) {
+              alias = self.deviceModel!.trim();
+            } else if ((self.alias).trim().isNotEmpty) {
+              alias = self.alias.trim();
+            }
           }
         }
       } catch (_) {
@@ -461,13 +470,56 @@ class NoteSyncService extends ChangeNotifier {
       final body = jsonEncode({'fingerprint': fp, 'alias': alias});
       final resp = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10)); // 增加超时时间以等待用户审批
       if (resp.statusCode != 200) return true; // 回退：旧版本对方不支持则直接继续
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
       return data['approved'] != false;
     } catch (e) {
-      // 容错：如果对方是旧版本（无该端点）继续旧流程
+      // 容错：如果对方是旧版本（无该端点）或超时，继续旧流程
+      AppLogger.w('发送同步意向失败: $e', error: e, source: 'NoteSyncService');
       return true;
+    }
+  }
+
+  /// 通过反射获取 discoveryService 的真实设备型号
+  Future<String> _getDiscoveryDeviceModel() async {
+    try {
+      // discoveryService 内部有 _deviceModel 字段但未公开
+      // 这里通过一个间接方式：让 discovery 服务暴露该字段或使用公共接口
+      // 临时方案：直接访问（需要添加 getter）
+      // 由于无法直接访问私有字段，改为通过 DeviceInfoPlugin 直接获取
+      if (kIsWeb) return 'Web';
+      
+      final plugin = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final info = await plugin.androidInfo;
+        final brand = info.brand.trim();
+        final m = info.model.trim();
+        return [brand, m].where((e) => e.isNotEmpty).join(' ');
+      } else if (Platform.isIOS) {
+        final info = await plugin.iosInfo;
+        final name = info.name.trim();
+        final machine = info.utsname.machine.trim();
+        return name.isNotEmpty && machine.isNotEmpty
+            ? '$name ($machine)'
+            : (name.isNotEmpty ? name : machine);
+      } else if (Platform.isMacOS) {
+        final info = await plugin.macOsInfo;
+        return info.model.trim().isEmpty ? 'macOS' : info.model.trim();
+      } else if (Platform.isWindows) {
+        final info = await plugin.windowsInfo;
+        return info.computerName.trim().isEmpty
+            ? 'Windows'
+            : info.computerName.trim();
+      } else if (Platform.isLinux) {
+        final info = await plugin.linuxInfo;
+        return info.prettyName.trim().isEmpty
+            ? 'Linux'
+            : info.prettyName.trim();
+      }
+      return Platform.operatingSystem;
+    } catch (e) {
+      return '';
     }
   }
 
@@ -750,6 +802,67 @@ class NoteSyncService extends ChangeNotifier {
     _localSendProvider?.dispose();
     super.dispose();
   }
+
+  /// 计算滑动窗口平均速度 (bytes/second)
+  double _calculateAverageSpeed() {
+    if (_speedSamples.isEmpty) return 0.0;
+    
+    // 移除过期样本（超过5秒的）
+    final now = DateTime.now();
+    _speedSamples.removeWhere((s) => 
+      now.difference(s.timestamp).inMilliseconds > 5000);
+    
+    if (_speedSamples.isEmpty) return 0.0;
+    
+    // 计算总字节数和总时间
+    final totalBytes = _speedSamples.fold<int>(0, (sum, s) => sum + s.bytes);
+    final earliest = _speedSamples.first.timestamp;
+    final latest = _speedSamples.last.timestamp;
+    final duration = latest.difference(earliest).inMilliseconds / 1000.0;
+    
+    if (duration < 0.1) return 0.0; // 避免除以很小的数
+    
+    return totalBytes / duration;
+  }
+
+  /// 添加速度样本
+  void _addSpeedSample(int currentBytes, DateTime timestamp) {
+    if (_lastProgressBytes != null && _lastProgressTime != null) {
+      final deltaBytes = currentBytes - _lastProgressBytes!;
+      if (deltaBytes > 0) {
+        _speedSamples.add(_SpeedSample(
+          bytes: deltaBytes,
+          timestamp: timestamp,
+        ));
+        
+        // 限制样本数量
+        while (_speedSamples.length > _maxSpeedSamples) {
+          _speedSamples.removeAt(0);
+        }
+      }
+    }
+    
+    _lastProgressBytes = currentBytes;
+    _lastProgressTime = timestamp;
+  }
+
+  /// 重置速度跟踪
+  void _resetSpeedTracking() {
+    _speedSamples.clear();
+    _lastProgressTime = null;
+    _lastProgressBytes = null;
+  }
+}
+
+/// 速度样本（用于滑动窗口平均）
+class _SpeedSample {
+  final int bytes;
+  final DateTime timestamp;
+
+  _SpeedSample({
+    required this.bytes,
+    required this.timestamp,
+  });
 }
 
 // CrossFile模型（简化版）

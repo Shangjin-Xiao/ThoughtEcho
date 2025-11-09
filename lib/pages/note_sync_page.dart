@@ -36,6 +36,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   static const int _uiDiscoveryTimeoutMs =
       30000; // 与 defaultDiscoveryTimeout 对齐
   bool _syncDialogVisible = false;
+  String? _currentDialogSessionId; // 当前显示对话框的会话ID，避免重复弹窗
   bool _sendIncludeMedia = true; // 发送时是否包含媒体文件（用户可选）
   // 旧的接收确认弹窗标记已移除；审批与进度合并为单一对话框
 
@@ -791,8 +792,17 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         service.syncStatus == SyncStatus.failed ||
         service.syncStatus == SyncStatus.idle;
 
+    // 生成会话ID：根据当前状态和会话信息
+    String? currentSessionId;
+    if (active) {
+      // 使用实际的会话ID或状态组合作为唯一标识
+      currentSessionId = '${service.syncStatus.name}_${service.awaitingUserApproval}_${service.awaitingPeerApproval}';
+    }
+
+    // 避免重复弹窗：如果已经显示了对话框，且会话ID相同，则不重复弹出
     if (active && !_syncDialogVisible) {
       _syncDialogVisible = true;
+      _currentDialogSessionId = currentSessionId;
       final dialogContext = context;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -985,6 +995,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             s.rejectIncoming();
                             Navigator.of(ctx).pop();
                             _syncDialogVisible = false;
+                            _currentDialogSessionId = null;
                           },
                           child: const Text('拒绝'),
                         ),
@@ -1016,6 +1027,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           onPressed: () {
                             Navigator.of(ctx).pop();
                             _syncDialogVisible = false;
+                            _currentDialogSessionId = null;
                           },
                           child: const Text('关闭'),
                         ),
@@ -1028,6 +1040,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           },
         ).then((_) {
           _syncDialogVisible = false;
+          _currentDialogSessionId = null;
         });
       });
     } else if (terminal && _syncDialogVisible) {
@@ -1141,7 +1154,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     return full.substring(full.length - 6).toUpperCase();
   }
 
-  /// 构建设备名称组件，优先展示设备型号并允许多行展示
+  /// 构建设备名称组件，优先展示设备型号，过长时横向滚动显示
   Widget _buildDeviceName(Device device) {
     final theme = Theme.of(context);
     final alias = device.alias.trim();
@@ -1180,18 +1193,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            displayName,
-            style: titleStyle,
-            softWrap: true,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              displayName,
+              style: titleStyle,
+              maxLines: 1,
+            ),
           ),
           if (showAlias)
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                alias,
-                style: aliasStyle,
-                softWrap: true,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Text(
+                  alias,
+                  style: aliasStyle,
+                  maxLines: 1,
+                ),
               ),
             ),
         ],
