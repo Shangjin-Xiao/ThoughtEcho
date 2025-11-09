@@ -185,6 +185,16 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：安全的数据库访问方法，增加并发控制
   Future<Database> get safeDatabase async {
+    // Web平台使用内存存储，不需要数据库对象
+    if (kIsWeb) {
+      // 确保已初始化
+      if (!_isInitialized) {
+        await init();
+      }
+      // Web平台没有真实数据库，抛出一个标记异常或返回mock
+      throw UnsupportedError('Web平台使用内存存储，不支持数据库访问');
+    }
+    
     // 如果正在初始化，等待初始化完成
     if (_isInitializing && _initCompleter != null) {
       await _initCompleter!.future;
@@ -1093,7 +1103,7 @@ class DatabaseService extends ChangeNotifier {
 
       logDebug('开始删除tag_ids列...');
 
-      // 1. 创建新的quotes表（不包含tag_ids列）
+      // 1. 创建新的quotes表（不包含tag_ids列，但包含favorite_count）
       await txn.execute('''
         CREATE TABLE quotes_new(
           id TEXT PRIMARY KEY,
@@ -1114,23 +1124,25 @@ class DatabaseService extends ChangeNotifier {
           edit_source TEXT,
           delta_content TEXT,
           day_period TEXT,
-          last_modified TEXT
+          last_modified TEXT,
+          favorite_count INTEGER DEFAULT 0
         )
       ''');
 
-      // 2. 复制数据（排除tag_ids列）
+      // 2. 复制数据（排除tag_ids列，保留favorite_count）
       await txn.execute('''
         INSERT INTO quotes_new (
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, weather, temperature, edit_source,
-          delta_content, day_period, last_modified
+          delta_content, day_period, last_modified, favorite_count
         )
         SELECT
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, weather, temperature, edit_source,
-          delta_content, day_period, last_modified
+          delta_content, day_period, last_modified,
+          COALESCE(favorite_count, 0) as favorite_count
         FROM quotes
       ''');
 
@@ -1162,10 +1174,13 @@ class DatabaseService extends ChangeNotifier {
         'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
       );
       await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)',
+      );
+      await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)',
       );
 
-      logDebug('tag_ids列删除完成');
+      logDebug('tag_ids列删除完成，favorite_count字段已保留');
     } catch (e) {
       logError('删除tag_ids列失败: $e', error: e, source: 'DatabaseUpgrade');
       // 不重新抛出异常，让升级继续
@@ -1999,6 +2014,8 @@ class DatabaseService extends ChangeNotifier {
             'editSource': 'edit_source',
             'deltaContent': 'delta_content',
             'dayPeriod': 'day_period',
+            'favoriteCount': 'favorite_count',
+            'lastModified': 'last_modified',
           };
 
           // 应用字段名映射
@@ -3680,9 +3697,12 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       final index = _memoryStore.indexWhere((q) => q.id == quoteId);
       if (index != -1) {
+        final oldCount = _memoryStore[index].favoriteCount;
         _memoryStore[index] = _memoryStore[index].copyWith(
-          favoriteCount: _memoryStore[index].favoriteCount + 1,
+          favoriteCount: oldCount + 1,
         );
+        logDebug('Web平台收藏操作: quoteId=$quoteId, 旧值=$oldCount, 新值=${oldCount + 1}', source: 'IncrementFavorite');
+        
         // 同步更新当前流缓存并推送
         final curIndex = _currentQuotes.indexWhere((q) => q.id == quoteId);
         if (curIndex != -1) {
@@ -3694,34 +3714,53 @@ class DatabaseService extends ChangeNotifier {
           }
         }
         notifyListeners();
+      } else {
+        logWarning('Web平台收藏操作失败: 未找到quoteId=$quoteId', source: 'IncrementFavorite');
       }
       return;
     }
 
     return _executeWithLock('incrementFavorite_$quoteId', () async {
       try {
+        // 记录操作前的状态
+        final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
+        final oldCount = index != -1 ? _currentQuotes[index].favoriteCount : null;
+        logDebug('收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount', source: 'IncrementFavorite');
+        
         final db = await safeDatabase;
         await db.transaction((txn) async {
           // 原子性地增加计数
-          await txn.rawUpdate(
+          final updateCount = await txn.rawUpdate(
             'UPDATE quotes SET favorite_count = favorite_count + 1, last_modified = ? WHERE id = ?',
             [DateTime.now().toUtc().toIso8601String(), quoteId],
           );
+          
+          if (updateCount == 0) {
+            logWarning('收藏操作失败: 数据库中未找到quoteId=$quoteId', source: 'IncrementFavorite');
+          } else {
+            // 查询更新后的值进行验证
+            final result = await txn.rawQuery(
+              'SELECT favorite_count FROM quotes WHERE id = ?',
+              [quoteId],
+            );
+            final newCount = result.isNotEmpty ? (result.first['favorite_count'] as int?) ?? 0 : 0;
+            logInfo('收藏操作成功: quoteId=$quoteId, 旧值=$oldCount, 数据库新值=$newCount', source: 'IncrementFavorite');
+          }
         });
 
         // 更新内存中的笔记列表
-        final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
         if (index != -1) {
           _currentQuotes[index] = _currentQuotes[index].copyWith(
             favoriteCount: _currentQuotes[index].favoriteCount + 1,
           );
+          logDebug('内存缓存已更新: 新值=${_currentQuotes[index].favoriteCount}', source: 'IncrementFavorite');
         }
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
         notifyListeners();
       } catch (e) {
-        logError('增加心形点击次数时出错: $e', error: e, source: 'IncrementFavorite');
+        logError('增加心形点击次数时出错: quoteId=$quoteId, error=$e', error: e, source: 'IncrementFavorite');
         rethrow;
       }
     });
@@ -4944,6 +4983,8 @@ class DatabaseService extends ChangeNotifier {
           'editSource': 'edit_source',
           'deltaContent': 'delta_content',
           'dayPeriod': 'day_period',
+          'favoriteCount': 'favorite_count',
+          'lastModified': 'last_modified',
         };
 
         for (final mapping in fieldMappings.entries) {
