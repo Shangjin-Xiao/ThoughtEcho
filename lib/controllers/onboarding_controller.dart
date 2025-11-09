@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -34,23 +35,31 @@ class OnboardingController extends ChangeNotifier {
 
   /// 初始化控制器
   void initialize(BuildContext context) {
-    final databaseService = context.read<DatabaseService>();
-    final settingsService = context.read<SettingsService>();
-    final mmkvService = context.read<MMKVService>();
-    final clipboardService = context.read<ClipboardService>();
-    final aiAnalysisDbService = context.read<AIAnalysisDatabaseService>();
+    try {
+      final databaseService = context.read<DatabaseService>();
+      final settingsService = context.read<SettingsService>();
+      final mmkvService = context.read<MMKVService>();
+      final clipboardService = context.read<ClipboardService>();
+      final aiAnalysisDbService = context.read<AIAnalysisDatabaseService>();
 
-    _settingsService = settingsService;
-    _clipboardService = clipboardService;
-    _aiAnalysisDbService = aiAnalysisDbService;
-    _databaseService = databaseService;
-    _migrationService = MigrationService(
-      databaseService: databaseService,
-      settingsService: settingsService,
-      mmkvService: mmkvService,
-    );
+      _settingsService = settingsService;
+      _clipboardService = clipboardService;
+      _aiAnalysisDbService = aiAnalysisDbService;
+      _databaseService = databaseService;
+      _migrationService = MigrationService(
+        databaseService: databaseService,
+        settingsService: settingsService,
+        mmkvService: mmkvService,
+      );
 
-    _initializePreferences();
+      _initializePreferences();
+      
+      logDebug('OnboardingController初始化完成', source: 'OnboardingController');
+    } catch (e, stackTrace) {
+      logError('OnboardingController初始化失败', 
+          error: e, stackTrace: stackTrace, source: 'OnboardingController');
+      rethrow;
+    }
   }
 
   /// 初始化偏好设置默认值
@@ -139,8 +148,14 @@ class OnboardingController extends ChangeNotifier {
         }
       }
 
-      // 2. 确保数据库完全初始化并可用
-      await _databaseService.safeDatabase;
+      // 2. 确保数据库完全初始化并可用（Web平台跳过）
+      if (!kIsWeb) {
+        try {
+          await _databaseService.safeDatabase;
+        } catch (e) {
+          logWarning('数据库访问检查失败: $e', source: 'OnboardingController');
+        }
+      }
 
       // 3. 显式通知数据库监听者，确保UI组件能正确订阅数据流
       _databaseService.notifyListeners();

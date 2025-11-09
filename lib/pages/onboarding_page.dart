@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -46,26 +47,54 @@ class _OnboardingPageState extends State<OnboardingPage>
   bool _isLoaded = false;
   String? _errorMessage;
 
+  bool _isInitializing = false;
+
   @override
   void initState() {
     super.initState();
-    _initializeOnboarding();
+    // 不在 initState 中初始化，改在 didChangeDependencies 中
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 确保只初始化一次
+    if (!_isInitializing && !_isLoaded && _errorMessage == null) {
+      _isInitializing = true;
+      // 使用 Future.microtask 确保在当前帧完成后执行
+      Future.microtask(() => _initializeOnboarding());
+    }
   }
 
   /// 初始化引导流程
   Future<void> _initializeOnboarding() async {
     try {
+      if (!mounted) return;
+
       // 获取 servicesInitializedNotifier
-      final servicesInitializedNotifier = Provider.of<ValueNotifier<bool>>(
-        context,
-        listen: false,
-      );
+      ValueNotifier<bool>? servicesInitializedNotifier;
+      try {
+        servicesInitializedNotifier = context.read<ValueNotifier<bool>>();
+      } catch (e) {
+        logError('无法获取servicesInitializedNotifier: $e', 
+            error: e, source: 'OnboardingPage');
+        // 创建临时notifier以继续流程
+        servicesInitializedNotifier = ValueNotifier<bool>(false);
+      }
 
       final controller = OnboardingController(
         servicesInitializedNotifier: servicesInitializedNotifier,
       );
       _controller = controller;
-      controller.initialize(context);
+      
+      // 尝试初始化控制器，如果失败则记录详细错误
+      try {
+        controller.initialize(context);
+      } catch (e, stackTrace) {
+        logError('OnboardingController初始化失败', 
+            error: e, stackTrace: stackTrace, source: 'OnboardingPage');
+        throw Exception('控制器初始化失败: $e');
+      }
 
       final loadingController = AnimationController(
         duration: const Duration(milliseconds: 800),
@@ -84,8 +113,11 @@ class _OnboardingPageState extends State<OnboardingPage>
       if (widget.showUpdateReady && !widget.showFullOnboarding) {
         await _handleUpdateMigration();
       } else {
-        // 延迟加载效果
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Web平台快速加载，其他平台保持延迟效果
+        final loadDelay = kIsWeb 
+            ? const Duration(milliseconds: 100)
+            : const Duration(milliseconds: 500);
+        await Future.delayed(loadDelay);
       }
 
       if (mounted) {
@@ -94,8 +126,9 @@ class _OnboardingPageState extends State<OnboardingPage>
         });
         _loadingAnimationController?.forward();
       }
-    } catch (e) {
-      logError('初始化引导失败', error: e, source: 'OnboardingPage');
+    } catch (e, stackTrace) {
+      logError('初始化引导失败', error: e, stackTrace: stackTrace, 
+          source: 'OnboardingPage');
       if (mounted) {
         setState(() {
           _errorMessage = '初始化失败，请重试';
