@@ -91,15 +91,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
-      // 切换tab时清除选中状态，并禁用动画（因为只是视图切换，数据没变）
-      setState(() {
+    setState(() {
+      if (_tabController.indexIsChanging) {
+        // 切换tab时清除选中状态，并禁用动画（因为只是视图切换，数据没变）
         _selectedCardIndex = null;
         // Tab切换时不播放动画，保持即时响应
         _shouldAnimateOverview = false;
         _shouldAnimateCards = false;
-      });
-    }
+      }
+    });
   }
 
   @override
