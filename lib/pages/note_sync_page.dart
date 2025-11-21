@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
@@ -7,6 +8,110 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 // 网络测速入口已根据用户需求隐藏，相关 import 注释保留以便未来恢复
 // import 'package:thoughtecho/utils/sync_network_tester.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
+
+class _AutoScrollText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const _AutoScrollText(this.text, {this.style});
+
+  @override
+  State<_AutoScrollText> createState() => _AutoScrollTextState();
+}
+
+class _AutoScrollTextState extends State<_AutoScrollText> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isAnimating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoScroll());
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoScrollText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text || oldWidget.style != widget.style) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      _isAnimating = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoScroll());
+    }
+  }
+
+  Future<void> _startAutoScroll() async {
+    if (!mounted) return;
+    if (_isAnimating) return;
+    _isAnimating = true;
+
+    try {
+      while (mounted) {
+        if (!_scrollController.hasClients) {
+          await Future.delayed(const Duration(seconds: 1));
+          continue;
+        }
+
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (maxScroll <= 0) {
+          _isAnimating = false;
+          return;
+        }
+
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) break;
+
+        // 速度：每秒 30 像素
+        final duration = Duration(milliseconds: (maxScroll * 30).toInt());
+        if (_scrollController.hasClients) {
+          await _scrollController.animateTo(
+            maxScroll,
+            duration: duration,
+            curve: Curves.linear,
+          );
+        }
+        if (!mounted) break;
+
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) break;
+
+        if (_scrollController.hasClients) {
+          await _scrollController.animateTo(
+            0,
+            duration: duration,
+            curve: Curves.linear,
+          );
+        }
+      }
+    } catch (e) {
+      // 忽略动画中断等异常
+    } finally {
+      if (mounted) _isAnimating = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Text(
+        widget.text,
+        style: widget.style,
+        softWrap: false,
+        maxLines: 1,
+      ),
+    );
+  }
+}
 
 /// 笔记同步页面
 ///
@@ -1193,24 +1298,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              displayName,
-              style: titleStyle,
-              maxLines: 1,
-            ),
+          _AutoScrollText(
+            displayName,
+            style: titleStyle,
           ),
           if (showAlias)
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Text(
-                  alias,
-                  style: aliasStyle,
-                  maxLines: 1,
-                ),
+              child: _AutoScrollText(
+                alias,
+                style: aliasStyle,
               ),
             ),
         ],
@@ -1220,3 +1317,4 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   // 平台标签显示已移除
 }
+
