@@ -62,6 +62,41 @@ void main() {
       expect(SyncStatus.values.contains(SyncStatus.completed), true);
       expect(SyncStatus.values.contains(SyncStatus.failed), true);
     });
+
+    test('接收取消后重新接收应刷新状态与进度', () {
+      final backupService = MockBackupService();
+      final databaseService = MockDatabaseService();
+      final settingsService = MockSettingsService();
+      final aiService = MockAIAnalysisDatabaseService();
+
+      final syncService = NoteSyncService(
+        backupService: backupService,
+        databaseService: databaseService,
+        settingsService: settingsService,
+        aiAnalysisDbService: aiService,
+      );
+
+      syncService.debugHandleReceiveSessionCreated(
+        'session-a',
+        1024,
+        '设备A',
+      );
+      expect(syncService.syncStatus, SyncStatus.receiving);
+
+      syncService.cancelReceiving();
+      expect(syncService.syncStatus, SyncStatus.failed);
+
+      syncService.debugHandleReceiveSessionCreated(
+        'session-b',
+        2048,
+        '设备B',
+      );
+      expect(syncService.syncStatus, SyncStatus.receiving);
+
+      syncService.debugHandleReceiveProgress(1024, 2048);
+      expect(syncService.syncStatus, SyncStatus.receiving);
+      expect(syncService.syncProgress, greaterThan(0.05));
+    });
   });
 }
 

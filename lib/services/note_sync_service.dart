@@ -145,42 +145,8 @@ class NoteSyncService extends ChangeNotifier {
           // 文件接收完毕后开始处理合并
           await processSyncPackage(filePath);
         },
-        onReceiveProgress: (received, total) {
-          // 接收端进度：0-100% 映射到 receiving 状态的 0-0.9，剩余0.9-1.0给合并阶段
-          if (total > 0) {
-            final ratio = received / total;
-            // 仅当未进入合并阶段才更新为接收状态，避免覆盖后续合并状态
-            if (_syncStatus == SyncStatus.idle ||
-                _syncStatus == SyncStatus.receiving) {
-              final now = DateTime.now();
-              _addSpeedSample(received, now);
-              final speed = _calculateAverageSpeed(); // bytes/s
-              
-              String extra = '';
-              if (speed > 1024 * 100) { // 速度 > 100KB/s 时才显示
-                final speedMBps = speed / 1024 / 1024;
-                final remaining = total - received;
-                final etaSec = remaining / speed;
-                extra = ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
-              }
-              
-              _updateSyncStatus(
-                SyncStatus.receiving,
-                '正在接收${_receiveSenderAlias != null ? '（来自$_receiveSenderAlias）' : ''} ${(received / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
-                0.05 + ratio * 0.75, // 留出空间给合并
-              );
-            }
-          }
-        },
-        onReceiveSessionCreated: (sid, totalBytes, alias) {
-          _currentReceiveSessionId = sid;
-          _receiveSenderAlias = alias;
-          _resetSpeedTracking(); // 重置速度跟踪
-          if (_syncStatus == SyncStatus.idle) {
-            // 审批前不展示总大小，简化文案
-            _updateSyncStatus(SyncStatus.receiving, '等待 $alias 发送数据...', 0.02);
-          }
-        },
+        onReceiveProgress: _handleReceiveProgress,
+        onReceiveSessionCreated: _handleReceiveSessionCreated,
         onApprovalNeeded: (sid, totalBytes, alias) async {
           // 如果设置了跳过确认,直接批准
           if (skipSyncConfirmation) {
@@ -852,6 +818,74 @@ class NoteSyncService extends ChangeNotifier {
     _lastProgressTime = null;
     _lastProgressBytes = null;
   }
+
+  bool _isReceiveEligibleState() {
+    return _syncStatus == SyncStatus.idle ||
+        _syncStatus == SyncStatus.receiving ||
+        _syncStatus == SyncStatus.failed ||
+        _syncStatus == SyncStatus.completed;
+  }
+
+  void _handleReceiveSessionCreated(
+    String sessionId,
+    int totalBytes,
+    String senderAlias,
+  ) {
+    _currentReceiveSessionId = sessionId;
+    _receiveSenderAlias = senderAlias;
+    _pendingReceiveTotalBytes = totalBytes > 0 ? totalBytes : null;
+    _resetSpeedTracking();
+
+    if (_isReceiveEligibleState()) {
+      final displayAlias = senderAlias.isEmpty ? '对方' : senderAlias;
+      _updateSyncStatus(
+        SyncStatus.receiving,
+        '等待 $displayAlias 发送数据...',
+        0.02,
+      );
+    } else {
+      // 仍然需要同步 alias 信息供 UI 展示
+      notifyListeners();
+    }
+  }
+
+  void _handleReceiveProgress(int received, int total) {
+    if (total <= 0) {
+      return;
+    }
+    if (!_isReceiveEligibleState()) {
+      return;
+    }
+
+    final ratio = received / total;
+    final now = DateTime.now();
+    _addSpeedSample(received, now);
+    final speed = _calculateAverageSpeed();
+
+    String extra = '';
+    if (speed > 1024 * 100) {
+      final speedMBps = speed / 1024 / 1024;
+      final remaining = total - received;
+      final etaSec = remaining / speed;
+      extra =
+          ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
+    }
+
+    _updateSyncStatus(
+      SyncStatus.receiving,
+      '正在接收${_receiveSenderAlias != null ? '（来自$_receiveSenderAlias）' : ''} ${(received / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
+      0.05 + ratio * 0.75,
+    );
+  }
+
+  @visibleForTesting
+  void debugHandleReceiveSessionCreated(
+          String sessionId, int totalBytes, String senderAlias) =>
+      _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
+
+  @visibleForTesting
+  void debugHandleReceiveProgress(int received, int total) =>
+      _handleReceiveProgress(received, total);
 }
 
 /// 速度样本（用于滑动窗口平均）
