@@ -75,13 +75,11 @@ jobs:
           cat android/gradle.properties
           
           # 构建APK，明确指定32位和64位架构
+          # 移除 --no-shrink 和 --no-obfuscate，使用 build.gradle 中的配置
           flutter build apk --release \
             --target-platform=android-arm,android-arm64 \
             --build-number=${{ github.run_number }} \
-            --build-name=${{ github.event.inputs.version_name }} \
-            --no-shrink \
-            --no-obfuscate \
-            --android-skip-build-dependency-validation
+            --build-name=${{ github.event.inputs.version_name }}
 
       - name: 上传APK
         uses: actions/upload-artifact@v4
