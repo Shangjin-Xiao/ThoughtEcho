@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/gestures.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
@@ -141,8 +140,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   static const int _uiDiscoveryTimeoutMs =
       30000; // 与 defaultDiscoveryTimeout 对齐
   bool _syncDialogVisible = false;
-  String? _currentDialogSessionId; // 当前显示对话框的会话ID，避免重复弹窗
   bool _sendIncludeMedia = true; // 发送时是否包含媒体文件（用户可选）
+  bool _dialogWasTerminal = false; // 标记当前对话框是否停留在终态
+  bool _dialogRestartPending = false; // 避免终态->活跃切换时重复重建
   // 旧的接收确认弹窗标记已移除；审批与进度合并为单一对话框
 
   // 还原模式枚举（备份还原页中支持 LWW 合并导入，此处复用时可参考）
@@ -884,6 +884,258 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     );
   }
 
+  void _showSyncDialog() {
+    if (!mounted || _syncDialogVisible) return;
+
+    _syncDialogVisible = true;
+    _dialogWasTerminal = false;
+    final dialogContext = context;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog(
+        context: dialogContext,
+        barrierDismissible: false,
+        builder: (ctx) {
+          return StatefulBuilder(builder: (ctx, setLocal) {
+            return Consumer<NoteSyncService>(
+              builder: (context, s, _) {
+                final progress = s.syncProgress.clamp(0.0, 1.0);
+                final waitingPeer = s.awaitingPeerApproval;
+                final waitingUser = s.awaitingUserApproval;
+                final inProgress = s.syncStatus == SyncStatus.packaging ||
+                    s.syncStatus == SyncStatus.sending ||
+                    s.syncStatus == SyncStatus.receiving ||
+                    s.syncStatus == SyncStatus.merging;
+
+                final bool isFailure = s.syncStatus == SyncStatus.failed;
+                final bool isSuccess = s.syncStatus == SyncStatus.completed;
+
+                String titleText;
+                IconData titleIcon;
+                Color? titleColor;
+
+                if (waitingUser) {
+                  titleText = '接收同步请求';
+                  titleIcon = Icons.handshake;
+                  titleColor = Theme.of(context).colorScheme.primary;
+                } else if (waitingPeer) {
+                  titleText = '等待对方确认';
+                  titleIcon = Icons.handshake_outlined;
+                  titleColor = Theme.of(context).colorScheme.primary;
+                } else if (isFailure) {
+                  titleText = _getSyncStatusText(s.syncStatus);
+                  titleIcon = Icons.error_outline;
+                  titleColor = Colors.red;
+                } else if (isSuccess) {
+                  titleText = _getSyncStatusText(s.syncStatus);
+                  titleIcon = Icons.check_circle_outline;
+                  titleColor = Colors.green;
+                } else {
+                  titleText = _getSyncStatusText(s.syncStatus);
+                  titleIcon = Icons.sync;
+                  titleColor = Theme.of(context).colorScheme.primary;
+                }
+
+                final String percentLabel = waitingPeer || waitingUser
+                    ? '等待'
+                    : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
+                final double? progressValue =
+                    waitingPeer || waitingUser ? null : progress;
+                final String progressMessage = waitingPeer
+                    ? '已向目标设备发送同步请求，请在对方确认后继续。'
+                    : s.syncStatusMessage;
+
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+                  actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  title: Row(
+                    children: [
+                      Icon(titleIcon, color: titleColor, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          titleText,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                  content: SizedBox(
+                    width: 360,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  minHeight: 8,
+                                  value: progressValue,
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              percentLabel,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (waitingUser)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 20,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        '设备 "${s.receiveSenderAlias ?? '对方'}" 想同步笔记',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          height: 1.4,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              CheckboxListTile(
+                                value: s.skipSyncConfirmation,
+                                onChanged: (v) async {
+                                  await s.setSkipSyncConfirmation(v ?? false);
+                                  setLocal(() {});
+                                },
+                                dense: true,
+                                contentPadding: const EdgeInsets.only(left: 0),
+                                title: const Text('以后不再提示',
+                                    style: TextStyle(fontSize: 13)),
+                                subtitle: const Text(
+                                  '将自动接受来自其他设备的同步请求',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              progressMessage,
+                              style: const TextStyle(fontSize: 14, height: 1.3),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    if (waitingUser) ...[
+                      TextButton(
+                        onPressed: () {
+                          s.rejectIncoming();
+                          _dismissSyncDialog();
+                        },
+                        child: const Text('拒绝'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          s.approveIncoming();
+                        },
+                        child: const Text('接受'),
+                      ),
+                    ] else if (inProgress &&
+                        (s.syncStatus == SyncStatus.sending ||
+                            s.syncStatus == SyncStatus.receiving)) ...[
+                      TextButton(
+                        onPressed: () {
+                          if (s.syncStatus == SyncStatus.sending) {
+                            s.cancelOngoingSend();
+                          } else if (s.syncStatus == SyncStatus.receiving) {
+                            s.cancelReceiving();
+                          }
+                        },
+                        child: Text(
+                          s.syncStatus == SyncStatus.receiving
+                              ? '取消接收'
+                              : '取消发送',
+                        ),
+                      ),
+                    ] else if (!inProgress && !waitingPeer) ...[
+                      TextButton(
+                        onPressed: _dismissSyncDialog,
+                        child: const Text('关闭'),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            );
+          });
+        },
+      ).then((_) {
+        _syncDialogVisible = false;
+        _dialogWasTerminal = false;
+        _dialogRestartPending = false;
+      });
+    });
+  }
+
+  void _dismissSyncDialog() {
+    if (!_syncDialogVisible) return;
+    _syncDialogVisible = false;
+    _dialogWasTerminal = false;
+    if (!mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
   void _maybeShowOrHideSyncDialog(NoteSyncService service) {
     // 统一：审批 + 进度 合并为一个弹窗
     final active = service.awaitingUserApproval ||
@@ -897,261 +1149,39 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         service.syncStatus == SyncStatus.failed ||
         service.syncStatus == SyncStatus.idle;
 
-    // 生成会话ID：根据当前状态和会话信息
-    String? currentSessionId;
     if (active) {
-      // 使用实际的会话ID或状态组合作为唯一标识
-      currentSessionId = '${service.syncStatus.name}_${service.awaitingUserApproval}_${service.awaitingPeerApproval}';
-    }
-
-    // 避免重复弹窗：如果已经显示了对话框，且会话ID相同，则不重复弹出
-    if (active && !_syncDialogVisible) {
-      _syncDialogVisible = true;
-      _currentDialogSessionId = currentSessionId;
-      final dialogContext = context;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        showDialog(
-          context: dialogContext,
-          barrierDismissible: false,
-          builder: (ctx) {
-            return StatefulBuilder(builder: (ctx, setLocal) {
-              return Consumer<NoteSyncService>(
-                builder: (context, s, _) {
-                  final progress = s.syncProgress.clamp(0.0, 1.0);
-                  final waitingPeer = s.awaitingPeerApproval;
-                  final waitingUser = s.awaitingUserApproval;
-                  final inProgress = s.syncStatus == SyncStatus.packaging ||
-                      s.syncStatus == SyncStatus.sending ||
-                      s.syncStatus == SyncStatus.receiving ||
-                      s.syncStatus == SyncStatus.merging;
-
-                  final bool isFailure = s.syncStatus == SyncStatus.failed;
-                  final bool isSuccess = s.syncStatus == SyncStatus.completed;
-
-                  String titleText;
-                  IconData titleIcon;
-                  Color? titleColor;
-
-                  if (waitingUser) {
-                    titleText = '接收同步请求';
-                    titleIcon = Icons.handshake;
-                    titleColor = Theme.of(context).colorScheme.primary;
-                  } else if (waitingPeer) {
-                    titleText = '等待对方确认';
-                    titleIcon = Icons.handshake_outlined;
-                    titleColor = Theme.of(context).colorScheme.primary;
-                  } else if (isFailure) {
-                    titleText = _getSyncStatusText(s.syncStatus);
-                    titleIcon = Icons.error_outline;
-                    titleColor = Colors.red;
-                  } else if (isSuccess) {
-                    titleText = _getSyncStatusText(s.syncStatus);
-                    titleIcon = Icons.check_circle_outline;
-                    titleColor = Colors.green;
-                  } else {
-                    titleText = _getSyncStatusText(s.syncStatus);
-                    titleIcon = Icons.sync;
-                    titleColor = Theme.of(context).colorScheme.primary;
-                  }
-
-                  final String percentLabel = waitingPeer || waitingUser
-                      ? '等待'
-                      : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
-                  final double? progressValue =
-                      waitingPeer || waitingUser ? null : progress;
-                  final String progressMessage = waitingPeer
-                      ? '已向目标设备发送同步请求，请在对方确认后继续。'
-                      : s.syncStatusMessage;
-
-                  return AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                    contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-                    actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    title: Row(
-                      children: [
-                        Icon(titleIcon, color: titleColor, size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            titleText,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 18),
-                          ),
-                        ),
-                      ],
-                    ),
-                    content: SizedBox(
-                      width: 360,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(
-                                    minHeight: 8,
-                                    value: progressValue,
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                percentLabel,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (waitingUser)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer
-                                        .withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        size: 20,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          '设备 "${s.receiveSenderAlias ?? '对方'}" 想同步笔记',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            height: 1.4,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                CheckboxListTile(
-                                  value: s.skipSyncConfirmation,
-                                  onChanged: (v) async {
-                                    await s.setSkipSyncConfirmation(v ?? false);
-                                    setLocal(() {});
-                                  },
-                                  dense: true,
-                                  contentPadding:
-                                      const EdgeInsets.only(left: 0),
-                                  title: const Text('以后不再提示',
-                                      style: TextStyle(fontSize: 13)),
-                                  subtitle: const Text(
-                                    '将自动接受来自其他设备的同步请求',
-                                    style: TextStyle(fontSize: 11),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest
-                                    .withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                progressMessage,
-                                style:
-                                    const TextStyle(fontSize: 14, height: 1.3),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      if (waitingUser) ...[
-                        TextButton(
-                          onPressed: () {
-                            s.rejectIncoming();
-                            Navigator.of(ctx).pop();
-                            _syncDialogVisible = false;
-                            _currentDialogSessionId = null;
-                          },
-                          child: const Text('拒绝'),
-                        ),
-                        FilledButton(
-                          onPressed: () {
-                            s.approveIncoming();
-                          },
-                          child: const Text('接受'),
-                        ),
-                      ] else if (inProgress &&
-                          (s.syncStatus == SyncStatus.sending ||
-                              s.syncStatus == SyncStatus.receiving)) ...[
-                        TextButton(
-                          onPressed: () {
-                            if (s.syncStatus == SyncStatus.sending) {
-                              s.cancelOngoingSend();
-                            } else if (s.syncStatus == SyncStatus.receiving) {
-                              s.cancelReceiving();
-                            }
-                          },
-                          child: Text(
-                            s.syncStatus == SyncStatus.receiving
-                                ? '取消接收'
-                                : '取消发送',
-                          ),
-                        ),
-                      ] else if (!inProgress && !waitingPeer) ...[
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            _syncDialogVisible = false;
-                            _currentDialogSessionId = null;
-                          },
-                          child: const Text('关闭'),
-                        ),
-                      ],
-                    ],
-                  );
-                },
-              );
+      if (_syncDialogVisible) {
+        if (_dialogWasTerminal && !_dialogRestartPending) {
+          _dialogRestartPending = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _dismissSyncDialog();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                _dialogRestartPending = false;
+                return;
+              }
+              final latestService = context.read<NoteSyncService>();
+              final stillActive = latestService.awaitingUserApproval ||
+                  latestService.awaitingPeerApproval ||
+                  latestService.syncStatus == SyncStatus.packaging ||
+                  latestService.syncStatus == SyncStatus.sending ||
+                  latestService.syncStatus == SyncStatus.receiving ||
+                  latestService.syncStatus == SyncStatus.merging;
+              _dialogRestartPending = false;
+              if (stillActive) {
+                _showSyncDialog();
+              }
             });
-          },
-        ).then((_) {
-          _syncDialogVisible = false;
-          _currentDialogSessionId = null;
-        });
-      });
+          });
+        } else {
+          _dialogWasTerminal = false;
+        }
+      } else if (!_dialogRestartPending) {
+        _showSyncDialog();
+      }
     } else if (terminal && _syncDialogVisible) {
-      // 终态：更新对话框为可关闭状态（不立即强制关闭，给用户查看结果）
+      _dialogWasTerminal = true;
       if (service.syncStatus == SyncStatus.completed) {
-        // 成功提示
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('同步完成'), duration: Duration(seconds: 2)),
         );
@@ -1163,8 +1193,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               duration: const Duration(seconds: 3)),
         );
       }
-      // 不再自动关闭，由用户点击“关闭”按钮手动关闭，保留结果供查看
-      // 终态，无额外操作
     }
   }
 
