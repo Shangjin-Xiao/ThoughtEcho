@@ -6,7 +6,6 @@ import '../theme/app_theme.dart';
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
-import '../utils/color_utils.dart'; // Import color_utils
 import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
@@ -234,6 +233,15 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           ) // Ensure alpha for hex string
         : theme.colorScheme.surfaceContainerLowest;
 
+    // 修复深色模式下自定义颜色卡片的对比度问题
+    // 计算卡片背景的亮度，决定内容颜色
+    final bool isLightCard = ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
+    final Color baseContentColor = isLightCard ? Colors.black : Colors.white;
+    
+    final Color primaryTextColor = baseContentColor.withValues(alpha: 0.9);
+    final Color secondaryTextColor = baseContentColor.withValues(alpha: 0.7);
+    final Color iconColor = baseContentColor.withValues(alpha: 0.65);
+
     // Determine the text color based on the card color
 
     // 格式化日期和时间段
@@ -287,9 +295,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   Text(
                     formattedDate,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.applyOpacity(
-                        0.7,
-                      ), // MODIFIED
+                      color: secondaryTextColor,
                     ),
                   ),
                   if (quote.location != null || quote.weather != null)
@@ -300,10 +306,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           Icon(
                             Icons.location_on,
                             size: 14,
-                            color: theme.colorScheme.secondary.applyOpacity(
-                              // MODIFIED
-                              0.7,
-                            ),
+                            color: iconColor,
                           ),
                           const SizedBox(width: 2),
                           Text(
@@ -313,7 +316,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                     : quote.location!.split(',')[2]) // 只有城市
                                 : quote.location!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.secondary,
+                              color: secondaryTextColor,
                               fontSize: 12,
                             ),
                           ),
@@ -324,16 +327,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           Icon(
                             _getWeatherIcon(quote.weather!),
                             size: 14,
-                            color: theme.colorScheme.secondary.applyOpacity(
-                              // MODIFIED
-                              0.7,
-                            ),
+                            color: iconColor,
                           ),
                           const SizedBox(width: 2),
                           Text(
                             '${WeatherService.getWeatherDescription(quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.secondary,
+                              color: secondaryTextColor,
                               fontSize: 12,
                             ),
                           ),
@@ -400,7 +400,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       quote: quote,
                                       style: innerTheme.textTheme.bodyLarge
                                           ?.copyWith(
-                                        color: innerTheme.colorScheme.onSurface,
+                                        color: primaryTextColor,
                                         height: 1.5,
                                       ),
                                       showFullContent: showFullContent,
@@ -526,9 +526,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     quote.sourceWork ?? '',
                   ),
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.75,
-                    ), // MODIFIED
+                    color: secondaryTextColor,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -539,9 +537,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 child: Text(
                   quote.source!,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.75,
-                    ), // MODIFIED
+                    color: secondaryTextColor,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -557,7 +553,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     Icon(
                       Icons.label_outline,
                       size: 16,
-                      color: theme.colorScheme.onSurface.applyOpacity(0.6),
+                      color: iconColor,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -597,18 +593,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                               horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: isFilteredTag
-                                                ? theme.colorScheme.primary
-                                                    .applyOpacity(0.18)
-                                                : theme.colorScheme.primary
-                                                    .applyOpacity(0.12),
+                                                ? baseContentColor.withValues(alpha: 0.15)
+                                                : baseContentColor.withValues(alpha: 0.08),
                                             borderRadius:
                                                 BorderRadius.circular(14),
                                             border: Border.all(
                                               color: isFilteredTag
-                                                  ? theme.colorScheme.primary
-                                                      .withValues(alpha: 0.6)
-                                                  : theme.colorScheme.primary
-                                                      .withValues(alpha: 0.3),
+                                                  ? baseContentColor.withValues(alpha: 0.4)
+                                                  : baseContentColor.withValues(alpha: 0.15),
                                               width: isFilteredTag ? 1.0 : 0.5,
                                             ),
                                           ),
@@ -631,8 +623,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                     IconUtils.getIconData(
                                                         tag.iconName!),
                                                     size: 12,
-                                                    color: theme
-                                                        .colorScheme.primary,
+                                                    color: secondaryTextColor,
                                                   ),
                                                   const SizedBox(width: 3),
                                                 ],
@@ -642,7 +633,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                 style: theme.textTheme.bodySmall
                                                     ?.copyWith(
                                                   color:
-                                                      theme.colorScheme.primary,
+                                                      secondaryTextColor,
                                                   fontSize: 11,
                                                   fontWeight: isFilteredTag
                                                       ? FontWeight.w600
@@ -682,8 +673,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                 size: 20,
                                 color: quote.favoriteCount > 0
                                     ? Colors.red.shade400
-                                    : theme.colorScheme.onSurface
-                                        .applyOpacity(0.6),
+                                    : iconColor,
                               ),
                               if (quote.favoriteCount > 0)
                                 Positioned(
@@ -730,7 +720,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_vert,
-                      color: theme.colorScheme.onSurface.applyOpacity(0.7),
+                      color: iconColor,
                     ),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
