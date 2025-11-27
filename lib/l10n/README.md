@@ -6,6 +6,8 @@
 
 - `app_zh.arb` - 中文翻译模板（主模板）
 - `app_en.arb` - 英文翻译
+
+生成的国际化代码位于 `lib/gen_l10n/` 目录：
 - `app_localizations.dart` - 生成的国际化代码（自动生成，勿手动修改）
 - `app_localizations_zh.dart` - 生成的中文实现（自动生成，勿手动修改）
 - `app_localizations_en.dart` - 生成的英文实现（自动生成，勿手动修改）
@@ -44,7 +46,7 @@ flutter gen-l10n
 1. 首先导入生成的本地化文件：
 
 ```dart
-import 'package:thoughtecho/l10n/app_localizations.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 ```
 
 2. 在 Widget 中使用：
@@ -110,6 +112,7 @@ Text(l10n.welcomeMessage('张三'))
 - `template-arb-file`: 主模板文件
 - `output-localization-file`: 生成的输出文件名
 - `output-class`: 生成的类名
+- `output-dir`: 生成文件的输出目录
 - `preferred-supported-locales`: 首选语言顺序
 
 ## 重新生成代码
@@ -121,6 +124,30 @@ flutter gen-l10n
 ```
 
 或者在运行 `flutter run` 或 `flutter build` 时会自动生成。
+
+## 测试中使用
+
+在 widget 测试中使用本地化：
+
+```dart
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+testWidgets('my test', (WidgetTester tester) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: MyWidget(),
+    ),
+  );
+  // ...
+});
+```
 
 ## 注意事项
 
