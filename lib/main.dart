@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 // 国际化
-import 'l10n/app_localizations.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 // 第三方包
 import 'package:dynamic_color/dynamic_color.dart';
