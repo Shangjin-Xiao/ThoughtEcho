@@ -158,6 +158,8 @@ msix_config:
   
 # 字体配置
 flutter:
+  # 启用国际化代码生成
+  generate: true
   # 确保应用可以使用Material Design图标
   uses-material-design: true
   assets:
