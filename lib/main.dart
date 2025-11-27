@@ -784,7 +784,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             FlutterQuillLocalizations.delegate,
           ],
           supportedLocales: S.supportedLocales,
-          locale: null, // 跟随系统语言
+          locale: null, // null 表示自动检测系统语言设置
         );
       },
     );
