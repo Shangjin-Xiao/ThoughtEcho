@@ -1,0 +1,13 @@
+{
+  "@@locale": "zh",
+  "appTitle": "心迹",
+  "cancel": "取消",
+  "confirm": "确定",
+  "delete": "删除",
+  "save": "保存",
+  "edit": "编辑",
+  "search": "搜索",
+  "settings": "设置",
+  "loading": "加载中...",
+  "retry": "重试"
+}
