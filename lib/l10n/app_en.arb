@@ -1,0 +1,16 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2024-01-01T00:00:00.000Z",
+  
+  "appTitle": "ThoughtEcho",
+  "ok": "OK",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "settings": "Settings",
+  "loading": "Loading...",
+  "error": "Error",
+  "retry": "Retry",
+  "confirm": "Confirm"
+}

@@ -1,0 +1,59 @@
+{
+  "@@locale": "zh",
+  "@@last_modified": "2024-01-01T00:00:00.000Z",
+  
+  "appTitle": "心迹",
+  "@appTitle": {
+    "description": "应用名称"
+  },
+  
+  "ok": "确定",
+  "@ok": {
+    "description": "确定按钮文本"
+  },
+  
+  "cancel": "取消",
+  "@cancel": {
+    "description": "取消按钮文本"
+  },
+  
+  "save": "保存",
+  "@save": {
+    "description": "保存按钮文本"
+  },
+  
+  "delete": "删除",
+  "@delete": {
+    "description": "删除按钮文本"
+  },
+  
+  "edit": "编辑",
+  "@edit": {
+    "description": "编辑按钮文本"
+  },
+  
+  "settings": "设置",
+  "@settings": {
+    "description": "设置页面标题"
+  },
+  
+  "loading": "加载中...",
+  "@loading": {
+    "description": "加载提示文本"
+  },
+  
+  "error": "错误",
+  "@error": {
+    "description": "错误提示标题"
+  },
+  
+  "retry": "重试",
+  "@retry": {
+    "description": "重试按钮文本"
+  },
+  
+  "confirm": "确认",
+  "@confirm": {
+    "description": "确认按钮文本"
+  }
+}

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:thoughtecho/l10n/app_localizations.dart';
 
 // 第三方包
 import 'package:dynamic_color/dynamic_color.dart';
@@ -775,13 +776,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                           initialPage:
                               settingsService.appSettings.defaultStartPage,
                         ),
-          localizationsDelegates: const [
+          localizationsDelegates: [
+            S.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
             FlutterQuillLocalizations.delegate,
           ],
-          supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
+          supportedLocales: S.supportedLocales,
+          locale: null, // 跟随系统语言
         );
       },
     );
