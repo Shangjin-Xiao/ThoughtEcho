@@ -754,6 +754,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     final bool hasCompletedOnboarding =
         settingsService.hasCompletedOnboarding();
 
+    // 获取用户设置的语言，null 表示跟随系统
+    final localeCode = settingsService.localeCode;
+    final Locale? locale = localeCode != null ? Locale(localeCode) : null;
+
     // 使用 DynamicColorBuilder 以支持动态取色功能
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -768,6 +772,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,
           debugShowCheckedModeBanner: false,
+          locale: locale,
           home: widget.showUpdateReady
               ? const OnboardingPage(showUpdateReady: true)
               : !hasCompletedOnboarding

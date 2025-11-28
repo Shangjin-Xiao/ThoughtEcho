@@ -500,6 +500,8 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
+                // 语言设置
+                _buildLanguageItem(context),
                 // 二级页面入口：偏好设置
                 ListTile(
                   key: _preferencesGuideKey, // 功能引导 key
@@ -891,6 +893,65 @@ class SettingsPageState extends State<SettingsPage> {
       );
 
   // 相关设置已移动到“偏好设置”二级页面
+
+  // 构建语言设置项
+  Widget _buildLanguageItem(BuildContext context) {
+    final settingsService = Provider.of<SettingsService>(context);
+    final currentLocale = settingsService.localeCode;
+    
+    String getLanguageName(String? code) {
+      switch (code) {
+        case 'zh':
+          return '简体中文';
+        case 'en':
+          return 'English';
+        default:
+          return '跟随系统';
+      }
+    }
+
+    return ListTile(
+      title: const Text('语言 / Language'),
+      subtitle: Text(getLanguageName(currentLocale)),
+      leading: const Icon(Icons.language),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('选择语言 / Select Language'),
+            content: StatefulBuilder(
+              builder: (context, setState) {
+                return RadioGroup<String?>(
+                  groupValue: currentLocale,
+                  onChanged: (value) async {
+                    await settingsService.setLocale(value);
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      RadioListTile<String?>(
+                        title: Text('跟随系统 / Follow System'),
+                        value: null,
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('简体中文'),
+                        value: 'zh',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('English'),
+                        value: 'en',
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   // 构建默认启动页面设置项
   Widget _buildDefaultStartPageItem(BuildContext context) {

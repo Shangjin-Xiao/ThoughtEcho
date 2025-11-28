@@ -216,6 +216,12 @@ class OnboardingController extends ChangeNotifier {
       // 获取当前应用设置
       final currentSettings = _settingsService.appSettings;
 
+      // 获取语言设置（空字符串转换为 null 表示跟随系统）
+      final localeCodeValue = _state.getPreference<String>('localeCode');
+      final localeCode = (localeCodeValue == null || localeCodeValue.isEmpty) 
+          ? null 
+          : localeCodeValue;
+
       // 构建新的设置对象
       final newSettings = currentSettings.copyWith(
         defaultStartPage: _state.getPreference<int>('defaultStartPage'),
@@ -231,6 +237,8 @@ class OnboardingController extends ChangeNotifier {
         useLocalQuotesOnly: _state.getPreference<bool>('useLocalOnly') ?? false,
         aiCardGenerationEnabled:
             _state.getPreference<bool>('aiCardGenerationEnabled') ?? true,
+        localeCode: localeCode,
+        clearLocale: localeCode == null,
       );
 
       // 更新应用设置
