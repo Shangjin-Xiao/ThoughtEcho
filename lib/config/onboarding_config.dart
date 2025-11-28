@@ -55,8 +55,31 @@ class OnboardingConfig {
     ),
   ];
 
-  // 偏好设置列表（顺序：每日一言类型、位置服务、默认启动页面）
+  // 偏好设置列表（顺序：语言、每日一言类型、位置服务、默认启动页面）
   static final List<OnboardingPreference<dynamic>> preferences = [
+    // 0. 语言选择（放在最前面）
+    const OnboardingPreference<String>(
+      key: 'localeCode',
+      title: '语言 / Language',
+      description: '选择应用显示语言',
+      defaultValue: '', // 空字符串表示跟随系统
+      type: OnboardingPreferenceType.radio,
+      options: [
+        OnboardingPreferenceOption<String>(
+          value: '',
+          label: '跟随系统 / Follow System',
+        ),
+        OnboardingPreferenceOption<String>(
+          value: 'zh',
+          label: '简体中文',
+        ),
+        OnboardingPreferenceOption<String>(
+          value: 'en',
+          label: 'English',
+        ),
+      ],
+    ),
+
     // 1. 每日一言类型选择
     OnboardingPreference<String>(
       key: 'hitokotoTypes',

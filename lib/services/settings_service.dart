@@ -87,6 +87,20 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 语言设置：获取当前语言代码（null 表示跟随系统）
+  String? get localeCode => _appSettings.localeCode;
+
+  /// 设置语言代码，null 表示跟随系统
+  Future<void> setLocale(String? localeCode) async {
+    if (localeCode == null) {
+      _appSettings = _appSettings.copyWith(clearLocale: true);
+    } else {
+      _appSettings = _appSettings.copyWith(localeCode: localeCode);
+    }
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

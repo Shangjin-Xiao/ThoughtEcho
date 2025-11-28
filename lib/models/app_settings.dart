@@ -9,6 +9,7 @@ class AppSettings {
   final bool prioritizeBoldContentInCollapse; // 新增：折叠时优先显示加粗内容
   final bool showFavoriteButton; // 新增：是否显示心形按钮
   final bool useLocalQuotesOnly; // 新增：仅使用本地笔记作为一言，不请求API
+  final String? localeCode; // 新增：语言代码，null 表示跟随系统
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -21,6 +22,7 @@ class AppSettings {
     this.prioritizeBoldContentInCollapse = false, // 默认关闭优先显示加粗内容
     this.showFavoriteButton = true, // 默认显示心形按钮
     this.useLocalQuotesOnly = false, // 默认允许请求一言API
+    this.localeCode, // 默认跟随系统
   });
 
   Map<String, dynamic> toJson() {
@@ -34,7 +36,8 @@ class AppSettings {
       'todayThoughtsUseAI': todayThoughtsUseAI,
       'prioritizeBoldContentInCollapse': prioritizeBoldContentInCollapse,
       'showFavoriteButton': showFavoriteButton,
-      'useLocalQuotesOnly': useLocalQuotesOnly, // 新增
+      'useLocalQuotesOnly': useLocalQuotesOnly,
+      'localeCode': localeCode,
     };
   }
 
@@ -50,7 +53,8 @@ class AppSettings {
       prioritizeBoldContentInCollapse:
           map['prioritizeBoldContentInCollapse'] ?? false,
       showFavoriteButton: map['showFavoriteButton'] ?? true,
-      useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false, // 新增
+      useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false,
+      localeCode: map['localeCode'] as String?,
     );
   }
 
@@ -64,9 +68,11 @@ class AppSettings {
         todayThoughtsUseAI: true,
         prioritizeBoldContentInCollapse: false,
         showFavoriteButton: true,
-        useLocalQuotesOnly: false, // 新增
+        useLocalQuotesOnly: false,
+        localeCode: null, // 默认跟随系统
       );
 
+  /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
     String? hitokotoType,
     bool? clipboardMonitoringEnabled,
@@ -77,7 +83,9 @@ class AppSettings {
     bool? todayThoughtsUseAI,
     bool? prioritizeBoldContentInCollapse,
     bool? showFavoriteButton,
-    bool? useLocalQuotesOnly, // 新增
+    bool? useLocalQuotesOnly,
+    String? localeCode,
+    bool clearLocale = false, // 新增：是否清除 localeCode（设置为跟随系统）
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -93,7 +101,8 @@ class AppSettings {
       prioritizeBoldContentInCollapse: prioritizeBoldContentInCollapse ??
           this.prioritizeBoldContentInCollapse,
       showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton,
-      useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly, // 新增
+      useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
+      localeCode: clearLocale ? null : (localeCode ?? this.localeCode),
     );
   }
 }

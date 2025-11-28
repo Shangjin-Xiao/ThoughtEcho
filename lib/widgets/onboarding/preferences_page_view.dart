@@ -278,10 +278,27 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value = widget.state.getPreference<int>(preference.key) ??
-        preference.defaultValue as int;
     final options = preference.options ?? [];
+    
+    // 根据默认值类型判断是 int 还是 String
+    if (preference.defaultValue is int) {
+      final value = widget.state.getPreference<int>(preference.key) ??
+          preference.defaultValue as int;
+      return _buildRadioPreferenceInt(preference, theme, value, options);
+    } else {
+      // String 类型的 radio（例如语言选择）
+      final value = widget.state.getPreference<String>(preference.key) ??
+          preference.defaultValue as String;
+      return _buildRadioPreferenceString(preference, theme, value, options);
+    }
+  }
 
+  Widget _buildRadioPreferenceInt(
+    OnboardingPreference<dynamic> preference,
+    ThemeData theme,
+    int value,
+    List<OnboardingPreferenceOption<dynamic>> options,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -314,6 +331,67 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 children: options.map((option) {
                   return RadioListTile<int>(
                     value: option.value as int,
+                    title: Text(option.label),
+                    subtitle: option.description != null
+                        ? Text(
+                            option.description!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                          )
+                        : null,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: theme.colorScheme.primary,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioPreferenceString(
+    OnboardingPreference<dynamic> preference,
+    ThemeData theme,
+    String value,
+    List<OnboardingPreferenceOption<dynamic>> options,
+  ) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              preference.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              preference.description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 16),
+            RadioGroup<String>(
+              groupValue: value,
+              onChanged: (newValue) {
+                if (newValue != null) {
+                  widget.onPreferenceChanged(preference.key, newValue);
+                }
+              },
+              child: Column(
+                children: options.map((option) {
+                  return RadioListTile<String>(
+                    value: option.value as String,
                     title: Text(option.label),
                     subtitle: option.description != null
                         ? Text(
