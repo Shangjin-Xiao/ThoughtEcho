@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/settings_service.dart';
@@ -235,9 +236,10 @@ class SettingsPageState extends State<SettingsPage> {
     final locationService = context.watch<LocationService>();
     final theme = Theme.of(context);
 
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设置'),
+        title: Text(l10n.settingsTitle),
         // actions: [
         //   PopupMenuButton<String>(
         //     icon: const Icon(Icons.analytics_outlined),
@@ -293,9 +295,9 @@ class SettingsPageState extends State<SettingsPage> {
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                const ListTile(
-                  title: Text('位置与天气设置'),
-                  leading: Icon(Icons.location_on),
+                ListTile(
+                  title: Text(l10n.settingsLocationWeather),
+                  leading: const Icon(Icons.location_on),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -306,13 +308,13 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SwitchListTile(
-                  title: const Text('使用位置服务'),
+                  title: Text(l10n.settingsUseLocationService),
                   subtitle: Text(
                     locationService.hasLocationPermission
                         ? (locationService.isLocationServiceEnabled
-                            ? '已获得权限并启用'
-                            : '已获得权限但服务未启用')
-                        : '未获得位置权限',
+                            ? l10n.settingsLocationEnabled
+                            : l10n.settingsLocationPermissionOnly)
+                        : l10n.settingsLocationNoPermission,
                     style: TextStyle(
                       fontSize: 12,
                       color: locationService.hasLocationPermission &&
@@ -330,8 +332,8 @@ class SettingsPageState extends State<SettingsPage> {
                       if (!permissionGranted) {
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('无法获取位置权限'),
+                            SnackBar(
+                              content: Text(l10n.locationPermissionDenied),
                               duration: AppConstants.snackBarDurationError,
                             ),
                           );
@@ -349,15 +351,13 @@ class SettingsPageState extends State<SettingsPage> {
                           showDialog(
                             context: currentContext,
                             builder: (context) => AlertDialog(
-                              title: const Text('请启用位置服务'),
-                              content: const Text(
-                                '心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。',
-                              ),
+                              title: Text(l10n.enableLocationService),
+                              content: Text(l10n.enableLocationServiceDesc),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(currentContext),
-                                  child: const Text('取消'),
+                                  child: Text(l10n.cancel),
                                 ),
                                 TextButton(
                                   onPressed: () async {
@@ -368,7 +368,7 @@ class SettingsPageState extends State<SettingsPage> {
                                     await Geolocator.openLocationSettings();
                                     if (!mounted) return; // Add this check
                                   },
-                                  child: const Text('去设置'),
+                                  child: Text(l10n.goToSettings),
                                 ),
                               ],
                             ),
@@ -379,9 +379,9 @@ class SettingsPageState extends State<SettingsPage> {
 
                       if (mounted && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('正在获取位置...'),
-                            duration: Duration(seconds: 2),
+                          SnackBar(
+                            content: Text(l10n.gettingLocation),
+                            duration: const Duration(seconds: 2),
                           ),
                         );
                       }
@@ -395,8 +395,8 @@ class SettingsPageState extends State<SettingsPage> {
                           );
                           scaffoldMessenger.removeCurrentSnackBar();
                           scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('位置服务已启用，位置已更新'),
+                            SnackBar(
+                              content: Text(l10n.locationServiceEnabled),
                               duration: AppConstants.snackBarDurationImportant,
                             ),
                           );
@@ -413,8 +413,8 @@ class SettingsPageState extends State<SettingsPage> {
                           );
                           scaffoldMessenger.removeCurrentSnackBar();
                           scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('无法获取当前位置'),
+                            SnackBar(
+                              content: Text(l10n.cannotGetLocation),
                               duration: AppConstants.snackBarDurationError,
                             ),
                           );
@@ -425,8 +425,8 @@ class SettingsPageState extends State<SettingsPage> {
                       if (context.mounted) {
                         final scaffoldMessenger = ScaffoldMessenger.of(context);
                         scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('位置服务已禁用'),
+                          SnackBar(
+                            content: Text(l10n.locationServiceDisabled),
                             duration: AppConstants.snackBarDurationNormal,
                           ),
                         );
@@ -446,7 +446,7 @@ class SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '设置显示位置',
+                        l10n.settingsSetLocation,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -454,7 +454,7 @@ class SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 8.0),
                       ElevatedButton.icon(
                         icon: const Icon(Icons.search),
-                        label: const Text('搜索并选择城市'),
+                        label: Text(l10n.settingsSearchCity),
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
                         ),
@@ -464,7 +464,7 @@ class SettingsPageState extends State<SettingsPage> {
                       ),
                       const SizedBox(height: 8.0),
                       Text(
-                        '当前显示位置: ${locationService.currentAddress ?? '未设置'}',
+                        '${l10n.settingsCurrentLocation}: ${locationService.currentAddress ?? l10n.settingsNotSet}',
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurface.withAlpha(
@@ -488,9 +488,9 @@ class SettingsPageState extends State<SettingsPage> {
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                const ListTile(
-                  title: Text('应用设置'),
-                  leading: Icon(Icons.settings),
+                ListTile(
+                  title: Text(l10n.settingsAppSettings),
+                  leading: const Icon(Icons.settings),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -505,8 +505,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 二级页面入口：偏好设置
                 ListTile(
                   key: _preferencesGuideKey, // 功能引导 key
-                  title: const Text('偏好设置'),
-                  subtitle: const Text('个性化选项与AI功能'),
+                  title: Text(l10n.settingsPreferences),
+                  subtitle: Text(l10n.settingsPreferencesDesc),
                   leading: const Icon(Icons.tune),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -524,8 +524,8 @@ class SettingsPageState extends State<SettingsPage> {
 
                 ListTile(
                   key: _themeGuideKey, // 功能引导 key
-                  title: const Text('主题设置'),
-                  subtitle: const Text('自定义应用的外观主题'),
+                  title: Text(l10n.settingsTheme),
+                  subtitle: Text(l10n.settingsThemeDesc),
                   leading: const Icon(Icons.color_lens_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -538,8 +538,8 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: const Text('AI设置'),
-                  subtitle: const Text('配置AI分析所需的API信息和多服务商管理'),
+                  title: Text(l10n.settingsAI),
+                  subtitle: Text(l10n.settingsAIDesc),
                   leading: const Icon(Icons.auto_awesome),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -552,10 +552,8 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: const Text('一言设置'),
-                  subtitle: const Text(
-                    '自定义"每日一言"的类型',
-                  ), // Keep original subtitle
+                  title: Text(l10n.settingsHitokoto),
+                  subtitle: Text(l10n.settingsHitokotoDesc),
                   leading: const Icon(Icons.format_quote_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -570,8 +568,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 移至偏好设置页
                 // Add Logs Settings entry below
                 ListTile(
-                  title: const Text('日志设置'),
-                  subtitle: const Text('配置应用日志记录级别'),
+                  title: Text(l10n.settingsLogs),
+                  subtitle: Text(l10n.settingsLogsDesc),
                   leading: const Icon(
                     Icons.article_outlined,
                   ), // 或者 Icons.bug_report_outlined
@@ -631,7 +629,7 @@ class SettingsPageState extends State<SettingsPage> {
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: const Text('关闭'),
+                                child: Text(l10n.close),
                               ),
                             ],
                           ),
@@ -650,8 +648,8 @@ class SettingsPageState extends State<SettingsPage> {
                 ],
                 // 存储管理
                 ListTile(
-                  title: const Text('存储管理'),
-                  subtitle: const Text('查看存储占用，清理缓存与无用文件'),
+                  title: Text(l10n.settingsStorage),
+                  subtitle: Text(l10n.settingsStorageDesc),
                   leading: const Icon(Icons.storage_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -672,9 +670,9 @@ class SettingsPageState extends State<SettingsPage> {
             margin: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                const ListTile(
-                  title: Text('内容管理'),
-                  leading: Icon(Icons.category),
+                ListTile(
+                  title: Text(l10n.settingsContentManagement),
+                  leading: const Icon(Icons.category),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -685,8 +683,8 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 ListTile(
-                  title: const Text('标签管理'),
-                  subtitle: const Text('添加、编辑或删除笔记标签'),
+                  title: Text(l10n.settingsTags),
+                  subtitle: Text(l10n.settingsTagsDesc),
                   leading: const Icon(Icons.label_outline),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -699,8 +697,8 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: const Text('备份与恢复'),
-                  subtitle: const Text('备份数据或从备份中恢复'),
+                  title: Text(l10n.settingsBackup),
+                  subtitle: Text(l10n.settingsBackupDesc),
                   leading: const Icon(Icons.backup_outlined),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -713,8 +711,8 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: const Text('笔记同步'),
-                  subtitle: const Text('与附近设备同步笔记数据'),
+                  title: Text(l10n.settingsSync),
+                  subtitle: Text(l10n.settingsSyncDesc),
                   leading: const Icon(Icons.sync),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -737,7 +735,7 @@ class SettingsPageState extends State<SettingsPage> {
               children: [
                 // --- 修改：关于标题 ListTile，点击弹出包含链接的对话框 ---
                 ListTile(
-                  title: const Text('关于 心迹 (ThoughtEcho)'),
+                  title: Text(l10n.settingsAbout),
                   leading: const Icon(Icons.info_outline),
                   trailing: const Icon(Icons.chevron_right), // 添加箭头指示可点击
                   onTap: () {
@@ -745,7 +743,7 @@ class SettingsPageState extends State<SettingsPage> {
                     showDialog(
                       context: context,
                       builder: (dialogContext) => AlertDialog(
-                        title: const Text('关于 心迹 (ThoughtEcho)'),
+                        title: Text(l10n.settingsAbout),
                         content: SingleChildScrollView(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -771,19 +769,19 @@ class SettingsPageState extends State<SettingsPage> {
                                 },
                               ),
                               const SizedBox(height: 12),
-                              const Text('你的专属灵感摘录本'),
+                              Text(l10n.settingsAboutSlogan),
                               const SizedBox(height: 20),
                               _buildAboutLink(
                                 context: context,
                                 icon: Icons.code_outlined,
-                                text: '查看项目源码 (GitHub)',
+                                text: l10n.settingsViewSource,
                                 url: _projectUrl,
                               ),
                               const SizedBox(height: 8),
                               _buildAboutLink(
                                 context: context,
                                 icon: Icons.language_outlined,
-                                text: '访问官网',
+                                text: l10n.settingsVisitWebsite,
                                 url: _websiteUrl,
                               ),
                               const SizedBox(height: 16),
@@ -799,7 +797,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   );
                                 },
                                 icon: const Icon(Icons.article_outlined),
-                                label: const Text('查看许可证信息'),
+                                label: Text(l10n.settingsViewLicenses),
                                 style: _primaryButtonStyle(context),
                               ),
                             ],
@@ -809,7 +807,7 @@ class SettingsPageState extends State<SettingsPage> {
                           TextButton(
                             style: _textButtonStyle(dialogContext),
                             onPressed: () => Navigator.pop(dialogContext),
-                            child: const Text('关闭'),
+                            child: Text(l10n.close),
                           ),
                         ],
                       ),
@@ -830,12 +828,12 @@ class SettingsPageState extends State<SettingsPage> {
 
                 // 检查更新 ListTile
                 ListTile(
-                  title: const Text('检查更新'),
+                  title: Text(l10n.settingsCheckUpdate),
                   subtitle: _updateCheckMessage != null
                       ? Text(_updateCheckMessage!,
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.error))
-                      : const Text('检查是否有新版本可用'),
+                      : Text(l10n.settingsCheckUpdateDesc),
                   leading: _isCheckingUpdate
                       ? const SizedBox(
                           width: 24,
@@ -958,17 +956,18 @@ class SettingsPageState extends State<SettingsPage> {
     // 从 SettingsService 获取设置
     final settingsService = Provider.of<SettingsService>(context);
     final currentValue = settingsService.appSettings.defaultStartPage;
+    final l10n = AppLocalizations.of(context);
 
     return ListTile(
       key: _startupPageGuideKey, // 功能引导 key
-      title: const Text('默认启动页面'),
-      subtitle: Text(currentValue == 0 ? '首页（每日一言）' : '记录（笔记列表）'),
+      title: Text(l10n.settingsDefaultStartPage),
+      subtitle: Text(currentValue == 0 ? l10n.settingsStartPageHome : l10n.settingsStartPageNotes),
       leading: const Icon(Icons.home_outlined),
       onTap: () {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('选择默认启动页面'),
+          builder: (dialogContext) => AlertDialog(
+            title: Text(l10n.settingsSelectStartPage),
             content: StatefulBuilder(
               builder: (context, setState) {
                 return RadioGroup<int>(
@@ -980,18 +979,18 @@ class SettingsPageState extends State<SettingsPage> {
                           defaultStartPage: value,
                         ),
                       );
-                      Navigator.pop(context);
+                      Navigator.pop(dialogContext);
                     }
                   },
-                  child: const Column(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       RadioListTile<int>(
-                        title: Text('首页（每日一言）'),
+                        title: Text(l10n.settingsStartPageHome),
                         value: 0,
                       ),
                       RadioListTile<int>(
-                        title: Text('记录（笔记列表）'),
+                        title: Text(l10n.settingsStartPageNotes),
                         value: 1,
                       ),
                     ],

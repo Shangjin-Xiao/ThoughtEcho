@@ -29,6 +29,7 @@ import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
 import '../utils/daily_prompt_generator.dart';
 import '../services/ai_card_generation_service.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../widgets/svg_card_widget.dart';
 import '../models/generated_card.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1585,7 +1586,7 @@ class _HomePageState extends State<HomePage>
                     Icons.home,
                     color: theme.colorScheme.primary,
                   ),
-                  label: '首页',
+                  label: AppLocalizations.of(context).navHome,
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.book_outlined),
@@ -1593,7 +1594,7 @@ class _HomePageState extends State<HomePage>
                     Icons.book,
                     color: theme.colorScheme.primary,
                   ),
-                  label: '记录',
+                  label: AppLocalizations.of(context).navNotes,
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.auto_awesome_outlined),
@@ -1601,7 +1602,7 @@ class _HomePageState extends State<HomePage>
                     Icons.auto_awesome,
                     color: theme.colorScheme.primary,
                   ),
-                  label: '洞察',
+                  label: AppLocalizations.of(context).navInsights,
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.settings_outlined),
@@ -1609,7 +1610,7 @@ class _HomePageState extends State<HomePage>
                     Icons.settings,
                     color: theme.colorScheme.primary,
                   ),
-                  label: '设置',
+                  label: AppLocalizations.of(context).navSettings,
                 ),
               ],
             ),

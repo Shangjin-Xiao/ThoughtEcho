@@ -146,5 +146,179 @@
   "error": "错误",
   "success": "成功",
   "warning": "警告",
-  "info": "信息"
+  "info": "信息",
+  
+  "cannotOpenLink": "无法打开链接: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "检查更新失败: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermission": "无法获取位置权限",
+  "logDebugInfo": "日志调试信息",
+  "logDebugInfoDesc": "显示日志数据库状态和路径信息",
+  "databaseStatus": "数据库状态:",
+  "logStatistics": "日志统计:",
+  "getDebugInfoFailed": "获取调试信息失败: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAIReport": "正在生成AI年度报告...",
+  "generateReportFailed": "生成年度报告失败",
+  "aiReturnedEmpty": "AI返回了空内容，请重试",
+  "pleaseConfigureApiKey": "请先在AI设置中配置有效的API Key",
+  "networkError": "网络连接异常，请检查网络后重试",
+  "aiQuotaExceeded": "AI服务配额不足，请稍后重试",
+  "generateAIReportFailed": "生成AI年度报告失败",
+  "getDataFailed": "获取数据失败",
+  "testingAIReport": "正在测试AI年度报告...",
+  "testResult": "测试结果",
+  "contentLength": "内容长度：{length}字符",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "htmlFormat": "HTML格式：{status}",
+  "@htmlFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "jsonFormat": "JSON格式：{status}",
+  "@jsonFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "containsHtmlTags": "包含HTML标签：{status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "前100字符：",
+  "viewReport": "查看报告",
+  "testFailed": "测试失败：{error}",
+  "@testFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testFailedEmpty": "测试失败：AI返回了空内容",
+  "testFailedApiKey": "测试失败：请先在AI设置中配置有效的API Key",
+  "testFailedNetwork": "测试失败：网络连接异常",
+  "testInitFailed": "测试初始化失败",
+  "followSystem": "跟随系统",
+  
+  "navHome": "首页",
+  "navNotes": "记录",
+  "navInsights": "洞察",
+  "navSettings": "设置",
+  
+  "appTitleOffline": "心迹 - 无网络",
+  "loadingDataPleaseWait": "正在加载数据，请稍等...",
+  "noTagsAvailable": "暂无标签数据",
+  
+  "deleteNote": "删除笔记",
+  "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
+  "noteDeleted": "笔记已删除",
+  
+  "favorited": "已珍藏 ({count})",
+  "@favorited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "favoriteFailed": "收藏失败，请重试",
+  
+  "aiCardServiceNotInitialized": "AI卡片服务未初始化",
+  "generateCardFailed": "生成卡片失败: {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "generatingShareImage": "正在生成分享图片...",
+  "cardSharedSuccessfully": "卡片分享成功",
+  "shareFailed": "分享失败: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "savingCardToGallery": "正在保存卡片到相册...",
+  "cardSavedToGallery": "卡片已保存到相册: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "保存失败: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "view": "查看",
+  
+  "todayThoughts": "今日思考",
+  "loadingTodayThoughts": "正在加载今日思考...",
+  "fetchingDefaultPrompt": "正在获取默认提示...",
+  "waitingForTodayThoughts": "等待今日思考...",
+  "noTodayThoughts": "暂无今日思考",
+  
+  "cannotOpenFullEditor": "无法打开全屏编辑器: {error}",
+  "@cannotOpenFullEditor": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "refreshFailed": "刷新失败: {error}",
+  "@refreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }
