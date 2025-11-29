@@ -1169,6 +1169,113 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  /// 构建首页位置天气显示（保持原有样式，只改文字）
+  Widget _buildLocationWeatherDisplay(
+    BuildContext context,
+    LocationService locationService,
+    WeatherService weatherService,
+  ) {
+    final theme = Theme.of(context);
+    final connectivityService = Provider.of<ConnectivityService>(context);
+    final isConnected = connectivityService.isConnected;
+    final hasPermission = locationService.hasLocationPermission;
+    final hasCoordinates = locationService.hasCoordinates;
+    final hasCity = locationService.city != null && 
+                    !locationService.city!.contains("Throttled!");
+    final hasWeather = weatherService.currentWeather != null;
+    
+    // 决定显示什么文字
+    String locationText;
+    String weatherText;
+    IconData weatherIcon;
+    
+    if (!hasPermission) {
+      // 无定位权限
+      locationText = '无定位';
+      weatherText = '--';
+      weatherIcon = Icons.cloud_off;
+    } else if (!isConnected && !hasCity) {
+      // 离线且无城市
+      if (hasCoordinates) {
+        locationText = LocationService.formatCoordinates(
+          locationService.currentPosition!.latitude,
+          locationService.currentPosition!.longitude,
+        );
+      } else {
+        locationText = '无网络';
+      }
+      weatherText = '离线';
+      weatherIcon = Icons.cloud_off;
+    } else if (hasCity && hasWeather) {
+      // 正常状态
+      locationText = locationService.getDisplayLocation();
+      weatherText = '${WeatherService.getWeatherDescription(weatherService.currentWeather!)}'
+          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
+      weatherIcon = weatherService.getWeatherIconData();
+    } else if (hasCoordinates) {
+      // 有坐标但未解析
+      locationText = LocationService.formatCoordinates(
+        locationService.currentPosition!.latitude,
+        locationService.currentPosition!.longitude,
+      );
+      weatherText = '加载中...';
+      weatherIcon = Icons.cloud_queue;
+    } else {
+      // 什么都没有，不显示
+      return const SizedBox.shrink();
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          boxShadow: AppTheme.defaultShadow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.location_on,
+              size: 14,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              locationText,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '|',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer.withAlpha(128),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              weatherIcon,
+              size: 18,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              weatherText,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final weatherService = Provider.of<WeatherService>(context);
@@ -1231,87 +1338,12 @@ class _HomePageState extends State<HomePage>
                         ),
                       ),
 
-                    // 显示位置和天气信息
-                    if (locationService.city != null &&
-                        !locationService.city!.contains("Throttled!") &&
-                        weatherService.currentWeather != null &&
-                        locationService.hasLocationPermission)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.cardRadius,
-                            ),
-                            boxShadow: AppTheme.defaultShadow,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                locationService.getDisplayLocation(),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer,
-                                    ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '|',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer
-                                          .withAlpha(128),
-                                    ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                weatherService.getWeatherIconData(),
-                                size: 18,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')}'
-                                '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // 显示位置和天气信息（支持多种状态）
+                    _buildLocationWeatherDisplay(
+                      context,
+                      locationService,
+                      weatherService,
+                    ),
                   ],
                 )
               : AppBar(toolbarHeight: 0),

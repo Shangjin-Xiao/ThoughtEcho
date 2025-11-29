@@ -418,7 +418,7 @@ class DatabaseService extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 18, // 版本号升级至18，更新默认标签图标为emoji
+      version: 19, // 版本号升级至19，添加latitude/longitude字段支持离线位置存储
       onCreate: (db, version) async {
         // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
         await db.execute('''
@@ -446,6 +446,8 @@ class DatabaseService extends ChangeNotifier {
             category_id TEXT DEFAULT '',
             color_hex TEXT,
             location TEXT,
+            latitude REAL,
+            longitude REAL,
             weather TEXT,
             temperature TEXT,
             edit_source TEXT,
@@ -950,6 +952,38 @@ class DatabaseService extends ChangeNotifier {
         logError('默认标签图标更新失败: $e', error: e, source: 'DatabaseUpgrade');
       }
     }
+
+    // 版本19：为笔记表添加latitude/longitude字段，支持离线位置存储
+    if (oldVersion < 19) {
+      logDebug(
+        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 latitude/longitude 字段',
+      );
+      try {
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        
+        // 检查并添加 latitude 字段
+        final hasLatitude = columns.any((col) => col['name'] == 'latitude');
+        if (!hasLatitude) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN latitude REAL');
+          logDebug('数据库升级：latitude 字段添加完成');
+        }
+        
+        // 检查并添加 longitude 字段
+        final hasLongitude = columns.any((col) => col['name'] == 'longitude');
+        if (!hasLongitude) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN longitude REAL');
+          logDebug('数据库升级：longitude 字段添加完成');
+        }
+        
+        // 为经纬度创建复合索引，便于地理位置查询
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_coordinates ON quotes(latitude, longitude)',
+        );
+        logDebug('数据库升级：coordinates 索引创建完成');
+      } catch (e) {
+        logError('latitude/longitude 字段升级失败: $e', error: e, source: 'DatabaseUpgrade');
+      }
+    }
   }
 
   /// 修复：验证升级结果
@@ -1103,7 +1137,7 @@ class DatabaseService extends ChangeNotifier {
 
       logDebug('开始删除tag_ids列...');
 
-      // 1. 创建新的quotes表（不包含tag_ids列，但包含favorite_count）
+      // 1. 创建新的quotes表（不包含tag_ids列，但包含favorite_count和latitude/longitude）
       await txn.execute('''
         CREATE TABLE quotes_new(
           id TEXT PRIMARY KEY,
@@ -1119,6 +1153,8 @@ class DatabaseService extends ChangeNotifier {
           category_id TEXT DEFAULT '',
           color_hex TEXT,
           location TEXT,
+          latitude REAL,
+          longitude REAL,
           weather TEXT,
           temperature TEXT,
           edit_source TEXT,
@@ -1129,18 +1165,18 @@ class DatabaseService extends ChangeNotifier {
         )
       ''');
 
-      // 2. 复制数据（排除tag_ids列，保留favorite_count）
+      // 2. 复制数据（排除tag_ids列，保留favorite_count和latitude/longitude）
       await txn.execute('''
         INSERT INTO quotes_new (
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
-          color_hex, location, weather, temperature, edit_source,
+          color_hex, location, latitude, longitude, weather, temperature, edit_source,
           delta_content, day_period, last_modified, favorite_count
         )
         SELECT
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
-          color_hex, location, weather, temperature, edit_source,
+          color_hex, location, latitude, longitude, weather, temperature, edit_source,
           delta_content, day_period, last_modified,
           COALESCE(favorite_count, 0) as favorite_count
         FROM quotes
