@@ -410,7 +410,6 @@
   "askNote": "Ask Note",
   "askNoteDesc": "Chat with AI assistant to explore note content in depth",
   "pleaseEnterContent": "Please enter content first",
-  "analyzing": "Analyzing...",
   "analysisResults": "Analysis Results",
   "confidence": "Confidence",
   "noAuthorOrWorkIdentified": "Could not identify a clear author or work",
@@ -900,7 +899,6 @@
     }
   },
   "logClearAllFilters": "Clear All",
-  "logDetailsTitle": "{level} Log {source}",
   "logCopyAll": "Copy All",
   "logTimestamp": "Time: {time}",
   "@logTimestamp": {
@@ -914,7 +912,6 @@
   "logError": "Error:",
   "logStackTrace": "Stack Trace:",
   "logCopied": "Log details copied to clipboard",
-  "logFilterOptions": "Log Filter Options",
   "logFilterReset": "Reset",
   "logFilterByLevel": "Filter by Log Level",
   "logFilterBySource": "Filter by Source",
@@ -967,25 +964,8 @@
       }
     }
   },
-  "analysisTypeComprehensive": "Comprehensive Analysis",
-  "analysisTypeComprehensiveDesc": "Analyze all your notes to explore themes, emotions and thinking patterns",
-  "analysisTypeEmotional": "Emotional Insights",
-  "analysisTypeEmotionalDesc": "Analyze your emotional state and trends",
-  "analysisTypeMindmap": "Mind Map",
-  "analysisTypeMindmapDesc": "Build the structure of your thinking and analyze habits",
-  "analysisTypeGrowth": "Growth Suggestions",
-  "analysisTypeGrowthDesc": "Personalized growth and progress suggestions based on your notes",
-  "analysisStyleProfessional": "Professional Analysis",
-  "analysisStyleProfessionalDesc": "Analyze your notes in a professional and objective way",
-  "analysisStyleFriendly": "Friendly Mentor",
-  "analysisStyleFriendlyDesc": "Gentle advice like a friendly mentor",
-  "analysisStyleHumorous": "Humorous Style",
-  "analysisStyleHumorousDesc": "Interpret your thoughts in a humorous way",
-  "analysisStyleLiterary": "Literary Style",
-  "analysisStyleLiteraryDesc": "Describe your thinking journey in beautiful literary language",
   "testAnalysis": "Test Analysis",
   "testAnalysisDesc": "This is a test analysis to verify that the save function is working properly.",
-  "analysisSaved": "Analysis results have been saved",
   "viewHistory": "View History",
   "saveAnalysisError": "Failed to save analysis: {error}",
   "@saveAnalysisError": {
@@ -1017,7 +997,6 @@
       }
     }
   },
-  "analysisCopied": "Analysis results have been copied to the clipboard and can be pasted to share",
   "shareError": "Failed to share: {error}",
   "@shareError": {
     "placeholders": {
@@ -1042,7 +1021,6 @@
   "checkApiKey": "Check API Key",
   "rateLimitExceeded": "Request frequency is too high, please try again later",
   "tryLater": "Try Again Later",
-  "networkError": "Network connection issue, please check your network",
   "generateInsightsSetupError": "Failed to generate insights (setup): {error}",
   "@generateInsightsSetupError": {
     "placeholders": {
@@ -1054,15 +1032,9 @@
   "serverInternalErrorConfig": "Server internal error, please check if the AI model configuration is correct",
   "invalidApiKeyUpdate": "Invalid API key, please update the API key in the settings",
   "configureValidApiKey": "Please configure a valid API key in the settings first",
-  "goToSettings": "Go to Settings",
-  "analyzing": "Analyzing...",
-  "startAnalysis": "Start Analysis",
-  "analysisHistory": "Analysis History",
   "regenerate": "Regenerate",
   "selectAnalysisMethod": "Select Analysis Method",
-  "selectAnalysisStyle": "Select Analysis Style",
   "advancedOptions": "Advanced Options",
-  "customPrompt": "Custom Analysis Prompt",
   "customPromptHint": "e.g., Analyze the characters and locations mentioned in my notes",
   "analysisHistoryRecord": "Analysis History Record",
   "viewPreviousAnalysis": "View previous AI analysis results",
@@ -1126,7 +1098,6 @@
     }
   },
   "loadAiSettingsErrorUser": "Failed to load AI settings, please check your network connection or restart the app",
-  "retry": "Retry",
   "fixFormErrors": "Please fix the errors in the form before saving",
   "presetCreated": "New preset created and saved successfully",
   "saveSettingsError": "Failed to save settings: {error}",
@@ -1192,7 +1163,6 @@
   },
   "renamePreset": "Rename Preset",
   "presetName": "Preset Name",
-  "confirm": "Confirm",
   "presetRenamed": "Preset has been renamed to \"{result}\"",
   "@presetRenamed": {
     "placeholders": {
@@ -1210,7 +1180,6 @@
       }
     }
   },
-  "delete": "Delete",
   "presetDeleted": "Preset \"{providerName}\" has been deleted",
   "@presetDeleted": {
     "placeholders": {
@@ -1279,7 +1248,6 @@
       }
     }
   },
-  "custom": "Custom",
   "apiUrlField": "API URL",
   "apiUrlHint": "e.g., https://api.xxx.com/v1/chat/completions",
   "apiUrlHelper": "Must be an http/https URL",
@@ -1463,7 +1431,6 @@
     }
   },
   "reportCopied": "Annual report has been copied to the clipboard",
-  "shareFailed": "Failed to share, please try again later",
   "monday": "Monday",
   "tuesday": "Tuesday",
   "wednesday": "Wednesday",
@@ -1471,7 +1438,6 @@
   "friday": "Friday",
   "saturday": "Saturday",
   "sunday": "Sunday",
-  "defaultTag": "Default",
   "dayOfMonth": "Day {day}",
   "@dayOfMonth": {
     "placeholders": {
@@ -1594,37 +1560,9 @@
     }
   },
   "generateCards": "Generate Cards",
-  "regenerate": "Regenerate",
   "noFeaturedCards": "No Featured Cards Yet",
   "featuredCardGenerationTip": "Generate beautiful sharing cards from your notes: AI On = Smart Design, AI Off = Built-in Templates.",
-  "generatingShareImage": "Generating share image...",
   "cardFromReport": "A beautiful card from ThoughtEcho Periodic Report",
-  "cardSharedSuccessfully": "Card shared successfully",
-  "shareFailed": "Share failed: {error}",
-  "@shareFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "savingCardToGallery": "Saving card to gallery...",
-  "cardSavedToGallery": "Card saved to gallery: {path}",
-  "@cardSavedToGallery": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "saveFailed": "Save failed: {error}",
-  "@saveFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "loadDataFailed": "Failed to load data: {error}",
   "@loadDataFailed": {
     "placeholders": {
@@ -1745,72 +1683,18 @@
       }
     }
   },
-  "fileCount": "{count, plural, =1{1 file} other{{count} files}}",
-  "@fileCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
 
-  "cannotOpenLink": "Cannot open link: {url}",
-  "@cannotOpenLink": {
-    "placeholders": {
-      "url": {
-        "type": "String"
-      }
-    }
-  },
-  "checkUpdateFailed": "Failed to check for updates: {error}",
-  "@checkUpdateFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "getDebugInfoFailed": "Failed to get debug info: {error}",
-  "@getDebugInfoFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "generatingAiReport": "Generating AI annual report...",
-  "contentLength": "Content length: {length} characters",
-  "@contentLength": {
-    "placeholders": {
-      "length": {
-        "type": "int"
-      }
-    }
-  },
-  "containsHtmlTags": "Contains HTML tags: {status}",
-  "@containsHtmlTags": {
-    "placeholders": {
-      "status": {
-        "type": "String"
-      }
-    }
-  },
-  "first100Chars": "First 100 characters:",
   "testFailedEmptyContent": "Test failed: AI returned empty content",
   
   "includeMediaFilesHint": "Include images, audio and other media files when checked (larger file but more complete)",
-  "selectImportMode": "Select Import Mode",
   "overwriteImport": "Overwrite Import (Clear existing data)",
   "overwriteImportDesc": "Delete all current data and replace with backup content",
   "mergeImport": "Merge Import (LWW strategy)",
   "mergeImportDesc": "Keep existing data and merge with backup data by update time",
-  "continueAction": "Continue",
   "restoreSuccess": "Data restored successfully! All data has been updated.",
-  "confirmRestore": "Confirm Restore",
-  "confirmMergeImport": "Confirm Merge Import",
   "mergeImportHint": "This operation will keep current data and merge with backup data:",
   "mergeImportReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
-  "startMerge": "Start Merge",
   "confirmRestoreBtn": "Confirm Restore",
   
   "favoriteCountWithNum": "Favorited ({count})",
@@ -1821,25 +1705,8 @@
       }
     }
   },
-  "shareFailed": "Share failed: {error}",
-  "@shareFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "saveFailed": "Save failed: {error}",
-  "@saveFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   
   "analysisRecordDeleted": "Analysis record deleted",
-  "deleteFailed": "Delete failed: {error}",
   "@deleteFailed": {
     "placeholders": {
       "error": {
@@ -1857,8 +1724,6 @@
   },
   "deleteConfirmTitle": "Delete Confirmation",
   "deleteRecordConfirm": "Are you sure you want to delete this analysis record?",
-  "close": "Close",
-  "serviceNotInitialized": "Service not initialized, delete failed",
   "confirmDeleteAll": "Confirm Delete All",
   "deleteAllRecordsConfirm": "Are you sure you want to delete all analysis records? This action cannot be undone.",
   "allRecordsDeleted": "All records deleted",
@@ -1871,10 +1736,8 @@
   "afternoon": "Afternoon",
   "evening": "Evening",
   "night": "Night",
-  "growth": "Growth",
   "learning": "Learning",
   "progress": "Progress",
-  "success": "Success",
   "happiness": "Happiness",
   "gratitude": "Gratitude",
   "harvest": "Harvest",
