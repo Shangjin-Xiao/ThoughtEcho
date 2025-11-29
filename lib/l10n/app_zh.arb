@@ -2001,5 +2001,102 @@
   "weatherUnknown": "未知",
   "weatherError": "获取失败",
   "weatherDataFetchFailed": "天气数据获取失败",
-  "unknownWeather": "未知天气"
+  "unknownWeather": "未知天气",
+  
+  "noAiAnalysisRecords": "暂无AI分析记录",
+  "aiAssistant": "AI助手",
+  "analyzingSource": "正在分析来源...",
+  "analysisResult": "分析结果",
+  "confidenceLevel": "可信度: {confidence}",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "author": "作者",
+  "authorLabel": "作者: {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "workLabel": "作品: {work}",
+  "@workLabel": {
+    "placeholders": {
+      "work": {
+        "type": "String"
+      }
+    }
+  },
+  "applyResult": "应用结果",
+  "parseResultFailedWithError": "解析结果失败: {error}",
+  "@parseResultFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailedWithError": "分析失败: {error}",
+  "@analysisFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "polishResult": "润色结果",
+  "applyChanges": "应用更改",
+  "polishFailedWithError": "润色失败: {error}",
+  "@polishFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueResult": "续写结果",
+  "appendToNote": "追加到笔记",
+  "continueFailedWithError": "续写失败: {error}",
+  "@continueFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAnalysis": "笔记分析",
+  "applyToNote": "应用到笔记",
+  "analysisComplete": "分析完成",
+  
+  "filterAndSort": "筛选与排序",
+  "resetFilter": "重置",
+  "tagFilter": "标签筛选",
+  "weatherFilter": "天气筛选",
+  "timePeriodFilter": "时间段筛选",
+  "sortMethod": "排序方式",
+  "sortByTime": "按时间排序",
+  "sortByName": "按名称排序",
+  "sortByFavorite": "按喜爱度排序",
+  "ascending": "升序",
+  "applyFilter": "应用",
+  
+  "editNoteMenu": "编辑笔记",
+  "askAIMenu": "向AI提问",
+  "generateCardShareMenu": "生成卡片分享",
+  "deleteNoteMenu": "删除笔记",
+  "doubleTapToViewFull": "双击查看全文",
+  
+  "logLevel": "级别: {level}",
+  "@logLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  }
 }
