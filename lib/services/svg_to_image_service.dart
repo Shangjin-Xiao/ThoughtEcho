@@ -288,6 +288,7 @@ class SvgToImageService {
   }
 
   /// 使用flutter_svg库直接渲染（备用方案）
+  /// 重构：改进渐变和颜色解析，确保备用渲染与预览一致
   static Future<Uint8List> _renderWithFlutterSvg(
     String svgContent,
     int width,
@@ -297,28 +298,29 @@ class SvgToImageService {
     double scaleFactor,
     ExportRenderMode renderMode,
   ) async {
-    // 注意：flutter_svg 2.x 不支持直接渲染到canvas
-    // 这个备用方案使用简化的方式，主要用于无BuildContext的场景
-    AppLogger.w('使用简化SVG渲染（无BuildContext备用方案）', source: 'SvgToImageService');
+    AppLogger.d('使用改进的备用SVG渲染', source: 'SvgToImageService');
 
     final pictureRecorder = ui.PictureRecorder();
     final canvas = Canvas(pictureRecorder);
+    
+    final scaledWidth = (width * scaleFactor).round();
+    final scaledHeight = (height * scaleFactor).round();
 
-    // 绘制背景
+    // 应用缩放
+    canvas.scale(scaleFactor);
+
+    // 绘制白色背景作为基础
     final bgPaint = Paint()..color = backgroundColor;
     canvas.drawRect(
       Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
       bgPaint,
     );
 
-    // 绘制SVG内容的简化版本
-    await _drawSvgContent(canvas, svgContent, width, height);
+    // 解析并绘制SVG内容
+    await _drawSvgContentImproved(canvas, svgContent, width, height);
 
     final picture = pictureRecorder.endRecording();
-    final image = await picture.toImage(
-      (width * scaleFactor).round(),
-      (height * scaleFactor).round(),
-    );
+    final image = await picture.toImage(scaledWidth, scaledHeight);
     final byteData = await image.toByteData(format: format);
 
     picture.dispose();
@@ -331,20 +333,300 @@ class SvgToImageService {
     return byteData.buffer.asUint8List();
   }
 
-  /// 绘制SVG内容（基础解析）
-  static Future<void> _drawSvgContent(
+  /// 改进的SVG内容绘制
+  static Future<void> _drawSvgContentImproved(
       Canvas canvas, String svgContent, int width, int height) async {
-    // 简化的SVG解析和绘制
-    // 这里实现基本的SVG元素绘制
+    // 解析所有渐变定义
+    final gradients = _parseAllGradients(svgContent);
+    
+    // 绘制背景矩形（通常是第一个rect元素）
+    _drawBackgroundRect(canvas, svgContent, width, height, gradients);
+    
+    // 绘制其他形状
+    _drawAllShapes(canvas, svgContent, width, height, gradients);
+    
+    // 绘制文本
+    _drawAllText(canvas, svgContent, width, height);
+  }
 
-    // 绘制背景渐变（如果存在）
-    _drawGradientBackground(canvas, svgContent, width, height);
+  /// 解析所有渐变定义
+  static Map<String, Gradient> _parseAllGradients(String svgContent) {
+    final gradients = <String, Gradient>{};
+    
+    // 解析 linearGradient
+    final linearGradientRegex = RegExp(
+      r'<linearGradient\s+id="([^"]+)"[^>]*>(.*?)</linearGradient>',
+      dotAll: true,
+    );
+    
+    for (final match in linearGradientRegex.allMatches(svgContent)) {
+      final id = match.group(1) ?? '';
+      final content = match.group(2) ?? '';
+      final tag = match.group(0) ?? '';
+      
+      if (id.isEmpty) continue;
+      
+      // 解析渐变方向
+      final x1 = _parsePercentage(RegExp(r'x1="([^"]*)"').firstMatch(tag)?.group(1));
+      final y1 = _parsePercentage(RegExp(r'y1="([^"]*)"').firstMatch(tag)?.group(1));
+      final x2 = _parsePercentage(RegExp(r'x2="([^"]*)"').firstMatch(tag)?.group(1));
+      final y2 = _parsePercentage(RegExp(r'y2="([^"]*)"').firstMatch(tag)?.group(1));
+      
+      // 解析颜色停靠点
+      final stops = <double>[];
+      final colors = <Color>[];
+      
+      final stopRegex = RegExp(
+        r'<stop[^>]*offset="([^"]*)"[^>]*(?:stop-color="([^"]*)"|style="[^"]*stop-color:\s*([^;"\s]+))[^>]*(?:stop-opacity="([^"]*)"|style="[^"]*stop-opacity:\s*([^;"\s]+))?',
+        caseSensitive: false,
+      );
+      
+      for (final stopMatch in stopRegex.allMatches(content)) {
+        final offset = _parsePercentage(stopMatch.group(1));
+        final colorStr = stopMatch.group(2) ?? stopMatch.group(3) ?? '#000000';
+        final opacityStr = stopMatch.group(4) ?? stopMatch.group(5);
+        
+        stops.add(offset);
+        Color color = _parseColor(colorStr);
+        if (opacityStr != null) {
+          final opacity = double.tryParse(opacityStr) ?? 1.0;
+          color = color.withValues(alpha: opacity);
+        }
+        colors.add(color);
+      }
+      
+      if (colors.isNotEmpty) {
+        gradients[id] = LinearGradient(
+          begin: Alignment(x1 * 2 - 1, y1 * 2 - 1),
+          end: Alignment(x2 * 2 - 1, y2 * 2 - 1),
+          colors: colors,
+          stops: stops.isEmpty ? null : stops,
+        );
+      }
+    }
+    
+    // 解析 radialGradient
+    final radialGradientRegex = RegExp(
+      r'<radialGradient\s+id="([^"]+)"[^>]*>(.*?)</radialGradient>',
+      dotAll: true,
+    );
+    
+    for (final match in radialGradientRegex.allMatches(svgContent)) {
+      final id = match.group(1) ?? '';
+      final content = match.group(2) ?? '';
+      
+      if (id.isEmpty) continue;
+      
+      final stops = <double>[];
+      final colors = <Color>[];
+      
+      final stopRegex = RegExp(
+        r'<stop[^>]*offset="([^"]*)"[^>]*(?:stop-color="([^"]*)"|style="[^"]*stop-color:\s*([^;"\s]+))[^>]*(?:stop-opacity="([^"]*)"|style="[^"]*stop-opacity:\s*([^;"\s]+))?',
+        caseSensitive: false,
+      );
+      
+      for (final stopMatch in stopRegex.allMatches(content)) {
+        final offset = _parsePercentage(stopMatch.group(1));
+        final colorStr = stopMatch.group(2) ?? stopMatch.group(3) ?? '#000000';
+        final opacityStr = stopMatch.group(4) ?? stopMatch.group(5);
+        
+        stops.add(offset);
+        Color color = _parseColor(colorStr);
+        if (opacityStr != null) {
+          final opacity = double.tryParse(opacityStr) ?? 1.0;
+          color = color.withValues(alpha: opacity);
+        }
+        colors.add(color);
+      }
+      
+      if (colors.isNotEmpty) {
+        gradients[id] = RadialGradient(
+          colors: colors,
+          stops: stops.isEmpty ? null : stops,
+        );
+      }
+    }
+    
+    return gradients;
+  }
 
-    // 绘制基本形状
-    _drawBasicShapes(canvas, svgContent, width, height);
+  /// 解析百分比值
+  static double _parsePercentage(String? value) {
+    if (value == null) return 0.0;
+    final trimmed = value.trim().replaceAll('%', '');
+    return (double.tryParse(trimmed) ?? 0.0) / 100.0;
+  }
 
-    // 绘制文本内容
-    _drawTextContent(canvas, svgContent, width, height);
+  /// 绘制背景矩形
+  static void _drawBackgroundRect(Canvas canvas, String svgContent, int width, int height, Map<String, Gradient> gradients) {
+    // 查找第一个覆盖整个画布的矩形
+    final rectRegex = RegExp(
+      r'<rect[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*fill="([^"]*)"[^>]*(?:rx="([^"]*)")?',
+    );
+    
+    for (final match in rectRegex.allMatches(svgContent)) {
+      final w = double.tryParse(match.group(1) ?? '0') ?? 0;
+      final h = double.tryParse(match.group(2) ?? '0') ?? 0;
+      final fill = match.group(3) ?? '';
+      final rx = double.tryParse(match.group(4) ?? '0') ?? 0;
+      
+      // 检查是否是全尺寸背景
+      if (w >= width * 0.9 && h >= height * 0.9) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, w, h),
+          Radius.circular(rx),
+        );
+        
+        final paint = Paint();
+        if (fill.startsWith('url(#')) {
+          final gradientId = fill.substring(5, fill.length - 1);
+          final gradient = gradients[gradientId];
+          if (gradient != null) {
+            paint.shader = gradient.createShader(Rect.fromLTWH(0, 0, w, h));
+          } else {
+            paint.color = Colors.grey;
+          }
+        } else {
+          paint.color = _parseColor(fill);
+        }
+        
+        canvas.drawRRect(rect, paint);
+        break; // 只绘制第一个背景
+      }
+    }
+  }
+
+  /// 绘制所有形状
+  static void _drawAllShapes(Canvas canvas, String svgContent, int width, int height, Map<String, Gradient> gradients) {
+    // 绘制圆形
+    final circleRegex = RegExp(
+      r'<circle[^>]*cx="([^"]*)"[^>]*cy="([^"]*)"[^>]*r="([^"]*)"[^>]*(?:fill="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?',
+    );
+    
+    for (final match in circleRegex.allMatches(svgContent)) {
+      try {
+        final cx = double.parse(match.group(1) ?? '0');
+        final cy = double.parse(match.group(2) ?? '0');
+        final r = double.parse(match.group(3) ?? '0');
+        final fill = match.group(4) ?? '#000000';
+        final opacity = double.tryParse(match.group(5) ?? '1.0') ?? 1.0;
+        
+        final paint = Paint();
+        if (fill.startsWith('url(#')) {
+          final gradientId = fill.substring(5, fill.length - 1);
+          final gradient = gradients[gradientId];
+          if (gradient != null) {
+            paint.shader = gradient.createShader(Rect.fromCircle(center: Offset(cx, cy), radius: r));
+          }
+        } else {
+          paint.color = _parseColor(fill).withValues(alpha: opacity);
+        }
+        
+        canvas.drawCircle(Offset(cx, cy), r, paint);
+      } catch (e) {
+        // 忽略解析错误
+      }
+    }
+    
+    // 绘制矩形（跳过背景矩形）
+    final rectRegex = RegExp(
+      r'<rect[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*(?:fill="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?[^>]*(?:rx="([^"]*)")?',
+    );
+    
+    for (final match in rectRegex.allMatches(svgContent)) {
+      try {
+        final x = double.parse(match.group(1) ?? '0');
+        final y = double.parse(match.group(2) ?? '0');
+        final w = double.parse(match.group(3) ?? '0');
+        final h = double.parse(match.group(4) ?? '0');
+        final fill = match.group(5) ?? '#000000';
+        final opacity = double.tryParse(match.group(6) ?? '1.0') ?? 1.0;
+        final rx = double.tryParse(match.group(7) ?? '0') ?? 0;
+        
+        // 跳过全屏背景矩形
+        if (w >= width * 0.9 && h >= height * 0.9 && x < 10 && y < 10) continue;
+        
+        final rect = rx > 0
+            ? RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(rx))
+            : null;
+        
+        final paint = Paint();
+        if (fill.startsWith('url(#')) {
+          final gradientId = fill.substring(5, fill.length - 1);
+          final gradient = gradients[gradientId];
+          if (gradient != null) {
+            paint.shader = gradient.createShader(Rect.fromLTWH(x, y, w, h));
+          }
+        } else {
+          paint.color = _parseColor(fill).withValues(alpha: opacity);
+        }
+        
+        if (rect != null) {
+          canvas.drawRRect(rect, paint);
+        } else {
+          canvas.drawRect(Rect.fromLTWH(x, y, w, h), paint);
+        }
+      } catch (e) {
+        // 忽略解析错误
+      }
+    }
+  }
+
+  /// 绘制所有文本
+  static void _drawAllText(Canvas canvas, String svgContent, int width, int height) {
+    final textRegex = RegExp(
+      r'<text[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*(?:text-anchor="([^"]*)")?[^>]*(?:fill="([^"]*)")?[^>]*(?:font-size="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?[^>]*>([^<]*)</text>',
+    );
+    
+    for (final match in textRegex.allMatches(svgContent)) {
+      try {
+        double x = double.parse(match.group(1) ?? '0');
+        final y = double.parse(match.group(2) ?? '0');
+        final anchor = match.group(3) ?? 'start';
+        final fill = match.group(4) ?? '#000000';
+        final fontSize = double.tryParse(match.group(5) ?? '14') ?? 14.0;
+        final opacity = double.tryParse(match.group(6) ?? '1.0') ?? 1.0;
+        String text = match.group(7) ?? '';
+        
+        // 解码HTML实体
+        text = text
+            .replaceAll('&lt;', '<')
+            .replaceAll('&gt;', '>')
+            .replaceAll('&amp;', '&')
+            .replaceAll('&quot;', '"')
+            .replaceAll('&apos;', "'")
+            .trim();
+        
+        if (text.isEmpty) continue;
+        
+        final textStyle = TextStyle(
+          color: _parseColor(fill).withValues(alpha: opacity),
+          fontSize: fontSize,
+        );
+        
+        final textPainter = TextPainter(
+          text: TextSpan(text: text, style: textStyle),
+          textDirection: ui.TextDirection.ltr,
+        );
+        
+        textPainter.layout();
+        
+        // 处理文本对齐
+        double offsetX = x;
+        if (anchor == 'middle') {
+          offsetX = x - textPainter.width / 2;
+        } else if (anchor == 'end') {
+          offsetX = x - textPainter.width;
+        }
+        
+        // SVG y坐标是基线位置
+        final offsetY = y - fontSize * 0.8;
+        
+        textPainter.paint(canvas, Offset(offsetX, offsetY));
+      } catch (e) {
+        // 忽略解析错误
+      }
+    }
   }
 
   /// 渲染回退图片
@@ -373,354 +655,6 @@ class SvgToImageService {
 
     picture.dispose();
     return byteData!.buffer.asUint8List();
-  }
-
-  /// 绘制渐变背景
-  static void _drawGradientBackground(
-      Canvas canvas, String svgContent, int width, int height) {
-    // 检查是否包含linearGradient
-    if (svgContent.contains('linearGradient')) {
-      // 解析linearGradient定义
-      final gradientColors = _parseLinearGradient(svgContent);
-
-      final gradientPaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors.isNotEmpty
-              ? gradientColors
-              : [
-                  const Color(0xFF4F46E5),
-                  const Color(0xFF7C3AED),
-                  const Color(0xFFDB2777)
-                ],
-        ).createShader(
-            Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
-
-      canvas.drawRect(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-          gradientPaint);
-    }
-  }
-
-  /// 解析SVG中的linearGradient定义
-  static List<Color> _parseLinearGradient(String svgContent) {
-    final colors = <Color>[];
-
-    try {
-      // 匹配linearGradient标签内容
-      final gradientRegex =
-          RegExp(r'<linearGradient[^>]*>(.*?)</linearGradient>', dotAll: true);
-      final gradientMatch = gradientRegex.firstMatch(svgContent);
-
-      if (gradientMatch != null) {
-        final gradientContent = gradientMatch.group(1) ?? '';
-
-        // 匹配stop元素
-        final stopRegex = RegExp(
-            r'<stop[^>]*stop-color="([^"]*)"[^>]*(?:stop-opacity="([^"]*)")?');
-        final stopMatches = stopRegex.allMatches(gradientContent);
-
-        for (final stopMatch in stopMatches) {
-          final stopColor = _parseColor(stopMatch.group(1) ?? '#000000');
-          final stopOpacity =
-              double.tryParse(stopMatch.group(2) ?? '1.0') ?? 1.0;
-          colors.add(stopColor.withValues(alpha: stopOpacity));
-        }
-      }
-    } catch (e) {
-      logError('解析linearGradient失败: $e', error: e, source: 'SvgToImageService');
-    }
-
-    return colors;
-  }
-
-  /// 绘制基本形状
-  static void _drawBasicShapes(
-      Canvas canvas, String svgContent, int width, int height) {
-    // 解析并绘制圆形
-    final circleRegex = RegExp(
-        r'<circle[^>]*cx="([^"]*)"[^>]*cy="([^"]*)"[^>]*r="([^"]*)"[^>]*fill="([^"]*)"(?:[^>]*fill-opacity="([^"]*)")?');
-    final circleMatches = circleRegex.allMatches(svgContent);
-
-    for (final match in circleMatches) {
-      try {
-        final cx = double.parse(match.group(1) ?? '0');
-        final cy = double.parse(match.group(2) ?? '0');
-        final r = double.parse(match.group(3) ?? '0');
-        final fillColor = _parseColor(match.group(4) ?? '#000000');
-        final fillOpacity = double.tryParse(match.group(5) ?? '1.0') ?? 1.0;
-
-        final paint = Paint()..color = fillColor.withValues(alpha: fillOpacity);
-        canvas.drawCircle(Offset(cx, cy), r, paint);
-      } catch (e) {
-        logError('解析圆形元素失败: $e', error: e, source: 'SvgToImageService');
-      }
-    }
-
-    // 解析并绘制矩形
-    final rectRegex = RegExp(
-        r'<rect[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*fill="([^"]*)"(?:[^>]*fill-opacity="([^"]*)")?(?:[^>]*rx="([^"]*)")?(?:[^>]*ry="([^"]*)")?');
-    final rectMatches = rectRegex.allMatches(svgContent);
-
-    for (final match in rectMatches) {
-      try {
-        final x = double.parse(match.group(1) ?? '0');
-        final y = double.parse(match.group(2) ?? '0');
-        final w = double.parse(match.group(3) ?? '0');
-        final h = double.parse(match.group(4) ?? '0');
-        final fillColor = _parseColor(match.group(5) ?? '#000000');
-        final fillOpacity = double.tryParse(match.group(6) ?? '1.0') ?? 1.0;
-        final rx = double.tryParse(match.group(7) ?? '0') ?? 0;
-        final ry = double.tryParse(match.group(8) ?? '0') ?? 0;
-
-        final paint = Paint()..color = fillColor.withValues(alpha: fillOpacity);
-
-        if (rx > 0 || ry > 0) {
-          // 绘制圆角矩形，正确处理不同的rx和ry值
-          final rect = Rect.fromLTWH(x, y, w, h);
-          final radiusX = rx > 0 ? rx : 0.0;
-          final radiusY = ry > 0 ? ry : 0.0;
-
-          if (radiusX == radiusY) {
-            // 统一圆角
-            final rrect =
-                RRect.fromRectAndRadius(rect, Radius.circular(radiusX));
-            canvas.drawRRect(rrect, paint);
-          } else {
-            // 不同的rx和ry值，使用椭圆圆角
-            final rrect = RRect.fromRectAndCorners(
-              rect,
-              topLeft: Radius.elliptical(radiusX, radiusY),
-              topRight: Radius.elliptical(radiusX, radiusY),
-              bottomLeft: Radius.elliptical(radiusX, radiusY),
-              bottomRight: Radius.elliptical(radiusX, radiusY),
-            );
-            canvas.drawRRect(rrect, paint);
-          }
-        } else {
-          // 绘制普通矩形
-          canvas.drawRect(Rect.fromLTWH(x, y, w, h), paint);
-        }
-      } catch (e) {
-        logError('解析矩形元素失败: $e', error: e, source: 'SvgToImageService');
-      }
-    }
-  }
-
-  /// 绘制文本内容
-  static void _drawTextContent(
-      Canvas canvas, String svgContent, int width, int height) {
-    // 使用更强大的文本元素解析，支持嵌套标签
-    final textElements = _extractTextElements(svgContent);
-
-    for (final textElement in textElements) {
-      try {
-        final fullTextElement = textElement['element'] as String;
-        final textContent = textElement['content'] as String;
-
-        if (textContent.trim().isEmpty) continue;
-
-        // 解析文本属性
-        final attributes = _parseTextAttributes(fullTextElement);
-
-        final textStyle = TextStyle(
-          color: attributes['fill'] != null
-              ? _parseColor(attributes['fill']!)
-              : Colors.black,
-          fontSize: attributes['font-size'] != null
-              ? _parseFontSize(attributes['font-size']!)
-              : 14.0,
-          fontWeight: attributes['font-weight'] != null
-              ? _parseFontWeight(attributes['font-weight']!)
-              : FontWeight.normal,
-          fontStyle: attributes['font-style'] == 'italic'
-              ? FontStyle.italic
-              : FontStyle.normal,
-        );
-
-        final textPainter = TextPainter(
-          text: TextSpan(
-            text: textContent.trim(),
-            style: textStyle,
-          ),
-          textDirection: ui.TextDirection.ltr,
-          textAlign: attributes['text-anchor'] == 'middle'
-              ? TextAlign.center
-              : attributes['text-anchor'] == 'end'
-                  ? TextAlign.right
-                  : TextAlign.left,
-        );
-
-        textPainter.layout();
-
-        // 计算绘制位置
-        double x = attributes['x'] != null
-            ? double.tryParse(attributes['x']!) ?? 0
-            : 0;
-        double y = attributes['y'] != null
-            ? double.tryParse(attributes['y']!) ?? 0
-            : 0;
-
-        // 处理text-anchor对齐
-        if (attributes['text-anchor'] == 'middle') {
-          x -= textPainter.width / 2;
-        } else if (attributes['text-anchor'] == 'end') {
-          x -= textPainter.width;
-        }
-
-        // SVG的y坐标是基线位置，需要调整到顶部
-        y -= textPainter.height * 0.8; // 近似基线调整
-
-        textPainter.paint(canvas, Offset(x, y));
-      } catch (e) {
-        // 使用统一日志服务记录文本解析失败
-        AppLogger.w('解析文本元素失败: $e', error: e, source: 'SvgToImageService');
-      }
-    }
-  }
-
-  /// 提取文本元素，支持嵌套标签如<tspan>
-  static List<Map<String, String>> _extractTextElements(String svgContent) {
-    final textElements = <Map<String, String>>[];
-
-    // 使用更强大的正则表达式来匹配text元素，包括嵌套内容
-    final textRegex =
-        RegExp(r'<text[^>]*>(.*?)</text>', multiLine: true, dotAll: true);
-    final textMatches = textRegex.allMatches(svgContent);
-
-    for (final match in textMatches) {
-      final fullElement = match.group(0) ?? '';
-      final innerContent = match.group(1) ?? '';
-
-      // 提取所有文本内容，包括嵌套的tspan等标签
-      final textContent = _extractAllTextContent(innerContent);
-
-      if (textContent.trim().isNotEmpty) {
-        textElements.add({
-          'element': fullElement,
-          'content': textContent,
-        });
-      }
-    }
-
-    return textElements;
-  }
-
-  /// 提取所有文本内容，包括嵌套标签内的文本
-  static String _extractAllTextContent(String content) {
-    // 移除所有HTML/XML标签，保留文本内容
-    String textContent = content;
-
-    // 处理常见的XML实体
-    final entities = {
-      '&lt;': '<',
-      '&gt;': '>',
-      '&amp;': '&',
-      '&quot;': '"',
-      '&apos;': "'",
-      '&#39;': "'",
-    };
-
-    for (final entry in entities.entries) {
-      textContent = textContent.replaceAll(entry.key, entry.value);
-    }
-
-    // 移除所有标签，保留文本内容
-    textContent = textContent.replaceAll(RegExp(r'<[^>]*>'), '');
-
-    // 清理多余的空白字符
-    textContent = textContent.replaceAll(RegExp(r'\s+'), ' ').trim();
-
-    return textContent;
-  }
-
-  /// 解析文本属性
-  static Map<String, String> _parseTextAttributes(String textElement) {
-    final attributes = <String, String>{};
-
-    // 解析各种属性
-    final attributePatterns = {
-      'x': RegExp(r'x="([^"]*)"'),
-      'y': RegExp(r'y="([^"]*)"'),
-      'fill': RegExp(r'fill="([^"]*)"'),
-      'font-size': RegExp(r'font-size="([^"]*)"'),
-      'font-weight': RegExp(r'font-weight="([^"]*)"'),
-      'font-style': RegExp(r'font-style="([^"]*)"'),
-      'text-anchor': RegExp(r'text-anchor="([^"]*)"'),
-      'font-family': RegExp(r'font-family="([^"]*)"'),
-    };
-
-    for (final entry in attributePatterns.entries) {
-      final match = entry.value.firstMatch(textElement);
-      if (match != null) {
-        attributes[entry.key] = match.group(1) ?? '';
-      }
-    }
-
-    return attributes;
-  }
-
-  /// 解析字体大小，支持不同单位
-  static double _parseFontSize(String fontSizeStr) {
-    try {
-      final trimmed = fontSizeStr.trim().toLowerCase();
-
-      // 处理纯数字（默认为px）
-      final numericMatch = RegExp(r'^(\d+(?:\.\d+)?)$').firstMatch(trimmed);
-      if (numericMatch != null) {
-        return double.tryParse(numericMatch.group(1)!) ?? 14.0;
-      }
-
-      // 处理带单位的值
-      final unitMatch =
-          RegExp(r'^(\d+(?:\.\d+)?)(px|pt|em|rem|%)?$').firstMatch(trimmed);
-      if (unitMatch != null) {
-        final value = double.tryParse(unitMatch.group(1)!) ?? 14.0;
-        final unit = unitMatch.group(2) ?? 'px';
-
-        switch (unit) {
-          case 'px':
-            return value;
-          case 'pt':
-            // 1pt = 1.333px (approximately)
-            return value * 1.333;
-          case 'em':
-            // 1em = 16px (default browser font size)
-            return value * 16.0;
-          case 'rem':
-            // 1rem = 16px (root em, same as em for our purposes)
-            return value * 16.0;
-          case '%':
-            // 100% = 16px (default), so 1% = 0.16px
-            return value * 0.16;
-          default:
-            return value;
-        }
-      }
-
-      // 如果无法解析，返回默认值
-      return 14.0;
-    } catch (e) {
-      return 14.0;
-    }
-  }
-
-  /// 解析字体粗细
-  static FontWeight _parseFontWeight(String fontWeightStr) {
-    switch (fontWeightStr.toLowerCase()) {
-      case 'bold':
-      case '700':
-      case '800':
-      case '900':
-        return FontWeight.bold;
-      case '500':
-      case '600':
-        return FontWeight.w600;
-      case 'normal':
-      case '400':
-      default:
-        return FontWeight.normal;
-    }
   }
 
   /// 解析颜色
