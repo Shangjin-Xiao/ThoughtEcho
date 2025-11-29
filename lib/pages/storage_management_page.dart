@@ -137,7 +137,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.cacheCleanedResult(StorageStats.formatBytes(clearedBytes))),
+          content: Text(
+              l10n.cacheCleanedResult(StorageStats.formatBytes(clearedBytes))),
           duration: AppConstants.snackBarDurationImportant,
         ),
       );
@@ -317,9 +318,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.maintenanceDuration((durationMs / 1000).toStringAsFixed(1))),
+                Text(l10n.maintenanceDuration(
+                    (durationMs / 1000).toStringAsFixed(1))),
                 const SizedBox(height: 8),
-                Text(l10n.databaseSizeChange(dbSizeBefore.toStringAsFixed(2), dbSizeAfter.toStringAsFixed(2))),
+                Text(l10n.databaseSizeChange(dbSizeBefore.toStringAsFixed(2),
+                    dbSizeAfter.toStringAsFixed(2))),
                 const SizedBox(height: 8),
                 Text(
                   spaceSaved > 0
@@ -422,7 +425,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建总存储空间卡片
-  Widget _buildTotalStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
+  Widget _buildTotalStorageCard(
+      ColorScheme colorScheme, AppLocalizations l10n) {
     final totalSize = _stats?.totalSize ?? 0;
     final mainDbSize = _stats?.mainDatabaseSize ?? 0;
     final logDbSize = _stats?.logDatabaseSize ?? 0;
@@ -515,13 +519,16 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 runSpacing: 8,
                 children: [
                   if (mainDbSize > 0)
-                    _buildLegendItem(l10n.notesDatabase, Colors.blue, mainDbSize),
+                    _buildLegendItem(
+                        l10n.notesDatabase, Colors.blue, mainDbSize),
                   if (aiDbSize > 0)
                     _buildLegendItem(l10n.aiDatabase, Colors.purple, aiDbSize),
                   if (logDbSize > 0)
-                    _buildLegendItem(l10n.logDatabase, Colors.orange, logDbSize),
+                    _buildLegendItem(
+                        l10n.logDatabase, Colors.orange, logDbSize),
                   if (mediaSize > 0)
-                    _buildLegendItem(l10n.mediaFilesUsage, Colors.green, mediaSize),
+                    _buildLegendItem(
+                        l10n.mediaFilesUsage, Colors.green, mediaSize),
                   if (cacheSize > 0)
                     _buildLegendItem(l10n.cacheUsage, Colors.grey, cacheSize),
                 ],
@@ -556,7 +563,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建数据库存储卡片
-  Widget _buildDatabaseStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
+  Widget _buildDatabaseStorageCard(
+      ColorScheme colorScheme, AppLocalizations l10n) {
     return Card(
       child: Column(
         children: [
@@ -586,7 +594,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建媒体存储卡片
-  Widget _buildMediaStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
+  Widget _buildMediaStorageCard(
+      ColorScheme colorScheme, AppLocalizations l10n) {
     final breakdown = _stats?.mediaBreakdown;
 
     return Card(
@@ -621,7 +630,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建缓存存储卡片
-  Widget _buildCacheStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
+  Widget _buildCacheStorageCard(
+      ColorScheme colorScheme, AppLocalizations l10n) {
     return Card(
       child: _buildStorageItem(
         icon: Icons.cleaning_services_outlined,
@@ -899,7 +909,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建数据目录部分
-  Widget _buildDataDirectorySection(ColorScheme colorScheme, AppLocalizations l10n) {
+  Widget _buildDataDirectorySection(
+      ColorScheme colorScheme, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -997,7 +1008,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.drive_file_move_outlined),
-                      label: Text(_isMigrating ? l10n.migrating : l10n.changeDataDirectory),
+                      label: Text(_isMigrating
+                          ? l10n.migrating
+                          : l10n.changeDataDirectory),
                     ),
                   ),
                 ],

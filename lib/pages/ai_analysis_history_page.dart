@@ -66,7 +66,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-            content: Text(l10n.analysisRecordDeleted), duration: const Duration(seconds: 2)));
+            content: Text(l10n.analysisRecordDeleted),
+            duration: const Duration(seconds: 2)));
       }
     } catch (e) {
       if (!mounted) return;

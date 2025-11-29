@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/version_check_service.dart';
@@ -12,10 +13,13 @@ import '../services/apk_download_service.dart'
 enum UpdateButtonType {
   /// 稍后更新（本次忽略）
   later,
+
   /// 永久忽略
   ignore,
+
   /// 立即更新/下载
   update,
+
   /// 查看更新详情/日志
   viewDetails,
 }
@@ -209,7 +213,8 @@ class UpdateBottomSheet extends StatelessWidget {
                     styleSheet: _createUpdateMarkdownStyle(theme),
                     onTapLink: (text, href, title) {
                       if (href != null) {
-                        launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+                        launchUrl(Uri.parse(href),
+                            mode: LaunchMode.externalApplication);
                       }
                     },
                     shrinkWrap: false,
@@ -342,7 +347,8 @@ class UpdateBottomSheet extends StatelessWidget {
             child: FilledButton(
               onPressed: () => Navigator.of(context).pop(),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
               ),
               child: const Text('确定'),
             ),
@@ -485,7 +491,8 @@ class UpdateBottomSheet extends StatelessWidget {
       // 行内代码样式
       code: TextStyle(
         color: colorScheme.primary,
-        backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        backgroundColor:
+            colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         fontFamily: 'JetBrains Mono, Consolas, Monaco, Courier New, monospace',
         fontSize: 13,
         fontWeight: FontWeight.w500,
@@ -551,7 +558,8 @@ class UpdateBottomSheet extends StatelessWidget {
     VersionInfo versionInfo,
   ) async {
     // 根据平台确定更新按钮的文本和图标
-    final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    final isWindows =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
     final updateButtonLabel = isWindows ? '前往商店' : '立即更新';
     final updateButtonIcon = isWindows ? Icons.store : Icons.download;
 
@@ -615,9 +623,11 @@ class UpdateBottomSheet extends StatelessWidget {
     VersionInfo versionInfo,
   ) async {
     // 根据平台选择不同的更新方式
-    final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    
+    final isWindows =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    final isAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
     if (isWindows) {
       // Windows平台：跳转到Microsoft Store
       await _openMicrosoftStore(context);
@@ -643,7 +653,8 @@ class UpdateBottomSheet extends StatelessWidget {
   static Future<void> _openMicrosoftStore(BuildContext context) async {
     // Microsoft Store URL格式：ms-windows-store://pdp/?productId=<AppId>
     // 这里需要替换为实际的应用ProductId
-    const String microsoftStoreUrl = 'ms-windows-store://pdp/?productId=9NC7GDG6KFMC';
+    const String microsoftStoreUrl =
+        'ms-windows-store://pdp/?productId=9NC7GDG6KFMC';
 
     try {
       final uri = Uri.parse(microsoftStoreUrl);
@@ -651,7 +662,8 @@ class UpdateBottomSheet extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         // 如果Store协议不可用，回退到网页版
-        const String webStoreUrl = 'https://www.microsoft.com/store/apps/9NC7GDG6KFMC';
+        const String webStoreUrl =
+            'https://www.microsoft.com/store/apps/9NC7GDG6KFMC';
         final webUri = Uri.parse(webStoreUrl);
         if (await canLaunchUrl(webUri)) {
           await launchUrl(webUri, mode: LaunchMode.externalApplication);

@@ -34,7 +34,8 @@ class ApkDownloadService {
       _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
       // 初始化通知
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosSettings = DarwinInitializationSettings();
       const initSettings = InitializationSettings(
         android: androidSettings,
@@ -89,7 +90,6 @@ class ApkDownloadService {
       if (context.mounted) {
         _showDownloadDialog(context, apkUrl, filePath, version);
       }
-
     } catch (e) {
       logError('APK下载失败: $e');
       if (context.mounted) {
@@ -256,7 +256,7 @@ class ApkDownloadService {
       logError('下载过程出错: $e');
 
       // 显示错误通知
-              await _showDownloadNotification('下载失败: $e', -1);
+      await _showDownloadNotification('下载失败: $e', -1);
 
       if (context.mounted) {
         Navigator.of(context).pop(); // 关闭下载对话框
@@ -314,7 +314,8 @@ class ApkDownloadService {
   }
 
   /// 显示下载通知
-  static Future<void> _showDownloadNotification(String message, int progress) async {
+  static Future<void> _showDownloadNotification(
+      String message, int progress) async {
     final androidDetails = AndroidNotificationDetails(
       _notificationChannelId,
       _notificationChannelName,
@@ -351,9 +352,7 @@ class ApkDownloadService {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('需要存储权限'),
-          content: const Text(
-            '下载APK文件需要存储权限。请在设置中允许应用访问存储空间。'
-          ),
+          content: const Text('下载APK文件需要存储权限。请在设置中允许应用访问存储空间。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),

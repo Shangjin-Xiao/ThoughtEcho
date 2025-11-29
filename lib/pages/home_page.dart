@@ -256,7 +256,8 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).refreshFailed(e.toString())),
+            content:
+                Text(AppLocalizations.of(context).refreshFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
@@ -826,7 +827,8 @@ class _HomePageState extends State<HomePage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).cannotOpenFullEditor(e.toString())),
+              content: Text(AppLocalizations.of(context)
+                  .cannotOpenFullEditor(e.toString())),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
@@ -992,7 +994,8 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).generateCardFailed(e.toString())),
+            content: Text(
+                AppLocalizations.of(context).generateCardFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1073,7 +1076,9 @@ class _HomePageState extends State<HomePage>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text(AppLocalizations.of(context).shareFailed(e.toString()))),
+                Expanded(
+                    child: Text(AppLocalizations.of(context)
+                        .shareFailed(e.toString()))),
               ],
             ),
             backgroundColor: Colors.red,
@@ -1150,7 +1155,9 @@ class _HomePageState extends State<HomePage>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text(AppLocalizations.of(context).saveFailed(e.toString()))),
+                Expanded(
+                    child: Text(
+                        AppLocalizations.of(context).saveFailed(e.toString()))),
               ],
             ),
             backgroundColor: Colors.red,
@@ -1180,15 +1187,15 @@ class _HomePageState extends State<HomePage>
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
     final hasCoordinates = locationService.hasCoordinates;
-    final hasCity = locationService.city != null && 
-                    !locationService.city!.contains("Throttled!");
+    final hasCity = locationService.city != null &&
+        !locationService.city!.contains("Throttled!");
     final hasWeather = weatherService.currentWeather != null;
-    
+
     // 决定显示什么文字
     String locationText;
     String weatherText;
     IconData weatherIcon;
-    
+
     if (!hasPermission) {
       // 无定位权限
       locationText = '无定位';
@@ -1209,7 +1216,8 @@ class _HomePageState extends State<HomePage>
     } else if (hasCity && hasWeather) {
       // 正常状态
       locationText = locationService.getDisplayLocation();
-      weatherText = '${WeatherService.getWeatherDescription(weatherService.currentWeather!)}'
+      weatherText =
+          '${WeatherService.getWeatherDescription(weatherService.currentWeather!)}'
           '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
       weatherIcon = weatherService.getWeatherIconData();
     } else if (hasCoordinates) {
@@ -1224,7 +1232,7 @@ class _HomePageState extends State<HomePage>
       // 什么都没有，不显示
       return const SizedBox.shrink();
     }
-    
+
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
       child: Container(
@@ -1299,7 +1307,7 @@ class _HomePageState extends State<HomePage>
       theme.colorScheme.surface,
       theme.brightness,
     );
-    
+
     return Scaffold(
       backgroundColor: scaffoldBackgroundColor,
       appBar: _currentIndex == 1
@@ -1312,7 +1320,8 @@ class _HomePageState extends State<HomePage>
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.wifi_off, size: 16, color: Colors.red),
+                            const Icon(Icons.wifi_off,
+                                size: 16, color: Colors.red),
                             const SizedBox(width: 4),
                             Text(AppLocalizations.of(context).appTitleOffline),
                           ],
@@ -1476,8 +1485,10 @@ class _HomePageState extends State<HomePage>
                                                     : 6)), // 动态调整间距
                                         Text(
                                           isAiConfigured
-                                              ? AppLocalizations.of(context).loadingTodayThoughts
-                                              : AppLocalizations.of(context).fetchingDefaultPrompt,
+                                              ? AppLocalizations.of(context)
+                                                  .loadingTodayThoughts
+                                              : AppLocalizations.of(context)
+                                                  .fetchingDefaultPrompt,
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(
                                             color: theme.colorScheme.onSurface
@@ -1496,8 +1507,10 @@ class _HomePageState extends State<HomePage>
                                       _accumulatedPromptText.isNotEmpty
                                           ? _accumulatedPromptText.trim()
                                           : (isAiConfigured
-                                              ? AppLocalizations.of(context).waitingForTodayThoughts
-                                              : AppLocalizations.of(context).noTodayThoughts),
+                                              ? AppLocalizations.of(context)
+                                                  .waitingForTodayThoughts
+                                              : AppLocalizations.of(context)
+                                                  .noTodayThoughts),
                                       style:
                                           theme.textTheme.bodyMedium?.copyWith(
                                         height: 1.4,

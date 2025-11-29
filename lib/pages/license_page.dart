@@ -109,7 +109,8 @@ class _LicensePageState extends State<LicensePage> {
         if (_licenseError != null) {
           return AlertDialog(
             title: const Text('本程序 LICENSE'),
-            content: Text(_licenseError!, style: const TextStyle(color: Colors.red)),
+            content:
+                Text(_licenseError!, style: const TextStyle(color: Colors.red)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
@@ -476,28 +477,29 @@ class SystemLicensesPage extends StatefulWidget {
 }
 
 class _SystemLicensesPageState extends State<SystemLicensesPage> {
-    // 合并后的许可证条目
-    List<_MergedLicenseEntry> _mergedEntries = [];
+  // 合并后的许可证条目
+  List<_MergedLicenseEntry> _mergedEntries = [];
 
-    void _mergeEntries() {
-      final Map<String, _MergedLicenseEntry> map = {};
-      for (final entry in _entries) {
-        for (final pkg in entry.packages) {
-          final key = pkg.trim();
-          if (!map.containsKey(key)) {
-            map[key] = _MergedLicenseEntry([key], List.of(entry.paragraphs));
-          } else {
-            final exist = map[key]!;
-            for (final p in entry.paragraphs) {
-              if (!exist.paragraphs.any((ep) => ep.text == p.text)) {
-                exist.paragraphs.add(p);
-              }
+  void _mergeEntries() {
+    final Map<String, _MergedLicenseEntry> map = {};
+    for (final entry in _entries) {
+      for (final pkg in entry.packages) {
+        final key = pkg.trim();
+        if (!map.containsKey(key)) {
+          map[key] = _MergedLicenseEntry([key], List.of(entry.paragraphs));
+        } else {
+          final exist = map[key]!;
+          for (final p in entry.paragraphs) {
+            if (!exist.paragraphs.any((ep) => ep.text == p.text)) {
+              exist.paragraphs.add(p);
             }
           }
         }
       }
-      _mergedEntries = map.values.toList();
     }
+    _mergedEntries = map.values.toList();
+  }
+
   final TextEditingController _searchController = TextEditingController();
   final List<LicenseEntry> _entries = [];
   final Set<int> _expanded = {};
@@ -629,7 +631,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.blueGrey, size: 20),
+                const Icon(Icons.info_outline,
+                    color: Colors.blueGrey, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -653,9 +656,11 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                         icon: const Icon(Icons.clear),
                         onPressed: () => _searchController.clear(),
                       ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               ),
             ),
           ),
@@ -676,7 +681,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 32),
             const SizedBox(height: 12),
-            Text('加载系统许可证失败：$_error', style: const TextStyle(color: Colors.red)),
+            Text('加载系统许可证失败：$_error',
+                style: const TextStyle(color: Colors.red)),
           ],
         ),
       );
@@ -725,9 +731,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             title: Text(packages.isEmpty ? '未命名' : packages,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(
-              preview.length > 120
-                  ? '${preview.substring(0, 120)}…'
-                  : preview,
+              preview.length > 120 ? '${preview.substring(0, 120)}…' : preview,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -750,8 +754,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             },
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0, vertical: 6.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -762,11 +766,9 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                         final messenger = ScaffoldMessenger.of(context);
                         final paragraphs =
                             entry.paragraphs.map((p) => p.text).toList();
-                        final full =
-                            await compute(_joinParagraphs, paragraphs);
+                        final full = await compute(_joinParagraphs, paragraphs);
                         if (!mounted) return;
-                        await Clipboard.setData(
-                            ClipboardData(text: full));
+                        await Clipboard.setData(ClipboardData(text: full));
                         if (!mounted) return;
                         messenger.showSnackBar(const SnackBar(
                             content: Text('已复制许可证内容'),
@@ -799,6 +801,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
     );
   }
 }
+
 class _MergedLicenseEntry {
   final List<String> packages;
   final List<LicenseParagraph> paragraphs;
@@ -929,14 +932,16 @@ class _ProgressiveSystemLicensesPageState
 class LicenseDetailPage extends StatelessWidget {
   final LicenseEntry entry;
   final String title;
-  const LicenseDetailPage({super.key, required this.entry, required this.title});
+  const LicenseDetailPage(
+      {super.key, required this.entry, required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<String>(
-        future: compute(_joinParagraphs, entry.paragraphs.map((p) => p.text).toList()),
+        future: compute(
+            _joinParagraphs, entry.paragraphs.map((p) => p.text).toList()),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());

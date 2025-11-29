@@ -70,7 +70,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   double? _originalLongitude;
   String? _originalWeather;
   String? _originalTemperature;
-  
+
   // 新建笔记时的实时位置信息
   String? _newLocation;
   double? _newLatitude;
@@ -306,7 +306,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _fetchLocationForNewNote() async {
     final locationService = _cachedLocationService;
     if (locationService == null) return;
-    
+
     try {
       final position = await locationService.getCurrentLocation();
       if (position != null && mounted) {
@@ -359,7 +359,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       }
     }
   }
-  
+
   /// 获取位置提示文本（支持坐标显示）
   String _getLocationTooltipText(String? currentAddress, String? location) {
     // 编辑模式：显示原始位置
@@ -368,11 +368,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         return _originalLocation!;
       }
       if (_originalLatitude != null && _originalLongitude != null) {
-        return LocationService.formatCoordinates(_originalLatitude, _originalLongitude);
+        return LocationService.formatCoordinates(
+            _originalLatitude, _originalLongitude);
       }
       return '无位置信息';
     }
-    
+
     // 新建模式：显示实时获取的位置
     if (_newLocation != null && _newLocation!.isNotEmpty) {
       return _newLocation!;
@@ -390,16 +391,18 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   }
 
   /// 编辑模式下的位置对话框
-  Future<void> _showLocationDialog(BuildContext context, ThemeData theme) async {
-    final hasLocationData = _originalLocation != null || 
+  Future<void> _showLocationDialog(
+      BuildContext context, ThemeData theme) async {
+    final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
-    final hasCoordinates = _originalLatitude != null && _originalLongitude != null;
+    final hasCoordinates =
+        _originalLatitude != null && _originalLongitude != null;
     final hasOnlyCoordinates = _originalLocation == null && hasCoordinates;
-    
+
     String title;
     String content;
     List<Widget> actions = [];
-    
+
     if (!hasLocationData) {
       // 没有位置数据
       title = '无法添加位置';
@@ -413,7 +416,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     } else {
       // 有位置数据
       title = '位置信息';
-      content = hasOnlyCoordinates 
+      content = hasOnlyCoordinates
           ? '当前位置：${LocationService.formatCoordinates(_originalLatitude, _originalLongitude)}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。'
           : '当前位置：${_originalLocation ?? ""}\n\n移除位置信息后将无法再次添加或更改。';
       actions = [
@@ -433,7 +436,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         ),
       ];
     }
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -442,12 +445,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         actions: actions,
       ),
     );
-    
+
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
-        final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!, _originalLongitude!);
+        final addressInfo =
+            await LocalGeocodingService.getAddressFromCoordinates(
+                _originalLatitude!, _originalLongitude!);
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -482,15 +486,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       });
     }
   }
-  
+
   /// 编辑模式下的天气对话框
   Future<void> _showWeatherDialog(BuildContext context, ThemeData theme) async {
     final hasWeatherData = _originalWeather != null;
-    
+
     String title;
     String content;
     List<Widget> actions = [];
-    
+
     if (!hasWeatherData) {
       // 没有天气数据
       title = '无法添加天气';
@@ -504,7 +508,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     } else {
       // 有天气数据
       title = '天气信息';
-      content = '当前天气：${_originalWeather}${_originalTemperature != null ? " $_originalTemperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
+      content =
+          '当前天气：${_originalWeather}${_originalTemperature != null ? " $_originalTemperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
       actions = [
         if (_includeWeather)
           TextButton(
@@ -517,7 +522,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         ),
       ];
     }
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -526,7 +531,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         actions: actions,
       ),
     );
-    
+
     if (result == 'remove') {
       setState(() {
         _includeWeather = false;
@@ -958,13 +963,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 // 创建包含当前所有元数据的临时Quote对象
                                 // 获取经纬度（编辑时用原始值，新建时用实时获取的值）
-                                final currentLat = widget.initialQuote != null 
-                                    ? _originalLatitude 
-                                    : _newLatitude ?? locationService.currentPosition?.latitude;
-                                final currentLon = widget.initialQuote != null 
-                                    ? _originalLongitude 
-                                    : _newLongitude ?? locationService.currentPosition?.longitude;
-                                    
+                                final currentLat = widget.initialQuote != null
+                                    ? _originalLatitude
+                                    : _newLatitude ??
+                                        locationService
+                                            .currentPosition?.latitude;
+                                final currentLon = widget.initialQuote != null
+                                    ? _originalLongitude
+                                    : _newLongitude ??
+                                        locationService
+                                            .currentPosition?.longitude;
+
                                 final tempQuote = Quote(
                                   id: widget
                                       .initialQuote?.id, // 保持原有ID（如果是编辑模式）
@@ -982,8 +991,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   tagIds: _selectedTagIds,
                                   colorHex: _selectedColorHex,
                                   location: currentLocation,
-                                  latitude: _includeLocation ? currentLat : null,
-                                  longitude: _includeLocation ? currentLon : null,
+                                  latitude:
+                                      _includeLocation ? currentLat : null,
+                                  longitude:
+                                      _includeLocation ? currentLon : null,
                                   weather: currentWeather,
                                   temperature: currentTemperature,
                                   aiAnalysis: widget.initialQuote?.aiAnalysis,
@@ -1120,7 +1131,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             return;
                           }
                           // 新建模式
-                          if (value && _newLocation == null && _newLatitude == null) {
+                          if (value &&
+                              _newLocation == null &&
+                              _newLatitude == null) {
                             _fetchLocationForNewNote();
                           }
                           setState(() {
@@ -1130,9 +1143,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         selectedColor: theme.colorScheme.primaryContainer,
                       ),
                       // 小红点：有坐标但没地址时提示可更新
-                      if (widget.initialQuote != null && 
-                          _originalLocation == null && 
-                          _originalLatitude != null && _originalLongitude != null)
+                      if (widget.initialQuote != null &&
+                          _originalLocation == null &&
+                          _originalLatitude != null &&
+                          _originalLongitude != null)
                         Positioned(
                           right: 0,
                           top: 0,
@@ -1336,7 +1350,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       // 创建或更新笔记
                       // 使用实时获取的位置（新建）或原始位置（编辑）
                       final isEditing = widget.initialQuote != null;
-                      
+
                       final Quote quote = Quote(
                         id: widget.initialQuote?.id ?? const Uuid().v4(),
                         content: _contentController.text,
@@ -1357,7 +1371,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             widget.initialQuote?.categoryId,
                         colorHex: _selectedColorHex,
                         location: _includeLocation
-                            ? (isEditing ? _originalLocation : _newLocation ?? location)
+                            ? (isEditing
+                                ? _originalLocation
+                                : _newLocation ?? location)
                             : null,
                         latitude: _includeLocation
                             ? (isEditing ? _originalLatitude : _newLatitude)
@@ -1366,9 +1382,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             ? (isEditing ? _originalLongitude : _newLongitude)
                             : null,
                         weather: _includeWeather
-                            ? (isEditing
-                                ? _originalWeather
-                                : weather)
+                            ? (isEditing ? _originalWeather : weather)
                             : null,
                         temperature: _includeWeather
                             ? (isEditing ? _originalTemperature : temperature)
@@ -1391,7 +1405,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(AppLocalizations.of(context).noteUpdated),
+                              content: Text(
+                                  AppLocalizations.of(context).noteUpdated),
                               duration: AppConstants.snackBarDurationImportant,
                             ),
                           );
@@ -1401,7 +1416,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(AppLocalizations.of(context).noteSaved),
+                              content:
+                                  Text(AppLocalizations.of(context).noteSaved),
                               duration: AppConstants.snackBarDurationImportant,
                             ),
                           );
@@ -1420,7 +1436,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(AppLocalizations.of(context).saveFailedWithError(e.toString())),
+                              content: Text(AppLocalizations.of(context)
+                                  .saveFailedWithError(e.toString())),
                               duration: AppConstants.snackBarDurationError,
                               backgroundColor: Colors.red,
                             ),
@@ -1429,7 +1446,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       }
                     }
                   },
-                  child: Text(widget.initialQuote != null ? AppLocalizations.of(context).edit : AppLocalizations.of(context).save),
+                  child: Text(widget.initialQuote != null
+                      ? AppLocalizations.of(context).edit
+                      : AppLocalizations.of(context).save),
                 ),
               ],
             ),

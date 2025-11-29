@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:flutter_quill_extensions/src/editor/image/widgets/image.dart'
-  show ImageTapWrapper;
+    show ImageTapWrapper;
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../utils/app_logger.dart';
@@ -93,7 +93,7 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
 
 class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
   static const QuillEditorImageEmbedConfig _imageConfig =
-    QuillEditorImageEmbedConfig(
+      QuillEditorImageEmbedConfig(
     imageProviderBuilder: _optimizedImageProviderBuilder,
   );
 

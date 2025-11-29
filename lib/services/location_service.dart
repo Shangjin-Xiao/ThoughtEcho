@@ -58,12 +58,14 @@ class LocationService extends ChangeNotifier {
   String? get province => _province;
   String? get city => _city;
   String? get district => _district;
-  
+
   /// 检查当前是否处于离线状态（有坐标但没有解析出地址）
-  bool get isOfflineLocation => 
-      _currentPosition != null && 
-      (_currentAddress == null || _currentAddress!.isEmpty || _currentAddress == '位置待解析');
-  
+  bool get isOfflineLocation =>
+      _currentPosition != null &&
+      (_currentAddress == null ||
+          _currentAddress!.isEmpty ||
+          _currentAddress == '位置待解析');
+
   /// 检查是否有有效坐标
   bool get hasCoordinates => _currentPosition != null;
 
@@ -378,11 +380,11 @@ class LocationService extends ChangeNotifier {
   Future<List<CityInfo>> _searchCityWithTimeout(String query) async {
     try {
       final bool isChinese = _containsChinese(query);
-      
+
       if (isChinese) {
         // 中文搜索：优先使用Nominatim API（对中文支持更好）
         logDebug('检测到中文输入，优先使用Nominatim API');
-        
+
         final nominatimResults = await _searchCityWithNominatim(
           query,
         ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
@@ -390,7 +392,7 @@ class LocationService extends ChangeNotifier {
         if (nominatimResults.isNotEmpty) {
           return nominatimResults;
         }
-        
+
         // 如果Nominatim没有结果，回退到OpenMeteo
         logDebug('Nominatim无结果，尝试OpenMeteo');
         return await _searchCityWithOpenMeteo(
@@ -399,7 +401,7 @@ class LocationService extends ChangeNotifier {
       } else {
         // 英文/拼音搜索：优先使用OpenMeteo API
         logDebug('检测到非中文输入，优先使用OpenMeteo API');
-        
+
         final results = await _searchCityWithOpenMeteo(
           query,
         ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
@@ -494,11 +496,11 @@ class LocationService extends ChangeNotifier {
     try {
       // 对查询字符串进行URL编码
       final encodedQuery = Uri.encodeComponent(query.trim());
-      
+
       // 使用Nominatim API - 对中文搜索支持更好
       final url =
           'https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&addressdetails=1&limit=15';
-      
+
       logDebug('Nominatim搜索URL: $url');
 
       final response = await NetworkService.instance.get(
@@ -512,31 +514,42 @@ class LocationService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        
+
         // 过滤并解析结果
         final results = <CityInfo>[];
         final seenLocations = <String>{};
-        
+
         for (final item in data) {
           // 提取地址信息
           final address = item['address'] ?? {};
           final String type = item['type'] ?? '';
           final String classType = item['class'] ?? '';
-          
+
           // 过滤掉非地点类型的结果（如道路、建筑等）
           // 只保留城市、城镇、村庄、行政区等地点类型
           final validTypes = {
-            'city', 'town', 'village', 'municipality', 'hamlet',
-            'suburb', 'county', 'state', 'province', 'country',
-            'administrative', 'locality', 'place', 'district'
+            'city',
+            'town',
+            'village',
+            'municipality',
+            'hamlet',
+            'suburb',
+            'county',
+            'state',
+            'province',
+            'country',
+            'administrative',
+            'locality',
+            'place',
+            'district'
           };
           final validClasses = {'place', 'boundary', 'administrative'};
-          
+
           // 如果类型和class都不匹配，跳过此结果
           if (!validTypes.contains(type) && !validClasses.contains(classType)) {
             // 但如果address中有城市信息，仍然保留
-            if (address['city'] == null && 
-                address['town'] == null && 
+            if (address['city'] == null &&
+                address['town'] == null &&
                 address['village'] == null &&
                 address['municipality'] == null) {
               logDebug('跳过非地点类型结果: type=$type, class=$classType');
@@ -561,7 +574,7 @@ class LocationService extends ChangeNotifier {
           if (address.isEmpty && placeName.isNotEmpty) {
             cityName = placeName;
           }
-          
+
           // 跳过空的城市名
           if (cityName.isEmpty) continue;
 
@@ -592,7 +605,7 @@ class LocationService extends ChangeNotifier {
             province: state,
           ));
         }
-        
+
         return results;
       } else {
         logDebug('Nominatim搜索失败: ${response.statusCode}');
@@ -691,46 +704,47 @@ class LocationService extends ChangeNotifier {
       return cityDisplay;
     }
   }
-  
+
   /// 格式化坐标显示（用于离线状态或简单显示）
   /// [precision] 小数位数，默认2位（约1km精度）
-  static String formatCoordinates(double? lat, double? lon, {int precision = 2}) {
+  static String formatCoordinates(double? lat, double? lon,
+      {int precision = 2}) {
     if (lat == null || lon == null) return '';
-    
+
     // 格式化纬度
     final latStr = lat.abs().toStringAsFixed(precision);
     final latDir = lat >= 0 ? 'N' : 'S';
-    
+
     // 格式化经度
     final lonStr = lon.abs().toStringAsFixed(precision);
     final lonDir = lon >= 0 ? 'E' : 'W';
-    
+
     return '$latStr°$latDir, $lonStr°$lonDir';
   }
-  
+
   /// 获取位置显示文本（优先地址，离线时显示坐标）
   String getLocationDisplayText() {
     // 如果有城市信息，返回友好格式
     if (_city != null && _city!.isNotEmpty) {
       return getDisplayLocation();
     }
-    
+
     // 如果有格式化地址，返回地址
-    if (_currentAddress != null && 
-        _currentAddress!.isNotEmpty && 
+    if (_currentAddress != null &&
+        _currentAddress!.isNotEmpty &&
         _currentAddress != '位置待解析' &&
         _currentAddress != '地址解析失败') {
       return _currentAddress!;
     }
-    
+
     // 离线时显示坐标
     if (_currentPosition != null) {
       return '📍 ${formatCoordinates(_currentPosition!.latitude, _currentPosition!.longitude)}';
     }
-    
+
     return '';
   }
-  
+
   /// 仅获取坐标位置（离线存储用）
   /// 返回 {latitude, longitude} 或 null
   Map<String, double>? getCoordinatesOnly() {
@@ -740,7 +754,7 @@ class LocationService extends ChangeNotifier {
       'longitude': _currentPosition!.longitude,
     };
   }
-  
+
   /// 从经纬度设置位置（用于从数据库恢复离线坐标）
   void setCoordinates(double latitude, double longitude, {String? address}) {
     _currentPosition = Position(
@@ -755,7 +769,7 @@ class LocationService extends ChangeNotifier {
       altitudeAccuracy: 0,
       headingAccuracy: 0,
     );
-    
+
     if (address != null && address.isNotEmpty) {
       parseLocationString(address);
     } else {
@@ -766,21 +780,21 @@ class LocationService extends ChangeNotifier {
       _city = null;
       _district = null;
     }
-    
+
     notifyListeners();
   }
-  
+
   /// 尝试解析离线坐标的地址（联网后调用）
   Future<bool> resolveOfflineLocation() async {
     if (_currentPosition == null) return false;
     if (!isOfflineLocation) return true; // 已经有地址了
-    
+
     try {
       logDebug('尝试解析离线位置...');
       await getAddressFromLatLng();
-      return _currentAddress != null && 
-             _currentAddress != '位置待解析' && 
-             _currentAddress != '地址解析失败';
+      return _currentAddress != null &&
+          _currentAddress != '位置待解析' &&
+          _currentAddress != '地址解析失败';
     } catch (e) {
       logDebug('解析离线位置失败: $e');
       return false;

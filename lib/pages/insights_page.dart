@@ -197,10 +197,12 @@ class _InsightsPageState extends State<InsightsPage> {
     }
 
     try {
-      logDebug('Starting to save AI analysis, content length: ${content.length}');
+      logDebug(
+          'Starting to save AI analysis, content length: ${content.length}');
 
       if (_aiAnalysisDatabaseService == null) {
-        logDebug('AIAnalysisDatabaseService not initialized, trying to re-fetch');
+        logDebug(
+            'AIAnalysisDatabaseService not initialized, trying to re-fetch');
         _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
           context,
           listen: false,
@@ -220,7 +222,8 @@ class _InsightsPageState extends State<InsightsPage> {
         quoteCount: quoteCount,
       );
 
-      logDebug('Creating AI analysis object: ${analysis.title}, type: ${analysis.analysisType}');
+      logDebug(
+          'Creating AI analysis object: ${analysis.title}, type: ${analysis.analysisType}');
 
       if (_aiAnalysisDatabaseService == null) {
         throw Exception('AI analysis database service not initialized');
@@ -241,7 +244,8 @@ class _InsightsPageState extends State<InsightsPage> {
       final verifyAnalysis =
           await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
       if (verifyAnalysis != null) {
-        logDebug('Save verification successful, title: ${verifyAnalysis.title}');
+        logDebug(
+            'Save verification successful, title: ${verifyAnalysis.title}');
       } else {
         logDebug('Save verification failed, could not find the saved analysis');
       }
@@ -673,8 +677,8 @@ class _InsightsPageState extends State<InsightsPage> {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _getAnalysisStyles(AppLocalizations.of(context))
-                  .map((style) {
+              children:
+                  _getAnalysisStyles(AppLocalizations.of(context)).map((style) {
                 final isSelected = _selectedAnalysisStyle == style['style'];
                 final String key = style['style'];
                 return ChoiceChip(
@@ -991,7 +995,8 @@ class _InsightsPageState extends State<InsightsPage> {
                         const SizedBox(height: 8),
                         // Use MarkdownBody to render accumulated text
                         MarkdownBody(
-                          data: _accumulatedInsightsText, // Use accumulated text
+                          data:
+                              _accumulatedInsightsText, // Use accumulated text
                           selectable: true,
                           styleSheet: MarkdownStyleSheet.fromTheme(
                             theme,
@@ -1041,8 +1046,7 @@ class _InsightsPageState extends State<InsightsPage> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                l10n.generateInsightsErrorSnapshot(
-                    snapshot.error.toString()),
+                l10n.generateInsightsErrorSnapshot(snapshot.error.toString()),
                 style: const TextStyle(color: Colors.red),
                 textAlign: TextAlign.center,
               ),
