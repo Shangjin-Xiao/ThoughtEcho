@@ -764,5 +764,72 @@
       }
     }
   },
-  "logPageError": "日志页渲染异常:"
+  "logPageError": "日志页渲染异常:",
+  
+  "networkDiagnostic": "网络诊断",
+  "networkConfig": "网络配置",
+  "networkDiagnosticSection": "网络诊断",
+  "diagnosing": "诊断中...",
+  "runNetworkDiagnostic": "运行网络诊断",
+  "diagnosticResult": "诊断结果: {passed}/{total} 项通过",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "诊断失败: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "设备发现",
+  "startDiscovery": "开始发现",
+  "stopDiscovery": "停止发现",
+  "sendAnnouncement": "发送公告",
+  "deviceAnnouncementSent": "设备公告已发送",
+  "startDiscoveryFailed": "启动设备发现失败: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "发送设备公告失败: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "状态: 运行中",
+  "statusStopped": "状态: 已停止",
+  "discoveredDevices": "发现的设备",
+  "discoveredDevicesCount": "发现的设备 ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "暂无发现的设备",
+  "unknownModel": "未知型号",
+  "fingerprint": "指纹: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  }
 }

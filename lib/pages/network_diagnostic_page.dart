@@ -3,6 +3,7 @@ import 'package:thoughtecho/utils/multicast_diagnostic_tool.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 网络诊断页面
 /// 用于测试和诊断设备发现功能
@@ -50,9 +51,10 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
       });
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('诊断失败: $e'),
+            content: Text(l10n.diagnosticFailed(e.toString())),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -78,9 +80,10 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
         });
       } catch (e) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('启动设备发现失败: $e'),
+              content: Text(l10n.startDiscoveryFailed(e.toString())),
               duration: const Duration(seconds: 3),
             ),
           );
@@ -90,13 +93,14 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
   }
 
   Future<void> _announceDevice() async {
+    final l10n = AppLocalizations.of(context);
     try {
       await _discoveryService.announceDevice();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('设备公告已发送'),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Text(l10n.deviceAnnouncementSent),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -104,7 +108,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('发送设备公告失败: $e'),
+            content: Text(l10n.sendAnnouncementFailed(e.toString())),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -114,9 +118,10 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('网络诊断'),
+        title: Text(l10n.networkDiagnostic),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SingleChildScrollView(
@@ -125,79 +130,79 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 配置信息
-            _buildConfigSection(),
+            _buildConfigSection(l10n),
             const SizedBox(height: 20),
 
             // 诊断工具
-            _buildDiagnosticSection(),
+            _buildDiagnosticSection(l10n),
             const SizedBox(height: 20),
 
             // 设备发现
-            _buildDiscoverySection(),
+            _buildDiscoverySection(l10n),
             const SizedBox(height: 20),
 
             // 发现的设备
-            _buildDevicesSection(),
+            _buildDevicesSection(l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildConfigSection() {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '网络配置',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text('HTTP服务器端口: $defaultPort'),
-            Text('组播发现端口: $defaultMulticastPort'),
-            Text('组播地址: $defaultMulticastGroup'),
-            Text('协议版本: $protocolVersion'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDiagnosticSection() {
+  Widget _buildConfigSection(AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '网络诊断',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.networkConfig,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const Text('HTTP Server Port: $defaultPort'),
+            const Text('Multicast Discovery Port: $defaultMulticastPort'),
+            const Text('Multicast Address: $defaultMulticastGroup'),
+            const Text('Protocol Version: $protocolVersion'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticSection(AppLocalizations l10n) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.networkDiagnosticSection,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _isRunningDiagnostic ? null : _runDiagnostic,
               child: _isRunningDiagnostic
-                  ? const Row(
+                  ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        SizedBox(width: 8),
-                        Text('诊断中...'),
+                        const SizedBox(width: 8),
+                        Text(l10n.diagnosing),
                       ],
                     )
-                  : const Text('运行网络诊断'),
+                  : Text(l10n.runNetworkDiagnostic),
             ),
             if (_diagnosticResult != null) ...[
               const SizedBox(height: 10),
-              _buildDiagnosticResults(),
+              _buildDiagnosticResults(l10n),
             ],
           ],
         ),
@@ -205,13 +210,13 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
     );
   }
 
-  Widget _buildDiagnosticResults() {
+  Widget _buildDiagnosticResults(AppLocalizations l10n) {
     final result = _diagnosticResult!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '诊断结果: ${result.successCount}/${result.totalCount} 项通过',
+          l10n.diagnosticResult(result.successCount, result.totalCount),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: result.isSuccess ? Colors.green : Colors.red,
@@ -242,34 +247,34 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
     );
   }
 
-  Widget _buildDiscoverySection() {
+  Widget _buildDiscoverySection(AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '设备发现',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.deviceDiscovery,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
                 ElevatedButton(
                   onPressed: _toggleDiscovery,
-                  child: Text(_isDiscoveryRunning ? '停止发现' : '开始发现'),
+                  child: Text(_isDiscoveryRunning ? l10n.stopDiscovery : l10n.startDiscovery),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: _isDiscoveryRunning ? _announceDevice : null,
-                  child: const Text('发送公告'),
+                  child: Text(l10n.sendAnnouncement),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             Text(
-              '状态: ${_isDiscoveryRunning ? "运行中" : "已停止"}',
+              _isDiscoveryRunning ? l10n.statusRunning : l10n.statusStopped,
               style: TextStyle(
                 color: _isDiscoveryRunning ? Colors.green : Colors.grey,
               ),
@@ -280,7 +285,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
     );
   }
 
-  Widget _buildDevicesSection() {
+  Widget _buildDevicesSection(AppLocalizations l10n) {
     final devices = _discoveryService.devices;
     return Card(
       child: Padding(
@@ -289,12 +294,12 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '发现的设备 (${devices.length})',
+              l10n.discoveredDevicesCount(devices.length),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             if (devices.isEmpty)
-              const Text('暂无发现的设备')
+              Text(l10n.noDevicesFound)
             else
               ...devices.map((device) => Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -307,8 +312,8 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
                       title: Text(device.alias),
                       subtitle: Text(
                         '${device.ip}:${device.port}\n'
-                        '${device.deviceModel ?? "未知型号"}\n'
-                        '指纹: ${device.fingerprint}',
+                        '${device.deviceModel ?? l10n.unknownModel}\n'
+                        '${l10n.fingerprint(device.fingerprint)}',
                       ),
                       isThreeLine: true,
                       trailing: Icon(

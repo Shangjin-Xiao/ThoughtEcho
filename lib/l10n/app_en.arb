@@ -764,5 +764,72 @@
       }
     }
   },
-  "logPageError": "Log page rendering error:"
+  "logPageError": "Log page rendering error:",
+  
+  "networkDiagnostic": "Network Diagnostic",
+  "networkConfig": "Network Configuration",
+  "networkDiagnosticSection": "Network Diagnostic",
+  "diagnosing": "Diagnosing...",
+  "runNetworkDiagnostic": "Run Network Diagnostic",
+  "diagnosticResult": "Diagnostic result: {passed}/{total} passed",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "Diagnostic failed: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "Device Discovery",
+  "startDiscovery": "Start Discovery",
+  "stopDiscovery": "Stop Discovery",
+  "sendAnnouncement": "Send Announcement",
+  "deviceAnnouncementSent": "Device announcement sent",
+  "startDiscoveryFailed": "Failed to start device discovery: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "Failed to send device announcement: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "Status: Running",
+  "statusStopped": "Status: Stopped",
+  "discoveredDevices": "Discovered Devices",
+  "discoveredDevicesCount": "Discovered Devices ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "No devices found",
+  "unknownModel": "Unknown model",
+  "fingerprint": "Fingerprint: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  }
 }
