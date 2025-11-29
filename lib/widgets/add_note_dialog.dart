@@ -509,7 +509,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       // 有天气数据
       title = '天气信息';
       content =
-          '当前天气：${_originalWeather}${_originalTemperature != null ? " $_originalTemperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
+          '当前天气：$_originalWeather${_originalTemperature != null ? " $_originalTemperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
       actions = [
         if (_includeWeather)
           TextButton(
