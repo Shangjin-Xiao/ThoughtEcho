@@ -88,6 +88,10 @@ class NoteListViewState extends State<NoteListView> {
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
 
+  // 修复：用于检测和恢复滚动范围异常的计数器
+  int _scrollExtentCheckCounter = 0;
+  static const int _maxScrollExtentChecks = 3;
+
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
   // ---- 自动滚动控制新增状态 ----
@@ -161,6 +165,9 @@ class NoteListViewState extends State<NoteListView> {
     }
     _lastScrollOffset = currentOffset;
 
+    // 修复：检测滚动范围异常（列表提前终止的情况）
+    _checkAndFixScrollExtentAnomaly();
+
     // 如果正在初始化，忽略滚动事件以避免冲突
     if (_isInitializing) {
       logDebug('正在初始化，忽略滚动事件', source: 'NoteListView');
@@ -196,6 +203,92 @@ class NoteListViewState extends State<NoteListView> {
       }
       _lastUserScrollTime = null;
     });
+  }
+
+  /// 修复：检测并修复滚动范围异常
+  /// 当用户滚动到接近底部但列表提前终止时，尝试强制刷新
+  void _checkAndFixScrollExtentAnomaly() {
+    if (!mounted || !_scrollController.hasClients) return;
+    if (_isLoading || !_hasMore) return;
+
+    final position = _scrollController.position;
+    final maxExtent = position.maxScrollExtent;
+    final currentOffset = position.pixels;
+
+    // 如果用户滚动到了接近底部（最后 200 像素），但 _hasMore 为 true
+    // 且列表似乎没有更多内容可滚动，这可能是异常情况
+    if (maxExtent > 0 && currentOffset > maxExtent - 200) {
+      // 检查是否实际还有更多数据
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      final dbHasMore = db.hasMoreQuotes;
+
+      if (dbHasMore && !_isLoading) {
+        // 数据库表示还有更多数据，但列表可能没有正确更新
+        _scrollExtentCheckCounter++;
+        logDebug(
+          '检测到可能的滚动范围异常 (第 $_scrollExtentCheckCounter 次): '
+          'maxExtent=$maxExtent, offset=$currentOffset, dbHasMore=$dbHasMore',
+          source: 'NoteListView',
+        );
+
+        if (_scrollExtentCheckCounter >= _maxScrollExtentChecks) {
+          // 多次检测到异常，尝试强制加载更多
+          logDebug('触发强制加载更多数据以修复滚动范围', source: 'NoteListView');
+          _scrollExtentCheckCounter = 0;
+          _forceLoadMore();
+        }
+      } else if (!dbHasMore && _hasMore) {
+        // 数据库表示没有更多数据，但本地状态不一致，同步状态
+        logDebug('同步 _hasMore 状态: 从 true 改为 false', source: 'NoteListView');
+        setState(() {
+          _hasMore = false;
+        });
+        _scrollExtentCheckCounter = 0;
+      }
+    } else {
+      // 不在底部区域，重置计数器
+      _scrollExtentCheckCounter = 0;
+    }
+  }
+
+  /// 修复：强制加载更多数据
+  Future<void> _forceLoadMore() async {
+    if (!mounted || _isLoading) return;
+
+    logDebug('强制加载更多数据开始', source: 'NoteListView');
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      await db.loadMoreQuotes();
+
+      if (mounted) {
+        setState(() {
+          _hasMore = db.hasMoreQuotes;
+          _isLoading = false;
+        });
+
+        // 强制刷新 ScrollController 以更新滚动范围
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            // 触发轻微滚动以强制重新计算滚动范围
+            final currentOffset = _scrollController.offset;
+            _scrollController.jumpTo(currentOffset + 0.1);
+            _scrollController.jumpTo(currentOffset);
+          }
+        });
+      }
+    } catch (e) {
+      logError('强制加载更多数据失败: $e', error: e, source: 'NoteListView');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   /// 数据库服务变化监听器
@@ -317,6 +410,18 @@ class NoteListViewState extends State<NoteListView> {
             _lastUserScrollTime = DateTime.now();
             logDebug('首次数据加载完成', source: 'NoteListView');
           }
+
+          // 修复：同步 _hasMore 状态与数据库服务状态
+          final dbService = Provider.of<DatabaseService>(context, listen: false);
+          if (_hasMore != dbService.hasMoreQuotes) {
+            logDebug(
+              '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
+              source: 'NoteListView',
+            );
+            _hasMore = dbService.hasMoreQuotes;
+          }
+          // 重置滚动范围检查计数器
+          _scrollExtentCheckCounter = 0;
 
           // 通知搜索控制器数据加载完成
           try {
@@ -520,6 +625,18 @@ class NoteListViewState extends State<NoteListView> {
               }
             });
           }
+
+          // 修复：同步 _hasMore 状态与数据库服务状态
+          final dbServiceForSync = Provider.of<DatabaseService>(context, listen: false);
+          if (_hasMore != dbServiceForSync.hasMoreQuotes) {
+            logDebug(
+              '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
+              source: 'NoteListView',
+            );
+            _hasMore = dbServiceForSync.hasMoreQuotes;
+          }
+          // 重置滚动范围检查计数器
+          _scrollExtentCheckCounter = 0;
 
           // 通知搜索控制器数据加载完成
           try {
@@ -781,6 +898,16 @@ class NoteListViewState extends State<NoteListView> {
       return;
     }
 
+    // 修复：在加载前先同步一次状态，确保 _hasMore 是最新的
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    if (!db.hasMoreQuotes) {
+      logDebug('数据库显示无更多数据，同步 _hasMore 为 false', source: 'NoteListView');
+      setState(() {
+        _hasMore = false;
+      });
+      return;
+    }
+
     // 修复：立即设置加载状态，防止并发调用
     setState(() {
       _isLoading = true;
@@ -788,7 +915,6 @@ class NoteListViewState extends State<NoteListView> {
 
     try {
       logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
-      final db = Provider.of<DatabaseService>(context, listen: false);
       await db.loadMoreQuotes();
 
       // 强制检查状态更新
@@ -796,6 +922,18 @@ class NoteListViewState extends State<NoteListView> {
         setState(() {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false; // 加载完成后重置状态
+        });
+
+        // 修复：加载更多后强制刷新滚动范围
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            // 触发轻微滚动以强制重新计算滚动范围
+            final currentOffset = _scrollController.offset;
+            if (currentOffset > 0) {
+              _scrollController.jumpTo(currentOffset + 0.1);
+              _scrollController.jumpTo(currentOffset);
+            }
+          }
         });
       }
     } catch (e) {
@@ -891,6 +1029,20 @@ class NoteListViewState extends State<NoteListView> {
               _hasMore) {
             logDebug(
                 '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
+                source: 'NoteListView');
+            _loadMore();
+          }
+        }
+
+        // 修复：在滚动结束时检查是否需要加载更多
+        if (notification is ScrollEndNotification) {
+          final metrics = notification.metrics;
+          // 如果滚动到了底部附近，且还有更多数据，确保触发加载
+          if (metrics.pixels >= metrics.maxScrollExtent - 100 &&
+              _hasMore &&
+              !_isLoading) {
+            logDebug(
+                '滚动结束时检测到接近底部，尝试加载更多',
                 source: 'NoteListView');
             _loadMore();
           }
