@@ -538,7 +538,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       // 选择导入模式：覆盖 或 合并(LWW)
       bool useMerge = false;
       if (mounted) {
-        final l10n = AppLocalizations.of(context);
         final mode = await showDialog<String>(
           context: context,
           barrierDismissible: false,

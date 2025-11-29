@@ -87,7 +87,7 @@ class OnboardingConfig {
       description: '选择您感兴趣的内容类型',
       defaultValue: 'a,b,c,d,e,f,g,h,i,j,k',
       type: OnboardingPreferenceType.multiSelect,
-      options: ApiService.hitokotoTypes.entries
+      options: ApiService.hitokotoTypeKeys.entries
           .map(
             (entry) => OnboardingPreferenceOption<String>(
               value: entry.key,
