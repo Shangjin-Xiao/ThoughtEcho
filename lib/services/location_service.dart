@@ -58,6 +58,15 @@ class LocationService extends ChangeNotifier {
   String? get province => _province;
   String? get city => _city;
   String? get district => _district;
+  
+  /// 检查当前是否处于离线状态（有坐标但没有解析出地址）
+  bool get isOfflineLocation => 
+      _currentPosition != null && 
+      (_currentAddress == null || _currentAddress!.isEmpty || _currentAddress == '位置待解析');
+  
+  /// 检查是否有有效坐标
+  bool get hasCoordinates => _currentPosition != null;
+
   // 初始化位置服务
   Future<void> init() async {
     logDebug('开始初始化位置服务');
@@ -680,6 +689,101 @@ class LocationService extends ChangeNotifier {
       return '$cityDisplay·$_district';
     } else {
       return cityDisplay;
+    }
+  }
+  
+  /// 格式化坐标显示（用于离线状态或简单显示）
+  /// [precision] 小数位数，默认2位（约1km精度）
+  static String formatCoordinates(double? lat, double? lon, {int precision = 2}) {
+    if (lat == null || lon == null) return '';
+    
+    // 格式化纬度
+    final latStr = lat.abs().toStringAsFixed(precision);
+    final latDir = lat >= 0 ? 'N' : 'S';
+    
+    // 格式化经度
+    final lonStr = lon.abs().toStringAsFixed(precision);
+    final lonDir = lon >= 0 ? 'E' : 'W';
+    
+    return '$latStr°$latDir, $lonStr°$lonDir';
+  }
+  
+  /// 获取位置显示文本（优先地址，离线时显示坐标）
+  String getLocationDisplayText() {
+    // 如果有城市信息，返回友好格式
+    if (_city != null && _city!.isNotEmpty) {
+      return getDisplayLocation();
+    }
+    
+    // 如果有格式化地址，返回地址
+    if (_currentAddress != null && 
+        _currentAddress!.isNotEmpty && 
+        _currentAddress != '位置待解析' &&
+        _currentAddress != '地址解析失败') {
+      return _currentAddress!;
+    }
+    
+    // 离线时显示坐标
+    if (_currentPosition != null) {
+      return '📍 ${formatCoordinates(_currentPosition!.latitude, _currentPosition!.longitude)}';
+    }
+    
+    return '';
+  }
+  
+  /// 仅获取坐标位置（离线存储用）
+  /// 返回 {latitude, longitude} 或 null
+  Map<String, double>? getCoordinatesOnly() {
+    if (_currentPosition == null) return null;
+    return {
+      'latitude': _currentPosition!.latitude,
+      'longitude': _currentPosition!.longitude,
+    };
+  }
+  
+  /// 从经纬度设置位置（用于从数据库恢复离线坐标）
+  void setCoordinates(double latitude, double longitude, {String? address}) {
+    _currentPosition = Position(
+      latitude: latitude,
+      longitude: longitude,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      heading: 0,
+      speed: 0,
+      speedAccuracy: 0,
+      altitudeAccuracy: 0,
+      headingAccuracy: 0,
+    );
+    
+    if (address != null && address.isNotEmpty) {
+      parseLocationString(address);
+    } else {
+      // 离线状态标记
+      _currentAddress = '位置待解析';
+      _country = null;
+      _province = null;
+      _city = null;
+      _district = null;
+    }
+    
+    notifyListeners();
+  }
+  
+  /// 尝试解析离线坐标的地址（联网后调用）
+  Future<bool> resolveOfflineLocation() async {
+    if (_currentPosition == null) return false;
+    if (!isOfflineLocation) return true; // 已经有地址了
+    
+    try {
+      logDebug('尝试解析离线位置...');
+      await getAddressFromLatLng();
+      return _currentAddress != null && 
+             _currentAddress != '位置待解析' && 
+             _currentAddress != '地址解析失败';
+    } catch (e) {
+      logDebug('解析离线位置失败: $e');
+      return false;
     }
   }
 

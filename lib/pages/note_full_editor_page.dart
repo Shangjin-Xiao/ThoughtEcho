@@ -10,6 +10,7 @@ import '../services/database_service.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/location_service.dart';
+import '../services/local_geocoding_service.dart';
 import '../services/weather_service.dart';
 import '../services/ai_service.dart'; // 导入AI服务
 import '../utils/time_utils.dart'; // 导入时间工具类
@@ -54,6 +55,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late List<String> _selectedTagIds; // 选中标签ID列表
   String? _selectedColorHex;
   String? _location;
+  double? _latitude;  // 位置纬度
+  double? _longitude; // 位置经度
   String? _weather;
   String? _temperature; // 分离位置和天气控制
   bool _showLocation = false;
@@ -61,6 +64,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 保存原始笔记的位置和天气信息（用于编辑模式判断）
   String? _originalLocation;
+  double? _originalLatitude;
+  double? _originalLongitude;
   String? _originalWeather;
 
   // 会话级媒体追踪：记录本编辑会话中通过导入对话框新增的媒体文件
@@ -103,15 +108,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _selectedColorHex = widget.initialQuote?.colorHex;
     // 位置/天气 - 分别设置状态
     _location = widget.initialQuote?.location;
+    _latitude = widget.initialQuote?.latitude;
+    _longitude = widget.initialQuote?.longitude;
     _weather = widget.initialQuote?.weather;
     _temperature = widget.initialQuote?.temperature;
 
     // 保存原始的位置和天气信息（用于编辑模式判断）
     _originalLocation = widget.initialQuote?.location;
+    _originalLatitude = widget.initialQuote?.latitude;
+    _originalLongitude = widget.initialQuote?.longitude;
     _originalWeather = widget.initialQuote?.weather;
 
     // 分别检查并设置位置和天气状态
-    _showLocation = _location != null;
+    // 有地址字符串或有坐标都算有位置
+    _showLocation = _location != null || (_latitude != null && _longitude != null);
     _showWeather = _weather != null;
 
     // 显示功能引导（首帧后立即触发）
@@ -613,6 +623,153 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
+  /// 编辑模式下的位置对话框
+  Future<void> _showLocationDialogInEditor(BuildContext context, ThemeData theme) async {
+    final hasLocationData = _originalLocation != null || 
+        (_originalLatitude != null && _originalLongitude != null);
+    final hasCoordinates = _originalLatitude != null && _originalLongitude != null;
+    final hasOnlyCoordinates = _originalLocation == null && hasCoordinates;
+    
+    String title;
+    String content;
+    List<Widget> actions = [];
+    
+    if (!hasLocationData) {
+      // 没有位置数据
+      title = '无法添加位置';
+      content = '此笔记首次保存时未记录位置信息，无法补充添加。\n\n如需记录位置，请在新建笔记时勾选位置选项。';
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('我知道了'),
+        ),
+      ];
+    } else {
+      // 有位置数据
+      title = '位置信息';
+      content = hasOnlyCoordinates 
+          ? '当前位置：${LocationService.formatCoordinates(_originalLatitude, _originalLongitude)}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。'
+          : '当前位置：${_originalLocation ?? _location ?? ""}\n\n移除位置信息后将无法再次添加或更改。';
+      actions = [
+        if (_showLocation)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'remove'),
+            child: const Text('移除'),
+          ),
+        if (hasCoordinates)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'update'),
+            child: const Text('更新位置'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: const Text('取消'),
+        ),
+      ];
+    }
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: actions,
+      ),
+    );
+    
+    if (result == 'update' && hasCoordinates) {
+      // 尝试用坐标更新地址
+      try {
+        final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
+          _originalLatitude!, _originalLongitude!);
+        if (addressInfo != null && mounted) {
+          final formattedAddress = addressInfo['formatted_address'];
+          if (formattedAddress != null && formattedAddress.isNotEmpty) {
+            setState(() {
+              _location = formattedAddress;
+              _originalLocation = formattedAddress;
+            });
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('位置已更新为: $formattedAddress')),
+              );
+            }
+          } else if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('无法获取地址，请检查网络')),
+            );
+          }
+        } else if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法获取地址，请检查网络')),
+          );
+        }
+      } catch (e) {
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('更新失败: $e')),
+          );
+        }
+      }
+    } else if (result == 'remove') {
+      setState(() {
+        _showLocation = false;
+      });
+    }
+  }
+  
+  /// 编辑模式下的天气对话框
+  Future<void> _showWeatherDialogInEditor(BuildContext context, ThemeData theme) async {
+    final hasWeatherData = _originalWeather != null;
+    
+    String title;
+    String content;
+    List<Widget> actions = [];
+    
+    if (!hasWeatherData) {
+      // 没有天气数据
+      title = '无法添加天气';
+      content = '此笔记首次保存时未记录天气信息，无法补充添加。\n\n如需记录天气，请在新建笔记时勾选天气选项。';
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('我知道了'),
+        ),
+      ];
+    } else {
+      // 有天气数据
+      final weatherDesc = WeatherService.getWeatherDescription(_originalWeather!);
+      title = '天气信息';
+      content = '当前天气：$weatherDesc${_temperature != null ? " $_temperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
+      actions = [
+        if (_showWeather)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'remove'),
+            child: const Text('移除'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: const Text('取消'),
+        ),
+      ];
+    }
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: actions,
+      ),
+    );
+    
+    if (result == 'remove') {
+      setState(() {
+        _showWeather = false;
+      });
+    }
+  }
+
   Future<void> _fetchLocationWeather() async {
     final locationService = Provider.of<LocationService>(
       context,
@@ -625,13 +782,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       bool permissionGranted =
           await locationService.requestLocationPermission();
       if (!permissionGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(
-            content: Text('无法获取位置权限'),
-            duration: AppConstants.snackBarDurationError,
-          ));
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('无法获取位置权限'),
+              duration: AppConstants.snackBarDurationError,
+            ),
+          );
         }
         return;
       }
@@ -643,9 +800,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
       // 优化：将网络请求包装为 Future，避免阻塞主线程
       try {
-        // 先更新位置信息
+        // 更新位置信息（包括经纬度）
         setState(() {
-          _location = location;
+          _location = location.isNotEmpty ? location : null;
+          _latitude = position.latitude;
+          _longitude = position.longitude;
         });
 
         // 异步获取天气数据，不阻塞UI
@@ -654,6 +813,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       } catch (e) {
         logError('获取位置天气失败', error: e, source: 'NoteFullEditorPage');
       }
+    } else if (mounted && context.mounted) {
+      // 获取位置失败，给出提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('无法获取当前位置，请检查定位权限或网络状态'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -778,6 +945,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       categoryId: widget.initialQuote?.categoryId,
       colorHex: _selectedColorHex,
       location: _showLocation ? _location : null,
+      latitude: _showLocation ? _latitude : null,
+      longitude: _showLocation ? _longitude : null,
       weather: _showWeather ? _weather : null,
       temperature: _showWeather ? _temperature : null,
       deltaContent: deltaJson,
@@ -1780,49 +1949,51 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   children: [
                                     // 位置信息按钮
                                     Expanded(
-                                      child: FilterChip(
-                                        avatar: Icon(
-                                          Icons.location_on,
-                                          color: _showLocation
-                                              ? theme.colorScheme.primary
-                                              : Colors.grey,
-                                          size: 18,
-                                        ),
-                                        label: const Text('位置'),
-                                        selected: _showLocation,
-                                        onSelected: (value) {
-                                          // 编辑模式下的提示逻辑
-                                          if (widget.initialQuote != null) {
-                                            if (value && _originalLocation == null) {
-                                              // 尝试添加但原始没有位置
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('此笔记首次保存时未记录位置，无法补充添加'),
-                                                  duration: Duration(seconds: 2),
+                                      child: Stack(
+                                        children: [
+                                          FilterChip(
+                                            avatar: Icon(
+                                              Icons.location_on,
+                                              color: _showLocation
+                                                  ? theme.colorScheme.primary
+                                                  : Colors.grey,
+                                              size: 18,
+                                            ),
+                                            label: const Text('位置'),
+                                            selected: _showLocation,
+                                            onSelected: (value) async {
+                                              // 编辑模式下统一弹对话框
+                                              if (widget.initialQuote != null) {
+                                                await _showLocationDialogInEditor(context, theme);
+                                                return;
+                                              }
+                                              // 新建模式
+                                              if (value && _location == null && _latitude == null) {
+                                                _fetchLocationWeather();
+                                              }
+                                              setState(() {
+                                                _showLocation = value;
+                                              });
+                                            },
+                                            selectedColor: theme.colorScheme.primaryContainer,
+                                          ),
+                                          // 小红点：有坐标但没地址时提示可更新
+                                          if (widget.initialQuote != null && 
+                                              _originalLocation == null && 
+                                              _originalLatitude != null && _originalLongitude != null)
+                                            Positioned(
+                                              right: 0,
+                                              top: 0,
+                                              child: Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: BoxDecoration(
+                                                  color: theme.colorScheme.error,
+                                                  shape: BoxShape.circle,
                                                 ),
-                                              );
-                                              return;
-                                            }
-                                            if (!value && _originalLocation != null) {
-                                              // 尝试移除已有位置
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('移除后将无法再次添加或更改位置信息'),
-                                                  duration: Duration(seconds: 2),
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            // 新建模式：如果开启了位置但还没有数据，则自动获取
-                                            if (value && _location == null) {
-                                              _fetchLocationWeather();
-                                            }
-                                          }
-                                          setState(() {
-                                            _showLocation = value;
-                                          });
-                                        },
-                                        selectedColor: theme.colorScheme.primaryContainer,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -1840,33 +2011,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         ),
                                         label: const Text('天气'),
                                         selected: _showWeather,
-                                        onSelected: (value) {
-                                          // 编辑模式下的提示逻辑
+                                        onSelected: (value) async {
+                                          // 编辑模式下统一弹对话框
                                           if (widget.initialQuote != null) {
-                                            if (value && _originalWeather == null) {
-                                              // 尝试添加但原始没有天气
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('此笔记首次保存时未记录天气，无法补充添加'),
-                                                  duration: Duration(seconds: 2),
-                                                ),
-                                              );
-                                              return;
-                                            }
-                                            if (!value && _originalWeather != null) {
-                                              // 尝试移除已有天气
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('移除后将无法再次添加或更改天气信息'),
-                                                  duration: Duration(seconds: 2),
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            // 新建模式：如果开启了天气但还没有数据，则自动获取
-                                            if (value && _weather == null) {
-                                              _fetchLocationWeather();
-                                            }
+                                            await _showWeatherDialogInEditor(context, theme);
+                                            return;
+                                          }
+                                          // 新建模式
+                                          if (value && _weather == null) {
+                                            _fetchLocationWeather();
                                           }
                                           setState(() {
                                             _showWeather = value;
@@ -1889,11 +2042,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 ),
                                 
                                 // 显示位置和天气信息
-                                if (_location != null || _weather != null) ...[
+                                if (_location != null || _latitude != null || _weather != null) ...[
                                   const SizedBox(height: 12),
                                   const Divider(height: 1),
                                   const SizedBox(height: 12),
-                                  if (_location != null)
+                                  if (_location != null || _latitude != null)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
                                       child: Row(
@@ -1906,7 +2059,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              _location!,
+                                              // 优先显示地址，没有地址时显示坐标
+                                              _location ?? 
+                                                  ((_latitude != null && _longitude != null) 
+                                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
+                                                      : '位置获取中...'),
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 color: theme.colorScheme.onSurfaceVariant,
@@ -1944,9 +2101,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     ),
                                 ],
                                 
-                                // 编辑模式下无数据时的提示
-                                if (widget.initialQuote != null && 
+                                // 编辑模式下无数据时的提示（只有真正编辑已保存的笔记时才显示）
+                                // initialQuote.id 不为空表示是已保存的笔记
+                                if (widget.initialQuote?.id != null && 
                                     _originalLocation == null && 
+                                    _originalLatitude == null &&
                                     _originalWeather == null) ...[
                                   const SizedBox(height: 8),
                                   Text(

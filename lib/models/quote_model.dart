@@ -13,6 +13,8 @@ class Quote {
   final String? categoryId;
   final String? colorHex;
   final String? location;
+  final double? latitude;  // 位置纬度，支持离线存储
+  final double? longitude; // 位置经度，支持离线存储
   final String? weather;
   final String? temperature;
   final String? editSource; // "fullscreen" 或 null
@@ -36,6 +38,8 @@ class Quote {
     this.categoryId,
     this.colorHex,
     this.location,
+    this.latitude,
+    this.longitude,
     this.weather,
     this.temperature,
     this.editSource,
@@ -81,6 +85,8 @@ class Quote {
     String? categoryId,
     String? colorHex,
     String? location,
+    double? latitude,
+    double? longitude,
     String? weather,
     String? temperature,
     String? editSource,
@@ -121,6 +127,8 @@ class Quote {
       categoryId: categoryId,
       colorHex: colorHex,
       location: location?.trim(),
+      latitude: latitude,
+      longitude: longitude,
       weather: weather?.trim(),
       temperature: temperature?.trim(),
       editSource: editSource,
@@ -214,6 +222,8 @@ class Quote {
         categoryId: json['category_id']?.toString(),
         colorHex: colorHex,
         location: json['location']?.toString(),
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
         weather: json['weather']?.toString(),
         temperature: json['temperature']?.toString(),
         editSource: json['edit_source']?.toString(),
@@ -245,6 +255,8 @@ class Quote {
       'category_id': categoryId,
       'color_hex': colorHex,
       'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
       'weather': weather,
       'temperature': temperature,
       'edit_source': editSource,
@@ -274,6 +286,8 @@ class Quote {
     String? categoryId,
     String? colorHex,
     String? location,
+    double? latitude,
+    double? longitude,
     String? weather,
     String? temperature,
     String? editSource,
@@ -297,6 +311,8 @@ class Quote {
       categoryId: categoryId ?? this.categoryId,
       colorHex: colorHex ?? this.colorHex,
       location: location ?? this.location,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       weather: weather ?? this.weather,
       temperature: temperature ?? this.temperature,
       editSource: editSource ?? this.editSource,
@@ -321,7 +337,8 @@ class Quote {
   };
 
   /// 修复：添加工具方法
-  bool get hasLocation => location != null && location!.isNotEmpty;
+  bool get hasLocation => (location != null && location!.isNotEmpty) || hasCoordinates;
+  bool get hasCoordinates => latitude != null && longitude != null;
   bool get hasWeather => weather != null && weather!.isNotEmpty;
   bool get hasAiAnalysis => aiAnalysis != null && aiAnalysis!.isNotEmpty;
   bool get hasTags => tagIds.isNotEmpty;
