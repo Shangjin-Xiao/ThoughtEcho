@@ -1399,5 +1399,168 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "cannotOpenLink": "无法打开链接: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "检查更新失败: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "getDebugInfoFailed": "获取调试信息失败: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAiReport": "正在生成AI年度报告...",
+  "contentLength": "内容长度：{length}字符",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "containsHtmlTags": "包含HTML标签：{status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "前100字符：",
+  "testFailedEmptyContent": "测试失败：AI返回了空内容",
+  
+  "includeMediaFilesHint": "勾选后将备份图片、音频等媒体文件（文件更大但更完整）",
+  "selectImportMode": "选择导入模式",
+  "overwriteImport": "覆盖导入 (清空现有数据)",
+  "overwriteImportDesc": "删除当前所有数据，以备份内容替换",
+  "mergeImport": "合并导入 (LWW策略)",
+  "mergeImportDesc": "保留现有数据，与备份数据按更新时间合并",
+  "continueAction": "继续",
+  "restoreSuccess": "数据还原成功！所有数据已更新。",
+  "confirmRestore": "确认还原数据",
+  "confirmMergeImport": "确认合并导入",
+  "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
+  "mergeImportReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
+  "startMerge": "开始合并",
+  "confirmRestoreBtn": "确认还原",
+  
+  "favoriteCountWithNum": "已珍藏 ({count})",
+  "@favoriteCountWithNum": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareFailed": "分享失败: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "保存失败: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "analysisRecordDeleted": "分析记录已删除",
+  "deleteFailed": "删除失败: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadFailed": "加载失败: {error}",
+  "@loadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConfirmTitle": "删除确认",
+  "deleteRecordConfirm": "确定要删除这条分析记录吗？",
+  "close": "关闭",
+  "serviceNotInitialized": "服务未初始化，删除失败",
+  "confirmDeleteAll": "确认删除",
+  "deleteAllRecordsConfirm": "确定要删除所有分析记录吗？此操作不可恢复。",
+  "allRecordsDeleted": "所有记录已删除",
+  "selectAnnualReportType": "选择年度报告类型",
+  "selectReportTypeHint": "请选择要生成的年度报告类型：",
+  
+  "unknownTag": "未知标签",
+  "morning": "早晨",
+  "forenoon": "上午",
+  "afternoon": "下午",
+  "evening": "傍晚",
+  "night": "夜晚",
+  "growth": "成长",
+  "learning": "学习",
+  "progress": "进步",
+  "success": "成功",
+  "happiness": "快乐",
+  "gratitude": "感谢",
+  "harvest": "收获",
+  "breakthrough": "突破",
+  "hope": "希望",
+  
+  "backupFormatZip": "将创建ZIP格式的备份文件，包含所有笔记、设置和媒体文件",
+  "backupFormatJson": "将创建JSON格式的备份文件，包含所有笔记和设置",
+  "supportedBackupFormats": "支持新版ZIP格式和旧版JSON格式的备份文件",
+  "restoringData": "正在还原数据... {current}/{total}",
+  "@restoringData": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "restoreFailedGeneric": "无法完成数据还原：{error}",
+  "@restoreFailedGeneric": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "restoreFailedOutOfMemory": "还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大",
+  "restoreFailedNoSpace": "还原失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "restoreFailedPermission": "还原失败：权限不足\n\n请检查应用的存储权限设置。",
+  "restoreCancelled": "还原已取消",
+  "restoreFailedCorrupt": "还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。",
+  
+  "restoreConfirmDialogTitle": "确认还原数据",
+  "restoreConfirmDialogDesc": "此操作将：",
+  "restoreConfirmDialogItem1": "• 删除当前设备上的所有笔记和设置",
+  "restoreConfirmDialogItem2": "• 用备份文件中的数据替换",
+  "restoreConfirmDialogItem3": "• 此操作无法撤销",
+  "restoreConfirmDialogWarning": "请确保您已经备份了当前的重要数据。",
+  
+  "mergeConfirmDialogTitle": "确认合并导入",
+  "mergeConfirmDialogDesc": "此操作将保留当前数据，并与备份数据进行合并：",
+  "mergeConfirmDialogItem1": "• 相同ID的笔记按「最后写入 wins」保留较新版本",
+  "mergeConfirmDialogItem2": "• 不同ID的笔记全部保留",
+  "mergeConfirmDialogItem3": "• 设置与AI分析数据合并追加",
+  "mergeConfirmDialogReversible": "此操作可逆：可再次导入覆盖备份或继续合并。"
 }

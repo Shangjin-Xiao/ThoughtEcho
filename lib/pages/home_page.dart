@@ -904,6 +904,7 @@ class _HomePageState extends State<HomePage>
       // 检查mounted以确保widget还在树中
       if (!mounted) return;
 
+      final l10n = AppLocalizations.of(context);
       // 显示简洁的反馈
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -916,7 +917,7 @@ class _HomePageState extends State<HomePage>
                 size: 16,
               ),
               const SizedBox(width: 8),
-              Text('已珍藏 (${quote.favoriteCount + 1})'),
+              Text(l10n.favoriteCountWithNum(quote.favoriteCount + 1)),
             ],
           ),
           duration: const Duration(milliseconds: 1500),
@@ -1072,7 +1073,7 @@ class _HomePageState extends State<HomePage>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('分享失败: $e')),
+                Expanded(child: Text(AppLocalizations.of(context).shareFailed(e.toString()))),
               ],
             ),
             backgroundColor: Colors.red,
@@ -1149,7 +1150,7 @@ class _HomePageState extends State<HomePage>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('保存失败: $e')),
+                Expanded(child: Text(AppLocalizations.of(context).saveFailed(e.toString()))),
               ],
             ),
             backgroundColor: Colors.red,
