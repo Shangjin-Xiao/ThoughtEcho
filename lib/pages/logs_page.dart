@@ -10,6 +10,7 @@ import '../widgets/app_error_view.dart';
 import '../utils/color_utils.dart'; // Import color_utils.dart
 import '../utils/time_utils.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -535,22 +536,23 @@ class _LogsPageState extends State<LogsPage> {
   Widget build(BuildContext context) {
     try {
       final theme = Theme.of(context);
+      final l10n = AppLocalizations.of(context);
 
       return Scaffold(
         appBar: AppBar(
-          title: const Text('日志查看'),
+          title: Text(l10n.logsViewer),
           actions: [
             // 自动滚动按钮
             IconButton(
               icon: const Icon(Icons.filter_list),
-              tooltip: '日志过滤',
+              tooltip: l10n.logFilter,
               onPressed: () {
                 _showFilterDialog();
               },
             ),
             IconButton(
               icon: const Icon(Icons.cleaning_services_outlined),
-              tooltip: '清除日志',
+              tooltip: l10n.clearLogs,
               onPressed: () {
                 _showClearLogsDialog();
               },
@@ -566,7 +568,7 @@ class _LogsPageState extends State<LogsPage> {
                 controller: _searchController,
                 focusNode: _searchFocusNode, // 使用管理的焦点节点
                 decoration: InputDecoration(
-                  hintText: '搜索日志...',
+                  hintText: l10n.searchLogs,
                   prefixIcon: const Icon(Icons.search),
                   border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(8.0)),
@@ -626,9 +628,9 @@ class _LogsPageState extends State<LogsPage> {
                   return RefreshIndicator(
                     onRefresh: _refreshLogs,
                     child: filteredLogs.isEmpty
-                        ? const AppEmptyView(
+                        ? AppEmptyView(
                             svgAsset: 'assets/empty/empty_logs.svg',
-                            text: '暂无日志',
+                            text: l10n.noLogs,
                           )
                         : ListView.separated(
                             controller: _scrollController,
@@ -664,7 +666,7 @@ class _LogsPageState extends State<LogsPage> {
                                   index == filteredLogs.length) {
                                 return TextButton(
                                   onPressed: _loadMoreLogs,
-                                  child: const Text('加载更多日志'),
+                                  child: Text(l10n.loadMoreLogs),
                                 );
                               }
 
@@ -697,7 +699,7 @@ class _LogsPageState extends State<LogsPage> {
                 builder: (context, logService, child) {
                   final filteredLogs = _getFilteredLogs(logService.logs);
                   return Text(
-                    '已显示 ${filteredLogs.length} 条日志 • 长按日志可复制 • 点击查看详情',
+                    l10n.logsCount(filteredLogs.length),
                     style: theme.textTheme.bodySmall,
                     textAlign: TextAlign.center,
                   );
@@ -708,8 +710,9 @@ class _LogsPageState extends State<LogsPage> {
         ),
       );
     } catch (e, stack) {
+      final l10n = AppLocalizations.of(context);
       return Scaffold(
-        appBar: AppBar(title: const Text('日志查看')),
+        appBar: AppBar(title: Text(l10n.logsViewer)),
         body: Center(
           child: SingleChildScrollView(
             child: Column(
@@ -718,7 +721,7 @@ class _LogsPageState extends State<LogsPage> {
                 const Icon(Icons.error, color: Colors.red, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  '日志页渲染异常:\n\n${e.toString()}',
+                  '${l10n.logPageError}\n\n${e.toString()}',
                   style: const TextStyle(color: Colors.red),
                 ),
                 const SizedBox(height: 8),
