@@ -57,12 +57,13 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('加载存储信息失败: $e'),
+            content: Text(l10n.loadStorageInfoFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -89,21 +90,22 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   /// 清理缓存
   Future<void> _clearCache() async {
     if (_isClearing) return;
+    final l10n = AppLocalizations.of(context);
 
     // 确认对话框
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清理缓存'),
-        content: const Text('确定要清理应用缓存吗？\n\n这将清除临时文件、图片缓存等，不会删除您的笔记数据。'),
+        title: Text(l10n.clearCacheConfirmTitle),
+        content: Text(l10n.clearCacheConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -135,7 +137,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('缓存清理完成，释放了 ${StorageStats.formatBytes(clearedBytes)}'),
+          content: Text(l10n.cacheCleanedResult(StorageStats.formatBytes(clearedBytes))),
           duration: AppConstants.snackBarDurationImportant,
         ),
       );
@@ -143,7 +145,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('清理缓存失败: $e'),
+          content: Text(l10n.clearCacheFailed(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
@@ -158,20 +160,21 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
   /// 清理孤儿媒体文件
   Future<void> _cleanupOrphanFiles() async {
+    final l10n = AppLocalizations.of(context);
     // 确认对话框
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清理无用媒体文件'),
-        content: const Text('这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？'),
+        title: Text(l10n.cleanOrphanMediaConfirmTitle),
+        content: Text(l10n.cleanOrphanMediaConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -194,7 +197,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       if (!mounted) return;
 
       final message =
-          orphanCount > 0 ? '清理完成，删除了 $orphanCount 个无用文件' : '没有发现无用文件';
+          orphanCount > 0 ? l10n.orphanFilesCleanedResult(orphanCount) : l10n.noOrphanFilesFound;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -206,7 +209,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('清理失败: $e'),
+          content: Text(l10n.cleanupFailed(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
@@ -221,27 +224,21 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
   /// 执行数据库维护（VACUUM + ANALYZE + REINDEX）
   Future<void> _performDatabaseMaintenance() async {
+    final l10n = AppLocalizations.of(context);
     // 确认对话框
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('数据库维护优化'),
-        content: const Text(
-          '此操作将对数据库进行优化维护，包括：\n\n'
-          '• 整理碎片空间\n'
-          '• 更新统计信息\n'
-          '• 重建索引\n\n'
-          '维护过程可能需要几秒到几分钟，具体取决于数据量大小。\n\n'
-          '确定继续吗？',
-        ),
+        title: Text(l10n.databaseMaintenanceConfirmTitle),
+        content: Text(l10n.databaseMaintenanceConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('开始维护'),
+            child: Text(l10n.startMaintenance),
           ),
         ],
       ),
@@ -253,7 +250,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       _isClearing = true;
     });
 
-    String currentProgress = '准备中...';
+    String currentProgress = l10n.preparingProgress;
 
     // 显示进度对话框
     if (!mounted) return;
@@ -263,15 +260,15 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 16),
-                Text('数据库维护中...'),
+                const SizedBox(width: 16),
+                Text(l10n.maintenanceInProgress),
               ],
             ),
             content: Text(currentProgress),
@@ -312,26 +309,25 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 12),
-                Text('维护完成'),
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 12),
+                Text(l10n.maintenanceComplete),
               ],
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('耗时: ${(durationMs / 1000).toStringAsFixed(1)} 秒'),
+                Text(l10n.maintenanceDuration((durationMs / 1000).toStringAsFixed(1))),
                 const SizedBox(height: 8),
-                Text(
-                    '数据库大小: ${dbSizeBefore.toStringAsFixed(2)} MB → ${dbSizeAfter.toStringAsFixed(2)} MB'),
+                Text(l10n.databaseSizeChange(dbSizeBefore.toStringAsFixed(2), dbSizeAfter.toStringAsFixed(2))),
                 const SizedBox(height: 8),
                 Text(
                   spaceSaved > 0
-                      ? '释放空间: ${spaceSaved.toStringAsFixed(2)} MB'
-                      : '未释放空间（数据库已很紧凑）',
+                      ? l10n.spaceSavedMb(spaceSaved.toStringAsFixed(2))
+                      : l10n.noSpaceSaved,
                   style: TextStyle(
                     color: spaceSaved > 0 ? Colors.green : Colors.grey,
                   ),
@@ -341,7 +337,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('确定'),
+                child: Text(l10n.confirm),
               ),
             ],
           ),
@@ -349,7 +345,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('维护失败: ${result['message']}'),
+            content: Text(l10n.maintenanceFailed(result['message'].toString())),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -363,7 +359,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('维护失败: $e'),
+          content: Text(l10n.maintenanceFailed(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
@@ -708,8 +704,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       if (!isValid) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('所选目录不可用或没有写权限'),
+          SnackBar(
+            content: Text(l10n.directoryNotAvailable),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -721,12 +717,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('确认数据迁移'),
+          title: Text(l10n.confirmDataMigration),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('即将迁移所有应用数据到：'),
+              Text(l10n.migrationTargetPath),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -743,21 +739,20 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                '⚠️ 迁移过程可能需要几分钟，期间请勿关闭应用。\n'
-                '⚠️ 迁移完成后需要重启应用才能生效。',
-                style: TextStyle(fontSize: 13),
+              Text(
+                l10n.migrationWarning,
+                style: const TextStyle(fontSize: 13),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('开始迁移'),
+              child: Text(l10n.startMigration),
             ),
           ],
         ),
@@ -771,7 +766,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('选择目录失败: $e'),
+          content: Text(l10n.selectDirectoryFailed(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
@@ -780,6 +775,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
   /// 执行数据迁移
   Future<void> _performDataMigration(String newPath) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isMigrating = true;
     });
@@ -798,14 +794,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           child: StatefulBuilder(
             builder: (context, setDialogState) {
               return AlertDialog(
-                title: const Text('正在迁移数据'),
+                title: Text(l10n.migratingData),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     LinearProgressIndicator(value: progress),
                     const SizedBox(height: 16),
                     Text(
-                      statusMessage ?? '准备中...',
+                      statusMessage ?? l10n.preparingProgress,
                       style: const TextStyle(fontSize: 13),
                     ),
                   ],
@@ -830,7 +826,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
               builder: (context) => PopScope(
                 canPop: false,
                 child: AlertDialog(
-                  title: const Text('正在迁移数据'),
+                  title: Text(l10n.migratingData),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -860,11 +856,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('迁移完成'),
-            content: const Text(
-              '数据已成功迁移到新目录！\n\n'
-              '请重启应用以使更改生效。',
-            ),
+            title: Text(l10n.migrationComplete),
+            content: Text(l10n.migrationCompleteMessage),
             actions: [
               FilledButton(
                 onPressed: () {
@@ -872,7 +865,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   // 可以在这里添加退出应用的逻辑
                   // 或者提示用户手动重启
                 },
-                child: const Text('确定'),
+                child: Text(l10n.confirm),
               ),
             ],
           ),
@@ -883,8 +876,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('数据迁移失败，请查看日志了解详情'),
+          SnackBar(
+            content: Text(l10n.migrationFailed),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -894,7 +887,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       Navigator.of(context).pop(); // 关闭进度对话框
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('迁移失败: $e'),
+          content: Text(l10n.migrationFailedWithError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
