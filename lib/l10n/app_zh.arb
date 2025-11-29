@@ -431,5 +431,114 @@
         "type": "String"
       }
     }
-  }
+  },
+  
+  "themeSettings": "主题设置",
+  "themeMode": "主题模式",
+  "themeModeLight": "浅色",
+  "themeModeDark": "深色",
+  "useCustomThemeColor": "使用自定义主题色",
+  "selectThemeColor": "选择主题色",
+  "dynamicColor": "动态取色",
+  "dynamicColorDesc": "从系统提取主题颜色",
+  "customColorEnabledHint": "已启用自定义主题色，动态取色功能已暂时禁用",
+  "dynamicColorDisabledHint": "未启用动态取色，将使用默认蓝色主题",
+  "themeTools": "主题工具",
+  "themeToolsDesc": "如果主题颜色显示异常，可以尝试刷新主题",
+  "themeRefreshed": "主题已刷新",
+  "refreshTheme": "刷新主题",
+  
+  "hitokotoSettings": "每日一言设置",
+  "hitokotoTypeSettings": "每日一言类型设置",
+  "hitokotoTypeDesc": "您可以选择一个或多个\"每日一言\"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。",
+  "selectAll": "全选",
+  "clearAll": "清除全部",
+  "typeSelection": "类型选择",
+  "typeSelectionHint": "点击选择您喜欢的句子类型",
+  "usageInstructions": "使用说明",
+  "hitokotoServiceProvider": "一言服务由 Hitokoto 提供",
+  "hitokotoHelpItem1": "至少需要选择一种类型，程序会随机展示选中类型的内容",
+  "hitokotoHelpItem2": "选择多种类型可以获得更丰富多样的内容体验",
+  "hitokotoHelpItem3": "不同类型代表不同的内容风格和来源平台",
+  "settingsSaved": "设置已保存",
+  "selectedCount": "已选择 {count} 种类型",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "tagManagement": "标签管理",
+  "newTagName": "新标签名称",
+  "enterTagNameHint": "输入标签名称（最多50字）",
+  "selectIcon": "选择图标",
+  "adding": "添加中",
+  "add": "添加",
+  "pleaseEnterTagName": "请输入标签名称",
+  "tagAddedSuccess": "标签添加成功",
+  "addTagFailed": "添加标签失败：{error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "可选一个图标或直接输入一个Emoji作为标签图标",
+  "iconSelected": "已选择图标：{icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "清除",
+  "loadTagsFailed": "加载标签失败: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "暂无标签",
+  "editTag": "编辑标签",
+  "tagName": "标签名称",
+  "icon": "图标",
+  "confirmDelete": "确认删除",
+  "deleteTagConfirmation": "确定要删除标签\"{name}\"吗？相关联的笔记将保留，但不再关联此标签。",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "标签删除成功",
+  "deleteTagFailed": "删除标签失败：{error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "默认",
+  "systemDefaultTag": "系统默认标签",
+  "tapToEditLongPressToDelete": "点击编辑，长按删除",
+  "edit": "编辑",
+  "select": "选择",
+  "enterEmojiHint": "直接输入表情符号...",
+  "useAsIcon": "使用 \"{emoji}\" 作为图标",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "系统图标"
 }

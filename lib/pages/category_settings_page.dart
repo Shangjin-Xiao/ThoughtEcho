@@ -5,6 +5,7 @@ import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -28,16 +29,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('标签管理')),
+      appBar: AppBar(title: Text(l10n.tagManagement)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '标签管理',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.tagManagement,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             // 输入与添加区域卡片化
@@ -59,17 +61,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         child: TextField(
                           controller: _categoryController,
                           maxLength: 50,
-                          decoration: const InputDecoration(
-                            labelText: '新标签名称',
-                            hintText: '输入标签名称（最多50字）',
+                          decoration: InputDecoration(
+                            labelText: l10n.newTagName,
+                            hintText: l10n.enterTagNameHint,
                             counterText: '',
-                            border: OutlineInputBorder(),
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Tooltip(
-                        message: '选择图标',
+                        message: l10n.selectIcon,
                         child: InkWell(
                           onTap: () => _showIconSelector(context),
                           borderRadius:
@@ -113,15 +115,15 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.check),
-                        label: Text(_isLoading ? '添加中' : '添加'),
+                        label: Text(_isLoading ? l10n.adding : l10n.add),
                         onPressed: _isLoading
                             ? null
                             : () async {
                                 final text = _categoryController.text.trim();
                                 if (text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('请输入标签名称'),
+                                    SnackBar(
+                                        content: Text(l10n.pleaseEnterTagName),
                                         duration: AppConstants
                                             .snackBarDurationNormal),
                                   );
@@ -137,8 +139,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   );
                                   if (mounted) {
                                     messenger.showSnackBar(
-                                      const SnackBar(
-                                          content: Text('标签添加成功'),
+                                      SnackBar(
+                                          content: Text(l10n.tagAddedSuccess),
                                           duration: AppConstants
                                               .snackBarDurationNormal),
                                     );
@@ -149,7 +151,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   if (mounted) {
                                     messenger.showSnackBar(
                                       SnackBar(
-                                          content: Text('添加标签失败：$e'),
+                                          content: Text(l10n.addTagFailed(e.toString())),
                                           duration: AppConstants
                                               .snackBarDurationError),
                                     );
@@ -181,8 +183,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         Expanded(
                           child: Text(
                             _selectedIconName == null
-                                ? '可选一个图标或直接输入一个Emoji作为标签图标'
-                                : '已选择图标：${_selectedIconName!}',
+                                ? l10n.iconSelectionHint
+                                : l10n.iconSelected(_selectedIconName!),
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context)
@@ -195,7 +197,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           TextButton(
                             onPressed: () =>
                                 setState(() => _selectedIconName = null),
-                            child: const Text('清除'),
+                            child: Text(l10n.clear),
                           ),
                       ],
                     ),
@@ -212,11 +214,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('加载标签失败: ${snapshot.error}'));
+                  return Center(child: Text(l10n.loadTagsFailed(snapshot.error.toString())));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('暂无标签'));
+                  return Center(child: Text(l10n.noTags));
                 }
 
                 final categories = snapshot.data!;
