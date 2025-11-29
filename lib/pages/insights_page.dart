@@ -296,8 +296,8 @@ class _InsightsPageState extends State<InsightsPage> {
       // 创建一个Quote对象
       final quote = Quote(
         content: l10n.analysisNoteTitle(
-          _getAnalysisTitle(),
           content,
+          _getAnalysisTitle(),
         ),
         date: DateTime.now().toIso8601String(),
         source: l10n.aiAnalysisSource,
