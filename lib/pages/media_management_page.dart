@@ -88,7 +88,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.operationFailed(operation, e.toString())),
+            content: Text(l10n.operationFailed(e.toString(), operation)),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
