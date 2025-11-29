@@ -4,6 +4,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
 import '../services/database_service.dart';
 import '../models/quote_model.dart';
@@ -798,8 +799,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(
-            content: Text('笔记已保存'),
+          ).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).noteSaved),
             duration: AppConstants.snackBarDurationImportant,
           ));
           // 成功更新后，关闭页面并返回
@@ -813,8 +814,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(
-            content: Text('笔记已保存'),
+          ).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).noteSaved),
             duration: AppConstants.snackBarDurationImportant,
           ));
           // 成功添加后，关闭页面并返回
@@ -935,7 +936,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final Color? result = await showDialog<Color>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('选择卡片颜色'),
+        title: Text(AppLocalizations.of(context).selectCardColor),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -954,7 +955,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                     Padding(
                       padding: const EdgeInsets.only(left: 4, bottom: 8),
                       child: Text(
-                        '预设颜色',
+                        AppLocalizations.of(context).presetColors,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -1039,7 +1040,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               // 高级颜色选择按钮
               OutlinedButton.icon(
                 icon: const Icon(Icons.color_lens),
-                label: const Text('自定义颜色'),
+                label: Text(AppLocalizations.of(context).customColor),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
@@ -1053,7 +1054,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   final Color? advancedColor = await showDialog<Color>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('自定义颜色'),
+                      title: Text(AppLocalizations.of(context).customColor),
                       content: SingleChildScrollView(
                         child: ColorPicker(
                           color: initialColor != Colors.transparent
@@ -1077,13 +1078,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       actions: <Widget>[
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('取消'),
+                          child: Text(AppLocalizations.of(context).cancel),
                         ),
                         FilledButton(
                           onPressed: () => Navigator.of(
                             context,
                           ).pop(initialColor),
-                          child: const Text('选择'),
+                          child: Text(AppLocalizations.of(context).select),
                         ),
                       ],
                     ),
@@ -1105,7 +1106,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
         ],
         actionsPadding: const EdgeInsets.symmetric(

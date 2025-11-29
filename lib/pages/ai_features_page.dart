@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'insights_page.dart';
 import 'ai_periodic_report_page.dart';
 
@@ -48,9 +49,9 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
             ),
             child: TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(text: '周期报告'),
-                Tab(text: '智能洞察'),
+              tabs: [
+                Tab(text: AppLocalizations.of(context).periodicReport),
+                Tab(text: AppLocalizations.of(context).aiInsightsTab),
               ],
               labelColor: theme.primaryColor,
               unselectedLabelColor:

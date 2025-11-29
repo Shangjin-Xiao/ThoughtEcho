@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../gen_l10n/app_localizations.dart';
 import '../controllers/onboarding_controller.dart';
 import '../config/onboarding_config.dart';
 import '../models/onboarding_models.dart';
@@ -265,7 +266,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 20),
-              Text('出现问题', style: theme.textTheme.headlineSmall),
+              Text(AppLocalizations.of(context).onboardingError, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
@@ -275,7 +276,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: _navigateToHome,
-                child: const Text('继续使用'),
+                child: Text(AppLocalizations.of(context).onboardingContinueUsing),
               ),
             ],
           ),
@@ -308,7 +309,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                     const SizedBox(height: 32),
                     Text(
-                      '更新完成',
+                      AppLocalizations.of(context).onboardingUpdateComplete,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
@@ -316,7 +317,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      '心迹已成功更新到新版本\n数据已自动迁移，无需手动操作',
+                      AppLocalizations.of(context).onboardingUpdateSuccess,
                       style: theme.textTheme.titleLarge,
                       textAlign: TextAlign.center,
                     ),
@@ -330,7 +331,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     else
                       FilledButton(
                         onPressed: _navigateToHome,
-                        child: const Text('进入应用'),
+                        child: Text(AppLocalizations.of(context).onboardingEnterApp),
                       ),
                   ],
                 ),
@@ -497,7 +498,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   'hitokotoTypes', allValues);
                               },
                               icon: const Icon(Icons.select_all, size: 16),
-                              label: const Text('全选'),
+                              label: Text(AppLocalizations.of(context).prefSelectAll),
                               style: OutlinedButton.styleFrom(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 8),
@@ -516,7 +517,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   'hitokotoTypes', firstValue);
                               },
                               icon: const Icon(Icons.clear_all, size: 16),
-                              label: const Text('清空'),
+                              label: Text(AppLocalizations.of(context).prefClearAll),
                               style: OutlinedButton.styleFrom(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 8),
@@ -593,14 +594,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                     const SizedBox(height: 32),
                     Text(
-                      '设置完成',
+                      AppLocalizations.of(context).onboardingComplete,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      '您已完成所有设置\n现在可以开始记录您的思想',
+                      AppLocalizations.of(context).onboardingAllSet,
                       style: theme.textTheme.titleLarge,
                       textAlign: TextAlign.center,
                     ),
@@ -618,7 +619,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '让我们一起随心记录',
+                        AppLocalizations.of(context).onboardingStartJourney,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.onPrimaryContainer,
@@ -665,7 +666,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               TextButton.icon(
                 onPressed: state.isCompleting ? null : controller.previousPage,
                 icon: const Icon(Icons.arrow_back),
-                label: const Text('上一步'),
+                label: Text(AppLocalizations.of(context).onboardingPrevious),
               )
             else
               const SizedBox(width: 90),
@@ -704,13 +705,13 @@ class _OnboardingPageState extends State<OnboardingPage>
                         ),
                       )
                     : const Icon(Icons.check),
-                label: Text(state.isCompleting ? '请稍候...' : '开始使用'),
+                label: Text(state.isCompleting ? AppLocalizations.of(context).pleaseWait : AppLocalizations.of(context).onboardingStart),
               )
             else
               FilledButton.icon(
                 onPressed: state.isCompleting ? null : controller.nextPage,
                 icon: const Icon(Icons.arrow_forward),
-                label: const Text('下一步'),
+                label: Text(AppLocalizations.of(context).onboardingNext),
               ),
           ],
         ),
@@ -728,7 +729,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             ? null
             : () => _showSkipDialog(controller),
         icon: const Icon(Icons.skip_next),
-        label: const Text('跳过'),
+        label: Text(AppLocalizations.of(context).onboardingSkip),
       ),
     );
   }
@@ -743,27 +744,27 @@ class _OnboardingPageState extends State<OnboardingPage>
         listenable: controller,
         builder: (context, child) {
           return AlertDialog(
-            title: const Text('跳过引导'),
+            title: Text(AppLocalizations.of(context).onboardingSkipTitle),
             content: controller.state.isCompleting
-                ? const Column(
+                ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      EnhancedLottieAnimation(
+                      const EnhancedLottieAnimation(
                         type: LottieAnimationType.loading,
                         width: 60,
                         height: 60,
                       ),
-                      SizedBox(height: 16),
-                      Text('正在初始化...'),
+                      const SizedBox(height: 16),
+                      Text(AppLocalizations.of(context).onboardingInitializing),
                     ],
                   )
-                : const Text('确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。'),
+                : Text(AppLocalizations.of(context).onboardingSkipMessage),
             actions: controller.state.isCompleting
                 ? null
                 : [
                     TextButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text('取消'),
+                      child: Text(AppLocalizations.of(context).cancel),
                     ),
                     FilledButton(
                       onPressed: () async {
@@ -782,15 +783,15 @@ class _OnboardingPageState extends State<OnboardingPage>
                           Navigator.pop(dialogContext);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('初始化失败，请重试'),
+                              SnackBar(
+                                content: Text(AppLocalizations.of(context).onboardingInitFailed),
                                 duration: AppConstants.snackBarDurationError,
                               ),
                             );
                           }
                         }
                       },
-                      child: const Text('确定跳过'),
+                      child: Text(AppLocalizations.of(context).onboardingConfirmSkip),
                     ),
                   ],
           );

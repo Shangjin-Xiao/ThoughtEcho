@@ -320,5 +320,116 @@
         "type": "String"
       }
     }
+  },
+  
+  "backupAndRestore": "Backup & Restore",
+  "dataBackup": "Data Backup",
+  "dataRestore": "Data Restore",
+  "includeMediaFiles": "Include media files",
+  "creatingBackup": "Creating backup...",
+  "createBackup": "Create Backup",
+  "selectBackupFileToRestore": "Select backup file to restore",
+  "importantNotes": "Important Notes",
+  "dataSecurity": "Data Security",
+  "dataSafetyDesc": "Restoring data will overwrite all current data. Please make sure to backup your current data first",
+  "backupAdvice": "Backup Advice",
+  "backupAdviceDesc": "It's recommended to backup data regularly to multiple locations (local, cloud storage, etc.)",
+  "formatInfo": "Format Info",
+  "formatInfoDesc": "New ZIP format contains complete data and media files; old JSON format contains only text data",
+  "compatibility": "Compatibility",
+  "compatibilityDesc": "Supports importing both new ZIP format and old JSON format backup files",
+  "confirmRestore": "Confirm Restore",
+  "confirmMergeImport": "Confirm Merge Import",
+  "startMerge": "Start Merge",
+  "selectImportMode": "Select Import Mode",
+  "continueAction": "Continue",
+  "backupFailed": "Backup Failed",
+  "restoreFailed": "Restore Failed",
+  "selectFileFailed": "Failed to select file",
+  "cannotGetFilePath": "Cannot get file path, please select again",
+  "invalidBackupFile": "Invalid Backup File",
+  "invalidBackupFileDesc": "The selected file is not a valid ThoughtEcho backup file.\n\nPlease select a correct backup file.",
+  "backupCanceled": "Backup canceled",
+  "restoreCanceled": "Restore canceled",
+  "unknownField": "Unknown field",
+  "confirmRestoreData": "Confirm Restore Data",
+  
+  "insightsTitle": "AI Insights",
+  "analysisTypeComprehensive": "Comprehensive Analysis",
+  "analysisTypeComprehensiveDesc": "Analyze all your notes to explore themes, emotions and thinking patterns",
+  "analysisTypeEmotional": "Emotional Insights",
+  "analysisTypeEmotionalDesc": "Analyze your emotional state and trends",
+  "analysisTypeMindmap": "Mind Map",
+  "analysisTypeMindmapDesc": "Build the structure of your thinking and analyze habits",
+  "analysisTypeGrowth": "Growth Suggestions",
+  "analysisTypeGrowthDesc": "Personalized growth and progress suggestions based on your notes",
+  "analysisStyleProfessional": "Professional Analysis",
+  "analysisStyleProfessionalDesc": "Objective and professional analytical perspective",
+  "analysisStyleFriendly": "Friendly Mentor",
+  "analysisStyleFriendlyDesc": "Gentle advice like a friendly mentor",
+  "analysisStyleHumorous": "Humorous Style",
+  "analysisStyleHumorousDesc": "Interpret your thoughts in a humorous way",
+  "analysisStyleLiterary": "Literary Style",
+  "analysisStyleLiteraryDesc": "Describe your thinking journey in beautiful literary language",
+  "selectAnalysisType": "Select Analysis Type",
+  "selectAnalysisStyle": "Select Analysis Style",
+  "customPrompt": "Custom Prompt",
+  "startAnalysis": "Start Analysis",
+  "stopAnalysis": "Stop",
+  "shareAnalysis": "Share",
+  "copyAnalysis": "Copy",
+  "saveAnalysis": "Save",
+  "noNotesToAnalyze": "No notes to analyze",
+  "noNotesToAnalyzeDesc": "Add some notes first so AI can provide insights",
+  "aiServiceNotConfigured": "AI service not configured",
+  "configureAIService": "Configure AI Service",
+  "analysisHistory": "History",
+  "newAnalysis": "New Analysis",
+  "analyzing": "Analyzing...",
+  "analysisSaved": "Analysis saved",
+  "analysisCopied": "Analysis copied to clipboard",
+  
+  "noteSaved": "Note saved",
+  "selectCardColor": "Select Card Color",
+  "presetColors": "Preset Colors",
+  "customColor": "Custom Color",
+  "select": "Select",
+  "editMetadata": "Edit Metadata",
+  
+  "periodicReport": "Periodic Report",
+  "aiInsightsTab": "AI Insights",
+  
+  "locationServiceNotEnabled": "Location Service Not Enabled",
+  "pleaseEnableLocationInSettings": "Please enable location service in system settings",
+  "locationServiceEnabledMsg": "Location service enabled",
+  
+  "quickTips": "Quick Tips",
+  "coreFeature": "Core",
+  
+  "confirmDelete": "Confirm Delete",
+  "confirmDeleteAnalysis": "Are you sure you want to delete this analysis record?",
+  "deleteSuccess": "Deleted successfully",
+  "deleteFailed": "Delete failed",
+  "serviceNotInitialized": "Service not initialized",
+  
+  "location": "Location",
+  "weather": "Weather",
+  "color": "Color",
+  "noteUpdated": "Note updated",
+  "openFullEditorFailed": "Failed to open full editor: {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "Save failed: {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

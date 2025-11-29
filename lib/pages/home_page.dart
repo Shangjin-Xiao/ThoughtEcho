@@ -256,7 +256,7 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('刷新失败: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context).refreshFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
@@ -753,9 +753,9 @@ class _HomePageState extends State<HomePage>
     if (_isLoadingTags || _tags.isEmpty) {
       logDebug('标签数据未准备好，重新加载标签数据...');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('正在加载数据，请稍等...'),
-          duration: Duration(seconds: 1),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).loadingDataPleaseWait),
+          duration: const Duration(seconds: 1),
         ),
       );
 
@@ -766,9 +766,9 @@ class _HomePageState extends State<HomePage>
       if (_tags.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('暂无标签数据，请检查网络连接或稍后重试'),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).noTagsAvailable),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -826,12 +826,12 @@ class _HomePageState extends State<HomePage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('无法打开全屏编辑器: $e'),
+              content: Text(AppLocalizations.of(context).cannotOpenFullEditor(e.toString())),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: '重试',
+                label: AppLocalizations.of(context).retry,
                 onPressed: () => _showEditQuoteDialog(quote),
                 textColor: Colors.white,
               ),
@@ -864,12 +864,12 @@ class _HomePageState extends State<HomePage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除笔记'),
-        content: const Text('确定要删除这条笔记吗？此操作无法撤销。'),
+        title: Text(AppLocalizations.of(context).deleteNote),
+        content: Text(AppLocalizations.of(context).deleteNoteConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -881,14 +881,14 @@ class _HomePageState extends State<HomePage>
               db.deleteQuote(quote.id!);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('笔记已删除'),
-                  duration: Duration(seconds: 1),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context).noteDeleted),
+                  duration: const Duration(seconds: 1),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
-            child: const Text('删除'),
+            child: Text(AppLocalizations.of(context).delete),
           ),
         ],
       ),
@@ -929,9 +929,9 @@ class _HomePageState extends State<HomePage>
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('收藏失败，请重试'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).favoriteFailed),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
         ),
@@ -951,8 +951,8 @@ class _HomePageState extends State<HomePage>
     if (_aiCardService == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('AI卡片服务未初始化'),
+      ).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).aiCardServiceNotInitialized),
         duration: AppConstants.snackBarDurationError,
       ));
       return;
@@ -991,7 +991,7 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('生成卡片失败: $e'),
+            content: Text(AppLocalizations.of(context).generateCardFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1006,19 +1006,19 @@ class _HomePageState extends State<HomePage>
       // 显示加载指示器
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 16),
-                Text('正在生成分享图片...'),
+                const SizedBox(width: 16),
+                Text(AppLocalizations.of(context).generatingShareImage),
               ],
             ),
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -1050,16 +1050,16 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('卡片分享成功'),
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(AppLocalizations.of(context).cardSharedSuccessfully),
               ],
             ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -1089,19 +1089,19 @@ class _HomePageState extends State<HomePage>
       // 显示加载指示器
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 16),
-                Text('正在保存卡片到相册...'),
+                const SizedBox(width: 16),
+                Text(AppLocalizations.of(context).savingCardToGallery),
               ],
             ),
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -1117,6 +1117,7 @@ class _HomePageState extends State<HomePage>
       );
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1124,13 +1125,13 @@ class _HomePageState extends State<HomePage>
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('卡片已保存到相册: $filePath')),
+                Expanded(child: Text(l10n.cardSavedToGallery(filePath))),
               ],
             ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
-              label: '查看',
+              label: l10n.view,
               textColor: Colors.white,
               onPressed: () {
                 // 这里可以添加打开相册的逻辑
@@ -1200,16 +1201,16 @@ class _HomePageState extends State<HomePage>
                   title: Consumer<ConnectivityService>(
                     builder: (context, connectivityService, child) {
                       if (!connectivityService.isConnected) {
-                        return const Row(
+                        return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.wifi_off, size: 16, color: Colors.red),
-                            SizedBox(width: 4),
-                            Text('心迹 - 无网络'),
+                            const Icon(Icons.wifi_off, size: 16, color: Colors.red),
+                            const SizedBox(width: 4),
+                            Text(AppLocalizations.of(context).appTitleOffline),
                           ],
                         );
                       }
-                      return const Text('心迹');
+                      return Text(AppLocalizations.of(context).appTitle);
                     },
                   ),
                   actions: [
@@ -1399,7 +1400,7 @@ class _HomePageState extends State<HomePage>
                                       width:
                                           isVerySmallScreen ? 4 : 6), // 动态调整间距
                                   Text(
-                                    '今日思考',
+                                    AppLocalizations.of(context).todayThoughts,
                                     style:
                                         theme.textTheme.titleMedium?.copyWith(
                                       color: theme.colorScheme.primary,
@@ -1442,8 +1443,8 @@ class _HomePageState extends State<HomePage>
                                                     : 6)), // 动态调整间距
                                         Text(
                                           isAiConfigured
-                                              ? '正在加载今日思考...'
-                                              : '正在获取默认提示...',
+                                              ? AppLocalizations.of(context).loadingTodayThoughts
+                                              : AppLocalizations.of(context).fetchingDefaultPrompt,
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(
                                             color: theme.colorScheme.onSurface
@@ -1462,8 +1463,8 @@ class _HomePageState extends State<HomePage>
                                       _accumulatedPromptText.isNotEmpty
                                           ? _accumulatedPromptText.trim()
                                           : (isAiConfigured
-                                              ? '等待今日思考...'
-                                              : '暂无今日思考'),
+                                              ? AppLocalizations.of(context).waitingForTodayThoughts
+                                              : AppLocalizations.of(context).noTodayThoughts),
                                       style:
                                           theme.textTheme.bodyMedium?.copyWith(
                                         height: 1.4,

@@ -1,5 +1,6 @@
 import 'dart:io';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:file_picker/file_picker.dart';
@@ -32,8 +33,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('数据备份与还原'), elevation: 0),
+      appBar: AppBar(title: Text(l10n.backupAndRestore), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -52,6 +54,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   /// 构建备份区域
   Widget _buildBackupSection() {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -66,7 +69,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '数据备份',
+                  l10n.dataBackup,
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -77,7 +80,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
             // 媒体文件选项
             CheckboxListTile(
-              title: const Text('包含媒体文件'),
+              title: Text(l10n.includeMediaFiles),
               subtitle: const Text('勾选后将备份图片、音频等媒体文件（文件更大但更完整）'),
               value: _includeMediaFiles,
               onChanged: _isLoading
@@ -103,7 +106,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save_alt),
-                label: Text(_isLoading ? '正在备份...' : '创建备份'),
+                label: Text(_isLoading ? l10n.creatingBackup : l10n.createBackup),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -163,6 +166,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   /// 构建还原区域
   Widget _buildRestoreSection() {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -177,7 +181,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '数据还原',
+                  l10n.dataRestore,
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -191,7 +195,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               child: ElevatedButton.icon(
                 onPressed: _isLoading ? null : _handleRestore,
                 icon: const Icon(Icons.folder_open),
-                label: const Text('选择备份文件还原'),
+                label: Text(l10n.selectBackupFileToRestore),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   backgroundColor: Theme.of(context).colorScheme.secondary,
@@ -256,6 +260,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   /// 构建信息区域
   Widget _buildInfoSection() {
+    final l10n = AppLocalizations.of(context);
     return Card(
       color: Theme.of(
         context,
@@ -274,7 +279,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '重要提示',
+                  l10n.importantNotes,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -282,10 +287,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ],
             ),
             const SizedBox(height: 12),
-            _buildInfoItem('数据安全', '还原数据将覆盖当前所有数据，请在还原前确保当前数据已备份'),
-            _buildInfoItem('备份建议', '建议定期备份数据到多个位置（本地、云存储等）'),
-            _buildInfoItem('格式说明', '新版ZIP格式包含完整数据和媒体文件，旧版JSON格式仅包含文本数据'),
-            _buildInfoItem('兼容性', '支持导入新版ZIP格式和旧版JSON格式的备份文件'),
+            _buildInfoItem(l10n.dataSecurity, l10n.dataSafetyDesc),
+            _buildInfoItem(l10n.backupAdvice, l10n.backupAdviceDesc),
+            _buildInfoItem(l10n.formatInfo, l10n.formatInfoDesc),
+            _buildInfoItem(l10n.compatibility, l10n.compatibilityDesc),
           ],
         ),
       ),

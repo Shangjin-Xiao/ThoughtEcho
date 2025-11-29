@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:async';
+import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
@@ -589,6 +590,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     // 优化：使用缓存的服务或延迟获取
     final locationService =
@@ -855,7 +857,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           : Colors.grey,
                       size: 18,
                     ),
-                    label: const Text('位置'),
+                    label: Text(l10n.location),
                     selected: _includeLocation,
                     onSelected: (value) {
                       setState(() {
@@ -881,7 +883,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           : Colors.grey,
                       size: 18,
                     ),
-                    label: const Text('天气'),
+                    label: Text(l10n.weather),
                     selected: _includeWeather,
                     onSelected: (value) {
                       setState(() {
@@ -920,7 +922,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             size: 18,
                             color: Colors.grey,
                           ),
-                    label: const Text('颜色'),
+                    label: Text(l10n.color),
                     selected: _selectedColorHex != null,
                     onSelected: (value) {
                       if (value) {
@@ -1028,7 +1030,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancel),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
@@ -1097,8 +1099,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           await db.updateQuote(quote);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('笔记已更新'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context).noteUpdated),
                               duration: AppConstants.snackBarDurationImportant,
                             ),
                           );
@@ -1107,8 +1109,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           await db.addQuote(quote);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('笔记已保存'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context).noteSaved),
                               duration: AppConstants.snackBarDurationImportant,
                             ),
                           );
@@ -1127,7 +1129,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('保存失败: $e'),
+                              content: Text(AppLocalizations.of(context).saveFailedWithError(e.toString())),
                               duration: AppConstants.snackBarDurationError,
                               backgroundColor: Colors.red,
                             ),
@@ -1136,7 +1138,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       }
                     }
                   },
-                  child: Text(widget.initialQuote != null ? '更新' : '保存'),
+                  child: Text(widget.initialQuote != null ? AppLocalizations.of(context).edit : AppLocalizations.of(context).save),
                 ),
               ],
             ),
@@ -1151,6 +1153,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _showCustomColorPicker(BuildContext context) async {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
     final Color initialColor = _selectedColorHex != null
         ? Color(
             int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
@@ -1188,7 +1191,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     final Color? result = await showDialog<Color>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('选择卡片颜色'),
+        title: Text(l10n.selectCardColor),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1207,7 +1210,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     Padding(
                       padding: const EdgeInsets.only(left: 4, bottom: 8),
                       child: Text(
-                        '预设颜色',
+                        l10n.presetColors,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -1293,7 +1296,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               // 高级颜色选择按钮
               OutlinedButton.icon(
                 icon: const Icon(Icons.color_lens),
-                label: const Text('自定义颜色'),
+                label: Text(l10n.customColor),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
@@ -1308,7 +1311,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   final Color? advancedColor = await showDialog<Color>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('自定义颜色'),
+                      title: Text(l10n.customColor),
                       content: SingleChildScrollView(
                         child: ColorPicker(
                           color: initialColor != Colors.transparent
@@ -1334,13 +1337,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       actions: <Widget>[
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('取消'),
+                          child: Text(l10n.cancel),
                         ),
                         FilledButton(
                           onPressed: () => Navigator.of(
                             context,
                           ).pop(selectedColor),
-                          child: const Text('选择'),
+                          child: Text(l10n.select),
                         ),
                       ],
                     ),
@@ -1361,7 +1364,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
         ],
         actionsPadding: const EdgeInsets.symmetric(
