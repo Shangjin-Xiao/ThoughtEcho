@@ -17,7 +17,7 @@ void main() {
       // 验证SVG结构完整
       expect(svg, contains('<svg'));
       expect(svg, contains('</svg>'));
-      expect(svg, contains('viewBox="0 0 400 600"'));
+      expect(svg, contains(RegExp(r'viewBox="0 0 400\.?0? 600\.?0?"')));
 
       // 验证包含文本元素
       expect(svg, contains('<text'));
@@ -49,8 +49,8 @@ void main() {
       ];
 
       for (final svg in testCases) {
-        // 验证所有模板使用统一的viewBox
-        expect(svg, contains('viewBox="0 0 400 600"'));
+        // 验证所有模板使用统一的viewBox (接受整数或浮点格式)
+        expect(svg, matches(RegExp(r'viewBox="0 0 400\.?0? 600\.?0?"')));
         // 验证没有额外的width/height属性(应由渲染器控制)
         final widthMatches = RegExp(r'<svg[^>]*\swidth=').allMatches(svg);
         expect(widthMatches.length, 0, reason: 'SVG不应包含width属性');
@@ -75,7 +75,7 @@ void main() {
 
         expect(svg, contains('<svg'));
         expect(svg, contains('</svg>'));
-        expect(svg, contains('viewBox="0 0 400 600"'));
+        expect(svg, matches(RegExp(r'viewBox="0 0 400\.?0? 600\.?0?"')));
       }
     });
 
