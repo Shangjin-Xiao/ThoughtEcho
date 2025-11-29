@@ -20,13 +20,15 @@
     </a>
   </p>
 
+  <h3>🌍 English localization in progress — contributions welcome!</h3>
+
   <p>
     <b>📝 你的专属灵感摘录本<br>
     让我们一起随心记录，释放 AI 洞察的力量 ✨</b>
   </p>
 
   <p>
-    <b>⚠️ 友情提示：</b>这是一个 vibe coding 项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
+    <b>⚠️ 友情提示：</b>这是一个与 AI 协作完成的项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
   </p>
   
   <p>
@@ -229,18 +231,52 @@
 
 ---
 
-<details id="-english-version">
+<details id="-english-version" open>
 <summary><h2>🇬🇧 English Version</h2></summary>
 
 <div align="center">
+  <img src="res/icon.png" alt="ThoughtEcho Logo" width="120">
+  
+  # ThoughtEcho (心迹)
+  
   <p>
-    <b>📝 Your Personal Inspiration Notebook with AI Power<br>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&label=latest" alt="Latest Release">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
+      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=yellow" alt="Stars">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/network/members">
+      <img src="https://img.shields.io/github/forks/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=blue" alt="Forks">
+    </a>
+  </p>
+
+  <p>
+    <b>📝 Your Personal AI-Powered Inspiration Notebook<br>
     Capture ideas effortlessly, unlock insights with AI ✨</b>
   </p>
+  
   <p>
-    <b>⚠️ Heads-up:</b> this is a vibe coding project—we're polishing it in the open, so thanks for your patience with any rough edges.
+    <b>⚠️ Heads-up:</b> This project was built in collaboration with AI—we're polishing it in the open, so thanks for your patience with any rough edges.
+  </p>
+
+  <p>
+    <b>🌍 Localization:</b> English translation is actively in progress! We're working hard to provide full English support. Contributions are welcome!
   </p>
 </div>
+
+## 🌟 Why ThoughtEcho?
+
+ThoughtEcho is more than just a note-taking app—it's your **personal AI-powered knowledge companion**. Whether you're a writer capturing fleeting ideas, a student organizing study notes, or a professional tracking insights, ThoughtEcho helps you:
+
+- 📝 **Capture** thoughts instantly with rich text, images, audio, and video
+- 🤖 **Understand** your notes deeper with AI-powered analysis and Q&A
+- 📊 **Discover** patterns in your thinking with intelligent insights and reports
+- 🔄 **Sync** seamlessly across all your devices
+- 🔒 **Own** your data with local-first storage and secure backups
 
 ## ✨ Current Features
 
@@ -404,14 +440,27 @@
 
 ## 🤝 How to Contribute
 
+We'd love your help making ThoughtEcho better! Here's how you can contribute:
+
 1. **Report Issues or Suggestions**: Via [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues)
 
-2. **Contribute Code**:
+2. **Help with Translation** 🌍:
+   - English localization is our top priority
+   - Help translate UI strings and documentation
+   - Review existing translations for accuracy
+
+3. **Contribute Code**:
    - Fork the repo and create feature branch `feature/YourFeature`
    - Commit changes `git commit -m 'feat: Add feature'`
    - Create Pull Request to main repository
 
-## � Acknowledgments
+4. **Spread the Word**: Star ⭐ the repo and share with others!
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE) - feel free to use, modify, and distribute.
+
+## 🙏 Acknowledgments
 
 Thanks to the following service providers:
 - [Hitokoto](https://hitokoto.cn/) - Daily quote service
