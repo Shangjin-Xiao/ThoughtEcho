@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import '../gen_l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../controllers/weather_search_controller.dart';
@@ -196,7 +197,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: '搜索城市...',
+                  hintText: AppLocalizations.of(context).searchCity,
                   prefixIcon: Icon(
                     Icons.search,
                     color: theme.colorScheme.primary,

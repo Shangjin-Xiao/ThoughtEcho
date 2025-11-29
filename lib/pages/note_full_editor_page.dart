@@ -1634,11 +1634,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               Expanded(
                                 child: TextField(
                                   controller: _authorController,
-                                  decoration: const InputDecoration(
-                                    hintText: '作者/人物',
-                                    prefixIcon: Icon(Icons.person_outline),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).authorPerson,
+                                    prefixIcon: const Icon(Icons.person_outline),
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: const EdgeInsets.symmetric(
                                       vertical: 10,
                                       horizontal: 12,
                                     ),
@@ -1650,11 +1650,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               Expanded(
                                 child: TextField(
                                   controller: _workController,
-                                  decoration: const InputDecoration(
-                                    hintText: '作品/来源',
-                                    prefixIcon: Icon(Icons.menu_book_outlined),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).workSource,
+                                    prefixIcon: const Icon(Icons.menu_book_outlined),
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: const EdgeInsets.symmetric(
                                       vertical: 10,
                                       horizontal: 12,
                                     ),
@@ -1718,11 +1718,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 // 搜索框
                                 TextField(
                                   controller: _tagSearchController,
-                                  decoration: const InputDecoration(
-                                    hintText: '搜索标签...',
-                                    prefixIcon: Icon(Icons.search),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).searchTags,
+                                    prefixIcon: const Icon(Icons.search),
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: const EdgeInsets.symmetric(
                                       vertical: 8.0,
                                       horizontal: 12.0,
                                     ),

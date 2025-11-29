@@ -992,7 +992,7 @@ $positiveQuotesText
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: '搜索分析记录...',
+                  hintText: AppLocalizations.of(context).searchAnalysisRecords,
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
