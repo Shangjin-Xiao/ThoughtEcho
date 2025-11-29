@@ -3,6 +3,7 @@ import '../services/media_cleanup_service.dart';
 import '../services/media_reference_service.dart';
 import '../services/temporary_media_service.dart';
 import '../utils/app_logger.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 媒体文件管理页面
 ///
@@ -27,6 +28,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
   }
 
   Future<void> _loadMediaStats() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isLoading = true;
     });
@@ -41,7 +43,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('加载统计信息失败: $e'),
+            content: Text(l10n.loadStatsError(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -56,6 +58,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
 
   Future<void> _performOperation(
       String operation, Future<Map<String, dynamic>> Function() action) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isLoading = true;
       _lastOperation = operation;
@@ -71,7 +74,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$operation 完成'),
+            content: Text(l10n.operationCompleted(operation)),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
@@ -85,7 +88,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$operation 失败: $e'),
+            content: Text(l10n.operationFailed(operation, e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -100,9 +103,10 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('媒体文件管理'),
+        title: Text(l10n.mediaManagementTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -129,11 +133,12 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
   }
 
   Widget _buildStatsSection() {
+    final l10n = AppLocalizations.of(context);
     if (_mediaStats == null) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('无法加载统计信息'),
+          padding: const EdgeInsets.all(16),
+          child: Text(l10n.loadStatsFailed),
         ),
       );
     }
@@ -147,33 +152,37 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '媒体文件统计',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.mediaFileStats,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildStatRow('总文件数', '${stats['totalFiles'] ?? 0}'),
-            _buildStatRow('被引用文件数', '${stats['referencedFiles'] ?? 0}'),
-            _buildStatRow('孤儿文件数', '${stats['orphanFiles'] ?? 0}'),
-            _buildStatRow('总引用数', '${stats['totalReferences'] ?? 0}'),
+            _buildStatRow(l10n.totalFiles, '${stats['totalFiles'] ?? 0}'),
+            _buildStatRow(
+                l10n.referencedFiles, '${stats['referencedFiles'] ?? 0}'),
+            _buildStatRow(l10n.orphanFiles, '${stats['orphanFiles'] ?? 0}'),
+            _buildStatRow(
+                l10n.totalReferences, '${stats['totalReferences'] ?? 0}'),
             const Divider(),
-            _buildStatRow('总大小',
+            _buildStatRow(l10n.totalSize,
                 '${(stats['totalSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
-            _buildStatRow('图片大小',
+            _buildStatRow(l10n.imagesSize,
                 '${(stats['imagesSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
-            _buildStatRow('视频大小',
+            _buildStatRow(l10n.videosSize,
                 '${(stats['videosSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
-            _buildStatRow('音频大小',
+            _buildStatRow(l10n.audiosSize,
                 '${(stats['audiosSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
             const Divider(),
-            const Text(
-              '临时文件',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            Text(
+              l10n.tempFiles,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            _buildStatRow('临时文件数', '${tempStats['totalFiles'] ?? 0}'),
-            _buildStatRow('过期文件数', '${tempStats['expiredFiles'] ?? 0}'),
-            _buildStatRow('临时文件大小',
+            _buildStatRow(
+                l10n.tempFilesCount, '${tempStats['totalFiles'] ?? 0}'),
+            _buildStatRow(
+                l10n.expiredFilesCount, '${tempStats['expiredFiles'] ?? 0}'),
+            _buildStatRow(l10n.tempFilesSize,
                 '${(tempStats['totalSizeMB'] ?? 0.0).toStringAsFixed(2)} MB'),
           ],
         ),
@@ -198,23 +207,24 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
   }
 
   Widget _buildActionsSection() {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '清理操作',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.cleanupOperations,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildActionButton(
-              '清理过期临时文件',
-              '删除超过24小时的临时文件',
+              l10n.cleanupExpiredTempFiles,
+              l10n.cleanupExpiredTempFilesDesc,
               Icons.cleaning_services,
               () => _performOperation(
-                '清理过期临时文件',
+                l10n.cleanupExpiredTempFiles,
                 () async {
                   final count = await TemporaryMediaService
                       .cleanupExpiredTemporaryFiles();
@@ -224,11 +234,11 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
             ),
             const SizedBox(height: 12),
             _buildActionButton(
-              '清理孤儿文件',
-              '删除没有被任何笔记引用的媒体文件',
+              l10n.cleanupOrphanFiles,
+              l10n.cleanupOrphanFilesDesc,
               Icons.delete_sweep,
               () => _performOperation(
-                '清理孤儿文件',
+                l10n.cleanupOrphanFiles,
                 () async {
                   final count =
                       await MediaReferenceService.cleanupOrphanFiles();
@@ -238,31 +248,31 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
             ),
             const SizedBox(height: 12),
             _buildActionButton(
-              '完整清理',
-              '清理所有临时文件和孤儿文件',
+              l10n.fullCleanup,
+              l10n.fullCleanupDesc,
               Icons.cleaning_services_outlined,
               () => _performOperation(
-                '完整清理',
+                l10n.fullCleanup,
                 () => MediaCleanupService.performFullCleanup(),
               ),
             ),
             const SizedBox(height: 12),
             _buildActionButton(
-              '迁移现有笔记',
-              '重新建立现有笔记的媒体文件引用关系',
+              l10n.migrateExistingNotes,
+              l10n.migrateExistingNotesDesc,
               Icons.sync,
               () => _performOperation(
-                '迁移现有笔记',
+                l10n.migrateExistingNotes,
                 () => MediaCleanupService.migrateExistingNotes(),
               ),
             ),
             const SizedBox(height: 12),
             _buildActionButton(
-              '验证文件完整性',
-              '检查媒体文件引用的完整性',
+              l10n.verifyFileIntegrity,
+              l10n.verifyFileIntegrityDesc,
               Icons.verified,
               () => _performOperation(
-                '验证文件完整性',
+                l10n.verifyFileIntegrity,
                 () => MediaCleanupService.verifyMediaIntegrity(),
               ),
             ),
@@ -314,6 +324,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
   }
 
   Widget _buildResultSection() {
+    final l10n = AppLocalizations.of(context);
     final result = _lastOperationResult!;
 
     return Card(
@@ -323,7 +334,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$_lastOperation 结果',
+              l10n.operationResult(_lastOperation!),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -348,29 +359,31 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
   }
 
   String _formatKey(String key) {
+    final l10n = AppLocalizations.of(context);
     switch (key) {
       case 'cleanedFiles':
-        return '清理文件数';
+        return l10n.cleanedFilesCount;
       case 'spaceSavedMB':
-        return '节省空间 (MB)';
+        return l10n.spaceSavedMb;
       case 'migratedQuotes':
-        return '迁移笔记数';
+        return l10n.migratedQuotesCount;
       case 'orphanFilesDetected':
-        return '检测到孤儿文件';
+        return l10n.orphanFilesDetected;
       case 'checkedReferences':
-        return '检查引用数';
+        return l10n.checkedReferencesCount;
       case 'missingFiles':
-        return '缺失文件数';
+        return l10n.missingFilesCount;
       case 'isHealthy':
-        return '文件完整性';
+        return l10n.fileIntegrity;
       default:
         return key;
     }
   }
 
   String _formatValue(dynamic value) {
+    final l10n = AppLocalizations.of(context);
     if (value is bool) {
-      return value ? '正常' : '异常';
+      return value ? l10n.normal : l10n.abnormal;
     } else if (value is double) {
       return value.toStringAsFixed(2);
     } else {

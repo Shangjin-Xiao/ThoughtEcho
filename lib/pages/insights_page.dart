@@ -40,80 +40,96 @@ class _InsightsPageState extends State<InsightsPage> {
       _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
-  final List<Map<String, dynamic>> _analysisTypes = [
-    {
-      'title': '全面分析',
-      'icon': Icons.all_inclusive, // 保持不变
-      'description': '综合分析您所有笔记，探索主题、情感和思维模式',
-      'prompt': 'comprehensive',
-    },
-    {
-      'title': '情感洞察',
-      'icon': Icons.mood, // 更新图标
-      'description': '分析您的情绪状态和变化趋势',
-      'prompt': 'emotional',
-    },
-    {
-      'title': '思维导图',
-      'icon': Icons.account_tree, // 更新图标
-      'description': '构建您思考的结构和思维习惯分析',
-      'prompt': 'mindmap',
-    },
-    {
-      'title': '成长建议',
-      'icon': Icons.trending_up, // 更新图标
-      'description': '根据您的笔记提供个性化成长和进步建议',
-      'prompt': 'growth',
-    },
-  ];
+  List<Map<String, dynamic>> _getAnalysisTypes(AppLocalizations l10n) {
+    return [
+      {
+        'title': l10n.analysisTypeComprehensive,
+        'icon': Icons.all_inclusive,
+        'description': l10n.analysisTypeComprehensiveDesc,
+        'prompt': 'comprehensive',
+      },
+      {
+        'title': l10n.analysisTypeEmotional,
+        'icon': Icons.mood,
+        'description': l10n.analysisTypeEmotionalDesc,
+        'prompt': 'emotional',
+      },
+      {
+        'title': l10n.analysisTypeMindmap,
+        'icon': Icons.account_tree,
+        'description': l10n.analysisTypeMindmapDesc,
+        'prompt': 'mindmap',
+      },
+      {
+        'title': l10n.analysisTypeGrowth,
+        'icon': Icons.trending_up,
+        'description': l10n.analysisTypeGrowthDesc,
+        'prompt': 'growth',
+      },
+    ];
+  }
 
   // 分析风格
-  final List<Map<String, dynamic>> _analysisStyles = [
-    {
-      'title': '专业分析',
-      'description': '以专业、客观的方式分析您的笔记',
-      'style': 'professional',
-    },
-    {'title': '友好导师', 'description': '像一位友好的导师给予温和的建议', 'style': 'friendly'},
-    {'title': '风趣幽默', 'description': '以幽默风趣的方式解读您的思考', 'style': 'humorous'},
-    {'title': '文学风格', 'description': '以优美的文学语言描述您的思考旅程', 'style': 'literary'},
-  ];
+  List<Map<String, dynamic>> _getAnalysisStyles(AppLocalizations l10n) {
+    return [
+      {
+        'title': l10n.analysisStyleProfessional,
+        'description': l10n.analysisStyleProfessionalDesc,
+        'style': 'professional',
+      },
+      {
+        'title': l10n.analysisStyleFriendly,
+        'description': l10n.analysisStyleFriendlyDesc,
+        'style': 'friendly'
+      },
+      {
+        'title': l10n.analysisStyleHumorous,
+        'description': l10n.analysisStyleHumorousDesc,
+        'style': 'humorous'
+      },
+      {
+        'title': l10n.analysisStyleLiterary,
+        'description': l10n.analysisStyleLiteraryDesc,
+        'style': 'literary'
+      },
+    ];
+  }
 
   String _selectedAnalysisType = 'comprehensive';
   String _selectedAnalysisStyle = 'professional';
 
   // 1. 静态key-label映射
-  static const Map<String, String> _analysisTypeKeyToLabel = {
-    'comprehensive': '全面分析',
-    'emotional': '情感洞察',
-    'mindmap': '思维导图',
-    'growth': '成长建议',
-  };
-  static const Map<String, String> _analysisStyleKeyToLabel = {
-    'professional': '专业分析',
-    'friendly': '友好导师',
-    'humorous': '风趣幽默',
-    'literary': '文学风格',
-  };
+  late Map<String, String> _analysisTypeKeyToLabel;
+  late Map<String, String> _analysisStyleKeyToLabel;
 
   @override
   void initState() {
     super.initState();
-    // 延迟初始化AIAnalysisDatabaseService，避免在initState中使用context
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 在didChangeDependencies中安全地获取AIAnalysisDatabaseService实例
+    final l10n = AppLocalizations.of(context);
+    _analysisTypeKeyToLabel = {
+      'comprehensive': l10n.analysisTypeComprehensive,
+      'emotional': l10n.analysisTypeEmotional,
+      'mindmap': l10n.analysisTypeMindmap,
+      'growth': l10n.analysisTypeGrowth,
+    };
+    _analysisStyleKeyToLabel = {
+      'professional': l10n.analysisStyleProfessional,
+      'friendly': l10n.analysisStyleFriendly,
+      'humorous': l10n.analysisStyleHumorous,
+      'literary': l10n.analysisStyleLiterary,
+    };
+
     if (_aiAnalysisDatabaseService == null) {
       _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
         context,
         listen: false,
       );
-      logDebug('AIAnalysisDatabaseService已初始化');
-
-      // 测试数据库连接
+      logDebug('AIAnalysisDatabaseService initialized');
       _testDatabaseConnection();
     }
   }
@@ -123,26 +139,24 @@ class _InsightsPageState extends State<InsightsPage> {
     try {
       if (_aiAnalysisDatabaseService != null) {
         await _aiAnalysisDatabaseService!.database;
-        logDebug('AI分析数据库连接测试成功');
+        logDebug('AI analysis database connection test successful');
 
-        // 测试获取所有分析
         final analyses = await _aiAnalysisDatabaseService!.getAllAnalyses();
-        logDebug('当前已保存的AI分析数量: ${analyses.length}');
+        logDebug('Current number of saved AI analyses: ${analyses.length}');
 
-        // 测试保存一个简单的分析
         await _testSaveAnalysis();
       }
     } catch (e) {
-      logDebug('AI分析数据库连接测试失败: $e');
+      logDebug('AI analysis database connection test failed: $e');
     }
   }
 
-  /// 测试保存分析功能
   Future<void> _testSaveAnalysis() async {
+    final l10n = AppLocalizations.of(context);
     try {
       final testAnalysis = AIAnalysis(
-        title: '测试分析',
-        content: '这是一个测试分析，用于验证保存功能是否正常工作。',
+        title: l10n.testAnalysis,
+        content: l10n.testAnalysisDesc,
         analysisType: 'comprehensive',
         analysisStyle: 'professional',
         createdAt: DateTime.now().toIso8601String(),
@@ -151,21 +165,19 @@ class _InsightsPageState extends State<InsightsPage> {
 
       final savedAnalysis =
           await _aiAnalysisDatabaseService!.saveAnalysis(testAnalysis);
-      logDebug('测试保存成功，ID: ${savedAnalysis.id}');
+      logDebug('Test save successful, ID: ${savedAnalysis.id}');
 
-      // 验证保存
       final verifyAnalysis =
           await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
       if (verifyAnalysis != null) {
-        logDebug('测试验证成功');
-        // 删除测试数据
+        logDebug('Test verification successful');
         await _aiAnalysisDatabaseService!.deleteAnalysis(savedAnalysis.id!);
-        logDebug('测试数据已清理');
+        logDebug('Test data cleaned up');
       } else {
-        logDebug('测试验证失败');
+        logDebug('Test verification failed');
       }
     } catch (e) {
-      logDebug('测试保存分析失败: $e');
+      logDebug('Test save analysis failed: $e');
     }
   }
 
@@ -178,30 +190,28 @@ class _InsightsPageState extends State<InsightsPage> {
 
   /// 将当前分析结果保存为AI分析记录
   Future<void> _saveAnalysis(String content) async {
+    final l10n = AppLocalizations.of(context);
     if (content.isEmpty) {
-      logDebug('保存分析失败：内容为空');
+      logDebug('Save analysis failed: content is empty');
       return;
     }
 
     try {
-      logDebug('开始保存AI分析，内容长度: ${content.length}');
+      logDebug('Starting to save AI analysis, content length: ${content.length}');
 
-      // 确保AIAnalysisDatabaseService已初始化
       if (_aiAnalysisDatabaseService == null) {
-        logDebug('AIAnalysisDatabaseService未初始化，尝试重新获取');
+        logDebug('AIAnalysisDatabaseService not initialized, trying to re-fetch');
         _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
           context,
           listen: false,
         );
       }
 
-      // 获取笔记数量
       final quoteCount = await context.read<DatabaseService>().getQuotesCount();
-      logDebug('当前笔记数量: $quoteCount');
+      logDebug('Current number of notes: $quoteCount');
 
-      // 创建一个新的AI分析对象
       final analysis = AIAnalysis(
-        title: _getAnalysisTitle(), // 使用当前选择的分析类型作为标题
+        title: _getAnalysisTitle(),
         content: content,
         analysisType: _selectedAnalysisType,
         analysisStyle: _selectedAnalysisStyle,
@@ -210,45 +220,41 @@ class _InsightsPageState extends State<InsightsPage> {
         quoteCount: quoteCount,
       );
 
-      logDebug('创建AI分析对象: ${analysis.title}, 类型: ${analysis.analysisType}');
+      logDebug('Creating AI analysis object: ${analysis.title}, type: ${analysis.analysisType}');
 
-      // 保存到数据库
       if (_aiAnalysisDatabaseService == null) {
-        throw Exception('AI分析数据库服务未初始化');
+        throw Exception('AI analysis database service not initialized');
       }
 
-      // 测试数据库连接
       try {
         await _aiAnalysisDatabaseService!.database;
-        logDebug('数据库连接测试成功');
+        logDebug('Database connection test successful');
       } catch (dbError) {
-        logDebug('数据库连接测试失败: $dbError');
-        throw Exception('数据库连接失败: $dbError');
+        logDebug('Database connection test failed: $dbError');
+        throw Exception('Database connection failed: $dbError');
       }
 
       final savedAnalysis =
           await _aiAnalysisDatabaseService!.saveAnalysis(analysis);
-      logDebug('AI分析保存成功，ID: ${savedAnalysis.id}');
+      logDebug('AI analysis saved successfully, ID: ${savedAnalysis.id}');
 
-      // 验证保存结果
       final verifyAnalysis =
           await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
       if (verifyAnalysis != null) {
-        logDebug('保存验证成功，标题: ${verifyAnalysis.title}');
+        logDebug('Save verification successful, title: ${verifyAnalysis.title}');
       } else {
-        logDebug('保存验证失败，无法找到刚保存的分析');
+        logDebug('Save verification failed, could not find the saved analysis');
       }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('分析结果已保存'),
-          duration: AppConstants.snackBarDurationImportant, // 统一常量
+          content: Text(l10n.analysisSaved),
+          duration: AppConstants.snackBarDurationImportant,
           action: SnackBarAction(
-            label: '查看历史',
+            label: l10n.viewHistory,
             onPressed: () {
-              // 导航到分析历史记录页面
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -260,17 +266,17 @@ class _InsightsPageState extends State<InsightsPage> {
         ),
       );
     } catch (e, stackTrace) {
-      logDebug('保存AI分析失败: $e');
-      logDebug('堆栈跟踪: $stackTrace');
+      logDebug('Failed to save AI analysis: $e');
+      logDebug('Stack trace: $stackTrace');
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('保存分析失败: $e'),
+          content: Text(l10n.saveAnalysisError(e.toString())),
           backgroundColor: Colors.red,
           duration: AppConstants.snackBarDurationError,
           action: SnackBarAction(
-            label: '重试',
+            label: l10n.retry,
             textColor: Colors.white,
             onPressed: () => _saveAnalysis(content),
           ),
@@ -281,6 +287,7 @@ class _InsightsPageState extends State<InsightsPage> {
 
   /// 将分析结果保存为笔记
   Future<void> _saveAsNote(String content) async {
+    final l10n = AppLocalizations.of(context);
     if (content.isEmpty) return;
 
     try {
@@ -288,10 +295,13 @@ class _InsightsPageState extends State<InsightsPage> {
 
       // 创建一个Quote对象
       final quote = Quote(
-        content: "# ${_getAnalysisTitle()}\n\n$content",
+        content: l10n.analysisNoteTitle(
+          _getAnalysisTitle(),
+          content,
+        ),
         date: DateTime.now().toIso8601String(),
-        source: "AI分析",
-        sourceAuthor: "心迹AI",
+        source: l10n.aiAnalysisSource,
+        sourceAuthor: l10n.thoughtechoAI,
         sourceWork: _getAnalysisTitle(),
         aiAnalysis: null, // 笔记本身就是分析，不需要再保存分析
       );
@@ -303,15 +313,15 @@ class _InsightsPageState extends State<InsightsPage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('已保存为新笔记'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.savedAsNote),
         duration: AppConstants.snackBarDurationImportant,
       ));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('保存为笔记失败: $e'),
+          content: Text(l10n.saveAsNoteError(e.toString())),
           duration: AppConstants.snackBarDurationError,
           backgroundColor: Colors.red,
         ),
@@ -321,6 +331,7 @@ class _InsightsPageState extends State<InsightsPage> {
 
   /// 分享分析结果
   Future<void> _shareAnalysis(String content) async {
+    final l10n = AppLocalizations.of(context);
     if (content.isEmpty) return;
 
     try {
@@ -331,8 +342,8 @@ class _InsightsPageState extends State<InsightsPage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('分析结果已复制到剪贴板，可以粘贴分享'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.analysisCopied),
         duration: AppConstants.snackBarDurationNormal,
       ));
 
@@ -344,7 +355,7 @@ class _InsightsPageState extends State<InsightsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('分享失败: $e'),
+          content: Text(l10n.shareError(e.toString())),
           duration: AppConstants.snackBarDurationError,
           backgroundColor: Colors.red,
         ),
@@ -353,12 +364,13 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Future<void> _generateInsights() async {
+    final l10n = AppLocalizations.of(context);
     final aiService = context.read<AIService>();
     if (!aiService.hasValidApiKey()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请先在设置中配置 API Key'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(l10n.configureApiKey),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -384,8 +396,8 @@ class _InsightsPageState extends State<InsightsPage> {
       if (quotes.isEmpty) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-            content: Text('没有找到笔记，请先添加一些笔记'),
+        ).showSnackBar(SnackBar(
+            content: Text(l10n.noNotesFound),
             duration: AppConstants.snackBarDurationNormal));
         setState(() {
           _isLoading = false;
@@ -420,7 +432,6 @@ class _InsightsPageState extends State<InsightsPage> {
       // Listen to the stream and accumulate text manually
       _insightsSubscription = insightsStream.listen(
         (String chunk) {
-          // Append the new chunk and update state to trigger UI rebuild
           if (mounted) {
             setState(() {
               _accumulatedInsightsText += chunk;
@@ -428,31 +439,29 @@ class _InsightsPageState extends State<InsightsPage> {
           }
         },
         onError: (error) {
-          // Handle errors
-          logDebug('生成洞察流出错: $error');
+          logDebug('Error in insights stream: $error');
           if (mounted) {
-            String errorMessage = '生成洞察失败: ${error.toString()}';
-            String actionText = '重试';
+            String errorMessage = l10n.generateInsightsError(error.toString());
+            String actionText = l10n.retry;
 
-            // 处理特定的错误类型
             if (error.toString().contains('500')) {
-              errorMessage = '服务器内部错误，可能是模型配置问题';
-              actionText = '检查设置';
+              errorMessage = l10n.serverInternalError;
+              actionText = l10n.checkSettings;
             } else if (error.toString().contains('401')) {
-              errorMessage = 'API密钥无效，请检查设置';
-              actionText = '检查API密钥';
+              errorMessage = l10n.invalidApiKey;
+              actionText = l10n.checkApiKey;
             } else if (error.toString().contains('429')) {
-              errorMessage = '请求频率过高，请稍后重试';
-              actionText = '稍后重试';
-            } else if (error.toString().contains('网络') ||
-                error.toString().contains('连接')) {
-              errorMessage = '网络连接问题，请检查网络';
-              actionText = '重试';
+              errorMessage = l10n.rateLimitExceeded;
+              actionText = l10n.tryLater;
+            } else if (error.toString().contains('Network') ||
+                error.toString().contains('Connection')) {
+              errorMessage = l10n.networkError;
+              actionText = l10n.retry;
             }
 
             setState(() {
               _accumulatedInsightsText = errorMessage;
-              _isGenerating = false; // Stop generating state on error
+              _isGenerating = false;
             });
 
             ScaffoldMessenger.of(context).showSnackBar(
@@ -464,8 +473,8 @@ class _InsightsPageState extends State<InsightsPage> {
                   label: actionText,
                   textColor: Colors.white,
                   onPressed: () {
-                    if (actionText == '检查设置' || actionText == '检查API密钥') {
-                      // 导航到AI设置页面
+                    if (actionText == l10n.checkSettings ||
+                        actionText == l10n.checkApiKey) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -473,7 +482,6 @@ class _InsightsPageState extends State<InsightsPage> {
                         ),
                       );
                     } else {
-                      // 重试生成洞察
                       _generateInsights();
                     }
                   },
@@ -483,31 +491,27 @@ class _InsightsPageState extends State<InsightsPage> {
           }
         },
         onDone: () {
-          logDebug('生成洞察流完成');
-          // Stream finished, update loading state
+          logDebug('Insights stream finished');
           if (mounted) {
             setState(() {
-              _isLoading = false; // Stop full loading state on done
-              _isGenerating = false; // Stop generating state on done
+              _isLoading = false;
+              _isGenerating = false;
             });
-
-            // 移除自动保存，让用户手动选择是否保存
           }
         },
-        cancelOnError: true, // Cancel subscription if an error occurs
+        cancelOnError: true,
       );
     } catch (e) {
-      logDebug('生成洞察失败 (setup): $e');
+      logDebug('Failed to generate insights (setup): $e');
       if (mounted) {
-        String errorMessage = '生成洞察失败: ${e.toString()}';
+        String errorMessage = l10n.generateInsightsSetupError(e.toString());
 
-        // 处理特定的错误类型
         if (e.toString().contains('500')) {
-          errorMessage = '服务器内部错误，请检查AI模型配置是否正确';
+          errorMessage = l10n.serverInternalErrorConfig;
         } else if (e.toString().contains('401')) {
-          errorMessage = 'API密钥无效，请在设置中更新API密钥';
+          errorMessage = l10n.invalidApiKeyUpdate;
         } else if (e.toString().contains('API Key')) {
-          errorMessage = '请先在设置中配置有效的API密钥';
+          errorMessage = l10n.configureValidApiKey;
         }
 
         setState(() {
@@ -522,7 +526,7 @@ class _InsightsPageState extends State<InsightsPage> {
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
-              label: '去设置',
+              label: l10n.goToSettings,
               textColor: Colors.white,
               onPressed: () {
                 Navigator.push(
@@ -542,6 +546,7 @@ class _InsightsPageState extends State<InsightsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -552,7 +557,7 @@ class _InsightsPageState extends State<InsightsPage> {
       floatingActionButton: _showAnalysisSelection
           ? FloatingActionButton.extended(
               onPressed: _isLoading ? null : _generateInsights,
-              label: Text(_isLoading ? '分析中...' : '开始分析'),
+              label: Text(_isLoading ? l10n.analyzing : l10n.startAnalysis),
               icon: _isLoading
                   ? const SizedBox(
                       width: 18,
@@ -574,6 +579,7 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Widget _buildAnalysisResultView(ThemeData theme) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         // 顶部操作按钮栏
@@ -598,7 +604,7 @@ class _InsightsPageState extends State<InsightsPage> {
               IconButton(
                 icon: const Icon(Icons.history),
                 color: theme.primaryColor,
-                tooltip: '分析历史',
+                tooltip: l10n.analysisHistory,
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -613,7 +619,7 @@ class _InsightsPageState extends State<InsightsPage> {
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   color: theme.primaryColor,
-                  tooltip: '重新生成',
+                  tooltip: l10n.regenerate,
                   onPressed: _generateInsights,
                 ),
             ],
@@ -628,6 +634,7 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Widget _buildAnalysisSelectionTab(ThemeData theme) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -639,7 +646,7 @@ class _InsightsPageState extends State<InsightsPage> {
           // const SizedBox(height: 24),
 
           Text(
-            '选择分析方式',
+            l10n.selectAnalysisMethod,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -647,12 +654,13 @@ class _InsightsPageState extends State<InsightsPage> {
           const SizedBox(height: 16),
 
           // 分析类型卡片
-          ..._analysisTypes.map((type) => _buildAnalysisTypeCard(theme, type)),
+          ..._getAnalysisTypes(AppLocalizations.of(context))
+              .map((type) => _buildAnalysisTypeCard(theme, type)),
 
           const SizedBox(height: 24),
 
           Text(
-            '选择分析风格',
+            l10n.selectAnalysisStyle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -665,7 +673,8 @@ class _InsightsPageState extends State<InsightsPage> {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _analysisStyles.map((style) {
+              children: _getAnalysisStyles(AppLocalizations.of(context))
+                  .map((style) {
                 final isSelected = _selectedAnalysisStyle == style['style'];
                 final String key = style['style'];
                 return ChoiceChip(
@@ -708,7 +717,7 @@ class _InsightsPageState extends State<InsightsPage> {
                   color: theme.primaryColor,
                 ),
                 Text(
-                  '高级选项',
+                  l10n.advancedOptions,
                   style: TextStyle(
                     color: theme.primaryColor,
                     fontWeight: FontWeight.w500,
@@ -724,8 +733,8 @@ class _InsightsPageState extends State<InsightsPage> {
             TextField(
               controller: _customPromptController,
               decoration: InputDecoration(
-                labelText: '自定义分析提示词',
-                hintText: '例如：分析我的笔记中提到的人物和地点',
+                labelText: l10n.customPrompt,
+                hintText: l10n.customPromptHint,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -746,8 +755,8 @@ class _InsightsPageState extends State<InsightsPage> {
                 Icons.history,
                 color: theme.primaryColor,
               ),
-              title: const Text('分析历史记录'),
-              subtitle: const Text('查看之前的AI分析结果'),
+              title: Text(l10n.analysisHistoryRecord),
+              subtitle: Text(l10n.viewPreviousAnalysis),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.push(
@@ -779,7 +788,7 @@ class _InsightsPageState extends State<InsightsPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '分析说明',
+                      l10n.analysisDescriptionTitle,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSecondaryContainer,
@@ -789,7 +798,7 @@ class _InsightsPageState extends State<InsightsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'AI 分析会综合您所有的笔记内容，发现潜在的思维模式和规律。可以选择不同的分析风格来获取多样的洞察视角。这可能需要一些时间，请耐心等待。',
+                  l10n.analysisDescription,
                   style: TextStyle(
                     fontSize: 13,
                     color: theme.colorScheme.onSecondaryContainer,
@@ -809,27 +818,23 @@ class _InsightsPageState extends State<InsightsPage> {
               color: Colors.amber,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, size: 20),
-                    SizedBox(width: 8),
+                    const Icon(Icons.warning_amber_rounded, size: 20),
+                    const SizedBox(width: 8),
                     Text(
-                      'AI 分析使用说明',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      l10n.aiAnalysisUsageInstructionsTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  '1. AI可能会生成不准确或误导性内容，请谨慎评估分析结果\n'
-                  '2. 使用此功能时，您的所有笔记信息（包括内容、日期、位置、天气和温度等）'
-                  '都会发送给AI进行全面分析\n'
-                  '3. 分析结果仅供参考，最终解释权归您自己\n'
-                  '4. 建议在网络良好的环境下使用此功能，以获得最佳体验',
-                  style: TextStyle(fontSize: 12),
+                  l10n.aiAnalysisUsageInstructions,
+                  style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
@@ -914,20 +919,21 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Widget _buildAnalysisResultTab(ThemeData theme) {
-    // 使用 StreamBuilder 监听 _insightsStream 的连接状态变化，并根据 _accumulatedInsightsText 显示内容
+    final l10n = AppLocalizations.of(context);
+    // Use StreamBuilder to listen to connection state changes of _insightsStream and display content based on _accumulatedInsightsText
     return StreamBuilder<String>(
       stream:
           _insightsStream, // Listen to stream for connection state and errors
       builder: (context, snapshot) {
-        // 根据生成状态和累积文本显示不同内容
+        // Display different content based on generation state and accumulated text
         if (_accumulatedInsightsText.isNotEmpty) {
-          // 已经有累积文本时，显示结果卡片
+          // Display result card when there is accumulated text
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 分析结果卡片
+                // Analysis result card
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -950,12 +956,12 @@ class _InsightsPageState extends State<InsightsPage> {
                               ),
                             ),
                             const Spacer(),
-                            // 复制按钮只在生成完成后显示
+                            // Show copy button only after generation is complete
                             if (!_isGenerating &&
                                 _accumulatedInsightsText.isNotEmpty)
                               IconButton(
                                 icon: const Icon(Icons.copy),
-                                tooltip: '复制到剪贴板',
+                                tooltip: l10n.copyToClipboard,
                                 onPressed: () {
                                   Clipboard.setData(
                                     ClipboardData(
@@ -963,14 +969,14 @@ class _InsightsPageState extends State<InsightsPage> {
                                     ),
                                   );
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('分析结果已复制'),
+                                    SnackBar(
+                                      content: Text(l10n.analysisResultCopied),
                                       duration: AppConstants
                                           .snackBarDurationImportant,
                                     ),
                                   );
                                 },
-                              ), // 加载指示器在生成过程中显示
+                              ), // Show loading indicator during generation
                             if (_isGenerating)
                               const SizedBox(
                                 width: 24,
@@ -983,9 +989,9 @@ class _InsightsPageState extends State<InsightsPage> {
                         ),
                         const Divider(),
                         const SizedBox(height: 8),
-                        // 使用 MarkdownBody 渲染累积的文本
+                        // Use MarkdownBody to render accumulated text
                         MarkdownBody(
-                          data: _accumulatedInsightsText, // 使用累积的文本
+                          data: _accumulatedInsightsText, // Use accumulated text
                           selectable: true,
                           styleSheet: MarkdownStyleSheet.fromTheme(
                             theme,
@@ -997,36 +1003,33 @@ class _InsightsPageState extends State<InsightsPage> {
                 ),
 
                 const SizedBox(height: 16),
-                // 分享和保存按钮只在生成完成后显示
+                // Show share and save buttons only after generation is complete
                 if (!_isGenerating && _accumulatedInsightsText.isNotEmpty)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       OutlinedButton.icon(
                         onPressed: () {
-                          // 保存为笔记
                           _saveAsNote(_accumulatedInsightsText);
                         },
                         icon: const Icon(Icons.note_add),
-                        label: const Text('保存为笔记'),
+                        label: Text(l10n.saveAsNoteButton),
                       ),
                       const SizedBox(width: 16),
                       OutlinedButton.icon(
                         onPressed: () {
-                          // 保存分析结果
                           _saveAnalysis(_accumulatedInsightsText);
                         },
                         icon: const Icon(Icons.save),
-                        label: const Text('保存分析'),
+                        label: Text(l10n.saveAnalysisButton),
                       ),
                       const SizedBox(width: 16),
                       ElevatedButton.icon(
                         onPressed: () {
-                          // 实现分享功能
                           _shareAnalysis(_accumulatedInsightsText);
                         },
                         icon: const Icon(Icons.share),
-                        label: const Text('分享洞察'),
+                        label: Text(l10n.shareInsightsButton),
                       ),
                     ],
                   ),
@@ -1034,29 +1037,24 @@ class _InsightsPageState extends State<InsightsPage> {
             ),
           );
         } else if (snapshot.hasError) {
-          // 处理错误，只在没有累积文本时显示错误信息
-          // Error handling will be managed by the listener now, updating _accumulatedInsightsText directly.
-          // We can just check if _accumulatedInsightsText contains an error message.
-          // However, if the error occurs immediately before any data is received, snapshot.hasError will be true.
-          // Let's keep this error handling for initial errors.
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                '生成洞察时出错: ${snapshot.error.toString()}',
+                l10n.generateInsightsErrorSnapshot(
+                    snapshot.error.toString()),
                 style: const TextStyle(color: Colors.red),
                 textAlign: TextAlign.center,
               ),
             ),
           );
         } else if (_isGenerating) {
-          // 正在生成但还没有收到任何文本时，显示加载动画
           return const AppLoadingView();
         } else {
-          // 初始状态或没有生成且没有累积文本时显示空状态
-          return const AppEmptyView(
+          // Show empty state in initial state or when not generating and no accumulated text
+          return AppEmptyView(
             svgAsset: 'assets/empty/empty_state.svg',
-            text: '选择分析类型并点击"开始分析"\n洞察将帮助你发现笔记中的思维模式和规律',
+            text: l10n.insightsPageEmpty,
           );
         }
       },
@@ -1083,8 +1081,9 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   String _getAnalysisTitle() {
+    final l10n = AppLocalizations.of(context);
     if (_showCustomPrompt && _customPromptController.text.isNotEmpty) {
-      return "自定义分析";
+      return l10n.customAnalysis;
     }
     return _analysisTypeKeyToLabel[_selectedAnalysisType] ??
         _selectedAnalysisType;

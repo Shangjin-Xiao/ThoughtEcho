@@ -20,6 +20,7 @@ import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
+import '../gen_l10n/app_localizations.dart';
 
 /// AI周期报告页面
 class AIPeriodicReportPage extends StatefulWidget {
@@ -157,10 +158,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       });
       AppLogger.e('加载周期数据失败', error: e);
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-            content: Text('加载数据失败: $e'),
+            content: Text(l10n.loadDataFailed(e.toString())),
             duration: AppConstants.snackBarDurationError));
       }
     }
@@ -292,9 +294,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   void _maybeStartInsight() {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
     final useAI = settings.reportInsightsUseAI;
-    final periodLabel = '本${_getPeriodName()}';
+    final periodLabel = l10n.thisPeriod(_getPeriodName(l10n));
     final activeDays = _getActiveDays();
     final noteCount = _periodQuotes.length;
 
@@ -309,14 +312,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {
         final date = DateTime.parse(quote.date);
-        final dateStr = '${date.month}月${date.day}日';
+        final dateStr = l10n.formattedDate(date.month, date.day);
         var content = quote.content.trim();
 
         // 添加位置信息
         if (quote.location != null && quote.location!.isNotEmpty) {
-          content = '【$dateStr·${quote.location}】$content';
+          content = l10n.noteMetaWithLocation(dateStr, quote.location!, content);
         } else {
-          content = '【$dateStr】$content';
+          content = l10n.noteMeta(dateStr, content);
         }
 
         // 添加天气信息
@@ -324,8 +327,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           final w = quote.weather!.trim();
           // 优先把英文key映射为中文描述
           final wDesc = WeatherCodeMapper.getDescription(w);
-          final display = wDesc == '未知' ? w : wDesc;
-          content += ' （天气：$display）';
+          final display = wDesc == l10n.unknown ? w : wDesc;
+          content += l10n.weatherInfo(display);
         }
 
         return content;
@@ -382,7 +385,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
           // 保存洞察到历史记录
           if (_insightText.isNotEmpty) {
-            _saveInsightToHistory();
+            _saveInsightToHistory(l10n);
           }
         },
       );
@@ -418,7 +421,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
       // 保存洞察到历史记录
       if (_insightText.isNotEmpty) {
-        _saveInsightToHistory();
+        _saveInsightToHistory(l10n);
       }
     }
   }
@@ -458,7 +461,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   /// 保存洞察到历史记录
-  Future<void> _saveInsightToHistory() async {
+  Future<void> _saveInsightToHistory(AppLocalizations l10n) async {
     try {
       final insightService = context.read<InsightHistoryService>();
 
@@ -466,13 +469,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       String periodLabel = '';
       switch (_selectedPeriod) {
         case 'week':
-          periodLabel = '本周';
+          periodLabel = l10n.thisWeek;
           break;
         case 'month':
-          periodLabel = '本月';
+          periodLabel = l10n.thisMonth;
           break;
         case 'year':
-          periodLabel = '${_selectedDate.year}年';
+          periodLabel = l10n.yearOnly(_selectedDate.year);
           break;
         default:
           periodLabel = _selectedPeriod;
@@ -522,9 +525,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       });
       AppLogger.e('生成精选卡片失败', error: e);
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('生成卡片失败: $e'),
+              content: Text(l10n.generateCardFailed(e.toString())),
               duration: AppConstants.snackBarDurationError),
         );
       }
@@ -561,31 +565,34 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     return selected;
   }
 
-  String _getPeriodName() {
+  String _getPeriodName(AppLocalizations l10n) {
     switch (_selectedPeriod) {
       case 'week':
-        return '周';
+        return l10n.periodWeek;
       case 'month':
-        return '月';
+        return l10n.periodMonth;
       case 'year':
-        return '年';
+        return l10n.periodYear;
       default:
-        return '期间';
+        return l10n.periodDuring;
     }
   }
 
-  String _getDateRangeText() {
+  String _getDateRangeText(AppLocalizations l10n) {
     final now = _selectedDate;
     switch (_selectedPeriod) {
       case 'week':
         final weekday = now.weekday;
         final startDate = now.subtract(Duration(days: weekday - 1));
         final endDate = startDate.add(const Duration(days: 6));
-        return '${startDate.month}月${startDate.day}日 - ${endDate.month}月${endDate.day}日';
+        return l10n.dateRange(
+          l10n.formattedDate(startDate.month, startDate.day),
+          l10n.formattedDate(endDate.month, endDate.day),
+        );
       case 'month':
-        return '${now.year}年${now.month}月';
+        return l10n.yearMonth(now.year, now.month);
       case 'year':
-        return '${now.year}年';
+        return l10n.yearOnly(now.year);
       default:
         return '';
     }
@@ -605,8 +612,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           child: Row(
             children: [
-              _buildTabItem(0, '数据概览', Icons.analytics_outlined),
-              _buildTabItem(1, '精选卡片', Icons.auto_awesome_outlined),
+              _buildTabItem(0, l10n.dataOverview, Icons.analytics_outlined),
+              _buildTabItem(1, l10n.featuredCards, Icons.auto_awesome_outlined),
             ],
           ),
         ),
@@ -751,7 +758,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(width: 8),
           Text(
-            '${_getPeriodName()} - ${_getDateRangeText()}',
+            '${_getPeriodName(l10n)} - ${_getDateRangeText(l10n)}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
@@ -790,7 +797,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               ),
               const SizedBox(width: 8),
               Text(
-                '时间范围',
+                l10n.timeRange,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -807,7 +814,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     Icons.calendar_today,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
-                  tooltip: '选择具体日期',
+                  tooltip: l10n.selectDate,
                   iconSize: 20,
                 ),
               ),
@@ -821,15 +828,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           ),
           const SizedBox(height: 12),
           SegmentedButton<String>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: 'week',
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.view_week, size: 16),
-                    SizedBox(width: 4),
-                    Text('本周'),
+                    const Icon(Icons.view_week, size: 16),
+                    const SizedBox(width: 4),
+                    Text(l10n.thisWeek),
                   ],
                 ),
               ),
@@ -838,9 +845,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_view_month, size: 16),
-                    SizedBox(width: 4),
-                    Text('本月'),
+                    const Icon(Icons.calendar_view_month, size: 16),
+                    const SizedBox(width: 4),
+                    Text(l10n.thisMonth),
                   ],
                 ),
               ),
@@ -849,9 +856,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.today, size: 16),
-                    SizedBox(width: 4),
-                    Text('本年'),
+                    const Icon(Icons.today, size: 16),
+                    const SizedBox(width: 4),
+                    Text(l10n.thisYear),
                   ],
                 ),
               ),
@@ -897,6 +904,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建数据概览
   Widget _buildDataOverview() {
+    final l10n = AppLocalizations.of(context);
     if (_isLoadingData) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -934,14 +942,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '数据概览',
+                      l10n.dataOverview,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                     ),
                     Text(
-                      _getDateRangeText(),
+                      _getDateRangeText(l10n),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -969,12 +977,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Row(
                     children: [
                       Expanded(
-                          child: _buildStatCard('笔记数量', '$totalNotes', '条',
-                              Icons.note_alt_outlined)),
+                          child: _buildStatCard(l10n.noteCount, '$totalNotes',
+                              l10n.notesUnitPlain, Icons.note_alt_outlined)),
                       const SizedBox(width: 12),
                       Expanded(
-                          child: _buildStatCard(
-                              '总字数', '$totalWords', '字', Icons.text_fields)),
+                          child: _buildStatCard(l10n.totalWordCount,
+                              '$totalWords', l10n.wordsUnitPlain, Icons.text_fields)),
                     ],
                   ),
                 ),
@@ -996,12 +1004,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Row(
                     children: [
                       Expanded(
-                          child: _buildStatCard('平均字数', '$avgWords', '字/条',
-                              Icons.calculate_outlined)),
+                          child: _buildStatCard(l10n.avgWords, '$avgWords',
+                              l10n.wordsPerNote, Icons.calculate_outlined)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildStatCard('活跃天数', '${_getActiveDays()}',
-                            '天', Icons.calendar_today_outlined),
+                        child: _buildStatCard(l10n.activeDays,
+                            '${_getActiveDays()}', l10n.daysUnitPlain, Icons.calendar_today_outlined),
                       ),
                     ],
                   ),
@@ -1027,23 +1035,23 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     children: [
                       Expanded(
                         child: _buildStatCardWithCustomIcon(
-                            '常见时段',
-                            _mostDayPeriodDisplay ?? '暂无',
+                            l10n.commonPeriod,
+                            _mostDayPeriodDisplay ?? l10n.noDataYet,
                             '',
                             _mostDayPeriodIcon ?? Icons.timelapse),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCardWithCustomIcon(
-                            '常见天气',
-                            _mostWeatherDisplay ?? '暂无',
+                            l10n.commonWeather,
+                            _mostWeatherDisplay ?? l10n.noDataYet,
                             '',
                             _mostWeatherIcon ?? Icons.cloud_queue),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCardWithTagIcon(
-                            '常用标签', _mostTopTag ?? '暂无', ''),
+                            l10n.commonTag, _mostTopTag ?? l10n.noDataYet, ''),
                       ),
                     ],
                   ),
@@ -1103,7 +1111,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '最近笔记',
+                              l10n.recentNotes,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -1148,6 +1156,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   // 构建“本周期收藏最多”的展示区域
   Widget _buildPeriodTopFavoritesSection() {
+    final l10n = AppLocalizations.of(context);
     // 过滤出有心形点击的笔记，并按次数排序
     final List<Quote> favorited = _periodQuotes
         .where((q) => q.favoriteCount > 0)
@@ -1177,7 +1186,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '本周期暂无喜爱记录，去给喜欢的笔记点个心吧！',
+                      l10n.noFavoritesInPeriod,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -1212,7 +1221,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '本周期收藏最多',
+                      l10n.mostFavoritedInPeriod,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -1699,7 +1708,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Opacity(
                     opacity: value,
                     child: Text(
-                      '本${_getPeriodName()}暂无笔记',
+                      l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1723,7 +1732,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Opacity(
                     opacity: value,
                     child: Text(
-                      '开始记录您的思考吧',
+                      l10n.startRecordingThoughts,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
@@ -1753,9 +1762,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建笔记预览 - 优化交互效果
   Widget _buildQuotePreview(Quote quote) {
+    final l10n = AppLocalizations.of(context);
     final date = DateTime.parse(quote.date);
     final formattedDate =
-        '${date.month}月${date.day}日 ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+        '${l10n.formattedDate(date.month, date.day)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1884,7 +1894,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Opacity(
                     opacity: value,
                     child: Text(
-                      '本${_getPeriodName()}暂无笔记记录',
+                      l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: Colors.grey[600],
                           ),
@@ -1924,7 +1934,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '精选卡片',
+                      l10n.featuredCards,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -1933,7 +1943,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       Row(
                         children: [
                           Text(
-                            '共 ${_featuredCards.length} 张卡片',
+                            l10n.totalCards(_featuredCards.length),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -1955,7 +1965,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '已选中第${_selectedCardIndex! + 1}张',
+                                l10n.cardSelected(_selectedCardIndex! + 1),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -1986,7 +1996,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 FilledButton.icon(
                   onPressed: _generateFeaturedCards,
                   icon: const Icon(Icons.auto_awesome, size: 18),
-                  label: const Text('生成卡片'),
+                  label: Text(l10n.generateCards),
                   style: FilledButton.styleFrom(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -2001,7 +2011,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     _generateFeaturedCards();
                   },
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('重新生成'),
+                  label: Text(l10n.regenerate),
                   style: FilledButton.styleFrom(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -2045,7 +2055,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               ),
               const SizedBox(height: 24),
               Text(
-                _featuredCards.isEmpty ? '暂无精选卡片' : '精选卡片',
+                _featuredCards.isEmpty ? l10n.noFeaturedCards : l10n.featuredCards,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -2053,7 +2063,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               ),
               const SizedBox(height: 12),
               Text(
-                '可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板',
+                l10n.featuredCardGenerationTip,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -2065,7 +2075,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 onPressed:
                     _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
                 icon: const Icon(Icons.auto_awesome),
-                label: const Text('生成卡片'),
+                label: Text(l10n.generateCards),
                 style: FilledButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -2175,19 +2185,19 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       // 显示加载指示器
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 16),
-                Text('正在生成分享图片...'),
+                const SizedBox(width: 16),
+                Text(l10n.generatingShareImage),
               ],
             ),
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -2203,7 +2213,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
       final tempDir = await getTemporaryDirectory();
       final fileName =
-          '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}.png';
+          'ThoughtEcho_Report_Card_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(imageBytes);
 
@@ -2211,7 +2221,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       await SharePlus.instance.share(
         ShareParams(
           text:
-              '来自心迹周期报告的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
+              '${l10n.cardFromReport}\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
           files: [XFile(file.path)],
         ),
       );
@@ -2220,16 +2230,16 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('卡片分享成功'),
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(l10n.cardSharedSuccessfully),
               ],
             ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -2242,7 +2252,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('分享失败: $e')),
+                Expanded(child: Text(l10n.shareFailed(e.toString()))),
               ],
             ),
             backgroundColor: Colors.red,
@@ -2266,19 +2276,19 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       // 显示加载指示器
       if (mounted) {
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 16),
-                Text('正在保存卡片到相册...'),
+                const SizedBox(width: 16),
+                Text(l10n.savingCardToGallery),
               ],
             ),
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -2288,7 +2298,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         card,
         width: 800,
         height: 1200,
-        customName: '心迹_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
+        customName: 'ThoughtEcho_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
         context: scaffoldContext,
       );
 
@@ -2302,7 +2312,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('卡片已保存到相册: $filePath')),
+                Expanded(child: Text(l10n.cardSavedToGallery(filePath ?? ''))),
               ],
             ),
             backgroundColor: Colors.green,
@@ -2321,7 +2331,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('保存失败: $e')),
+                Expanded(child: Text(l10n.saveFailed(e.toString()))),
               ],
             ),
             backgroundColor: Colors.red,

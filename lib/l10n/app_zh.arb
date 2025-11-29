@@ -818,5 +818,586 @@
         "type": "String"
       }
     }
+  },
+  "hitokotoTypeA": "动画",
+  "hitokotoTypeB": "漫画",
+  "hitokotoTypeC": "游戏",
+  "hitokotoTypeD": "文学",
+  "hitokotoTypeE": "原创",
+  "hitokotoTypeF": "来自网络",
+  "hitokotoTypeG": "其他",
+  "hitokotoTypeH": "影视",
+  "hitokotoTypeI": "诗词",
+  "hitokotoTypeJ": "网易云",
+  "hitokotoTypeK": "哲学",
+  "noNetworkConnection": "无网络连接",
+  "unknown": "未知",
+  "defaultQuote1": "生活不止眼前的苟且，还有诗和远方。",
+  "defaultQuote2": "人生就像一场旅行，不必在乎目的地，在乎的是沿途的风景。",
+  "defaultQuote3": "不要等待机会，而要创造机会。",
+  "editTagTitle": "编辑标签",
+  "tagNameLabel": "标签名称",
+  "iconLabel": "图标：",
+  "emotion": "情感",
+  "thinking": "思考",
+  "nature": "自然",
+  "mood": "心情",
+  "life": "生活",
+  "growth": "成长",
+  "reward": "奖励",
+  "logLoadMoreError": "加载更多日志失败: {error}",
+  "logLoadError": "加载日志失败",
+  "logSourceFilter": "来源: {source}",
+  "logSearchFilter": "搜索: {query}",
+  "logClearAllFilters": "清除全部",
+  "logDetailsTitle": "{level} 日志 {source}",
+  "logCopyAll": "复制全部信息",
+  "logTimestamp": "时间: {time}",
+  "logMessage": "消息:",
+  "logError": "错误:",
+  "logStackTrace": "堆栈跟踪:",
+  "logCopied": "日志详情已复制到剪贴板",
+  "logFilterOptions": "日志过滤选项",
+  "logFilterReset": "重置",
+  "logFilterByLevel": "按日志级别过滤",
+  "logFilterBySource": "按来源过滤",
+  "logFilterSourceHint": "输入日志来源名称...",
+  "logFilterApply": "应用",
+  "logClearTitle": "清除日志",
+  "logClearQuestion": "您想清除哪些日志？",
+  "logClearMemory": "仅清除内存日志",
+  "logClearMemorySuccess": "内存中的日志已清除",
+  "logClearAll": "清除全部日志",
+  "logClearAllSuccess": "所有日志记录已清除",
+  "logClearError": "清除日志失败: {error}",
+  "logContainsError": "包含错误信息",
+  "httpServerPort": "HTTP 服务端口: {port}",
+  "multicastDiscoveryPort": "多播发现端口: {port}",
+  "multicastAddress": "多播地址: {address}",
+  "protocolVersion": "协议版本: {version}",
+  "analysisTypeComprehensive": "全面分析",
+  "analysisTypeComprehensiveDesc": "综合分析您所有笔记，探索主题、情感和思维模式",
+  "analysisTypeEmotional": "情感洞察",
+  "analysisTypeEmotionalDesc": "分析您的情绪状态和变化趋势",
+  "analysisTypeMindmap": "思维导图",
+  "analysisTypeMindmapDesc": "构建您思考的结构和思维习惯分析",
+  "analysisTypeGrowth": "成长建议",
+  "analysisTypeGrowthDesc": "根据您的笔记提供个性化成长和进步建议",
+  "analysisStyleProfessional": "专业分析",
+  "analysisStyleProfessionalDesc": "以专业、客观的方式分析您的笔记",
+  "analysisStyleFriendly": "友好导师",
+  "analysisStyleFriendlyDesc": "像一位友好的导师给予温和的建议",
+  "analysisStyleHumorous": "风趣幽默",
+  "analysisStyleHumorousDesc": "以幽默风趣的方式解读您的思考",
+  "analysisStyleLiterary": "文学风格",
+  "analysisStyleLiteraryDesc": "以优美的文学语言描述您的思考旅程",
+  "testAnalysis": "测试分析",
+  "testAnalysisDesc": "这是一个测试分析，用于验证保存功能是否正常工作。",
+  "analysisSaved": "分析结果已保存",
+  "viewHistory": "查看历史",
+  "saveAnalysisError": "保存分析失败: {error}",
+  "analysisNoteTitle": "# {title}\n\n{content}",
+  "aiAnalysisSource": "AI分析",
+  "thoughtechoAI": "心迹AI",
+  "savedAsNote": "已保存为新笔记",
+  "saveAsNoteError": "保存为笔记失败: {error}",
+  "analysisCopied": "分析结果已复制到剪贴板，可以粘贴分享",
+  "shareError": "分享失败: {error}",
+  "configureApiKey": "请先在设置中配置 API Key",
+  "noNotesFound": "没有找到笔记，请先添加一些笔记",
+  "generateInsightsError": "生成洞察失败: {error}",
+  "serverInternalError": "服务器内部错误，可能是模型配置问题",
+  "checkSettings": "检查设置",
+  "invalidApiKey": "API密钥无效，请检查设置",
+  "checkApiKey": "检查API密钥",
+  "rateLimitExceeded": "请求频率过高，请稍后重试",
+  "tryLater": "稍后重试",
+  "networkError": "网络连接问题，请检查网络",
+  "generateInsightsSetupError": "生成洞察失败 (setup): {error}",
+  "serverInternalErrorConfig": "服务器内部错误，请检查AI模型配置是否正确",
+  "invalidApiKeyUpdate": "API密钥无效，请在设置中更新API密钥",
+  "configureValidApiKey": "请先在设置中配置有效的API密钥",
+  "goToSettings": "去设置",
+  "analyzing": "分析中...",
+  "startAnalysis": "开始分析",
+  "analysisHistory": "分析历史",
+  "regenerate": "重新生成",
+  "selectAnalysisMethod": "选择分析方式",
+  "selectAnalysisStyle": "选择分析风格",
+  "advancedOptions": "高级选项",
+  "customPrompt": "自定义分析提示词",
+  "customPromptHint": "例如：分析我的笔记中提到的人物和地点",
+  "analysisHistoryRecord": "分析历史记录",
+  "viewPreviousAnalysis": "查看之前的AI分析结果",
+  "analysisDescriptionTitle": "分析说明",
+  "analysisDescription": "AI 分析会综合您所有的笔记内容，发现潜在的思维模式和规律。可以选择不同的分析风格来获取多样的洞察视角。这可能需要一些时间，请耐心等待。",
+  "aiAnalysisUsageInstructionsTitle": "AI 分析使用说明",
+  "aiAnalysisUsageInstructions": "1. AI可能会生成不准确或误导性内容，请谨慎评估分析结果\n2. 使用此功能时，您的所有笔记信息（包括内容、日期、位置、天气和温度等）都会发送给AI进行全面分析\n3. 分析结果仅供参考，最终解释权归您自己\n4. 建议在网络良好的环境下使用此功能，以获得最佳体验",
+  "copyToClipboard": "复制到剪贴板",
+  "analysisResultCopied": "分析结果已复制",
+  "saveAsNoteButton": "保存为笔记",
+  "saveAnalysisButton": "保存分析",
+  "shareInsightsButton": "分享洞察",
+  "generateInsightsErrorSnapshot": "生成洞察时出错: {error}",
+  "insightsPageEmpty": "选择分析类型并点击\"开始分析\"\n洞察将帮助你发现笔记中的思维模式和规律",
+  "customAnalysis": "自定义分析",
+  "siliconflow": "硅基流动",
+  "openapiCompatible": "OpenAPI兼容",
+  "verifyingApiKey": "正在验证API Key...",
+  "noProviderSelected": "未选择服务商",
+  "apiKeyValid": "API Key有效 ({length}字符)",
+  "apiKeyInvalid": "未配置有效的API Key",
+  "noAiProviderSelected": "❌ 未选择AI服务商",
+  "providerDisabled": "⚠️ 服务商已禁用",
+  "apiKeyVerified": "✅ API Key有效 (已验证)",
+  "apiKeyStatusCheck": "API Key状态检查: {status}",
+  "checkFailed": "检查失败: {error}",
+  "loadAiSettingsError": "加载AI设置失败: {error}",
+  "loadAiSettingsErrorUser": "加载AI设置失败，请检查网络连接或重新启动应用",
+  "retry": "重试",
+  "fixFormErrors": "请修正表单中的错误后再保存",
+  "presetCreated": "新预设已创建并保存成功",
+  "saveSettingsError": "保存设置失败: {error}",
+  "customConfig": "自定义配置",
+  "customConfigHost": "自定义-{host}",
+  "customConfigTimestamp": "自定义-{timestamp}",
+  "testingConnection": "正在测试连接...",
+  "connectionTestSuccess": "AI连接测试成功！",
+  "connectionTestFailed": "连接测试失败：{error}",
+  "apiKeyRequired": "{providerName} 需要配置API密钥",
+  "connectionSuccess": "连接成功",
+  "responseFormatError": "响应格式异常",
+  "connectionFailed": "连接失败：{statusCode}",
+  "switchedTo": "已切换到 {providerName}",
+  "renamePreset": "重命名预设",
+  "presetName": "预设名称",
+  "confirm": "确定",
+  "presetRenamed": "预设已重命名为 \"{result}\"",
+  "deletePreset": "删除预设",
+  "deletePresetConfirm": "确定要删除预设 \"{providerName}\" 吗？此操作无法撤销。",
+  "delete": "删除",
+  "presetDeleted": "预设 \"{providerName}\" 已删除",
+  "aiProviderSelection": "AI 服务商选择",
+  "currentProvider": "当前: {providerName}",
+  "apiUrlLabel": "API: {url}",
+  "modelLabel": "模型: {model}",
+  "apiKeyLabel": "API Key: {status}",
+  "modelNotConfigured": "未配置",
+  "checkApiKeyStatus": "检查API Key状态",
+  "savedPresets": "已保存的预设 ({length}):",
+  "noPresetsSaved": "还没有保存的预设。配置完API信息后点击\"保存设置\"来创建第一个预设。",
+  "rename": "重命名",
+  "testConnectionButton": "测试连接",
+  "reportInsightsUseAi": "周期报告洞察使用AI",
+  "reportInsightsUseAiDesc": "打开后进入报告页自动生成“诗意洞察”，关闭则使用本地生成",
+  "aiSettingsTitle": "AI 设置",
+  "quickPresets": "快速预设",
+  "selectPreset": "选择服务商预设",
+  "selectPresetHint": "或手动配置下方连接参数",
+  "connectionConfig": "连接配置 ({providerName})",
+  "custom": "自定义",
+  "apiUrlField": "API URL",
+  "apiUrlHint": "例如 https://api.xxx.com/v1/chat/completions",
+  "apiUrlHelper": "必须为 http/https 地址",
+  "apiKeyField": "API Key",
+  "apiKeyHint": "服务所需的密钥（可留空）",
+  "show": "显示",
+  "hide": "隐藏",
+  "modelAndAdvanced": "模型与高级",
+  "modelNameField": "模型名称",
+  "modelNameHint": "请输入模型名称",
+  "modelNameHintDefault": "使用默认模型或自定义",
+  "hostOverrideField": "主机覆盖 (Host Override)",
+  "hostOverrideHint": "可选，用于代理/反向代理场景",
+  "createNewPreset": "创建新预设",
+  "aiCardGeneration": "AI 卡片生成",
+  "aiCardGenerationDesc": "为笔记生成 SVG 分享卡片：开启=使用 AI 智能设计，关闭=使用内置模板（功能仍可用）",
+  "aiCardGenerationTip": "提示：建议使用支持 ≥4K tokens、具备良好指令遵循与文本→SVG 生成能力的中大型模型。",
+  "aiEnhancedGeneration": "AI 增强生成",
+  "aiEnhancedGenerationDesc": "关闭后改用本地模板，不再调用模型",
+  "todayThoughtsUseAi": "今日思考使用AI",
+  "todayThoughtsUseAiDesc": "打开后将使用AI生成今日思考提示，关闭则使用本地生成",
+  "apiUrlRequired": "API URL不能为空",
+  "invalidUrl": "请输入有效的HTTP/HTTPS URL",
+  "mediaManagementTitle": "媒体文件管理",
+  "loadStatsError": "加载统计信息失败: {error}",
+  "operationCompleted": "{operation} 完成",
+  "operationFailed": "{operation} 失败: {error}",
+  "loadStatsFailed": "无法加载统计信息",
+  "mediaFileStats": "媒体文件统计",
+  "totalFiles": "总文件数",
+  "referencedFiles": "被引用文件数",
+  "orphanFiles": "孤儿文件数",
+  "totalReferences": "总引用数",
+  "totalSize": "总大小",
+  "imagesSize": "图片大小",
+  "videosSize": "视频大小",
+  "audiosSize": "音频大小",
+  "tempFiles": "临时文件",
+  "tempFilesCount": "临时文件数",
+  "expiredFilesCount": "过期文件数",
+  "tempFilesSize": "临时文件大小",
+  "cleanupOperations": "清理操作",
+  "cleanupExpiredTempFiles": "清理过期临时文件",
+  "cleanupExpiredTempFilesDesc": "删除超过24小时的临时文件",
+  "cleanupOrphanFiles": "清理孤儿文件",
+  "cleanupOrphanFilesDesc": "删除没有被任何笔记引用的媒体文件",
+  "fullCleanup": "完整清理",
+  "fullCleanupDesc": "清理所有临时文件和孤儿文件",
+  "migrateExistingNotes": "迁移现有笔记",
+  "migrateExistingNotesDesc": "重新建立现有笔记的媒体文件引用关系",
+  "verifyFileIntegrity": "验证文件完整性",
+  "verifyFileIntegrityDesc": "检查媒体文件引用的完整性",
+  "operationResult": "{operation} 结果",
+  "cleanedFilesCount": "清理文件数",
+  "spaceSavedMb": "节省空间 (MB)",
+  "migratedQuotesCount": "迁移笔记数",
+  "orphanFilesDetected": "检测到孤儿文件",
+  "checkedReferencesCount": "检查引用数",
+  "missingFilesCount": "缺失文件数",
+  "fileIntegrity": "文件完整性",
+  "normal": "正常",
+  "abnormal": "异常",
+  "yourThoughtTrack": "你的思想轨迹",
+  "tapToExplore": "点击屏幕开始探索",
+  "annualOverview": "年度概览",
+  "noNotesInPeriod": "这个时段还没有笔记",
+  "startRecording": "开始记录你的想法吧",
+  "totalRecorded": "总共记录",
+  "notesUnit": "篇笔记",
+  "writingDays": "写作天数",
+  "daysUnit": "天",
+  "longestStreak": "最长连续",
+  "tagsUsed": "使用标签",
+  "tagsUnit": "个",
+  "writingHabits": "写作习惯",
+  "noWritingHabits": "暂无写作习惯数据",
+  "mostActiveTime": "最活跃时间",
+  "noData": "暂无数据",
+  "favoriteDay": "最喜欢的日子",
+  "avgWordsPerNote": "平均每篇字数",
+  "wordsUnit": " 字",
+  "longestNote": "最长的一篇",
+  "mostCommonPeriod": "最常见时间段",
+  "mostCommonWeather": "最常见天气",
+  "mostUsedTag": "最常用标签",
+  "tagAnalysis": "标签分析",
+  "mostUsedTags": "最常用的标签",
+  "usedXTimes": "使用了 {count} 次 ({percentage}%)",
+  "noTagsUsed": "还没有使用过标签",
+  "timeline": "时间轴",
+  "noRecordsInPeriod": "这个时段还没有记录",
+  "monthX": "{month}月",
+  "notesCount": "{count}篇",
+  "deepInsights": "深度洞察",
+  "thinkingDensity": "思考密度",
+  "deepThinker": "你喜欢深度思考，每篇笔记都很详细。这样的习惯帮助你更好地整理思路。",
+  "conciseThinker": "你的思考简洁而有力，善于抓住要点。这是很好的总结能力。",
+  "quickThinker": "你习惯记录简短的想法，这样能快速捕捉灵感，是很好的记录习惯。",
+  "growthTrack": "成长轨迹",
+  "notStarted": "还没有开始记录,现在就是最好的时机。",
+  "increasingFrequency": "你的记录频率越来越高了！从年初到年末，思考和记录的习惯越来越好。",
+  "decreasingFrequency": "年初的记录很活跃，也许可以重新找回那时的写作热情。",
+  "stableRhythm": "你保持了稳定的记录节奏，这种坚持很难得！",
+  "beginningOfYear": "今年是记录的开始，期待看到更多的思考轨迹。",
+  "writingRhythm": "写作节奏",
+  "goodRhythm": "你有很好的写作节奏，最长连续记录了{longestStreak}天！坚持就是力量。",
+  "decentRhythm": "你已经建立了不错的记录习惯，继续保持这个节奏。",
+  "startRhythm": "记录更多是一个习惯，可以尝试每天记录一些小想法。",
+  "generatingInsights": "正在生成本期洞察…",
+  "noInsights": "暂无洞察",
+  "thankYou": "感谢你的坚持",
+  "everyThoughtCounts": "每一个想法都值得被记录\n每一次记录都是成长的足迹",
+  "continueRecording": "继续记录 {year}",
+  "reportCopied": "年度报告已复制到剪贴板",
+  "shareFailed": "分享失败，请稍后重试",
+  "monday": "星期一",
+  "tuesday": "星期二",
+  "wednesday": "星期三",
+  "thursday": "星期四",
+  "friday": "星期五",
+  "saturday": "星期六",
+  "sunday": "星期日",
+  "defaultTag": "默认",
+  "dayOfMonth": "{day}日",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "{month}{day}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "于 {location}",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "（天气：{weather}）",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "{year}年度报告",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "ThoughtEcho 年度报告",
+  "pageIndicator": "{currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "我的{year}年心迹回顾\n\n📝 记录了 {totalQuotes} 条心迹\n💭 见证了一年的成长与思考\n\n在ThoughtEcho中记录生活的点点滴滴\n#心迹 #年度回顾 #ThoughtEcho",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "dataOverview": "数据概览",
+  "featuredCards": "精选卡片",
+  "timeRange": "时间范围",
+  "selectDate": "选择具体日期",
+  "thisWeek": "本周",
+  "thisMonth": "本月",
+  "thisYear": "本年",
+  "noteCount": "笔记数量",
+  "notesUnitPlain": "条",
+  "totalWordCount": "总字数",
+  "wordsUnitPlain": "字",
+  "avgWords": "平均字数",
+  "wordsPerNote": "字/条",
+  "activeDays": "活跃天数",
+  "daysUnitPlain": "天",
+  "commonPeriod": "常见时段",
+  "noDataYet": "暂无",
+  "commonWeather": "常见天气",
+  "commonTag": "常用标签",
+  "generatingInsightsForPeriod": "正在生成本{period}洞察…",
+  "@generatingInsightsForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavoritesInPeriod": "本周期暂无喜爱记录，去给喜欢的笔记点个心吧！",
+  "mostFavoritedInPeriod": "本周期收藏最多",
+  "recentNotes": "最近笔记",
+  "noNotesInPeriodForPeriod": "本{period}暂无笔记",
+  "@noNotesInPeriodForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "startRecordingThoughts": "开始记录您的思考吧",
+  "totalCards": "共 {count} 张卡片",
+  "@totalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "已选中第{index}张",
+  "@cardSelected": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "generateCards": "生成卡片",
+  "regenerate": "重新生成",
+  "noFeaturedCards": "暂无精选卡片",
+  "featuredCardGenerationTip": "可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板",
+  "generatingShareImage": "正在生成分享图片...",
+  "cardFromReport": "来自心迹周期报告的精美卡片",
+  "cardSharedSuccessfully": "卡片分享成功",
+  "shareFailed": "分享失败: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "正在保存卡片到相册...",
+  "cardSavedToGallery": "卡片已保存到相册: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "保存失败: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadDataFailed": "加载数据失败: {error}",
+  "@loadDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPeriod": "本{period}",
+  "@thisPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeek": "周",
+  "periodMonth": "月",
+  "periodYear": "年",
+  "periodDuring": "期间",
+  "dateRange": "{startDate} - {endDate}",
+  "@dateRange": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "yearMonth": "{year}年{month}月",
+  "@yearMonth": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "yearOnly": "{year}年",
+  "@yearOnly": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "formattedDate": "{month}月{day}日",
+  "@formattedDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMetaWithLocation": "【{date}·{location}】{content}",
+  "@noteMetaWithLocation": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "noteMeta": "【{date}】{content}",
+  "@noteMeta": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherInfo": "（天气：{weather}）",
+  "@weatherInfo": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOpenAI": "OpenAI",
+  "aiProviderOpenRouter": "OpenRouter",
+  "aiProviderDeepSeek": "DeepSeek",
+  "aiProviderAnthropic": "Anthropic (Claude)",
+  "aiProviderOllama": "Ollama",
+  "aiProviderLMStudio": "LMStudio",
+  "apiKeyStatusEmpty": "空",
+  "apiKeyStatusNotEmpty": "{length}字符",
+  "@apiKeyStatusNotEmpty": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noProvider": "无",
+  "connectionTestSystemMessage": "你是一个AI助手。请简单回复\"连接测试成功\"。",
+  "connectionTestUserMessage": "测试连接",
+  "apiKeySavedForProvider": "已保存 {providerName} 的API密钥到安全存储",
+  "@apiKeySavedForProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "fileCount": "{count} 个文件",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

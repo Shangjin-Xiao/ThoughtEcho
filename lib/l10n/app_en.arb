@@ -267,6 +267,14 @@
       }
     }
   },
+  "generateCardFailed": "Failed to generate card: {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   
   "generatingShareImage": "Generating share image...",
   "cardSharedSuccessfully": "Card shared successfully",
@@ -816,6 +824,587 @@
     "placeholders": {
       "fingerprint": {
         "type": "String"
+      }
+    }
+  },
+  "hitokotoTypeA": "Anime",
+  "hitokotoTypeB": "Manga",
+  "hitokotoTypeC": "Game",
+  "hitokotoTypeD": "Literature",
+  "hitokotoTypeE": "Original",
+  "hitokotoTypeF": "From the web",
+  "hitokotoTypeG": "Other",
+  "hitokotoTypeH": "Movie & TV",
+  "hitokotoTypeI": "Poetry",
+  "hitokotoTypeJ": "Netease Cloud Music",
+  "hitokotoTypeK": "Philosophy",
+  "noNetworkConnection": "No network connection",
+  "unknown": "Unknown",
+  "defaultQuote1": "Life is not only about the present, but also poetry and distance.",
+  "defaultQuote2": "Life is like a journey, you don't have to care about the destination, what you care about is the scenery along the way.",
+  "defaultQuote3": "Don't wait for opportunity, create it.",
+  "editTagTitle": "Edit Tag",
+  "tagNameLabel": "Tag Name",
+  "iconLabel": "Icon:",
+  "emotion": "Emotion",
+  "thinking": "Thinking",
+  "nature": "Nature",
+  "mood": "Mood",
+  "life": "Life",
+  "growth": "Growth",
+  "reward": "Reward",
+  "logLoadMoreError": "Failed to load more logs: {error}",
+  "logLoadError": "Failed to load logs",
+  "logSourceFilter": "Source: {source}",
+  "logSearchFilter": "Search: {query}",
+  "logClearAllFilters": "Clear All",
+  "logDetailsTitle": "{level} Log {source}",
+  "logCopyAll": "Copy All",
+  "logTimestamp": "Time: {time}",
+  "logMessage": "Message:",
+  "logError": "Error:",
+  "logStackTrace": "Stack Trace:",
+  "logCopied": "Log details copied to clipboard",
+  "logFilterOptions": "Log Filter Options",
+  "logFilterReset": "Reset",
+  "logFilterByLevel": "Filter by Log Level",
+  "logFilterBySource": "Filter by Source",
+  "logFilterSourceHint": "Enter log source name...",
+  "logFilterApply": "Apply",
+  "logClearTitle": "Clear Logs",
+  "logClearQuestion": "Which logs would you like to clear?",
+  "logClearMemory": "Clear Memory Logs Only",
+  "logClearMemorySuccess": "Memory logs cleared",
+  "logClearAll": "Clear All Logs",
+  "logClearAllSuccess": "All logs cleared",
+  "logClearError": "Failed to clear logs: {error}",
+  "logContainsError": "Contains error information",
+  "httpServerPort": "HTTP Server Port: {port}",
+  "multicastDiscoveryPort": "Multicast Discovery Port: {port}",
+  "multicastAddress": "Multicast Address: {address}",
+  "protocolVersion": "Protocol Version: {version}",
+  "analysisTypeComprehensive": "Comprehensive Analysis",
+  "analysisTypeComprehensiveDesc": "Analyze all your notes to explore themes, emotions and thinking patterns",
+  "analysisTypeEmotional": "Emotional Insights",
+  "analysisTypeEmotionalDesc": "Analyze your emotional state and trends",
+  "analysisTypeMindmap": "Mind Map",
+  "analysisTypeMindmapDesc": "Build the structure of your thinking and analyze habits",
+  "analysisTypeGrowth": "Growth Suggestions",
+  "analysisTypeGrowthDesc": "Personalized growth and progress suggestions based on your notes",
+  "analysisStyleProfessional": "Professional Analysis",
+  "analysisStyleProfessionalDesc": "Analyze your notes in a professional and objective way",
+  "analysisStyleFriendly": "Friendly Mentor",
+  "analysisStyleFriendlyDesc": "Gentle advice like a friendly mentor",
+  "analysisStyleHumorous": "Humorous Style",
+  "analysisStyleHumorousDesc": "Interpret your thoughts in a humorous way",
+  "analysisStyleLiterary": "Literary Style",
+  "analysisStyleLiteraryDesc": "Describe your thinking journey in beautiful literary language",
+  "testAnalysis": "Test Analysis",
+  "testAnalysisDesc": "This is a test analysis to verify that the save function is working properly.",
+  "analysisSaved": "Analysis results have been saved",
+  "viewHistory": "View History",
+  "saveAnalysisError": "Failed to save analysis: {error}",
+  "analysisNoteTitle": "# {title}\n\n{content}",
+  "aiAnalysisSource": "AI Analysis",
+  "thoughtechoAI": "ThoughtEcho AI",
+  "savedAsNote": "Saved as a new note",
+  "saveAsNoteError": "Failed to save as note: {error}",
+  "analysisCopied": "Analysis results have been copied to the clipboard and can be pasted to share",
+  "shareError": "Failed to share: {error}",
+  "configureApiKey": "Please configure the API Key in the settings first",
+  "noNotesFound": "No notes found, please add some notes first",
+  "generateInsightsError": "Failed to generate insights: {error}",
+  "serverInternalError": "Server internal error, may be a model configuration issue",
+  "checkSettings": "Check Settings",
+  "invalidApiKey": "Invalid API key, please check the settings",
+  "checkApiKey": "Check API Key",
+  "rateLimitExceeded": "Request frequency is too high, please try again later",
+  "tryLater": "Try Again Later",
+  "networkError": "Network connection issue, please check your network",
+  "generateInsightsSetupError": "Failed to generate insights (setup): {error}",
+  "serverInternalErrorConfig": "Server internal error, please check if the AI model configuration is correct",
+  "invalidApiKeyUpdate": "Invalid API key, please update the API key in the settings",
+  "configureValidApiKey": "Please configure a valid API key in the settings first",
+  "goToSettings": "Go to Settings",
+  "analyzing": "Analyzing...",
+  "startAnalysis": "Start Analysis",
+  "analysisHistory": "Analysis History",
+  "regenerate": "Regenerate",
+  "selectAnalysisMethod": "Select Analysis Method",
+  "selectAnalysisStyle": "Select Analysis Style",
+  "advancedOptions": "Advanced Options",
+  "customPrompt": "Custom Analysis Prompt",
+  "customPromptHint": "e.g., Analyze the characters and locations mentioned in my notes",
+  "analysisHistoryRecord": "Analysis History Record",
+  "viewPreviousAnalysis": "View previous AI analysis results",
+  "analysisDescriptionTitle": "Analysis Description",
+  "analysisDescription": "AI analysis will synthesize all your note content to discover potential thinking patterns and regularities. You can choose different analysis styles to get diverse perspectives. This may take some time, please be patient.",
+  "aiAnalysisUsageInstructionsTitle": "AI Analysis Usage Instructions",
+  "aiAnalysisUsageInstructions": "1. AI may generate inaccurate or misleading content, please evaluate the analysis results with caution\n2. When using this feature, all your note information (including content, date, location, weather, and temperature, etc.) will be sent to the AI for comprehensive analysis\n3. The analysis results are for reference only, and the final interpretation is up to you\n4. It is recommended to use this feature in a good network environment to get the best experience",
+  "copyToClipboard": "Copy to Clipboard",
+  "analysisResultCopied": "Analysis result copied",
+  "saveAsNoteButton": "Save as Note",
+  "saveAnalysisButton": "Save Analysis",
+  "shareInsightsButton": "Share Insights",
+  "generateInsightsErrorSnapshot": "Error generating insights: {error}",
+  "insightsPageEmpty": "Select an analysis type and click \"Start Analysis\"\nInsights will help you discover thinking patterns and regularities in your notes",
+  "customAnalysis": "Custom Analysis",
+  "siliconflow": "SiliconFlow",
+  "openapiCompatible": "OpenAPI Compatible",
+  "verifyingApiKey": "Verifying API Key...",
+  "noProviderSelected": "No provider selected",
+  "apiKeyValid": "API Key valid ({length} characters)",
+  "apiKeyInvalid": "No valid API Key configured",
+  "noAiProviderSelected": "❌ No AI provider selected",
+  "providerDisabled": "⚠️ Provider disabled",
+  "apiKeyVerified": "✅ API Key valid (verified)",
+  "apiKeyStatusCheck": "API Key status check: {status}",
+  "checkFailed": "Check failed: {error}",
+  "loadAiSettingsError": "Failed to load AI settings: {error}",
+  "loadAiSettingsErrorUser": "Failed to load AI settings, please check your network connection or restart the app",
+  "retry": "Retry",
+  "fixFormErrors": "Please fix the errors in the form before saving",
+  "presetCreated": "New preset created and saved successfully",
+  "saveSettingsError": "Failed to save settings: {error}",
+  "customConfig": "Custom Configuration",
+  "customConfigHost": "Custom-{host}",
+  "customConfigTimestamp": "Custom-{timestamp}",
+  "testingConnection": "Testing connection...",
+  "connectionTestSuccess": "AI connection test successful!",
+  "connectionTestFailed": "Connection test failed: {error}",
+  "apiKeyRequired": "API Key is required for {providerName}",
+  "connectionSuccess": "Connection successful",
+  "responseFormatError": "Response format error",
+  "connectionFailed": "Connection failed: {statusCode}",
+  "switchedTo": "Switched to {providerName}",
+  "renamePreset": "Rename Preset",
+  "presetName": "Preset Name",
+  "confirm": "Confirm",
+  "presetRenamed": "Preset has been renamed to \"{result}\"",
+  "deletePreset": "Delete Preset",
+  "deletePresetConfirm": "Are you sure you want to delete the preset \"{providerName}\"? This action cannot be undone.",
+  "delete": "Delete",
+  "presetDeleted": "Preset \"{providerName}\" has been deleted",
+  "aiProviderSelection": "AI Provider Selection",
+  "currentProvider": "Current: {providerName}",
+  "apiUrlLabel": "API: {url}",
+  "modelLabel": "Model: {model}",
+  "apiKeyLabel": "API Key: {status}",
+  "modelNotConfigured": "Not configured",
+  "checkApiKeyStatus": "Check API Key Status",
+  "savedPresets": "Saved Presets ({length}):",
+  "noPresetsSaved": "No saved presets yet. Configure the API information and click \"Save Settings\" to create the first preset.",
+  "rename": "Rename",
+  "testConnectionButton": "Test Connection",
+  "reportInsightsUseAi": "Use AI for Periodic Report Insights",
+  "reportInsightsUseAiDesc": "When enabled, an \"Insightful Poem\" will be automatically generated when entering the report page. If disabled, local generation will be used.",
+  "aiSettingsTitle": "AI Settings",
+  "quickPresets": "Quick Presets",
+  "selectPreset": "Select a provider preset",
+  "selectPresetHint": "Or manually configure the connection parameters below",
+  "connectionConfig": "Connection Configuration ({providerName})",
+  "custom": "Custom",
+  "apiUrlField": "API URL",
+  "apiUrlHint": "e.g., https://api.xxx.com/v1/chat/completions",
+  "apiUrlHelper": "Must be an http/https URL",
+  "apiKeyField": "API Key",
+  "apiKeyHint": "The key required for the service (can be left blank)",
+  "show": "Show",
+  "hide": "Hide",
+  "modelAndAdvanced": "Model & Advanced",
+  "modelNameField": "Model Name",
+  "modelNameHint": "Please enter a model name",
+  "modelNameHintDefault": "Use default model or customize",
+  "hostOverrideField": "Host Override",
+  "hostOverrideHint": "Optional, for proxy/reverse proxy scenarios",
+  "createNewPreset": "Create New Preset",
+  "aiCardGeneration": "AI Card Generation",
+  "aiCardGenerationDesc": "Generate SVG sharing cards for notes: On = use AI for smart design, Off = use built-in templates (feature still available)",
+  "aiCardGenerationTip": "Tip: It is recommended to use a medium-to-large model that supports ≥4K tokens and has good instruction following and text-to-SVG generation capabilities.",
+  "aiEnhancedGeneration": "AI Enhanced Generation",
+  "aiEnhancedGenerationDesc": "When turned off, local templates will be used instead of calling the model",
+  "todayThoughtsUseAi": "Use AI for Today's Thoughts",
+  "todayThoughtsUseAiDesc": "When enabled, AI will be used to generate prompts for Today's Thoughts. If disabled, local generation will be used.",
+  "apiUrlRequired": "API URL cannot be empty",
+  "invalidUrl": "Please enter a valid HTTP/HTTPS URL",
+  "mediaManagementTitle": "Media File Management",
+  "loadStatsError": "Failed to load statistics: {error}",
+  "operationCompleted": "{operation} completed",
+  "operationFailed": "{operation} failed: {error}",
+  "loadStatsFailed": "Failed to load statistics",
+  "mediaFileStats": "Media File Statistics",
+  "totalFiles": "Total Files",
+  "referencedFiles": "Referenced Files",
+  "orphanFiles": "Orphan Files",
+  "totalReferences": "Total References",
+  "totalSize": "Total Size",
+  "imagesSize": "Images Size",
+  "videosSize": "Videos Size",
+  "audiosSize": "Audios Size",
+  "tempFiles": "Temporary Files",
+  "tempFilesCount": "Temporary Files Count",
+  "expiredFilesCount": "Expired Files Count",
+  "tempFilesSize": "Temporary Files Size",
+  "cleanupOperations": "Cleanup Operations",
+  "cleanupExpiredTempFiles": "Clean up expired temporary files",
+  "cleanupExpiredTempFilesDesc": "Delete temporary files older than 24 hours",
+  "cleanupOrphanFiles": "Clean up orphan files",
+  "cleanupOrphanFilesDesc": "Delete media files not referenced by any notes",
+  "fullCleanup": "Full Cleanup",
+  "fullCleanupDesc": "Clean up all temporary and orphan files",
+  "migrateExistingNotes": "Migrate Existing Notes",
+  "migrateExistingNotesDesc": "Re-establish media file references for existing notes",
+  "verifyFileIntegrity": "Verify File Integrity",
+  "verifyFileIntegrityDesc": "Check the integrity of media file references",
+  "operationResult": "{operation} Result",
+  "cleanedFilesCount": "Cleaned Files Count",
+  "spaceSavedMb": "Space Saved (MB)",
+  "migratedQuotesCount": "Migrated Quotes Count",
+  "orphanFilesDetected": "Orphan Files Detected",
+  "checkedReferencesCount": "Checked References Count",
+  "missingFilesCount": "Missing Files Count",
+  "fileIntegrity": "File Integrity",
+  "normal": "Normal",
+  "abnormal": "Abnormal",
+  "yourThoughtTrack": "Your Thought Track",
+  "tapToExplore": "Tap the screen to start exploring",
+  "annualOverview": "Annual Overview",
+  "noNotesInPeriod": "No notes in this period",
+  "startRecording": "Start recording your thoughts",
+  "totalRecorded": "Total Recorded",
+  "notesUnit": " notes",
+  "writingDays": "Writing Days",
+  "daysUnit": " days",
+  "longestStreak": "Longest Streak",
+  "tagsUsed": "Tags Used",
+  "tagsUnit": " tags",
+  "writingHabits": "Writing Habits",
+  "noWritingHabits": "No writing habits data yet",
+  "mostActiveTime": "Most Active Time",
+  "noData": "No data",
+  "favoriteDay": "Favorite Day",
+  "avgWordsPerNote": "Avg. Words Per Note",
+  "wordsUnit": " words",
+  "longestNote": "Longest Note",
+  "mostCommonPeriod": "Most Common Period",
+  "mostCommonWeather": "Most Common Weather",
+  "mostUsedTag": "Most Used Tag",
+  "tagAnalysis": "Tag Analysis",
+  "mostUsedTags": "Most Used Tags",
+  "usedXTimes": "Used {count} times ({percentage}%)",
+  "noTagsUsed": "No tags have been used yet",
+  "timeline": "Timeline",
+  "noRecordsInPeriod": "No records in this period",
+  "monthX": "Month {month}",
+  "notesCount": "{count} notes",
+  "deepInsights": "Deep Insights",
+  "thinkingDensity": "Thinking Density",
+  "deepThinker": "You enjoy deep thinking, and each note is very detailed. This habit helps you organize your thoughts better.",
+  "conciseThinker": "Your thinking is concise and powerful, and you are good at grasping the main points. This is a great summarizing skill.",
+  "quickThinker": "You are used to recording short ideas, which allows you to quickly capture inspiration. This is a great recording habit.",
+  "growthTrack": "Growth Track",
+  "notStarted": "You haven't started recording yet, now is the best time.",
+  "increasingFrequency": "Your recording frequency is getting higher and higher! From the beginning to the end of the year, the habit of thinking and recording has gotten better and better.",
+  "decreasingFrequency": "The records at the beginning of the year were very active, maybe you can regain the enthusiasm for writing at that time.",
+  "stableRhythm": "You have maintained a stable recording rhythm, and this persistence is rare!",
+  "beginningOfYear": "This year is the beginning of recording, looking forward to seeing more thought tracks.",
+  "writingRhythm": "Writing Rhythm",
+  "goodRhythm": "You have a good writing rhythm, with the longest continuous recording of {longestStreak} days! Persistence is power.",
+  "decentRhythm": "You have established a good recording habit, keep up this rhythm.",
+  "startRhythm": "Recording more is a habit, you can try to record some small ideas every day.",
+  "generatingInsights": "Generating insights for this period...",
+  "noInsights": "No insights yet",
+  "thankYou": "Thank you for your persistence",
+  "everyThoughtCounts": "Every thought is worth recording\nEvery record is a footprint of growth",
+  "continueRecording": "Continue recording in {year}",
+  "reportCopied": "Annual report has been copied to the clipboard",
+  "shareFailed": "Failed to share, please try again later",
+  "monday": "Monday",
+  "tuesday": "Tuesday",
+  "wednesday": "Wednesday",
+  "thursday": "Thursday",
+  "friday": "Friday",
+  "saturday": "Saturday",
+  "sunday": "Sunday",
+  "defaultTag": "Default",
+  "dayOfMonth": "Day {day}",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "{month} {day}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "at {location}",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "(Weather: {weather})",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "{year} Annual Report",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "ThoughtEcho Annual Report",
+  "pageIndicator": "{currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "My {year} ThoughtEcho Review\n\n📝 Recorded {totalQuotes} thoughts\n💭 Witnessed a year of growth and reflection\n\nRecording the bits and pieces of life in ThoughtEcho\n#ThoughtEcho #AnnualReview #Journal",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "dataOverview": "Data Overview",
+  "featuredCards": "Featured Cards",
+  "timeRange": "Time Range",
+  "selectDate": "Select Date",
+  "thisWeek": "This Week",
+  "thisMonth": "This Month",
+  "thisYear": "This Year",
+  "noteCount": "Note Count",
+  "notesUnitPlain": "notes",
+  "totalWordCount": "Total Words",
+  "wordsUnitPlain": "words",
+  "avgWords": "Avg. Words",
+  "wordsPerNote": "words/note",
+  "activeDays": "Active Days",
+  "daysUnitPlain": "days",
+  "commonPeriod": "Common Period",
+  "noDataYet": "N/A",
+  "commonWeather": "Common Weather",
+  "commonTag": "Common Tag",
+  "generatingInsightsForPeriod": "Generating insights for this {period}...",
+  "@generatingInsightsForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavoritesInPeriod": "No favorites in this period. Go give some love to your notes!",
+  "mostFavoritedInPeriod": "Most Favorited This Period",
+  "recentNotes": "Recent Notes",
+  "noNotesInPeriodForPeriod": "No notes in this {period}",
+  "@noNotesInPeriodForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "startRecordingThoughts": "Start recording your thoughts",
+  "totalCards": "{count} cards in total",
+  "@totalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "Card {index} selected",
+  "@cardSelected": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "generateCards": "Generate Cards",
+  "regenerate": "Regenerate",
+  "noFeaturedCards": "No Featured Cards Yet",
+  "featuredCardGenerationTip": "Generate beautiful sharing cards from your notes: AI On = Smart Design, AI Off = Built-in Templates.",
+  "generatingShareImage": "Generating share image...",
+  "cardFromReport": "A beautiful card from ThoughtEcho Periodic Report",
+  "cardSharedSuccessfully": "Card shared successfully",
+  "shareFailed": "Share failed: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "Saving card to gallery...",
+  "cardSavedToGallery": "Card saved to gallery: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "Save failed: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadDataFailed": "Failed to load data: {error}",
+  "@loadDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPeriod": "This {period}",
+  "@thisPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeek": "Week",
+  "periodMonth": "Month",
+  "periodYear": "Year",
+  "periodDuring": "Period",
+  "dateRange": "{startDate} - {endDate}",
+  "@dateRange": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "yearMonth": "{month}, {year}",
+  "@yearMonth": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "yearOnly": "{year}",
+  "@yearOnly": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "formattedDate": "{month}/{day}",
+  "@formattedDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMetaWithLocation": "[{date}·{location}] {content}",
+  "@noteMetaWithLocation": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "noteMeta": "[{date}] {content}",
+  "@noteMeta": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherInfo": " (Weather: {weather})",
+  "@weatherInfo": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOpenAI": "OpenAI",
+  "aiProviderOpenRouter": "OpenRouter",
+  "aiProviderDeepSeek": "DeepSeek",
+  "aiProviderAnthropic": "Anthropic (Claude)",
+  "aiProviderOllama": "Ollama",
+  "aiProviderLMStudio": "LMStudio",
+  "apiKeyStatusEmpty": "empty",
+  "apiKeyStatusNotEmpty": "{length} characters",
+  "@apiKeyStatusNotEmpty": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noProvider": "None",
+  "connectionTestSystemMessage": "You are an AI assistant. Please reply briefly with \"Connection test successful\".",
+  "connectionTestUserMessage": "Test connection",
+  "apiKeySavedForProvider": "Saved API Key for {providerName} to secure storage",
+  "@apiKeySavedForProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "fileCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }
