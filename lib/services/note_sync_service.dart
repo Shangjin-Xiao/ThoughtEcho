@@ -677,7 +677,7 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 流式发现附近设备，实时推送列表更新。
-  /// 返回 (Stream<List<Device>>, VoidCallback cancel) 二元组。
+  /// 返回 `(Stream<List<Device>>, VoidCallback cancel)` 二元组。
   ///  - stream: 订阅后会立即收到第一次空列表，然后设备变化时推送。
   ///  - cancel: 调用后提前结束等待并完成 stream。
   /// [timeout] 总等待时长毫秒。
