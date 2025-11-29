@@ -1108,7 +1108,7 @@
   "verifyFileIntegrityDesc": "检查媒体文件引用的完整性",
   "operationResult": "{operation} 结果",
   "cleanedFilesCount": "清理文件数",
-  "spaceSavedMb": "节省空间 (MB)",
+  "spaceSavedMbLabel": "节省空间 (MB)",
   "migratedQuotesCount": "迁移笔记数",
   "orphanFilesDetected": "检测到孤儿文件",
   "checkedReferencesCount": "检查引用数",
