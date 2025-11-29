@@ -856,13 +856,41 @@
   "transport": "Transport",
   "otherCategory": "Other",
   "logLoadMoreError": "Failed to load more logs: {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "logLoadError": "Failed to load logs",
   "logSourceFilter": "Source: {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "logSearchFilter": "Search: {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "logClearAllFilters": "Clear All",
   "logDetailsTitle": "{level} Log {source}",
   "logCopyAll": "Copy All",
   "logTimestamp": "Time: {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "logMessage": "Message:",
   "logError": "Error:",
   "logStackTrace": "Stack Trace:",
@@ -880,10 +908,38 @@
   "logClearAll": "Clear All Logs",
   "logClearAllSuccess": "All logs cleared",
   "logClearError": "Failed to clear logs: {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "logContainsError": "Contains error information",
   "httpServerPort": "HTTP Server Port: {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
   "multicastDiscoveryPort": "Multicast Discovery Port: {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
   "multicastAddress": "Multicast Address: {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "protocolVersion": "Protocol Version: {version}",
   "analysisTypeComprehensive": "Comprehensive Analysis",
   "analysisTypeComprehensiveDesc": "Analyze all your notes to explore themes, emotions and thinking patterns",

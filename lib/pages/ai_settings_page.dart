@@ -106,7 +106,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   /// 异步加载当前provider的API Key
   Future<void> _loadApiKeyAsync() async {
-    final l10n = AppLocalizations.of(context);
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
       logDebug('Loading API key for provider: ${_currentProvider!.id}');
@@ -131,7 +130,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   void _loadMultiSettings() {
-    final l10n = AppLocalizations.of(context);
     final settingsService = Provider.of<SettingsService>(
       context,
       listen: false,
