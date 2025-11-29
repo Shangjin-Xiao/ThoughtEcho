@@ -656,7 +656,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             onPressed: () => Navigator.pop(context, 'remove'),
             child: const Text('移除'),
           ),
-        if (hasCoordinates)
+        if (hasOnlyCoordinates)
           TextButton(
             onPressed: () => Navigator.pop(context, 'update'),
             child: const Text('更新位置'),
@@ -815,10 +815,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } else if (mounted && context.mounted) {
       // 获取位置失败，给出提示
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('无法获取当前位置，请检查定位权限或网络状态'),
-          duration: Duration(seconds: 2),
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('无法获取位置'),
+          content: const Text('无法获取当前位置，请检查定位权限或网络状态。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('我知道了'),
+            ),
+          ],
         ),
       );
     }
@@ -1405,7 +1412,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   'color-indicator-$_selectedColorHex'),
                             ),
                           ),
-                        if (_showLocation && _location != null)
+                        if (_showLocation && (_location != null || (_latitude != null && _longitude != null)))
                           Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: Icon(
@@ -1962,8 +1969,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             label: const Text('位置'),
                                             selected: _showLocation,
                                             onSelected: (value) async {
-                                              // 编辑模式下统一弹对话框
-                                              if (widget.initialQuote != null) {
+                                              // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
+                                              if (widget.initialQuote?.id != null) {
                                                 await _showLocationDialogInEditor(context, theme);
                                                 return;
                                               }
@@ -1977,8 +1984,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             },
                                             selectedColor: theme.colorScheme.primaryContainer,
                                           ),
-                                          // 小红点：有坐标但没地址时提示可更新
-                                          if (widget.initialQuote != null && 
+                                          // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
+                                          if (widget.initialQuote?.id != null && 
                                               _originalLocation == null && 
                                               _originalLatitude != null && _originalLongitude != null)
                                             Positioned(
@@ -2012,8 +2019,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         label: const Text('天气'),
                                         selected: _showWeather,
                                         onSelected: (value) async {
-                                          // 编辑模式下统一弹对话框
-                                          if (widget.initialQuote != null) {
+                                          // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
+                                          if (widget.initialQuote?.id != null) {
                                             await _showWeatherDialogInEditor(context, theme);
                                             return;
                                           }
@@ -2028,8 +2035,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         selectedColor: theme.colorScheme.primaryContainer,
                                       ),
                                     ),
-                                    // 刷新按钮 - 仅新建模式显示
-                                    if (widget.initialQuote == null)
+                                    // 刷新按钮 - 仅新建模式显示（未保存的笔记）
+                                    if (widget.initialQuote?.id == null)
                                       IconButton(
                                         icon: const Icon(Icons.refresh, size: 20),
                                         tooltip: '刷新位置和天气',

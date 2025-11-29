@@ -5,6 +5,7 @@ import '../models/note_category.dart';
 import '../theme/app_theme.dart';
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
+import '../services/location_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
 
@@ -298,11 +299,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                       color: secondaryTextColor,
                     ),
                   ),
-                  if (quote.location != null || quote.weather != null)
+                  if (quote.hasLocation || quote.weather != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (quote.location != null) ...[
+                        if (quote.hasLocation) ...[
                           Icon(
                             Icons.location_on,
                             size: 14,
@@ -310,18 +311,21 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            quote.location!.split(',').length >= 3
-                                ? (quote.location!.split(',').length >= 4
-                                    ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
-                                    : quote.location!.split(',')[2]) // 只有城市
-                                : quote.location!,
+                            // 优先显示文字位置，没有文字位置时显示坐标
+                            quote.location != null
+                                ? (quote.location!.split(',').length >= 3
+                                    ? (quote.location!.split(',').length >= 4
+                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
+                                        : quote.location!.split(',')[2]) // 只有城市
+                                    : quote.location!)
+                                : LocationService.formatCoordinates(quote.latitude, quote.longitude),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,
                             ),
                           ),
                         ],
-                        if (quote.location != null && quote.weather != null)
+                        if (quote.hasLocation && quote.weather != null)
                           const SizedBox(width: 8),
                         if (quote.weather != null) ...[
                           Icon(
