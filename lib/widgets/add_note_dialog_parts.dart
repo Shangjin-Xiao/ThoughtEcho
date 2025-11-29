@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 
@@ -156,16 +157,17 @@ class _TagSelectionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: searchController,
-          decoration: const InputDecoration(
-            hintText: '搜索标签...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(
+          decoration: InputDecoration(
+            hintText: l10n.searchTags,
+            prefixIcon: const Icon(Icons.search),
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(
               vertical: 8.0,
               horizontal: 12.0,
             ),
@@ -173,10 +175,10 @@ class _TagSelectionContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (filteredTags.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
-              child: Text('没有找到匹配的标签'),
+              child: Text(l10n.noMatchingTags),
             ),
           )
         else
