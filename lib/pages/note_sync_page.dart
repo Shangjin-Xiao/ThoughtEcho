@@ -489,7 +489,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('将向设备 “${device.alias}” 发送全部笔记数据。'),
+                    Text(l10n.sendConfirmContent(device.alias)),
                     const SizedBox(height: 12),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
