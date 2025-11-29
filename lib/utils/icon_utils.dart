@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class IconUtils {
   // 保留原有Material图标
@@ -168,6 +169,50 @@ class IconUtils {
     '交通': ['🚗', '✈️', '🚢', '🚲', '🚀'],
     '其他': ['💡', '🔥', '💧', '🌍', '⭐']
   };
+
+  // Internal category keys for lookup
+  static const List<String> _categoryKeys = [
+    '情感',
+    '思考',
+    '自然',
+    '心情',
+    '生活',
+    '成长',
+    '奖励',
+  ];
+
+  // Get localized category name
+  static String getLocalizedCategoryName(String chineseKey, AppLocalizations l10n) {
+    switch (chineseKey) {
+      case '情感':
+        return l10n.emotion;
+      case '思考':
+        return l10n.thinking;
+      case '自然':
+        return l10n.nature;
+      case '心情':
+        return l10n.mood;
+      case '生活':
+        return l10n.life;
+      case '成长':
+        return l10n.growth;
+      case '奖励':
+        return l10n.reward;
+      default:
+        return chineseKey;
+    }
+  }
+
+  // Get localized emoji categories
+  static Map<String, List<String>> getLocalizedEmojiCategories(AppLocalizations l10n) {
+    final result = <String, List<String>>{};
+    for (final key in _categoryKeys) {
+      if (emojiCategories.containsKey(key)) {
+        result[getLocalizedCategoryName(key, l10n)] = emojiCategories[key]!;
+      }
+    }
+    return result;
+  }
 
   // 检查图标名称是否为emoji
   static bool isEmoji(String? iconName) {

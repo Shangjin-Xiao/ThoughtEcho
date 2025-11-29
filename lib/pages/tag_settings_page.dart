@@ -665,8 +665,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          // 获取emoji分类
-          final emojiCategories = IconUtils.getCategorizedEmojis();
+          // 获取emoji分类（使用本地化的分类名称）
+          final emojiCategories = IconUtils.getLocalizedEmojiCategories(l10n);
 
           // 过滤emoji
           Map<String, List<String>> filteredEmojis = {};
