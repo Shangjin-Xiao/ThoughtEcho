@@ -686,5 +686,83 @@
         "type": "String"
       }
     }
-  }
+  },
+  
+  "logsViewer": "Log Viewer",
+  "logFilter": "Log Filter",
+  "clearLogs": "Clear Logs",
+  "searchLogs": "Search logs...",
+  "noLogs": "No logs yet",
+  "loadMoreLogs": "Load more logs",
+  "loadMoreLogsFailed": "Failed to load more logs: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} Log {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "Copy All",
+  "timestamp": "Time: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "Message:",
+  "errorLabel": "Error:",
+  "stackTrace": "Stack Trace:",
+  "logCopiedToClipboard": "Log details copied to clipboard",
+  "containsError": "Contains error information",
+  "sourceFilter": "Source: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "Search: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "Clear All",
+  "logFilterOptions": "Log Filter Options",
+  "reset": "Reset",
+  "filterByLogLevel": "Filter by Log Level",
+  "filterBySource": "Filter by Source",
+  "enterSourceName": "Enter log source name...",
+  "apply": "Apply",
+  "clearLogsTitle": "Clear Logs",
+  "clearLogsQuestion": "Which logs would you like to clear?",
+  "clearMemoryLogsOnly": "Clear Memory Logs Only",
+  "clearAllLogs": "Clear All Logs",
+  "memoryLogsCleared": "Memory logs cleared",
+  "allLogsCleared": "All logs cleared",
+  "logsCount": "{count, plural, =1{Showing 1 log} other{Showing {count} logs}} • Long press to copy • Tap for details",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "Log page rendering error:"
 }

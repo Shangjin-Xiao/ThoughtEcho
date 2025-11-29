@@ -686,5 +686,83 @@
         "type": "String"
       }
     }
-  }
+  },
+  
+  "logsViewer": "日志查看",
+  "logFilter": "日志过滤",
+  "clearLogs": "清除日志",
+  "searchLogs": "搜索日志...",
+  "noLogs": "暂无日志",
+  "loadMoreLogs": "加载更多日志",
+  "loadMoreLogsFailed": "加载更多日志失败: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} 日志 {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "复制全部信息",
+  "timestamp": "时间: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "消息:",
+  "errorLabel": "错误:",
+  "stackTrace": "堆栈跟踪:",
+  "logCopiedToClipboard": "日志详情已复制到剪贴板",
+  "containsError": "包含错误信息",
+  "sourceFilter": "来源: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "搜索: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "清除全部",
+  "logFilterOptions": "日志过滤选项",
+  "reset": "重置",
+  "filterByLogLevel": "按日志级别过滤",
+  "filterBySource": "按来源过滤",
+  "enterSourceName": "输入日志来源名称...",
+  "apply": "应用",
+  "clearLogsTitle": "清除日志",
+  "clearLogsQuestion": "您想清除哪些日志？",
+  "clearMemoryLogsOnly": "仅清除内存日志",
+  "clearAllLogs": "清除全部日志",
+  "memoryLogsCleared": "内存中的日志已清除",
+  "allLogsCleared": "所有日志记录已清除",
+  "logsCount": "已显示 {count} 条日志 • 长按日志可复制 • 点击查看详情",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "日志页渲染异常:"
 }
