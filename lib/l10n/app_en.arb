@@ -435,7 +435,14 @@
   "confirmDelete": "Confirm Delete",
   "confirmDeleteAnalysis": "Are you sure you want to delete this analysis record?",
   "deleteSuccess": "Deleted successfully",
-  "deleteFailed": "Delete failed",
+  "deleteFailed": "Delete failed: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "serviceNotInitialized": "Service not initialized",
   
   "location": "Location",

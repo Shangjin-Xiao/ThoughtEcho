@@ -55,7 +55,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late List<String> _selectedTagIds; // 选中标签ID列表
   String? _selectedColorHex;
   String? _location;
-  double? _latitude;  // 位置纬度
+  double? _latitude; // 位置纬度
   double? _longitude; // 位置经度
   String? _weather;
   String? _temperature; // 分离位置和天气控制
@@ -121,7 +121,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 分别检查并设置位置和天气状态
     // 有地址字符串或有坐标都算有位置
-    _showLocation = _location != null || (_latitude != null && _longitude != null);
+    _showLocation =
+        _location != null || (_latitude != null && _longitude != null);
     _showWeather = _weather != null;
 
     // 显示功能引导（首帧后立即触发）
@@ -624,16 +625,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   /// 编辑模式下的位置对话框
-  Future<void> _showLocationDialogInEditor(BuildContext context, ThemeData theme) async {
-    final hasLocationData = _originalLocation != null || 
+  Future<void> _showLocationDialogInEditor(
+      BuildContext context, ThemeData theme) async {
+    final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
-    final hasCoordinates = _originalLatitude != null && _originalLongitude != null;
+    final hasCoordinates =
+        _originalLatitude != null && _originalLongitude != null;
     final hasOnlyCoordinates = _originalLocation == null && hasCoordinates;
-    
+
     String title;
     String content;
     List<Widget> actions = [];
-    
+
     if (!hasLocationData) {
       // 没有位置数据
       title = '无法添加位置';
@@ -647,7 +650,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } else {
       // 有位置数据
       title = '位置信息';
-      content = hasOnlyCoordinates 
+      content = hasOnlyCoordinates
           ? '当前位置：${LocationService.formatCoordinates(_originalLatitude, _originalLongitude)}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。'
           : '当前位置：${_originalLocation ?? _location ?? ""}\n\n移除位置信息后将无法再次添加或更改。';
       actions = [
@@ -667,7 +670,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         ),
       ];
     }
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -676,12 +679,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         actions: actions,
       ),
     );
-    
+
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
-        final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!, _originalLongitude!);
+        final addressInfo =
+            await LocalGeocodingService.getAddressFromCoordinates(
+                _originalLatitude!, _originalLongitude!);
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -717,15 +721,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       });
     }
   }
-  
+
   /// 编辑模式下的天气对话框
-  Future<void> _showWeatherDialogInEditor(BuildContext context, ThemeData theme) async {
+  Future<void> _showWeatherDialogInEditor(
+      BuildContext context, ThemeData theme) async {
     final hasWeatherData = _originalWeather != null;
-    
+
     String title;
     String content;
     List<Widget> actions = [];
-    
+
     if (!hasWeatherData) {
       // 没有天气数据
       title = '无法添加天气';
@@ -738,9 +743,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       ];
     } else {
       // 有天气数据
-      final weatherDesc = WeatherService.getWeatherDescription(_originalWeather!);
+      final weatherDesc =
+          WeatherService.getWeatherDescription(_originalWeather!);
       title = '天气信息';
-      content = '当前天气：$weatherDesc${_temperature != null ? " $_temperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
+      content =
+          '当前天气：$weatherDesc${_temperature != null ? " $_temperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
       actions = [
         if (_showWeather)
           TextButton(
@@ -753,7 +760,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         ),
       ];
     }
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -762,7 +769,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         actions: actions,
       ),
     );
-    
+
     if (result == 'remove') {
       setState(() {
         _showWeather = false;
@@ -1412,7 +1419,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   'color-indicator-$_selectedColorHex'),
                             ),
                           ),
-                        if (_showLocation && (_location != null || (_latitude != null && _longitude != null)))
+                        if (_showLocation &&
+                            (_location != null ||
+                                (_latitude != null && _longitude != null)))
                           Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: Icon(
@@ -1687,7 +1696,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               ),
                             ),
                             child: ExpansionTile(
-                              title: Text(AppLocalizations.of(context).selectTags),
+                              title:
+                                  Text(AppLocalizations.of(context).selectTags),
                               leading: const Icon(Icons.sell_outlined),
                               shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(
@@ -1743,8 +1753,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         if (filteredTags.isEmpty) {
                                           return Center(
                                             child: Padding(
-                                              padding: const EdgeInsets.all(16.0),
-                                              child: Text(AppLocalizations.of(context).noMatchingTags),
+                                              padding:
+                                                  const EdgeInsets.all(16.0),
+                                              child: Text(
+                                                  AppLocalizations.of(context)
+                                                      .noMatchingTags),
                                             ),
                                           );
                                         }
@@ -1937,7 +1950,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          
+
                           // 位置和天气选择容器
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -1970,24 +1983,30 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             selected: _showLocation,
                                             onSelected: (value) async {
                                               // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
-                                              if (widget.initialQuote?.id != null) {
-                                                await _showLocationDialogInEditor(context, theme);
+                                              if (widget.initialQuote?.id !=
+                                                  null) {
+                                                await _showLocationDialogInEditor(
+                                                    context, theme);
                                                 return;
                                               }
                                               // 新建模式
-                                              if (value && _location == null && _latitude == null) {
+                                              if (value &&
+                                                  _location == null &&
+                                                  _latitude == null) {
                                                 _fetchLocationWeather();
                                               }
                                               setState(() {
                                                 _showLocation = value;
                                               });
                                             },
-                                            selectedColor: theme.colorScheme.primaryContainer,
+                                            selectedColor: theme
+                                                .colorScheme.primaryContainer,
                                           ),
                                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
-                                          if (widget.initialQuote?.id != null && 
-                                              _originalLocation == null && 
-                                              _originalLatitude != null && _originalLongitude != null)
+                                          if (widget.initialQuote?.id != null &&
+                                              _originalLocation == null &&
+                                              _originalLatitude != null &&
+                                              _originalLongitude != null)
                                             Positioned(
                                               right: 0,
                                               top: 0,
@@ -1995,7 +2014,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 width: 8,
                                                 height: 8,
                                                 decoration: BoxDecoration(
-                                                  color: theme.colorScheme.error,
+                                                  color:
+                                                      theme.colorScheme.error,
                                                   shape: BoxShape.circle,
                                                 ),
                                               ),
@@ -2021,7 +2041,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         onSelected: (value) async {
                                           // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
                                           if (widget.initialQuote?.id != null) {
-                                            await _showWeatherDialogInEditor(context, theme);
+                                            await _showWeatherDialogInEditor(
+                                                context, theme);
                                             return;
                                           }
                                           // 新建模式
@@ -2032,13 +2053,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             _showWeather = value;
                                           });
                                         },
-                                        selectedColor: theme.colorScheme.primaryContainer,
+                                        selectedColor:
+                                            theme.colorScheme.primaryContainer,
                                       ),
                                     ),
                                     // 刷新按钮 - 仅新建模式显示（未保存的笔记）
                                     if (widget.initialQuote?.id == null)
                                       IconButton(
-                                        icon: const Icon(Icons.refresh, size: 20),
+                                        icon:
+                                            const Icon(Icons.refresh, size: 20),
                                         tooltip: '刷新位置和天气',
                                         onPressed: () {
                                           _fetchLocationWeather();
@@ -2047,9 +2070,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                       ),
                                   ],
                                 ),
-                                
+
                                 // 显示位置和天气信息
-                                if (_location != null || _latitude != null || _weather != null) ...[
+                                if (_location != null ||
+                                    _latitude != null ||
+                                    _weather != null) ...[
                                   const SizedBox(height: 12),
                                   const Divider(height: 1),
                                   const SizedBox(height: 12),
@@ -2067,13 +2092,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                           Expanded(
                                             child: Text(
                                               // 优先显示地址，没有地址时显示坐标
-                                              _location ?? 
-                                                  ((_latitude != null && _longitude != null) 
+                                              _location ??
+                                                  ((_latitude != null &&
+                                                          _longitude != null)
                                                       ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
                                                       : '位置获取中...'),
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: theme.colorScheme.onSurfaceVariant,
+                                                color: theme.colorScheme
+                                                    .onSurfaceVariant,
                                               ),
                                             ),
                                           ),
@@ -2090,10 +2117,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          WeatherService.getWeatherDescription(_weather!),
+                                          WeatherService.getWeatherDescription(
+                                              _weather!),
                                           style: TextStyle(
                                             fontSize: 14,
-                                            color: theme.colorScheme.onSurfaceVariant,
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                         if (_temperature != null)
@@ -2101,17 +2130,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             ' $_temperature',
                                             style: TextStyle(
                                               fontSize: 14,
-                                              color: theme.colorScheme.onSurfaceVariant,
+                                              color: theme
+                                                  .colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                       ],
                                     ),
                                 ],
-                                
+
                                 // 编辑模式下无数据时的提示（只有真正编辑已保存的笔记时才显示）
                                 // initialQuote.id 不为空表示是已保存的笔记
-                                if (widget.initialQuote?.id != null && 
-                                    _originalLocation == null && 
+                                if (widget.initialQuote?.id != null &&
+                                    _originalLocation == null &&
                                     _originalLatitude == null &&
                                     _originalWeather == null) ...[
                                   const SizedBox(height: 8),
@@ -2194,8 +2224,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   Divider(height: 1, color: theme.colorScheme.outline),
                   ListTile(
                     leading: const Icon(Icons.text_fields),
-                    title: Text(AppLocalizations.of(context).smartAnalyzeSource),
-                    subtitle: Text(AppLocalizations.of(context).smartAnalyzeSourceDesc),
+                    title:
+                        Text(AppLocalizations.of(context).smartAnalyzeSource),
+                    subtitle: Text(
+                        AppLocalizations.of(context).smartAnalyzeSourceDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeSource();
@@ -2213,7 +2245,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ListTile(
                     leading: const Icon(Icons.add_circle_outline),
                     title: Text(AppLocalizations.of(context).continueWriting),
-                    subtitle: Text(AppLocalizations.of(context).continueWritingDesc),
+                    subtitle:
+                        Text(AppLocalizations.of(context).continueWritingDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _continueText();
@@ -2222,7 +2255,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ListTile(
                     leading: const Icon(Icons.analytics),
                     title: Text(AppLocalizations.of(context).deepAnalysis),
-                    subtitle: Text(AppLocalizations.of(context).deepAnalysisDesc),
+                    subtitle:
+                        Text(AppLocalizations.of(context).deepAnalysisDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeContent();

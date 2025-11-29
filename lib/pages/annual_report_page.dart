@@ -12,7 +12,8 @@ import '../gen_l10n/app_localizations.dart';
 
 /// ⚠️ 暂时弃用 - 防止 AI 工具识别错误
 /// 此页面已暂停使用，如需年度报告功能请使用 AI 周期报告页面
-@Deprecated('AnnualReportPage 已弃用，请使用新版 AnnualReportPageV2 或 AnnualReportWebPage')
+@Deprecated(
+    'AnnualReportPage 已弃用，请使用新版 AnnualReportPageV2 或 AnnualReportWebPage')
 class AnnualReportPage extends StatefulWidget {
   final int year;
   final List<Quote> quotes;
@@ -728,7 +729,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                         // 最长笔记
                         _buildHabitCard(
                           title: l10n.longestNote,
-                          content: '${_stats!.longestNoteWords}${l10n.wordsUnit}',
+                          content:
+                              '${_stats!.longestNoteWords}${l10n.wordsUnit}',
                           icon: Icons.article,
                           color: const Color(0xFF84CC16),
                         ),

@@ -238,9 +238,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     // 修复深色模式下自定义颜色卡片的对比度问题
     // 计算卡片背景的亮度，决定内容颜色
-    final bool isLightCard = ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
+    final bool isLightCard =
+        ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
     final Color baseContentColor = isLightCard ? Colors.black : Colors.white;
-    
+
     final Color primaryTextColor = baseContentColor.withValues(alpha: 0.9);
     final Color secondaryTextColor = baseContentColor.withValues(alpha: 0.7);
     final Color iconColor = baseContentColor.withValues(alpha: 0.65);
@@ -320,7 +321,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                         ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
                                         : quote.location!.split(',')[2]) // 只有城市
                                     : quote.location!)
-                                : LocationService.formatCoordinates(quote.latitude, quote.longitude),
+                                : LocationService.formatCoordinates(
+                                    quote.latitude, quote.longitude),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,
@@ -579,8 +581,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                 final tagId = sortedTagIds[index];
                                 final tag = widget.tags.firstWhere(
                                   (t) => t.id == tagId,
-                                  orElse: () =>
-                                      NoteCategory(id: tagId, name: l10n.unknownTag),
+                                  orElse: () => NoteCategory(
+                                      id: tagId, name: l10n.unknownTag),
                                 );
 
                                 // 判断是否是筛选条件中的标签
@@ -599,14 +601,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                               horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: isFilteredTag
-                                                ? baseContentColor.withValues(alpha: 0.15)
-                                                : baseContentColor.withValues(alpha: 0.08),
+                                                ? baseContentColor.withValues(
+                                                    alpha: 0.15)
+                                                : baseContentColor.withValues(
+                                                    alpha: 0.08),
                                             borderRadius:
                                                 BorderRadius.circular(14),
                                             border: Border.all(
                                               color: isFilteredTag
-                                                  ? baseContentColor.withValues(alpha: 0.4)
-                                                  : baseContentColor.withValues(alpha: 0.15),
+                                                  ? baseContentColor.withValues(
+                                                      alpha: 0.4)
+                                                  : baseContentColor.withValues(
+                                                      alpha: 0.15),
                                               width: isFilteredTag ? 1.0 : 0.5,
                                             ),
                                           ),
@@ -638,8 +644,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                 tag.name,
                                                 style: theme.textTheme.bodySmall
                                                     ?.copyWith(
-                                                  color:
-                                                      secondaryTextColor,
+                                                  color: secondaryTextColor,
                                                   fontSize: 11,
                                                   fontWeight: isFilteredTag
                                                       ? FontWeight.w600

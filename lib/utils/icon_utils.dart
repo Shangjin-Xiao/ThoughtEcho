@@ -184,7 +184,8 @@ class IconUtils {
   ];
 
   // Get localized category name
-  static String getLocalizedCategoryName(String chineseKey, AppLocalizations l10n) {
+  static String getLocalizedCategoryName(
+      String chineseKey, AppLocalizations l10n) {
     switch (chineseKey) {
       case '情感':
         return l10n.emotion;
@@ -210,7 +211,8 @@ class IconUtils {
   }
 
   // Get localized emoji categories
-  static Map<String, List<String>> getLocalizedEmojiCategories(AppLocalizations l10n) {
+  static Map<String, List<String>> getLocalizedEmojiCategories(
+      AppLocalizations l10n) {
     final result = <String, List<String>>{};
     for (final key in _categoryKeys) {
       if (emojiCategories.containsKey(key)) {

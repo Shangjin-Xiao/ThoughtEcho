@@ -151,7 +151,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   if (mounted) {
                                     messenger.showSnackBar(
                                       SnackBar(
-                                          content: Text(l10n.addTagFailed(e.toString())),
+                                          content: Text(
+                                              l10n.addTagFailed(e.toString())),
                                           duration: AppConstants
                                               .snackBarDurationError),
                                     );
@@ -214,7 +215,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text(l10n.loadTagsFailed(snapshot.error.toString())));
+                  return Center(
+                      child:
+                          Text(l10n.loadTagsFailed(snapshot.error.toString())));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -452,7 +455,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             trailing: Icon(
                               expandedCategories[l10n.systemIcons] ?? false
@@ -462,7 +466,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             onTap: () {
                               setState(() {
                                 expandedCategories[l10n.systemIcons] =
-                                    !(expandedCategories[l10n.systemIcons] ?? false);
+                                    !(expandedCategories[l10n.systemIcons] ??
+                                        false);
                               });
                             },
                           ),
@@ -638,9 +643,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: () => _editCategory(context, category),
-      onLongPress: isDefault
-          ? null
-          : () => _deleteCategory(context, category),
+      onLongPress: isDefault ? null : () => _deleteCategory(context, category),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -698,7 +701,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isDefault ? l10n.systemDefaultTag : l10n.tapToEditLongPressToDelete,
+                    isDefault
+                        ? l10n.systemDefaultTag
+                        : l10n.tapToEditLongPressToDelete,
                     style: TextStyle(
                       fontSize: 11,
                       color: isDefault

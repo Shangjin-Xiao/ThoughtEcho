@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 /// 测试收藏功能数据持久化逻辑验证
-/// 
+///
 /// 此测试验证以下修复：
 /// 1. 版本12升级时favorite_count字段不丢失（SQL语句验证）
 /// 2. 字段映射正确处理favoriteCount/favorite_count

@@ -25,15 +25,23 @@ class CardTemplates {
     String? temperature,
     String? dayPeriod,
   }) {
-    final textLines = _wrapText(content, _maxContentCharsPerLine, _maxContentLines);
-    final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
+    final textLines =
+        _wrapText(content, _maxContentCharsPerLine, _maxContentLines);
+    final metaText = _buildMetaText(
+        date: date,
+        location: location,
+        weather: weather,
+        temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
-    
+
     // 计算内容区域起始Y位置（居中显示）
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
     const contentAreaTop = 180.0;
     const contentAreaHeight = 280.0;
-    final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize + 20;
+    final contentStartY = contentAreaTop +
+        (contentAreaHeight - contentHeight) / 2 +
+        _contentFontSize +
+        20;
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight">
@@ -94,14 +102,22 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b')
     String? temperature,
     String? dayPeriod,
   }) {
-    final textLines = _wrapText(content, _maxContentCharsPerLine, _maxContentLines);
-    final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
+    final textLines =
+        _wrapText(content, _maxContentCharsPerLine, _maxContentLines);
+    final metaText = _buildMetaText(
+        date: date,
+        location: location,
+        weather: weather,
+        temperature: temperature);
     final authorDisplay = author ?? source ?? '';
-    
+
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
     const contentAreaTop = 200.0;
     const contentAreaHeight = 240.0;
-    final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize + 20;
+    final contentStartY = contentAreaTop +
+        (contentAreaHeight - contentHeight) / 2 +
+        _contentFontSize +
+        20;
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight">
@@ -544,24 +560,25 @@ ${authorDisplay.isNotEmpty ? '''
   // ============ 新增工具方法（重构版） ============
 
   /// 简化的文字换行 - 按字符数量直接截断
-  static List<String> _wrapText(String text, int maxCharsPerLine, int maxLines) {
+  static List<String> _wrapText(
+      String text, int maxCharsPerLine, int maxLines) {
     String cleanText = text.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (cleanText.isEmpty) return [''];
-    
+
     final lines = <String>[];
     int currentIndex = 0;
-    
+
     while (currentIndex < cleanText.length && lines.length < maxLines) {
       int endIndex = currentIndex + maxCharsPerLine;
-      
+
       if (endIndex >= cleanText.length) {
         lines.add(cleanText.substring(currentIndex));
         break;
       }
-      
+
       String segment = cleanText.substring(currentIndex, endIndex);
       int lastSpace = segment.lastIndexOf(' ');
-      
+
       if (lastSpace > maxCharsPerLine * 0.5) {
         lines.add(segment.substring(0, lastSpace).trim());
         currentIndex += lastSpace + 1;
@@ -570,48 +587,52 @@ ${authorDisplay.isNotEmpty ? '''
         currentIndex = endIndex;
       }
     }
-    
+
     if (currentIndex < cleanText.length && lines.isNotEmpty) {
       String lastLine = lines.last;
       if (lastLine.length > 3) {
-        lines[lines.length - 1] = '${lastLine.substring(0, lastLine.length - 3)}...';
+        lines[lines.length - 1] =
+            '${lastLine.substring(0, lastLine.length - 3)}...';
       } else {
         lines[lines.length - 1] = '$lastLine...';
       }
     }
-    
+
     return lines.isEmpty ? [''] : lines;
   }
 
   /// 生成SVG文字行
-  static String _renderTextLines(List<String> lines, double centerX, double startY, double fontSize, String color) {
+  static String _renderTextLines(List<String> lines, double centerX,
+      double startY, double fontSize, String color) {
     final buffer = StringBuffer();
     const lineHeightRatio = 1.7;
     final lineSpacing = fontSize * lineHeightRatio;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final y = startY + i * lineSpacing;
-      buffer.writeln('  <text x="$centerX" y="${y.toStringAsFixed(1)}" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize.toStringAsFixed(0)}" font-weight="400">${_escape(lines[i])}</text>');
+      buffer.writeln(
+          '  <text x="$centerX" y="${y.toStringAsFixed(1)}" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize.toStringAsFixed(0)}" font-weight="400">${_escape(lines[i])}</text>');
     }
-    
+
     return buffer.toString();
   }
 
   /// 构建元数据文本（日期、位置、天气）
-  static String _buildMetaText({String? date, String? location, String? weather, String? temperature}) {
+  static String _buildMetaText(
+      {String? date, String? location, String? weather, String? temperature}) {
     final parts = <String>[];
-    
+
     if (date != null && date.isNotEmpty) {
       parts.add(date);
     }
-    
+
     if (location != null && location.isNotEmpty) {
       final shortLocation = location.split(',').first.trim();
       if (shortLocation.isNotEmpty) {
         parts.add(shortLocation);
       }
     }
-    
+
     if (weather != null && weather.isNotEmpty) {
       String weatherText = _localizeWeather(weather);
       if (temperature != null && temperature.isNotEmpty) {
@@ -619,22 +640,22 @@ ${authorDisplay.isNotEmpty ? '''
       }
       parts.add(weatherText);
     }
-    
+
     return parts.isEmpty ? '' : parts.join(' · ');
   }
 
   /// 构建品牌文本（作者、来源、心迹标识）
   static String _buildBrandText({String? author, String? source}) {
     final parts = <String>[];
-    
+
     if (author != null && author.isNotEmpty) {
       parts.add(author);
     } else if (source != null && source.isNotEmpty) {
       parts.add(source);
     }
-    
+
     parts.add('心迹 · ThoughtEcho');
-    
+
     return parts.join(' · ');
   }
 
@@ -689,13 +710,21 @@ ${authorDisplay.isNotEmpty ? '''
   static String _localizeWeather(String weather) {
     final w = weather.toLowerCase().trim();
     const weatherMap = {
-      'clear': '晴', 'sunny': '晴',
-      'cloudy': '多云', 'partly_cloudy': '少云',
+      'clear': '晴',
+      'sunny': '晴',
+      'cloudy': '多云',
+      'partly_cloudy': '少云',
       'overcast': '阴',
-      'rain': '雨', 'drizzle': '小雨', 'light rain': '小雨',
-      'heavy rain': '大雨', 'thunderstorm': '雷雨',
-      'snow': '雪', 'light snow': '小雪', 'heavy snow': '大雪',
-      'fog': '雾', 'haze': '霾',
+      'rain': '雨',
+      'drizzle': '小雨',
+      'light rain': '小雨',
+      'heavy rain': '大雨',
+      'thunderstorm': '雷雨',
+      'snow': '雪',
+      'light snow': '小雪',
+      'heavy snow': '大雪',
+      'fog': '雾',
+      'haze': '霾',
       'windy': '有风',
     };
     return weatherMap[w] ?? weather;

@@ -62,7 +62,6 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     super.dispose();
   }
 
-
   String _getQuotePreview() {
     final content = widget.quote.content;
     if (content.length <= 100) {
@@ -216,7 +215,6 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
       ),
     );
   }
-
 
   void _showNoteInfo() {
     showDialog(

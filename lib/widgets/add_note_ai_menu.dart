@@ -128,7 +128,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 分析来源
   Future<void> _analyzeSource() async {
     final l10n = AppLocalizations.of(context);
-    
+
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -198,7 +198,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                     const SizedBox(height: 8),
                     if (author != null && author.isNotEmpty)
                       Text(l10n.authorLabel(author)),
-                    if (work != null && work.isNotEmpty) Text(l10n.workLabel(work)),
+                    if (work != null && work.isNotEmpty)
+                      Text(l10n.workLabel(work)),
                   ],
                 ),
                 actions: [
@@ -258,7 +259,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 润色文本
   Future<void> _polishText() async {
     final l10n = AppLocalizations.of(context);
-    
+
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -312,7 +313,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 续写文本
   Future<void> _continueText() async {
     final l10n = AppLocalizations.of(context);
-    
+
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -366,7 +367,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 深入分析内容
   Future<void> _analyzeContent() async {
     final l10n = AppLocalizations.of(context);
-    
+
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -427,7 +428,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 问笔记功能
   Future<void> _askNoteQuestion() async {
     final l10n = AppLocalizations.of(context);
-    
+
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,

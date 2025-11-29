@@ -106,7 +106,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save_alt),
-                label: Text(_isLoading ? l10n.creatingBackup : l10n.createBackup),
+                label:
+                    Text(_isLoading ? l10n.creatingBackup : l10n.createBackup),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),

@@ -86,6 +86,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       },
     ];
   }
+
   String? _selectedPreset;
 
   @override
@@ -411,8 +412,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (uri != null && uri.host.isNotEmpty) {
         providerName = l10n.customConfigHost(uri.host);
       } else {
-        providerName =
-            l10n.customConfigTimestamp(DateTime.now().millisecondsSinceEpoch.toString());
+        providerName = l10n.customConfigTimestamp(
+            DateTime.now().millisecondsSinceEpoch.toString());
       }
     }
 

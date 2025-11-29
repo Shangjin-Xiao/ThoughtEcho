@@ -431,7 +431,7 @@ class AppTheme with ChangeNotifier {
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
     final colorScheme = darkColorScheme;
-    
+
     final baseTheme = FlexThemeData.dark(
       colorScheme: colorScheme,
       useMaterial3: true,
@@ -625,7 +625,8 @@ class AppTheme with ChangeNotifier {
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.12));
+              return BorderSide(
+                  color: colorScheme.onSurface.withValues(alpha: 0.12));
             }
             return BorderSide(color: colorScheme.outline);
           }),
